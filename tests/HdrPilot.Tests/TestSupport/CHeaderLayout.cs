@@ -19,6 +19,8 @@ public sealed partial class CHeaderLayout
         ["BYTE"] = (1, 1), ["UCHAR"] = (1, 1), ["CHAR"] = (1, 1),
         // Aus anderen Headern (winnt.h, windef.h, guiddef.h):
         ["LUID"] = (8, 4), ["POINTL"] = (8, 4), ["RECTL"] = (16, 4), ["GUID"] = (16, 4),
+        ["HANDLE"] = (8, 8), ["PVOID"] = (8, 8), ["SIZE_T"] = (8, 8), ["PWSTR"] = (8, 8), ["KPRIORITY"] = (4, 4),
+        ["LARGE_INTEGER"] = (8, 8), ["ULONG64"] = (8, 8),
     };
 
     private readonly Dictionary<string, List<string>> _structBodies = new(StringComparer.Ordinal);

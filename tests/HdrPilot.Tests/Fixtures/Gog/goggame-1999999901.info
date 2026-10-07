@@ -1,0 +1,60 @@
+{
+    "buildId": "50000000000000101",
+    "clientId": "50000000000000002",
+    "gameId": "1999999901",
+    "language": "German",
+    "languages": [
+        "de-DE"
+    ],
+    "name": "Beispielspiel Eins",
+    "osBitness": [
+        "64"
+    ],
+    "playTasks": [
+        {
+            "category": "launcher",
+            "isPrimary": true,
+            "languages": [
+                "en-US",
+                "de-DE"
+            ],
+            "name": "Beispielspiel Eins",
+            "osBitness": [
+                "64"
+            ],
+            "path": "Launcher/Starter.exe",
+            "type": "FileTask",
+            "workingDir": "Launcher"
+        },
+        {
+            "category": "game",
+            "isHidden": true,
+            "languages": [
+                "en-US",
+                "de-DE"
+            ],
+            "name": "Beispielspiel Eins - launcher process bin/eins_exe",
+            "osBitness": [
+                "64"
+            ],
+            "path": "bin/eins.exe",
+            "type": "FileTask"
+        },
+        {
+            "category": "game",
+            "isHidden": true,
+            "languages": [
+                "en-US",
+                "de-DE"
+            ],
+            "name": "Beispielspiel Eins - launcher process bin/eins_dx11_exe",
+            "osBitness": [
+                "64"
+            ],
+            "path": "bin/eins_dx11.exe",
+            "type": "FileTask"
+        }
+    ],
+    "rootGameId": "1999999901",
+    "version": 1
+}

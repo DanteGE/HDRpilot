@@ -1,0 +1,43 @@
+{
+    "buildId": "50000000000000201",
+    "clientId": "50000000000000001",
+    "gameId": "1423049311",
+    "language": "German",
+    "languages": [
+        "de-DE"
+    ],
+    "name": "Cyberpunk 2077",
+    "osBitness": [
+        "64"
+    ],
+    "playTasks": [
+        {
+            "additionalPaths": [
+                {
+                    "path": "<?APPLICATION_DATA_LOCAL?>\\Programs\\CD Projekt Red\\REDlauncher",
+                    "type": "filesystemPath"
+                }
+            ],
+            "category": "launcher",
+            "isPrimary": true,
+            "languages": [
+                "*"
+            ],
+            "name": "Cyberpunk 2077",
+            "path": "REDprelauncher.exe",
+            "type": "FileTask"
+        },
+        {
+            "category": "game",
+            "isHidden": true,
+            "languages": [
+                "*"
+            ],
+            "name": "Cyberpunk 2077",
+            "path": "bin\\x64\\Cyberpunk2077.exe",
+            "type": "FileTask"
+        }
+    ],
+    "rootGameId": "1423049311",
+    "version": 1
+}

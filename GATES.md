@@ -62,60 +62,60 @@ und die EXPECT-Marke ausgibt.
 
 ## Phase 2: Spielbibliothek
 
-- [ ] G2.1: `hdrpilot scan` gibt alle gefundenen Spiele als gültiges JSON aus; jeder Eintrag hat Quelle, ID, Name, vorhandenen Installationsordner und Start-Befehl; Fehler je Scanner stehen im JSON
+- [x] G2.1: `hdrpilot scan` gibt alle gefundenen Spiele als gültiges JSON aus; jeder Eintrag hat Quelle, ID, Name, vorhandenen Installationsordner und Start-Befehl; Fehler je Scanner stehen im JSON
   CHECK: ps tools\gates\phase2-scan.ps1
   EXPECT: PHASE2_SCAN_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 646 Spiele (Steam 631, Epic 7, GOG 5, Xbox 1, Ubisoft 1, EA 1, Battle.net 0), alle 7 Launcher erkannt, 0 Fehler, 631 ms, PHASE2_SCAN_OK; eigene Stichprobe: 637 Steam-Manifeste, im Scan fehlen genau die 6 gefilterten Werkzeuge
 
-- [ ] G2.2: Abgleich mit der Bibliothek jedes installierten Launchers, jede Abweichung mit Begründung in docs\phase2-abgleich.md
-  EVIDENCE: pending
+- [x] G2.2: Abgleich mit der Bibliothek jedes installierten Launchers, jede Abweichung mit Begründung in docs\phase2-abgleich.md
+  EVIDENCE: docs\phase2-abgleich.md (zweite/dritte Quelle je Launcher, von Entwickler und unabhängigem Prüfer am System gemessen); Nutzer bestätigt am 2026-10-07 gegen die Launcher-Ansichten: "Passt so"
 
-- [ ] G2.3: Jeder Scanner hat Unit-Tests gegen Beispieldateien bzw. Registry-Attrappe, darunter defekte und unvollständige Dateien
+- [x] G2.3: Jeder Scanner hat Unit-Tests gegen Beispieldateien bzw. Registry-Attrappe, darunter defekte und unvollständige Dateien
   CHECK: ps tools\gates\phase2-scanner-tests.ps1
   EXPECT: PHASE2_SCANNER_TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 7 Scanner (BattleNet 28, EA 41, Epic 44, GOG 35, Steam 43, Ubisoft 37, Xbox 37 Tests; je Scanner fehlender Launcher, 8–12 defekt, 3–6 unvollständig), Scanner-Tests 408/408, PHASE2_SCANNER_TESTS_OK
 
-- [ ] G2.4: Nicht installierter Launcher ergibt leere Liste ohne Fehler (je Scanner ein Test), ein werfender Scanner stört die anderen nicht
+- [x] G2.4: Nicht installierter Launcher ergibt leere Liste ohne Fehler (je Scanner ein Test), ein werfender Scanner stört die anderen nicht
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Missing_launcher|FullyQualifiedName~LibraryScannerTests" -MinTests 9
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 18/18, TESTS_OK 18
 
-- [ ] G2.5: Build ohne Warnungen und alle Tests grün am Phasenende
+- [x] G2.5: Build ohne Warnungen und alle Tests grün am Phasenende
   CHECK: ps tools\gates\build.ps1
   EXPECT: BUILD_OK_0_WARNINGS
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, Warnungen=0, BUILD_OK_0_WARNINGS; tools\gates\test.ps1: 768/768, TESTS_OK 768
 
 ## Phase 3: Überwachung und Sitzungslogik
 
-- [ ] G3.1: Sitzungslogik vollständig mit Attrappen (IHdrController, IProcessWatcher) und steuerbarer Uhr getestet: Zustand merken/wiederherstellen, mehrere Spiele, Nachlaufzeit, Wiederanlauf nach Absturz, nicht HDR-fähiger Bildschirm
+- [x] G3.1: Sitzungslogik vollständig mit Attrappen (IHdrController, IProcessWatcher) und steuerbarer Uhr getestet: Zustand merken/wiederherstellen, mehrere Spiele, Nachlaufzeit, Wiederanlauf nach Absturz, nicht HDR-fähiger Bildschirm
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Session" -MinTests 25
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 57/57 (SessionManagerTests und GameMatcherTests), TESTS_OK 57; Gesamtlauf 853/853
 
-- [ ] G3.2: Stellvertreter-EXE in einem als Spiel eingetragenen Ordner: Start schaltet HDR innerhalb von 2 s ein, Ende nach der Nachlaufzeit wieder aus
+- [x] G3.2: Stellvertreter-EXE in einem als Spiel eingetragenen Ordner: Start schaltet HDR innerhalb von 2 s ein, Ende nach der Nachlaufzeit wieder aus
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario single
   EXPECT: PHASE3_SINGLE_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:52 exit 0, HDR an nach 1015 ms, aus 11042 ms nach Ende (Nachlaufzeit 10 s), Protokollzeilen mit Auslöser/Bildschirm/vorher/nachher/Ergebnis, PHASE3_SINGLE_OK
 
-- [ ] G3.3: Zwei gleichzeitige Stellvertreter: erst nach dem Ende des zweiten wird zurückgestellt
+- [x] G3.3: Zwei gleichzeitige Stellvertreter: erst nach dem Ende des zweiten wird zurückgestellt
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario two
   EXPECT: PHASE3_TWO_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:53 exit 0, HDR bleibt 14 s nach Ende von A an, aus 11130 ms nach Ende von B, PHASE3_TWO_OK
 
-- [ ] G3.4: War HDR vorher an, bleibt es an
+- [x] G3.4: War HDR vorher an, bleibt es an
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario alreadyon
   EXPECT: PHASE3_ALREADYON_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:53 exit 0, HDR 15 s nach Ende weiter an, Protokoll "war schon an und bleibt", PHASE3_ALREADYON_OK
 
-- [ ] G3.5: App bei laufendem Stellvertreter hart beenden, Stellvertreter schließen, App neu starten: HDR wird zurückgestellt
+- [x] G3.5: App bei laufendem Stellvertreter hart beenden, Stellvertreter schließen, App neu starten: HDR wird zurückgestellt
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario crash
   EXPECT: PHASE3_CRASH_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:54 exit 0, Überwachung per TerminateProcess beendet, gemerkt WasHdrOn=False, HDR blieb an, nach Neustart aus (302 ms nach Startbefehl), Zustandsdatei gelöscht, PHASE3_CRASH_OK. Mit der App wiederholt in G4.6.
 
-- [ ] G3.6: Überwachung im Leerlauf sparsam: CPU-Zeit und Handle-Zahl über 60 s gemessen
+- [x] G3.6: Überwachung im Leerlauf sparsam: CPU-Zeit und Handle-Zahl über 60 s gemessen
   CHECK: ps tools\gates\phase3-idle.ps1
   EXPECT: PHASE3_IDLE_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 646 Spiele, CPU 125 ms in 60 s = 0,208 % eines Kerns, Handles 284 -> 281, 54 MB, PHASE3_IDLE_OK (vorher mit Toolhelp 0,599 %: Gate schlug fehl, siehe E30)
 
 ## Phase 4: Oberfläche und Tray
 

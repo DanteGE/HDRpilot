@@ -1,0 +1,159 @@
+"AppState"
+{
+	"appid"		"228980"
+	"universe"		"1"
+	"LauncherPath"		"C:\\Program Files (x86)\\Steam\\steam.exe"
+	"name"		"Steamworks Common Redistributables"
+	"StateFlags"		"4"
+	"installdir"		"Steamworks Shared"
+	"LastUpdated"		"1781162044"
+	"LastPlayed"		"1700000000"
+	"SizeOnDisk"		"1062108387"
+	"StagingSize"		"0"
+	"buildid"		"21000210"
+	"LastOwner"		"76561197960265728"
+	"DownloadType"		"0"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"228981"
+		{
+			"manifest"		"1000000000000000001"
+			"size"		"6012334"
+		}
+		"228982"
+		{
+			"manifest"		"1000000000000000002"
+			"size"		"9501276"
+		}
+		"228983"
+		{
+			"manifest"		"1000000000000000003"
+			"size"		"18840912"
+		}
+		"228984"
+		{
+			"manifest"		"1000000000000000004"
+			"size"		"14105538"
+		}
+		"228985"
+		{
+			"manifest"		"1000000000000000005"
+			"size"		"13377104"
+		}
+		"228986"
+		{
+			"manifest"		"1000000000000000006"
+			"size"		"30214687"
+		}
+		"228987"
+		{
+			"manifest"		"1000000000000000007"
+			"size"		"28903355"
+		}
+		"228988"
+		{
+			"manifest"		"1000000000000000008"
+			"size"		"29660841"
+		}
+		"228989"
+		{
+			"manifest"		"1000000000000000009"
+			"size"		"26138027"
+		}
+		"228990"
+		{
+			"manifest"		"1000000000000000010"
+			"size"		"99874213"
+		}
+		"229000"
+		{
+			"manifest"		"1000000000000000011"
+			"size"		"238406172"
+		}
+		"229002"
+		{
+			"manifest"		"1000000000000000012"
+			"size"		"51203348"
+		}
+		"229003"
+		{
+			"manifest"		"1000000000000000013"
+			"size"		"42566019"
+		}
+		"229004"
+		{
+			"manifest"		"1000000000000000014"
+			"size"		"71338205"
+		}
+		"229005"
+		{
+			"manifest"		"1000000000000000015"
+			"size"		"60772416"
+		}
+		"229006"
+		{
+			"manifest"		"1000000000000000016"
+			"size"		"85120693"
+		}
+		"229007"
+		{
+			"manifest"		"1000000000000000017"
+			"size"		"115948730"
+		}
+		"229012"
+		{
+			"manifest"		"1000000000000000018"
+			"size"		"7230154"
+		}
+		"229020"
+		{
+			"manifest"		"1000000000000000019"
+			"size"		"795632"
+		}
+		"229030"
+		{
+			"manifest"		"1000000000000000020"
+			"size"		"52611470"
+		}
+		"229033"
+		{
+			"manifest"		"1000000000000000021"
+			"size"		"59487261"
+		}
+	}
+	"InstallScripts"
+	{
+		"228981"		"_CommonRedist\\vcredist\\2005\\installscript.vdf"
+		"228982"		"_CommonRedist\\vcredist\\2008\\installscript.vdf"
+		"228983"		"_CommonRedist\\vcredist\\2010\\installscript.vdf"
+		"228984"		"_CommonRedist\\vcredist\\2012\\installscript.vdf"
+		"228985"		"_CommonRedist\\vcredist\\2013\\installscript.vdf"
+		"228986"		"_CommonRedist\\vcredist\\2015\\installscript.vdf"
+		"228987"		"_CommonRedist\\vcredist\\2017\\installscript.vdf"
+		"228988"		"_CommonRedist\\vcredist\\2019\\installscript.vdf"
+		"228989"		"_CommonRedist\\vcredist\\2022\\installscript.vdf"
+		"228990"		"_CommonRedist\\DirectX\\Jun2010\\installscript.vdf"
+		"229000"		"_CommonRedist\\DotNet\\3.5\\installscript.vdf"
+		"229002"		"_CommonRedist\\DotNet\\4.0\\installscript.vdf"
+		"229003"		"_CommonRedist\\DotNet\\4.0 Client Profile\\installscript.vdf"
+		"229004"		"_CommonRedist\\DotNet\\4.5.2\\installscript.vdf"
+		"229005"		"_CommonRedist\\DotNet\\4.6\\installscript.vdf"
+		"229006"		"_CommonRedist\\DotNet\\4.7\\installscript.vdf"
+		"229007"		"_CommonRedist\\DotNet\\4.8\\installscript.vdf"
+		"229012"		"_CommonRedist\\XNA\\4.0\\installscript.vdf"
+		"229020"		"_CommonRedist\\OpenAL\\2.0.7.0\\installscript.vdf"
+		"229030"		"_CommonRedist\\PhysX\\8.09.04\\installscript.vdf"
+		"229033"		"_CommonRedist\\PhysX\\9.14.0702\\installscript.vdf"
+	}
+	"UserConfig"
+	{
+		"BetaKey"		"public"
+	}
+	"MountedConfig"
+	{
+		"BetaKey"		"public"
+	}
+}

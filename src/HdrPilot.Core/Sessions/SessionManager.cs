@@ -592,8 +592,9 @@ public sealed class SessionManager
         if (_matcher is null || _config.Revision != _matcherRevision)
         {
             var patterns = cfg.Settings.HelperExecutablePatterns;
+            // Ausgewählte Spiele zählen auch, wenn sie beim letzten Einlesen fehlten (etwa mitten in einem Steam-Update).
             _matcher = new GameMatcher(
-                cfg.Games.Where(g => g.IsInstalled || _sessions.ContainsKey(g.Key)),
+                cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || _sessions.ContainsKey(g.Key)),
                 name => _isHelper(name, patterns),
                 _forbiddenRoots);
             _matcherRevision = _config.Revision;

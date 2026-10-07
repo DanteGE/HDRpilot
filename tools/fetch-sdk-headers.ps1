@@ -1,4 +1,4 @@
-﻿# Holt wingdi.h und WinUser.h aus dem NuGet-Paket Microsoft.Windows.SDK.CPP nach .sdk\
+﻿# Holt wingdi.h, WinUser.h, TlHelp32.h und winternl.h aus dem NuGet-Paket Microsoft.Windows.SDK.CPP nach .sdk\
 # (für WingdiHeaderConformanceTests). Nur nötig, wenn kein Windows SDK installiert ist.
 # Lädt ca. 153 MB von nuget.org. Die Header stehen unter Microsoft-Lizenz und kommen nicht ins Repository.
 param([string]$Version = '10.0.26100.9169')
@@ -12,7 +12,7 @@ Invoke-WebRequest -UseBasicParsing "https://api.nuget.org/v3-flatcontainer/micro
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [IO.Compression.ZipFile]::OpenRead($pkg)
 try {
-    foreach ($name in 'wingdi.h', 'WinUser.h') {
+    foreach ($name in 'wingdi.h', 'WinUser.h', 'TlHelp32.h', 'winternl.h') {
         $entry = $zip.Entries | Where-Object { $_.FullName -match "/um/$([regex]::Escape($name))$" } | Select-Object -First 1
         if (-not $entry) { throw "$name nicht im Paket" }
         [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path $target $name), $true)

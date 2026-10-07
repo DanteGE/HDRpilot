@@ -57,6 +57,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
                 "games" => await RunGamesAsync(parsed, cancellationToken).ConfigureAwait(false),
                 "watch" => await RunWatchAsync(parsed, cancellationToken).ConfigureAwait(false),
                 "run" => await RunLaunchAsync(parsed, cancellationToken).ConfigureAwait(false),
+                "diag" => await RunDiagAsync(parsed, cancellationToken).ConfigureAwait(false),
                 _ => Usage($"Unbekannter Befehl \"{parsed.Positional[0]}\"."),
             };
         }

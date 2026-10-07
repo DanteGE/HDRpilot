@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3" IgnorableNamespaces="uap uap3" xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10">
+  <Identity Name="Contoso.BeispielspielSoundtrack" Publisher="CN=Contoso Spiele GmbH, O=Contoso Spiele GmbH, L=Berlin, C=DE" Version="1.0.0.0" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>Beispielspiel - Soundtrack</DisplayName>
+    <PublisherDisplayName>Contoso Spiele GmbH</PublisherDisplayName>
+    <Logo>StoreLogo.png</Logo>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.18362.0" MaxVersionTested="10.0.18362.0" />
+    <uap3:MainPackageDependency Name="Contoso.Beispielspiel" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="de-DE" />
+  </Resources>
+</Package>

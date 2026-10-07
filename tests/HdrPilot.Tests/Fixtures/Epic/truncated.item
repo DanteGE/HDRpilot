@@ -1,0 +1,33 @@
+{
+	"FormatVersion": 0,
+	"bIsIncompleteInstall": false,
+	"LaunchCommand": "",
+	"LaunchExecutable": "DeadIsland.exe",
+	"ManifestLocation": "D:\\Anwendungen\\Epic Games/DeadIsland2/.egstore",
+	"ManifestHash": "0000000000000000000000000000000000000008",
+	"bIsApplication": true,
+	"bIsExecutable": true,
+	"bIsManaged": false,
+	"bNeedsValidation": false,
+	"bRequiresAuth": true,
+	"bAllowMultipleInstances": false,
+	"bCanRunOffline": false,
+	"bAllowUriCmdArgs": false,
+	"bLaunchElevated": false,
+	"BaseURLs": [
+		"http://download.epicgames.com/Builds/Org/o-beispiel/00000000000000000000000000000000/default"
+	],
+	"BuildLabel": "Live",
+	"AppCategories": [
+		"public",
+		"games",
+		"applications"
+	],
+	"ChunkDbs": [],
+	"CompatibleApps": [],
+	"DisplayName": "Dead Island 2",
+	"InstallationGuid": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+	"InstallLocation": "D:\\Anwendungen\\Epic Games/DeadIsland2",
+	"InstallSessionId": "0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F",
+	"InstallTags": [],
+	"InstallCompon

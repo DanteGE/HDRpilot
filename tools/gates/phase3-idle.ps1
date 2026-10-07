@@ -13,8 +13,8 @@ $cfg = Join-Path $root 'tools\out\phase3\config-idle'
 if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
 New-Item -ItemType Directory -Force $cfg | Out-Null
 & $Cli games import --config-dir $cfg | Select-Object -First 1 | ForEach-Object { Write-Output "Import: $_" }
-$games = @(& $Cli games list --config-dir $cfg --json | Out-String | ConvertFrom-Json)
-Write-Output "Spiele in der Konfiguration: $($games.Count)"
+$games = (& $Cli games list --config-dir $cfg --json | Out-String | ConvertFrom-Json) | ForEach-Object { $_ }
+Write-Output "Spiele in der Konfiguration: $(@($games).Count)"
 
 $out = Join-Path $cfg 'watch.out'
 $p = Start-Process $Cli -ArgumentList @('watch', '--config-dir', "`"$cfg`"") -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError (Join-Path $cfg 'watch.err') -PassThru

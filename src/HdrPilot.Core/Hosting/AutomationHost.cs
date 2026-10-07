@@ -58,7 +58,7 @@ public sealed class AutomationHost : IAsyncDisposable
             new TypedLogger<DisplayConfigHdrController>(LoggerFactory));
 
         Watcher = new PollingProcessWatcher(
-            new Win32ProcessSnapshotProvider(),
+            new NtProcessSnapshotProvider(LoggerFactory.CreateLogger("Processes")),
             TimeSpan.FromMilliseconds(Config.Current.Settings.PollIntervalMs),
             LoggerFactory.CreateLogger("Watcher"));
 

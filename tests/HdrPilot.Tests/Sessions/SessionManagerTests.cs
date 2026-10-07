@@ -702,6 +702,23 @@ public sealed class SessionManagerTests
     }
 
     [Fact]
+    public async Task Session_selected_game_marked_not_installed_still_switches()
+    {
+        // Steam-Update: Spiel fehlte beim letzten Einlesen, ist aber ausgewählt und läuft.
+        var game = _config.AddGame("1", DirA);
+        game.IsInstalled = false;
+        var other = _config.AddGame("2", DirB, hdrAuto: false);
+        other.IsInstalled = false;
+        _processes.StartExe(ExeA);
+        _processes.StartExe(ExeB);
+        await Poll();
+
+        Assert.Equal("Steam:1", Assert.Single(Manager.Sessions).GameKey);
+        Assert.True(PrimaryOn);
+        Assert.DoesNotContain(_config.Recorded, r => r.Key == "Steam:2"); // nicht installiert und nicht ausgewählt: nicht beachtet
+    }
+
+    [Fact]
     public async Task Session_user_excluded_exe_does_not_count()
     {
         var game = _config.AddGame("1", DirA);

@@ -46,6 +46,9 @@ public sealed record GameEntry
     /// <summary>Arbeitsordner beim Start über die EXE.</summary>
     public string? LaunchWorkingDirectory { get; init; }
 
+    /// <summary>Zuletzt gespielt laut Launcher (etwa Steam "LastPlayed"), sonst null. Für „zuletzt verwendet“.</summary>
+    public DateTimeOffset? LastPlayed { get; init; }
+
     [JsonIgnore]
     public string Key => GameKey.Create(Source, SourceId);
 }

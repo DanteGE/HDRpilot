@@ -11,6 +11,9 @@ public enum SessionTrigger
 
     /// <summary>Nach einem Neustart von HdrPilot lief das Spiel noch.</summary>
     Recovery,
+
+    /// <summary>Steam-Startoption (<c>HdrPilot.exe --wrap -- %command%</c>): HDR vor dem Spielstart, das Spiel startet der Wrapper.</summary>
+    SteamLaunchOption,
 }
 
 public enum SessionPhase
@@ -55,3 +58,10 @@ public sealed record LaunchOutcome(
     string Message,
     DateTimeOffset? HdrConfirmedAt,
     DateTimeOffset? LaunchedAt);
+
+/// <summary>Ergebnis der Vorbereitung für einen Start, den ein anderer ausführt (etwa die Steam-Startoption).</summary>
+/// <param name="Prepared">HDR-Schritt erledigt, die Sitzung wartet auf das Spiel. False: nichts geschaltet (etwa unbekanntes Spiel).</param>
+public sealed record PrepareOutcome(
+    bool Prepared,
+    string Message,
+    DateTimeOffset? HdrConfirmedAt);

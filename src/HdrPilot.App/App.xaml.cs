@@ -1,15 +1,18 @@
 using System.Windows;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
+using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hosting;
+using HdrPilot.Core.Launch;
 
 namespace HdrPilot.App;
 
 /// <summary>
-/// Start: Einzelinstanz prüfen (sonst Befehle weiterreichen), Automatik starten (inklusive Wiederanlauf nach
-/// Absturz), Tray anzeigen. Das Fenster öffnet sich nur auf Wunsch; HdrPilot startet minimiert.
+/// Start: Steam-Startoption erkennen (dann nur Wrapper, siehe <see cref="SteamWrapperMode"/>), Einzelinstanz prüfen
+/// (sonst Befehle weiterreichen), Automatik starten (inklusive Wiederanlauf nach Absturz), Tray anzeigen. Das Fenster
+/// öffnet sich nur auf Wunsch; HdrPilot startet minimiert.
 /// </summary>
 public partial class App : Application
 {
@@ -19,7 +22,32 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Steam-Startoption (--wrap -- %command%): vor allem anderen, ohne Fenster, Tray und Design. HDR vorbereiten
+        // lassen, das Spiel starten, sofort enden. Die Tray-App startet hier nie: Steam zählt alle Nachkommen zum Spiel.
+        if (WrapCommandLine.TryParse(RawCommandLine.Get()) is { } wrap)
+        {
+            try
+            {
+                await Task.Run(() => SteamWrapperMode.Run(wrap));
+            }
+            catch (Exception)
+            {
+                // Der Wrapper fängt selbst alles ab; hier nur, damit nie ein Fehlerdialog im Spielstart erscheint.
+            }
+
+            Shutdown(0);
+            return;
+        }
+
         var args = AppArguments.Parse(e.Args);
+        if (args.Wrap)
+        {
+            // Nur zur Sicherheit (die rohe Befehlszeile ergab keinen Spielbefehl): auch dann nie die Tray-App starten.
+            Shutdown(0);
+            return;
+        }
+
         if (args.SnapshotDir is { } snapshotDir)
         {
             await RunSnapshotModeAsync(args, snapshotDir);

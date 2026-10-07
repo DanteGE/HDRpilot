@@ -37,7 +37,7 @@ public sealed partial class SingleInstance : IDisposable
     /// <summary>Liefert die Instanz, wenn dies der erste Aufruf ist, sonst null.</summary>
     public static SingleInstance? TryAcquire(string id)
     {
-        var mutex = new Mutex(initiallyOwned: true, @"Local\HdrPilot.Instance." + id, out var createdNew);
+        var mutex = new Mutex(initiallyOwned: true, MutexName(id), out var createdNew);
         if (!createdNew)
         {
             mutex.Dispose();
@@ -45,6 +45,28 @@ public sealed partial class SingleInstance : IDisposable
         }
 
         return new SingleInstance(mutex, id);
+    }
+
+    /// <summary>
+    /// True, wenn eine Instanz für diese Kennung läuft. Wird dabei nie selbst zur Instanz (Steam-Startoption: Steam zählt
+    /// alle Nachkommen zum Spiel, die Tray-App darf dort nie starten).
+    /// </summary>
+    public static bool IsRunning(string id)
+    {
+        try
+        {
+            if (!Mutex.TryOpenExisting(MutexName(id), out var mutex))
+            {
+                return false;
+            }
+
+            mutex.Dispose();
+            return true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return true; // vorhanden, nur ohne Zugriff
+        }
     }
 
     /// <summary>Öffnet das Nachrichtenfenster. Befehle kommen auf dem UI-Thread an.</summary>
@@ -109,6 +131,8 @@ public sealed partial class SingleInstance : IDisposable
     }
 
     private static string WindowTitle(string id) => "HdrPilot.Commands." + id;
+
+    private static string MutexName(string id) => @"Local\HdrPilot.Instance." + id;
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {

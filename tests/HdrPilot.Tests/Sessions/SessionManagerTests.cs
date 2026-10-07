@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace HdrPilot.Tests.Sessions;
 
 /// <summary>Sitzungslogik mit Attrappen für HDR-Steuerung, Prozessliste, Speicher und steuerbarer Uhr.</summary>
-public sealed class SessionManagerTests
+public sealed partial class SessionManagerTests
 {
     private const string DirA = @"D:\Steam-Bibliothek\steamapps\common\Spiel A";
     private const string DirB = @"C:\XboxGames\Spiel B\Content";

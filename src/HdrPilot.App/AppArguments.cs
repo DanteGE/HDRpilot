@@ -7,11 +7,25 @@ namespace HdrPilot.App;
 /// <item><c>--show</c> Fenster öffnen; <c>--minimized</c> nur Tray (Autostart).</item>
 /// <item><c>--toggle-hdr</c>, <c>--pause</c>, <c>--resume</c>, <c>--rescan</c>, <c>--exit</c> wie im Tray-Menü.</item>
 /// <item><c>--config-dir &lt;ordner&gt;</c> eigene Ablage (Tests); eigene Instanz je Ordner.</item>
+/// <item><c>--wrap -- %command%</c> Steam-Startoption: erledigt <c>App</c> vor allem anderen über die rohe Befehlszeile
+/// (siehe <see cref="HdrPilot.Core.Launch.SteamWrapper"/>); wird nie weitergereicht.</item>
+/// <item><c>--prepare &lt;Quelle:ID&gt; --ready-event &lt;name&gt;</c> vom Wrapper an die laufende Instanz: HDR für einen Start
+/// vorbereiten, den der Wrapper selbst ausführt, und danach das Ereignis setzen.</item>
+/// <item><c>--</c> beendet die Befehle: alles danach (der Spielbefehl) wird nie als Befehl von HdrPilot gelesen.</item>
 /// </list>
 /// </summary>
 public sealed record AppArguments
 {
     public string? RunGameKey { get; init; }
+
+    /// <summary>Steam-Startoption: HDR für dieses Spiel vorbereiten, das Spiel startet der Wrapper.</summary>
+    public string? PrepareGameKey { get; init; }
+
+    /// <summary>Ereignis, das nach der Vorbereitung gesetzt wird (Name aus <see cref="HdrPilot.Core.Launch.PrepareSignal"/>).</summary>
+    public string? ReadyEvent { get; init; }
+
+    /// <summary>Aufruf als Steam-Startoption (<c>--wrap</c>); wird nie weitergereicht.</summary>
+    public bool Wrap { get; init; }
 
     public bool Show { get; init; }
 
@@ -35,7 +49,8 @@ public sealed record AppArguments
     public IReadOnlyList<string> Unknown { get; init; } = [];
 
     /// <summary>True, wenn der Aufruf etwas tun soll außer die App zu starten.</summary>
-    public bool HasCommand => RunGameKey is not null || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings;
+    public bool HasCommand => RunGameKey is not null || PrepareGameKey is not null || ReadyEvent is not null
+        || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings;
 
     public static AppArguments Parse(IReadOnlyList<string> args)
     {
@@ -44,10 +59,24 @@ public sealed record AppArguments
         for (var i = 0; i < args.Count; i++)
         {
             var a = args[i];
+            if (a == "--")
+            {
+                break; // dahinter steht der Spielbefehl der Steam-Startoption, nie ein Befehl von HdrPilot
+            }
+
             switch (a.ToLowerInvariant())
             {
                 case "--run" when i + 1 < args.Count:
                     result = result with { RunGameKey = args[++i] };
+                    break;
+                case "--prepare" when i + 1 < args.Count:
+                    result = result with { PrepareGameKey = args[++i] };
+                    break;
+                case "--ready-event" when i + 1 < args.Count:
+                    result = result with { ReadyEvent = args[++i] };
+                    break;
+                case "--wrap":
+                    result = result with { Wrap = true };
                     break;
                 case "--config-dir" when i + 1 < args.Count:
                     result = result with { ConfigDir = args[++i] };
@@ -94,7 +123,7 @@ public sealed record AppArguments
     /// </summary>
     public IReadOnlyList<string> ToRunningInstance() => HasCommand ? ToForwardedArgs() : Minimized ? [] : ["--show"];
 
-    /// <summary>Befehle für die Weitergabe an die laufende Instanz (ohne --config-dir).</summary>
+    /// <summary>Befehle für die Weitergabe an die laufende Instanz (ohne --config-dir und ohne --wrap).</summary>
     public IReadOnlyList<string> ToForwardedArgs()
     {
         var list = new List<string>();
@@ -102,6 +131,18 @@ public sealed record AppArguments
         {
             list.Add("--run");
             list.Add(RunGameKey);
+        }
+
+        if (PrepareGameKey is not null)
+        {
+            list.Add("--prepare");
+            list.Add(PrepareGameKey);
+        }
+
+        if (ReadyEvent is not null)
+        {
+            list.Add("--ready-event");
+            list.Add(ReadyEvent);
         }
 
         if (Show)

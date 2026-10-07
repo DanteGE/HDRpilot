@@ -38,6 +38,9 @@ public sealed class SessionManager
     private readonly Dictionary<string, DisplayClaim> _claims = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, MatchedProcess> _pidMatches = [];
     private readonly Dictionary<string, LearnState> _learning = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Laufende Läufe je Spiel für „zuletzt verwendet“ (Wert: seit wann kein Prozess mehr, sonst null).</summary>
+    private readonly Dictionary<string, DateTimeOffset?> _playing = new(StringComparer.OrdinalIgnoreCase);
     private GameMatcher? _matcher;
 
     /// <summary>Alle Spiele der Bibliothek, nur für die Sperre der Tastenkürzel-Notlösung (E66).</summary>
@@ -174,7 +177,7 @@ public sealed class SessionManager
                     continue;
                 }
 
-                await StartSessionAsync(game, SessionTrigger.ProcessDetected, processes, cfg, cancellationToken).ConfigureAwait(false);
+                await StartSessionAsync(game, SessionTrigger.ProcessDetected, processes, cfg, startRequested: false, cancellationToken).ConfigureAwait(false);
             }
 
             var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
@@ -229,6 +232,9 @@ public sealed class SessionManager
                     await EndSessionAsync(session, "Spielende", cancellationToken).ConfigureAwait(false);
                 }
             }
+
+            // Erst nach den Schaltvorgängen: das Speichern der Konfiguration verzögert nie das Einschalten.
+            RecordPlayed(running, cfg, now);
         }
         finally
         {
@@ -269,40 +275,11 @@ public sealed class SessionManager
                 return new LaunchOutcome(false, noCommand, null, null);
             }
 
-            var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
-            if (!_sessions.TryGetValue(game.Key, out var session))
+            var (session, duplicate) = await BeginStartAsync(game, SessionTrigger.LaunchedViaApp, cfg, cancellationToken).ConfigureAwait(false);
+            if (duplicate is not null)
             {
-                session = await StartSessionAsync(game, SessionTrigger.LaunchedViaApp, processes, cfg, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                // Läuft das Spiel schon oder wurde es gerade erst gestartet (etwa doppelter Doppelklick auf die Verknüpfung),
-                // keinen zweiten Start-Befehl schicken: bei direkt gestarteten EXEs gäbe das eine zweite Instanz (E71).
-                var duplicate = processes.Count > 0
-                    ? Format(CoreStrings.LaunchAlreadyRunning, game.Name)
-                    : session.Phase == SessionPhase.Launching && session.LaunchCommandIssued
-                      && _clock.UtcNow - (session.LaunchRequestedAt ?? session.StartedAt) < DuplicateLaunchWindow
-                        ? Format(CoreStrings.LaunchAlreadyStarting, game.Name)
-                        : null;
-                if (duplicate is not null)
-                {
-                    await EnsureOnAsync(session, cancellationToken).ConfigureAwait(false);
-                    _logger.LogInformation("Start über die App für \"{Game}\" übergangen: {Reason}", game.Name, duplicate);
-                    return new LaunchOutcome(true, duplicate, session.HdrConfirmedAt, null);
-                }
-
-                if (processes.Count == 0)
-                {
-                    // Erneuter Start (etwa während der Nachlaufzeit oder nach einem Neustart des Spiels):
-                    // Sitzung wieder auf "wartet auf Spielprozess" stellen, Startfrist neu beginnen.
-                    session.Phase = SessionPhase.Launching;
-                    session.MissingSince = null;
-                    session.LaunchRequestedAt = _clock.UtcNow;
-                    _logger.LogInformation("Erneuter Start über die App für \"{Game}\": Sitzung wartet wieder auf den Spielprozess.", game.Name);
-                }
-
-                await ReapplyAsync(session, cancellationToken).ConfigureAwait(false);
-                await EnsureOnAsync(session, cancellationToken).ConfigureAwait(false);
+                _logger.LogInformation("Start über die App für \"{Game}\" übergangen: {Reason}", game.Name, duplicate);
+                return new LaunchOutcome(true, duplicate, session.HdrConfirmedAt, null);
             }
 
             session.HdrConfirmedAt = _clock.UtcNow;
@@ -327,6 +304,59 @@ public sealed class SessionManager
             }
 
             return new LaunchOutcome(result.Success, result.Message, session.HdrConfirmedAt, launchedAt);
+        }
+        finally
+        {
+            var changed = PublishState();
+            _lock.Release();
+            RaiseStateChanged(changed);
+        }
+    }
+
+    /// <summary>
+    /// HDR vor einem Spielstart einschalten, den ein anderer ausführt: die Steam-Startoption (<c>HdrPilot.exe --wrap</c>)
+    /// startet das Spiel gleich danach selbst. Wie <see cref="LaunchAsync"/> (bestehende Sitzung, doppelte Anforderung E71,
+    /// Zustand vor dem Schalten gespeichert, HDR an und bestätigt), aber ohne Start-Befehl. Danach wartet die Sitzung auf
+    /// den Spielprozess und der Start gilt als ausgeführt (Notlösung gesperrt, E66). Gilt auch bei pausierter Automatik
+    /// und für Spiele ohne „HDR automatisch“ (ausdrücklicher Wunsch). Unbekanntes Spiel: nichts schalten.
+    /// </summary>
+    /// <param name="trigger">Auslöser für Sitzung und Protokoll, etwa <see cref="SessionTrigger.SteamLaunchOption"/>.</param>
+    public async Task<PrepareOutcome> PrepareAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!_recovered)
+            {
+                // Sonst hielte der erste Zyklus den eben gemerkten Zustand für einen Absturzrest und stellte zurück.
+                throw new InvalidOperationException("InitializeAsync muss vor PrepareAsync aufgerufen werden.");
+            }
+
+            var cfg = _config.Current;
+            var game = cfg.FindGame(gameKey);
+            if (game is null)
+            {
+                var unknown = Format(CoreStrings.LaunchUnknownGame, gameKey);
+                _logger.LogInformation("{Trigger}: {Message} HDR bleibt unverändert, das Spiel startet ohne Vorbereitung.", TriggerText(trigger), unknown);
+                return new PrepareOutcome(false, unknown, null);
+            }
+
+            var (session, duplicate) = await BeginStartAsync(game, trigger, cfg, cancellationToken).ConfigureAwait(false);
+            if (duplicate is not null)
+            {
+                _logger.LogInformation(
+                    "{Trigger} für \"{Game}\": Sitzung besteht schon ({Reason}), HDR ist an.", TriggerText(trigger), game.Name, duplicate);
+                return new PrepareOutcome(true, duplicate, session.HdrConfirmedAt ?? _clock.UtcNow);
+            }
+
+            session.HdrConfirmedAt = _clock.UtcNow;
+
+            // Das Spiel startet gleich danach: ab jetzt kann es laufen, auch wenn sein Prozess noch nicht erkannt ist.
+            session.LaunchCommandIssued = true;
+            _logger.LogInformation(
+                "{Trigger}: HDR-Schritt für \"{Game}\" abgeschlossen um {Time}. Das Spiel wird jetzt gestartet.",
+                TriggerText(trigger), game.Name, Stamp(session.HdrConfirmedAt.Value));
+            return new PrepareOutcome(true, Format(CoreStrings.PrepareReady, game.Name), session.HdrConfirmedAt);
         }
         finally
         {
@@ -363,13 +393,59 @@ public sealed class SessionManager
         }
     }
 
+    /// <summary>
+    /// Gemeinsamer Teil von Start über die App und Vorbereitung: neue Sitzung anlegen (Zustand vor dem Schalten gespeichert,
+    /// HDR an und bestätigt) oder eine bestehende wieder auf „wartet auf Spielprozess“ stellen und HDR sicher einschalten.
+    /// Läuft das Spiel schon oder wurde es gerade erst gestartet, ist die Anforderung doppelt (E71): dann nur HDR sicher an,
+    /// die Sitzung bleibt, wie sie ist, und der Grund kommt zurück.
+    /// </summary>
+    private async Task<(ActiveSession Session, string? Duplicate)> BeginStartAsync(
+        GameConfig game, SessionTrigger trigger, AppConfig cfg, CancellationToken cancellationToken)
+    {
+        var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
+        if (!_sessions.TryGetValue(game.Key, out var session))
+        {
+            session = await StartSessionAsync(game, trigger, processes, cfg, startRequested: true, cancellationToken).ConfigureAwait(false);
+            return (session, null);
+        }
+
+        // Läuft das Spiel schon oder wurde es gerade erst gestartet (etwa doppelter Doppelklick auf die Verknüpfung),
+        // keinen zweiten Start-Befehl schicken: bei direkt gestarteten EXEs gäbe das eine zweite Instanz (E71).
+        var duplicate = processes.Count > 0
+            ? Format(CoreStrings.LaunchAlreadyRunning, game.Name)
+            : session.Phase == SessionPhase.Launching && session.LaunchCommandIssued
+              && _clock.UtcNow - (session.LaunchRequestedAt ?? session.StartedAt) < DuplicateLaunchWindow
+                ? Format(CoreStrings.LaunchAlreadyStarting, game.Name)
+                : null;
+        if (duplicate is not null)
+        {
+            await EnsureOnAsync(session, trigger, cancellationToken).ConfigureAwait(false);
+            return (session, duplicate);
+        }
+
+        if (processes.Count == 0)
+        {
+            // Erneuter Start (etwa während der Nachlaufzeit oder nach einem Neustart des Spiels):
+            // Sitzung wieder auf "wartet auf Spielprozess" stellen, Startfrist neu beginnen.
+            session.Phase = SessionPhase.Launching;
+            session.MissingSince = null;
+            session.LaunchRequestedAt = _clock.UtcNow;
+            _logger.LogInformation("Erneuter {Trigger} für \"{Game}\": Sitzung wartet wieder auf den Spielprozess.", TriggerText(trigger), game.Name);
+        }
+
+        await ReapplyAsync(session, cancellationToken).ConfigureAwait(false);
+        await EnsureOnAsync(session, trigger, cancellationToken).ConfigureAwait(false);
+        return (session, null);
+    }
+
+    /// <param name="startRequested">Start über die App oder Vorbereitung: ohne laufenden Prozess wartet die Sitzung auf das Spiel.</param>
     private async Task<ActiveSession> StartSessionAsync(
-        GameConfig game, SessionTrigger trigger, IReadOnlyList<ProcessInfo> processes, AppConfig cfg, CancellationToken cancellationToken)
+        GameConfig game, SessionTrigger trigger, IReadOnlyList<ProcessInfo> processes, AppConfig cfg, bool startRequested, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
         var session = new ActiveSession(game.Key, game.Name, trigger, now, game.RestoreAfter)
         {
-            Phase = trigger == SessionTrigger.LaunchedViaApp && processes.Count == 0 ? SessionPhase.Launching : SessionPhase.Running,
+            Phase = startRequested && processes.Count == 0 ? SessionPhase.Launching : SessionPhase.Running,
         };
         session.ProcessIds = processes.Select(p => p.ProcessId).ToList();
         if (session.Phase == SessionPhase.Running)
@@ -481,8 +557,8 @@ public sealed class SessionManager
         claim.Applied = switched.IsSuccess;
     }
 
-    /// <summary>Start über die App bei bestehender Sitzung: HDR auf ihren Bildschirmen sicher einschalten.</summary>
-    private async Task EnsureOnAsync(ActiveSession session, CancellationToken cancellationToken)
+    /// <summary>Start über die App oder Vorbereitung bei bestehender Sitzung: HDR auf ihren Bildschirmen sicher einschalten.</summary>
+    private async Task EnsureOnAsync(ActiveSession session, SessionTrigger trigger, CancellationToken cancellationToken)
     {
         var displays = SafeGetDisplays();
         foreach (var path in session.Displays)
@@ -490,7 +566,7 @@ public sealed class SessionManager
             var info = displays.FirstOrDefault(d => string.Equals(d.MonitorDevicePath, path, StringComparison.OrdinalIgnoreCase));
             if (info is { HdrSupported: true } && !DisplayConfigHdrController.IsInState(info, enable: true))
             {
-                var result = await SwitchAsync(path, info.FriendlyName, true, TriggerText(SessionTrigger.LaunchedViaApp), session, cancellationToken).ConfigureAwait(false);
+                var result = await SwitchAsync(path, info.FriendlyName, true, TriggerText(trigger), session, cancellationToken).ConfigureAwait(false);
                 if (_claims.TryGetValue(path, out var claim))
                 {
                     claim.Applied = result.IsSuccess;
@@ -557,11 +633,7 @@ public sealed class SessionManager
             }
         }
 
-        Persist();
-        if (session.FirstProcessAt is not null)
-        {
-            _config.RecordLastPlayed(session.Key, _clock.UtcNow);
-        }
+        Persist(); // „zuletzt verwendet“ schreibt RecordPlayed schon beim Erkennen des Spiels
     }
 
     private async Task ReleaseAsync(DisplayClaim claim, string trigger, ActiveSession? session, CancellationToken cancellationToken, bool gameMayRun = false)
@@ -723,6 +795,43 @@ public sealed class SessionManager
                 _config.RecordDetectedExecutables(key, seen.ToList());
                 _logger.LogInformation("Spiel-EXEs für {Key} gemerkt: {Exes}", key, string.Join(", ", seen));
             }
+        }
+    }
+
+    /// <summary>
+    /// „Zuletzt verwendet“ für jedes zugeordnete Spiel der Bibliothek, nicht nur für Spiele mit HDR-Sitzung: einmal je Lauf,
+    /// beim ersten Erkennen. Ein Lauf endet wie eine Sitzung erst nach der Nachlaufzeit ohne Prozess; Starter-Ketten und
+    /// Neustarts des Spiels schreiben also nicht erneut (die Konfiguration wird selten geschrieben).
+    /// </summary>
+    private void RecordPlayed(Dictionary<string, List<ProcessInfo>> running, AppConfig cfg, DateTimeOffset now)
+    {
+        var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
+        foreach (var (key, missingSince) in _playing.ToList())
+        {
+            if (running.ContainsKey(key))
+            {
+                _playing[key] = null;
+            }
+            else if (missingSince is null)
+            {
+                _playing[key] = now;
+            }
+            else if (now - missingSince >= grace)
+            {
+                _playing.Remove(key);
+            }
+        }
+
+        foreach (var key in running.Keys)
+        {
+            if (_playing.ContainsKey(key) || cfg.FindGame(key) is null)
+            {
+                continue;
+            }
+
+            _playing[key] = null;
+            _config.RecordLastPlayed(key, now);
+            _logger.LogDebug("Zuletzt verwendet für {Key}: {Time}.", key, Stamp(now));
         }
     }
 
@@ -1007,6 +1116,7 @@ public sealed class SessionManager
         SessionTrigger.ProcessDetected => "Spielstart erkannt",
         SessionTrigger.LaunchedViaApp => "Start über die App",
         SessionTrigger.Recovery => "Wiederanlauf",
+        SessionTrigger.SteamLaunchOption => "Start über Steam-Startoption",
         _ => trigger.ToString(),
     };
 

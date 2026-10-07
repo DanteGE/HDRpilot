@@ -34,6 +34,64 @@ public sealed class AppArgumentsTests
     }
 
     [Fact]
+    public void Prepare_and_ready_event_are_parsed_and_forwarded()
+    {
+        const string Event = @"Local\HdrPilot.Prepared.0123456789abcdef0123456789abcdef";
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--prepare", "Steam:1091500", "--ready-event", Event]);
+
+        Assert.Equal("Steam:1091500", args.PrepareGameKey);
+        Assert.Equal(Event, args.ReadyEvent);
+        Assert.True(args.HasCommand);
+        Assert.Equal(["--prepare", "Steam:1091500", "--ready-event", Event], args.ToForwardedArgs());
+        Assert.Equal(args.ToForwardedArgs(), args.ToRunningInstance());
+
+        var received = AppArguments.Parse(args.ToForwardedArgs()); // so kommt es bei der laufenden Instanz an
+        Assert.Equal("Steam:1091500", received.PrepareGameKey);
+        Assert.Equal(Event, received.ReadyEvent);
+    }
+
+    [Fact]
+    public void Wrap_is_never_forwarded_and_the_game_command_is_never_read_as_commands()
+    {
+        var args = AppArguments.Parse(["--wrap", "--", @"D:\Spiel\game.exe", "--exit", "--run", "Steam:1", "--show", "--prepare", "Steam:2"]);
+
+        Assert.True(args.Wrap);
+        Assert.False(args.Exit);
+        Assert.False(args.Show);
+        Assert.Null(args.RunGameKey);
+        Assert.Null(args.PrepareGameKey);
+        Assert.False(args.HasCommand);
+        Assert.Empty(args.Unknown);
+        Assert.Empty(args.ToForwardedArgs());
+        Assert.Equal(["--run", "Steam:1"], AppArguments.Parse(["--wrap", "--run", "Steam:1"]).ToForwardedArgs());
+    }
+
+    [Fact]
+    public void Ready_event_alone_is_a_command_so_the_wrapper_gets_an_answer()
+    {
+        var args = AppArguments.Parse(["--ready-event", "X"]);
+
+        Assert.True(args.HasCommand);
+        Assert.Equal(["--ready-event", "X"], args.ToRunningInstance());
+    }
+
+    [Fact]
+    public void Instance_check_of_the_wrapper_never_becomes_the_instance()
+    {
+        var id = "test-" + Guid.NewGuid().ToString("N")[..12]; // nie die echte Kennung "default"
+        Assert.False(HdrPilot.App.Infrastructure.SingleInstance.IsRunning(id));
+        Assert.False(HdrPilot.App.Infrastructure.SingleInstance.IsRunning(id)); // die Abfrage legt nichts an
+
+        using (var instance = HdrPilot.App.Infrastructure.SingleInstance.TryAcquire(id))
+        {
+            Assert.NotNull(instance);
+            Assert.True(HdrPilot.App.Infrastructure.SingleInstance.IsRunning(id));
+        }
+
+        Assert.False(HdrPilot.App.Infrastructure.SingleInstance.IsRunning(id));
+    }
+
+    [Fact]
     public void Instance_id_depends_on_config_dir()
     {
         Assert.Equal("default", HdrPilot.App.Infrastructure.SingleInstance.IdFor(null));

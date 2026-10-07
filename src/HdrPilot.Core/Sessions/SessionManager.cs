@@ -3,6 +3,7 @@ using System.Globalization;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.Native;
 using HdrPilot.Core.Processes;
 using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
@@ -14,7 +15,8 @@ namespace HdrPilot.Core.Sessions;
 /// <summary>
 /// Sitzungslogik: erkennt Spielstart und -ende, merkt sich vor dem Einschalten den HDR-Zustand jedes betroffenen
 /// Bildschirms (sofort auf der Platte), schaltet erst nach dem Ende des letzten Spiels zurück und stellt nach einem
-/// Absturz beim nächsten Start den gemerkten Zustand wieder her. Alle Abläufe sind serialisiert.
+/// Absturz beim nächsten Start den gemerkten Zustand wieder her. Alle Abläufe sind serialisiert. Nach kurzen Sitzungen
+/// gilt ein Neustart-Puffer; scheint ein laufendes Spiel unsichtbar zu hängen, kommt ein Hinweis.
 /// </summary>
 public sealed class SessionManager
 {
@@ -26,6 +28,9 @@ public sealed class SessionManager
     private readonly ILogger _logger;
     private readonly Func<string, IReadOnlyList<string>?, bool> _isHelper;
     private readonly IReadOnlyList<string> _forbiddenRoots;
+    private readonly SessionManagerOptions _options;
+    private readonly Func<bool> _fullscreenAppRunning;
+    private readonly IProcessActivityProbe _activity;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>So lange wartet ein Start über die App höchstens, solange ein Launcher-Fenster aus dem Spielordner offen ist.</summary>
@@ -54,8 +59,12 @@ public sealed class SessionManager
     private volatile bool _paused;
     private volatile bool _hotkeyFallbackAllowed = true;
 
+    /// <summary>Zeitpunkt der letzten Prüfung auf hängende Spiele; null, solange keine Sitzung läuft.</summary>
+    private DateTimeOffset? _lastHangCheck;
+
     /// <param name="isHelper">Prüft einen EXE-Namen gegen die Ausschlussliste (Muster aus der Konfiguration, null = Standard).</param>
     /// <param name="forbiddenRoots">Ordner, die nie als Installationsordner gelten (z. B. Windows, Programme).</param>
+    /// <param name="options">Neustart-Puffer und Hinweis „Spiel hängt“ (null = Werte für den Betrieb).</param>
     public SessionManager(
         IHdrController hdr,
         ISessionConfigSource config,
@@ -64,7 +73,8 @@ public sealed class SessionManager
         IClock clock,
         Func<string, IReadOnlyList<string>?, bool> isHelper,
         IReadOnlyList<string>? forbiddenRoots = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        SessionManagerOptions? options = null)
     {
         _hdr = hdr;
         _config = config;
@@ -74,6 +84,9 @@ public sealed class SessionManager
         _isHelper = isHelper;
         _forbiddenRoots = forbiddenRoots ?? [];
         _logger = logger ?? NullLogger.Instance;
+        _options = options ?? SessionManagerOptions.Default;
+        _fullscreenAppRunning = _options.FullscreenAppRunning ?? ShellNative.IsFullscreenAppRunning;
+        _activity = _options.ActivityProbe ?? new NtProcessActivityProbe(_logger);
     }
 
     /// <summary>Meldung für einen Tray-Hinweis.</summary>
@@ -223,11 +236,19 @@ public sealed class SessionManager
                 {
                     session.MissingSince = now;
                     session.Phase = SessionPhase.Ending;
-                    _logger.LogInformation(
-                        "Kein Prozess von \"{Game}\" mehr. Nachlaufzeit {Grace} s beginnt.", session.Name, grace.TotalSeconds);
+                    BeginEnding(session, grace, now);
                 }
 
-                if (now - session.MissingSince >= grace)
+                if (session.BufferUntil is { } bufferEnd)
+                {
+                    if (now < bufferEnd || HoldForFullscreen(session, now))
+                    {
+                        continue;
+                    }
+
+                    await EndSessionAsync(session, "Spielende nach Neustart-Puffer", cancellationToken).ConfigureAwait(false);
+                }
+                else if (now - session.MissingSince >= grace)
                 {
                     await EndSessionAsync(session, "Spielende", cancellationToken).ConfigureAwait(false);
                 }
@@ -235,6 +256,7 @@ public sealed class SessionManager
 
             // Erst nach den Schaltvorgängen: das Speichern der Konfiguration verzögert nie das Einschalten.
             RecordPlayed(running, cfg, now);
+            CheckForHangs(now);
         }
         finally
         {
@@ -428,7 +450,7 @@ public sealed class SessionManager
             // Erneuter Start (etwa während der Nachlaufzeit oder nach einem Neustart des Spiels):
             // Sitzung wieder auf "wartet auf Spielprozess" stellen, Startfrist neu beginnen.
             session.Phase = SessionPhase.Launching;
-            session.MissingSince = null;
+            ClearEnding(session);
             session.LaunchRequestedAt = _clock.UtcNow;
             _logger.LogInformation("Erneuter {Trigger} für \"{Game}\": Sitzung wartet wieder auf den Spielprozess.", TriggerText(trigger), game.Name);
         }
@@ -739,9 +761,227 @@ public sealed class SessionManager
         else if (session.Phase == SessionPhase.Ending)
         {
             session.Phase = SessionPhase.Running;
-            session.MissingSince = null;
-            _logger.LogInformation("\"{Game}\" läuft wieder, Nachlaufzeit abgebrochen.", session.Name);
+            _logger.LogInformation(
+                "\"{Game}\" läuft wieder, {Wait} abgebrochen.", session.Name, session.BufferUntil is null ? "Nachlaufzeit" : "Neustart-Puffer");
+            ClearEnding(session);
         }
+    }
+
+    /// <summary>
+    /// Kein Spielprozess mehr: normalerweise beginnt die Nachlaufzeit. War die Sitzung kurz und hat HdrPilot HDR für sie
+    /// eingeschaltet (vorher aus, Zurückstellen an), gilt stattdessen der längere Neustart-Puffer. Anlass: Dead Island 2
+    /// hing gleich nach dem Umschalten, der Nutzer beendete es und startete 96 s nach dem Zurückstellen neu. Startet das
+    /// Spiel im Puffer wieder, läuft die Sitzung einfach weiter (<see cref="Touch"/>) und HDR bleibt an.
+    /// </summary>
+    private void BeginEnding(ActiveSession session, TimeSpan grace, DateTimeOffset now)
+    {
+        var ran = now - (session.FirstProcessAt ?? now);
+        var shortSession = _options.RestartBuffer > TimeSpan.Zero
+            && session.FirstProcessAt is not null
+            && ran < _options.ShortSessionLimit
+            && session.Displays.Any(path => _claims.TryGetValue(path, out var claim) && !claim.WasHdrOn && claim.Restore);
+        if (!shortSession)
+        {
+            _logger.LogInformation("Kein Prozess von \"{Game}\" mehr. Nachlaufzeit {Grace} s beginnt.", session.Name, grace.TotalSeconds);
+            return;
+        }
+
+        var wait = grace > _options.RestartBuffer ? grace : _options.RestartBuffer;
+        session.BufferUntil = now + wait;
+        _logger.LogInformation(
+            "Kein Prozess von \"{Game}\" mehr, kurze Sitzung ({Ran:0} s): Neustart-Puffer {Buffer:0} s, HDR bleibt so lange an.",
+            session.Name, ran.TotalSeconds, wait.TotalSeconds);
+    }
+
+    /// <summary>
+    /// Neustart-Puffer abgelaufen. Läuft eine Vollbild-Anwendung im Vordergrund (etwa ein anderes Spiel, das gerade
+    /// startet), wartet das Zurückstellen, bis sie weg ist (geprüft bei jedem Zyklus), höchstens
+    /// <see cref="SessionManagerOptions.MaxFullscreenHold"/> lang. True: weiter warten.
+    /// </summary>
+    private bool HoldForFullscreen(ActiveSession session, DateTimeOffset now)
+    {
+        if (!IsFullscreenAppRunning())
+        {
+            if (session.FullscreenHoldSince is { } heldSince)
+            {
+                _logger.LogInformation(
+                    "\"{Game}\": Vollbild-Anwendung nach {Seconds:0} s beendet, HDR wird zurückgestellt.", session.Name, (now - heldSince).TotalSeconds);
+            }
+
+            return false;
+        }
+
+        if (session.FullscreenHoldSince is not { } since)
+        {
+            session.FullscreenHoldSince = now;
+            _logger.LogInformation(
+                "\"{Game}\": Neustart-Puffer abgelaufen, aber eine Vollbild-Anwendung läuft. Zurückstellen wartet, bis sie beendet ist (höchstens {Max} min).",
+                session.Name, _options.MaxFullscreenHold.TotalMinutes);
+            return true;
+        }
+
+        if (now - since < _options.MaxFullscreenHold)
+        {
+            return true;
+        }
+
+        _logger.LogInformation(
+            "\"{Game}\": Vollbild-Anwendung läuft seit {Max} min, HDR wird trotzdem zurückgestellt.", session.Name, _options.MaxFullscreenHold.TotalMinutes);
+        return false;
+    }
+
+    private bool IsFullscreenAppRunning()
+    {
+        try
+        {
+            return _fullscreenAppRunning();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Abfrage „Vollbild-Anwendung läuft“ fehlgeschlagen.");
+            return false;
+        }
+    }
+
+    /// <summary>Nachlaufzeit, Neustart-Puffer und Warten auf eine Vollbild-Anwendung beenden (das Spiel ist wieder da).</summary>
+    private static void ClearEnding(ActiveSession session)
+    {
+        session.MissingSince = null;
+        session.BufferUntil = null;
+        session.FullscreenHoldSince = null;
+    }
+
+    /// <summary>
+    /// Hinweis „Spiel hängt im Hintergrund“. Anlass: Palworld lief nach dem Schließen unsichtbar weiter (kein Fenster,
+    /// keine CPU), HdrPilot ließ HDR richtigerweise an, der Nutzer wusste aber nicht warum. Nur solange eine Sitzung läuft,
+    /// alle <see cref="SessionManagerOptions.HangCheckInterval"/>: eine Abfrage der CPU-Zeiten aller Prozesse (ohne Handle),
+    /// Fenster nur für Sitzungen ohne CPU-Zuwachs. Hatten alle Prozesse einer Sitzung mindestens
+    /// <see cref="SessionManagerOptions.HangThreshold"/> lang kein sichtbares Fenster und keine zusätzliche CPU-Zeit, kommt
+    /// ein Hinweis, höchstens einmal je Sitzung. Nichts wird beendet oder zurückgestellt. Minimierte Fenster zählen als
+    /// sichtbar, angehaltene Xbox-Spiele lösen also keinen Hinweis aus.
+    /// </summary>
+    private void CheckForHangs(DateTimeOffset now)
+    {
+        if (_sessions.Count == 0 && _lastHangCheck is null)
+        {
+            return; // Leerlauf ohne Spiel: nichts zu tun, nichts anzulegen
+        }
+
+        try
+        {
+            var running = _sessions.Values.Where(s => s.Phase == SessionPhase.Running && s.ProcessIds.Count > 0).ToList();
+            if (running.Count == 0)
+            {
+                if (_lastHangCheck is not null)
+                {
+                    // Keine Sitzung läuft mehr: nichts mehr prüfen und den Abfragepuffer freigeben.
+                    _lastHangCheck = null;
+                    foreach (var s in _sessions.Values)
+                    {
+                        s.ResetActivity();
+                    }
+
+                    _activity.ReleaseBuffers();
+                }
+
+                return;
+            }
+
+            if (_lastHangCheck is { } last && now - last < _options.HangCheckInterval)
+            {
+                return;
+            }
+
+            var previousCheck = _lastHangCheck;
+            _lastHangCheck = now;
+            foreach (var s in _sessions.Values.Where(s => s.Phase != SessionPhase.Running))
+            {
+                s.ResetActivity();
+            }
+
+            var cpu = _activity.SampleCpu(running.SelectMany(s => s.ProcessIds).ToHashSet());
+            var cpuIdle = new List<ActiveSession>();
+            foreach (var session in running)
+            {
+                // Ruhig heißt: jeder Prozess war schon bei der letzten Prüfung da (gleiche Startzeit) und hat seitdem
+                // keine CPU-Zeit verbraucht. Neue, verschwundene oder nicht lesbare Prozesse zählen als aktiv.
+                var idle = previousCheck is not null;
+                var samples = new Dictionary<int, ProcessCpuSample>(session.ProcessIds.Count);
+                foreach (var pid in session.ProcessIds)
+                {
+                    if (!cpu.TryGetValue(pid, out var sample))
+                    {
+                        idle = false;
+                        continue;
+                    }
+
+                    samples[pid] = sample;
+                    if (!session.CpuSamples.TryGetValue(pid, out var before) || before.CreateTime != sample.CreateTime || before.CpuTime != sample.CpuTime)
+                    {
+                        idle = false;
+                    }
+                }
+
+                session.CpuSamples = samples;
+                if (idle)
+                {
+                    cpuIdle.Add(session);
+                }
+            }
+
+            // Fenster nur, wenn ein Spiel keine CPU-Zeit verbraucht hat (im Normalfall gar nicht).
+            var withWindow = cpuIdle.Count == 0
+                ? null
+                : _activity.WithVisibleWindow(cpuIdle.SelectMany(s => s.ProcessIds).ToHashSet());
+            foreach (var session in running)
+            {
+                var idle = withWindow is not null && cpuIdle.Contains(session) && !session.ProcessIds.Any(withWindow.Contains);
+                UpdateHangState(session, idle, now);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Prüfung auf hängende Spiele fehlgeschlagen.");
+        }
+    }
+
+    /// <summary>
+    /// Ruhig seit der ersten Prüfung, bei der alles ruhig war (Fenster sind nur Stichproben): der Hinweis kommt erst,
+    /// wenn das über mindestens <see cref="SessionManagerOptions.HangThreshold"/> beobachtet wurde.
+    /// </summary>
+    private void UpdateHangState(ActiveSession session, bool idle, DateTimeOffset now)
+    {
+        if (!idle)
+        {
+            if (session.IdleSince is not null && session.HangHintShown)
+            {
+                _logger.LogInformation("\"{Game}\" ist wieder aktiv (Fenster oder CPU-Zeit).", session.Name);
+            }
+
+            session.IdleSince = null;
+            return;
+        }
+
+        session.IdleSince ??= now;
+        var idleFor = now - session.IdleSince.Value;
+        if (session.HangHintShown || idleFor < _options.HangThreshold)
+        {
+            return;
+        }
+
+        // Während einer Vollbild-Anwendung zeigt das Tray keine Hinweise (nur Protokoll): dann bei einer späteren
+        // Prüfung nachholen, sonst ginge der einzige Hinweis der Sitzung verloren.
+        if (IsFullscreenAppRunning())
+        {
+            _logger.LogDebug("\"{Game}\" scheint zu hängen; der Hinweis wartet, bis keine Vollbild-Anwendung mehr läuft.", session.Name);
+            return;
+        }
+
+        session.HangHintShown = true;
+        _logger.LogInformation(
+            "\"{Game}\" scheint im Hintergrund zu hängen: seit {Seconds:0} s kein sichtbares Fenster und keine CPU-Zeit (PID {Pids}). HDR bleibt an bis zum Spielende, Hinweis angezeigt.",
+            session.Name, idleFor.TotalSeconds, string.Join(", ", session.ProcessIds));
+        Notify(NotificationKind.GameSeemsHung, CoreStrings.NotifyGameSeemsHungTitle, Format(CoreStrings.NotifyGameSeemsHungMessage, session.Name));
     }
 
     private void Learn(Dictionary<string, List<ProcessInfo>> running, AppConfig cfg, DateTimeOffset now)
@@ -1065,7 +1305,8 @@ public sealed class SessionManager
     private bool PublishState()
     {
         var snapshot = _sessions.Values
-            .Select(s => new SessionInfo(s.Key, s.Name, s.Phase, s.Trigger, s.StartedAt, [.. s.Displays], [.. s.ProcessIds]))
+            .Select(s => new SessionInfo(
+                s.Key, s.Name, s.Phase, s.Trigger, s.StartedAt, [.. s.Displays], [.. s.ProcessIds], s.BufferUntil, s.FullscreenHoldSince is not null))
             .OrderBy(s => s.StartedAt)
             .ToList();
         var previous = _publicSessions;
@@ -1158,6 +1399,21 @@ public sealed class SessionManager
 
         public DateTimeOffset? MissingSince { get; set; }
 
+        /// <summary>Ende des Neustart-Puffers nach einer kurzen Sitzung (gilt statt der Nachlaufzeit), sonst null.</summary>
+        public DateTimeOffset? BufferUntil { get; set; }
+
+        /// <summary>Seit wann das Zurückstellen nach dem Neustart-Puffer auf das Ende einer Vollbild-Anwendung wartet.</summary>
+        public DateTimeOffset? FullscreenHoldSince { get; set; }
+
+        /// <summary>CPU-Zeit je Prozess bei der letzten Prüfung auf Hänger.</summary>
+        public Dictionary<int, ProcessCpuSample> CpuSamples { get; set; } = [];
+
+        /// <summary>Seit wann alle Prozesse ohne sichtbares Fenster und ohne CPU-Zeit sind (null: aktiv oder unbekannt).</summary>
+        public DateTimeOffset? IdleSince { get; set; }
+
+        /// <summary>Hinweis „Spiel hängt“ schon gezeigt (höchstens einmal je Sitzung).</summary>
+        public bool HangHintShown { get; set; }
+
         /// <summary>Zeitpunkt des (letzten) Starts über die App; ab hier zählt die Startfrist.</summary>
         public DateTimeOffset? LaunchRequestedAt { get; set; }
 
@@ -1175,6 +1431,13 @@ public sealed class SessionManager
         public List<string> Displays { get; } = [];
 
         public List<string> PendingDisplays { get; } = [];
+
+        /// <summary>Beobachtung für den Hinweis „Spiel hängt“ verwerfen (Sitzung läuft gerade nicht).</summary>
+        public void ResetActivity()
+        {
+            CpuSamples.Clear();
+            IdleSince = null;
+        }
     }
 
     private sealed class DisplayClaim(string devicePath, string friendlyName, bool wasHdrOn, bool restore)
@@ -1198,7 +1461,8 @@ public sealed class SessionManager
 
         public bool Equals(SessionInfo? x, SessionInfo? y) =>
             x is not null && y is not null && x.GameKey == y.GameKey && x.Phase == y.Phase
-            && x.Displays.SequenceEqual(y.Displays) && x.ProcessIds.SequenceEqual(y.ProcessIds);
+            && x.Displays.SequenceEqual(y.Displays) && x.ProcessIds.SequenceEqual(y.ProcessIds)
+            && x.BufferUntil == y.BufferUntil && x.HeldForFullscreen == y.HeldForFullscreen;
 
         public int GetHashCode(SessionInfo obj) => obj.GameKey.GetHashCode(StringComparison.Ordinal);
     }

@@ -78,13 +78,22 @@ internal sealed class ReadOnlyRegistry(FakeRegistry inner) : IRegistry
 
 internal sealed class FakeTrayHost : ITrayHost
 {
+    private int _queries;
+
     public Dispatcher Dispatcher => WpfTestHost.Dispatcher;
 
     public TrayState State { get; set; } = TrayState.Initial;
 
     public List<string> Calls { get; } = [];
 
-    public TrayState QueryTrayState() => State;
+    /// <summary>Wie oft der Zustand gelesen wurde (läuft im Hintergrund).</summary>
+    public int Queries => Volatile.Read(ref _queries);
+
+    public TrayState QueryTrayState()
+    {
+        Interlocked.Increment(ref _queries);
+        return State;
+    }
 
     public Task ToggleHdrNowAsync()
     {

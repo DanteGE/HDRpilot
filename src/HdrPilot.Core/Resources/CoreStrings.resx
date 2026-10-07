@@ -54,6 +54,13 @@
   <data name="NotifyStateNotSavedMessage" xml:space="preserve">
     <value>Der HDR-Zustand vor dem Spiel ließ sich nicht speichern ({0}). Stürzt HdrPilot während des Spiels ab, wird HDR danach nicht von selbst zurückgestellt.</value>
   </data>
+  <data name="NotifyGameSeemsHungTitle" xml:space="preserve">
+    <value>Spiel hängt im Hintergrund?</value>
+  </data>
+  <data name="NotifyGameSeemsHungMessage" xml:space="preserve">
+    <value>„{0}“ scheint im Hintergrund zu hängen (kein Fenster, keine Aktivität). HDR bleibt an, bis das Spiel beendet ist. Zum Beenden den Task-Manager nutzen, oder im Infobereich „HDR jetzt ausschalten“.</value>
+    <comment>{0} = Name des Spiels</comment>
+  </data>
   <data name="LaunchUnknownGame" xml:space="preserve">
     <value>Spiel {0} ist nicht bekannt.</value>
   </data>

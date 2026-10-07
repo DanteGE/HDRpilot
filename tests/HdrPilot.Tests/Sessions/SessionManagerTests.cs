@@ -44,7 +44,8 @@ public sealed partial class SessionManagerTests
         _hdr, _config, _store, _launcher, _clock,
         (name, _) => name.Contains("Crash", StringComparison.OrdinalIgnoreCase) || name.StartsWith("vc_redist", StringComparison.OrdinalIgnoreCase),
         [@"C:\Windows", @"C:\Program Files", @"C:\Program Files (x86)"],
-        _log);
+        _log,
+        Options);
 
     /// <summary>Ein Abfragezyklus, danach rückt die Uhr eine Sekunde vor.</summary>
     private async Task Poll(int times = 1)
@@ -920,7 +921,7 @@ public sealed partial class SessionManagerTests
     public async Task Session_state_save_failure_is_reported_and_game_not_blocked()
     {
         var failing = new FailingStateStore();
-        _manager = new SessionManager(_hdr, _config, failing, _launcher, _clock, (_, _) => false, [], _log);
+        _manager = new SessionManager(_hdr, _config, failing, _launcher, _clock, (_, _) => false, [], _log, Options);
         _manager.Notification += (_, n) => _notifications.Add(n);
         _config.AddGame("1", DirA);
         _processes.StartExe(ExeA);

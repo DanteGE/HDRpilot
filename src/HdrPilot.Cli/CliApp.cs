@@ -96,7 +96,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             Überwacht Spielstarts im Vordergrund (wie die App, ohne Oberfläche). Beenden mit Strg+C.
         hdrpilot run <schlüssel>
             Start über HdrPilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
-        Gemeinsame Option: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HdrPilot, für Tests).
+        games, watch und run: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HdrPilot, für Tests).
 
         Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
                     4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden

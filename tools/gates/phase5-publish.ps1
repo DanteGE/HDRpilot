@@ -1,0 +1,122 @@
+﻿# Gate G5.1: Einzelne, eigenständige EXE veröffentlicht und lauffähig, ohne installierte .NET-Runtime.
+# Startet die veröffentlichte EXE als Kopie außerhalb des Repositorys, ohne erreichbare .NET-Installation
+# (DOTNET_ROOT ins Leere, dotnet aus PATH entfernt), und prüft die geladenen Module. Gegenprobe: dieselbe
+# Modulprüfung erkennt beim normalen (runtime-abhängigen) Debug-Build die installierte Runtime.
+$ErrorActionPreference = 'Stop'
+$root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$out = Join-Path $root 'artifacts\publish\HdrPilot'
+$work = Join-Path $env:TEMP 'HdrPilot-gate5'
+$debugApp = Join-Path $root 'src\HdrPilot.App\bin\Debug\net10.0-windows\HdrPilot.exe'
+$script:ok = $true
+
+function Note([string]$text) { Write-Output ("{0:HH:mm:ss.fff} {1}" -f (Get-Date), $text) }
+function Check([bool]$condition, [string]$text) {
+    if ($condition) { Note "ok   $text" } else { Note "FEHLER $text"; $script:ok = $false }
+}
+
+function Wait-Log([string]$cfg, [string]$pattern, [int]$timeoutMs) {
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+        $text = Get-ChildItem (Join-Path $cfg 'logs') -Filter '*.log' -ErrorAction SilentlyContinue | ForEach-Object {
+            $fs = New-Object IO.FileStream($_.FullName, 'Open', 'Read', 'ReadWrite, Delete')
+            $sr = New-Object IO.StreamReader($fs, [Text.Encoding]::UTF8)
+            $sr.ReadToEnd(); $sr.Dispose()
+        } | Out-String
+        if ($text -match $pattern) { return $true }
+        Start-Sleep -Milliseconds 100
+    }
+    return $false
+}
+
+function Get-Machine([string]$path) {
+    $bytes = [IO.File]::ReadAllBytes($path)
+    $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+    return [BitConverter]::ToUInt16($bytes, $pe + 4)
+}
+
+# Startet eine App-EXE mit eigener Ablage, wartet auf die laufende Automatik, liefert die Modulpfade und beendet sie.
+function Get-AppModules([string]$exe, [string]$cfg) {
+    if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
+    New-Item -ItemType Directory -Force $cfg | Out-Null
+    $p = Start-Process $exe -ArgumentList @('--config-dir', "`"$cfg`"", '--minimized') -PassThru
+    $started = Wait-Log $cfg 'Einlesen:' 90000
+    $modules = @()
+    if ($started -and -not $p.HasExited) {
+        $modules = @((Get-Process -Id $p.Id).Modules | ForEach-Object { $_.FileName })
+    }
+    Start-Process $exe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null
+    $exited = $p.WaitForExit(15000)
+    if (-not $exited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
+    return [pscustomobject]@{ Started = $started; Exited = $exited; ExitCode = $(if ($exited) { $p.ExitCode } else { -1 }); Modules = $modules }
+}
+
+$installedRuntime = '\\dotnet\\(shared|host)\\'
+
+# 1. Veröffentlichen
+& (Join-Path $root 'tools\publish.ps1') -Output $out | ForEach-Object { Note $_ }
+Check ($LASTEXITCODE -eq 0) 'Veröffentlichung ohne Fehler'
+
+# 2. Inhalt, Architektur, Version
+$files = @(Get-ChildItem $out -Recurse -File | ForEach-Object { $_.FullName.Substring($out.Length + 1) } | Sort-Object)
+Check (($files -join ',') -eq 'cli\hdrpilot.exe,HdrPilot.exe,README.md,THIRD-PARTY-NOTICES.txt') ("Ausgabe enthält genau HdrPilot.exe, cli\hdrpilot.exe, README.md, THIRD-PARTY-NOTICES.txt (gefunden: {0})" -f ($files -join ', '))
+$notices = Join-Path $out 'THIRD-PARTY-NOTICES.txt'
+$noticeText = if (Test-Path $notices) { [IO.File]::ReadAllText($notices) } else { '' }
+$mitCount = ([regex]::Matches($noticeText, 'MIT License')).Count
+Check ($mitCount -ge 2 -and $noticeText -match 'Microsoft\.NETCore\.App\.Runtime\.win-x64 10\.' -and $noticeText -match 'Microsoft\.WindowsDesktop\.App\.Runtime\.win-x64 10\.' -and $noticeText -match 'Microsoft\.Extensions\.Logging\.Abstractions' -and $noticeText.Length -gt 50000) ("Lizenzhinweise: {0} MIT-Lizenztexte, {1:N0} Zeichen" -f $mitCount, $noticeText.Length)
+$appExe = Join-Path $out 'HdrPilot.exe'
+$cliExe = Join-Path $out 'cli\hdrpilot.exe'
+foreach ($exe in $appExe, $cliExe) {
+    if (Test-Path $exe) {
+        $machine = Get-Machine $exe
+        Check ($machine -eq 0x8664) ("{0}: x64 (Machine 0x{1:X4}), {2:N1} MB" -f (Split-Path $exe -Leaf), $machine, ((Get-Item $exe).Length / 1MB))
+    }
+}
+$version = ([xml](Get-Content (Join-Path $root 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version
+$productVersion = (Get-Item $appExe).VersionInfo.ProductVersion
+Check ($productVersion -like "$version*") "Produktversion $productVersion passt zu $version"
+
+# 3. Gegenprobe: Die Modulprüfung erkennt eine installierte Runtime (Debug-Build ist runtime-abhängig).
+if (Test-Path $debugApp) {
+    $control = Get-AppModules $debugApp (Join-Path $work 'control-config')
+    $controlHits = @($control.Modules | Where-Object { $_ -match $installedRuntime })
+    Check ($control.Started -and $controlHits.Count -gt 0) ("Gegenprobe Debug-Build: {0} Module aus der installierten Runtime erkannt (z. B. {1})" -f $controlHits.Count, ($controlHits | Select-Object -First 1))
+} else {
+    Check $false "Gegenprobe: Debug-Build fehlt ($debugApp), erst tools\gates\build.ps1 ausführen"
+}
+
+# 4. Veröffentlichte EXE als Kopie außerhalb des Repositorys, ohne erreichbare .NET-Installation
+$run = Join-Path $work 'run'
+if (Test-Path $run) { Remove-Item $run -Recurse -Force }
+New-Item -ItemType Directory -Force (Join-Path $run 'cli') | Out-Null
+Copy-Item $appExe $run
+Copy-Item $cliExe (Join-Path $run 'cli')
+$env:DOTNET_ROOT = Join-Path $work 'kein-dotnet'
+${env:DOTNET_ROOT(x86)} = $env:DOTNET_ROOT
+$env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
+$env:PATH = (($env:PATH -split ';') | Where-Object { $_ -and $_ -notmatch '\\dotnet' }) -join ';'
+Check ($null -eq (Get-Command dotnet -ErrorAction SilentlyContinue)) 'dotnet ist im Prüflauf nicht erreichbar'
+
+$runApp = Join-Path $run 'HdrPilot.exe'
+$runCli = Join-Path $run 'cli\hdrpilot.exe'
+$cfg = Join-Path $work 'config'
+if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
+
+$ErrorActionPreference = 'Continue' # Kommandozeile darf auf stderr schreiben
+$importOutput = & $runCli games import --config-dir $cfg 2>&1 | Out-String
+Check ($LASTEXITCODE -eq 0 -and (Test-Path (Join-Path $cfg 'config.json'))) ("Kommandozeile läuft eigenständig: games import exit={0}" -f $LASTEXITCODE)
+$statusOutput = & $runCli hdr status 2>&1 | Out-String
+Check ($LASTEXITCODE -eq 0) ("Kommandozeile: hdr status exit={0}" -f $LASTEXITCODE)
+$ErrorActionPreference = 'Stop'
+
+$result = Get-AppModules $runApp $cfg
+$runtimeHits = @($result.Modules | Where-Object { $_ -match $installedRuntime })
+$extracted = @($result.Modules | Where-Object { $_ -match '\\\.net\\HdrPilot\\' })
+Check $result.Started 'Veröffentlichte App startet und liest die Bibliothek ein'
+Check ($result.Modules.Count -gt 0 -and $runtimeHits.Count -eq 0) ("Keine Module aus einer installierten Runtime ({0} Module geladen, Treffer: {1})" -f $result.Modules.Count, $runtimeHits.Count)
+Check ($result.Modules.Count -gt 0 -and $result.Modules[0] -like '*\HdrPilot-gate5\run\HdrPilot.exe') ("Hauptmodul ist die kopierte EXE: {0}" -f ($result.Modules | Select-Object -First 1))
+Check ($extracted.Count -gt 0) ("Native WPF-Bibliotheken aus der EXE entpackt: {0}" -f (($extracted | ForEach-Object { Split-Path $_ -Leaf }) -join ', '))
+Check ($result.Exited -and $result.ExitCode -eq 0) ("Beenden über --exit, Exitcode {0}" -f $result.ExitCode)
+
+if ($ok) { Write-Output 'PHASE5_PUBLISH_OK'; exit 0 }
+Write-Output 'PHASE5_PUBLISH_FAILED'
+exit 1

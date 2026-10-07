@@ -30,9 +30,9 @@ public partial class App : Application
         var instance = SingleInstance.TryAcquire(instanceId);
         if (instance is null)
         {
-            // Zweiter Aufruf: an die laufende Instanz weiterreichen (ohne Befehl: Fenster öffnen).
-            var forward = args.HasCommand ? args.ToForwardedArgs() : ["--show"];
-            if (!SingleInstance.TrySend(instanceId, forward, TimeSpan.FromSeconds(5)))
+            // Zweiter Aufruf: an die laufende Instanz weiterreichen (ohne Befehl: Fenster öffnen, Autostart: nichts).
+            var forward = args.ToRunningInstance();
+            if (forward.Count > 0 && !SingleInstance.TrySend(instanceId, forward, TimeSpan.FromSeconds(5)))
             {
                 MessageBox.Show(HdrPilot.App.Resources.CommonStrings.ForwardFailed, HdrPilot.App.Resources.CommonStrings.AppName, MessageBoxButton.OK, MessageBoxImage.Warning);
             }

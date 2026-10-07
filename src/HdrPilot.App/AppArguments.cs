@@ -88,6 +88,12 @@ public sealed record AppArguments
         return result with { Unknown = unknown };
     }
 
+    /// <summary>
+    /// Was ein zweiter Aufruf an die laufende Instanz weiterreicht: seine Befehle; ohne Befehl das Fenster öffnen;
+    /// nur <c>--minimized</c> (Autostart, während HdrPilot schon läuft): nichts.
+    /// </summary>
+    public IReadOnlyList<string> ToRunningInstance() => HasCommand ? ToForwardedArgs() : Minimized ? [] : ["--show"];
+
     /// <summary>Befehle für die Weitergabe an die laufende Instanz (ohne --config-dir).</summary>
     public IReadOnlyList<string> ToForwardedArgs()
     {

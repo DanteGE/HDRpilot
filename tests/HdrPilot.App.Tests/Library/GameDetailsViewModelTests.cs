@@ -231,6 +231,27 @@ public sealed class GameDetailsViewModelTests
     });
 
     [Fact]
+    public void Launch_and_shortcuts_are_disabled_without_start_command() => Sta.Run(() =>
+    {
+        // Eigener Eintrag als Ordner mit mehreren EXEs: HdrPilot kennt keinen Start-Befehl.
+        var game = Game(GameSource.Manual, "m1", "Mein Spiel", hdrAuto: true, isNew: false);
+        game.LaunchCommand = null;
+        var (context, library, details) = Open(game);
+        using var _l = library;
+
+        Assert.False(details.CanLaunchGame);
+        Assert.False(details.LaunchCommand.CanExecute(null));
+        Assert.False(details.CreateDesktopShortcutCommand.CanExecute(null));
+        Assert.False(details.CreateStartMenuShortcutCommand.CanExecute(null));
+        Assert.Empty(context.FakeShortcuts.Created);
+
+        var (_, library2, launchable) = Open(Cyberpunk());
+        using var _l2 = library2;
+        Assert.True(launchable.CanLaunchGame);
+        Assert.True(launchable.CreateDesktopShortcutCommand.CanExecute(null));
+    });
+
+    [Fact]
     public void Shortcuts_report_path_or_error() => Sta.Run(() =>
     {
         var (context, library, details) = Open(Cyberpunk());

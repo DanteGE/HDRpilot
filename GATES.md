@@ -150,19 +150,19 @@ und die EXPECT-Marke ausgibt.
 - [x] G4.7: Neubau ohne Warnungen, alle Tests aller Testprojekte grün
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
-  EVIDENCE: 2026-10-07 13:31 exit 0, build.ps1 BUILD_OK_0_WARNINGS, 2 Testprojekte 1072/1072 erfolgreich, TESTS_OK 1072
+  EVIDENCE: 2026-10-07 14:04 exit 0, build.ps1 BUILD_OK_0_WARNINGS, 2 Testprojekte 1075/1075 erfolgreich, TESTS_OK 1075 (neue Tests zu E61/E62 per Gegenprobe ohne Korrektur rot)
 
 ## Phase 5: Auslieferung
 
-- [ ] G5.1: Einzelne, eigenständige EXE veröffentlicht und lauffähig (ohne installierte .NET-Runtime-Abhängigkeit)
+- [x] G5.1: Einzelne, eigenständige EXE veröffentlicht und lauffähig (ohne installierte .NET-Runtime-Abhängigkeit)
   CHECK: ps tools\gates\phase5-publish.ps1
   EXPECT: PHASE5_PUBLISH_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 14:07 exit 0, artifacts\publish\HdrPilot: HdrPilot.exe 168,3 MB und cli\hdrpilot.exe 39,0 MB (beide x64), README.md, THIRD-PARTY-NOTICES.txt (18 MIT-Texte); Version 1.0.0; Kopie in %TEMP% ohne erreichbares dotnet gestartet: 70 Module, keines aus einer installierten Runtime (Gegenprobe Debug-Build: 72 erkannt), WPF-Bibliotheken aus der EXE entpackt, Ende per --exit mit Exitcode 0, PHASE5_PUBLISH_OK
 
-- [ ] G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche
+- [x] G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 14:05 exit 0, alle Abschnitte, 10 App-Schalter, 9 CLI-Aufrufe und 7 Exit-Codes, Standardwerte, Ablageorte und fett gesetzte Bezeichnungen stimmen mit Code und resx (0 Probleme); Gegenprobe 7/7 eingebaute Fehler erkannt; inhaltlich von 5 unabhängigen Prüfern gelesen, 55 Hinweise eingearbeitet (E64), PHASE5_README_OK
 
 - [ ] G5.3: Rückfrage beim Nutzer zu WMI-Überwachung, Neustart bei verspätetem HDR, Steam-Hülle, englischer Oberfläche
   EVIDENCE: pending

@@ -248,3 +248,30 @@ den Verknüpfungen der Launcher.
 **E59 `System.GC.ConserveMemory = 5`** in der Laufzeit-Konfiguration der App: im Leerlauf ohne Fenster privat rund
 77 statt 95 MB, Arbeitssatz unverändert um 42 MB. Die Leerlauf-CPU blieb gleich (je zwei Messungen über 90 s,
 0,10–0,17 % eines Kerns mit und ohne).
+
+## Phase 5: Auslieferung (2026-10-07)
+
+**E60 Auslieferung als einzelne, eigenständige EXE ohne Kompression:** `HdrPilot.exe` (win-x64, SelfContained,
+PublishSingleFile, ReadyToRun, native WPF-Bibliotheken eingebettet und beim ersten Start nach `%TEMP%\.net\HdrPilot\`
+entpackt). Mit Kompression wäre die EXE 73 statt 168 MB groß, hielte aber alle Assemblys entpackt im Speicher: gemessen
+privat 166 statt 81 MB im Leerlauf. Weil der Dauerbetrieb zählt, bleibt die App unkomprimiert. Die Kommandozeile
+`cli\hdrpilot.exe` ist ein kurzlebiges Werkzeug und wird komprimiert. Symbole stecken in den Assemblys
+(`DebugType=embedded`), damit keine losen .pdb-Dateien entstehen und Stapelverfolgungen im Protokoll Zeilen behalten.
+Version 1.0.0. Erzeugt wird alles mit `tools\publish.ps1`, Prüfung in `tools\gates\phase5-publish.ps1`.
+
+**E61 Kein Start ohne Start-Befehl:** Selbst eingetragene Ordner mit keiner oder mehreren EXEs haben keinen
+Start-Befehl. „Mit HDR starten“ und die Verknüpfungs-Knöpfe sind dann gesperrt, mit Hinweis in den Details; ein
+`--run` lehnt der Kern ab, bevor er schaltet (vorher: HDR kurz an und gleich wieder aus). Gefunden bei der
+Nachprüfung der README.
+
+**E62 Zweiter Aufruf mit nur `--minimized` reicht nichts weiter:** Startet der Autostart, während HdrPilot schon
+läuft, öffnet sich kein Fenster mehr. Ein zweiter Start ohne Argument öffnet weiterhin die Spielebibliothek.
+
+**E63 Lizenzhinweise in der Auslieferung:** `tools\publish.ps1` legt `THIRD-PARTY-NOTICES.txt` bei, zusammengesetzt aus
+den Lizenztexten der Laufzeitpakete in der gebauten Version (.NET-Laufzeit, Windows Desktop, Microsoft.Extensions.*)
+und den THIRD-PARTY-NOTICES der .NET-Laufzeit. Die Versionen kommen aus der deps.json der Veröffentlichung.
+
+**E64 README gegen den Quelltext geprüft:** `phase5-readme.ps1` gleicht Abschnitte, App-Schalter, CLI-Hilfe,
+Exit-Codes, Standardwerte, Ablageorte und alle fett gesetzten Oberflächen-Bezeichnungen mit Code und resx ab (mit
+Gegenprobe). Die inhaltlichen Aussagen haben fünf unabhängige Prüfer gegen den Code gelesen; 55 Hinweise, alle
+eingearbeitet (darunter E61, E62 und die korrigierte CLI-Hilfe zu `--config-dir`).

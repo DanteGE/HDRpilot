@@ -398,7 +398,10 @@
     <value>Mit HDR starten</value>
   </data>
   <data name="Launch_Hint" xml:space="preserve">
-    <value>Schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel über seinen Launcher.</value>
+    <value>Schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel (über seinen Launcher oder direkt über die EXE).</value>
+  </data>
+  <data name="Launch_NoCommand" xml:space="preserve">
+    <value>Für diesen Eintrag kennt HdrPilot keine Start-EXE: Im Ordner liegt keine oder mehr als eine. Die Erkennung beim Spielen wirkt trotzdem. Zum Starten über HdrPilot das Spiel über seine EXE hinzufügen.</value>
   </data>
   <data name="Launch_Running" xml:space="preserve">
     <value>HDR wird eingeschaltet, dann startet das Spiel …</value>

@@ -213,6 +213,15 @@ public sealed class SessionManager
                 return new LaunchOutcome(false, Format(CoreStrings.LaunchUnknownGame, gameKey), null, null);
             }
 
+            if (string.IsNullOrWhiteSpace(game.LaunchCommand))
+            {
+                // Ohne Start-Befehl gar nicht erst schalten (sonst HDR kurz an und gleich wieder aus).
+                var noCommand = Format(CoreStrings.LaunchNoCommand, game.Name);
+                _logger.LogWarning("Start über die App abgelehnt, HDR bleibt unverändert: {Message}", noCommand);
+                Notify(NotificationKind.LaunchFailed, CoreStrings.NotifyLaunchFailedTitle, noCommand);
+                return new LaunchOutcome(false, noCommand, null, null);
+            }
+
             var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
             if (!_sessions.TryGetValue(game.Key, out var session))
             {

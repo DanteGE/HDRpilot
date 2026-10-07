@@ -629,7 +629,11 @@
                                                 <TextBlock Text="{x:Static res:LibraryStrings.Launch_Button}" />
                                             </StackPanel>
                                         </Button>
-                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_Hint}" Margin="0,8,0,12" />
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_Hint}" Margin="0,8,0,12"
+                                                   Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}}" />
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_NoCommand}" Margin="0,8,0,12"
+                                                   AutomationProperties.AutomationId="LaunchNoCommandHint"
+                                                   Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}" />
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />

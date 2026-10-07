@@ -629,6 +629,23 @@ public sealed class SessionManagerTests
     }
 
     [Fact]
+    public async Task Session_launch_without_start_command_does_not_switch()
+    {
+        // Eigener Eintrag als Ordner mit mehreren EXEs: kein Start-Befehl, also HDR gar nicht erst anfassen.
+        _config.AddGame("1", DirA).LaunchCommand = null;
+
+        var outcome = await Launch("Steam:1");
+
+        Assert.False(outcome.Started);
+        Assert.Null(outcome.HdrConfirmedAt);
+        Assert.Empty(_hdr.Calls);
+        Assert.Empty(_launcher.Launched);
+        Assert.Empty(Manager.Sessions);
+        Assert.Null(_store.Data);
+        Assert.Contains(_notifications, n => n.Kind == NotificationKind.LaunchFailed && n.Message.Contains("Spiel 1", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Session_launch_works_while_paused_and_on_incapable_display()
     {
         _config.AddGame("1", DirA);

@@ -1,6 +1,6 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-07 13:45. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-07 14:10. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Erledigt (auf `main`, committet)
@@ -8,16 +8,19 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
 - Phase 2 Spielbibliothek – 646 Spiele aus 7 Quellen, G2.2 vom Nutzer bestätigt.
 - Phase 3 Überwachung und Sitzungslogik – alle Gates belegt; danach unabhängige Nachprüfung, 13 Funde behoben (E41–E48).
 - Phase 4 Oberfläche und Tray – G4.1–G4.4, G4.6, G4.7 belegt (E49–E59). Offen ist nur G4.5, der gemeinsame Test.
+- Phase 5 Auslieferung – G5.1 (Einzel-EXE über `tools\publish.ps1`) und G5.2 (README, gegen den Quelltext geprüft)
+  belegt (E60–E64). Offen: G5.3, die Rückfrage beim Nutzer nach dem gemeinsamen Test.
 
 ## Als Nächstes
-- G4.5 gemeinsam mit dem Nutzer: je installiertem Launcher ein Spiel über „Mit HDR starten“ und über die erzeugte
-  Verknüpfung starten; Protokoll (`%LOCALAPPDATA%\HdrPilot\logs`) belegt „HDR bestätigt“ vor dem Prozessstart.
-  Kandidaten: Steam, Epic (RDR2 oder Alan Wake 2), GOG (Cyberpunk 2077), Xbox (Palworld), Ubisoft (Avatar), EA
-  (Battlefield 6); Battle.net hat kein Spiel. Dabei Tray-Menü und sichtbare Oberfläche vom Nutzer ansehen lassen.
-  Dieser Test läuft mit der echten Ablage (`%APPDATA%\HdrPilot`), also ohne `--config-dir`.
-- Phase 5: einzelne EXE veröffentlichen (`PublishSingleFile`, eigenständig, x64, ReadyToRun; CLI getrennt), README,
-  Gates `phase5-publish.ps1` und `phase5-readme.ps1`, dann Rückfrage beim Nutzer zu WMI-Überwachung, Neustart bei
-  verspätetem HDR, Steam-Hülle, englischer Oberfläche.
+- G4.5 gemeinsam mit dem Nutzer, mit der veröffentlichten EXE aus `artifacts\publish\HdrPilot` (nur mit Zustimmung
+  nach `%LOCALAPPDATA%\Programs\HdrPilot\` kopieren; läuft mit der echten Ablage, also ohne `--config-dir`). Je
+  Launcher ein Spiel über „Mit HDR starten“ und über die erzeugte Verknüpfung; das Protokoll
+  (`%LOCALAPPDATA%\HdrPilot\logs`) muss „HDR bestätigt“ vor dem Start-Befehl und dem erkannten Prozess zeigen.
+  Testspiele: Hades II (Steam:1145350), Ring of Pain (Epic), Showgunners (GOG), Palworld (Xbox), Avatar (Ubisoft),
+  Battlefield 6 (EA); Battle.net hat kein Spiel. Dabei Tray-Menü und sichtbare Oberfläche vom Nutzer ansehen lassen.
+- Danach in der README unter „Bekannte Grenzen“ den Punkt „Start über die Launcher“ durch das Testergebnis ersetzen,
+  neu veröffentlichen (`phase5-readme.ps1`, `phase5-publish.ps1`), dann G5.3: Rückfrage zu WMI-Überwachung, Neustart
+  bei verspätetem HDR, Steam-Hülle, englischer Oberfläche.
 - Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben.
 
 ## Arbeitsweise und Fallen

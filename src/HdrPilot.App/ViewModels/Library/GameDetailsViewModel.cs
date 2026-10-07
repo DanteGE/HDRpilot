@@ -35,9 +35,9 @@ public sealed class GameDetailsViewModel : ObservableObject
         RemoveExeCommand = new AsyncRelayCommand(RemoveExecutableAsync, () => _selectedExecutable is { IsExcluded: false });
         IncludeExeCommand = new AsyncRelayCommand(IncludeExecutableAsync, () => _selectedExecutable is { IsExcluded: true });
         RelearnExeCommand = new AsyncRelayCommand(RelearnAsync, () => _config.DetectedExecutables.Count > 0);
-        LaunchCommand = new AsyncRelayCommand(LaunchAsync, () => !_isLaunching && Item.IsInstalled);
-        CreateDesktopShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: true));
-        CreateStartMenuShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: false));
+        LaunchCommand = new AsyncRelayCommand(LaunchAsync, () => !_isLaunching && Item.IsInstalled && CanLaunchGame);
+        CreateDesktopShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: true), () => CanLaunchGame);
+        CreateStartMenuShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: false), () => CanLaunchGame);
         RemoveGameCommand = new AsyncRelayCommand(RemoveGameAsync, () => Item.IsManual);
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
@@ -51,6 +51,12 @@ public sealed class GameDetailsViewModel : ObservableObject
     public bool HasInstallDir => !string.IsNullOrWhiteSpace(_config.InstallDir);
 
     public bool IsManual => Item.IsManual;
+
+    /// <summary>
+    /// Ohne Start-Befehl (eigener Eintrag als Ordner mit keiner oder mehreren EXEs) kann HdrPilot das Spiel weder starten
+    /// noch eine Verknüpfung anlegen; die Erkennung beim Spielen wirkt trotzdem.
+    /// </summary>
+    public bool CanLaunchGame => !string.IsNullOrWhiteSpace(_config.LaunchCommand);
 
     public string? LastPlayedText => _config.LastPlayed is { } t
         ? LibraryText.Format(LibraryStrings.Details_LastPlayed, t.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))

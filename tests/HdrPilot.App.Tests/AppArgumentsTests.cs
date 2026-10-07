@@ -26,6 +26,14 @@ public sealed class AppArgumentsTests
     }
 
     [Fact]
+    public void Second_start_opens_window_but_autostart_forwards_nothing()
+    {
+        Assert.Equal(["--show"], AppArguments.Parse([]).ToRunningInstance());
+        Assert.Empty(AppArguments.Parse(["--minimized"]).ToRunningInstance());
+        Assert.Equal(["--run", "Steam:1"], AppArguments.Parse(["--minimized", "--run", "Steam:1"]).ToRunningInstance());
+    }
+
+    [Fact]
     public void Instance_id_depends_on_config_dir()
     {
         Assert.Equal("default", HdrPilot.App.Infrastructure.SingleInstance.IdFor(null));

@@ -1,0 +1,35 @@
+
+
+[2026-09-23 12:41:00] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 2.1ms
+[2026-09-23 12:44:30] ExecCommandLine: ""C:\Program Files (x86)\Steam\steam.exe" -- steam://rungameid/9990130"
+[2026-09-23 12:44:30] ExecuteSteamURL: "steam://rungameid/9990130"
+[2026-09-23 12:44:30] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to CheckShaderDepotManifest with ""
+[2026-09-23 12:44:31] STARTUP SlowJSMethodCall Apps.RegisterForAppDetails took 2.9ms
+[2026-09-23 12:44:31] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to RunningInstallScript with ""
+[2026-09-23 12:44:31] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to SynchronizingCloud with ""
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to SynchronizingStats with ""
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to ShowInterstitials with ""
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp waiting for user response to ShowInterstitials ""
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp continues with user response "ShowInterstitials"
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to SynchronizingControllerConfig with ""
+[2026-09-23 12:44:32] Loaded Config for Local Override Path for App ID 9990130, Controller 4: C:\Program Files (x86)\Steam/controller_base/empty.vdf
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to KickingOtherSession with ""
+[2026-09-23 12:44:32] GameAction [AppID 9990130, ActionID 5] : LaunchApp waiting for user response to KickingOtherSession "Anderes Spiel"
+[2026-09-23 12:44:54] GameAction [AppID 9990130, ActionID 5] : LaunchApp continues with user response "KickOtherSession"
+[2026-09-23 12:44:54] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to SiteLicenseSeatCheckout with ""
+[2026-09-23 12:44:54] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to DelayLaunch with ""
+[2026-09-23 12:44:55] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to CreatingProcess with ""
+[2026-09-23 12:44:55] GameAction [AppID 9990130, ActionID 5] : LaunchApp waiting for user response to CreatingProcess ""
+[2026-09-23 12:44:55] GameAction [AppID 9990130, ActionID 5] : LaunchApp continues with user response "CreatingProcess"
+[2026-09-23 12:44:55] Game process added : AppID 9990130 ""C:\Program Files (x86)\Steam\steamapps\common\Aschenacht\bin\x64\Game.exe"", ProcID 41736, IP 0.0.0.0:0
+[2026-09-23 12:44:55] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to WaitingGameWindow with ""
+[2026-09-23 12:44:55] GameAction [AppID 9990130, ActionID 5] : LaunchApp changed task to Completed with ""
+[2026-09-23 12:44:56] Game process updated : AppID 9990130 ""C:\Program Files (x86)\Steam\steamapps\common\Aschenacht\bin\x64\Game.exe"", ProcID 41736, IP 0.0.0.0:0
+[2026-09-23 12:45:12] GameOverlay: started 'C:\Program Files (x86)\Steam\gameoverlayui64.exe' (pid 17204) for game process 41736
+[2026-09-23 12:47:32] ExecCommandLine: ""C:\Program Files (x86)\Steam\steam.exe" -- steam://rungameid/9990130"
+[2026-09-23 12:47:32] ExecuteSteamURL: "steam://rungameid/9990130"
+[2026-09-23 12:47:32] GameAction [AppID 9990130, ActionID 6] : LaunchApp changed task to CheckShaderDepotManifest with ""
+[2026-09-23 12:47:33] GameAction [AppID 9990130, ActionID 6] : LaunchApp changed task to RunningInstallScript with ""
+[2026-09-23 12:47:34] GameAction [AppID 9990130, ActionID 6] : LaunchApp changed task to CreatingProcess with ""
+[2026-09-23 12:47:34] Game process added : AppID 9990130 ""C:\Program Files (x86)\Steam\steamapps\common\Aschenacht\bin\x64\Game.exe"", ProcID 38412, IP 0.0.0.0:0
+[2026-09-23 12:47:35] GameAction [AppID 9990130, ActionID 6] : LaunchApp changed task to Completed with ""

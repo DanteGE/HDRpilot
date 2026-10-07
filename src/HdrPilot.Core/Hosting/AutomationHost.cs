@@ -2,6 +2,7 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.Launchers;
 using HdrPilot.Core.Logging;
 using HdrPilot.Core.Native;
 using HdrPilot.Core.Processes;
@@ -78,6 +79,10 @@ public sealed class AutomationHost : IAsyncDisposable
             ForbiddenRoots(environment),
             LoggerFactory.CreateLogger("Sessions"));
 
+        // Frühwarnung: Spielstarts aus Epic und Steam an deren Protokollen erkennen, HDR vor dem Spielprozess.
+        LauncherSignals = LauncherSignalService.Create(
+            Config, Sessions, fileSystem, registry, environment, clock, LoggerFactory.CreateLogger("LauncherSignals"));
+
         Config.Changed += OnConfigChanged;
 
         // Änderungen anderer Prozesse (etwa "hdrpilot games set") ohne Abfrageschleife bemerken.
@@ -110,6 +115,9 @@ public sealed class AutomationHost : IAsyncDisposable
 
     public SessionManager Sessions { get; }
 
+    /// <summary>Frühwarnung aus den Protokollen von Epic Games Launcher und Steam.</summary>
+    public LauncherSignalService LauncherSignals { get; }
+
     public CompositeLoggerFactory LoggerFactory { get; }
 
     public RollingFileLoggerProvider FileLog { get; }
@@ -128,7 +136,8 @@ public sealed class AutomationHost : IAsyncDisposable
             "HdrPilot {Version} startet. Konfiguration {Config}, Abfrageintervall {Interval} ms, Nachlaufzeit {Grace} s, Windows-Build {Build}.",
             typeof(AutomationHost).Assembly.GetName().Version, Paths.ConfigFile, s.PollIntervalMs, s.GracePeriodSeconds, _environment.WindowsBuild);
         await Sessions.InitializeAsync(Watcher.Poll(), cancellationToken).ConfigureAwait(false);
-        Watcher.Start(Sessions.UpdateAsync);
+        Watcher.Start(OnPollAsync);
+        LauncherSignals.Start(); // erst nach dem ersten Zyklus: vorher lehnt die Sitzungslogik Vorbereitungen ab
     }
 
     public Task<LaunchOutcome> LaunchAsync(string gameKey, CancellationToken cancellationToken = default) =>
@@ -156,9 +165,17 @@ public sealed class AutomationHost : IAsyncDisposable
         Config.Changed -= OnConfigChanged;
         _configWatcher?.Dispose();
         _reloadTimer?.Dispose();
+        LauncherSignals.Dispose();
         await Watcher.StopAsync().ConfigureAwait(false);
         _logger.LogInformation("HdrPilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
         LoggerFactory.Dispose();
+    }
+
+    /// <summary>Ein Zyklus der Prozessüberwachung; die Frühwarnung prüft im selben Takt mit (kein eigener Zeitgeber).</summary>
+    private Task OnPollAsync(ProcessChanges changes, CancellationToken cancellationToken)
+    {
+        LauncherSignals.Tick();
+        return Sessions.UpdateAsync(changes, cancellationToken);
     }
 
     private void ScheduleConfigReload()
@@ -183,6 +200,7 @@ public sealed class AutomationHost : IAsyncDisposable
         var s = Config.Current.Settings;
         Watcher.Interval = TimeSpan.FromMilliseconds(s.PollIntervalMs);
         _levelSwitch.Level = s.LogLevel;
+        LauncherSignals.ApplySettings();
     }
 
     /// <summary>Ordner, die nie als Installationsordner gelten dürfen.</summary>

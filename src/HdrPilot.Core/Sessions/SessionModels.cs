@@ -14,6 +14,9 @@ public enum SessionTrigger
 
     /// <summary>Steam-Startoption (<c>HdrPilot.exe --wrap -- %command%</c>): HDR vor dem Spielstart, das Spiel startet der Wrapper.</summary>
     SteamLaunchOption,
+
+    /// <summary>Frühwarnung: Epic Games Launcher oder Steam hat den Spielstart protokolliert (HDR vor dem Spielprozess).</summary>
+    LauncherSignal,
 }
 
 public enum SessionPhase

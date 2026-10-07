@@ -1358,6 +1358,7 @@ public sealed class SessionManager
         SessionTrigger.LaunchedViaApp => "Start über die App",
         SessionTrigger.Recovery => "Wiederanlauf",
         SessionTrigger.SteamLaunchOption => "Start über Steam-Startoption",
+        SessionTrigger.LauncherSignal => "Launcher-Signal (Epic/Steam)",
         _ => trigger.ToString(),
     };
 

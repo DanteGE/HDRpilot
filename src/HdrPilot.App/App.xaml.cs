@@ -20,6 +20,12 @@ public partial class App : Application
     {
         base.OnStartup(e);
         var args = AppArguments.Parse(e.Args);
+        if (args.SnapshotDir is { } snapshotDir)
+        {
+            await RunSnapshotModeAsync(args, snapshotDir);
+            return;
+        }
+
         var instanceId = SingleInstance.IdFor(args.ConfigDir);
         var instance = SingleInstance.TryAcquire(instanceId);
         if (instance is null)
@@ -62,6 +68,34 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         base.OnExit(e);
+    }
+
+    /// <summary>Entwicklung: Bildschirmfotos der Fenster rendern (eigene Ablage nötig), dann beenden.</summary>
+    private async Task RunSnapshotModeAsync(AppArguments args, string snapshotDir)
+    {
+        if (args.ConfigDir is null)
+        {
+            Shutdown(2); // nie gegen die echte Konfiguration
+            return;
+        }
+
+        ThemeManager.Initialize(this);
+        _host = new AutomationHost(AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir)));
+        _services = new AppServices(_host, Dispatcher, instance: null);
+        try
+        {
+            await _services.RenderSnapshotsAsync(System.IO.Path.GetFullPath(snapshotDir));
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+            await _services.DisposeAsync();
+            Shutdown(1);
+            return;
+        }
+
+        await _services.DisposeAsync();
+        Shutdown(0);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

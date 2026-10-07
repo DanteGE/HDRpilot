@@ -285,6 +285,12 @@ public sealed partial class AppServices : IAsyncDisposable
         BringToFront(_settingsWindow);
     }
 
+    /// <summary>Entwicklung: Fenster hell und dunkel unsichtbar als PNG rendern (siehe SnapshotRenderer).</summary>
+    public Task RenderSnapshotsAsync(string directory) => SnapshotRenderer.RenderAsync(
+        System.Windows.Application.Current,
+        [("hauptfenster", CreateMainWindow), ("einstellungen", CreateSettingsWindow)],
+        directory);
+
     public void OpenLogFolder()
     {
         System.IO.Directory.CreateDirectory(Paths.LogDirectory);

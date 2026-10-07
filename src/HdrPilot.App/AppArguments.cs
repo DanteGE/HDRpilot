@@ -29,6 +29,9 @@ public sealed record AppArguments
 
     public string? ConfigDir { get; init; }
 
+    /// <summary>Entwicklung: Hauptfenster und Einstellungen hell und dunkel unsichtbar als PNG in diesen Ordner rendern, dann beenden.</summary>
+    public string? SnapshotDir { get; init; }
+
     public IReadOnlyList<string> Unknown { get; init; } = [];
 
     /// <summary>True, wenn der Aufruf etwas tun soll außer die App zu starten.</summary>
@@ -48,6 +51,9 @@ public sealed record AppArguments
                     break;
                 case "--config-dir" when i + 1 < args.Count:
                     result = result with { ConfigDir = args[++i] };
+                    break;
+                case "--snapshot" when i + 1 < args.Count:
+                    result = result with { SnapshotDir = args[++i] };
                     break;
                 case "--show":
                     result = result with { Show = true };

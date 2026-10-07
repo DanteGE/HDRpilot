@@ -111,7 +111,7 @@ public sealed class GogScanner : IGameScanner
         }
 
         var id = string.IsNullOrWhiteSpace(reg.GameId) ? keyName.Trim() : reg.GameId.Trim();
-        if (!string.IsNullOrWhiteSpace(reg.DependsOn))
+        if (NamesOtherGame(reg.DependsOn, id))
         {
             _logger.LogInformation("GOG: {GameId} übersprungen, Zusatzinhalt zu {DependsOn}.", id, reg.DependsOn);
             return null;
@@ -144,8 +144,7 @@ public sealed class GogScanner : IGameScanner
         }
 
         var info = ReadInfo(installDir, id, errors);
-        if (info?.RootGameId is { } rootId && !string.IsNullOrWhiteSpace(rootId)
-            && !string.Equals(rootId.Trim(), id, StringComparison.OrdinalIgnoreCase))
+        if (info?.RootGameId is { } rootId && NamesOtherGame(rootId, id))
         {
             _logger.LogInformation("GOG: {GameId} übersprungen, laut Spielinfo Zusatzinhalt zu {RootGameId}.", id, rootId);
             return null;
@@ -264,4 +263,16 @@ public sealed class GogScanner : IGameScanner
     }
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>
+    /// True, wenn <paramref name="referencedId"/> (dependsOn bzw. rootGameId) ein anderes Spiel nennt. Leer, "0" (etwa
+    /// als DWORD 0 geschrieben, keine GOG-ID) und die eigene ID machen einen Eintrag nicht zum Zusatzinhalt.
+    /// </summary>
+    private static bool NamesOtherGame(string? referencedId, string id)
+    {
+        var value = referencedId?.Trim();
+        return !string.IsNullOrEmpty(value)
+            && !string.Equals(value, "0", StringComparison.Ordinal)
+            && !string.Equals(value, id, StringComparison.OrdinalIgnoreCase);
+    }
 }

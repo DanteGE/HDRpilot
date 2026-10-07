@@ -1,3 +1,4 @@
+using System.Text;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Games.Scanners;
@@ -390,6 +391,120 @@ public sealed class GogScannerTests
         var error = Assert.Single(result.Errors);
         Assert.Equal("GOG-Registry-Eintrag nicht lesbar.", error.Message);
         Assert.EndsWith(@"\1511366207", error.Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Broken_info_file_with_lone_surrogate_escape_is_reported_but_game_delivered()
+    {
+        // "\uD800" ist syntaktisch gültiges JSON; System.Text.Json wirft erst beim Dekodieren (InvalidOperationException).
+        AddGalaxyGame("1511366207", "Showgunners", ShowgunnersDir, ShowgunnersDir + @"\Showgunners.exe", ShowgunnersDir);
+        _fs.AddFile(ShowgunnersDir + @"\Showgunners.exe", "MZ");
+        _fs.AddFile(ShowgunnersDir + @"\goggame-1511366207.info",
+            "{\"gameId\": \"1511366207\", \"rootGameId\": \"1511366207\", \"name\": \"Show\\uD800gunners\", \"playTasks\": []}");
+        AddCyberpunk();
+
+        var result = Scan();
+
+        Assert.Equal(["1423049311", "1511366207"], result.Games.Select(g => g.SourceId).Order(StringComparer.Ordinal));
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("GOG-Spielinfo defekt: Feld \"name\" enthält eine ungültige Escape-Folge (einzelnes UTF-16-Surrogat).", error.Message);
+        Assert.Equal(ShowgunnersDir + @"\goggame-1511366207.info", error.Path);
+    }
+
+    [Fact]
+    public void Broken_info_file_in_wrong_encoding_is_reported_but_game_delivered()
+    {
+        AddGalaxyGame("1511366207", "Showgunners", ShowgunnersDir, ShowgunnersDir + @"\Showgunners.exe", ShowgunnersDir);
+        _fs.AddFile(ShowgunnersDir + @"\Showgunners.exe", "MZ");
+        _fs.AddFile(ShowgunnersDir + @"\goggame-1511366207.info",
+            Encoding.Latin1.GetBytes("{\"gameId\": \"1511366207\", \"rootGameId\": \"1511366207\", \"name\": \"Showgunners Ä\", \"playTasks\": []}"));
+
+        var result = Scan();
+
+        Assert.Equal("Showgunners", Assert.Single(result.Games).Name);
+        var error = Assert.Single(result.Errors);
+        Assert.StartsWith("GOG-Spielinfo defekt: Ungültige Zeichenkodierung", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Broken_dependsOn_written_as_dword_zero_is_not_dlc()
+    {
+        // DWORD 0 statt REG_SZ "" liest sich als "0"; das ist keine GOG-ID und darf das Spiel nicht als Zusatzinhalt verstecken.
+        AddGalaxyGame("1511366207", "Showgunners", ShowgunnersDir, ShowgunnersDir + @"\Showgunners.exe", ShowgunnersDir);
+        _registry.Set(RegistryHiveKind.LocalMachine, GamesKey + @"\1511366207", "dependsOn", 0, RegistryViewKind.Registry32);
+        _fs.AddFile(ShowgunnersDir + @"\Showgunners.exe", "MZ");
+
+        var result = Scan();
+
+        Assert.Equal("1511366207", Assert.Single(result.Games).SourceId);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Incomplete_info_with_root_game_id_zero_empty_or_own_id_is_not_dlc()
+    {
+        AddGalaxyGame("1511366207", "Showgunners", ShowgunnersDir, ShowgunnersDir + @"\Showgunners.exe", ShowgunnersDir);
+        _fs.AddFile(ShowgunnersDir + @"\Showgunners.exe", "MZ");
+        _fs.AddFile(ShowgunnersDir + @"\goggame-1511366207.info", "{\"gameId\": 1511366207, \"rootGameId\": 0, \"playTasks\": []}");
+        AddLegacyGame("1409964317", "SWAT 4 Gold Edition", Swat4Dir, Swat4Dir + @"\Content\System\swat4.exe", Swat4Dir + @"\Content\System");
+        _fs.AddFile(Swat4Dir + @"\Content\System\swat4.exe", "MZ");
+        _fs.AddFile(Swat4Dir + @"\goggame-1409964317.info", "{\"gameId\": \"1409964317\", \"rootGameId\": \"\", \"playTasks\": []}");
+        AddGalaxyGame("1207658946", "SWAT 3 - Tactical Game of The Year Edition", Swat3Dir, Swat3Dir + @"\SWAT.EXE", Swat3Dir);
+        _fs.AddFile(Swat3Dir + @"\swat.exe", "MZ");
+        _fs.AddFile(Swat3Dir + @"\goggame-1207658946.info", "{\"rootGameId\": 1207658946}");
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(["1207658946", "1409964317", "1511366207"], result.Games.Select(g => g.SourceId).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Broken_registry_values_with_dword_qword_or_multi_string_types_do_not_throw()
+    {
+        // gameID als DWORD (Zahl wird zu Text), workingDir als REG_BINARY (ignoriert).
+        Set(GamesKey + @"\1511366207", "gameName", "Showgunners");
+        Set(GamesKey + @"\1511366207", "path", ShowgunnersDir);
+        Set(GamesKey + @"\1511366207", "exe", ShowgunnersDir + @"\Showgunners.exe");
+        _registry.Set(RegistryHiveKind.LocalMachine, GamesKey + @"\1511366207", "gameID", 1511366207, RegistryViewKind.Registry32);
+        _registry.Set(RegistryHiveKind.LocalMachine, GamesKey + @"\1511366207", "workingDir", new byte[] { 0x44 }, RegistryViewKind.Registry32);
+        _fs.AddFile(ShowgunnersDir + @"\Showgunners.exe", "MZ");
+
+        // Pfad als QWORD (kein absoluter Pfad), Name als REG_MULTI_SZ.
+        _registry.Set(RegistryHiveKind.LocalMachine, GamesKey + @"\2", "gameName", new[] { "Zeile 1", "Zeile 2" }, RegistryViewKind.Registry32);
+        _registry.Set(RegistryHiveKind.LocalMachine, GamesKey + @"\2", "path", 42L, RegistryViewKind.Registry32);
+
+        // Pfad als REG_MULTI_SZ (kein Text).
+        Set(GamesKey + @"\3", "gameName", "Mehrzeilig");
+        _registry.Set(RegistryHiveKind.LocalMachine, GamesKey + @"\3", "path", new[] { @"D:\GOG-Spiele\A", @"D:\GOG-Spiele\B" }, RegistryViewKind.Registry32);
+
+        var result = Scan();
+
+        var game = Assert.Single(result.Games);
+        Assert.Equal("1511366207", game.SourceId);
+        Assert.Null(game.LaunchWorkingDirectory);
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, e => e.Message.Contains("\"42\" ist kein absoluter Pfad", StringComparison.Ordinal) && e.Path!.EndsWith(@"\2", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, e => e.Message == "GOG-Registry-Eintrag unvollständig: Wert path fehlt." && e.Path!.EndsWith(@"\3", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Paths_with_umlauts_special_characters_forward_slashes_and_missing_drive_are_handled()
+    {
+        const string dir = @"E:\Spiele\Größe & Co. (Ü-Edition) #1";
+        AddGalaxyGame("1000000002", "Größe & Co.™", "e:/spiele/GRÖßE & co. (ü-edition) #1/", dir.Replace('\\', '/') + "/bin/Spiel.exe", dir + @"\bin\");
+        _fs.AddFile(dir + @"\bin\spiel.EXE", "MZ");
+        AddGalaxyGame("1000000003", "Fehlendes Laufwerk", @"Q:\GOG\Weg", @"Q:\GOG\Weg\Weg.exe", @"Q:\GOG\Weg");
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Equal("Größe & Co.™", game.Name);
+        Assert.Equal(@"e:\spiele\GRÖßE & co. (ü-edition) #1", game.InstallDir);
+        Assert.Equal(dir + @"\bin\Spiel.exe", game.LaunchCommand);
+        Assert.Equal(dir + @"\bin", game.LaunchWorkingDirectory);
+        Assert.Equal([dir + @"\bin\Spiel.exe"], game.Executables);
     }
 
     [Fact]

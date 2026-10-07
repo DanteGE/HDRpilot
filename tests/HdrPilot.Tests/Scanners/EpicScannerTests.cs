@@ -330,7 +330,8 @@ public sealed class EpicScannerTests
     [Fact]
     public void Plugin_and_non_executable_manifests_are_skipped()
     {
-        AddManifestJson("plugin.item", Mutate("unrailed.item", m => m["AppCategories"] = new JsonArray("plugins", "engine")));
+        // "games" steht mit drin, damit wirklich die Plugin-Regel greift und nicht nur die fehlende Spielkategorie.
+        AddManifestJson("plugin.item", Mutate("unrailed.item", m => m["AppCategories"] = new JsonArray("plugins", "games")));
         AddManifestJson("nicht-ausfuehrbar.item", Mutate("rdr2.item", m => m["bIsExecutable"] = false));
         AddUnrailedFiles();
         AddRdr2Files();
@@ -522,6 +523,78 @@ public sealed class EpicScannerTests
         Assert.Equal(2, result.Errors.Count);
         Assert.Contains(result.Errors, e => e.Message.Contains("JSON-Wurzel ist kein Objekt", StringComparison.Ordinal));
         Assert.Contains(result.Errors, e => e.Message.Contains("Kein gültiges JSON", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Broken_lone_surrogate_escape_in_value_is_reported_and_others_delivered()
+    {
+        // "\uD800" ist syntaktisch gültiges JSON; System.Text.Json wirft erst beim Dekodieren des Werts
+        // (InvalidOperationException). Das darf den Scan nicht abbrechen.
+        AddManifestJson("Surrogat.item", FixtureText("unrailed.item").Replace("\"Unrailed\"", "\"Unrailed\\uD800\"", StringComparison.Ordinal));
+        AddManifest("rdr2.item");
+        AddUnrailedFiles();
+        AddRdr2Files();
+
+        var result = Scan();
+
+        Assert.Equal(["Heather"], result.Games.Select(g => g.SourceId));
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(Manifests + @"\Surrogat.item", error.Path);
+        Assert.Equal("Epic-Manifest defekt: Feld \"DisplayName\" enthält eine ungültige Escape-Folge (einzelnes UTF-16-Surrogat).", error.Message);
+    }
+
+    [Fact]
+    public void Broken_lone_surrogate_escape_in_unused_property_name_is_tolerated()
+    {
+        // Fehlt ein Feld (hier ProcessNames), sucht der Leser alle Namen ohne Groß-/Kleinschreibung ab und stieß dabei
+        // auf den nicht dekodierbaren Namen. Ein solcher Name kann keines der gesuchten Felder sein.
+        var json = FixtureText("unrailed.item")
+            .Replace("\"FormatVersion\"", "\"Format\\uDC00Version\"", StringComparison.Ordinal)
+            .Replace("\"ProcessNames\": [],", string.Empty, StringComparison.Ordinal);
+        AddManifestJson("x.item", json);
+        AddUnrailedFiles();
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        Assert.Equal("76233c0af0a441c7bd541e7d7ab3cde1", Assert.Single(result.Games).SourceId);
+    }
+
+    [Fact]
+    public void Broken_registry_value_with_wrong_type_does_not_throw()
+    {
+        // DWORD statt REG_SZ ergibt "5" (kein absoluter Pfad), REG_BINARY ergibt keinen Text.
+        _registry.Set(RegistryHiveKind.CurrentUser, @"Software\Epic Games\EOS", "ModSdkMetadataDir", 5);
+        var dword = Scan();
+        _registry.Set(RegistryHiveKind.CurrentUser, @"Software\Epic Games\EOS", "ModSdkMetadataDir", new byte[] { 0x43, 0x3A });
+        var binary = Scan();
+
+        Assert.Empty(dword.Games);
+        Assert.Empty(dword.Errors);
+        Assert.Empty(binary.Games);
+        Assert.Empty(binary.Errors);
+        Assert.False(binary.LauncherDetected);
+    }
+
+    [Fact]
+    public void Paths_with_umlauts_special_characters_and_missing_drive_are_handled()
+    {
+        AddManifestJson("x.item", Mutate("unrailed.item", m =>
+        {
+            m["InstallLocation"] = "E:/Spiele/Größe & Co. (Ü-Edition) #1/";
+            m["LaunchExecutable"] = "bin/Spiel ä.exe";
+            m["DisplayName"] = "Größe & Co.™";
+        }));
+        AddManifestJson("y.item", Mutate("rdr2.item", m => m["InstallLocation"] = @"Q:\Epic\RedDeadRedemption2")); // Laufwerk Q: fehlt
+        _fs.AddFile(@"E:\Spiele\größe & co. (ü-edition) #1\BIN\spiel Ä.EXE", "MZ");
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Equal("Größe & Co.™", game.Name);
+        Assert.Equal(@"E:\Spiele\Größe & Co. (Ü-Edition) #1", game.InstallDir);
+        Assert.Equal([@"E:\Spiele\Größe & Co. (Ü-Edition) #1\bin\Spiel ä.exe"], game.Executables);
     }
 
     [Fact]

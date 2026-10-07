@@ -59,7 +59,11 @@ internal static class ScannerJson
         return document;
     }
 
-    /// <summary>Sucht eine Eigenschaft erst exakt, dann ohne Beachtung der Groß-/Kleinschreibung.</summary>
+    /// <summary>
+    /// Sucht eine Eigenschaft erst exakt, dann ohne Beachtung der Groß-/Kleinschreibung. Namen mit ungültiger
+    /// Escape-Folge (etwa ein einzelnes Surrogat <c>\uD800</c>) lassen sich nicht dekodieren; sie können keiner der
+    /// gesuchten Namen sein und werden übergangen, statt eine Ausnahme aus dem Scanner zu werfen.
+    /// </summary>
     public static bool TryGetProperty(JsonElement element, string name, out JsonElement value)
     {
         if (element.ValueKind != JsonValueKind.Object)
@@ -68,14 +72,21 @@ internal static class ScannerJson
             return false;
         }
 
-        if (element.TryGetProperty(name, out value))
+        try
         {
-            return true;
+            if (element.TryGetProperty(name, out value))
+            {
+                return true;
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Ein anderer Eigenschaftsname ist nicht dekodierbar: unten tolerant weitersuchen.
         }
 
         foreach (var property in element.EnumerateObject())
         {
-            if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(TryGetName(property), name, StringComparison.OrdinalIgnoreCase))
             {
                 value = property.Value;
                 return true;
@@ -86,9 +97,12 @@ internal static class ScannerJson
         return false;
     }
 
-    /// <summary>Zeichenkette oder null, wenn die Eigenschaft fehlt oder keine Zeichenkette ist.</summary>
+    /// <summary>
+    /// Zeichenkette oder null, wenn die Eigenschaft fehlt oder keine Zeichenkette ist. Wirft
+    /// <see cref="InvalidDataException"/>, wenn der Wert eine ungültige Escape-Folge enthält.
+    /// </summary>
     public static string? GetString(JsonElement element, string name) =>
-        TryGetProperty(element, name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        TryGetProperty(element, name, out var value) && value.ValueKind == JsonValueKind.String ? ReadString(value, name) : null;
 
     /// <summary>Wie <see cref="GetString"/>, nimmt aber auch Zahlen an (IDs werden je nach Version als Zahl geschrieben).</summary>
     public static string? GetId(JsonElement element, string name)
@@ -100,7 +114,7 @@ internal static class ScannerJson
 
         return value.ValueKind switch
         {
-            JsonValueKind.String => value.GetString(),
+            JsonValueKind.String => ReadString(value, name),
             JsonValueKind.Number => value.GetRawText(),
             _ => null,
         };
@@ -122,8 +136,36 @@ internal static class ScannerJson
 
         return value.EnumerateArray()
             .Where(e => e.ValueKind == JsonValueKind.String)
-            .Select(e => e.GetString()!)
+            .Select(e => ReadString(e, name))
             .ToList();
+    }
+
+    /// <summary>
+    /// Dekodiert einen JSON-String. System.Text.Json prüft Escape-Folgen wie <c>\uD800</c> (einzelnes Surrogat) erst
+    /// hier und wirft dann <see cref="InvalidOperationException"/>; das wird zum gemeldeten Formatfehler.
+    /// </summary>
+    private static string ReadString(JsonElement value, string name)
+    {
+        try
+        {
+            return value.GetString() ?? string.Empty;
+        }
+        catch (InvalidOperationException)
+        {
+            throw new InvalidDataException($"Feld \"{name}\" enthält eine ungültige Escape-Folge (einzelnes UTF-16-Surrogat).");
+        }
+    }
+
+    private static string? TryGetName(JsonProperty property)
+    {
+        try
+        {
+            return property.Name;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 
     private static string Decode(byte[] bytes)

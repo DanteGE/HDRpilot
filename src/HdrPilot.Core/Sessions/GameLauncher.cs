@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using HdrPilot.Core.Config;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Sessions;
 
@@ -22,7 +24,7 @@ public sealed class ShellGameLauncher : IGameLauncher
     {
         if (string.IsNullOrWhiteSpace(game.LaunchCommand))
         {
-            return new GameLaunchResult(false, $"Für \"{game.Name}\" ist kein Start-Befehl bekannt.");
+            return new GameLaunchResult(false, string.Format(CultureInfo.CurrentCulture, CoreStrings.LaunchNoCommand, game.Name));
         }
 
         var command = game.LaunchCommand;
@@ -43,11 +45,11 @@ public sealed class ShellGameLauncher : IGameLauncher
         try
         {
             using var process = Process.Start(info);
-            return new GameLaunchResult(true, $"Start-Befehl ausgeführt: {command}");
+            return new GameLaunchResult(true, string.Format(CultureInfo.CurrentCulture, CoreStrings.LaunchExecuted, command));
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or FileNotFoundException)
         {
-            return new GameLaunchResult(false, $"Start von \"{game.Name}\" fehlgeschlagen: {ex.Message}");
+            return new GameLaunchResult(false, string.Format(CultureInfo.CurrentCulture, CoreStrings.LaunchError, game.Name, ex.Message));
         }
     }
 }

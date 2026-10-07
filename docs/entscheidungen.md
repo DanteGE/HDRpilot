@@ -169,3 +169,37 @@ Steam-Update, siehe Grenze in `docs/scanner/steam.md`). Verschwundene Spiele beh
 **E40 Kommandozeile für Phase-3-Tests:** `hdrpilot watch` betreibt dieselbe Automatik wie die App (gemeinsamer
 `AutomationHost`), `games add/set/list/import` pflegt die Konfiguration, `--config-dir` trennt Testläufe von der echten
 Ablage. `hdrpilot diag poll` misst die Kosten eines Abfragezyklus.
+
+## Nachprüfung der Sitzungslogik (unabhängige Prüfer, 2026-10-07)
+
+Drei Prüfer mit getrennten Blickwinkeln (Zustand, Technik, Auftrag) und drei Gegenprüfer. 15 Funde, davon 13 bestätigt
+und behoben (je mit Test, der ohne Korrektur fehlschlägt; zwei per Mutation nachgewiesen), 2 widerlegt.
+
+**E41 Erneuter Start über die App** während der Nachlaufzeit oder der Startfrist stellt die Sitzung wieder auf „wartet
+auf den Spielprozess“, beginnt die Startfrist neu und schaltet HDR sicher ein (auch wenn es von Hand ausgeschaltet wurde).
+
+**E42 Speicherfehler beim gemerkten Zustand:** einmal nach 250 ms erneut versuchen; scheitert es wieder, wird trotzdem
+geschaltet (das Spiel hat Vorrang), aber per Tray-Hinweis gemeldet, dass ein Absturz HDR jetzt nicht zurückstellen würde.
+
+**E43 Neue Sitzungen lösen eine Neuzuordnung aus,** damit auch nicht installierte, nicht ausgewählte Spiele beim Start über
+die App erkannt werden. Revision und Stand der Konfiguration werden in dieser Reihenfolge gelesen (kein Wettlauf).
+
+**E44 Gemerkte EXEs über die Nachlaufzeit:** Der „erste erkannte Lauf“ endet wie eine Sitzung erst nach der Nachlaufzeit;
+bei Starter-Ketten (PlayRDR2 → RDR2) wird so auch die eigentliche Spiel-EXE gemerkt.
+
+**E45 Zuordnung:** genau bekannte EXE-Pfade zählen immer (auch in sonst zu weiten Ordnern wie dem Desktop); bei gleichem
+Installationsordner gewinnt das ausgewählte, dann das installierte Spiel; per Pfad ausgeschlossene EXEs gelten auch bei
+unlesbarem Prozesspfad. `games add` weist auf einen schon vergebenen Ordner hin.
+
+**E46 Protokoll übersteht einen im Betrieb gelöschten Ordner** (Neuanlage beim nächsten Dateiwechsel, Schreiber wird
+verworfen statt in entsorgtem Zustand zu bleiben); Fehler beim Protokollieren können die Überwachung nicht mehr beenden.
+
+**E47 Konfiguration über Prozessgrenzen:** Vor jedem Schreiben wird `config.json` neu gelesen, wenn ein anderer Prozess
+sie geändert hat (Sperre `Local\HdrPilot.Config.<hash>`); die laufende Automatik lädt fremde Änderungen per
+FileSystemWatcher nach. Halb geschriebene Dateien werden ignoriert.
+
+**E48 Meldungstexte des Kerns in `Resources/CoreStrings.resx`** (Tray-Hinweise, Schaltergebnisse, Startmeldungen), damit
+Englisch später ergänzt werden kann. Protokolltexte bleiben im Code (nicht Teil der Oberfläche).
+
+Widerlegt (kein Fehler): „Zurückstellen“-Einstellung während einer Sitzung ändern wirkt ab dem nächsten Spielstart
+(bewusste Lesart); Wettlauf beim Neuaufbau der Zuordnung war nicht erreichbar (trotzdem gehärtet, E43).

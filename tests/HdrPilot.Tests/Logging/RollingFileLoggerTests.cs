@@ -69,6 +69,23 @@ public sealed class RollingFileLoggerTests : IDisposable
     }
 
     [Fact]
+    public void Deleted_log_folder_never_breaks_logging()
+    {
+        using var provider = new RollingFileLoggerProvider(_dir, () => LogLevel.Information, _clock);
+        var logger = provider.CreateLogger("X");
+        logger.LogInformation("vorher");
+        provider.Dispose();
+        using var provider2 = new RollingFileLoggerProvider(_dir, () => LogLevel.Information, _clock);
+        var logger2 = provider2.CreateLogger("X");
+        logger2.LogInformation("eins");
+        Directory.Delete(_dir, recursive: true); // Nutzer löscht den Ordner im Betrieb
+        _clock.Advance(TimeSpan.FromDays(1));
+
+        Assert.Null(Record.Exception(() => logger2.LogInformation("zwei")));
+        Assert.Null(Record.Exception(() => logger2.LogInformation("drei")));
+        Assert.Contains("drei", ReadShared(provider2.CurrentFile!), StringComparison.Ordinal);
+    }
+    [Fact]
     public void Composite_factory_writes_to_all_providers()
     {
         var writer = new StringWriter();

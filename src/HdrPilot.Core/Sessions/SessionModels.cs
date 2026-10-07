@@ -32,6 +32,9 @@ public enum NotificationKind
     DisplayNotConnected,
     SwitchFailed,
     LaunchFailed,
+
+    /// <summary>Der gemerkte HDR-Zustand ließ sich nicht auf die Platte schreiben.</summary>
+    StateNotSaved,
 }
 
 /// <summary>Kurze Meldung für den Tray-Hinweis.</summary>

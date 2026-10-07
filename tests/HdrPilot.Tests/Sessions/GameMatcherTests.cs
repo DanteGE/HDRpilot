@@ -90,4 +90,34 @@ public sealed class GameMatcherTests
         Assert.Equal("b", m.Match(new ProcessInfo(2, "BETA.exe", null))?.SourceId);
         Assert.Null(m.Match(new ProcessInfo(3, "unknown.exe", null)));
     }
+
+    [Fact]
+    public void Same_folder_prefers_selected_game()
+    {
+        var gog = Game("1511366207", @"D:\GOG-Spiele\Showgunners");
+        gog.Source = GameSource.Gog;
+        var manual = new GameConfig { Source = GameSource.Manual, SourceId = "m", Name = "m", InstallDir = @"D:\GOG-Spiele\Showgunners", HdrAuto = true };
+        Assert.Equal(manual.Key, Matcher(gog, manual).Match(new ProcessInfo(1, "Showgunners.exe", @"D:\GOG-Spiele\Showgunners\Showgunners.exe"))?.Key);
+    }
+
+    [Fact]
+    public void Exact_exe_path_matches_even_in_forbidden_folder()
+    {
+        const string desktop = @"C:\Users\T\Desktop";
+        var g = new GameConfig { Source = GameSource.Manual, SourceId = "d", Name = "d", InstallDir = desktop, KnownExecutables = [desktop + @"\Spiel.exe"] };
+        var m = new GameMatcher([g], _ => false, [desktop]);
+        Assert.NotNull(m.Match(new ProcessInfo(1, "Spiel.exe", desktop + @"\Spiel.exe")));
+        Assert.Null(m.Match(new ProcessInfo(2, "anderes.exe", desktop + @"\anderes.exe"))); // der Ordner selbst bleibt zu weit
+    }
+
+    [Fact]
+    public void Excluded_path_entry_also_applies_when_path_unreadable()
+    {
+        var g = Game("x", @"D:\Games\X");
+        g.DetectedExecutables = [@"D:\Games\X\x.exe", @"D:\Games\X\tools\editor.exe"];
+        g.ExcludedExecutables = [@"D:\Games\X\tools\editor.exe"];
+        var m = Matcher(g);
+        Assert.Null(m.Match(new ProcessInfo(2, "editor.exe", null)));
+        Assert.NotNull(m.Match(new ProcessInfo(3, "x.exe", null)));
+    }
 }

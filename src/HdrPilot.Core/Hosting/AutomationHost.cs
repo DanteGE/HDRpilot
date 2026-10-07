@@ -22,6 +22,8 @@ public sealed class AutomationHost : IAsyncDisposable
     private readonly ILogger _logger;
     private readonly LogLevelSwitch _levelSwitch;
     private bool _started;
+    private readonly FileSystemWatcher? _configWatcher;
+    private Timer? _reloadTimer;
 
     public AutomationHost(AppPaths paths, IReadOnlyList<ILoggerProvider>? extraLogProviders = null)
         : this(paths, PhysicalFileSystem.Instance, WindowsRegistry.Instance, SystemEnvironment.Instance, SystemClock.Instance, extraLogProviders)
@@ -73,6 +75,23 @@ public sealed class AutomationHost : IAsyncDisposable
             LoggerFactory.CreateLogger("Sessions"));
 
         Config.Changed += OnConfigChanged;
+
+        // Änderungen anderer Prozesse (etwa "hdrpilot games set") ohne Abfrageschleife bemerken.
+        try
+        {
+            _configWatcher = new FileSystemWatcher(paths.ConfigDirectory, Path.GetFileName(paths.ConfigFile))
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+            };
+            _configWatcher.Changed += (_, _) => ScheduleConfigReload();
+            _configWatcher.Created += (_, _) => ScheduleConfigReload();
+            _configWatcher.Renamed += (_, _) => ScheduleConfigReload();
+            _configWatcher.EnableRaisingEvents = true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or PlatformNotSupportedException)
+        {
+            _logger.LogWarning(ex, "Konfigurationsordner wird nicht auf fremde Änderungen überwacht.");
+        }
     }
 
     public AppPaths Paths { get; }
@@ -131,9 +150,28 @@ public sealed class AutomationHost : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         Config.Changed -= OnConfigChanged;
+        _configWatcher?.Dispose();
+        _reloadTimer?.Dispose();
         await Watcher.StopAsync().ConfigureAwait(false);
         _logger.LogInformation("HdrPilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
         LoggerFactory.Dispose();
+    }
+
+    private void ScheduleConfigReload()
+    {
+        // Entprellen: atomares Schreiben löst mehrere Ereignisse aus.
+        var timer = _reloadTimer ??= new Timer(_ =>
+        {
+            try
+            {
+                Config.ReloadIfChangedOnDisk();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Konfiguration ließ sich nicht neu laden.");
+            }
+        });
+        timer.Change(TimeSpan.FromMilliseconds(500), Timeout.InfiniteTimeSpan);
     }
 
     private void OnConfigChanged(object? sender, EventArgs e)

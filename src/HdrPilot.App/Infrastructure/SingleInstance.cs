@@ -32,7 +32,7 @@ public sealed partial class SingleInstance : IDisposable
     /// <summary>Kennung: "default" für die normale Ablage, sonst ein Hash des Konfigurationsordners.</summary>
     public static string IdFor(string? configDir) => configDir is null
         ? "default"
-        : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(System.IO.Path.GetFullPath(configDir).ToUpperInvariant())))[..16];
+        : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(configDir)).ToUpperInvariant())))[..16];
 
     /// <summary>Liefert die Instanz, wenn dies der erste Aufruf ist, sonst null.</summary>
     public static SingleInstance? TryAcquire(string id)

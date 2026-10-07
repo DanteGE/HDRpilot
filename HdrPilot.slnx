@@ -5,6 +5,7 @@
     <Project Path="src/HdrPilot.Core/HdrPilot.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/HdrPilot.App.Tests/HdrPilot.App.Tests.csproj" />
     <Project Path="tests/HdrPilot.Tests/HdrPilot.Tests.csproj" />
   </Folder>
 </Solution>

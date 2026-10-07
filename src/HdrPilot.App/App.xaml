@@ -8,6 +8,8 @@
             <!-- Tokens.Dark/Light.xaml setzt ThemeManager zur Laufzeit an Position 0. -->
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Themes/Controls.xaml" />
+                <ResourceDictionary Source="Themes/Library.xaml" />
+                <ResourceDictionary Source="Themes/Shell.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

@@ -1,6 +1,6 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-07 14:10. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-07 15:50. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Erledigt (auf `main`, committet)
@@ -16,8 +16,8 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   nach `%LOCALAPPDATA%\Programs\HdrPilot\` kopieren; läuft mit der echten Ablage, also ohne `--config-dir`). Je
   Launcher ein Spiel über „Mit HDR starten“ und über die erzeugte Verknüpfung; das Protokoll
   (`%LOCALAPPDATA%\HdrPilot\logs`) muss „HDR bestätigt“ vor dem Start-Befehl und dem erkannten Prozess zeigen.
-  Testspiele: Hades II (Steam:1145350), Ring of Pain (Epic), Showgunners (GOG), Palworld (Xbox), Avatar (Ubisoft),
-  Battlefield 6 (EA); Battle.net hat kein Spiel. Dabei Tray-Menü und sichtbare Oberfläche vom Nutzer ansehen lassen.
+  Testspiele mit belegtem eigenen HDR (Recherche PCGamingWiki u. a.): Dying Light: The Beast (Steam:3008130), Alan Wake 2 (Epic),
+  Cyberpunk 2077 (GOG, REDlauncher), Avatar (Ubisoft), Battlefield 6 (EA, Javelin); Palworld (Xbox) hat kein eigenes HDR,`r`n  nur Gegenprobe; Battle.net hat kein Spiel. Anti-Cheat-Prüfung erledigt (E65–E68, G5.4). Dabei Tray-Menü und sichtbare Oberfläche vom Nutzer ansehen lassen.
 - Danach in der README unter „Bekannte Grenzen“ den Punkt „Start über die Launcher“ durch das Testergebnis ersetzen,
   neu veröffentlichen (`phase5-readme.ps1`, `phase5-publish.ps1`), dann G5.3: Rückfrage zu WMI-Überwachung, Neustart
   bei verspätetem HDR, Steam-Hülle, englischer Oberfläche.

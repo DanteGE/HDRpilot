@@ -1,0 +1,21 @@
+version: 2.0
+root:
+  name: Assassin’s Creed Shadows
+  help_url: https://support.ubisoft.com/
+  overlay_virtual_control_enabled: no
+  overlay_notifications: []
+  start_game:
+    steam:
+      overlay_required: yes
+      overlay_supported: yes
+      steam_app_id: 3159330
+      steam_installation_status_register: HKEY_LOCAL_MACHINE\SOFTWARE\Valve\Steam\InstallPath
+      game_installation_status_register: HKEY_CURRENT_USER\SOFTWARE\Valve\Steam\Apps\3159330\Installed
+      offline_supported: yes
+  third_party_platform:
+    name: Steam
+  upn_enabled: true
+  uplay:
+    achievements_sync_id: 8006
+  show_properties: yes
+localizations: {}

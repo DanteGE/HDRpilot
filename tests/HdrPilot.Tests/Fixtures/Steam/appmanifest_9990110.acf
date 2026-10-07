@@ -1,0 +1,78 @@
+"AppState"
+{
+	"appid"		"9990110"
+	"universe"		"1"
+	"LauncherPath"		"C:\\Program Files (x86)\\Steam\\steam.exe"
+	"name"		"STERNENWACHT™ 2"
+	"StateFlags"		"4"
+	"installdir"		"Sternenwacht 2"
+	"LastUpdated"		"1789203466"
+	"LastPlayed"		"1700000000"
+	"SizeOnDisk"		"24168871936"
+	"StagingSize"		"0"
+	"buildid"		"21000110"
+	"LastOwner"		"76561197960265728"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"91226112"
+	"BytesDownloaded"		"91226112"
+	"BytesToStage"		"16127483902"
+	"BytesStaged"		"16127483902"
+	"TargetBuildID"		"21000110"
+	"AutoUpdateBehavior"		"2"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"9990111"
+		{
+			"manifest"		"1000000000000000001"
+			"size"		"248317402"
+		}
+		"9990113"
+		{
+			"manifest"		"1000000000000000002"
+			"size"		"22964180538"
+		}
+		"9990114"
+		{
+			"manifest"		"1000000000000000003"
+			"size"		"318702516"
+		}
+		"9990115"
+		{
+			"manifest"		"1000000000000000004"
+			"size"		"330415287"
+			"dlcappid"		"9990115"
+		}
+		"9990116"
+		{
+			"manifest"		"1000000000000000005"
+			"size"		"307256193"
+			"dlcappid"		"9990116"
+		}
+	}
+	"InstallScripts"
+	{
+		"9990111"		"tools\\installscript.vdf"
+	}
+	"SharedDepots"
+	{
+		"228984"		"228980"
+		"228985"		"228980"
+		"228988"		"228980"
+		"228990"		"228980"
+	}
+	"UserConfig"
+	{
+		"language"		"german"
+		"optionaldlc"		"9990115,9990116"
+		"BetaKey"		"public"
+	}
+	"MountedConfig"
+	{
+		"language"		"german"
+		"optionaldlc"		"9990115,9990116"
+		"BetaKey"		"public"
+	}
+}

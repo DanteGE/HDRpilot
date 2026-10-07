@@ -1,0 +1,59 @@
+version: 2.0
+root:
+  name: l1
+  sort_string: 'Avatar: Frontiers of Pandora™'
+  background_image: d491e52e263d37af1d413ecb44c8b22c.jpg
+  help_url: http://support.ubi.com
+  homepage_url: https://avatarfrontiersofpandora.com
+  overlay_virtual_control_enabled: no
+  overlay_notifications: []
+  icon_image: 2ebcf68313b904d3d6d17989ec7b3b50.ico
+  start_game:
+    online:
+      overlay_required: yes
+      overlay_supported: yes
+      executables:
+      - shortcut_name: AFOP
+        path:
+          relative: afop.exe
+        trial:
+          relative: afop_plus.exe
+        working_directory:
+          register: HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\4740\InstallDir
+        arguments: ''
+        play_arguments: ''
+    offline:
+      executables:
+      - shortcut_name: AFOP
+        path:
+          relative: afop.exe
+        trial:
+          relative: afop_plus.exe
+        working_directory:
+          register: HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\4740\InstallDir
+        arguments: ''
+        play_arguments: ''
+  overlay_injection_method: sdk
+  upn_enabled: true
+  installer:
+    game_identifier: AFOP
+    publisher: Ubisoft
+    help_url: http://support.ubi.com
+    about_url: https://avatarfrontiersofpandora.com
+  digital_distribution:
+    version: 1
+  cloud_saves: yes
+  uplay:
+    achievements_sync_id: 4740
+  club:
+    enabled: yes
+  show_properties: yes
+localizations:
+  default:
+    l1: Avatar Frontiers of Pandora™
+  ja-JP:
+    l1: アバター：フロンティア・オブ・パンドラ
+  ru-RU:
+    l1: 'Аватар: Рубежи Пандоры'
+  ko-KO:
+    l1: '아바타: 프론티어 오브 판도라'

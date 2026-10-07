@@ -1,0 +1,65 @@
+#--------------------------------------------------------------------------
+# Far Cry® 4 (gekürzt): Name über Lokalisierungsschlüssel, EXE relativ zum Arbeitsordner bin
+#--------------------------------------------------------------------------
+version: 2.0
+root:
+  name: GAMENAME
+  sort_string: "Far Cry 05"
+  background_image: BACKGROUNDIMAGE
+  background_color: 000000
+  party:
+    party_enabled: yes
+    max_party_size: 9
+  start_game:
+    online:
+      legacy_ticket_enabled: no
+      overlay_shop_url: http://shop.ubi.com/farcry4
+      executables:
+        - path:
+            relative: FarCry4.exe
+          working_directory:
+            register: HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\420\InstallDir
+            append: bin
+          internal_name: Executable
+          description: EXE_DESCRIPTION_1
+          shortcut_name: EXE_SHORTCUT_NAME_1
+        - path:
+            relative: IGE_WPF64.exe
+          working_directory:
+            register: HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\420\InstallDir
+            append: bin
+          arguments: -uplay_overlay_no_ui
+          internal_name: Executable
+          description: EXE_DESCRIPTION_2
+          shortcut_name: EXE_SHORTCUT_NAME_2
+    offline:
+      executables:
+        - path:
+            relative: FarCry4.exe
+          working_directory:
+            register: HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\420\InstallDir
+            append: bin
+          internal_name: Executable
+  installer:
+    game_identifier: Far Cry 4
+    publisher: Ubisoft
+  uplay:
+    game_code: FCC
+  addons:
+    - id: 1163
+      is_visible: no
+      name: RELATED_GAMENAME_1163
+    - id: 1213
+      is_visible: yes
+      name: RELATED_GAMENAME_1213
+localizations:
+  default:
+    FC4_GAME: Far Cry 4
+    FC4_EDITOR: Map Editor
+    GAMENAME: "Far Cry® 4"
+    EXE_SHORTCUT_NAME_1: Far Cry 4
+    EXE_SHORTCUT_NAME_2: Far Cry 4 Map Editor
+    RELATED_GAMENAME_1163: "Far Cry® 4 - BloodRuby"
+    RELATED_GAMENAME_1213: "Far Cry® 4 - Escape from Durgesh Prison"
+  de-DE:
+    RELATED_DESCRIPTION_1213: "Brich aus dem Gefängnis aus und überlebe auf dem feindlichen Terrain von Pagan Mins Kyrat."

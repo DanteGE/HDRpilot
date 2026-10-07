@@ -1,0 +1,41 @@
+"AppState"
+{
+	"appid"		"9990120"
+	"universe"		"1"
+	"LauncherPath"		"C:\\Program Files (x86)\\Steam\\steam.exe"
+	"name"		"Turmfall"
+	"StateFlags"		"4"
+	"installdir"		"Turmfall"
+	"LastUpdated"		"1772419836"
+	"LastPlayed"		"1700000000"
+	"SizeOnDisk"		"61237584"
+	"StagingSize"		"0"
+	"buildid"		"21000120"
+	"LastOwner"		"76561197960265728"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"0"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"12873416"
+	"BytesStaged"		"12873416"
+	"TargetBuildID"		"21000120"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"9990121"
+		{
+			"manifest"		"1000000000000000001"
+			"size"		"61237584"
+		}
+	}
+	"UserConfig"
+	{
+		"language"		"english"
+	}
+	"MountedConfig"
+	{
+		"language"		"english"
+	}
+}

@@ -88,6 +88,11 @@ public sealed partial class CliApp
                 }
 
                 var config = OpenConfig(paths);
+                foreach (var existing in config.Current.Games.Where(g => Core.Util.PathUtil.PathEquals(g.InstallDir, entry.InstallDir)))
+                {
+                    stderr.WriteLine($"Hinweis: Der Ordner gehört schon zu {existing.Key} ({existing.Name}). Dort lässt sich HDR mit \"hdrpilot games set {existing.Key} --hdr on\" einschalten. Bei gleichem Ordner gewinnt das Spiel mit HDR automatisch.");
+                }
+
                 config.Update(c => c.Games.Add(new GameConfig
                 {
                     Source = entry.Source,

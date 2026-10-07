@@ -670,6 +670,119 @@ public sealed class SessionManagerTests
         Assert.False(_store.Data!.Displays.Single().WasHdrOn);
     }
 
+    // ---------- Nachprüfung Phase 3 (unabhängige Prüfer) ----------
+
+    [Fact]
+    public async Task Session_relaunch_via_app_during_grace_keeps_hdr_until_process()
+    {
+        _config.AddGame("1", DirA, hdrAuto: false);
+        await Launch("Steam:1");
+        var pid = _processes.StartExe(ExeA);
+        await Poll(5);
+        _processes.Stop(pid);
+        await Poll(3); // Nachlaufzeit läuft (Ending)
+
+        var outcome = await Manager.LaunchAsync("Steam:1", Ct);
+        Assert.True(outcome.Started);
+        Assert.Equal(SessionPhase.Launching, Assert.Single(Manager.Sessions).Phase);
+
+        await Poll(15); // Steam braucht 15 s, alte Nachlaufzeit wäre längst abgelaufen
+        Assert.True(PrimaryOn);
+        Assert.Equal(0, _hdr.SetCalls(enable: false));
+        _processes.StartExe(ExeA);
+        await Poll();
+        Assert.Equal(SessionPhase.Running, Assert.Single(Manager.Sessions).Phase);
+    }
+
+    [Fact]
+    public async Task Session_relaunch_restarts_launch_timeout()
+    {
+        _config.Config.Settings.LaunchTimeoutSeconds = 120;
+        _config.AddGame("1", DirA, hdrAuto: false);
+        await Launch("Steam:1");
+        await Poll(100);
+        await Manager.LaunchAsync("Steam:1", Ct);
+        await Poll(25);
+
+        Assert.Equal(SessionPhase.Launching, Assert.Single(Manager.Sessions).Phase);
+        Assert.True(PrimaryOn);
+    }
+
+    [Fact]
+    public async Task Session_relaunch_switches_hdr_on_again_after_manual_off()
+    {
+        _config.AddGame("1", DirA);
+        _processes.StartExe(ExeA);
+        await Poll();
+        _hdr[FakeHdrController.Primary].HdrOn = false; // Nutzer hat im Spiel von Hand ausgeschaltet
+
+        await Manager.LaunchAsync("Steam:1", Ct);
+
+        Assert.True(PrimaryOn);
+    }
+
+    [Fact]
+    public async Task Session_state_save_failure_is_reported_and_game_not_blocked()
+    {
+        var failing = new FailingStateStore();
+        _manager = new SessionManager(_hdr, _config, failing, _launcher, _clock, (_, _) => false, [], _log);
+        _manager.Notification += (_, n) => _notifications.Add(n);
+        _config.AddGame("1", DirA);
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.True(PrimaryOn); // das Spiel hat Vorrang
+        Assert.Contains(_notifications, n => n.Kind == NotificationKind.StateNotSaved);
+        Assert.True(failing.SaveAttempts >= 2); // ein erneuter Versuch
+    }
+
+    [Fact]
+    public async Task Session_launch_of_not_installed_game_without_hdr_auto_is_matched()
+    {
+        var g = _config.AddGame("1", DirA, hdrAuto: false);
+        g.IsInstalled = false;
+        await Launch("Steam:1");
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.Equal(SessionPhase.Running, Assert.Single(Manager.Sessions).Phase);
+        await Poll(130);
+        Assert.True(PrimaryOn);
+        Assert.Equal(0, _hdr.SetCalls(enable: false));
+    }
+
+    [Fact]
+    public async Task Session_learns_game_exe_behind_starter_chain()
+    {
+        _config.AddGame("1", DirA);
+        var starter = _processes.StartExe(DirA + @"\PlayA.exe");
+        await Poll();
+        _processes.Stop(starter);
+        await Poll(4); // Lücke kürzer als die Nachlaufzeit
+        _processes.StartExe(ExeA);
+        await Poll(3);
+
+        var learned = _config.Config.FindGame("Steam:1")!.DetectedExecutables;
+        Assert.Contains(ExeA, learned, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains(DirA + @"\PlayA.exe", learned, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private sealed class FailingStateStore : ISessionStateStore
+    {
+        public int SaveAttempts { get; private set; }
+
+        public SessionStateData? Load() => null;
+
+        public void Save(SessionStateData data)
+        {
+            SaveAttempts++;
+            throw new IOException("Datenträger voll");
+        }
+
+        public void Delete()
+        {
+        }
+    }
     [Fact]
     public async Task Session_launch_unknown_game_does_nothing()
     {

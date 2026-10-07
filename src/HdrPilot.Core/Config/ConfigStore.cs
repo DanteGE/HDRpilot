@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HdrPilot.Core.Config;
 
-public sealed record ConfigLoadResult(AppConfig Config, bool CreatedNew, string? Warning);
+public sealed record ConfigLoadResult(AppConfig Config, bool CreatedNew, string? Warning, string? Text = null);
 
 /// <summary>Liest und schreibt config.json. Schreiben ist atomar (temporäre Datei, dann ersetzen).</summary>
 public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock clock, ILogger? logger = null)
@@ -60,13 +60,29 @@ public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock cloc
         }
 
         Normalize(config);
-        return new ConfigLoadResult(config, CreatedNew: false, warning);
+        return new ConfigLoadResult(config, CreatedNew: false, warning, text);
     }
 
-    public void Save(AppConfig config)
+    /// <summary>Aktueller Dateiinhalt oder null, wenn die Datei fehlt oder nicht lesbar ist.</summary>
+    public string? TryReadText()
+    {
+        try
+        {
+            return fileSystem.FileExists(path) ? fileSystem.ReadAllText(path) : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Schreibt atomar und liefert den geschriebenen Text (zum Erkennen fremder Änderungen).</summary>
+    public string Save(AppConfig config)
     {
         config.Version = AppConfig.CurrentVersion;
-        fileSystem.WriteAllTextAtomic(path, JsonSerializer.Serialize(config, ConfigJson.Options));
+        var text = JsonSerializer.Serialize(config, ConfigJson.Options);
+        fileSystem.WriteAllTextAtomic(path, text);
+        return text;
     }
 
     /// <summary>Bereinigt Nullwerte und doppelte Spiele (nach Schlüssel), begrenzt Zahlenwerte.</summary>

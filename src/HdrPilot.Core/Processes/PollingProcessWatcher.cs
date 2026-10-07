@@ -113,7 +113,14 @@ public sealed class PollingProcessWatcher(IProcessSnapshotProvider provider, Tim
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fehler im Abfragezyklus der Prozessüberwachung.");
+                try
+                {
+                    _logger.LogError(ex, "Fehler im Abfragezyklus der Prozessüberwachung.");
+                }
+                catch (Exception)
+                {
+                    // Die Überwachung darf nie an einem Protokollfehler sterben.
+                }
             }
 
             // Abstand von Beginn zu Beginn, mindestens 50 ms Pause.

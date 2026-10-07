@@ -91,14 +91,27 @@ public sealed class RollingFileLoggerProvider : ILoggerProvider
                 _writer!.WriteLine(line.ToString());
                 _writer.Flush();
             }
-            catch (IOException)
+            catch (Exception)
             {
-                // Protokoll darf die App nie stören.
-            }
-            catch (UnauthorizedAccessException)
-            {
+                // Protokoll darf die App nie stören (auch nicht bei gelöschtem Ordner oder entsorgtem Stream):
+                // Schreiber verwerfen, beim nächsten Aufruf wird neu geöffnet.
+                DropWriter();
             }
         }
+    }
+
+    private void DropWriter()
+    {
+        try
+        {
+            _writer?.Dispose();
+        }
+        catch (Exception)
+        {
+        }
+
+        _writer = null;
+        _currentPath = null;
     }
 
     private void EnsureWriter(DateOnly day)
@@ -113,8 +126,8 @@ public sealed class RollingFileLoggerProvider : ILoggerProvider
             DeleteOldFiles();
         }
 
-        _writer?.Dispose();
-        _currentDay = day;
+        DropWriter();
+        Directory.CreateDirectory(_directory); // falls der Ordner im Betrieb gelöscht wurde
         var baseName = "hdrpilot-" + day.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
         for (var i = 0; ; i++)
         {
@@ -127,6 +140,7 @@ public sealed class RollingFileLoggerProvider : ILoggerProvider
             var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
             _writer = new StreamWriter(stream, new UTF8Encoding(false));
             _currentPath = path;
+            _currentDay = day; // erst nach erfolgreichem Öffnen
             return;
         }
     }

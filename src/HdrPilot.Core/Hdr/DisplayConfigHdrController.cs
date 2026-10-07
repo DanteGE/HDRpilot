@@ -1,5 +1,6 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Native;
+using HdrPilot.Core.Resources;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -136,19 +137,19 @@ public sealed class DisplayConfigHdrController : IHdrController
         if (display is null)
         {
             return Result(HdrSetStatus.NotConnected, monitorDevicePath, null, null, null, null,
-                "Bildschirm nicht angeschlossen oder nicht aktiv.");
+                CoreStrings.HdrNotConnected);
         }
 
         if (!display.HdrSupported)
         {
             return Result(HdrSetStatus.NotHdrCapable, monitorDevicePath, display.FriendlyName, display.HdrEnabled, display.HdrEnabled, display.Api,
-                $"Bildschirm \"{display.FriendlyName}\" unterstützt kein HDR.");
+                Format(CoreStrings.HdrNotCapable, display.FriendlyName));
         }
 
         if (IsInState(display, enable))
         {
             return Result(HdrSetStatus.AlreadyInState, monitorDevicePath, display.FriendlyName, display.HdrEnabled, display.HdrEnabled, display.Api,
-                $"HDR ist bereits {OnOff(enable)}.");
+                Format(CoreStrings.HdrAlreadyInState, OnOff(enable)));
         }
 
         var before = display.HdrEnabled;
@@ -173,7 +174,7 @@ public sealed class DisplayConfigHdrController : IHdrController
             if (confirmed)
             {
                 return Result(HdrSetStatus.Success, monitorDevicePath, display.FriendlyName, before, enable, api,
-                    $"HDR {OnOff(enable)} (bestätigt).");
+                    Format(CoreStrings.HdrConfirmed, OnOff(enable)));
             }
 
             _logger.LogWarning(
@@ -191,14 +192,14 @@ public sealed class DisplayConfigHdrController : IHdrController
         }
 
         var detail = rc != DisplayConfigNative.ERROR_SUCCESS
-            ? $"Windows meldet Fehler {rc}."
+            ? Format(CoreStrings.HdrDetailWin32, rc)
             : last is null
-                ? "Bildschirm nach dem Schalten nicht mehr gefunden."
+                ? CoreStrings.HdrDetailGone
                 : last.HdrEnabled == enable && last.ActiveColorMode is { } mode && (mode == AdvancedColorMode.Hdr) != enable
-                    ? $"Schalter steht auf {OnOff(enable)}, aktiver Modus ist aber {mode} (evtl. durch Richtlinie begrenzt)."
-                    : $"Zustand nach {_options.VerifyAttempts} Prüfungen weiterhin HDR {OnOff(last.HdrEnabled)}.";
+                    ? Format(CoreStrings.HdrDetailPolicy, OnOff(enable), mode)
+                    : Format(CoreStrings.HdrDetailUnchanged, _options.VerifyAttempts, OnOff(last.HdrEnabled));
         return Result(HdrSetStatus.Failed, monitorDevicePath, display.FriendlyName, before, last?.HdrEnabled, api,
-            $"HDR ließ sich nicht {(enable ? "einschalten" : "ausschalten")}. {detail}");
+            Format(enable ? CoreStrings.HdrFailedOn : CoreStrings.HdrFailedOff, detail));
     }
 
     private async Task<HdrSetResult> HotkeyFallbackAsync(string monitorDevicePath, bool enable, DisplayInfo display, bool before, CancellationToken cancellationToken)
@@ -208,35 +209,35 @@ public sealed class DisplayConfigHdrController : IHdrController
         if (current is null)
         {
             return Result(HdrSetStatus.NotConnected, monitorDevicePath, display.FriendlyName, before, null, display.Api,
-                "Bildschirm vor der Tastenkürzel-Notlösung nicht mehr gefunden.");
+                CoreStrings.HdrHotkeyDisplayGone);
         }
 
         if (IsInState(current, enable))
         {
             return Result(HdrSetStatus.Success, monitorDevicePath, display.FriendlyName, before, enable, current.Api,
-                $"HDR {OnOff(enable)} (verspätet bestätigt).");
+                Format(CoreStrings.HdrLateConfirmed, OnOff(enable)));
         }
 
         if (current.HdrEnabled == enable)
         {
             // Schalter steht schon richtig, nur der aktive Modus fehlt: Umschalten würde es verschlimmern.
             return Result(HdrSetStatus.Failed, monitorDevicePath, display.FriendlyName, before, current.HdrEnabled, current.Api,
-                "HDR-Schalter steht richtig, aber Windows aktiviert den Modus nicht. Tastenkürzel nicht verwendet.");
+                CoreStrings.HdrHotkeyNotUsed);
         }
 
         _logger.LogWarning("Notlösung: sende Win+Alt+B für \"{Name}\". Das Kürzel betrifft alle HDR-fähigen Bildschirme.", display.FriendlyName);
         if (!_hotkey!.SendToggle())
         {
             return Result(HdrSetStatus.Failed, monitorDevicePath, display.FriendlyName, before, current.HdrEnabled, current.Api,
-                "Tastenkürzel Win+Alt+B ließ sich nicht senden.");
+                CoreStrings.HdrHotkeySendFailed);
         }
 
         var (confirmed, last) = await VerifyAsync(monitorDevicePath, enable, cancellationToken).ConfigureAwait(false);
         return confirmed
             ? Result(HdrSetStatus.Success, monitorDevicePath, display.FriendlyName, before, enable, current.Api,
-                $"HDR {OnOff(enable)} über Win+Alt+B (bestätigt).", usedHotkey: true)
+                Format(CoreStrings.HdrHotkeyConfirmed, OnOff(enable)), usedHotkey: true)
             : Result(HdrSetStatus.Failed, monitorDevicePath, display.FriendlyName, before, last?.HdrEnabled, current.Api,
-                "Auch Win+Alt+B hat den Zustand nicht geändert (Xbox Game Bar aktiv?).", usedHotkey: true);
+                CoreStrings.HdrHotkeyNoEffect, usedHotkey: true);
     }
 
     private async Task<(bool Confirmed, DisplayInfo? Last)> VerifyAsync(string monitorDevicePath, bool enable, CancellationToken cancellationToken)
@@ -343,11 +344,13 @@ public sealed class DisplayConfigHdrController : IHdrController
     }
 
     private static string DisplayName(RawTargetName name) =>
-        string.IsNullOrWhiteSpace(name.FriendlyName) ? "Unbenannter Bildschirm" : name.FriendlyName;
+        string.IsNullOrWhiteSpace(name.FriendlyName) ? CoreStrings.UnnamedDisplay : name.FriendlyName;
 
     private static string? NullIfEmpty(string value) => string.IsNullOrEmpty(value) ? null : value;
 
-    private static string OnOff(bool on) => on ? "an" : "aus";
+    private static string OnOff(bool on) => on ? CoreStrings.WordOn : CoreStrings.WordOff;
+
+    private static string Format(string format, params object?[] args) => string.Format(System.Globalization.CultureInfo.CurrentCulture, format, args);
 
     private static HdrSetResult Result(
         HdrSetStatus status, string path, string? name, bool? before, bool? after, HdrApi? api, string message, bool usedHotkey = false) => new()

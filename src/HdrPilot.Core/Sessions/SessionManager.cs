@@ -4,6 +4,7 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Processes;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,7 +31,7 @@ public sealed class SessionManager
     private readonly Dictionary<string, ActiveSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DisplayClaim> _claims = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, MatchedProcess> _pidMatches = [];
-    private readonly Dictionary<string, HashSet<string>> _learning = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, LearnState> _learning = new(StringComparer.OrdinalIgnoreCase);
     private GameMatcher? _matcher;
     private long _matcherRevision = -1;
     private bool _recovered;
@@ -98,8 +99,9 @@ public sealed class SessionManager
                 return;
             }
 
+            var revision = _config.Revision; // erst die Revision, dann den Stand lesen (sonst Wettlauf mit Update)
             var cfg = _config.Current;
-            RefreshMatches(snapshot, cfg);
+            RefreshMatches(snapshot, cfg, revision);
             _recovered = true;
             await RecoverCoreAsync(RunningGames(), cfg, cancellationToken).ConfigureAwait(false);
         }
@@ -118,8 +120,9 @@ public sealed class SessionManager
         try
         {
             var now = _clock.UtcNow;
+            var revision = _config.Revision;
             var cfg = _config.Current;
-            RefreshMatches(changes, cfg);
+            RefreshMatches(changes, cfg, revision);
             var running = RunningGames();
 
             if (!_recovered)
@@ -128,7 +131,7 @@ public sealed class SessionManager
                 await RecoverCoreAsync(running, cfg, cancellationToken).ConfigureAwait(false);
             }
 
-            Learn(running, cfg);
+            Learn(running, cfg, now);
 
             foreach (var (key, processes) in running)
             {
@@ -158,7 +161,7 @@ public sealed class SessionManager
 
                 if (session.Phase == SessionPhase.Launching)
                 {
-                    if (now - session.StartedAt >= launchTimeout)
+                    if (now - (session.LaunchRequestedAt ?? session.StartedAt) >= launchTimeout)
                     {
                         await EndSessionAsync(session, $"kein Spielprozess innerhalb von {launchTimeout.TotalSeconds:0} s nach dem Start", cancellationToken).ConfigureAwait(false);
                     }
@@ -207,17 +210,28 @@ public sealed class SessionManager
             var game = cfg.FindGame(gameKey);
             if (game is null)
             {
-                return new LaunchOutcome(false, $"Spiel {gameKey} ist nicht bekannt.", null, null);
+                return new LaunchOutcome(false, Format(CoreStrings.LaunchUnknownGame, gameKey), null, null);
             }
 
+            var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
             if (!_sessions.TryGetValue(game.Key, out var session))
             {
-                var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
                 session = await StartSessionAsync(game, SessionTrigger.LaunchedViaApp, processes, cfg, cancellationToken).ConfigureAwait(false);
             }
             else
             {
+                if (processes.Count == 0)
+                {
+                    // Erneuter Start (etwa während der Nachlaufzeit oder nach einem Neustart des Spiels):
+                    // Sitzung wieder auf "wartet auf Spielprozess" stellen, Startfrist neu beginnen.
+                    session.Phase = SessionPhase.Launching;
+                    session.MissingSince = null;
+                    session.LaunchRequestedAt = _clock.UtcNow;
+                    _logger.LogInformation("Erneuter Start über die App für \"{Game}\": Sitzung wartet wieder auf den Spielprozess.", game.Name);
+                }
+
                 await ReapplyAsync(session, cancellationToken).ConfigureAwait(false);
+                await EnsureOnAsync(session, cancellationToken).ConfigureAwait(false);
             }
 
             session.HdrConfirmedAt = _clock.UtcNow;
@@ -233,7 +247,7 @@ public sealed class SessionManager
             else
             {
                 _logger.LogWarning("Start fehlgeschlagen um {Time}: {Message}", Stamp(launchedAt), result.Message);
-                Notify(NotificationKind.LaunchFailed, "Start fehlgeschlagen", result.Message);
+                Notify(NotificationKind.LaunchFailed, CoreStrings.NotifyLaunchFailedTitle, result.Message);
                 if (session.Phase == SessionPhase.Launching)
                 {
                     await EndSessionAsync(session, "Start fehlgeschlagen", cancellationToken).ConfigureAwait(false);
@@ -290,8 +304,16 @@ public sealed class SessionManager
         {
             session.FirstProcessAt = now;
         }
+        else
+        {
+            session.LaunchRequestedAt = now;
+        }
 
         _sessions[game.Key] = session;
+
+        // Spiele mit Sitzung müssen zugeordnet werden, auch wenn sie nicht installiert und nicht ausgewählt sind
+        // (Start über die App): Zuordnung im nächsten Zyklus neu aufbauen.
+        _matcherRevision = -1;
         var first = processes.FirstOrDefault();
         _logger.LogInformation(
             "Sitzung beginnt um {Time}: \"{Game}\" ({Key}), Auslöser {Trigger}{Process}.",
@@ -303,7 +325,7 @@ public sealed class SessionManager
         if (targets.Count == 0)
         {
             _logger.LogWarning("Kein aktiver Bildschirm gefunden, HDR wird für \"{Game}\" nicht geschaltet.", game.Name);
-            Notify(NotificationKind.DisplayNotConnected, "Kein Bildschirm", $"{game.Name}: kein aktiver Bildschirm gefunden.");
+            Notify(NotificationKind.DisplayNotConnected, CoreStrings.NotifyNoDisplayTitle, Format(CoreStrings.NotifyNoDisplayMessage, game.Name));
         }
 
         foreach (var target in targets)
@@ -346,7 +368,7 @@ public sealed class SessionManager
         if (info is null)
         {
             _logger.LogWarning("Bildschirm {Display} ist nicht angeschlossen. HDR für \"{Game}\" wird nicht geschaltet.", devicePath, session.Name);
-            Notify(NotificationKind.DisplayNotConnected, "Bildschirm nicht angeschlossen", $"{session.Name}: Der gewählte Bildschirm ist nicht angeschlossen. HDR bleibt unverändert.");
+            Notify(NotificationKind.DisplayNotConnected, CoreStrings.NotifyNotConnectedTitle, Format(CoreStrings.NotifyNotConnectedMessage, session.Name));
             session.PendingDisplays.Add(devicePath);
             return;
         }
@@ -354,7 +376,7 @@ public sealed class SessionManager
         if (!info.HdrSupported)
         {
             _logger.LogWarning("Bildschirm \"{Display}\" unterstützt derzeit kein HDR. HDR für \"{Game}\" wird nicht geschaltet.", info.FriendlyName, session.Name);
-            Notify(NotificationKind.DisplayNotHdrCapable, "Kein HDR möglich", $"{session.Name}: \"{info.FriendlyName}\" unterstützt derzeit kein HDR. Das Spiel läuft normal weiter.");
+            Notify(NotificationKind.DisplayNotHdrCapable, CoreStrings.NotifyNotCapableTitle, Format(CoreStrings.NotifyNotCapableMessage, session.Name, info.FriendlyName));
             session.PendingDisplays.Add(devicePath);
             return;
         }
@@ -364,8 +386,17 @@ public sealed class SessionManager
         _claims[devicePath] = claim;
         AddDisplay(session, devicePath);
 
-        // Zuerst den gemerkten Zustand auf die Platte, dann schalten.
-        Persist();
+        // Zuerst den gemerkten Zustand auf die Platte, dann schalten. Scheitert das Speichern (etwa kurz gesperrt),
+        // einmal kurz erneut versuchen; scheitert es wieder, trotzdem schalten (das Spiel hat Vorrang), aber melden.
+        if (!Persist(out var saveError))
+        {
+            await _clock.Delay(TimeSpan.FromMilliseconds(250), cancellationToken).ConfigureAwait(false);
+            if (!Persist(out saveError))
+            {
+                _logger.LogError("Gemerkter HDR-Zustand für \"{Display}\" ließ sich nicht speichern: {Error}", info.FriendlyName, saveError);
+                Notify(NotificationKind.StateNotSaved, CoreStrings.NotifyStateNotSavedTitle, Format(CoreStrings.NotifyStateNotSavedMessage, saveError));
+            }
+        }
 
         if (DisplayConfigHdrController.IsInState(info, enable: true))
         {
@@ -376,6 +407,24 @@ public sealed class SessionManager
 
         var switched = await SwitchAsync(devicePath, info.FriendlyName, true, TriggerText(session.Trigger), session, cancellationToken).ConfigureAwait(false);
         claim.Applied = switched.IsSuccess;
+    }
+
+    /// <summary>Start über die App bei bestehender Sitzung: HDR auf ihren Bildschirmen sicher einschalten.</summary>
+    private async Task EnsureOnAsync(ActiveSession session, CancellationToken cancellationToken)
+    {
+        var displays = SafeGetDisplays();
+        foreach (var path in session.Displays)
+        {
+            var info = displays.FirstOrDefault(d => string.Equals(d.MonitorDevicePath, path, StringComparison.OrdinalIgnoreCase));
+            if (info is { HdrSupported: true } && !DisplayConfigHdrController.IsInState(info, enable: true))
+            {
+                var result = await SwitchAsync(path, info.FriendlyName, true, TriggerText(SessionTrigger.LaunchedViaApp), session, cancellationToken).ConfigureAwait(false);
+                if (_claims.TryGetValue(path, out var claim))
+                {
+                    claim.Applied = result.IsSuccess;
+                }
+            }
+        }
     }
 
     /// <summary>Holt für eine Sitzung ausstehende Bildschirme und nicht angewendete Zustände nach.</summary>
@@ -511,6 +560,7 @@ public sealed class SessionManager
                         ProcessIds = processes.Select(p => p.ProcessId).ToList(),
                     };
                     _sessions[key] = session;
+                    _matcherRevision = -1;
                     _logger.LogInformation("\"{Game}\" läuft noch: Sitzung wird übernommen.", game.Name);
                 }
 
@@ -549,16 +599,30 @@ public sealed class SessionManager
         }
     }
 
-    private void Learn(Dictionary<string, List<ProcessInfo>> running, AppConfig cfg)
+    private void Learn(Dictionary<string, List<ProcessInfo>> running, AppConfig cfg, DateTimeOffset now)
     {
-        foreach (var key in _learning.Keys.Where(k => !running.ContainsKey(k)).ToList())
+        // Der "erste erkannte Lauf" endet wie eine Sitzung erst nach der Nachlaufzeit. So werden bei Starter-Ketten
+        // (Starter beendet sich, kurz danach startet das Spiel) auch die eigentlichen Spiel-EXEs gemerkt.
+        var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
+        foreach (var (key, state) in _learning.ToList())
         {
-            _learning.Remove(key); // Lauf beendet: gelernt wird nur beim ersten erkannten Lauf.
+            if (running.ContainsKey(key))
+            {
+                state.MissingSince = null;
+            }
+            else if (state.MissingSince is null)
+            {
+                state.MissingSince = now;
+            }
+            else if (now - state.MissingSince >= grace)
+            {
+                _learning.Remove(key);
+            }
         }
 
         foreach (var (key, processes) in running)
         {
-            if (!_learning.TryGetValue(key, out var seen))
+            if (!_learning.TryGetValue(key, out var state))
             {
                 var game = cfg.FindGame(key);
                 if (game is null || game.DetectedExecutables.Count > 0)
@@ -566,9 +630,11 @@ public sealed class SessionManager
                     continue;
                 }
 
-                seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                _learning[key] = seen;
+                state = new LearnState();
+                _learning[key] = state;
             }
+
+            var seen = state.Executables;
 
             var added = false;
             foreach (var p in processes)
@@ -587,9 +653,9 @@ public sealed class SessionManager
         }
     }
 
-    private void RefreshMatches(ProcessChanges changes, AppConfig cfg)
+    private void RefreshMatches(ProcessChanges changes, AppConfig cfg, long revision)
     {
-        if (_matcher is null || _config.Revision != _matcherRevision)
+        if (_matcher is null || revision != _matcherRevision)
         {
             var patterns = cfg.Settings.HelperExecutablePatterns;
             // Ausgewählte Spiele zählen auch, wenn sie beim letzten Einlesen fehlten (etwa mitten in einem Steam-Update).
@@ -597,7 +663,7 @@ public sealed class SessionManager
                 cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || _sessions.ContainsKey(g.Key)),
                 name => _isHelper(name, patterns),
                 _forbiddenRoots);
-            _matcherRevision = _config.Revision;
+            _matcherRevision = revision;
             _pidMatches.Clear();
             foreach (var p in changes.Current)
             {
@@ -687,7 +753,7 @@ public sealed class SessionManager
                 Status = HdrSetStatus.Failed,
                 MonitorDevicePath = devicePath,
                 FriendlyName = displayName,
-                Message = "Ausnahme beim Schalten: " + ex.Message,
+                Message = Format(CoreStrings.HdrSwitchException, ex.Message),
             };
         }
 
@@ -702,19 +768,19 @@ public sealed class SessionManager
         switch (result.Status)
         {
             case HdrSetStatus.Success when enable:
-                Notify(NotificationKind.HdrEnabled, "HDR eingeschaltet", $"{game}: HDR auf \"{displayName}\" eingeschaltet.");
+                Notify(NotificationKind.HdrEnabled, CoreStrings.NotifyHdrEnabledTitle, Format(CoreStrings.NotifyHdrEnabledMessage, game, displayName));
                 break;
             case HdrSetStatus.Success:
-                Notify(NotificationKind.HdrRestored, "HDR zurückgestellt", $"HDR auf \"{displayName}\" wieder ausgeschaltet.");
+                Notify(NotificationKind.HdrRestored, CoreStrings.NotifyHdrRestoredTitle, Format(CoreStrings.NotifyHdrRestoredMessage, displayName));
                 break;
             case HdrSetStatus.NotHdrCapable:
-                Notify(NotificationKind.DisplayNotHdrCapable, "Kein HDR möglich", result.Message);
+                Notify(NotificationKind.DisplayNotHdrCapable, CoreStrings.NotifyNotCapableTitle, result.Message);
                 break;
             case HdrSetStatus.NotConnected:
-                Notify(NotificationKind.DisplayNotConnected, "Bildschirm nicht angeschlossen", result.Message);
+                Notify(NotificationKind.DisplayNotConnected, CoreStrings.NotifyNotConnectedTitle, result.Message);
                 break;
             case HdrSetStatus.Failed:
-                Notify(NotificationKind.SwitchFailed, "HDR-Schaltung fehlgeschlagen", result.Message);
+                Notify(NotificationKind.SwitchFailed, CoreStrings.NotifySwitchFailedTitle, result.Message);
                 break;
         }
 
@@ -734,14 +800,18 @@ public sealed class SessionManager
         }
     }
 
-    private void Persist()
+    private void Persist() => Persist(out _);
+
+    /// <summary>Schreibt den gemerkten Zustand sofort. False mit Fehlertext, wenn das Speichern scheiterte.</summary>
+    private bool Persist(out string? error)
     {
+        error = null;
         try
         {
             if (_claims.Count == 0)
             {
                 _store.Delete();
-                return;
+                return true;
             }
 
             var now = _clock.UtcNow;
@@ -757,10 +827,13 @@ public sealed class SessionManager
                     SavedAt = now,
                 }).ToList(),
             });
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogError(ex, "Gemerkter HDR-Zustand ließ sich nicht speichern.");
+            error = ex.Message;
+            return false;
         }
     }
 
@@ -828,9 +901,18 @@ public sealed class SessionManager
         null => "unbekannt",
     };
 
+    private static string Format(string format, params object?[] args) => string.Format(CultureInfo.CurrentCulture, format, args);
+
     private static string Stamp(DateTimeOffset time) => time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
 
     private sealed record MatchedProcess(ProcessInfo Process, string? GameKey);
+
+    private sealed class LearnState
+    {
+        public HashSet<string> Executables { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public DateTimeOffset? MissingSince { get; set; }
+    }
 
     private sealed class ActiveSession(string key, string name, SessionTrigger trigger, DateTimeOffset startedAt, bool restoreAfter)
     {
@@ -847,6 +929,9 @@ public sealed class SessionManager
         public SessionPhase Phase { get; set; }
 
         public DateTimeOffset? MissingSince { get; set; }
+
+        /// <summary>Zeitpunkt des (letzten) Starts über die App; ab hier zählt die Startfrist.</summary>
+        public DateTimeOffset? LaunchRequestedAt { get; set; }
 
         public DateTimeOffset? HdrConfirmedAt { get; set; }
 

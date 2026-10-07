@@ -88,6 +88,34 @@ public sealed class ProcessWatcherTests
     }
 
     [Fact]
+    public async Task Throwing_logger_does_not_kill_the_loop()
+    {
+        var provider = new ListProvider();
+        using var watcher = new PollingProcessWatcher(provider, TimeSpan.FromMilliseconds(100), new ThrowingLogger());
+        var calls = 0;
+        watcher.Start((_, _) =>
+        {
+            Interlocked.Increment(ref calls);
+            throw new InvalidOperationException("Rückruf kaputt");
+        });
+        await Task.Delay(450, Ct);
+
+        Assert.True(watcher.IsRunning);
+        Assert.True(calls >= 3);
+        await watcher.StopAsync();
+    }
+
+    private sealed class ThrowingLogger : Microsoft.Extensions.Logging.ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            throw new ObjectDisposedException("log");
+    }
+    [Fact]
     public void Win32_provider_finds_own_process_with_path()
     {
         var provider = new Win32ProcessSnapshotProvider();

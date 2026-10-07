@@ -156,6 +156,49 @@ public sealed class ConfigTests
     }
 
     [Fact]
+    public void Changes_of_another_process_are_not_lost_on_own_save()
+    {
+        var watch = Service();
+        watch.Update(c => c.Games.Add(new GameConfig { Source = GameSource.Manual, SourceId = "a", Name = "A", InstallDir = @"D:\A" }));
+        var cli = Service(); // zweiter Prozess (Kommandozeile)
+        cli.Update(c => c.Games.Add(new GameConfig { Source = GameSource.Manual, SourceId = "b", Name = "B", InstallDir = @"D:\B" }));
+        cli.UpdateGame("Manual:a", g => g.HdrAuto = true);
+
+        watch.RecordDetectedExecutables("Manual:a", [@"D:\A\a.exe"]); // laufende Automatik speichert selbst
+
+        var after = Service().Current;
+        Assert.NotNull(after.FindGame("Manual:b"));
+        Assert.True(after.FindGame("Manual:a")!.HdrAuto);
+        Assert.Equal([@"D:\A\a.exe"], after.FindGame("Manual:a")!.DetectedExecutables);
+    }
+
+    [Fact]
+    public void Reload_if_changed_on_disk_picks_up_external_change_once()
+    {
+        var app = Service();
+        var changed = 0;
+        app.Changed += (_, _) => changed++;
+        Assert.False(app.ReloadIfChangedOnDisk()); // eigene Datei unverändert
+
+        var cli = Service();
+        cli.Update(c => c.Settings.GracePeriodSeconds = 33);
+
+        Assert.True(app.ReloadIfChangedOnDisk());
+        Assert.Equal(33, app.Current.Settings.GracePeriodSeconds);
+        Assert.False(app.ReloadIfChangedOnDisk());
+        Assert.Equal(1, changed);
+    }
+
+    [Fact]
+    public void Half_written_external_file_keeps_own_state()
+    {
+        var app = Service();
+        app.Update(c => c.Settings.GracePeriodSeconds = 12);
+        _fs.AddFile(Path, "{ \"version\": 1, \"settings\": ");
+        Assert.False(app.ReloadIfChangedOnDisk());
+        Assert.Equal(12, app.Current.Settings.GracePeriodSeconds);
+    }
+    [Fact]
     public void Session_state_store_roundtrip_and_broken_file()
     {
         var store = new FileSessionStateStore(_fs, @"C:\Users\Test\AppData\Local\HdrPilot\session-state.json");

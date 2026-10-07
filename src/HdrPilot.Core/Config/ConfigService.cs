@@ -29,20 +29,29 @@ public sealed class ConfigService : ISessionConfigSource
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly object _gate = new();
+    private readonly Mutex _fileLock;
     private AppConfig _current;
     private long _revision;
+    private string? _lastText;
 
     public ConfigService(ConfigStore store, IClock clock, ILogger? logger = null)
     {
         _store = store;
         _clock = clock;
         _logger = logger ?? NullLogger.Instance;
+
+        // Prozessübergreifende Sperre je Konfigurationsdatei (App und Kommandozeile schreiben dieselbe Datei).
+        var id = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(store.Path).ToUpperInvariant())))[..16];
+        _fileLock = new Mutex(false, @"Local\HdrPilot.Config." + id);
+
         var result = store.Load();
         LoadWarning = result.Warning;
         _current = result.Config;
+        _lastText = result.Text;
         if (result.CreatedNew)
         {
-            TrySave(_current);
+            WithFileLock(() => TrySave(_current));
         }
     }
 
@@ -54,20 +63,106 @@ public sealed class ConfigService : ISessionConfigSource
 
     public string? LoadWarning { get; }
 
-    /// <summary>Ändert die Konfiguration unter Sperre, speichert sofort und meldet die Änderung.</summary>
+    /// <summary>
+    /// Ändert die Konfiguration unter Sperre, speichert sofort und meldet die Änderung. Hat ein anderer Prozess
+    /// (etwa die Kommandozeile) die Datei inzwischen geändert, wird sie vorher neu gelesen, damit nichts verloren geht.
+    /// </summary>
     public void Update(Action<AppConfig> mutate)
     {
         lock (_gate)
         {
-            var next = _current.Clone();
-            mutate(next);
-            ConfigStore.Normalize(next);
-            TrySave(next);
-            Volatile.Write(ref _current, next);
-            Interlocked.Increment(ref _revision);
+            WithFileLock(() =>
+            {
+                var baseConfig = ReloadBaseIfChangedOnDisk() ?? _current;
+                var next = baseConfig.Clone();
+                mutate(next);
+                ConfigStore.Normalize(next);
+                TrySave(next);
+                Volatile.Write(ref _current, next);
+                Interlocked.Increment(ref _revision);
+            });
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Liest die Datei neu, wenn ein anderer Prozess sie geändert hat. True, wenn sich etwas geändert hat.</summary>
+    public bool ReloadIfChangedOnDisk()
+    {
+        var changed = false;
+        lock (_gate)
+        {
+            WithFileLock(() =>
+            {
+                var reloaded = ReloadBaseIfChangedOnDisk();
+                if (reloaded is not null)
+                {
+                    Volatile.Write(ref _current, reloaded);
+                    Interlocked.Increment(ref _revision);
+                    changed = true;
+                }
+            });
+        }
+
+        if (changed)
+        {
+            _logger.LogInformation("Konfiguration wurde außerhalb geändert und neu geladen.");
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        return changed;
+    }
+
+    /// <summary>Neuer Stand von der Platte, falls die Datei sich seit dem letzten Lesen/Schreiben geändert hat und gültig ist.</summary>
+    private AppConfig? ReloadBaseIfChangedOnDisk()
+    {
+        var text = _store.TryReadText();
+        if (text is null || text == _lastText)
+        {
+            return null;
+        }
+
+        try
+        {
+            var config = System.Text.Json.JsonSerializer.Deserialize<AppConfig>(text, ConfigJson.Options);
+            if (config is null || config.Version > AppConfig.CurrentVersion)
+            {
+                return null;
+            }
+
+            ConfigStore.Normalize(config);
+            _lastText = text;
+            return config;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null; // halb geschrieben oder defekt: eigenen Stand behalten
+        }
+    }
+
+    private void WithFileLock(Action action)
+    {
+        var acquired = false;
+        try
+        {
+            try
+            {
+                acquired = _fileLock.WaitOne(TimeSpan.FromSeconds(3));
+            }
+            catch (AbandonedMutexException)
+            {
+                acquired = true; // anderer Prozess abgestürzt: Sperre gehört jetzt uns
+            }
+
+            action();
+        }
+        finally
+        {
+            if (acquired)
+            {
+                _fileLock.ReleaseMutex();
+            }
+        }
     }
 
     public void UpdateGame(string gameKey, Action<GameConfig> mutate) => Update(c =>
@@ -125,7 +220,7 @@ public sealed class ConfigService : ISessionConfigSource
     {
         try
         {
-            _store.Save(config);
+            _lastText = _store.Save(config);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

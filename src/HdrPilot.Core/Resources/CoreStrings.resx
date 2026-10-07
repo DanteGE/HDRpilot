@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NotifyNoDisplayTitle" xml:space="preserve">
+    <value>Kein Bildschirm</value>
+  </data>
+  <data name="NotifyNoDisplayMessage" xml:space="preserve">
+    <value>{0}: kein aktiver Bildschirm gefunden.</value>
+  </data>
+  <data name="NotifyNotConnectedTitle" xml:space="preserve">
+    <value>Bildschirm nicht angeschlossen</value>
+  </data>
+  <data name="NotifyNotConnectedMessage" xml:space="preserve">
+    <value>{0}: Der gewählte Bildschirm ist nicht angeschlossen. HDR bleibt unverändert.</value>
+  </data>
+  <data name="NotifyNotCapableTitle" xml:space="preserve">
+    <value>Kein HDR möglich</value>
+  </data>
+  <data name="NotifyNotCapableMessage" xml:space="preserve">
+    <value>{0}: &quot;{1}&quot; unterstützt derzeit kein HDR. Das Spiel läuft normal weiter.</value>
+  </data>
+  <data name="NotifyHdrEnabledTitle" xml:space="preserve">
+    <value>HDR eingeschaltet</value>
+  </data>
+  <data name="NotifyHdrEnabledMessage" xml:space="preserve">
+    <value>{0}: HDR auf &quot;{1}&quot; eingeschaltet.</value>
+  </data>
+  <data name="NotifyHdrRestoredTitle" xml:space="preserve">
+    <value>HDR zurückgestellt</value>
+  </data>
+  <data name="NotifyHdrRestoredMessage" xml:space="preserve">
+    <value>HDR auf &quot;{0}&quot; wieder ausgeschaltet.</value>
+  </data>
+  <data name="NotifySwitchFailedTitle" xml:space="preserve">
+    <value>HDR-Schaltung fehlgeschlagen</value>
+  </data>
+  <data name="NotifyLaunchFailedTitle" xml:space="preserve">
+    <value>Start fehlgeschlagen</value>
+  </data>
+  <data name="NotifyStateNotSavedTitle" xml:space="preserve">
+    <value>HDR-Zustand nicht gespeichert</value>
+  </data>
+  <data name="NotifyStateNotSavedMessage" xml:space="preserve">
+    <value>Der HDR-Zustand vor dem Spiel ließ sich nicht speichern ({0}). Stürzt HdrPilot während des Spiels ab, wird HDR danach nicht von selbst zurückgestellt.</value>
+  </data>
+  <data name="LaunchUnknownGame" xml:space="preserve">
+    <value>Spiel {0} ist nicht bekannt.</value>
+  </data>
+  <data name="LaunchNoCommand" xml:space="preserve">
+    <value>Für &quot;{0}&quot; ist kein Start-Befehl bekannt.</value>
+  </data>
+  <data name="LaunchExecuted" xml:space="preserve">
+    <value>Start-Befehl ausgeführt: {0}</value>
+  </data>
+  <data name="LaunchError" xml:space="preserve">
+    <value>Start von &quot;{0}&quot; fehlgeschlagen: {1}</value>
+  </data>
+  <data name="WordOn" xml:space="preserve">
+    <value>an</value>
+  </data>
+  <data name="WordOff" xml:space="preserve">
+    <value>aus</value>
+  </data>
+  <data name="UnnamedDisplay" xml:space="preserve">
+    <value>Unbenannter Bildschirm</value>
+  </data>
+  <data name="HdrNotConnected" xml:space="preserve">
+    <value>Bildschirm nicht angeschlossen oder nicht aktiv.</value>
+  </data>
+  <data name="HdrNotCapable" xml:space="preserve">
+    <value>Bildschirm &quot;{0}&quot; unterstützt kein HDR.</value>
+  </data>
+  <data name="HdrAlreadyInState" xml:space="preserve">
+    <value>HDR ist bereits {0}.</value>
+  </data>
+  <data name="HdrConfirmed" xml:space="preserve">
+    <value>HDR {0} (bestätigt).</value>
+  </data>
+  <data name="HdrFailedOn" xml:space="preserve">
+    <value>HDR ließ sich nicht einschalten. {0}</value>
+  </data>
+  <data name="HdrFailedOff" xml:space="preserve">
+    <value>HDR ließ sich nicht ausschalten. {0}</value>
+  </data>
+  <data name="HdrDetailWin32" xml:space="preserve">
+    <value>Windows meldet Fehler {0}.</value>
+  </data>
+  <data name="HdrDetailGone" xml:space="preserve">
+    <value>Bildschirm nach dem Schalten nicht mehr gefunden.</value>
+  </data>
+  <data name="HdrDetailPolicy" xml:space="preserve">
+    <value>Schalter steht auf {0}, aktiver Modus ist aber {1} (evtl. durch Richtlinie begrenzt).</value>
+  </data>
+  <data name="HdrDetailUnchanged" xml:space="preserve">
+    <value>Zustand nach {0} Prüfungen weiterhin HDR {1}.</value>
+  </data>
+  <data name="HdrHotkeyDisplayGone" xml:space="preserve">
+    <value>Bildschirm vor der Tastenkürzel-Notlösung nicht mehr gefunden.</value>
+  </data>
+  <data name="HdrLateConfirmed" xml:space="preserve">
+    <value>HDR {0} (verspätet bestätigt).</value>
+  </data>
+  <data name="HdrHotkeyNotUsed" xml:space="preserve">
+    <value>HDR-Schalter steht richtig, aber Windows aktiviert den Modus nicht. Tastenkürzel nicht verwendet.</value>
+  </data>
+  <data name="HdrHotkeySendFailed" xml:space="preserve">
+    <value>Tastenkürzel Win+Alt+B ließ sich nicht senden.</value>
+  </data>
+  <data name="HdrHotkeyConfirmed" xml:space="preserve">
+    <value>HDR {0} über Win+Alt+B (bestätigt).</value>
+  </data>
+  <data name="HdrHotkeyNoEffect" xml:space="preserve">
+    <value>Auch Win+Alt+B hat den Zustand nicht geändert (Xbox Game Bar aktiv?).</value>
+  </data>
+  <data name="HdrSwitchException" xml:space="preserve">
+    <value>Ausnahme beim Schalten: {0}</value>
+  </data>
+</root>

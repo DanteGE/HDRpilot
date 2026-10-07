@@ -1,0 +1,53 @@
+{
+    "gameId" : "1207658946",
+    "rootGameId" : "1207658946",
+    "standalone" : true,
+    "dependencyGameId" : "",
+    "language"         : "English",
+    "name"             : "SWAT 3 - Tactical Game of The Year Edition",
+    "playTasks"        : [
+        {
+            "isPrimary" : true,
+            "type"      : "FileTask",
+            "path"      : "SWAT.EXE",
+            "workingDir" : ""
+        },
+        {
+            "name" : "SWAT3 FAQ",
+            "type" : "FileTask",
+            "path" : "FAQs\\TGOTYFAQ\\FAQ.htm",
+            "workingDir" : "FAQs\\TGOTYFAQ"
+        },
+        {
+            "name" : "WorldCraft",
+            "type" : "FileTask",
+            "path" : "Tools\\Worldcraft\\wc.exe",
+            "workingDir" : "Tools\\Worldcraft"
+        },
+        {
+            "name" : "Scenario Editor",
+            "type" : "FileTask",
+            "path" : "ScenarioEd.exe",
+            "workingDir" : ""
+        },
+        {
+            "name" : "SWAT 3 - Tactics",
+            "type" : "FileTask",
+            "path" : "RunTactics.exe",
+            "workingDir" : ""
+        }
+    ],
+    "supportTasks"     : [
+        {
+            "name" : "Support",
+            "type" : "URLTask",
+            "link" : "http://www.gog.com/en/support/swat_3_tactical_game_of_the_year_edition"
+        },
+        {
+            "name" : "Readme",
+            "type" : "FileTask",
+            "path" : "Readme.txt",
+            "workingDir" : ""
+        }
+    ]
+}

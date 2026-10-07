@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<Settings>
+  <Setting type="10" key="CacheDir" value="D:\Programmordner\Origin\cache"/>
+  <Setting type="1" key="CacheDirRemoval" value="false"/>
+  <Setting type="10" key="DownloadInPlaceDir" value="D:\Programmordner\EA Games\"/>
+</Settings>

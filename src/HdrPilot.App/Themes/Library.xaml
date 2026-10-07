@@ -352,6 +352,22 @@
         </Setter>
     </Style>
 
+    <!--
+        Kennzeichen „HDR“ in der Spieleliste (HDR laut PCGamingWiki): Umriss in Akzentfarbe; eingeschränktes HDR
+        („HDR*“) zurückhaltender. Kein Effekt, keine Animation (Listenzeilen).
+    -->
+    <Style x:Key="Lib.HdrBadge" TargetType="Border" BasedOn="{StaticResource Hp.Badge}">
+        <Setter Property="Padding" Value="5,0,5,1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding HdrSupport}" Value="Limited">
+                <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Auf-/Zuklappen (eingeschaltet = offen): Pfeil dreht sich -->
     <Style x:Key="Lib.CollapseToggle" TargetType="ToggleButton">
         <Setter Property="Width" Value="28" />

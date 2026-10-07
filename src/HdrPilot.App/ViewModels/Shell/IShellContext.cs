@@ -1,6 +1,7 @@
 using HdrPilot.App.Services;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 
 namespace HdrPilot.App.ViewModels.Shell;
 
@@ -14,6 +15,12 @@ public interface IShellContext
     ConfigService Config { get; }
 
     IAutostartService Autostart { get; }
+
+    /// <summary>HDR-Liste von PCGamingWiki: Stand, „Jetzt abgleichen“, Konto.</summary>
+    IHdrListService HdrList { get; }
+
+    /// <summary>Öffnet eine https-Adresse im Standardbrowser (Links zu PCGamingWiki).</summary>
+    void OpenWebPage(string url);
 
     /// <summary>HDR-Zustand oder Bildschirme könnten sich geändert haben (auf dem UI-Thread). Beim Schließen abmelden.</summary>
     event EventHandler? HdrStateChanged;

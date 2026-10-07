@@ -5,6 +5,7 @@ using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 using HdrPilot.Tests.TestSupport;
 
 namespace HdrPilot.App.Tests.Shell;
@@ -45,6 +46,79 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
     public void OnSettingsSaved(bool searchFoldersChanged) => SavedCalls.Add(searchFoldersChanged);
 
     public void RaiseHdrStateChanged() => HdrStateChanged?.Invoke(this, EventArgs.Empty);
+
+    public FakeHdrListService FakeHdrList { get; } = new();
+
+    public IHdrListService HdrList => FakeHdrList;
+
+    public List<string> OpenedPages { get; } = [];
+
+    /// <summary>Wenn gesetzt, scheitert das Öffnen einer Webseite damit.</summary>
+    public Exception? OpenWebPageFailure { get; set; }
+
+    public void OpenWebPage(string url)
+    {
+        if (OpenWebPageFailure is { } failure)
+        {
+            throw failure;
+        }
+
+        OpenedPages.Add(url);
+    }
+}
+
+/// <summary>HDR-Liste ohne Netz: Stand und Ergebnisse vorgegeben, Aufrufe werden mitgeschrieben.</summary>
+internal sealed class FakeHdrListService : IHdrListService
+{
+    public event EventHandler? Changed;
+
+    public HdrListStatus Status { get; set; } = new(null, null, 0, 0, false, false, null);
+
+    public Dictionary<string, HdrSupportStatus> Statuses { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool IsRunning { get; set; }
+
+    public int SyncCalls { get; private set; }
+
+    /// <summary>Wenn gesetzt, endet „Jetzt abgleichen“ erst, wenn der Test diese Aufgabe abschließt.</summary>
+    public TaskCompletionSource<HdrListRunResult>? PendingSync { get; set; }
+
+    public List<(string User, string? Password)> SaveCalls { get; } = [];
+
+    public PcgwErrorKind? NextSaveResult { get; set; }
+
+    public int RemoveCalls { get; private set; }
+
+    public int Subscribers => Changed?.GetInvocationList().Length ?? 0;
+
+    public HdrListStatus GetStatus() => Status with { IsRunning = IsRunning };
+
+    public IReadOnlyDictionary<string, HdrSupportStatus> LoadStatuses() => Statuses;
+
+    public Task<HdrListRunResult> SyncNowAsync(bool force = true)
+    {
+        SyncCalls++;
+        return PendingSync?.Task ?? Task.FromResult(new HdrListRunResult(HdrListRunOutcome.Completed, null, 1, 1, 1, false));
+    }
+
+    public Task<PcgwErrorKind?> SaveAccountAsync(string userName, string? password)
+    {
+        SaveCalls.Add((userName, password));
+        if (NextSaveResult is null)
+        {
+            Status = Status with { AccountUser = userName };
+        }
+
+        return Task.FromResult(NextSaveResult);
+    }
+
+    public void RemoveAccount()
+    {
+        RemoveCalls++;
+        Status = Status with { AccountUser = null };
+    }
+
+    public void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
 }
 
 internal sealed class FakeFolderPicker : IFolderPicker

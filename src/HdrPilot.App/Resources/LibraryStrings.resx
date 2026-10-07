@@ -114,6 +114,12 @@
   <data name="Filter_OnlyNewName" xml:space="preserve">
     <value>Nur neue Spiele</value>
   </data>
+  <data name="Filter_OnlyHdrCapable" xml:space="preserve">
+    <value>HDR-fähig</value>
+  </data>
+  <data name="Filter_OnlyHdrCapableName" xml:space="preserve">
+    <value>Nur Spiele mit HDR laut PCGamingWiki (auch eingeschränkt)</value>
+  </data>
   <data name="Sort_Name" xml:space="preserve">
     <value>Spiele sortieren</value>
   </data>
@@ -122,6 +128,9 @@
   </data>
   <data name="Sort_ByLastPlayed" xml:space="preserve">
     <value>Zuletzt gespielt</value>
+  </data>
+  <data name="Sort_ByHdrSupport" xml:space="preserve">
+    <value>HDR-Unterstützung</value>
   </data>
   <data name="Splitter_Name" xml:space="preserve">
     <value>Breite von Spieleliste und Detailbereich</value>
@@ -225,6 +234,18 @@
   </data>
   <data name="Badge_NotInstalled" xml:space="preserve">
     <value>Nicht installiert</value>
+  </data>
+  <data name="Badge_Hdr" xml:space="preserve">
+    <value>HDR</value>
+  </data>
+  <data name="Badge_HdrLimited" xml:space="preserve">
+    <value>HDR*</value>
+  </data>
+  <data name="Badge_HdrTooltip" xml:space="preserve">
+    <value>HDR laut PCGamingWiki</value>
+  </data>
+  <data name="Badge_HdrLimitedTooltip" xml:space="preserve">
+    <value>HDR eingeschränkt laut PCGamingWiki</value>
   </data>
   <data name="Status_Dismiss" xml:space="preserve">
     <value>Hinweis schließen</value>

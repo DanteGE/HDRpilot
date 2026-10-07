@@ -66,6 +66,7 @@ $notice = @(
     '',
     'HdrPilot.exe und cli\hdrpilot.exe enthalten die folgenden Bestandteile von Microsoft und der .NET Foundation.',
     'Alle stehen unter der MIT-Lizenz; keiner steht unter GPL oder AGPL.',
+    'Zusätzlich zeigt HdrPilot Angaben von PCGamingWiki an (CC BY-NC-SA 3.0, zur Laufzeit abgerufen; Abschnitt am Ende).',
     '',
     $rule,
     ".NET-Laufzeit ($core $($deps[$core]))"
@@ -83,7 +84,19 @@ $notice = @(
     $rule,
     'Hinweise zu Fremdcode innerhalb der .NET-Laufzeit (THIRD-PARTY-NOTICES.TXT aus dem Laufzeitpaket):',
     $rule,
-    (Get-PackageText $core 'THIRD-PARTY-NOTICES.TXT')
+    (Get-PackageText $core 'THIRD-PARTY-NOTICES.TXT'),
+    '',
+    # HDR-Liste (E73): Daten von PCGamingWiki, nicht mitgeliefert, sondern zur Laufzeit abgerufen.
+    $rule,
+    'Angaben zur HDR-Unterstützung: PCGamingWiki (https://www.pcgamingwiki.com/)',
+    $rule,
+    'HdrPilot zeigt in der Spieleliste an, welche Spiele laut PCGamingWiki HDR unterstützen ("HDR", eingeschränkt "HDR*").',
+    'Diese Angaben stammen von PCGamingWiki (pcgamingwiki.com) und stehen unter der Lizenz Creative Commons',
+    'Namensnennung - Nicht kommerziell - Weitergabe unter gleichen Bedingungen 3.0 (CC BY-NC-SA 3.0,',
+    'https://creativecommons.org/licenses/by-nc-sa/3.0/).',
+    'Die Daten sind nicht Teil dieser Auslieferung: HdrPilot ruft sie zur Laufzeit von pcgamingwiki.com ab und speichert',
+    'nur das Ergebnis je Spiel lokal zwischen (%LOCALAPPDATA%\HdrPilot\hdr-support.json, mit Konto zusätzlich hdr-catalog.json).',
+    'Verwendet werden nur die Felder "hdr", "steam appid" und "gogcom id"; HdrPilot ordnet sie den Spielen der Bibliothek zu.'
 )
 [IO.File]::WriteAllText((Join-Path $Output 'THIRD-PARTY-NOTICES.txt'), (($notice -join "`r`n") + "`r`n"), (New-Object Text.UTF8Encoding $true))
 

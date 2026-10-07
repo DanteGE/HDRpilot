@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Globalization;
 using HdrPilot.App.Resources;
+using HdrPilot.Core.HdrSupport;
 
 namespace HdrPilot.App.ViewModels.Library;
 
@@ -12,6 +13,9 @@ public enum GameSortOrder
 
     /// <summary>Zuletzt gespielt zuerst; nie gespielte danach, nach Name.</summary>
     LastPlayed,
+
+    /// <summary>HDR laut PCGamingWiki zuerst, dann eingeschränktes HDR, dann alle übrigen; jeweils nach Name.</summary>
+    HdrSupport,
 }
 
 /// <summary>Eintrag der Sortier-Auswahl (Text und Symbol aus Segoe Fluent Icons).</summary>
@@ -36,6 +40,7 @@ public static class GameSorting
     [
         new SortOption(GameSortOrder.Name, LibraryStrings.Sort_ByName, ""),
         new SortOption(GameSortOrder.LastPlayed, LibraryStrings.Sort_ByLastPlayed, ""),
+        new SortOption(GameSortOrder.HdrSupport, LibraryStrings.Sort_ByHdrSupport, ""),
     ];
 
     /// <summary>Wert aus der Konfiguration; fehlend oder unbekannt (etwa aus einer neueren Version): nach Name.</summary>
@@ -59,6 +64,7 @@ public static class GameSorting
     public static IComparer Comparer(GameSortOrder order) => order switch
     {
         GameSortOrder.LastPlayed => LastPlayedComparer.Instance,
+        GameSortOrder.HdrSupport => HdrSupportComparer.Instance,
         _ => NameComparer.Instance,
     };
 
@@ -86,6 +92,20 @@ public static class GameSorting
         return CompareByName(a, b);
     }
 
+    /// <summary>HDR laut PCGamingWiki, dann eingeschränkt, dann alle übrigen (auch „nur mit Mods“); sonst nach Name.</summary>
+    public static int CompareByHdrSupport(GameItemViewModel a, GameItemViewModel b)
+    {
+        var byRank = HdrRank(a.HdrSupport).CompareTo(HdrRank(b.HdrSupport));
+        return byRank != 0 ? byRank : CompareByName(a, b);
+    }
+
+    private static int HdrRank(HdrSupportStatus status) => status switch
+    {
+        HdrSupportStatus.Native => 0,
+        HdrSupportStatus.Limited => 1,
+        _ => 2,
+    };
+
     private sealed class NameComparer : IComparer, IComparer<GameItemViewModel>
     {
         public static readonly NameComparer Instance = new();
@@ -100,6 +120,15 @@ public static class GameSorting
         public static readonly LastPlayedComparer Instance = new();
 
         public int Compare(GameItemViewModel? x, GameItemViewModel? y) => x is null || y is null ? Nulls(x, y) : CompareByLastPlayed(x, y);
+
+        public int Compare(object? x, object? y) => Compare(x as GameItemViewModel, y as GameItemViewModel);
+    }
+
+    private sealed class HdrSupportComparer : IComparer, IComparer<GameItemViewModel>
+    {
+        public static readonly HdrSupportComparer Instance = new();
+
+        public int Compare(GameItemViewModel? x, GameItemViewModel? y) => x is null || y is null ? Nulls(x, y) : CompareByHdrSupport(x, y);
 
         public int Compare(object? x, object? y) => Compare(x as GameItemViewModel, y as GameItemViewModel);
     }

@@ -225,6 +225,70 @@
         </Setter>
     </Style>
 
+    <!-- Passwortfeld (Bot-Passwort): wie das Eingabefeld, zeigt nur Punkte -->
+    <Style x:Key="Hp.Shell.PasswordBox" TargetType="PasswordBox">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceInput}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Setter Property="SelectionOpacity" Value="0.35" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="12" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" />
+                        <Border x:Name="Focus" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.TextMuted}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Link (öffnet eine Webseite im Standardbrowser): Akzentfarbe, unterstrichen bei Fokus und beim Überfahren -->
+    <Style x:Key="Hp.Shell.LinkButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="Transparent" Padding="2,1">
+                        <TextBlock x:Name="Text" Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Text" Property="TextDecorations" Value="Underline" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Text" Property="TextDecorations" Value="Underline" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Listen -->
     <Style x:Key="Hp.Shell.ListBox" TargetType="ListBox">
         <Setter Property="Background" Value="Transparent" />

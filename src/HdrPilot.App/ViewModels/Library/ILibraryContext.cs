@@ -3,6 +3,7 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 using HdrPilot.Core.Sessions;
 
 namespace HdrPilot.App.ViewModels.Library;
@@ -46,6 +47,12 @@ public interface ILibraryContext : IDisposable
     /// <summary>Konfiguration ändern: der Reihe nach und außerhalb des UI-Threads (Speichern dauert).</summary>
     Task UpdateConfigAsync(Action<AppConfig> mutate);
 
+    /// <summary>
+    /// HDR-Unterstützung laut PCGamingWiki je Spielschlüssel (ohne „unbekannt“), aus dem Zwischenspeicher des
+    /// Abgleichs; außerhalb des UI-Threads gelesen. Lebt nur, solange das Fenster offen ist.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, HdrSupportStatus>> LoadHdrSupportAsync();
+
     IReadOnlyList<DisplayInfo> GetDisplays();
 
     /// <summary>Bildschirme, die HdrPilot ohne Spiel-Einstellung schaltet (globale Einstellung).</summary>
@@ -69,6 +76,9 @@ public interface ILibraryContext : IDisposable
 
     /// <summary>Einlesen begonnen oder beendet.</summary>
     event EventHandler? ScanStateChanged;
+
+    /// <summary>Ein Abgleich der HDR-Liste ist fertig (neue Ergebnisse im Zwischenspeicher).</summary>
+    event EventHandler? HdrSupportChanged;
 }
 
 /// <summary>Arbeit später auf dem UI-Thread ausführen (in Tests sofort).</summary>

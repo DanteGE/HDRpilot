@@ -240,10 +240,12 @@ public sealed partial class AppServices : IAsyncDisposable
         }
 
         var enable = !targets.Any(d => d.HdrEnabled);
+
+        // Auch von Hand (Infobereich, Bibliothek, --toggle-hdr per Tastenkürzel): die Notlösung nie, solange ein Spiel läuft (E66).
+        var allowHotkey = Sessions.HotkeyFallbackAllowed;
         foreach (var d in targets)
         {
-            // Ausdrücklich von Hand im Infobereich: die Notlösung ist erlaubt, wenn sie eingeschaltet ist.
-            var result = await Hdr.SetHdrAsync(d.MonitorDevicePath, enable, allowHotkeyFallback: true);
+            var result = await Hdr.SetHdrAsync(d.MonitorDevicePath, enable, allowHotkey);
             _logger.Log(
                 result.IsSuccess ? LogLevel.Information : LogLevel.Warning,
                 "HDR-Schaltung | Auslöser: von Hand (Tray) | Bildschirm: {Display} | vorher: {Before} | nachher: {After} | Ergebnis: {Status} | {Message}",

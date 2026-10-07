@@ -158,20 +158,43 @@ public sealed class ProcessImagePathResolverTests
     {
         // services.exe läuft als SYSTEM in Sitzung 0: ohne Adminrechte verweigert OpenProcess den Zugriff,
         // die Abfrage ohne Handle liefert den Pfad trotzdem.
+        // Mit Adminrechten gelingt OpenProcess; der Pfad muss dann trotzdem ohne Handle kommen (kein Überspringen,
+        // das Test-Gate verlangt null übersprungene Tests).
         var services = Process.GetProcessesByName("services").FirstOrDefault();
-        Assert.SkipWhen(services is null, "services.exe nicht gefunden.");
-        var pid = (uint)services!.Id;
-        var handle = ToolhelpNative.OpenProcess(ToolhelpNative.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (handle != IntPtr.Zero)
-        {
-            ToolhelpNative.CloseHandle(handle);
-        }
+        Assert.NotNull(services);
+        var pid = (uint)services.Id;
+        var resolver = new ProcessImagePathResolver();
 
-        Assert.SkipWhen(handle != IntPtr.Zero, "Test läuft mit Adminrechten: OpenProcess gelingt, der Vergleich zeigt nichts.");
-
-        var path = new ProcessImagePathResolver().Resolve((int)pid);
+        var path = resolver.Resolve((int)pid);
 
         Assert.Equal(Path.Combine(Environment.SystemDirectory, "services.exe"), path, ignoreCase: true);
+        Assert.False(resolver.UsesHandleFallback);
+        if (!IsElevated())
+        {
+            var handle = ToolhelpNative.OpenProcess(ToolhelpNative.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+            if (handle != IntPtr.Zero)
+            {
+                ToolhelpNative.CloseHandle(handle);
+            }
+
+            Assert.Equal(IntPtr.Zero, handle);
+        }
+    }
+
+    [Fact]
+    public void Folder_mounted_volume_maps_to_its_mount_folder()
+    {
+        // Spiele-SSD ohne Laufwerksbuchstaben, eingebunden unter C:\Games.
+        DeviceMapping[] map = [new(@"\Device\HarddiskVolume1", "C:"), new(@"\Device\HarddiskVolume5", @"C:\Games")];
+
+        Assert.Equal(@"C:\Games\SteamLibrary\steamapps\common\X\X.exe", ProcessImagePathResolver.ToDosPath(@"\Device\HarddiskVolume5\SteamLibrary\steamapps\common\X\X.exe", map));
+        Assert.Equal(@"C:\Games\", ProcessImagePathResolver.ToDosPath(@"\Device\HarddiskVolume5", map));
+    }
+
+    private static bool IsElevated()
+    {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        return new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
     }
 
     [Fact]

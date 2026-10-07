@@ -140,7 +140,7 @@ HdrPilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme k
 - Es lädt keinen Treiber, braucht keine Administratorrechte und baut keine Netzwerkverbindung auf.
 - HDR schaltet es über die Anzeige-Einstellungen von Windows, wie der HDR-Schalter in den Windows-Einstellungen.
 - Künstliche Tastendrücke gibt es nur in der Tastenkürzel-Notlösung. Sie ist ab Werk aus und sendet nie etwas,
-  solange ein Spiel läuft.
+  solange ein Spiel läuft oder eine Vollbild-Anwendung im Vordergrund ist, auch nicht beim Umschalten von Hand.
 - Launcher-Spiele startet es über den Launcher-Link, sodass deren Anti-Cheat-Starter wie gewohnt läuft.
 
 Ein automatischer Test stellt sicher, dass solche Techniken nicht in den Quelltext gelangen. Eine Garantie gibt es

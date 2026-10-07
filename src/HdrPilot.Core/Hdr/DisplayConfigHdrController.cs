@@ -27,6 +27,12 @@ public sealed record HdrControllerOptions
     public Func<bool>? HotkeyFallbackProvider { get; init; }
 
     internal bool IsHotkeyFallbackEnabled => HotkeyFallbackProvider?.Invoke() ?? HotkeyFallbackEnabled;
+
+    /// <summary>
+    /// Wird unmittelbar vor dem Senden von Win+Alt+B gefragt: läuft eine Vollbild-Anwendung (Spiel, Präsentation), wird
+    /// nichts gesendet (E66). Fängt auch Spiele ab, die nicht in der Bibliothek stehen. Null: keine Prüfung.
+    /// </summary>
+    public Func<bool>? FullscreenAppRunning { get; init; }
 }
 
 /// <summary>Sendet das Windows-Tastenkürzel für HDR (Win+Alt+B, Xbox Game Bar).</summary>
@@ -229,6 +235,13 @@ public sealed class DisplayConfigHdrController : IHdrController
             // Schalter steht schon richtig, nur der aktive Modus fehlt: Umschalten würde es verschlimmern.
             return Result(HdrSetStatus.Failed, monitorDevicePath, display.FriendlyName, before, current.HdrEnabled, current.Api,
                 CoreStrings.HdrHotkeyNotUsed);
+        }
+
+        if (_options.FullscreenAppRunning?.Invoke() == true)
+        {
+            _logger.LogWarning("Notlösung Win+Alt+B nicht verwendet: Eine Vollbild-Anwendung läuft (Schutz vor Anti-Cheat-Fehlalarmen).");
+            return Result(HdrSetStatus.Failed, monitorDevicePath, display.FriendlyName, before, current.HdrEnabled, current.Api,
+                CoreStrings.HdrHotkeyBlockedFullscreen);
         }
 
         _logger.LogWarning("Notlösung: sende Win+Alt+B für \"{Name}\". Das Kürzel betrifft alle HDR-fähigen Bildschirme.", display.FriendlyName);

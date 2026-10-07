@@ -261,6 +261,23 @@ public sealed class HdrControllerTests
     }
 
     [Fact]
+    public async Task Hotkey_fallback_is_not_sent_while_a_fullscreen_app_runs()
+    {
+        // Auch Spiele außerhalb der Bibliothek: unmittelbar vor dem Senden wird nach einer Vollbild-Anwendung gefragt.
+        var api = FakeDisplayConfigApi.WithSingleHdrMonitor(hdrOn: false);
+        api.SetHdrResult = 31;
+        api.SetAdvancedColorResult = 31;
+        var hotkey = new FakeHotkeySender(api);
+        var controller = Create(api, new HdrControllerOptions { HotkeyFallbackEnabled = true, FullscreenAppRunning = () => true }, hotkey);
+
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
+
+        Assert.Equal(HdrSetStatus.Failed, result.Status);
+        Assert.Equal(0, hotkey.Sent);
+        Assert.Equal(HdrPilot.Core.Resources.CoreStrings.HdrHotkeyBlockedFullscreen, result.Message);
+    }
+
+    [Fact]
     public async Task Hotkey_fallback_checks_state_first_and_does_not_toggle_wrong_way()
     {
         // API meldet Fehler, hat aber trotzdem geschaltet: das Kürzel würde HDR wieder ausschalten.

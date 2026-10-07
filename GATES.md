@@ -167,7 +167,7 @@ und die EXPECT-Marke ausgibt.
 - [ ] G5.3: Rückfrage beim Nutzer zu WMI-Überwachung, Neustart bei verspätetem HDR, Steam-Hülle, englischer Oberfläche
   EVIDENCE: pending
 
-- [ ] G5.4: Kein Eingriff in Spielprozesse: keine verbotenen Techniken im Quelltext, EXE-Pfade ohne Handle auf fremde Prozesse, Tastenkürzel-Notlösung nie während eines Spiels (Anti-Cheat-Prüfung, E65–E67)
+- [x] G5.4: Kein Eingriff in Spielprozesse: keine verbotenen Techniken im Quelltext, EXE-Pfade ohne Handle auf fremde Prozesse, Tastenkürzel-Notlösung nie während eines Spiels (Anti-Cheat-Prüfung, E65–E67)
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AntiCheatSafetyTests|FullyQualifiedName~ProcessImagePathResolverTests|FullyQualifiedName~Hotkey" -MinTests 20
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 15:45 exit 0, TESTS_OK 43: Architekturtest (30 Regeln, jede mit Gegenprobe), Pfade ohne Handle (services.exe ohne OpenProcess gelesen), Notlösung gesperrt bei laufendem Bibliotheksspiel, unerkanntem gestarteten Spiel, Nachschalten während des Starts und Vollbild-Anwendung; Gegenproben: ohne jede Korrektur rot. Nach der Härtung erneut grün: PHASE3_SINGLE/TWO/ALREADYON/CRASH_OK, PHASE3_IDLE_OK (0,312 %), PHASE4_RUN_OK, PHASE4_CRASH_OK (0,286 %), PHASE4_UI_OK, PHASE5_PUBLISH_OK, PHASE5_README_OK, TESTS_OK 1114

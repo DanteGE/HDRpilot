@@ -55,7 +55,11 @@ public sealed class AutomationHost : IAsyncDisposable
             Win32DisplayConfigApi.Instance,
             environment,
             clock,
-            new HdrControllerOptions { HotkeyFallbackProvider = () => Config.Current.Settings.HotkeyFallback },
+            new HdrControllerOptions
+            {
+                HotkeyFallbackProvider = () => Config.Current.Settings.HotkeyFallback,
+                FullscreenAppRunning = ShellNative.IsFullscreenAppRunning,
+            },
             new Win32HdrHotkeySender(),
             new TypedLogger<DisplayConfigHdrController>(LoggerFactory));
 

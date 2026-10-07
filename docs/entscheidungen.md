@@ -287,15 +287,26 @@ Javelin), geänderte Priorität fremder Prozesse (Process Lasso, Vanguard) und k
 
 **E65 EXE-Pfade ohne Handle:** `ProcessImagePathResolver` liest den Pfad zu einer PID über
 NtQuerySystemInformation(SystemProcessIdInformation = 88) und rechnet den NT-Pfad über QueryDosDevice um (auch
-verbundene Netzlaufwerke und UNC). HdrPilot öffnet damit keinen fremden Prozess mehr, auch kein Spiel, und erkennt
-nebenbei geschützte Prozesse über ihren Pfad. Die Klasse ist undokumentiert, aber seit Vista vorhanden (Geoff Chappell,
+verbundene Netzlaufwerke und UNC, Volumes ohne Buchstaben über ihren Einhängeordner, etwa C:\Games). HdrPilot öffnet
+damit keinen fremden Prozess mehr, auch kein Spiel, und erkennt nebenbei geschützte Prozesse über ihren Pfad. Die Klasse ist undokumentiert, aber seit Vista vorhanden (Geoff Chappell,
 phnt; lokal gemessen: Pfade für 277 von 278 Prozessen ohne Adminrechte). Nur wenn Windows die Klasse nicht kennt,
 fällt HdrPilot auf OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) zurück.
 
 **E66 Tastenkürzel-Notlösung nie während eines Spiels:** `IHdrController.SetHdrAsync` bekommt `allowHotkeyFallback`.
-Die Sitzungslogik erlaubt die Notlösung nur, solange kein Prozess eines Spiels läuft (vor einem Start über die App, beim
-Zurückstellen nach dem letzten Spiel); das Umschalten von Hand im Infobereich und `hdrpilot hdr` dürfen sie benutzen.
-Künstliche Tastendrücke an ein laufendes Spiel sind genau das, wogegen Anti-Cheats vorgehen. Der Hinweistext sagt das.
+Erlaubt ist die Notlösung nur, solange kein Spiel läuft: kein Prozess irgendeines Spiels der Bibliothek (ausgewählt
+oder nicht, eigener Abgleich über alle Einträge) und kein über HdrPilot gestartetes Spiel, dessen Prozess noch nicht
+erkannt ist (das Zurückstellen nach der Startfrist läuft deshalb ohne Notlösung). Das gilt auch für das Umschalten von
+Hand (Infobereich, Bibliothek, `--toggle-hdr`); nur `hdrpilot hdr --hotkey-fallback` entscheidet der Nutzer je Aufruf
+selbst. Zusätzlich fragt der Controller unmittelbar vor dem Senden SHQueryUserNotificationState ab und sendet nicht,
+wenn eine Vollbild-Anwendung läuft; das deckt auch Spiele außerhalb der Bibliothek ab. Künstliche Tastendrücke an ein
+laufendes Spiel sind genau das, wogegen Anti-Cheats vorgehen. Der Hinweistext sagt das.
+
+**E68 Wiederanlauf übernimmt auch nicht ausgewählte Spiele aus dem gemerkten Zustand:** Vor dem ersten Abgleich nach
+dem Start liest HdrPilot die Spiele aus `session-state.json` und ordnet sie mit zu. Vorher stellte ein Neustart von
+HdrPilot mitten in einem über die App gestarteten, nicht ausgewählten und gerade nicht als installiert markierten
+Spiel HDR zurück. Gefunden bei der Nachprüfung der Anti-Cheat-Härtung (drei Prüfer, ein Gegenprüfer; 11 von 17
+Hinweisen bestätigt und behoben, darunter E65-Volumes, E66-Lücken, Architekturtest und ein Test, der mit Adminrechten
+übersprungen worden wäre).
 
 **E67 Architekturtest gegen verbotene Techniken:** `AntiCheatSafetyTests` durchsucht `src` nach Speicherzugriff,
 Einschleusen, Hooks, Debug-, Treiber- und Rechte-Schnittstellen, Modullisten, `Process.GetProcess*`, `WaitForExit`

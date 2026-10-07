@@ -117,6 +117,9 @@
   <data name="HdrHotkeySendFailed" xml:space="preserve">
     <value>Tastenkürzel Win+Alt+B ließ sich nicht senden.</value>
   </data>
+  <data name="HdrHotkeyBlockedFullscreen" xml:space="preserve">
+    <value>Notlösung Win+Alt+B nicht verwendet: Eine Vollbild-Anwendung läuft (Schutz vor Anti-Cheat-Fehlalarmen).</value>
+  </data>
   <data name="HdrHotkeyConfirmed" xml:space="preserve">
     <value>HDR {0} über Win+Alt+B (bestätigt).</value>
   </data>

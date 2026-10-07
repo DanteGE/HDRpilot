@@ -110,6 +110,79 @@ public sealed class SessionManagerTests
     }
 
     [Fact]
+    public async Task Hotkey_fallback_blocked_while_any_library_game_runs()
+    {
+        // Spiel 2 ist weder ausgewählt noch als installiert markiert, läuft aber: Zurückstellen ohne Notlösung.
+        _config.AddGame("1", DirA);
+        _config.AddGame("2", DirB, hdrAuto: false).IsInstalled = false;
+        await Poll();
+        var a = _processes.StartExe(ExeA);
+        await Poll();
+        _processes.StartExe(ExeB);
+        await Poll();
+        Assert.False(Manager.HotkeyFallbackAllowed);
+
+        _processes.Stop(a);
+        await Poll(15);
+
+        Assert.False(PrimaryOn);
+        Assert.Equal([false, false], _hdr.HotkeyAllowed);
+        Assert.False(Manager.HotkeyFallbackAllowed);
+    }
+
+    [Fact]
+    public async Task Hotkey_fallback_blocked_when_launched_game_runs_unrecognised()
+    {
+        // Start über die App, die echte EXE liegt außerhalb des Installationsordners: nach der Startfrist zurückstellen,
+        // aber ohne Notlösung, denn das Spiel läuft womöglich.
+        _config.Config.Settings.LaunchTimeoutSeconds = 20;
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        _processes.StartExe(@"E:\Woanders\EchtesSpiel.exe");
+        await Poll(2);
+        Assert.False(Manager.HotkeyFallbackAllowed);
+
+        await Poll(25);
+
+        Assert.False(PrimaryOn);
+        Assert.Equal([true, false], _hdr.HotkeyAllowed);
+    }
+
+    [Fact]
+    public async Task Hotkey_fallback_blocked_for_reapply_during_launch()
+    {
+        // Bildschirm kann beim Start über die App noch kein HDR; kommt er während des Starts, ohne Notlösung nachschalten.
+        _hdr[FakeHdrController.Primary].Capable = false;
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        _hdr[FakeHdrController.Primary].Capable = true;
+
+        await Manager.OnDisplaysChangedAsync(Ct);
+
+        Assert.True(PrimaryOn);
+        Assert.False(_hdr.HotkeyAllowed[^1]);
+    }
+
+    [Fact]
+    public async Task Recovery_adopts_running_launched_game_that_is_neither_selected_nor_installed()
+    {
+        // HdrPilot stürzte ab, während ein über die App gestartetes Spiel lief (nicht ausgewählt, gerade nicht als
+        // installiert markiert). Nach dem Neustart darf HDR nicht mitten im Spiel zurückgestellt werden.
+        _hdr[FakeHdrController.Primary].HdrOn = true;
+        _config.AddGame("2", DirB, hdrAuto: false).IsInstalled = false;
+        _store.Preset(new DisplayClaimState { MonitorDevicePath = FakeHdrController.Primary, FriendlyName = "MAG", WasHdrOn = false, Games = ["Steam:2"] });
+        var pid = _processes.StartExe(ExeB);
+
+        await Manager.InitializeAsync(_processes.Next(), Ct);
+
+        Assert.True(PrimaryOn);
+        Assert.Equal("Steam:2", Assert.Single(Manager.Sessions).GameKey);
+        _processes.Stop(pid);
+        await Poll(15);
+        Assert.False(PrimaryOn);
+    }
+
+    [Fact]
     public async Task Session_state_is_written_to_disk_before_switching()
     {
         _config.AddGame("1", DirA);

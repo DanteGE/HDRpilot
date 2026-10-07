@@ -33,10 +33,17 @@ public sealed class SessionManager
     private readonly Dictionary<int, MatchedProcess> _pidMatches = [];
     private readonly Dictionary<string, LearnState> _learning = new(StringComparer.OrdinalIgnoreCase);
     private GameMatcher? _matcher;
+
+    /// <summary>Alle Spiele der Bibliothek, nur für die Sperre der Tastenkürzel-Notlösung (E66).</summary>
+    private GameMatcher? _anyGameMatcher;
     private long _matcherRevision = -1;
     private bool _recovered;
+
+    /// <summary>Spiele aus dem gemerkten Zustand eines abgebrochenen Laufs: werden beim Wiederanlauf mit zugeordnet.</summary>
+    private HashSet<string> _recoveryKeys = new(StringComparer.OrdinalIgnoreCase);
     private volatile IReadOnlyList<SessionInfo> _publicSessions = [];
     private volatile bool _paused;
+    private volatile bool _hotkeyFallbackAllowed = true;
 
     /// <param name="isHelper">Prüft einen EXE-Namen gegen die Ausschlussliste (Muster aus der Konfiguration, null = Standard).</param>
     /// <param name="forbiddenRoots">Ordner, die nie als Installationsordner gelten (z. B. Windows, Programme).</param>
@@ -82,6 +89,12 @@ public sealed class SessionManager
 
     public IReadOnlyList<SessionInfo> Sessions => _publicSessions;
 
+    /// <summary>
+    /// Ob die Tastenkürzel-Notlösung gerade benutzt werden darf (Stand des letzten Zyklus): nicht, solange ein Spiel der
+    /// Bibliothek läuft oder ein über HdrPilot gestartetes Spiel noch nicht erkannt ist (E66). Für das Umschalten von Hand.
+    /// </summary>
+    public bool HotkeyFallbackAllowed => _hotkeyFallbackAllowed;
+
     public bool IsInitialized => _recovered;
 
     /// <summary>
@@ -101,9 +114,11 @@ public sealed class SessionManager
 
             var revision = _config.Revision; // erst die Revision, dann den Stand lesen (sonst Wettlauf mit Update)
             var cfg = _config.Current;
+            PrepareRecovery();
             RefreshMatches(snapshot, cfg, revision);
             _recovered = true;
             await RecoverCoreAsync(RunningGames(), cfg, cancellationToken).ConfigureAwait(false);
+            FinishRecovery();
         }
         finally
         {
@@ -122,6 +137,11 @@ public sealed class SessionManager
             var now = _clock.UtcNow;
             var revision = _config.Revision;
             var cfg = _config.Current;
+            if (!_recovered)
+            {
+                PrepareRecovery();
+            }
+
             RefreshMatches(changes, cfg, revision);
             var running = RunningGames();
 
@@ -129,6 +149,7 @@ public sealed class SessionManager
             {
                 _recovered = true;
                 await RecoverCoreAsync(running, cfg, cancellationToken).ConfigureAwait(false);
+                FinishRecovery();
             }
 
             Learn(running, cfg, now);
@@ -163,7 +184,10 @@ public sealed class SessionManager
                 {
                     if (now - (session.LaunchRequestedAt ?? session.StartedAt) >= launchTimeout)
                     {
-                        await EndSessionAsync(session, $"kein Spielprozess innerhalb von {launchTimeout.TotalSeconds:0} s nach dem Start", cancellationToken).ConfigureAwait(false);
+                        // Das gestartete Spiel kann unerkannt laufen (EXE außerhalb des Installationsordners): keine Notlösung.
+                        await EndSessionAsync(
+                            session, $"kein Spielprozess innerhalb von {launchTimeout.TotalSeconds:0} s nach dem Start", cancellationToken,
+                            gameMayRun: session.LaunchCommandIssued).ConfigureAwait(false);
                     }
 
                     continue;
@@ -251,6 +275,7 @@ public sealed class SessionManager
             var result = _launcher.Launch(game);
             if (result.Success)
             {
+                session.LaunchCommandIssued = true;
                 _logger.LogInformation("Start-Befehl ausgeführt um {Time}: {Message}", Stamp(launchedAt), result.Message);
             }
             else
@@ -472,7 +497,8 @@ public sealed class SessionManager
         }
     }
 
-    private async Task EndSessionAsync(ActiveSession session, string reason, CancellationToken cancellationToken)
+    /// <param name="gameMayRun">Das Spiel kann noch unerkannt laufen: Zurückstellen ohne Tastenkürzel-Notlösung.</param>
+    private async Task EndSessionAsync(ActiveSession session, string reason, CancellationToken cancellationToken, bool gameMayRun = false)
     {
         _sessions.Remove(session.Key);
         _logger.LogInformation("Sitzung endet um {Time}: \"{Game}\" ({Reason}).", Stamp(_clock.UtcNow), session.Name, reason);
@@ -483,7 +509,7 @@ public sealed class SessionManager
                 claim.Games.Remove(session.Key);
                 if (claim.Games.Count == 0)
                 {
-                    await ReleaseAsync(claim, $"Spielende \"{session.Name}\" ({reason})", session, cancellationToken).ConfigureAwait(false);
+                    await ReleaseAsync(claim, $"Spielende \"{session.Name}\" ({reason})", session, cancellationToken, gameMayRun).ConfigureAwait(false);
                 }
                 else
                 {
@@ -500,7 +526,7 @@ public sealed class SessionManager
         }
     }
 
-    private async Task ReleaseAsync(DisplayClaim claim, string trigger, ActiveSession? session, CancellationToken cancellationToken)
+    private async Task ReleaseAsync(DisplayClaim claim, string trigger, ActiveSession? session, CancellationToken cancellationToken, bool gameMayRun = false)
     {
         if (!claim.Restore)
         {
@@ -516,7 +542,7 @@ public sealed class SessionManager
             return;
         }
 
-        var result = await SwitchAsync(claim.DevicePath, claim.FriendlyName, false, trigger, session, cancellationToken).ConfigureAwait(false);
+        var result = await SwitchAsync(claim.DevicePath, claim.FriendlyName, false, trigger, session, cancellationToken, gameMayRun).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             _claims.Remove(claim.DevicePath);
@@ -667,16 +693,19 @@ public sealed class SessionManager
         if (_matcher is null || revision != _matcherRevision)
         {
             var patterns = cfg.Settings.HelperExecutablePatterns;
-            // Ausgewählte Spiele zählen auch, wenn sie beim letzten Einlesen fehlten (etwa mitten in einem Steam-Update).
+            // Ausgewählte Spiele zählen auch, wenn sie beim letzten Einlesen fehlten (etwa mitten in einem Steam-Update),
+            // ebenso Spiele aus dem gemerkten Zustand eines abgebrochenen Laufs (sonst stellte der Wiederanlauf mitten
+            // im Spiel zurück).
             _matcher = new GameMatcher(
-                cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || _sessions.ContainsKey(g.Key)),
+                cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || _sessions.ContainsKey(g.Key) || _recoveryKeys.Contains(g.Key)),
                 name => _isHelper(name, patterns),
                 _forbiddenRoots);
+            _anyGameMatcher = new GameMatcher(cfg.Games, name => _isHelper(name, patterns), _forbiddenRoots);
             _matcherRevision = revision;
             _pidMatches.Clear();
             foreach (var p in changes.Current)
             {
-                _pidMatches[p.ProcessId] = new MatchedProcess(p, _matcher.Match(p)?.Key);
+                _pidMatches[p.ProcessId] = MatchProcess(p);
             }
 
             return;
@@ -689,7 +718,7 @@ public sealed class SessionManager
 
         foreach (var p in changes.Started)
         {
-            _pidMatches[p.ProcessId] = new MatchedProcess(p, _matcher.Match(p)?.Key);
+            _pidMatches[p.ProcessId] = MatchProcess(p);
         }
 
         if (_pidMatches.Count != changes.Current.Count)
@@ -703,17 +732,47 @@ public sealed class SessionManager
 
             foreach (var p in changes.Current.Where(p => !_pidMatches.ContainsKey(p.ProcessId)))
             {
-                _pidMatches[p.ProcessId] = new MatchedProcess(p, _matcher.Match(p)?.Key);
+                _pidMatches[p.ProcessId] = MatchProcess(p);
             }
         }
     }
 
+    private MatchedProcess MatchProcess(ProcessInfo p)
+    {
+        var key = _matcher!.Match(p)?.Key;
+        return new MatchedProcess(p, key, key is not null || _anyGameMatcher!.Match(p) is not null);
+    }
+
+    /// <summary>Spiele aus dem gemerkten Zustand vor dem ersten Zuordnen laden, damit der Wiederanlauf sie übernimmt.</summary>
+    private void PrepareRecovery()
+    {
+        var keys = _store.Load()?.Displays.SelectMany(d => d.Games) ?? [];
+        _recoveryKeys = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
+        if (_recoveryKeys.Count > 0)
+        {
+            _matcherRevision = -1;
+        }
+    }
+
+    private void FinishRecovery()
+    {
+        if (_recoveryKeys.Count > 0)
+        {
+            _recoveryKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _matcherRevision = -1; // übernommene Spiele bleiben über ihre Sitzung in der Zuordnung
+        }
+    }
+
     /// <summary>
-    /// Die Tastenkürzel-Notlösung nur, solange kein Prozess eines Spiels läuft (E66): künstliche Tastendrücke an ein
-    /// laufendes Spiel sind genau das, wogegen Anti-Cheat-Systeme vorgehen. Erlaubt bleibt sie vor einem Start über die
-    /// App (das Spiel läuft noch nicht) und beim Zurückstellen nach dem letzten Spiel.
+    /// Die Tastenkürzel-Notlösung nur, solange kein Spiel läuft (E66): künstliche Tastendrücke an ein laufendes Spiel
+    /// sind genau das, wogegen Anti-Cheat-Systeme vorgehen. Als laufend gilt jeder Prozess eines Spiels der Bibliothek
+    /// (ausgewählt oder nicht) und jedes über HdrPilot gestartete Spiel, dessen Prozess noch nicht erkannt ist.
+    /// Erlaubt bleibt sie vor einem Start über die App (das Spiel läuft noch nicht) und beim Zurückstellen nach dem
+    /// letzten Spiel.
     /// </summary>
-    private bool HotkeyFallbackAllowed => !_pidMatches.Values.Any(m => m.GameKey is not null);
+    private bool ComputeHotkeyFallbackAllowed() =>
+        !_pidMatches.Values.Any(m => m.IsAnyGame)
+        && !_sessions.Values.Any(s => s.Phase == SessionPhase.Launching && s.LaunchCommandIssued);
 
     private Dictionary<string, List<ProcessInfo>> RunningGames()
     {
@@ -754,13 +813,15 @@ public sealed class SessionManager
     }
 
     private async Task<HdrSetResult> SwitchAsync(
-        string devicePath, string displayName, bool enable, string trigger, ActiveSession? session, CancellationToken cancellationToken)
+        string devicePath, string displayName, bool enable, string trigger, ActiveSession? session, CancellationToken cancellationToken,
+        bool gameMayRun = false)
     {
         var sw = Stopwatch.StartNew();
         HdrSetResult result;
         try
         {
-            result = await _hdr.SetHdrAsync(devicePath, enable, HotkeyFallbackAllowed, cancellationToken).ConfigureAwait(false);
+            var allowHotkey = !gameMayRun && ComputeHotkeyFallbackAllowed();
+            result = await _hdr.SetHdrAsync(devicePath, enable, allowHotkey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -862,6 +923,7 @@ public sealed class SessionManager
             .ToList();
         var previous = _publicSessions;
         _publicSessions = snapshot;
+        _hotkeyFallbackAllowed = ComputeHotkeyFallbackAllowed();
         return !previous.SequenceEqual(snapshot, SessionInfoComparer.Instance);
     }
 
@@ -921,7 +983,9 @@ public sealed class SessionManager
 
     private static string Stamp(DateTimeOffset time) => time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
 
-    private sealed record MatchedProcess(ProcessInfo Process, string? GameKey);
+    /// <param name="GameKey">Zugeordnetes Spiel (installiert, ausgewählt oder mit Sitzung), sonst null.</param>
+    /// <param name="IsAnyGame">Gehört zu irgendeinem Spiel der Bibliothek (nur für die Sperre der Notlösung).</param>
+    private sealed record MatchedProcess(ProcessInfo Process, string? GameKey, bool IsAnyGame);
 
     private sealed class LearnState
     {
@@ -950,6 +1014,9 @@ public sealed class SessionManager
         public DateTimeOffset? LaunchRequestedAt { get; set; }
 
         public DateTimeOffset? HdrConfirmedAt { get; set; }
+
+        /// <summary>Der Start-Befehl wurde ausgeführt: das Spiel kann laufen, auch wenn sein Prozess noch nicht erkannt ist.</summary>
+        public bool LaunchCommandIssued { get; set; }
 
         public DateTimeOffset? FirstProcessAt { get; set; }
 

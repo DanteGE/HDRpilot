@@ -78,5 +78,21 @@ internal static unsafe partial class NtNative
     /// <summary>Ziel eines Laufwerksbuchstabens, etwa "C:" → "\Device\HarddiskVolume3" (mehrere Ziele durch \0 getrennt).</summary>
     [LibraryImport("kernel32.dll", EntryPoint = "QueryDosDeviceW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     public static partial uint QueryDosDevice(string lpDeviceName, char* lpTargetPath, uint ucchMax);
+
+    // Volumes ohne Laufwerksbuchstaben (in einen Ordner eingebunden, etwa C:\Games): fileapi.h, ohne Adminrechte nutzbar.
+    [LibraryImport("kernel32.dll", EntryPoint = "FindFirstVolumeW", SetLastError = true)]
+    public static partial IntPtr FindFirstVolume(char* lpszVolumeName, uint cchBufferLength);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "FindNextVolumeW", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool FindNextVolume(IntPtr hFindVolume, char* lpszVolumeName, uint cchBufferLength);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool FindVolumeClose(IntPtr hFindVolume);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "GetVolumePathNamesForVolumeNameW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetVolumePathNamesForVolumeName(string lpszVolumeName, char* lpszVolumePathNames, uint cchBufferLength, out uint lpcchReturnLength);
 }
 #pragma warning restore IDE1006

@@ -215,21 +215,86 @@ public sealed unsafe class ProcessImagePathResolver
                 continue;
             }
 
-            var end = 0;
-            while (end < length && buffer[end] != '\0')
-            {
-                end++;
-            }
-
-            if (ParseDosDeviceTarget(drive, new string(buffer, 0, end)) is { } mapping)
+            if (ParseDosDeviceTarget(drive, ReadTerminated(buffer, (int)length)) is { } mapping)
             {
                 map.Add(mapping);
             }
         }
 
+        AddFolderMountedVolumes(map);
         return map;
     }
 
-    /// <summary>NT-Gerät (etwa \Device\HarddiskVolume3) und sein Laufwerksbuchstabe (etwa C:).</summary>
+    /// <summary>
+    /// Volumes ohne Laufwerksbuchstaben, die in einen Ordner eingebunden sind (etwa eine Spiele-SSD unter C:\Games):
+    /// Gerät über QueryDosDevice("Volume{GUID}"), Einhängepunkt über GetVolumePathNamesForVolumeName. Buchstaben haben
+    /// Vorrang, sie stehen schon in der Liste.
+    /// </summary>
+    private static void AddFolderMountedVolumes(List<DeviceMapping> map)
+    {
+        const int capacity = 1024;
+        var volume = stackalloc char[capacity];
+        var device = stackalloc char[capacity];
+        var paths = stackalloc char[capacity];
+        var find = NtNative.FindFirstVolume(volume, capacity);
+        if (find == INVALID_HANDLE_VALUE)
+        {
+            return;
+        }
+
+        try
+        {
+            do
+            {
+                // \\?\Volume{GUID}\ → für QueryDosDevice ohne Präfix und ohne abschließenden Backslash.
+                var volumeName = ReadTerminated(volume, capacity);
+                if (!volumeName.StartsWith(@"\\?\", StringComparison.Ordinal) || !volumeName.EndsWith('\\'))
+                {
+                    continue;
+                }
+
+                var length = NtNative.QueryDosDevice(volumeName[4..^1], device, capacity);
+                if (length == 0)
+                {
+                    continue;
+                }
+
+                var deviceName = ReadTerminated(device, (int)length);
+                if (map.Any(m => string.Equals(m.Device, deviceName, StringComparison.OrdinalIgnoreCase))
+                    || !NtNative.GetVolumePathNamesForVolumeName(volumeName, paths, capacity, out _))
+                {
+                    continue;
+                }
+
+                // Mehrere Einhängepunkte möglich (durch \0 getrennt): der erste genügt.
+                var mountPoint = ReadTerminated(paths, capacity).TrimEnd('\\');
+                if (mountPoint.Length > 2)
+                {
+                    map.Add(new DeviceMapping(deviceName, mountPoint));
+                }
+            }
+            while (NtNative.FindNextVolume(find, volume, capacity));
+        }
+        finally
+        {
+            NtNative.FindVolumeClose(find);
+        }
+    }
+
+    private static string ReadTerminated(char* buffer, int capacity)
+    {
+        var end = 0;
+        while (end < capacity && buffer[end] != '\0')
+        {
+            end++;
+        }
+
+        return new string(buffer, 0, end);
+    }
+
+    /// <summary>
+    /// NT-Gerät (etwa \Device\HarddiskVolume3) und sein Win32-Präfix: ein Laufwerksbuchstabe (C:) oder der Ordner, in den
+    /// ein Volume ohne Buchstaben eingebunden ist (C:\Games).
+    /// </summary>
     internal readonly record struct DeviceMapping(string Device, string Drive);
 }

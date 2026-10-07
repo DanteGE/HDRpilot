@@ -114,6 +114,9 @@ public sealed class PcgwClient : IDisposable
     /// <summary>Werte von Video.HDR, die die vollständige Liste enthält.</summary>
     private const string CatalogWhere = "Video.HDR IN (\"true\",\"limited\",\"always on\",\"hackable\")";
 
+    /// <summary>Höchstzahl der verfolgten Weiterleitungen je Titel (Schutz vor Schleifen).</summary>
+    private const int MaxRedirectHops = 5;
+
     private readonly HttpClient _http;
     private readonly RequestPacer _pacer;
 
@@ -134,9 +137,10 @@ public sealed class PcgwClient : IDisposable
     public int RequestCount { get; private set; }
 
     /// <summary>
-    /// Fragt bis zu 50 Titel samt Wikitext ab und folgt Weiterleitungen. Ergebnis je angefragtem Titel: die Seite
-    /// oder null, wenn es sie nicht gibt (oder der Titel ungültig ist). Titel ohne Antwort (Ergebnis zu groß, Rest
-    /// käme erst mit einer Fortsetzung) fehlen im Ergebnis und gelten als nicht geprüft.
+    /// Fragt bis zu 50 Titel samt Wikitext ab und folgt Weiterleitungen (auch Ketten). Ergebnis je angefragtem Titel:
+    /// die Seite oder null, wenn es sie nicht gibt (oder der Titel ungültig ist oder in ein anderes Wiki führt). Titel
+    /// ohne Antwort (Ergebnis zu groß, Rest käme erst mit einer Fortsetzung) fehlen im Ergebnis und gelten als nicht
+    /// geprüft.
     /// </summary>
     public IReadOnlyDictionary<string, PcgwPage?> QueryTitles(IReadOnlyList<string> titles, CancellationToken cancellationToken)
     {
@@ -178,10 +182,27 @@ public sealed class PcgwClient : IDisposable
             }
         }
 
+        // Titel mit Interwiki-Präfix (etwa „wikipedia:…“) verweisen auf ein anderes Wiki: hier gibt es sie nicht.
+        if (query.TryGetProperty("interwiki", out var interwiki) && interwiki.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in interwiki.EnumerateArray())
+            {
+                if (String(item, "title") is { } title)
+                {
+                    pages.TryAdd(title, null);
+                }
+            }
+        }
+
         foreach (var requested in titles)
         {
+            // Weiterleitungsketten (A → B → C) stehen Schritt für Schritt in "redirects", in "pages" nur das Ziel.
             var title = normalized.GetValueOrDefault(requested, requested);
-            title = redirects.GetValueOrDefault(title, title);
+            for (var hop = 0; hop < MaxRedirectHops && redirects.TryGetValue(title, out var next); hop++)
+            {
+                title = next;
+            }
+
             if (pages.TryGetValue(title, out var page))
             {
                 result[requested] = page;
@@ -241,7 +262,8 @@ public sealed class PcgwClient : IDisposable
         {
             case "Success":
                 return;
-            case "Throttled":
+            case "Throttled": // MediaWiki vor 1.27
+            case "Failed" when IsThrottled(login):
                 throw new PcgwException(PcgwErrorKind.LoginThrottled, result, "Zu viele Anmeldeversuche.");
             case null:
                 throw new PcgwException(PcgwErrorKind.InvalidResponse, null, "Antwort der Anmeldung nicht lesbar.");
@@ -386,6 +408,19 @@ public sealed class PcgwClient : IDisposable
 
         return map;
     }
+
+    /// <summary>
+    /// Sperre nach zu vielen Anmeldeversuchen: Seit MediaWiki 1.27 kommt sie als „Failed“, erkennbar nur am Grund. Im
+    /// voreingestellten Fehlerformat ist das englischer Text („You have made too many recent login attempts …“), in
+    /// den neueren ein Objekt mit dem Code „login-throttled“.
+    /// </summary>
+    private static bool IsThrottled(JsonElement login) =>
+        login.TryGetProperty("reason", out var reason) && reason.ValueKind switch
+        {
+            JsonValueKind.String => reason.GetString()!.Contains("too many recent login attempts", StringComparison.OrdinalIgnoreCase),
+            JsonValueKind.Object => String(reason, "code") == "login-throttled",
+            _ => false,
+        };
 
     private static string? Content(JsonElement page)
     {

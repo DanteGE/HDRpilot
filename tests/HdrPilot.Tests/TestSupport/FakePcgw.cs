@@ -166,7 +166,8 @@ public sealed class FakeWiki
                 normalized.Add(new { fromencoded = false, from = requested, to = title });
             }
 
-            if (Redirects.TryGetValue(title, out var target))
+            // Wie MediaWiki: Ketten werden ganz aufgelöst, jeder Schritt steht in "redirects".
+            for (var hop = 0; hop < 10 && Redirects.TryGetValue(title, out var target); hop++)
             {
                 redirects.Add(new { from = title, to = target });
                 title = target;

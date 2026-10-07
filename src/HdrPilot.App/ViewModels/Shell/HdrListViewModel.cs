@@ -29,6 +29,7 @@ public sealed class HdrListViewModel : ObservableObject, IDisposable
     private string _password = string.Empty;
     private string _userName = string.Empty;
     private string? _accountUser;
+    private bool _accountUnreadable;
     private string _statusText = string.Empty;
     private bool _hasStatusError;
     private string _modeText = string.Empty;
@@ -45,7 +46,7 @@ public sealed class HdrListViewModel : ObservableObject, IDisposable
         _ui = SynchronizationContext.Current;
         _syncNowCommand = new AsyncRelayCommand(SyncNowAsync, () => !_isSyncing);
         _saveAccountCommand = new AsyncRelayCommand(SaveAccountAsync, () => !_isTestingAccount);
-        _removeAccountCommand = new RelayCommand(RemoveAccount, () => HasAccount && !_isTestingAccount);
+        _removeAccountCommand = new RelayCommand(RemoveAccount, () => CanRemoveAccount && !_isTestingAccount);
         OpenCreateAccountCommand = new RelayCommand(() => Open(CreateAccountUrl));
         OpenBotPasswordsCommand = new RelayCommand(() => Open(BotPasswordsUrl));
         OpenSiteCommand = new RelayCommand(() => Open(SiteUrl));
@@ -86,7 +87,7 @@ public sealed class HdrListViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _hasStatusError, value);
     }
 
-    /// <summary>Ohne Konto (Namen werden abgefragt) oder mit Konto (vollständige Liste).</summary>
+    /// <summary>Ohne Konto (Namen werden abgefragt), mit Konto (vollständige Liste) oder Konto nicht lesbar (nichts wird abgefragt).</summary>
     public string ModeText
     {
         get => _modeText;
@@ -106,6 +107,9 @@ public sealed class HdrListViewModel : ObservableObject, IDisposable
     }
 
     public bool HasAccount => _accountUser is not null;
+
+    /// <summary>Auch ein gespeichertes, aber nicht lesbares Konto lässt sich entfernen (sonst fragt der Abgleich nie wieder).</summary>
+    private bool CanRemoveAccount => HasAccount || _accountUnreadable;
 
     /// <summary>„Gespeichert: Name@HdrPilot …“; null ohne Konto.</summary>
     public string? AccountUserText => _accountUser is null ? null : string.Format(CultureInfo.CurrentCulture, ShellStrings.PcgwAccountStored, _accountUser);
@@ -298,18 +302,19 @@ public sealed class HdrListViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var hadAccount = HasAccount;
+        var couldRemove = CanRemoveAccount;
         _accountUser = status.AccountUser;
-        if (hadAccount != HasAccount)
+        _accountUnreadable = status.AccountUnreadable;
+        if (couldRemove != CanRemoveAccount)
         {
             _removeAccountCommand.RaiseCanExecuteChanged();
         }
 
         OnPropertyChanged(nameof(HasAccount));
         OnPropertyChanged(nameof(AccountUserText));
-        ModeText = _accountUser is null
-            ? ShellStrings.HdrListModeAnonymous
-            : string.Format(CultureInfo.CurrentCulture, ShellStrings.HdrListModeAccount, _accountUser);
+        ModeText = _accountUser is not null
+            ? string.Format(CultureInfo.CurrentCulture, ShellStrings.HdrListModeAccount, _accountUser)
+            : _accountUnreadable ? ShellStrings.HdrListModeAccountUnreadable : ShellStrings.HdrListModeAnonymous;
         IsSyncing = status.IsRunning;
         if (status.IsRunning)
         {

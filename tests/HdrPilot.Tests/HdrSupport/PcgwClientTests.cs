@@ -75,6 +75,57 @@ public sealed class PcgwClientTests
     }
 
     [Fact]
+    public void Redirect_chains_are_followed_to_the_final_page()
+    {
+        // Wie MediaWiki mit redirects=1: jeder Schritt einer Kette in "redirects", in "pages" nur das Ziel.
+        const string json = """
+            {"batchcomplete":true,"query":{
+              "normalized":[{"fromencoded":false,"from":"doom 2016","to":"Doom 2016"}],
+              "redirects":[{"from":"Doom 2016","to":"Doom 4"},{"from":"Doom 4","to":"Doom (2016)"}],
+              "pages":[{"pageid":7,"ns":0,"title":"Doom (2016)","revisions":[{"slots":{"main":{"content":"{{Infobox game\n|steam appid = 379720\n}}\n{{Video\n|hdr = limited\n}}"}}}]}]}}
+            """;
+        using var client = Client(_ => FakeHttpHandler.Json(json), out _);
+
+        var result = client.QueryTitles(["doom 2016", "Doom 4"], CancellationToken.None);
+
+        Assert.Equal("Doom (2016)", result["doom 2016"]!.Title);
+        Assert.Equal(HdrSupportStatus.Limited, result["doom 2016"]!.Status);
+        Assert.True(result["doom 2016"]!.HasSteamAppId("379720"));
+        Assert.Equal("Doom (2016)", result["Doom 4"]!.Title);
+    }
+
+    [Fact]
+    public void Redirect_loops_end_after_a_few_hops()
+    {
+        // Schleife im Wiki: MediaWiki listet beide Schritte und keine Seite; der Titel bleibt unbeantwortet.
+        const string json = """
+            {"batchcomplete":true,"query":{"redirects":[{"from":"A","to":"B"},{"from":"B","to":"A"}],"pages":[]}}
+            """;
+        using var client = Client(_ => FakeHttpHandler.Json(json), out _);
+
+        Assert.Empty(client.QueryTitles(["A"], CancellationToken.None));
+    }
+
+    [Fact]
+    public void Interwiki_titles_count_as_not_found()
+    {
+        // „Wikipedia: …“ führt in ein anderes Wiki; MediaWiki nennt den Titel nur unter "interwiki", nie in "pages".
+        const string json = """
+            {"batchcomplete":true,"query":{
+              "normalized":[{"fromencoded":false,"from":"Wikipedia: The Game","to":"wikipedia:The Game"}],
+              "interwiki":[{"title":"wikipedia:The Game","iw":"wikipedia"}],
+              "pages":[{"ns":0,"title":"Wikipedia - The Game","missing":true}]}}
+            """;
+        using var client = Client(_ => FakeHttpHandler.Json(json), out _);
+
+        var result = client.QueryTitles(["Wikipedia - The Game", "Wikipedia: The Game"], CancellationToken.None);
+
+        Assert.Equal(2, result.Count);
+        Assert.Null(result["Wikipedia: The Game"]);
+        Assert.Null(result["Wikipedia - The Game"]);
+    }
+
+    [Fact]
     public void At_most_fifty_titles_per_request()
     {
         using var client = Client(_ => FakeHttpHandler.Json("{}"), out var handler);
@@ -282,7 +333,7 @@ public sealed class PcgwClientTests
     [InlineData("Failed", PcgwErrorKind.LoginFailed)]
     [InlineData("WrongToken", PcgwErrorKind.LoginFailed)]
     [InlineData("Aborted", PcgwErrorKind.LoginFailed)]
-    [InlineData("Throttled", PcgwErrorKind.LoginThrottled)]
+    [InlineData("Throttled", PcgwErrorKind.LoginThrottled)] // MediaWiki vor 1.27
     public void Rejected_logins_are_reported_without_the_password(string result, PcgwErrorKind kind)
     {
         var responses = new Queue<HttpResponseMessage>([
@@ -296,6 +347,27 @@ public sealed class PcgwClientTests
         Assert.Equal(kind, ex.Kind);
         Assert.Equal(result, ex.Code);
         Assert.DoesNotContain("sehr-geheim", ex.Message, StringComparison.Ordinal);
+    }
+
+    // MediaWiki 1.43 (PCGamingWiki) meldet die Anmeldesperre als „Failed“; nur der Grund unterscheidet sie von einem
+    // falschen Passwort (voreingestelltes Fehlerformat: englischer Text, sonst ein Objekt mit Code).
+    [Theory]
+    [InlineData("\"You have made too many recent login attempts. Please wait 5 minutes before trying again.\"", PcgwErrorKind.LoginThrottled)]
+    [InlineData("{\"code\":\"login-throttled\",\"text\":\"You have made too many recent login attempts.\"}", PcgwErrorKind.LoginThrottled)]
+    [InlineData("\"Incorrect username or password entered. Please try again.\"", PcgwErrorKind.LoginFailed)]
+    [InlineData("{\"code\":\"wrongpassword\",\"text\":\"Incorrect username or password entered.\"}", PcgwErrorKind.LoginFailed)]
+    public void Failed_login_is_throttled_only_by_its_reason(string reason, PcgwErrorKind kind)
+    {
+        var responses = new Queue<HttpResponseMessage>([
+            FakeHttpHandler.Json("""{"batchcomplete":true,"query":{"tokens":{"logintoken":"t+\\"}}}"""),
+            FakeHttpHandler.Json("{\"login\":{\"result\":\"Failed\",\"reason\":" + reason + "}}"),
+        ]);
+        using var client = Client(_ => responses.Dequeue(), out _);
+
+        var ex = Assert.Throws<PcgwException>(() => client.Login("Dante_GE@HdrPilot", "sehr-geheim", CancellationToken.None));
+
+        Assert.Equal(kind, ex.Kind);
+        Assert.Equal("Failed", ex.Code);
     }
 
     [Fact]

@@ -9,6 +9,10 @@ namespace HdrPilot.Core.HdrSupport;
 /// <summary>Stand des Abgleichs für die Einstellungen.</summary>
 /// <param name="CheckedGames">Spiele der Bibliothek mit einem Ergebnis (unter ihrem aktuellen Namen).</param>
 /// <param name="AccountUser">Gespeichertes Konto („Name@BotName“) oder null.</param>
+/// <param name="AccountUnreadable">
+/// Konto gespeichert, aber nicht lesbar (DPAPI-Schlüssel verloren, Profil kopiert, Datei beschädigt): Der Abgleich
+/// fragt dann nichts ab, bis das Konto neu eingetragen oder entfernt ist.
+/// </param>
 public sealed record HdrListStatus(
     DateTimeOffset? LastSuccessAt,
     PcgwErrorKind? LastError,
@@ -16,7 +20,8 @@ public sealed record HdrListStatus(
     int TotalGames,
     bool AccountMode,
     bool IsRunning,
-    string? AccountUser);
+    string? AccountUser,
+    bool AccountUnreadable = false);
 
 /// <summary>Was Oberfläche und Start von der HDR-Liste brauchen (in Tests eine Attrappe).</summary>
 public interface IHdrListService
@@ -41,7 +46,7 @@ public interface IHdrListService
     /// </summary>
     Task<PcgwErrorKind?> SaveAccountAsync(string userName, string? password);
 
-    /// <summary>Löscht Konto und vollständige Liste; die Ergebnisse je Spiel bleiben.</summary>
+    /// <summary>Löscht Konto (auch ein nicht lesbares) und vollständige Liste; die Ergebnisse je Spiel bleiben.</summary>
     void RemoveAccount();
 }
 
@@ -69,6 +74,7 @@ public sealed class HdrListService : IHdrListService, IDisposable
     private Task<HdrListRunResult>? _running;
     private Timer? _startupTimer;
     private string? _accountUser;
+    private bool _accountUnreadable;
     private bool _accountLoaded;
     private bool _disposed;
 
@@ -116,7 +122,8 @@ public sealed class HdrListService : IHdrListService, IDisposable
         var data = _cache.Load();
         var games = _config().Games;
         var checkedGames = games.Count(g => data.Games.TryGetValue(g.Key, out var e) && string.Equals(e.Name, g.Name, StringComparison.Ordinal));
-        return new HdrListStatus(data.LastSuccessAt, data.LastError, checkedGames, games.Count, data.AccountMode, IsRunning, AccountUser());
+        var (user, unreadable) = StoredAccount();
+        return new HdrListStatus(data.LastSuccessAt, data.LastError, checkedGames, games.Count, data.AccountMode, IsRunning, user, unreadable);
     }
 
     public IReadOnlyDictionary<string, HdrSupportStatus> LoadStatuses() => _cache.LoadStatuses();
@@ -185,6 +192,7 @@ public sealed class HdrListService : IHdrListService, IDisposable
         lock (_gate)
         {
             _accountUser = null;
+            _accountUnreadable = false;
             _accountLoaded = true;
         }
 
@@ -237,22 +245,23 @@ public sealed class HdrListService : IHdrListService, IDisposable
         }
     }
 
-    private string? AccountUser()
+    private (string? User, bool Unreadable) StoredAccount()
     {
         lock (_gate)
         {
             if (_accountLoaded)
             {
-                return _accountUser;
+                return (_accountUser, _accountUnreadable);
             }
         }
 
-        var user = _accounts.Load(out _)?.UserName;
+        var user = _accounts.Load(out var unreadable)?.UserName;
         lock (_gate)
         {
             _accountUser = user;
+            _accountUnreadable = unreadable;
             _accountLoaded = true;
-            return user;
+            return (user, unreadable);
         }
     }
 
@@ -319,6 +328,7 @@ public sealed class HdrListService : IHdrListService, IDisposable
         lock (_gate)
         {
             _accountUser = userName;
+            _accountUnreadable = false;
             _accountLoaded = true;
         }
 

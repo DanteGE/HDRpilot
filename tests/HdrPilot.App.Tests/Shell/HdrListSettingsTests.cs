@@ -206,6 +206,29 @@ public sealed class HdrListSettingsTests
     }
 
     [Fact]
+    public void Unreadable_account_says_nothing_is_queried_and_can_be_removed()
+    {
+        var (vm, ctx) = Create();
+        var list = vm.HdrList;
+        var canExecuteChanged = 0;
+        list.RemoveAccountCommand.CanExecuteChanged += (_, _) => canExecuteChanged++;
+        ctx.FakeHdrList.Status = new HdrListStatus(Stand, PcgwErrorKind.AccountUnreadable, 5, 5, false, false, null, AccountUnreadable: true);
+        list.Refresh();
+
+        Assert.False(list.HasAccount);
+        Assert.Equal(ShellStrings.HdrListModeAccountUnreadable, list.ModeText);
+        Assert.True(list.RemoveAccountCommand.CanExecute(null)); // sonst Sackgasse: der Abgleich fragt nie wieder
+        Assert.True(canExecuteChanged >= 1, "Knopf „Konto entfernen“ wird freigegeben");
+
+        list.RemoveAccountCommand.Execute(null);
+
+        Assert.Equal(1, ctx.FakeHdrList.RemoveCalls);
+        Assert.Equal(ShellStrings.PcgwRemoved, list.AccountMessage);
+        Assert.Equal(ShellStrings.HdrListModeAnonymous, list.ModeText);
+        Assert.False(list.RemoveAccountCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void Stored_account_name_is_prefilled()
     {
         var config = ShellTestFactory.NewConfig(_fs);

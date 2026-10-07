@@ -350,6 +350,9 @@
   <data name="HdrListModeAccount" xml:space="preserve">
     <value>Mit Konto {0}: vollständige Liste, es werden keine Spielnamen gesendet.</value>
   </data>
+  <data name="HdrListModeAccountUnreadable" xml:space="preserve">
+    <value>Gespeichertes Konto nicht lesbar – es wird nichts abgefragt. Neu eintragen oder Konto entfernen.</value>
+  </data>
   <data name="HdrListErrorNetwork" xml:space="preserve">
     <value>PCGamingWiki nicht erreichbar</value>
   </data>

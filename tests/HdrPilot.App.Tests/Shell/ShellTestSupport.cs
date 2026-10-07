@@ -106,7 +106,7 @@ internal sealed class FakeHdrListService : IHdrListService
         SaveCalls.Add((userName, password));
         if (NextSaveResult is null)
         {
-            Status = Status with { AccountUser = userName };
+            Status = Status with { AccountUser = userName, AccountUnreadable = false };
         }
 
         return Task.FromResult(NextSaveResult);
@@ -115,7 +115,7 @@ internal sealed class FakeHdrListService : IHdrListService
     public void RemoveAccount()
     {
         RemoveCalls++;
-        Status = Status with { AccountUser = null };
+        Status = Status with { AccountUser = null, AccountUnreadable = false };
     }
 
     public void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);

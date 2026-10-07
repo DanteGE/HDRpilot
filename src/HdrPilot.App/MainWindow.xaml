@@ -7,7 +7,7 @@
                     Title="{x:Static res:LibraryStrings.Window_Title}"
                     AutomationProperties.AutomationId="MainWindow"
                     AutomationProperties.Name="{x:Static res:LibraryStrings.Window_Title}"
-                    Width="1220" Height="800" MinWidth="1000" MinHeight="620"
+                    Width="1320" Height="800" MinWidth="1000" MinHeight="620"
                     WindowStartupLocation="CenterScreen">
     <infra:ChromeWindow.Resources>
         <!-- Zeile der Spieleliste -->
@@ -65,6 +65,15 @@
                         Background="{DynamicResource Hp.Brush.SurfaceSelected}">
                     <TextBlock Text="{Binding Count}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                 </Border>
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- Sortierung -->
+        <DataTemplate x:Key="SortOptionTemplate" DataType="{x:Type vm:SortOption}">
+            <DockPanel LastChildFill="True">
+                <TextBlock DockPanel.Dock="Left" Style="{StaticResource Lib.Glyph}" Text="{Binding Glyph}" FontSize="13" Margin="0,0,9,0"
+                           Foreground="{DynamicResource Hp.Brush.AccentSolid}" />
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </DockPanel>
         </DataTemplate>
@@ -278,17 +287,22 @@
             </StackPanel>
         </Grid>
 
-        <!-- Werkzeugleiste: Suche, Filter, Aktionen -->
+        <!--
+            Werkzeugleiste: Suche, Filter und Sortierung, Aktionen. Passt sich der Fensterbreite an (MainWindow.xaml.cs):
+            breit alles in einer Zeile; etwas schmaler „Neu einlesen“ nur als Symbol; schmal Filter und Sortierung in
+            einer zweiten Zeile unter der Suche.
+        -->
         <Grid x:Name="ToolbarArea" Grid.Row="1" Margin="0,22,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="200" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
+                <!-- Mindestbreite: Platzhalter „Spiele durchsuchen …   Strg+F“ bleibt lesbar -->
+                <ColumnDefinition Width="*" MinWidth="260" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid>
                 <TextBox x:Name="SearchBox" Style="{StaticResource Lib.SearchBox}" Tag="{x:Static res:LibraryStrings.Search_Placeholder}"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -301,60 +315,70 @@
                     <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE711;" FontSize="11" Margin="4" />
                 </Button>
             </Grid>
-            <ComboBox Grid.Column="1" Width="196" Margin="10,0,0,0" Style="{StaticResource Lib.ComboBox}"
-                      ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ItemTemplate="{StaticResource SourceOptionTemplate}"
-                      ItemContainerStyle="{StaticResource Lib.SourceComboBoxItem}"
-                      AutomationProperties.AutomationId="SourceFilter" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_SourceName}" />
-            <ToggleButton Grid.Column="2" Margin="10,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlySelected}"
-                          AutomationProperties.AutomationId="OnlySelectedToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlySelectedName}"
-                          ToolTip="{x:Static res:LibraryStrings.Filter_OnlySelectedName}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" FontSize="13" Margin="0,0,7,0" />
-                    <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlySelected}" />
-                </StackPanel>
-            </ToggleButton>
-            <ToggleButton Grid.Column="3" Margin="8,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlyNew}"
-                          AutomationProperties.AutomationId="OnlyNewToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyNewName}"
-                          ToolTip="{x:Static res:LibraryStrings.Filter_OnlyNewName}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE735;" FontSize="12" Margin="0,0,7,0" />
-                    <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyNew}" />
-                </StackPanel>
-            </ToggleButton>
-            <Button x:Name="MarkAllSeenButton" Grid.Column="4" Margin="18,0,0,0" Style="{StaticResource Lib.ToolbarIconButton}" Content="&#xE890;" Command="{Binding MarkAllSeenCommand}"
-                    AutomationProperties.AutomationId="MarkAllSeenButton" AutomationProperties.Name="{x:Static res:LibraryStrings.MarkAllSeen_Name}"
-                    ToolTip="{x:Static res:LibraryStrings.MarkAllSeen_Name}" ToolTipService.ShowOnDisabled="True" />
-            <Button Grid.Column="5" Margin="8,0,0,0" Style="{StaticResource Lib.ToolbarButton}" Command="{Binding RescanCommand}"
-                    AutomationProperties.AutomationId="RescanButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Rescan_Button}"
-                    ToolTip="{x:Static res:LibraryStrings.Rescan_Tooltip}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock x:Name="RescanGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE72C;" FontSize="13" Margin="0,0,8,0" RenderTransformOrigin="0.5,0.5">
-                        <TextBlock.RenderTransform>
-                            <RotateTransform />
-                        </TextBlock.RenderTransform>
-                    </TextBlock>
-                    <!-- Schmales Fenster: nur das Symbol (Name und Tooltip bleiben) -->
-                    <TextBlock x:Name="RescanText">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="{x:Static res:LibraryStrings.Rescan_Button}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsScanning}" Value="True">
-                                        <Setter Property="Text" Value="{x:Static res:LibraryStrings.Rescan_Running}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </StackPanel>
-            </Button>
-            <Button Grid.Column="6" Margin="8,0,0,0" Style="{StaticResource Lib.AccentButton}" Height="40" Padding="16,0" Command="{Binding AddGameCommand}"
-                    AutomationProperties.AutomationId="AddGameButton" AutomationProperties.Name="{x:Static res:LibraryStrings.AddGame_Button}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE710;" FontSize="13" Margin="0,0,8,0" />
-                    <TextBlock Text="{x:Static res:LibraryStrings.AddGame_Button}" />
-                </StackPanel>
-            </Button>
+
+            <StackPanel x:Name="FilterGroup" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Left">
+                <ComboBox x:Name="SourceFilter" Width="196" Margin="10,0,0,0" Style="{StaticResource Lib.ComboBox}"
+                          ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ItemTemplate="{StaticResource SourceOptionTemplate}"
+                          ItemContainerStyle="{StaticResource Lib.SourceComboBoxItem}"
+                          AutomationProperties.AutomationId="SourceFilter" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_SourceName}" />
+                <ComboBox x:Name="SortOrder" Width="186" Margin="8,0,0,0" Style="{StaticResource Lib.ComboBox}"
+                          ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSortOption}" ItemTemplate="{StaticResource SortOptionTemplate}"
+                          AutomationProperties.AutomationId="SortOrder" AutomationProperties.Name="{x:Static res:LibraryStrings.Sort_Name}"
+                          ToolTip="{x:Static res:LibraryStrings.Sort_Name}" />
+                <ToggleButton Margin="10,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlySelected}"
+                              AutomationProperties.AutomationId="OnlySelectedToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlySelectedName}"
+                              ToolTip="{x:Static res:LibraryStrings.Filter_OnlySelectedName}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" FontSize="13" Margin="0,0,7,0" />
+                        <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlySelected}" />
+                    </StackPanel>
+                </ToggleButton>
+                <ToggleButton Margin="8,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlyNew}"
+                              AutomationProperties.AutomationId="OnlyNewToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyNewName}"
+                              ToolTip="{x:Static res:LibraryStrings.Filter_OnlyNewName}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE735;" FontSize="12" Margin="0,0,7,0" />
+                        <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyNew}" />
+                    </StackPanel>
+                </ToggleButton>
+            </StackPanel>
+
+            <StackPanel x:Name="ActionGroup" Grid.Column="2" Orientation="Horizontal">
+                <Button x:Name="MarkAllSeenButton" Margin="18,0,0,0" Style="{StaticResource Lib.ToolbarIconButton}" Content="&#xE890;" Command="{Binding MarkAllSeenCommand}"
+                        AutomationProperties.AutomationId="MarkAllSeenButton" AutomationProperties.Name="{x:Static res:LibraryStrings.MarkAllSeen_Name}"
+                        ToolTip="{x:Static res:LibraryStrings.MarkAllSeen_Name}" ToolTipService.ShowOnDisabled="True" />
+                <Button Margin="8,0,0,0" Style="{StaticResource Lib.ToolbarButton}" Command="{Binding RescanCommand}"
+                        AutomationProperties.AutomationId="RescanButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Rescan_Button}"
+                        ToolTip="{x:Static res:LibraryStrings.Rescan_Tooltip}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="RescanGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE72C;" FontSize="13" Margin="0,0,8,0" RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform />
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                        <!-- Schmales Fenster: nur das Symbol (Name und Tooltip bleiben) -->
+                        <TextBlock x:Name="RescanText">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{x:Static res:LibraryStrings.Rescan_Button}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsScanning}" Value="True">
+                                            <Setter Property="Text" Value="{x:Static res:LibraryStrings.Rescan_Running}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+                <Button Margin="8,0,0,0" Style="{StaticResource Lib.AccentButton}" Height="40" Padding="16,0" Command="{Binding AddGameCommand}"
+                        AutomationProperties.AutomationId="AddGameButton" AutomationProperties.Name="{x:Static res:LibraryStrings.AddGame_Button}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE710;" FontSize="13" Margin="0,0,8,0" />
+                        <TextBlock Text="{x:Static res:LibraryStrings.AddGame_Button}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Grid>
 
         <!-- Fehler je Scanner (nur bei Fehlern) -->
@@ -367,11 +391,15 @@
             </ScrollViewer>
         </Expander>
 
-        <Grid Grid.Row="3" Margin="0,16,0,0">
+        <!--
+            Liste und Detailbereich: beide wachsen mit dem Fenster (Sternbreiten), der Trenner dazwischen verschiebt die
+            Aufteilung. Den Anteil des Detailbereichs setzt und merkt MainWindow.xaml.cs (AppSettings.LibraryDetailsRatio).
+        -->
+        <Grid x:Name="ColumnsArea" Grid.Row="3" Margin="0,16,0,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition x:Name="ListColumn" Width="65*" MinWidth="{x:Static vm:LibraryLayout.ListMinWidth}" />
                 <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="400" />
+                <ColumnDefinition x:Name="DetailsColumn" Width="35*" MinWidth="{x:Static vm:LibraryLayout.DetailsMinWidth}" />
             </Grid.ColumnDefinitions>
 
             <!-- Liste (mit Vorschlägen darüber) -->
@@ -469,6 +497,12 @@
                 </Grid>
             </Grid>
 
+            <!-- Trenner: zwischen Liste und Details auch in der Tab-Reihenfolge -->
+            <GridSplitter x:Name="LibrarySplitter" Grid.Column="1" Style="{StaticResource Lib.Splitter}"
+                          DragCompleted="OnSplitterDragCompleted" KeyUp="OnSplitterKeyUp" MouseDoubleClick="OnSplitterDoubleClick"
+                          AutomationProperties.AutomationId="LibrarySplitter" AutomationProperties.Name="{x:Static res:LibraryStrings.Splitter_Name}"
+                          ToolTip="{x:Static res:LibraryStrings.Splitter_Tooltip}" ToolTipService.InitialShowDelay="900" />
+
             <!-- Detailbereich -->
             <Border x:Name="DetailsArea" Grid.Column="2" Style="{StaticResource Hp.Card}" Padding="0">
                 <ScrollViewer x:Name="DetailsPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False"
@@ -531,8 +565,75 @@
                                     </DockPanel>
                                 </Grid>
 
+                                <!-- Starten und Verknüpfungen: die häufigste Aktion zuerst, noch vor der Automatik -->
+                                <Border x:Name="LaunchSection" Style="{StaticResource Lib.Section}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionLaunch}" />
+                                        <Button Style="{StaticResource Lib.AccentButton}" HorizontalAlignment="Stretch" Command="{Binding LaunchCommand}"
+                                                AutomationProperties.AutomationId="LaunchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Launch_Button}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE768;" FontSize="13" Margin="0,0,9,0" />
+                                                <TextBlock Text="{x:Static res:LibraryStrings.Launch_Button}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_Hint}" Margin="0,8,0,12"
+                                                   Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}}" />
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_NoCommand}" Margin="0,8,0,12"
+                                                   AutomationProperties.AutomationId="LaunchNoCommandHint"
+                                                   Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="8" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button Style="{StaticResource Lib.SmallGhostButton}" Command="{Binding CreateDesktopShortcutCommand}"
+                                                    AutomationProperties.AutomationId="CreateDesktopShortcutButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Shortcut_DesktopName}"
+                                                    ToolTip="{x:Static res:LibraryStrings.Shortcut_DesktopName}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE71B;" FontSize="12" Margin="0,0,7,0" />
+                                                    <TextBlock Text="{x:Static res:LibraryStrings.Shortcut_Desktop}" />
+                                                </StackPanel>
+                                            </Button>
+                                            <Button Grid.Column="2" Style="{StaticResource Lib.SmallGhostButton}" Command="{Binding CreateStartMenuShortcutCommand}"
+                                                    AutomationProperties.AutomationId="CreateStartMenuShortcutButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Shortcut_StartMenuName}"
+                                                    ToolTip="{x:Static res:LibraryStrings.Shortcut_StartMenuName}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE718;" FontSize="12" Margin="0,0,7,0" />
+                                                    <TextBlock Text="{x:Static res:LibraryStrings.Shortcut_StartMenu}" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+
+                                        <!-- Notlösung nur für Steam-Spiele: Startoption, mit der Steam das Spiel über HdrPilot startet -->
+                                        <StackPanel x:Name="SteamLaunchOptionArea" Visibility="{Binding IsSteam, Converter={StaticResource Lib.BoolToVisibility}}">
+                                            <Border Height="1" Margin="0,12" Background="{DynamicResource Hp.Brush.Border}" />
+                                            <Button Style="{StaticResource Lib.SmallGhostButton}" HorizontalAlignment="Stretch" Command="{Binding CopySteamLaunchOptionCommand}"
+                                                    AutomationProperties.AutomationId="CopySteamLaunchOptionButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Steam_CopyLaunchOptionName}"
+                                                    ToolTip="{x:Static res:LibraryStrings.Steam_CopyLaunchOptionName}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE8C8;" FontSize="12" Margin="0,0,7,0" />
+                                                    <TextBlock Text="{x:Static res:LibraryStrings.Steam_CopyLaunchOption}" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Button>
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Steam_LaunchOptionHint}" Margin="0,7,0,0"
+                                                       AutomationProperties.AutomationId="SteamLaunchOptionHint" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Ergebnis von Start, Verknüpfung oder Steam-Startoption -->
+                                <Grid Margin="0,0,0,12" Visibility="{Binding HasLaunchMessage, Converter={StaticResource Lib.BoolToVisibility}}">
+                                    <Border Style="{StaticResource Lib.StatusTint}" Tag="{Binding MessageKind}" />
+                                    <DockPanel Margin="12,9">
+                                        <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{Binding MessageKind}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Hp.Brush.Text}"
+                                                   AutomationProperties.AutomationId="DetailMessage" />
+                                    </DockPanel>
+                                </Grid>
+
                                 <!-- Automatik -->
-                                <Border Style="{StaticResource Lib.Section}">
+                                <Border x:Name="AutomationSection" Style="{StaticResource Lib.Section}">
                                     <StackPanel>
                                         <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionAutomation}" />
                                         <Grid>
@@ -570,7 +671,7 @@
                                 </Border>
 
                                 <!-- EXE-Dateien -->
-                                <Border Style="{StaticResource Lib.Section}">
+                                <Border x:Name="ExecutablesSection" Style="{StaticResource Lib.Section}">
                                     <StackPanel>
                                         <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionExecutables}" Margin="0,0,0,4" />
                                         <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_ExecutablesHint}" Margin="0,0,0,10" />
@@ -618,55 +719,13 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- Starten und Verknüpfungen -->
-                                <Border Style="{StaticResource Lib.Section}">
-                                    <StackPanel>
-                                        <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionLaunch}" />
-                                        <Button Style="{StaticResource Lib.AccentButton}" HorizontalAlignment="Stretch" Command="{Binding LaunchCommand}"
-                                                AutomationProperties.AutomationId="LaunchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Launch_Button}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE768;" FontSize="13" Margin="0,0,9,0" />
-                                                <TextBlock Text="{x:Static res:LibraryStrings.Launch_Button}" />
-                                            </StackPanel>
-                                        </Button>
-                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_Hint}" Margin="0,8,0,12"
-                                                   Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}}" />
-                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_NoCommand}" Margin="0,8,0,12"
-                                                   AutomationProperties.AutomationId="LaunchNoCommandHint"
-                                                   Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}" />
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="8" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Button Style="{StaticResource Lib.SmallGhostButton}" Command="{Binding CreateDesktopShortcutCommand}"
-                                                    AutomationProperties.AutomationId="CreateDesktopShortcutButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Shortcut_DesktopName}"
-                                                    ToolTip="{x:Static res:LibraryStrings.Shortcut_DesktopName}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE71B;" FontSize="12" Margin="0,0,7,0" />
-                                                    <TextBlock Text="{x:Static res:LibraryStrings.Shortcut_Desktop}" />
-                                                </StackPanel>
-                                            </Button>
-                                            <Button Grid.Column="2" Style="{StaticResource Lib.SmallGhostButton}" Command="{Binding CreateStartMenuShortcutCommand}"
-                                                    AutomationProperties.AutomationId="CreateStartMenuShortcutButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Shortcut_StartMenuName}"
-                                                    ToolTip="{x:Static res:LibraryStrings.Shortcut_StartMenuName}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE718;" FontSize="12" Margin="0,0,7,0" />
-                                                    <TextBlock Text="{x:Static res:LibraryStrings.Shortcut_StartMenu}" />
-                                                </StackPanel>
-                                            </Button>
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Ergebnis der letzten Aktion -->
-                                <Grid Margin="0,0,0,12" Visibility="{Binding HasMessage, Converter={StaticResource Lib.BoolToVisibility}}">
+                                <!-- Ergebnis einer Aktion an den EXE-Dateien (direkt darunter, auch wenn der Bereich gescrollt ist) -->
+                                <Grid Margin="0,0,0,12" Visibility="{Binding HasExecutablesMessage, Converter={StaticResource Lib.BoolToVisibility}}">
                                     <Border Style="{StaticResource Lib.StatusTint}" Tag="{Binding MessageKind}" />
                                     <DockPanel Margin="12,9">
                                         <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{Binding MessageKind}" Margin="0,0,10,0" VerticalAlignment="Top" />
                                         <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Hp.Brush.Text}"
-                                                   AutomationProperties.AutomationId="DetailMessage" />
+                                                   AutomationProperties.AutomationId="DetailExeMessage" />
                                     </DockPanel>
                                 </Grid>
 

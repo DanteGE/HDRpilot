@@ -12,12 +12,13 @@ using HdrPilot.Core.Hdr;
 namespace HdrPilot.App.ViewModels.Library;
 
 /// <summary>
-/// Hauptfenster „Spielebibliothek“: Spieleliste mit Suche und Filtern, Kopf mit HDR-Status und Schnellaktionen,
-/// Detailbereich des gewählten Spiels, Fehler je Scanner und Vorschläge aus Suchordnern.
+/// Hauptfenster „Spielebibliothek“: Spieleliste mit Suche, Filtern und Sortierung, Kopf mit HDR-Status und
+/// Schnellaktionen, Detailbereich des gewählten Spiels, Fehler je Scanner und Vorschläge aus Suchordnern.
 /// <para>
 /// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
-/// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert wird über eine CollectionView
-/// (Suche entprellt), damit 600+ Spiele flüssig bleiben.
+/// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert und sortiert wird über eine
+/// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung und Breite des Detailbereichs
+/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryDetailsRatio).
 /// </para>
 /// </summary>
 public sealed class LibraryViewModel : ObservableObject, IDisposable
@@ -27,6 +28,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     /// <summary>„Angesehen“ wird gesammelt gespeichert (Blättern mit den Pfeiltasten schreibt nicht je Spiel).</summary>
     public static readonly TimeSpan SeenDelay = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>Die Spaltenbreite wird gesammelt gespeichert (Verschieben mit den Pfeiltasten schreibt nicht je Schritt).</summary>
+    public static readonly TimeSpan LayoutDelay = TimeSpan.FromMilliseconds(400);
 
     private static readonly StringComparer NameOrder = StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true);
     private static readonly CompareInfo SearchCompare = CultureInfo.InvariantCulture.CompareInfo;
@@ -38,6 +42,10 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     private readonly SourceFilterOption _allSources;
     private readonly HashSet<string> _seenPending = new(StringComparer.OrdinalIgnoreCase);
     private IDisposable? _seenDelay;
+    private IDisposable? _layoutDelay;
+    private bool _layoutPending;
+    private double? _detailsRatio;
+    private SortOption _selectedSort;
 
     private AppConfig? _syncedConfig;
     private int _pendingWrites;
@@ -79,7 +87,16 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _allSources = new SourceFilterOption(null, 0);
         _selectedSource = _allSources;
         SourceOptions = [_allSources];
+
+        // Sortierung und Spaltenbreite aus der Konfiguration (unbekannte oder fehlende Werte: Standard).
+        var settings = _context.Config.Settings;
+        SortOptions = GameSorting.CreateOptions();
+        var order = GameSorting.Parse(settings.LibrarySortOrder);
+        _selectedSort = SortOptions.First(o => o.Order == order);
+        _detailsRatio = settings.LibraryDetailsRatio;
+
         GamesView = new ListCollectionView(Games) { Filter = Matches };
+        ApplySortToView();
 
         ToggleHdrCommand = new AsyncRelayCommand(ToggleHdrAsync, () => CanToggleHdr);
         OpenSettingsCommand = new RelayCommand(() => _context.ShowSettings());
@@ -202,6 +219,62 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     }
 
     public bool IsFiltered => _searchTokens.Length > 0 || _selectedSource.Source is not null || _onlySelected || _onlyNew;
+
+    // ---------- Sortierung ----------
+
+    public IReadOnlyList<SortOption> SortOptions { get; }
+
+    /// <summary>Gewählte Sortierung; wird sofort angewandt und in AppSettings.LibrarySortOrder gespeichert.</summary>
+    public SortOption SelectedSortOption
+    {
+        get => _selectedSort;
+        set
+        {
+            if (value is null || ReferenceEquals(value, _selectedSort))
+            {
+                return; // Die Auswahlliste meldet beim Neuaufbau kurz null.
+            }
+
+            _selectedSort = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SortOrder));
+            ApplySortToView();
+
+            // Immer schreiben: Ein Vergleich mit der gespeicherten Konfiguration könnte während eines noch laufenden
+            // Schreibvorgangs veraltet sein (schnelles Hin- und Zurückschalten).
+            var stored = GameSorting.ToConfig(value.Order);
+            _ = WriteAsync(c => c.Settings.LibrarySortOrder = stored);
+        }
+    }
+
+    public GameSortOrder SortOrder
+    {
+        get => _selectedSort.Order;
+        set => SelectedSortOption = SortOptions.First(o => o.Order == value);
+    }
+
+    // ---------- Spaltenbreite ----------
+
+    /// <summary>Gemerkter Anteil des Detailbereichs (null: Standard). Das Fenster begrenzt ihn auf seine Größe.</summary>
+    public double? DetailsRatio => _detailsRatio;
+
+    /// <summary>
+    /// Neuer Anteil des Detailbereichs nach dem Verschieben des Trenners (null: zurück zum Standard). Gespeichert
+    /// wird gesammelt nach <see cref="LayoutDelay"/> bzw. beim Schließen.
+    /// </summary>
+    public void SetDetailsRatio(double? ratio)
+    {
+        double? value = ratio is { } r && double.IsFinite(r) ? Math.Round(Math.Clamp(r, 0, 1), 3) : null;
+        if (_disposed || Nullable.Equals(value, _detailsRatio))
+        {
+            return;
+        }
+
+        _detailsRatio = value;
+        _layoutPending = true;
+        _layoutDelay?.Dispose();
+        _layoutDelay = _context.Ui.Delay(LayoutDelay, FlushLayout);
+    }
 
     // ---------- Auswahl und Details ----------
 
@@ -473,6 +546,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var added = new List<GameItemViewModel>();
         var renamed = false;
+        var lastPlayedChanged = false;
         foreach (var game in cfg.Games)
         {
             if (!seen.Add(game.Key))
@@ -483,6 +557,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             if (_byKey.TryGetValue(game.Key, out var item))
             {
                 renamed |= !string.Equals(item.Name, game.Name, StringComparison.Ordinal);
+                lastPlayedChanged |= item.Config.LastPlayed != game.LastPlayed;
                 item.Apply(game);
             }
             else
@@ -504,6 +579,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _byKey.Remove(item.Key);
         }
 
+        // Nach „Zuletzt gespielt“ sortiert: ein geändertes Datum (Spiel beendet, Steam eingelesen) verschiebt die Zeile.
+        var resort = lastPlayedChanged && SortOrder == GameSortOrder.LastPlayed;
         if (renamed || added.Count + removed.Count > 12)
         {
             _refreshing = true;
@@ -518,7 +595,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
             RefreshView();
         }
-        else if (added.Count + removed.Count > 0)
+        else if (added.Count + removed.Count > 0 || resort)
         {
             _refreshing = true;
             try
@@ -538,7 +615,14 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
                 _refreshing = false;
             }
 
-            UpdateVisibleCount();
+            if (resort)
+            {
+                RefreshView(); // Die Sicht ordnet geänderte Zeilen nicht von selbst neu ein.
+            }
+            else
+            {
+                UpdateVisibleCount();
+            }
         }
 
         if (_selectedGame is not null && !_byKey.ContainsKey(_selectedGame.Key))
@@ -614,6 +698,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
 
         FlushSeen(); // Vorgemerktes „angesehen“ nicht verlieren.
+        FlushLayout(); // ebenso eine gerade verschobene Spaltenbreite
         _disposed = true;
         _lifetime.Cancel();
         _searchDelay?.Dispose();
@@ -755,6 +840,40 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
 
         UpdateVisibleCount();
+    }
+
+    /// <summary>
+    /// Sortierung der Sicht setzen (baut sie neu auf). Nach Name ist schon <see cref="Games"/> geordnet, dann sortiert
+    /// die Sicht nicht selbst (schneller beim Filtern); andere Reihenfolgen sortiert sie mit einem eigenen Vergleich.
+    /// </summary>
+    private void ApplySortToView()
+    {
+        _refreshing = true;
+        try
+        {
+            GamesView.CustomSort = _selectedSort.Order == GameSortOrder.Name ? null : GameSorting.Comparer(_selectedSort.Order);
+            OnPropertyChanged(nameof(SelectedGame));
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+
+        UpdateVisibleCount();
+    }
+
+    private void FlushLayout()
+    {
+        _layoutDelay?.Dispose();
+        _layoutDelay = null;
+        if (!_layoutPending)
+        {
+            return;
+        }
+
+        _layoutPending = false;
+        var ratio = _detailsRatio;
+        _ = WriteAsync(c => c.Settings.LibraryDetailsRatio = ratio);
     }
 
     private void UpdateVisibleCount()

@@ -50,6 +50,10 @@ public sealed class AppLibraryContext : ILibraryContext
 
     public IUiDispatcher Ui { get; }
 
+    public IClipboard Clipboard { get; } = new WpfClipboard();
+
+    public string? ExecutablePath => System.Environment.ProcessPath;
+
     public IReadOnlyList<SessionInfo> Sessions => _services.Sessions.Sessions;
 
     public bool IsPaused => _services.Sessions.Paused;
@@ -173,4 +177,13 @@ public sealed class WpfUiDispatcher(Dispatcher dispatcher) : IUiDispatcher
     {
         public void Dispose() => timer.Stop();
     }
+}
+
+/// <summary>
+/// Zwischenablage über WPF (bleibt auch nach dem Beenden von HdrPilot gefüllt). WPF versucht es bei belegter
+/// Zwischenablage selbst mehrmals; danach kommt eine ExternalException.
+/// </summary>
+public sealed class WpfClipboard : IClipboard
+{
+    public void SetText(string text) => System.Windows.Clipboard.SetText(text);
 }

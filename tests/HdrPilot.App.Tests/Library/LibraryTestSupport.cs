@@ -210,6 +210,25 @@ public sealed class FakeShortcuts : IShortcutService
     }
 }
 
+/// <summary>Zwischenablage zum Mitlesen; berührt nie die echte Zwischenablage.</summary>
+public sealed class FakeClipboard : IClipboard
+{
+    public List<string> Texts { get; } = [];
+
+    /// <summary>Wenn gesetzt, scheitert das Kopieren damit (etwa belegte Zwischenablage).</summary>
+    public Exception? Failure { get; set; }
+
+    public void SetText(string text)
+    {
+        if (Failure is not null)
+        {
+            throw Failure;
+        }
+
+        Texts.Add(text);
+    }
+}
+
 /// <summary>Kontext der Bibliothek über einem echten ConfigService (Ablage im Speicher) und Attrappen.</summary>
 public sealed class TestLibraryContext : ILibraryContext
 {
@@ -257,6 +276,11 @@ public sealed class TestLibraryContext : ILibraryContext
 
     public FakeShortcuts FakeShortcuts { get; } = new();
 
+    public FakeClipboard FakeClipboard { get; } = new();
+
+    /// <summary>Programmpfad von HdrPilot für die Steam-Startoption (Attrappe, mit Leerzeichen wie unter „Program Files“).</summary>
+    public string? ExecutablePath { get; set; } = @"C:\Program Files\HdrPilot\HdrPilot.exe";
+
     public List<SessionInfo> SessionList { get; } = [];
 
     public List<string> Launched { get; } = [];
@@ -296,6 +320,8 @@ public sealed class TestLibraryContext : ILibraryContext
     public IShortcutService Shortcuts => FakeShortcuts;
 
     public IUiDispatcher Ui => Dispatcher;
+
+    public IClipboard Clipboard => FakeClipboard;
 
     public IReadOnlyList<SessionInfo> Sessions => SessionList;
 

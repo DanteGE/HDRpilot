@@ -28,6 +28,12 @@ public interface ILibraryContext : IDisposable
 
     IUiDispatcher Ui { get; }
 
+    /// <summary>Zwischenablage (in Tests eine Attrappe).</summary>
+    IClipboard Clipboard { get; }
+
+    /// <summary>Vollständiger Pfad der laufenden HdrPilot.exe (für die Steam-Startoption); null, wenn unbekannt.</summary>
+    string? ExecutablePath { get; }
+
     IReadOnlyList<SessionInfo> Sessions { get; }
 
     bool IsPaused { get; }

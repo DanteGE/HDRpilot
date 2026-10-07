@@ -114,6 +114,21 @@
   <data name="Filter_OnlyNewName" xml:space="preserve">
     <value>Nur neue Spiele</value>
   </data>
+  <data name="Sort_Name" xml:space="preserve">
+    <value>Spiele sortieren</value>
+  </data>
+  <data name="Sort_ByName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Sort_ByLastPlayed" xml:space="preserve">
+    <value>Zuletzt gespielt</value>
+  </data>
+  <data name="Splitter_Name" xml:space="preserve">
+    <value>Breite von Spieleliste und Detailbereich</value>
+  </data>
+  <data name="Splitter_Tooltip" xml:space="preserve">
+    <value>Ziehen oder Pfeiltasten: Breite ändern · Doppelklick: Standardbreite</value>
+  </data>
   <data name="MarkAllSeen_Name" xml:space="preserve">
     <value>Alle als gesehen markieren</value>
   </data>
@@ -447,6 +462,22 @@
   </data>
   <data name="Shortcut_NoTarget" xml:space="preserve">
     <value>Der Programmpfad von HdrPilot ist unbekannt.</value>
+  </data>
+  <data name="Steam_CopyLaunchOption" xml:space="preserve">
+    <value>Steam-Startoption kopieren</value>
+  </data>
+  <data name="Steam_CopyLaunchOptionName" xml:space="preserve">
+    <value>Steam-Startoption für den Start aus Steam kopieren</value>
+  </data>
+  <data name="Steam_LaunchOptionHint" xml:space="preserve">
+    <value>Notlösung für den Start direkt aus Steam: HDR geht dann vor dem Spiel an.</value>
+  </data>
+  <data name="Steam_LaunchOptionCopied" xml:space="preserve">
+    <value>Kopiert. In Steam: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen, dort einfügen. Dann schaltet HdrPilot HDR auch beim Start aus Steam vor dem Spiel ein (HdrPilot muss dafür laufen).</value>
+  </data>
+  <data name="Steam_LaunchOptionFailed" xml:space="preserve">
+    <value>Startoption konnte nicht kopiert werden: {0}</value>
+    <comment>{0} = Fehlermeldung</comment>
   </data>
   <data name="Details_InstallDir" xml:space="preserve">
     <value>INSTALLATIONSORDNER</value>

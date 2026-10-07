@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -11,9 +12,10 @@ using HdrPilot.App.Views.Library;
 namespace HdrPilot.App;
 
 /// <summary>
-/// Hauptfenster „Spielebibliothek“. Die Ansicht kümmert sich nur um Bewegung: Einblenden beim Öffnen, gestaffelte
-/// erste Zeilen, Wechsel im Detailbereich und das Leuchten des HDR-Status. Dauerhafte Animationen (Leuchten,
-/// Dreh-Symbol beim Einlesen) laufen nur, solange das Fenster sichtbar und aktiv ist.
+/// Hauptfenster „Spielebibliothek“. Die Ansicht kümmert sich um Bewegung (Einblenden beim Öffnen, gestaffelte erste
+/// Zeilen, Wechsel im Detailbereich, Leuchten des HDR-Status) und um die Anordnung: Werkzeugleiste je nach Breite,
+/// Aufteilung zwischen Liste und Detailbereich über den Trenner (gemerkt im ViewModel). Dauerhafte Animationen
+/// (Leuchten, Dreh-Symbol beim Einlesen) laufen nur, solange das Fenster sichtbar und aktiv ist.
 /// Beim Schließen wird das ViewModel freigegeben (meldet sich überall ab).
 /// </summary>
 public partial class MainWindow : ChromeWindow
@@ -25,12 +27,17 @@ public partial class MainWindow : ChromeWindow
     private Storyboard? _spin;
     private bool _pulseRunning;
     private bool _spinRunning;
-    private bool _compactToolbar;
-    private double _toolbarNeeded;
+    private ToolbarMode _toolbarMode = ToolbarMode.Wide;
+    private bool _rescanIconOnly;
+    private double _filtersWidth;
+    private double _actionsWidth;
+    private double _rescanTextWidth;
+    private double _appliedDetailsRatio;
 
     public MainWindow()
     {
         InitializeComponent();
+        ApplyDetailsRatio(LibraryLayout.DefaultDetailsRatio);
         Loaded += OnLoaded;
         SizeChanged += (_, _) => UpdateToolbarDensity();
         DetailsArea.SizeChanged += (_, e) => FitCandidates(e.NewSize.Height);
@@ -43,12 +50,57 @@ public partial class MainWindow : ChromeWindow
 
     public LibraryViewModel? ViewModel => _viewModel;
 
+    /// <summary>Aktuelle Anordnung der Werkzeugleiste (für Tests und Sichtprüfung).</summary>
+    public ToolbarMode ToolbarMode => _toolbarMode;
+
     public void Attach(LibraryViewModel viewModel)
     {
         _viewModel = viewModel;
         DataContext = viewModel;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         viewModel.RevealRequested += OnRevealRequested;
+
+        // Gemerkte Aufteilung sofort setzen (Sternbreiten, unabhängig von der Fenstergröße); an die tatsächliche
+        // Breite angepasst wird beim Laden.
+        ApplyDetailsRatio(LibraryLayout.Normalize(viewModel.DetailsRatio));
+    }
+
+    /// <summary>
+    /// Ordnet die Werkzeugleiste für die verfügbare Breite an: breit eine Zeile, etwas schmaler „Neu einlesen“ nur
+    /// als Symbol, schmal Filter und Sortierung in einer zweiten Zeile. Die nötigen Breiten werden in der breiten
+    /// Anordnung gemessen (passt sich an andere Sprachen an).
+    /// </summary>
+    public void UpdateToolbarLayout(double available)
+    {
+        if (_toolbarMode == ToolbarMode.Wide)
+        {
+            // In Spalten mit Auto-Breite messen die Gruppen ungekürzt; „Neu einlesen“ hat hier seinen Text.
+            _filtersWidth = FilterGroup.DesiredSize.Width;
+            _actionsWidth = ActionGroup.DesiredSize.Width;
+            _rescanTextWidth = RescanText.DesiredSize.Width + RescanGlyph.Margin.Right;
+        }
+
+        var searchMin = ToolbarArea.ColumnDefinitions[0].MinWidth;
+        var mode = LibraryToolbarLayout.Choose(available, searchMin, _filtersWidth, _actionsWidth, _rescanTextWidth);
+        var iconOnly = LibraryToolbarLayout.RescanIconOnly(mode, available, searchMin, _actionsWidth);
+        if (mode == _toolbarMode && iconOnly == _rescanIconOnly)
+        {
+            return;
+        }
+
+        _toolbarMode = mode;
+        _rescanIconOnly = iconOnly;
+        RescanText.Visibility = iconOnly ? Visibility.Collapsed : Visibility.Visible;
+        RescanGlyph.Margin = iconOnly ? new Thickness(0) : new Thickness(0, 0, 8, 0);
+        MarkAllSeenButton.Margin = iconOnly ? new Thickness(8, 0, 0, 0) : new Thickness(18, 0, 0, 0);
+
+        // Gestapelt: Filter und Sortierung in der zweiten Zeile, bündig unter der Suche.
+        var stacked = mode == ToolbarMode.Stacked;
+        Grid.SetRow(FilterGroup, stacked ? 1 : 0);
+        Grid.SetColumn(FilterGroup, stacked ? 0 : 1);
+        Grid.SetColumnSpan(FilterGroup, stacked ? 3 : 1);
+        FilterGroup.Margin = stacked ? new Thickness(0, 10, 0, 0) : new Thickness(0);
+        SourceFilter.Margin = stacked ? new Thickness(0) : new Thickness(10, 0, 0, 0);
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -81,8 +133,67 @@ public partial class MainWindow : ChromeWindow
         LibraryMotion.FadeIn(ListArea, TimeSpan.FromMilliseconds(90), offsetY: 16);
         LibraryMotion.FadeIn(DetailsArea, TimeSpan.FromMilliseconds(130), offsetX: 18);
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, StaggerFirstRows);
+        FitDetailsColumn();
         AnimateHdrTint();
         UpdateAmbientMotion();
+    }
+
+    /// <summary>
+    /// Gemerkte Aufteilung an die aktuelle Fenstergröße anpassen: Liste und Detailbereich behalten ihre Mindestbreite.
+    /// Der gemerkte Wert selbst bleibt (in einem größeren Fenster gilt er wieder).
+    /// </summary>
+    public void FitDetailsColumn()
+    {
+        var width = ListColumn.ActualWidth + DetailsColumn.ActualWidth;
+        if (width > 0)
+        {
+            ApplyDetailsRatio(LibraryLayout.Clamp(_viewModel?.DetailsRatio, width));
+        }
+    }
+
+    /// <summary>Anteil des Detailbereichs als Sternbreiten: beide Spalten wachsen mit dem Fenster im selben Verhältnis.</summary>
+    private void ApplyDetailsRatio(double ratio)
+    {
+        _appliedDetailsRatio = ratio;
+        ListColumn.Width = new GridLength(1 - ratio, GridUnitType.Star);
+        DetailsColumn.Width = new GridLength(ratio, GridUnitType.Star);
+    }
+
+    /// <summary>
+    /// Nach dem Ziehen oder den Pfeiltasten: Der Trenner hinterlässt die Pixelbreiten als Sternwerte. Daraus den Anteil
+    /// bilden, auf Anteile zurückführen und merken (nur bei einer echten Änderung, nicht nach einem bloßen Klick).
+    /// </summary>
+    private void RememberDetailsRatio()
+    {
+        var ratio = ListColumn.Width.IsStar && DetailsColumn.Width.IsStar
+            ? LibraryLayout.RatioOf(ListColumn.Width.Value, DetailsColumn.Width.Value)
+            : LibraryLayout.RatioOf(ListColumn.ActualWidth, DetailsColumn.ActualWidth);
+        if (ratio is not { } r || Math.Abs(r - _appliedDetailsRatio) < 0.0005)
+        {
+            return;
+        }
+
+        ApplyDetailsRatio(r);
+        _viewModel?.SetDetailsRatio(r);
+    }
+
+    private void OnSplitterDragCompleted(object sender, DragCompletedEventArgs e) => RememberDetailsRatio();
+
+    private void OnSplitterKeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Left or Key.Right)
+        {
+            RememberDetailsRatio();
+        }
+    }
+
+    /// <summary>Doppelklick auf den Trenner: zurück zur Standardaufteilung (nichts mehr gemerkt).</summary>
+    private void OnSplitterDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        var width = ListColumn.ActualWidth + DetailsColumn.ActualWidth;
+        ApplyDetailsRatio(width > 0 ? LibraryLayout.Clamp(null, width) : LibraryLayout.DefaultDetailsRatio);
+        _viewModel?.SetDetailsRatio(null);
+        e.Handled = true;
     }
 
     private void StaggerFirstRows()
@@ -133,6 +244,14 @@ public partial class MainWindow : ChromeWindow
                 }
 
                 break;
+            case nameof(LibraryViewModel.SelectedSortOption):
+                // Neue Reihenfolge: oben anfangen (nach „Zuletzt gespielt“ steht dort das letzte Spiel).
+                if (GameList.Template?.FindName("ScrollHost", GameList) is ScrollViewer scroll)
+                {
+                    scroll.ScrollToTop();
+                }
+
+                break;
         }
     }
 
@@ -177,40 +296,13 @@ public partial class MainWindow : ChromeWindow
         CandidateList.MaxHeight = Math.Clamp(rowHeight - headerAndMargins - keepForGames, 56, 122);
     }
 
-    /// <summary>
-    /// Schmales Fenster: „Neu einlesen“ zeigt nur das Symbol, damit Suche und „Spiel hinzufügen“ Platz behalten.
-    /// Die nötige Breite wird im normalen Zustand gemessen (passt sich an andere Sprachen an).
-    /// </summary>
+    /// <summary>Werkzeugleiste an die Fensterbreite anpassen (siehe <see cref="UpdateToolbarLayout"/>).</summary>
     private void UpdateToolbarDensity()
     {
-        if (!_compactToolbar)
-        {
-            var needed = ToolbarArea.ColumnDefinitions[0].MinWidth;
-            foreach (UIElement child in ToolbarArea.Children)
-            {
-                if (Grid.GetColumn(child) > 0)
-                {
-                    needed += child.DesiredSize.Width; // mit Außenabstand
-                }
-            }
-
-            _toolbarNeeded = needed;
-        }
-
         // Nicht ToolbarArea.ActualWidth: Ein überlaufendes Grid meldet seine ungekürzte Wunschbreite.
         // Verfügbar ist die Fensterbreite ohne Rahmen (maximiert: 7 px je Seite) und ohne Außenabstand des Inhalts.
         var frame = WindowState == WindowState.Maximized ? 14 : 2;
-        var available = ActualWidth - frame - Root.Margin.Left - Root.Margin.Right;
-        var compact = available < _toolbarNeeded;
-        if (compact == _compactToolbar)
-        {
-            return;
-        }
-
-        _compactToolbar = compact;
-        RescanText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        RescanGlyph.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 8, 0);
-        MarkAllSeenButton.Margin = compact ? new Thickness(8, 0, 0, 0) : new Thickness(18, 0, 0, 0);
+        UpdateToolbarLayout(ActualWidth - frame - Root.Margin.Left - Root.Margin.Right);
     }
 
     /// <summary>Zustandswechsel des HDR-Status: Tönung weich ein- bzw. ausblenden.</summary>

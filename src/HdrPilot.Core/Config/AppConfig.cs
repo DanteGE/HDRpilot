@@ -36,6 +36,12 @@ public sealed class AppSettings
     /// <summary>Start über die App: so lange wird auf den ersten Spielprozess gewartet.</summary>
     public int LaunchTimeoutSeconds { get; set; } = 120;
 
+    /// <summary>
+    /// Frühwarnung: Spielstarts aus Epic Games Launcher und Steam an deren Protokollen erkennen und HDR schon vor dem
+    /// Spielprozess einschalten (nur Spiele mit „HDR automatisch“). Standard an.
+    /// </summary>
+    public bool LauncherSignals { get; set; } = true;
+
     public bool StartWithWindows { get; set; }
 
     public bool Notifications { get; set; } = true;

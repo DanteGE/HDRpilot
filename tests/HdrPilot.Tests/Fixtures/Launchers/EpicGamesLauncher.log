@@ -1,0 +1,18 @@
+﻿Log file open, 09/23/26 11:56:42
+LogWindows: Failed to load 'aqProf.dll' (GetLastError=126)
+[2026.09.23-09.57.20:976][ 84]WinPlatform: Destroying shortcut. LinkPath: C:\Users\User\Desktop\Alan Wake 2.url ExpectedTargetPath: com.epicgames.launcher://apps/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%3Abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb%3ACoral?action=launch&silent=true
+[2026.09.23-10.13.29:701][293]LogUriHandler: Warning: Was unable to parse URI [ActivateLauncher]
+[2026.09.23-10.13.29:750][293]LogUriHandler: Warning: Was unable to parse URI ["D:\Programmordner\Epic Games\Launcher\Portal\Binaries\Win32\..\..\..\Portal\Binaries\Win64\EpicGamesLauncher.exe"  -AllowSoftwareRendering]
+[2026.09.23-10.50.48:691][696]LogLauncherSocial: Error: Unable to find port.
+[2026.09.23-10.51.30:801][567]LogUriHandler: Started processing URI ["D:\Programmordner\Epic Games\Launcher\Portal\Binaries\Win64\EpicGamesLauncher.exe" com.epicgames.launcher://apps/0123456789abcdef0123456789abcdef%3Afedcba9876543210fedcba9876543210%3ACrow?action=launch&silent=true -AllowSoftwareRendering] with AppLaunchUriHandler
+[2026.09.23-10.51.30:842][569]LogOnlineEula: Display: OSS: Starting EulaService::GetAgreement request for key egstore user 00000000000000000000000000000000
+[2026.09.23-10.51.31:259][578]LogOnlineEula: Display: OSS: EulaService::GetAgreement user has already accepted the agreement egstore (no content)
+[2026.09.23-10.51.31:260][578]LogAppLaunchContext: Warning: ExtractMatch: Pattern for '-IslandOverride=' not found CmdLine:  -epicusername="User" -epicuserid=00000000000000000000000000000000 -epiclocale=de -epicsandboxid=0123456789abcdef0123456789abcdef
+[2026.09.23-10.51.31:352][580]LogCloudSync: Cloud Sync: Sync Started for 0123456789abcdef0123456789abcdef:fedcba9876543210fedcba9876543210:Crow
+[2026.09.23-10.51.31:356][580]LogCloudSync: Cloud Sync: Get DSS Access Links on path Crow
+[2026.09.23-10.54.59:578][636]LogCloudSync: Cloud Sync: Exiting Cloud Sync - SUCCESS - AppName: 0123456789abcdef0123456789abcdef:fedcba9876543210fedcba9876543210:Crow
+[2026.09.23-10.55.40:042][824]LogTemp: UProductInfoJSBridge::LaunchWithOptions: Received 0123456789abcdef0123456789abcdef:fedcba9876543210fedcba9876543210:Crow library
+[2026.09.23-10.55.40:059][825]LogOnlineEula: Display: OSS: Starting EulaService::GetAgreement request for key egstore user 00000000000000000000000000000000
+[2026.09.23-10.55.41:804][929]FCommunityPortalLaunchAppTask: Preparing to launch app 'D:/Anwendungen/Epic Games/DeadIsland2/DeadIsland.exe' with commandline ' -AUTH_LOGIN=unused -AUTH_PASSWORD=REDACTED -AUTH_TYPE=exchangecode -epicapp=Crow -epicenv=Prod -EpicPortal -epicusername="User" -epicuserid=00000000000000000000000000000000 -epiclocale=de'
+[2026.09.23-10.55.41:809][929]LogRunningAppService: Display: New foreground process [21948] D:/Anwendungen/Epic Games/DeadIsland2/DeadIsland.exe for app D:\Anwendungen\Epic Games/DeadIsland2
+[2026.09.23-10.55.44:331][  8]LogPortalPublishTime: Started tracking playtime for 0123456789abcdef0123456789abcdef:fedcba9876543210fedcba9876543210:Crow

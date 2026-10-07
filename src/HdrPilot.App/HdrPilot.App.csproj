@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>HdrPilot</AssemblyName>
+    <RootNamespace>HdrPilot.App</RootNamespace>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HdrPilot.Core\HdrPilot.Core.csproj" />
+  </ItemGroup>
+
+</Project>

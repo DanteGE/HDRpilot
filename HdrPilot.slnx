@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HdrPilot.App/HdrPilot.App.csproj" />
+    <Project Path="src/HdrPilot.Cli/HdrPilot.Cli.csproj" />
+    <Project Path="src/HdrPilot.Core/HdrPilot.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HdrPilot.Tests/HdrPilot.Tests.csproj" />
+  </Folder>
+</Solution>

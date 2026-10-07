@@ -1,0 +1,14 @@
+bin/
+obj/
+artifacts/
+publish/
+.vs/
+*.user
+*.suo
+TestResults/
+# Lokale Kopie der Windows-SDK-Header für den Strukturabgleich (Microsoft-Lizenz, nicht ins Repo)
+.sdk/
+# Arbeitskopien für parallele Entwicklung
+.worktrees/
+# Messdaten aus Systemtests
+tools/out/

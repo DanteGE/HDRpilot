@@ -42,6 +42,12 @@ public sealed class AppSettings
     /// </summary>
     public bool LauncherSignals { get; set; } = true;
 
+    /// <summary>
+    /// Neustart-Puffer in Sekunden: Endet ein Spiel kurz nach dem Start (Hänger, Absturz), bleibt HDR so lange an, damit
+    /// ein Neustart HDR schon vorfindet. Null: Standard (180 s), 0: aus.
+    /// </summary>
+    public int? RestartBufferSeconds { get; set; }
+
     public bool StartWithWindows { get; set; }
 
     public bool Notifications { get; set; } = true;

@@ -100,6 +100,20 @@ public sealed partial class SessionManagerTests
     }
 
     [Fact]
+    public async Task Launcher_signal_never_uses_the_hotkey_fallback()
+    {
+        // Beim Launcher-Signal startet das Spiel 1-2 s später ohnehin: schon das erste Einschalten ohne Notlösung (E66).
+        _config.AddGame("1", DirA, hdrAuto: true);
+        await Poll();
+
+        var outcome = await Manager.PrepareAsync("Steam:1", SessionTrigger.LauncherSignal, Ct);
+
+        Assert.True(outcome.Prepared);
+        Assert.True(PrimaryOn);
+        Assert.Equal([false], _hdr.HotkeyAllowed);
+    }
+
+    [Fact]
     public async Task Prepare_reapply_during_launch_does_not_use_the_hotkey_fallback()
     {
         _hdr[FakeHdrController.Primary].Capable = false;

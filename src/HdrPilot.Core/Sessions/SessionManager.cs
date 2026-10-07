@@ -236,7 +236,7 @@ public sealed class SessionManager
                 {
                     session.MissingSince = now;
                     session.Phase = SessionPhase.Ending;
-                    BeginEnding(session, grace, now);
+                    BeginEnding(session, grace, RestartBufferFor(cfg), now);
                 }
 
                 if (session.BufferUntil is { } bufferEnd)
@@ -773,10 +773,14 @@ public sealed class SessionManager
     /// hing gleich nach dem Umschalten, der Nutzer beendete es und startete 96 s nach dem Zurückstellen neu. Startet das
     /// Spiel im Puffer wieder, läuft die Sitzung einfach weiter (<see cref="Touch"/>) und HDR bleibt an.
     /// </summary>
-    private void BeginEnding(ActiveSession session, TimeSpan grace, DateTimeOffset now)
+    /// <summary>Neustart-Puffer aus der Konfiguration (restartBufferSeconds, 0 = aus), sonst der Standard aus den Optionen.</summary>
+    private TimeSpan RestartBufferFor(AppConfig cfg) =>
+        cfg.Settings.RestartBufferSeconds is { } seconds ? TimeSpan.FromSeconds(Math.Clamp(seconds, 0, 1800)) : _options.RestartBuffer;
+
+    private void BeginEnding(ActiveSession session, TimeSpan grace, TimeSpan restartBuffer, DateTimeOffset now)
     {
         var ran = now - (session.FirstProcessAt ?? now);
-        var shortSession = _options.RestartBuffer > TimeSpan.Zero
+        var shortSession = restartBuffer > TimeSpan.Zero
             && session.FirstProcessAt is not null
             && ran < _options.ShortSessionLimit
             && session.Displays.Any(path => _claims.TryGetValue(path, out var claim) && !claim.WasHdrOn && claim.Restore);
@@ -786,7 +790,7 @@ public sealed class SessionManager
             return;
         }
 
-        var wait = grace > _options.RestartBuffer ? grace : _options.RestartBuffer;
+        var wait = grace > restartBuffer ? grace : restartBuffer;
         session.BufferUntil = now + wait;
         _logger.LogInformation(
             "Kein Prozess von \"{Game}\" mehr, kurze Sitzung ({Ran:0} s): Neustart-Puffer {Buffer:0} s, HDR bleibt so lange an.",
@@ -1207,7 +1211,9 @@ public sealed class SessionManager
         HdrSetResult result;
         try
         {
-            var allowHotkey = !gameMayRun && ComputeHotkeyFallbackAllowed();
+            // Beim Launcher-Signal startet das Spiel ohnehin 1-2 s später, unabhängig von HdrPilot: keine Notlösung (E66).
+            var launcherStartsGame = enable && session?.Trigger == SessionTrigger.LauncherSignal;
+            var allowHotkey = !gameMayRun && !launcherStartsGame && ComputeHotkeyFallbackAllowed();
             result = await _hdr.SetHdrAsync(devicePath, enable, allowHotkey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

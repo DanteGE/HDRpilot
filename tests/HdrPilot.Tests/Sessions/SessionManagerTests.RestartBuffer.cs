@@ -98,6 +98,36 @@ public sealed partial class SessionManagerTests
     }
 
     [Fact]
+    public async Task Restart_buffer_from_the_configuration_overrides_the_default()
+    {
+        UseRestartBuffer();
+        _config.Config.Settings.RestartBufferSeconds = 60;
+        _config.AddGame("1", DirA);
+        await Poll();
+
+        var stoppedAt = await RunGameFor(30);
+
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(60), Assert.Single(Manager.Sessions).BufferUntil);
+        await Poll(60);
+        Assert.False(PrimaryOn);
+    }
+
+    [Fact]
+    public async Task Restart_buffer_zero_in_the_configuration_switches_it_off()
+    {
+        UseRestartBuffer();
+        _config.Config.Settings.RestartBufferSeconds = 0;
+        _config.AddGame("1", DirA);
+        await Poll();
+
+        await RunGameFor(30);
+
+        Assert.Null(Assert.Single(Manager.Sessions).BufferUntil);
+        await Poll(10);
+        Assert.False(PrimaryOn);
+    }
+
+    [Fact]
     public async Task Restart_within_the_buffer_continues_the_session_and_keeps_hdr_on()
     {
         UseRestartBuffer();

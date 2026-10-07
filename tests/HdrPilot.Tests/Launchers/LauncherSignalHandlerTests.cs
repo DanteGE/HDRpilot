@@ -35,6 +35,8 @@ public sealed class LauncherSignalHandlerTests
 
     public LauncherSignalHandlerTests()
     {
+        // Ohne Neustart-Puffer: diese Tests prüfen die Frühwarnung, nicht die Nachlaufzeit kurzer Sitzungen.
+        _config.Config.Settings.RestartBufferSeconds = 0;
         _manager = new SessionManager(_hdr, _config, _store, _launcher, _clock, (_, _) => false, [@"C:\Windows"], _sessionLog);
         _sessions = new CountingSessions(new SessionManagerSignalTarget(_manager));
         _handler = new LauncherSignalHandler(_config, _sessions, _log);

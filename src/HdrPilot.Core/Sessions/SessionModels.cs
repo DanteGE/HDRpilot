@@ -38,12 +38,17 @@ public enum NotificationKind
 
     /// <summary>Der gemerkte HDR-Zustand ließ sich nicht auf die Platte schreiben.</summary>
     StateNotSaved,
+
+    /// <summary>Alle Prozesse eines laufenden Spiels ohne sichtbares Fenster und ohne CPU-Zeit: hängt wohl im Hintergrund.</summary>
+    GameSeemsHung,
 }
 
 /// <summary>Kurze Meldung für den Tray-Hinweis.</summary>
 public sealed record SessionNotification(NotificationKind Kind, string Title, string Message);
 
 /// <summary>Öffentliche Sicht auf eine laufende Sitzung (für Oberfläche und Diagnose).</summary>
+/// <param name="BufferUntil">Ende des Neustart-Puffers nach einer kurzen Sitzung (Phase Ending), sonst null.</param>
+/// <param name="HeldForFullscreen">Puffer abgelaufen, das Zurückstellen wartet auf das Ende einer Vollbild-Anwendung.</param>
 public sealed record SessionInfo(
     string GameKey,
     string GameName,
@@ -51,7 +56,9 @@ public sealed record SessionInfo(
     SessionTrigger Trigger,
     DateTimeOffset StartedAt,
     IReadOnlyList<string> Displays,
-    IReadOnlyList<int> ProcessIds);
+    IReadOnlyList<int> ProcessIds,
+    DateTimeOffset? BufferUntil = null,
+    bool HeldForFullscreen = false);
 
 public sealed record LaunchOutcome(
     bool Started,

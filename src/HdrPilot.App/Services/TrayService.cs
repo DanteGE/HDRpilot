@@ -124,12 +124,16 @@ public sealed class NotifyIconSurface : ITrayIconSurface
 /// <summary>
 /// Tray-Symbol (WinForms-NotifyIcon) mit WPF-Kontextmenü im HdrPilot-Stil. Das Symbol wird zur Laufzeit passend zur
 /// DPI gezeichnet und nur bei Zustandswechsel neu erzeugt; alte HICONs werden freigegeben. Im Hintergrund läuft nur
-/// ein Timer (alle 30 s), der HDR-Wechsel außerhalb von HdrPilot nachträgt. Das Menü wird erst beim Öffnen erzeugt
-/// und nach dem Schließen verworfen.
+/// ein Timer (alle 30 s), der HDR-Wechsel außerhalb von HdrPilot nachträgt. Nur solange ein Neustart-Puffer läuft
+/// (höchstens wenige Minuten), führt ein zweiter Timer den Countdown im Tooltip jede Sekunde nach. Das Menü wird erst
+/// beim Öffnen erzeugt und nach dem Schließen verworfen.
 /// </summary>
 public sealed partial class TrayService : ITrayService
 {
     public static readonly TimeSpan RecheckInterval = TimeSpan.FromSeconds(30);
+
+    /// <summary>Takt des Countdowns „HDR bleibt noch m:ss an (Neustart-Puffer)“.</summary>
+    public static readonly TimeSpan CountdownInterval = TimeSpan.FromSeconds(1);
 
     public const int BalloonTimeoutMs = 4000;
     public const int MaxBalloonTitle = 63;
@@ -140,10 +144,12 @@ public sealed partial class TrayService : ITrayService
     private readonly ILogger _logger;
     private readonly Func<ITrayIconSurface> _createSurface;
     private readonly Func<int> _iconSize;
+    private readonly Func<DateTimeOffset> _now;
     private ITrayIconSurface? _notifyIcon;
     private TrayIcon? _icon;
     private TrayState _state = TrayState.Initial;
     private DispatcherTimer? _recheck;
+    private DispatcherTimer? _countdown;
     private ForegroundSink? _sink;
     private TrayMenu? _menu;
     private TrayMenuViewModel? _menuModel;
@@ -153,13 +159,21 @@ public sealed partial class TrayService : ITrayService
 
     /// <param name="surfaceFactory">Erzeugt das Symbol im Infobereich (Standard: NotifyIcon; Tests: Attrappe).</param>
     /// <param name="iconSize">Kantenlänge des Symbols in Pixeln (Standard: kleine Symbole bei System-DPI).</param>
-    public TrayService(ITrayHost host, NotificationGate gate, ILogger? logger = null, Func<ITrayIconSurface>? surfaceFactory = null, Func<int>? iconSize = null)
+    /// <param name="clock">Uhr für den Countdown des Neustart-Puffers (Standard: Systemzeit; Tests: steuerbar).</param>
+    public TrayService(
+        ITrayHost host,
+        NotificationGate gate,
+        ILogger? logger = null,
+        Func<ITrayIconSurface>? surfaceFactory = null,
+        Func<int>? iconSize = null,
+        Func<DateTimeOffset>? clock = null)
     {
         _host = host;
         _gate = gate;
         _logger = logger ?? NullLogger.Instance;
         _createSurface = surfaceFactory ?? (() => new NotifyIconSurface());
         _iconSize = iconSize ?? TrayIconRenderer.SystemSmallIconSize;
+        _now = clock ?? (() => DateTimeOffset.UtcNow);
     }
 
     public void Initialize()
@@ -193,6 +207,9 @@ public sealed partial class TrayService : ITrayService
 
     /// <summary>True, solange ein <see cref="Refresh"/> den Zustand liest (nur auf dem UI-Thread lesen).</summary>
     public bool IsRefreshing => _refreshRunning;
+
+    /// <summary>True, solange der Countdown des Neustart-Puffers im Tooltip läuft (nur auf dem UI-Thread lesen).</summary>
+    public bool IsCountdownRunning => _countdown is not null;
 
     /// <summary>Zustand im Hintergrund neu lesen und Symbol, Tooltip und offenes Menü anpassen.</summary>
     public void Refresh()
@@ -262,6 +279,7 @@ public sealed partial class TrayService : ITrayService
         _disposed = true;
         _recheck?.Stop();
         _recheck = null;
+        StopCountdown();
         if (_menu is not null)
         {
             _menu.IsOpen = false;
@@ -345,13 +363,42 @@ public sealed partial class TrayService : ITrayService
             }
         }
 
-        var tooltip = TrayPresentation.TooltipFor(state);
+        ApplyTooltip();
+        _menuModel?.Update(state);
+    }
+
+    /// <summary>Tooltip aus dem letzten Zustand; startet oder beendet den Countdown des Neustart-Puffers.</summary>
+    private void ApplyTooltip()
+    {
+        if (_notifyIcon is null)
+        {
+            return;
+        }
+
+        var now = _now();
+        var tooltip = TrayPresentation.TooltipFor(_state, now);
         if (!string.Equals(_notifyIcon.Text, tooltip, StringComparison.Ordinal))
         {
             _notifyIcon.Text = tooltip;
         }
 
-        _menuModel?.Update(state);
+        if (!TrayPresentation.HasCountdown(_state, now))
+        {
+            StopCountdown();
+        }
+        else if (_countdown is null)
+        {
+            // Nur der Text wird nachgeführt (kein neues Lesen des Zustands); endet der Puffer, meldet die
+            // Sitzungslogik den neuen Zustand ohnehin über Refresh.
+            _countdown = new DispatcherTimer(CountdownInterval, DispatcherPriority.Background, (_, _) => ApplyTooltip(), _host.Dispatcher);
+            _countdown.Start();
+        }
+    }
+
+    private void StopCountdown()
+    {
+        _countdown?.Stop();
+        _countdown = null;
     }
 
     private void OnRightClick(object? sender, EventArgs e) => Run(ShowMenu);

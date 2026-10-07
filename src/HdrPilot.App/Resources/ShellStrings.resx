@@ -37,6 +37,13 @@
   <data name="TrayTooltipActive" xml:space="preserve">
     <value>Automatik aktiv</value>
   </data>
+  <data name="TrayTooltipRestartBuffer" xml:space="preserve">
+    <value>HDR bleibt noch {0}:{1:00} an (Neustart-Puffer)</value>
+    <comment>{0} = Minuten, {1} = Sekunden der Restzeit (Countdown, jede Sekunde nachgeführt)</comment>
+  </data>
+  <data name="TrayTooltipRestartBufferFullscreen" xml:space="preserve">
+    <value>HDR bleibt an, bis die Vollbild-Anwendung endet (Neustart-Puffer)</value>
+  </data>
   <data name="ListSeparator" xml:space="preserve">
     <value>, </value>
   </data>

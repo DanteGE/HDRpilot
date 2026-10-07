@@ -4,12 +4,21 @@ using System.Drawing.Text;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using HdrPilot.App.Resources;
+using HdrPilot.Core.Sessions;
 using Drawing = System.Drawing;
 
 namespace HdrPilot.App.Services;
 
 /// <summary>Was das Tray-Symbol zeigt: HDR-Zustand der Zielbildschirme, Pause und laufende Spiele.</summary>
-public sealed record TrayState(bool HdrOn, bool HdrSupported, bool Paused, IReadOnlyList<string> ActiveGames)
+/// <param name="RestartBufferUntil">Ende des Neustart-Puffers, wenn HDR nur noch deshalb an bleibt (sonst null).</param>
+/// <param name="RestartBufferHeld">Puffer abgelaufen, das Zurückstellen wartet auf das Ende einer Vollbild-Anwendung.</param>
+public sealed record TrayState(
+    bool HdrOn,
+    bool HdrSupported,
+    bool Paused,
+    IReadOnlyList<string> ActiveGames,
+    DateTimeOffset? RestartBufferUntil = null,
+    bool RestartBufferHeld = false)
 {
     public static TrayState Initial { get; } = new(HdrOn: false, HdrSupported: true, Paused: false, ActiveGames: []);
 }
@@ -25,25 +34,85 @@ public static class TrayPresentation
 
     public static TrayIconSpec IconFor(TrayState state) => new(state.HdrOn, state.Paused);
 
-    /// <summary>Zeile 1 HDR-Zustand, Zeile 2 laufende Spiele (falls vorhanden), Zeile 3 Automatik. Höchstens 127 Zeichen.</summary>
-    public static string TooltipFor(TrayState state)
+    /// <inheritdoc cref="TooltipFor(TrayState, DateTimeOffset)"/>
+    public static string TooltipFor(TrayState state) => TooltipFor(state, DateTimeOffset.UtcNow);
+
+    /// <summary>
+    /// Zeile 1 HDR-Zustand, dann laufende Spiele (falls vorhanden), dann der Neustart-Puffer (falls er läuft), zuletzt
+    /// Automatik. Höchstens 127 Zeichen; gekürzt wird nur die Spielezeile.
+    /// </summary>
+    /// <param name="now">Für den Countdown des Neustart-Puffers.</param>
+    public static string TooltipFor(TrayState state, DateTimeOffset now)
     {
         var head = state.HdrOn
             ? ShellStrings.TrayTooltipHdrOn
             : state.HdrSupported ? ShellStrings.TrayTooltipHdrOff : ShellStrings.TrayTooltipNoHdr;
         var tail = state.Paused ? ShellStrings.TrayTooltipPaused : ShellStrings.TrayTooltipActive;
+        var buffer = RestartBufferLine(state, now);
         var games = state.ActiveGames.Where(g => !string.IsNullOrWhiteSpace(g)).Select(g => g.Trim()).ToList();
-        if (games.Count == 0)
+        var lines = new List<string> { head };
+        if (games.Count > 0)
         {
-            return Fit(head + "\n" + tail, MaxTooltipLength);
+            var gamesLine = string.Format(
+                CultureInfo.CurrentCulture,
+                games.Count == 1 ? ShellStrings.TrayTooltipGame : ShellStrings.TrayTooltipGames,
+                string.Join(ShellStrings.ListSeparator, games));
+            var lineBreaks = buffer is null ? 2 : 3;
+            var budget = MaxTooltipLength - head.Length - tail.Length - (buffer?.Length ?? 0) - lineBreaks;
+            lines.Add(Fit(gamesLine, Math.Max(budget, 1)));
         }
 
-        var gamesLine = string.Format(
-            CultureInfo.CurrentCulture,
-            games.Count == 1 ? ShellStrings.TrayTooltipGame : ShellStrings.TrayTooltipGames,
-            string.Join(ShellStrings.ListSeparator, games));
-        var budget = MaxTooltipLength - head.Length - tail.Length - 2;
-        return Fit(head + "\n" + Fit(gamesLine, Math.Max(budget, 1)) + "\n" + tail, MaxTooltipLength);
+        if (buffer is not null)
+        {
+            lines.Add(buffer);
+        }
+
+        lines.Add(tail);
+        return Fit(string.Join("\n", lines), MaxTooltipLength);
+    }
+
+    /// <summary>
+    /// Zeile zum Neustart-Puffer: „HDR bleibt noch m:ss an“ bzw. „wartet auf eine Vollbild-Anwendung“. Null, wenn kein
+    /// Puffer läuft oder HDR gar nicht an ist.
+    /// </summary>
+    public static string? RestartBufferLine(TrayState state, DateTimeOffset now)
+    {
+        if (!state.HdrOn)
+        {
+            return null;
+        }
+
+        if (state.RestartBufferHeld)
+        {
+            return ShellStrings.TrayTooltipRestartBufferFullscreen;
+        }
+
+        if (state.RestartBufferUntil is not { } until)
+        {
+            return null;
+        }
+
+        // Aufgerundet: der Countdown zeigt 0:00 erst, wenn der Puffer wirklich zu Ende ist.
+        var seconds = (int)Math.Max(0, Math.Ceiling((until - now).TotalSeconds));
+        return string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayTooltipRestartBuffer, seconds / 60, seconds % 60);
+    }
+
+    /// <summary>True, solange der Tooltip einen laufenden Countdown zeigt (dann führt ihn das Tray jede Sekunde nach).</summary>
+    public static bool HasCountdown(TrayState state, DateTimeOffset now) =>
+        state.HdrOn && !state.RestartBufferHeld && state.RestartBufferUntil is { } until && until > now;
+
+    /// <summary>
+    /// Neustart-Puffer für das Tray aus den Sitzungen, nur wenn kein Spiel mehr läuft oder startet (sonst bleibt HDR
+    /// ohnehin an): spätestes Pufferende und ob eine Sitzung auf das Ende einer Vollbild-Anwendung wartet.
+    /// </summary>
+    public static (DateTimeOffset? Until, bool Held) RestartBufferOf(IReadOnlyList<SessionInfo> sessions)
+    {
+        if (sessions.Count == 0 || sessions.Any(s => s.Phase != SessionPhase.Ending))
+        {
+            return (null, false);
+        }
+
+        return (sessions.Max(s => s.BufferUntil), sessions.Any(s => s.HeldForFullscreen));
     }
 
     /// <summary>Kürzt auf <paramref name="max"/> Zeichen mit Auslassungszeichen.</summary>

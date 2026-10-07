@@ -75,12 +75,16 @@ public sealed partial class AppServices
         public TrayState QueryTrayState()
         {
             var targets = app.TargetDisplays();
-            var games = app.Sessions.Sessions.Select(s => s.GameName).Distinct(StringComparer.CurrentCultureIgnoreCase).ToList();
+            var sessions = app.Sessions.Sessions;
+            var games = sessions.Select(s => s.GameName).Distinct(StringComparer.CurrentCultureIgnoreCase).ToList();
+            var (bufferUntil, bufferHeld) = TrayPresentation.RestartBufferOf(sessions);
             return new TrayState(
                 HdrOn: targets.Any(d => d.HdrEnabled),
                 HdrSupported: targets.Any(d => d.HdrSupported),
                 Paused: app.Sessions.Paused,
-                ActiveGames: games);
+                ActiveGames: games,
+                RestartBufferUntil: bufferUntil,
+                RestartBufferHeld: bufferHeld);
         }
 
         public IReadOnlyList<DisplayInfo> GetDisplays() => app.Hdr.GetDisplays();

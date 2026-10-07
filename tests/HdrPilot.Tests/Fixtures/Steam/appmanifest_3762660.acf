@@ -1,0 +1,41 @@
+"AppState"
+{
+	"appid"		"3762660"
+	"universe"		"1"
+	"LauncherPath"		"C:\\Program Files (x86)\\Steam\\steam.exe"
+	"name"		"Trials Survivors"
+	"StateFlags"		"6"
+	"installdir"		"Trials Survivors"
+	"LastUpdated"		"1790176203"
+	"LastPlayed"		"1700000000"
+	"SizeOnDisk"		"1213594418"
+	"StagingSize"		"0"
+	"buildid"		"21000160"
+	"LastOwner"		"76561197960265728"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"228589568"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"762318641"
+	"BytesStaged"		"762318641"
+	"TargetBuildID"		"21000160"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"3762661"
+		{
+			"manifest"		"1000000000000000001"
+			"size"		"1213594418"
+		}
+	}
+	"UserConfig"
+	{
+		"language"		"german"
+	}
+	"MountedConfig"
+	{
+		"language"		"german"
+	}
+}

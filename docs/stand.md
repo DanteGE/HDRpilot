@@ -1,34 +1,42 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-07 15:50. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-07 20:45. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Erledigt (auf `main`, committet)
 - Phase 1 HDR-Kern und Kommandozeile – alle Gates belegt (G1.5c vom Nutzer gestrichen).
 - Phase 2 Spielbibliothek – 646 Spiele aus 7 Quellen, G2.2 vom Nutzer bestätigt.
 - Phase 3 Überwachung und Sitzungslogik – alle Gates belegt; danach unabhängige Nachprüfung, 13 Funde behoben (E41–E48).
-- Phase 4 Oberfläche und Tray – G4.1–G4.4, G4.6, G4.7 belegt (E49–E59). Offen ist nur G4.5, der gemeinsame Test.
-- Phase 5 Auslieferung – G5.1 (Einzel-EXE über `tools\publish.ps1`) und G5.2 (README, gegen den Quelltext geprüft)
-  belegt (E60–E64). Offen: G5.3, die Rückfrage beim Nutzer nach dem gemeinsamen Test.
+- Phase 4 Oberfläche und Tray – alle Gates belegt, G4.5 gemeinsam mit dem Nutzer (alle Launcher außer Battle.net,
+  dort ist kein Spiel installiert).
+- Phase 5 Auslieferung – alle Gates belegt, inkl. Anti-Cheat-Prüfung (E65–E68) und Rückfrage G5.3.
+- Phase 6 Feedback – alle Gates belegt (E69–E81): Starten-Bereich oben, Sortierung „Zuletzt gespielt“, verschiebbare
+  Spalten, Umbenennung in HDRpilot, Steam-Startoption, Neustart-Puffer, Frühwarnung Epic/Steam, Hänger-Hinweis,
+  HDR-Liste von PCGamingWiki (ohne Konto oder mit Bot-Passwort). Nachprüfung mit 4 Prüfern und Gegenprüfer, 10 Funde
+  behoben (E81), beide Korrekturrunden gegengeprüft.
+- Installierte Version beim Nutzer ersetzt (`%LOCALAPPDATA%\Programs\HdrPilot\HDRpilot.exe`, alte als
+  `HdrPilot-vorher.exe.bak` daneben), läuft mit der echten Ablage.
 
-## Als Nächstes
-- G4.5 gemeinsam mit dem Nutzer, mit der veröffentlichten EXE aus `artifacts\publish\HdrPilot` (nur mit Zustimmung
-  nach `%LOCALAPPDATA%\Programs\HdrPilot\` kopieren; läuft mit der echten Ablage, also ohne `--config-dir`). Je
-  Launcher ein Spiel über „Mit HDR starten“ und über die erzeugte Verknüpfung; das Protokoll
-  (`%LOCALAPPDATA%\HdrPilot\logs`) muss „HDR bestätigt“ vor dem Start-Befehl und dem erkannten Prozess zeigen.
-  Testspiele mit belegtem eigenen HDR (Recherche PCGamingWiki u. a.): Dying Light: The Beast (Steam:3008130),
-  Alan Wake 2 (Epic), Cyberpunk 2077 (GOG, REDlauncher), Avatar (Ubisoft), Battlefield 6 (EA, Javelin); Palworld
-  (Xbox) hat kein eigenes HDR, nur Gegenprobe; Battle.net hat kein Spiel. Anti-Cheat-Prüfung erledigt (E65–E68, G5.4).
-  Dabei Tray-Menü und sichtbare Oberfläche vom Nutzer ansehen lassen.
-- Danach in der README unter „Bekannte Grenzen“ den Punkt „Start über die Launcher“ durch das Testergebnis ersetzen,
-  neu veröffentlichen (`phase5-readme.ps1`, `phase5-publish.ps1`), dann G5.3: Rückfrage zu WMI-Überwachung, Neustart
-  bei verspätetem HDR, Steam-Hülle, englischer Oberfläche.
-- Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben.
+## Offen (nichts blockiert)
+- Kontomodus der HDR-Liste nur mit Attrappe getestet; live erst, wenn der Nutzer ein Bot-Passwort einträgt.
+- Battle.net ohne installiertes Spiel nicht live getestet.
+- Ursache des Dead-Island-2-Hängers beim automatischen Umschalten nicht bewiesen (Neustart-Puffer und Frühwarnung
+  mildern ihn; sicher sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption).
+- Aufräumen beim Nutzer (nur auf Wunsch): `config.json.vor-ruecksetzung.bak` im Roaming-Ordner, die alte Verknüpfung
+  „Dying Light_ The Beast (HDR).lnk“ (neue Verknüpfungen heißen „Dying Light - The Beast (HDR)“), die gesicherte alte EXE.
+- Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben; englische Oberfläche.
 
 ## Arbeitsweise und Fallen
-- git liegt nicht im PATH der Sitzung: `& 'C:\Program Files\Git\cmd\git.exe' …`.
-- PowerShell-5.1-Skripte mit Umlauten als UTF-8 mit BOM speichern.
-- `hdrpilot.dll` (CLI) und `HdrPilot.dll` (App) dürfen nie im selben Ordner landen (E4, E49).
-- Die App nie ohne `--config-dir` testen, solange die echte Ablage unberührt bleiben soll.
-- HDR-Tests schalten den echten Bildschirm (MAG 341C OLED); Skripte stellen den Ausgangszustand wieder her.
+- git liegt nicht im PATH der Sitzung: `& 'C:\Program Files\Git\cmd\git.exe' …`. Commit-Nachrichten mit Anführungszeichen
+  oder Umlauten über eine Datei ohne BOM (`-F`) mit kurzem Pfad (lange Pfade: „Filename too long“).
+- PowerShell-5.1-Skripte mit Umlauten als UTF-8 mit BOM speichern; typografische Anführungszeichen in Skripten nur in
+  einfachen Anführungszeichen.
+- `hdrpilot.dll` (CLI) und `HDRpilot.dll` (App) dürfen nie im selben Ordner landen (E4, E49).
+- Die App nie ohne `--config-dir` testen, solange die echte Ablage unberührt bleiben soll; UI-Automation nur an der PID
+  der Testinstanz (E72).
+- HDR-Tests schalten den echten Bildschirm (MAG 341C OLED); Skripte stellen den Ausgangszustand wieder her. Ist der
+  Bildschirm aus, brechen sie mit exit 3 ab („Keine aktiven Bildschirme gefunden“).
+- Testfilter in Gates treffen Klassen- und Methodennamen, nicht Dateinamen (Teilklassen wie SessionManagerTests.*.cs).
 - Leerlauf-CPU schwankt zwischen Messungen (0,10–0,39 % eines Kerns); Grenze im Gate 0,5 %.
+- Workflows mit `isolation: 'worktree'` scheitern hier („Failed to resolve base branch HEAD“): Arbeitsordner selbst
+  mit `git worktree add` anlegen.

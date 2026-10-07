@@ -174,35 +174,35 @@ und die EXPECT-Marke ausgibt.
 
 ## Phase 6: Feedback und Erweiterungen nach dem gemeinsamen Test
 
-- [ ] G6.1: Bibliothek: Starten-Bereich über der Automatik, Sortierung „Zuletzt gespielt“ (gespeichert), Spalten mit Trenner verschiebbar und Breite gespeichert, Knopf „Steam-Startoption kopieren“ nur bei Steam-Spielen (UI-Automation an einer Testinstanz)
+- [x] G6.1: Bibliothek: Starten-Bereich über der Automatik, Sortierung „Zuletzt gespielt“ (gespeichert), Spalten mit Trenner verschiebbar und Breite gespeichert, Knopf „Steam-Startoption kopieren“ nur bei Steam-Spielen (UI-Automation an einer Testinstanz)
   CHECK: ps tools\gates\phase6-ui.ps1
   EXPECT: PHASE6_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 20:34 exit 0, PHASE6_UI_OK (Testinstanz mit eigener Ablage, UI-Automation nur an deren PID, E72)
 
-- [ ] G6.2: Steam-Startoption (`--wrap -- %command%`): HDR ist bestätigt an, bevor der gestartete Prozess existiert; ohne laufende Instanz startet das Spiel trotzdem; der Wrapper hält kein Handle und beendet sich sofort
+- [x] G6.2: Steam-Startoption (`--wrap -- %command%`): HDR ist bestätigt an, bevor der gestartete Prozess existiert; ohne laufende Instanz startet das Spiel trotzdem; der Wrapper hält kein Handle und beendet sich sofort
   CHECK: ps tools\gates\phase6-wrap.ps1
   EXPECT: PHASE6_WRAP_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 20:34 exit 0, PHASE6_WRAP_OK am echten Bildschirm (MAG 341C OLED); zuvor 19:53 abgebrochen mit exit 3, solange der Bildschirm aus war
 
-- [ ] G6.3: Neustart-Puffer, Frühwarnung aus Epic-/Steam-Protokollen und Hänger-Hinweis per Unit-Tests belegt (mit Gegenproben)
-  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~RestartBuffer|FullyQualifiedName~LauncherSignal|FullyQualifiedName~HangHint" -MinTests 10
+- [x] G6.3: Neustart-Puffer, Frühwarnung aus Epic-/Steam-Protokollen und Hänger-Hinweis per Unit-Tests belegt (mit Gegenproben)
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SessionManagerTests|FullyQualifiedName~LauncherSignal" -MinTests 150
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 20:40 exit 0, TESTS_OK 200. Filter korrigiert: der alte (`~RestartBuffer|~HangHint`) traf nur 13 Tests, weil die Tests zu Puffer und Hänger-Hinweis in der Klasse SessionManagerTests liegen (Dateiname nicht im Testnamen). Neue Tests der Nachprüfung E81 per Gegenprobe ohne Korrektur rot (3 Runden: 9, 1 und 5 erwartete Fehlschläge)
 
-- [ ] G6.4: Name „HDRpilot“ überall sichtbar: Oberfläche, Hinweise, README, Produktname, EXE `HDRpilot.exe`; keine sichtbaren Reste „HdrPilot“
+- [x] G6.4: Name „HDRpilot“ überall sichtbar: Oberfläche, Hinweise, README, Produktname, EXE `HDRpilot.exe`; keine sichtbaren Reste „HdrPilot“
   CHECK: ps tools\gates\phase6-name.ps1
   EXPECT: PHASE6_NAME_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 20:35 exit 0, PHASE6_NAME_OK inkl. ganzer Lizenzhinweise (Skript und ausgelieferte Datei); Gegenprobe: die zuvor ausgelieferte Datei fiel mit 5 Resten durch
 
-- [ ] G6.5: Neubau ohne Warnungen, alle Tests grün, alle früheren Gates erneut grün, Auslieferung neu veröffentlicht
+- [x] G6.5: Neubau ohne Warnungen, alle Tests grün, alle früheren Gates erneut grün, Auslieferung neu veröffentlicht
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 20:28 exit 0, BUILD_OK_0_WARNINGS, TESTS_OK 1610 (2 Projekte). Danach am Stand df313c3 erneut grün: PHASE1_STATUS_OK, PHASE1_NEGATIVE_OK, PHASE1_TOGGLE20_OK, PHASE2_SCANNER_TESTS_OK (417), PHASE2_SCAN_OK (646 Spiele, 0 Fehler), PHASE3_SINGLE/TWO/ALREADYON/CRASH_OK, PHASE3_IDLE_OK (0,234 %), PHASE4_RUN_OK, PHASE4_CRASH_OK (0,130 %), PHASE4_UI_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, G5.4 TESTS_OK 47, PHASE5_PUBLISH_OK (HDRpilot.exe 169,2 MB, SHA256 6B21F76D…, 0 Module aus installierter Runtime)
 
-- [ ] G6.6: Installierte Version beim Nutzer ersetzt und neu gestartet; Autostart und Verknüpfungen zeigen weiter auf die EXE
-  EVIDENCE: pending
+- [x] G6.6: Installierte Version beim Nutzer ersetzt und neu gestartet; Autostart und Verknüpfungen zeigen weiter auf die EXE
+  EVIDENCE: 2026-10-07 20:36 alte Instanz (PID 29612) per --exit in 0,5 s beendet, alte EXE als HdrPilot-vorher.exe.bak gesichert, HDRpilot.exe (Hash gleich der Veröffentlichung) mit README und Lizenzhinweisen nach %LOCALAPPDATA%\Programs\HdrPilot kopiert, mit --minimized gestartet (PID 12844). Protokoll: „HDRpilot 1.0.0.0 startet. Konfiguration …\Roaming\HDRpilot\config.json“, 646 Spiele, Frühwarnung Epic/Steam aktiv, HDR-Liste 20:36:53 abgeglichen (ohne Konto, 4 Anfragen, 99 Spiele geprüft, 14 HDR-fähig). Autostart-Wert und alle 6 Desktop-Verknüpfungen zeigen auf eine vorhandene Datei (Pfad ohne Unterschied in Groß-/Kleinschreibung)
 
-- [ ] G6.7: HDR-Liste von PCGamingWiki: Kennzeichen, Sortierung und Filter in der Bibliothek; Abgleich bei jedem Start (höchstens stündlich, abschaltbar), ohne Netz gilt die zwischengespeicherte Liste (keine mitgelieferte Liste, präzisiert in E79); Zuordnung über Steam-ID, GOG-ID und exakten Namen; Konto mit Bot-Passwort optional; Quellenangabe
-  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrSupport" -MinTests 10
+- [x] G6.7: HDR-Liste von PCGamingWiki: Kennzeichen, Sortierung und Filter in der Bibliothek; Abgleich bei jedem Start (höchstens stündlich, abschaltbar), ohne Netz gilt die zwischengespeicherte Liste (keine mitgelieferte Liste, präzisiert in E79); Zuordnung über Steam-ID, GOG-ID und exakten Namen; Konto mit Bot-Passwort optional; Quellenangabe
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrSupport|FullyQualifiedName~HdrList|FullyQualifiedName~Pcgw" -MinTests 140
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 20:40 exit 0, TESTS_OK 157 (Core und App, Filter um die App-Tests der Einstellungen erweitert); live beim Nutzer abgeglichen (siehe G6.6). Kontomodus nur mit Attrappe getestet, nicht live (kein Konto eingerichtet)

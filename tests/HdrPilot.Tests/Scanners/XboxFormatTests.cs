@@ -173,6 +173,22 @@ public sealed class XboxFormatTests
     }
 
     [Fact]
+    public void Dlc_markers_are_read_from_config_and_manifest()
+    {
+        var config = MicrosoftGameConfig.Parse(Fixture(@"Zusatzinhalt\MicrosoftGame.config"));
+        var manifest = AppxManifest.Parse(Fixture(@"Zusatzinhalt\appxmanifest.xml"));
+
+        Assert.True(config.IsDownloadableContent);
+        Assert.Empty(config.Executables);
+        Assert.Equal("Contoso.Beispielspiel", manifest.MainPackageDependency);
+        Assert.Empty(manifest.Applications);
+
+        Assert.False(MicrosoftGameConfig.Parse(Fixture(@"Wolkenhof\MicrosoftGame.config")).IsDownloadableContent);
+        Assert.False(MicrosoftGameConfig.Parse(Fixture(@"Beispielspiel\MicrosoftGame.config")).IsDownloadableContent);
+        Assert.Null(AppxManifest.Parse(Fixture(@"Wolkenhof\appxmanifest.xml")).MainPackageDependency);
+    }
+
+    [Fact]
     public void Broken_xml_with_dtd_is_rejected()
     {
         var xml = Encoding.UTF8.GetBytes("<?xml version=\"1.0\"?><!DOCTYPE Game [<!ENTITY x \"y\">]><Game><Identity Name=\"A.B\" Publisher=\"CN=x\" /></Game>");

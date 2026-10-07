@@ -10,13 +10,17 @@ public sealed record GameConfigExecutable(string Name, string? Id, string? Targe
 /// <summary>
 /// Inhalt von <c>&lt;Spiel&gt;\Content\MicrosoftGame.config</c> (Microsoft GDK), soweit der Scanner ihn braucht:
 /// <c>Identity</c> (Name, Publisher, Version), <c>ShellVisuals/@DefaultDisplayName</c> und <c>ExecutableList/Executable</c>.
+/// <see cref="IsDownloadableContent"/> erkennt Zusatzinhalte (DLC): Laut GDK-Dokumentation („Packaging downloadable
+/// content“) hat deren Config keine <c>ExecutableList</c>, dafür <c>TargetDeviceFamilyForDLC</c>,
+/// <c>AllowedProducts</c> und <c>DesktopRegistration/MainPackageDependency</c>.
 /// </summary>
 public sealed record MicrosoftGameConfig(
     string IdentityName,
     string IdentityPublisher,
     string? IdentityVersion,
     string? DefaultDisplayName,
-    IReadOnlyList<GameConfigExecutable> Executables)
+    IReadOnlyList<GameConfigExecutable> Executables,
+    bool IsDownloadableContent = false)
 {
     public const string FileName = "MicrosoftGame.config";
 
@@ -37,11 +41,16 @@ public sealed record MicrosoftGameConfig(
             .Select(e => new GameConfigExecutable(e.Name!, e.Element.Attr("Id"), e.Element.Attr("TargetDeviceFamily"), e.Element.Attr("OverrideDisplayName")))
             .ToList() ?? [];
 
+        var isDlc = root.Child("TargetDeviceFamilyForDLC") is not null
+            || root.Child("AllowedProducts") is not null
+            || root.Child("DesktopRegistration")?.Child("MainPackageDependency") is not null;
+
         return new MicrosoftGameConfig(
             name,
             publisher,
             identity.Attr("Version"),
             root.Child("ShellVisuals").Attr("DefaultDisplayName"),
-            executables);
+            executables,
+            isDlc);
     }
 }

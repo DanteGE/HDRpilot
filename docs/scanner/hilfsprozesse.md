@@ -21,11 +21,20 @@ Ubisoft (1 mit Ordner), EA (Battlefield 6 über `__Installer\installerdata.xml`)
 
 | Kennzahl | Wert |
 |---|---|
-| Spielordner | 653 |
+| Einträge der Quellen | 653 (652 verschiedene Ordner: Cyberpunk 2077 und Phantom Liberty teilen sich bei GOG einen Ordner) |
 | EXE-Dateien | 2110 (1237 verschiedene Namen) |
 | davon als Hilfsprogramm erkannt | 797 Dateien, 86 verschiedene Namen |
 | Spielordner, in denen danach **keine** Spiel-EXE übrig bleibt | genau einer: „Steamworks Common Redistributables“ (AppID 228980, nur Redistributables, kein Spiel) |
-| Einträge ganz ohne EXE | 2: ein nicht heruntergeladener Steam-Playtest und der zweite GOG-Eintrag von Cyberpunk 2077, der denselben Ordner wie Phantom Liberty nutzt |
+| Ordner ganz ohne EXE | 1: ein nicht heruntergeladener Steam-Playtest („The Midnight Walkers Playtest“) |
+
+Nachprüfung im Review (2026-10-07): Inventar unabhängig neu erstellt (Steam-`appmanifest_*.acf` aller drei Bibliotheken,
+Epic-`.item`, GOG- und Ubisoft-Registry, `C:\XboxGames\Wolkenhof\Content`, EA über `__Installer\installerdata.xml`) und
+mit der gebauten `HdrPilot.Core.dll` klassifiziert: 653 Einträge, 2110 EXE, 1237 Namen, 797 Treffer mit 86 Namen –
+alle Zahlen bestätigt. Die frühere Angabe „2 Einträge ganz ohne EXE“ war ungenau (der zweite war nur der doppelte
+Cyberpunk-Ordner) und ist oben korrigiert. Alle 86 Treffernamen wurden einzeln mit Dateibeschreibung durchgesehen:
+kein Spiel darunter. Bei den fünf `launcher.exe` liegt jeweils eine eigene Spiel-EXE daneben (GRAVEN `Praest.exe` und
+`Praest-Win64-Shipping.exe`, HYPERVIOLENT `HYPERVIOLENT.exe`, Forgive Me Father 2 `FMF2-Win64-Shipping.exe`,
+The Riftbreaker `riftbreaker_win_release.exe`).
 
 Jedes Muster passt auf mindestens ein Beispiel (Test `Every_default_pattern_matches_at_least_one_real_example`);
 die Beispiele stammen bis auf `BEService*` und `CrashHandler*` (Regeln aus dem Auftrag, am Zielrechner nicht vorhanden)
@@ -119,6 +128,7 @@ Spiel-EXEs“ sauber.
 | `*sentry*`, `*bug*` | „Sentry.exe“ (SENTRY), „KILLBUG.exe“, „Buggos.exe“ sind Spiele. |
 | allgemein `*launcher*` | Schlösse Start-Helfer aus; bei unklaren Launchern (`SUPERHOT-Launcher.exe`, `X-Morph_Launcher.exe`, `Pizza Hero Launcher.exe`, `WardogsLauncher-Shipping.exe`, `Launcher.Native.exe`) ist nicht belegt, ob sie ein wartendes Fenster sind. Ein fälschlich ausgeschlossenes Spiel schaltet nie HDR, ein fälschlich mitgezählter Launcher hält HDR nur länger an. |
 | `7z*.exe`, `ffmpeg.exe`, `java(w).exe`, SteamVR-Dienste | keine der vier Gruppen; `javaw.exe` ist bei Java-Spielen der Spielprozess. |
+| Wallpaper Engine (`wallpaper32/64.exe`, `wallpaperservice*.exe`), SteamVR (`vrserver.exe`, `vrservice.exe` …) | Das sind keine Hilfsprozesse eines Spiels, sondern eigenständige Programme aus der Steam-Bibliothek, die dauerhaft bzw. ohne Spiel laufen. Werden sie als „Spiel“ gelistet, hielte Wallpaper Engine HDR ständig an. Sie gehören deshalb in den Filter des Steam-Scanners („Einträge ohne Spielcharakter“), nicht in diese Liste; die Ausschlussliste schlösse sonst nur einzelne Prozesse aus und ließe den Rest des Ordners als Spiel gelten. |
 
 ## Negativtests
 

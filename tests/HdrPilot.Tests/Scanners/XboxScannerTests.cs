@@ -452,6 +452,107 @@ public sealed class XboxScannerTests
     }
 
     [Fact]
+    public void Incomplete_dlc_package_is_not_a_game_and_reports_no_error()
+    {
+        // Format laut GDK-Dokumentation: DLC-Config ohne ExecutableList, Paketmanifest ohne Applications.
+        var fs = WithBeispiel(new InMemoryFileSystem())
+            .AddFixture(@"Xbox\Zusatzinhalt\MicrosoftGame.config", @"D:\Xbox Bibliothek\Beispielspiel - Soundtrack\Content\MicrosoftGame.config")
+            .AddFixture(@"Xbox\Zusatzinhalt\appxmanifest.xml", @"D:\Xbox Bibliothek\Beispielspiel - Soundtrack\Content\appxmanifest.xml")
+            .AddFile(@"D:\Xbox Bibliothek\Beispielspiel - Soundtrack\Content\Musik\01.ogg", "OggS");
+        fs.FixedDriveRoots.Add(@"D:\");
+
+        var result = Scanner(new FakeResolver("Beispielspiel")).Scan(fs, Ct);
+
+        Assert.Empty(result.Errors);
+        Assert.Equal([BeispielFamily], result.Games.Select(g => g.SourceId));
+    }
+
+    [Theory]
+    [InlineData("<TargetDeviceFamilyForDLC>PC</TargetDeviceFamilyForDLC>")]
+    [InlineData("<AllowedProducts><AllowedProduct>9ZZZZZZZZZZZ</AllowedProduct></AllowedProducts>")]
+    [InlineData("<DesktopRegistration><MainPackageDependency Name=\"Contoso.Spiel\" /><ProcessorArchitecture>x64</ProcessorArchitecture></DesktopRegistration>")]
+    public void Dlc_marker_in_config_skips_package_even_with_executable_and_broken_manifest(string marker)
+    {
+        var config = Config("Contoso.Zusatz", "Zusatz", ("Zusatz.exe", "Zusatz", "PC")).Replace("</Game>", marker + "\n</Game>", StringComparison.Ordinal);
+        var fs = WithWolkenhof(new InMemoryFileSystem())
+            .AddFile(@"C:\XboxGames\Zusatz\Content\MicrosoftGame.config", config)
+            .AddFile(@"C:\XboxGames\Zusatz\Content\appxmanifest.xml", "<Package><kaputt")
+            .AddFile(@"C:\XboxGames\Zusatz\Content\Zusatz.exe", "MZ");
+
+        var result = Scanner(fs).Scan(ScanOptions.Default, Ct);
+
+        Assert.Equal(WolkenhofFamily, Assert.Single(result.Games).SourceId);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Dlc_marker_in_appxmanifest_skips_package()
+    {
+        var manifest = Manifest("Contoso.Zusatz", "App").Replace(
+            "<Properties>",
+            "<Dependencies><uap3:MainPackageDependency xmlns:uap3=\"http://schemas.microsoft.com/appx/manifest/uap/windows10/3\" Name=\"Contoso.Spiel\" /></Dependencies><Properties>",
+            StringComparison.Ordinal);
+        var fs = WithWolkenhof(new InMemoryFileSystem())
+            .AddFile(@"C:\XboxGames\Zusatz\Content\MicrosoftGame.config", Config("Contoso.Zusatz", "Zusatz", ("Zusatz.exe", "App", "PC")))
+            .AddFile(@"C:\XboxGames\Zusatz\Content\appxmanifest.xml", manifest)
+            .AddFile(@"C:\XboxGames\Zusatz\Content\Zusatz.exe", "MZ");
+
+        var result = Scanner(fs).Scan(ScanOptions.Default, Ct);
+
+        Assert.Equal(WolkenhofFamily, Assert.Single(result.Games).SourceId);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Broken_gaming_root_with_drive_relative_folder_is_reported_and_never_gives_relative_install_dir()
+    {
+        var fs = new InMemoryFileSystem()
+            .AddFile(@"C:\.GamingRoot", GamingRoot("C:Spiele", "XboxGames"))
+            .AddFile(@"C:Spiele\Spiel\Content\MicrosoftGame.config", Config("Contoso.Relativ", "Relativ", ("r.exe", "Game", "PC")))
+            .AddFile(@"C:Spiele\Spiel\Content\r.exe", "MZ")
+            .AddFixture(@"Xbox\Wolkenhof\MicrosoftGame.config", WolkenhofContent + @"\MicrosoftGame.config")
+            .AddFile(WolkenhofExe, "MZ");
+
+        var result = Scanner(fs).Scan(ScanOptions.Default, Ct);
+
+        Assert.All(result.Games, g => Assert.True(Path.IsPathFullyQualified(g.InstallDir), g.InstallDir));
+        Assert.Equal(WolkenhofFamily, Assert.Single(result.Games).SourceId);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(@"C:\.GamingRoot", error.Path);
+        Assert.Contains("C:Spiele", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Umlauts_spaces_forward_slashes_and_trailing_backslash_in_paths_are_handled()
+    {
+        var content = @"E:\Spiele für Xbox\Ä\Spiel Ö & Co\Content";
+        var fs = new InMemoryFileSystem()
+            .AddFile(@"E:\.GamingRoot", GamingRoot(@"Spiele für Xbox/Ä\"))
+            .AddFile(content + @"\MicrosoftGame.config", Config("Contoso.Umlaut", "Spiel Ö &amp; Co", (@"bin/x64\Spiel Ö.exe", "Game", "PC")))
+            .AddFile(content + @"\bin\x64\Spiel Ö.exe", "MZ");
+        fs.FixedDriveRoots.Add(@"E:\");
+
+        var game = Assert.Single(Scanner(fs).Scan(ScanOptions.Default, Ct).Games);
+
+        Assert.Equal(content, game.InstallDir);
+        Assert.Equal([content + @"\bin\x64\Spiel Ö.exe"], game.Executables);
+        Assert.Equal("Spiel Ö & Co", game.Name);
+    }
+
+    [Fact]
+    public void Missing_drives_and_empty_gaming_root_do_not_throw()
+    {
+        var fs = new InMemoryFileSystem().AddFile(@"C:\.GamingRoot", []);
+        fs.FixedDriveRoots.Add(@"Z:\");
+
+        var result = Scanner(fs).Scan(ScanOptions.Default, Ct);
+
+        Assert.True(result.LauncherDetected);
+        Assert.Empty(result.Games);
+        Assert.Contains("zu kurz", Assert.Single(result.Errors).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Cancellation_stops_the_scan()
     {
         var fs = WithWolkenhof(new InMemoryFileSystem());
@@ -504,6 +605,19 @@ public sealed class XboxScannerTests
             ? @"\Hof\Binaries\WinGDK\Wolkenhof-WinGDK-Shipping.exe"
             : @"\Beispiel\Binaries\WinGDK\Beispiel-WinGDK-Shipping.exe";
         fs.AddFile(content + exe, "MZ");
+    }
+
+    /// <summary>.GamingRoot im gemessenen Format: "RGBX", UInt32 Anzahl, nullterminierte UTF-16LE-Namen.</summary>
+    private static byte[] GamingRoot(params string[] folders)
+    {
+        var bytes = new List<byte>("RGBX"u8.ToArray());
+        bytes.AddRange(BitConverter.GetBytes((uint)folders.Length));
+        foreach (var folder in folders)
+        {
+            bytes.AddRange(Encoding.Unicode.GetBytes(folder + "\0"));
+        }
+
+        return [.. bytes];
     }
 
     private static string Config(string packageName, string displayName, params (string Name, string? Id, string? Device)[] executables)

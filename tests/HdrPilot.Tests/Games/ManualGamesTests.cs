@@ -77,6 +77,23 @@ public sealed class ManualGamesTests
         Assert.Equal("Mein Spiel", ManualGames.Create(fs, @"D:\Spielordner\Mein Spiel", "   ").Name);
     }
 
+    [Theory]
+    [InlineData(@"D:\Spielordner\Größe & Ü (2024)\spiel.exe")]
+    [InlineData("\"D:\\Spielordner\\Größe & Ü (2024)\\spiel.exe\"")]
+    [InlineData(@"d:/spielordner/Bin/../Größe & Ü (2024)/spiel.exe")]
+    [InlineData(@"D:\\Spielordner\\Größe & Ü (2024)\\spiel.exe\")]
+    public void Exe_paths_with_umlauts_quotes_dot_segments_and_doubled_separators_are_normalized(string path)
+    {
+        var fs = new InMemoryFileSystem().AddFile(@"D:\Spielordner\Größe & Ü (2024)\spiel.exe", "MZ");
+
+        var game = ManualGames.Create(fs, path, id: "x");
+
+        Assert.Equal(@"D:\Spielordner\Größe & Ü (2024)", game.InstallDir, ignoreCase: true);
+        Assert.Equal(@"D:\Spielordner\Größe & Ü (2024)\spiel.exe", Assert.Single(game.Executables), ignoreCase: true);
+        Assert.Equal(game.Executables[0], game.LaunchCommand);
+        Assert.Equal("spiel", game.Name);
+    }
+
     [Fact]
     public void Missing_id_creates_new_guid_in_n_format()
     {

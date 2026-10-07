@@ -19,7 +19,8 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
     /// <summary>
     /// Liefert die Kandidaten aller Suchordner in Eingabereihenfolge, je Suchordner nach Name sortiert.
     /// Fehlende Suchordner werden still übersprungen; Ordner, die einem bekannten Installationsordner entsprechen,
-    /// darunter oder darüber liegen, ebenso. Nicht lesbare Unterordner werden ausgelassen.
+    /// darunter oder darüber liegen, ebenso. Nicht lesbare Unterordner werden ausgelassen. Ist der Suchordner eine
+    /// Laufwerkswurzel, sind Windows-Systemordner (<c>$RECYCLE.BIN</c> u. ä., <c>System Volume Information</c>) keine Kandidaten.
     /// </summary>
     public IReadOnlyList<GameCandidate> FindCandidates(
         IReadOnlyList<string> searchFolders, IEnumerable<string> knownInstallDirs, CancellationToken cancellationToken = default)
@@ -50,10 +51,12 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
                 continue;
             }
 
+            var isDriveRoot = PathUtil.PathEquals(Path.GetPathRoot(root) ?? string.Empty, root);
             foreach (var folder in SafeDirectories(root).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!seen.Add(folder)
+                    || (isDriveRoot && IsWindowsSystemFolder(Path.GetFileName(folder)))
                     || roots.Any(r => PathUtil.PathEquals(r, folder))
                     || known.Any(k => PathUtil.IsUnder(folder, k) || PathUtil.IsUnder(k, folder)))
                 {
@@ -108,6 +111,13 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
 
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
+
+    /// <summary>
+    /// Ordner, die Windows in Laufwerkswurzeln anlegt: Papierkorb (<c>$RECYCLE.BIN</c>, enthält gelöschte Spielordner
+    /// samt EXEs), Update-Reste (<c>$WINDOWS.~BT</c>, <c>$WinREAgent</c> …) und <c>System Volume Information</c>.
+    /// </summary>
+    private static bool IsWindowsSystemFolder(string name) =>
+        name.StartsWith('$') || string.Equals(name, "System Volume Information", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>0: heißt wie der Ordner, 1: Name beginnt mit dem Ordnernamen oder umgekehrt, 2: sonst.</summary>
     private static int Resemblance(string exePath, string folderKey)

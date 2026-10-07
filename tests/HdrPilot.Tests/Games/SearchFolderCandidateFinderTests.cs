@@ -116,6 +116,35 @@ public sealed class SearchFolderCandidateFinderTests
     }
 
     [Fact]
+    public void Recycle_bin_and_windows_system_folders_on_a_drive_root_are_not_candidates()
+    {
+        // Ein gelöschter Spielordner landet im Papierkorb als $RECYCLE.BIN\<SID>\$R…\ mit allen EXEs.
+        var fs = new InMemoryFileSystem()
+            .AddFile(@"D:\$RECYCLE.BIN\S-1-5-21-1000\$RX1Y2Z3\Spiel.exe", "MZ")
+            .AddFile(@"D:\$WINDOWS.~BT\Sources\setuphost.exe", "MZ")
+            .AddFile(@"D:\System Volume Information\x.exe", "MZ")
+            .AddFile(@"D:\Spielordner\Neu\neu.exe", "MZ")
+            .AddFile(@"D:\Tools\tool.exe", "MZ");
+
+        var candidates = new SearchFolderCandidateFinder(fs).FindCandidates([@"D:\"], [], Ct);
+
+        Assert.Equal(["Spielordner", "Tools"], candidates.Select(c => c.Name));
+    }
+
+    [Fact]
+    public void Folder_names_with_umlauts_and_special_characters_are_kept()
+    {
+        var fs = new InMemoryFileSystem()
+            .AddFile(@"D:\Spielordner\Größenwahn & Co. (2024)\bin\Spiel.exe", "MZ")
+            .AddFile(@"D:\Spielordner\$Dollar\d.exe", "MZ");
+
+        var candidates = new SearchFolderCandidateFinder(fs).FindCandidates(["d:/spielordner/"], [], Ct);
+
+        Assert.Equal(["$Dollar", "Größenwahn & Co. (2024)"], candidates.Select(c => c.Name));
+        Assert.Equal([@"D:\Spielordner\Größenwahn & Co. (2024)\bin\Spiel.exe"], candidates[1].Executables);
+    }
+
+    [Fact]
     public void Broken_enumeration_error_skips_only_that_folder()
     {
         var inner = new InMemoryFileSystem()

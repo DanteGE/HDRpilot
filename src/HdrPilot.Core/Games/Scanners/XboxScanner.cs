@@ -12,7 +12,7 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <item>Auf jedem festen Laufwerk die versteckte Datei <c>.GamingRoot</c> lesen; sie nennt den Spieleordner des
 /// Laufwerks (am Zielrechner <c>C:\XboxGames</c> und <c>D:\Xbox Bibliothek</c>).</item>
 /// <item>Je Unterordner <c>&lt;Spiel&gt;\Content\MicrosoftGame.config</c> lesen. Ordner ohne diese Datei (etwa
-/// <c>GameSave</c>) sind keine Spiele.</item>
+/// <c>GameSave</c>) sind keine Spiele, Zusatzinhalte (DLC-Merkmale in Config oder Paketmanifest) ebenfalls nicht.</item>
 /// <item>Installationsordner ist <c>&lt;Spiel&gt;\Content</c>: Dorthin zeigt der Paketordner unter WindowsApps, dort liegen
 /// gamelaunchhelper.exe und die Spiel-EXEs, und von dort liefen die Prozesse am Zielrechner (MuiCache, Compatibility Assistant).</item>
 /// <item>Start über <c>shell:AppsFolder\&lt;PackageFamilyName&gt;!&lt;App-Id&gt;</c>. Die App-Id stammt aus
@@ -115,6 +115,13 @@ public sealed class XboxScanner : IGameScanner
         foreach (var folder in content.Folders)
         {
             var full = PathUtil.Normalize(Path.IsPathFullyQualified(folder) ? folder : Path.Combine(driveRoot, folder.TrimStart('\\', '/')));
+            if (!Path.IsPathFullyQualified(full))
+            {
+                // Etwa "C:Spiele": relativ zum aktuellen Ordner des Laufwerks, ergäbe keinen absoluten Installationsordner.
+                errors.Add(new ScanError($"{GamingRootFile.FileName}: Ordnername \"{folder}\" ergibt keinen vollständigen Pfad und wird übersprungen.", markerPath));
+                continue;
+            }
+
             if (_fileSystem.DirectoryExists(full))
             {
                 libraries.Add(full);
@@ -193,7 +200,23 @@ public sealed class XboxScanner : IGameScanner
             return null;
         }
 
+        if (config.IsDownloadableContent)
+        {
+            _logger.LogInformation("Xbox: {Folder} ist ein Zusatzinhalt (DLC) laut {File}, kein eigenes Spiel.", gameFolder, MicrosoftGameConfig.FileName);
+            return null;
+        }
+
         var manifest = ReadManifest(contentDir, errors);
+        if (manifest?.MainPackageDependency is not null)
+        {
+            _logger.LogInformation(
+                "Xbox: {Folder} ist ein optionales Paket (Zusatzinhalt) zu {Main} laut {File}, kein eigenes Spiel.",
+                gameFolder,
+                manifest.MainPackageDependency,
+                AppxManifest.FileName);
+            return null;
+        }
+
         var packageName = manifest?.IdentityName ?? config.IdentityName;
         var publisher = manifest?.IdentityPublisher ?? config.IdentityPublisher;
         if (!string.Equals(packageName, config.IdentityName, StringComparison.OrdinalIgnoreCase)

@@ -44,7 +44,7 @@ foreach ($p in $projects) {
 # deps.json der Veröffentlichung, Texte aus den NuGet-Paketen, mit denen gebaut wurde.
 $packages = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path $env:USERPROFILE '.nuget\packages' }
 $deps = @{}
-foreach ($depsFile in 'src\HdrPilot.App\obj\Release\net10.0-windows\win-x64\HdrPilot.deps.json', 'src\HdrPilot.Cli\obj\Release\net10.0-windows\win-x64\hdrpilot.deps.json') {
+foreach ($depsFile in 'src\HdrPilot.App\obj\Release\net10.0-windows\win-x64\HDRpilot.deps.json', 'src\HdrPilot.Cli\obj\Release\net10.0-windows\win-x64\hdrpilot.deps.json') {
     $json = [IO.File]::ReadAllText((Join-Path $root $depsFile))
     foreach ($m in [regex]::Matches($json, '"(?:runtimepack\.)?((?:Microsoft\.NETCore\.App|Microsoft\.WindowsDesktop\.App)\.Runtime\.win-x64|Microsoft\.Extensions\.[A-Za-z.]+)/([0-9][^"]*)": \{')) {
         $deps[$m.Groups[1].Value] = $m.Groups[2].Value
@@ -66,7 +66,7 @@ $notice = @(
     '',
     'HDRpilot.exe und cli\hdrpilot.exe enthalten die folgenden Bestandteile von Microsoft und der .NET Foundation.',
     'Alle stehen unter der MIT-Lizenz; keiner steht unter GPL oder AGPL.',
-    'Zusätzlich zeigt HdrPilot Angaben von PCGamingWiki an (CC BY-NC-SA 3.0, zur Laufzeit abgerufen; Abschnitt am Ende).',
+    'Zusätzlich zeigt HDRpilot Angaben von PCGamingWiki an (CC BY-NC-SA 3.0, zur Laufzeit abgerufen; Abschnitt am Ende).',
     '',
     $rule,
     ".NET-Laufzeit ($core $($deps[$core]))"
@@ -90,13 +90,13 @@ $notice = @(
     $rule,
     'Angaben zur HDR-Unterstützung: PCGamingWiki (https://www.pcgamingwiki.com/)',
     $rule,
-    'HdrPilot zeigt in der Spieleliste an, welche Spiele laut PCGamingWiki HDR unterstützen ("HDR", eingeschränkt "HDR*").',
+    'HDRpilot zeigt in der Spieleliste an, welche Spiele laut PCGamingWiki HDR unterstützen ("HDR", eingeschränkt "HDR*").',
     'Diese Angaben stammen von PCGamingWiki (pcgamingwiki.com) und stehen unter der Lizenz Creative Commons',
     'Namensnennung - Nicht kommerziell - Weitergabe unter gleichen Bedingungen 3.0 (CC BY-NC-SA 3.0,',
     'https://creativecommons.org/licenses/by-nc-sa/3.0/).',
-    'Die Daten sind nicht Teil dieser Auslieferung: HdrPilot ruft sie zur Laufzeit von pcgamingwiki.com ab und speichert',
-    'nur das Ergebnis je Spiel lokal zwischen (%LOCALAPPDATA%\HdrPilot\hdr-support.json, mit Konto zusätzlich hdr-catalog.json).',
-    'Verwendet werden nur die Felder "hdr", "steam appid" und "gogcom id"; HdrPilot ordnet sie den Spielen der Bibliothek zu.'
+    'Die Daten sind nicht Teil dieser Auslieferung: HDRpilot ruft sie zur Laufzeit von pcgamingwiki.com ab und speichert',
+    'nur das Ergebnis je Spiel lokal zwischen (%LOCALAPPDATA%\HDRpilot\hdr-support.json, mit Konto zusätzlich hdr-catalog.json).',
+    'Verwendet werden nur die Felder "hdr", "steam appid" und "gogcom id"; HDRpilot ordnet sie den Spielen der Bibliothek zu.'
 )
 [IO.File]::WriteAllText((Join-Path $Output 'THIRD-PARTY-NOTICES.txt'), (($notice -join "`r`n") + "`r`n"), (New-Object Text.UTF8Encoding $true))
 

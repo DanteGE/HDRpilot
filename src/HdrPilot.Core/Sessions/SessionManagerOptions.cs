@@ -41,6 +41,12 @@ public sealed class SessionManagerOptions
     /// <summary>Ob eine Vollbild-Anwendung im Vordergrund läuft. Null: SHQueryUserNotificationState.</summary>
     public Func<bool>? FullscreenAppRunning { get; init; }
 
+    /// <summary>
+    /// Ob das Tray Hinweise gerade nur protokolliert (Vollbild, gesperrter Bildschirm, Bildschirmschoner): dann wartet der
+    /// Hinweis „Spiel hängt“. Null: SHQueryUserNotificationState.
+    /// </summary>
+    public Func<bool>? NotificationsSuppressed { get; init; }
+
     /// <summary>CPU-Zeit und Fenster der Spielprozesse. Null: <see cref="NtProcessActivityProbe"/>.</summary>
     public IProcessActivityProbe? ActivityProbe { get; init; }
 }

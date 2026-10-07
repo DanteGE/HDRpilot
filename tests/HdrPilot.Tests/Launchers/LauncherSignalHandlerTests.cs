@@ -187,16 +187,88 @@ public sealed class LauncherSignalHandlerTests
     [Fact]
     public async Task Launch_via_the_app_keeps_its_session()
     {
-        // HdrPilot startet über steam://rungameid/…; Steam protokolliert danach denselben Start.
+        // HDRpilot startet über steam://rungameid/…; Steam protokolliert danach denselben Start: doppelte Anforderung (E71).
         AddSteamGame();
         await Poll();
         await _manager.LaunchAsync("Steam:9990130", Ct);
         _clock.Advance(TimeSpan.FromSeconds(1));
 
-        Assert.Equal(LauncherSignalResult.SessionExists, await _handler.HandleAsync(SteamSignal, Ct));
-        Assert.Equal(0, _sessions.PrepareCalls);
-        Assert.Equal(SessionTrigger.LaunchedViaApp, Assert.Single(_manager.Sessions).Trigger);
+        Assert.Equal(LauncherSignalResult.Prepared, await _handler.HandleAsync(SteamSignal, Ct));
+        var session = Assert.Single(_manager.Sessions);
+        Assert.Equal(SessionTrigger.LaunchedViaApp, session.Trigger);
+        Assert.Equal(SessionPhase.Launching, session.Phase);
         Assert.Equal(1, _hdr.SetCalls(enable: true));
+        Assert.Single(_launcher.Launched);
+        Assert.True(_sessionLog.Contains(LogLevel.Information, "Sitzung besteht schon"));
+    }
+
+    /// <summary>Spiel läuft lange (keine kurze Sitzung), endet, dann vergehen <paramref name="afterEnd"/> s.</summary>
+    private async Task EndLongSteamSession(int afterEnd)
+    {
+        AddSteamGame();
+        await Poll();
+        var pid = _processes.StartExe(ExeSteam);
+        await Poll(10 * 60);
+        _processes.Stop(pid);
+        await Poll(afterEnd);
+        Assert.Equal(SessionPhase.Ending, Assert.Single(_manager.Sessions).Phase);
+    }
+
+    [Fact]
+    public async Task Signal_while_the_session_ends_keeps_hdr_on_through_the_new_start()
+    {
+        // Spiel beendet, gleich wieder „Spielen“ in Steam; bis zum Spielprozess vergehen einige Sekunden. Ohne Übernahme
+        // liefe die Nachlaufzeit (10 s) ab: HDR aus und mitten im Start wieder an, genau was die Frühwarnung verhindern soll.
+        await EndLongSteamSession(afterEnd: 3);
+
+        Assert.Equal(LauncherSignalResult.Prepared, await _handler.HandleAsync(SteamSignal, Ct));
+        Assert.Equal(SessionPhase.Launching, Assert.Single(_manager.Sessions).Phase);
+
+        await Poll(20); // Steam bereitet den Start vor
+        Assert.True(PrimaryOn);
+        _processes.StartExe(ExeSteam);
+        await Poll();
+
+        Assert.Equal(SessionPhase.Running, Assert.Single(_manager.Sessions).Phase);
+        Assert.Equal(1, _hdr.SetCalls(enable: true));
+        Assert.Equal(0, _hdr.SetCalls(enable: false));
+    }
+
+    [Fact]
+    public async Task Signal_for_an_ending_session_never_uses_the_hotkey_fallback()
+    {
+        // HDR während der Nachlaufzeit von Hand ausgeschaltet, dann Neustart aus Steam: einschalten ja, aber ohne
+        // Win+Alt+B, denn Steam startet das Spiel gleich danach selbst (E66).
+        await EndLongSteamSession(afterEnd: 3);
+        _hdr[FakeHdrController.Primary].HdrOn = false;
+
+        await _handler.HandleAsync(SteamSignal, Ct);
+
+        Assert.True(PrimaryOn);
+        Assert.Equal([false, false], _hdr.HotkeyAllowed); // Erkennen des laufenden Spiels, Einschalten vor dem Neustart
+    }
+
+    [Fact]
+    public async Task Repeated_signal_after_a_stalled_start_restarts_the_launch_deadline()
+    {
+        // Der erste Start blieb hängen (etwa Steam aktualisiert erst); 90 s später erneut „Spielen“: die Startfrist
+        // zählt ab dem neuen Signal, sonst stellte HDRpilot kurz vor oder während des neuen Starts zurück.
+        _config.Config.Settings.LaunchTimeoutSeconds = 120;
+        AddSteamGame();
+        await Poll();
+        await _handler.HandleAsync(SteamSignal, Ct);
+        await Poll(90);
+
+        Assert.Equal(LauncherSignalResult.Prepared, await _handler.HandleAsync(SteamSignal, Ct));
+        Assert.Equal(2, _sessions.PrepareCalls);
+
+        await Poll(100); // 190 s nach dem ersten, 100 s nach dem zweiten Signal
+        Assert.True(PrimaryOn);
+        Assert.Single(_manager.Sessions);
+
+        await Poll(21);
+        Assert.False(PrimaryOn);
+        Assert.Empty(_manager.Sessions);
     }
 
     [Fact]

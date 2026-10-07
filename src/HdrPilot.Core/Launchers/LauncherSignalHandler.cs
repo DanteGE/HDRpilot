@@ -51,7 +51,7 @@ public enum LauncherSignalResult
     /// <summary>Sitzungslogik noch nicht initialisiert (erster Zyklus nach dem Start steht aus).</summary>
     NotReady,
 
-    /// <summary>Für das Spiel läuft schon eine Sitzung (etwa Start über die App oder Steam-Startoption).</summary>
+    /// <summary>Das Spiel läuft schon (Sitzung mit erkanntem Spielprozess).</summary>
     SessionExists,
 
     /// <summary>Die Sitzungslogik hat nichts vorbereitet.</summary>
@@ -63,9 +63,11 @@ public enum LauncherSignalResult
 
 /// <summary>
 /// Entscheidet, ob ein angekündigter Spielstart HDR schon vor dem Spielprozess einschaltet: nur für Spiele der
-/// Bibliothek mit „HDR automatisch“, nicht bei pausierter Automatik und nicht, wenn für das Spiel schon eine Sitzung
-/// läuft. Dann übernimmt <see cref="SessionManager.PrepareAsync"/> (HDR an und bestätigt, Sitzung wartet auf den
-/// Spielprozess; startet das Spiel doch nicht, stellt die Startfrist zurück).
+/// Bibliothek mit „HDR automatisch“, nicht bei pausierter Automatik und nicht, solange das Spiel läuft (dann bleiben
+/// HDR-Änderungen von Hand unangetastet). Dann übernimmt <see cref="SessionManager.PrepareAsync"/> (HDR an und
+/// bestätigt, Sitzung wartet auf den Spielprozess; startet das Spiel doch nicht, stellt die Startfrist zurück). Eine
+/// endende Sitzung (Nachlaufzeit, Neustart-Puffer) oder eine, die noch auf ihr Spiel wartet, wird dabei wieder auf
+/// „wartet auf Spielprozess“ gestellt; ein doppeltes Signal kurz nach einem Start ändert nichts (E71).
 /// </summary>
 public sealed class LauncherSignalHandler(ISessionConfigSource config, ILauncherSignalSessions sessions, ILogger? logger = null)
 {
@@ -106,9 +108,12 @@ public sealed class LauncherSignalHandler(ISessionConfigSource config, ILauncher
                 return LauncherSignalResult.NotReady;
             }
 
-            if (sessions.Sessions.Any(s => string.Equals(s.GameKey, game.Key, StringComparison.OrdinalIgnoreCase)))
+            // Nur ein laufendes Spiel bleibt unangetastet. Endet seine Sitzung gerade (Nachlaufzeit, Neustart-Puffer) oder
+            // wartet sie noch, stellt PrepareAsync sie wieder auf den Start ein; sonst liefe die Frist während des neuen
+            // Starts ab und HDR ginge mitten im Start aus und wieder an.
+            if (sessions.Sessions.Any(s => string.Equals(s.GameKey, game.Key, StringComparison.OrdinalIgnoreCase) && s.Phase == SessionPhase.Running))
             {
-                _logger.LogDebug("Launcher-Signal von {Launcher} für \"{Game}\": Sitzung besteht schon.", signal.Launcher, game.Name);
+                _logger.LogDebug("Launcher-Signal von {Launcher} für \"{Game}\": das Spiel läuft schon.", signal.Launcher, game.Name);
                 return LauncherSignalResult.SessionExists;
             }
 

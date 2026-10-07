@@ -162,7 +162,7 @@ public sealed partial class SessionManagerTests
 
         await Poll(151);
         Assert.Empty(HangHints);
-        Assert.Equal(1, _fullscreenQueries); // gefragt wird erst, wenn der Hinweis fällig ist
+        Assert.Equal(1, _suppressedQueries); // gefragt wird erst, wenn der Hinweis fällig ist
 
         await Poll(60);
         Assert.Empty(HangHints);
@@ -171,6 +171,42 @@ public sealed partial class SessionManagerTests
         await Poll(30);
         Assert.Single(HangHints);
         Assert.True(_log.Contains(LogLevel.Information, "\"Spiel 1\" scheint im Hintergrund zu hängen: seit 210 s"));
+    }
+
+    [Fact]
+    public async Task Hint_waits_while_the_screen_is_locked_so_it_is_not_swallowed()
+    {
+        // Gesperrter Bildschirm oder Bildschirmschoner: das Tray zeigt auch dann nichts an (nur Protokoll). Genau so
+        // bleibt ein hängendes Spiel unbemerkt (Nutzer beendet das Spiel und geht weg); der Hinweis kommt bei der Rückkehr.
+        await StartQuietGame();
+        _userAway = true;
+
+        await Poll(151);
+        Assert.Empty(HangHints);
+        await Poll(10 * 60);
+        Assert.Empty(HangHints);
+        Assert.Equal(0, _fullscreenQueries); // Vollbild allein reicht als Frage nicht
+
+        _userAway = false;
+        await Poll(30);
+        Assert.Single(HangHints);
+    }
+
+    [Fact]
+    public async Task Failing_notification_state_query_does_not_hold_the_hint_back()
+    {
+        _options = new SessionManagerOptions
+        {
+            ActivityProbe = _activity,
+            FullscreenAppRunning = () => false,
+            NotificationsSuppressed = () => throw new InvalidOperationException("Shell nicht erreichbar"),
+        };
+        await StartQuietGame();
+
+        await Poll(151);
+
+        Assert.Single(HangHints);
+        Assert.True(_log.Contains(LogLevel.Warning, "Hinweise werden angezeigt“ fehlgeschlagen"));
     }
 
     [Fact]

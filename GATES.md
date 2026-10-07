@@ -202,7 +202,7 @@ und die EXPECT-Marke ausgibt.
 - [ ] G6.6: Installierte Version beim Nutzer ersetzt und neu gestartet; Autostart und Verknüpfungen zeigen weiter auf die EXE
   EVIDENCE: pending
 
-- [ ] G6.7: HDR-Liste von PCGamingWiki: Kennzeichen, Sortierung und Filter in der Bibliothek; Abgleich bei jedem Start (höchstens stündlich, abschaltbar), Rückfall auf zwischengespeicherte oder mitgelieferte Liste ohne Netz; Zuordnung über Steam-ID, GOG-ID und exakten Namen; Quellenangabe
+- [ ] G6.7: HDR-Liste von PCGamingWiki: Kennzeichen, Sortierung und Filter in der Bibliothek; Abgleich bei jedem Start (höchstens stündlich, abschaltbar), ohne Netz gilt die zwischengespeicherte Liste (keine mitgelieferte Liste, präzisiert in E79); Zuordnung über Steam-ID, GOG-ID und exakten Namen; Konto mit Bot-Passwort optional; Quellenangabe
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrSupport" -MinTests 10
   EXPECT: TESTS_OK
   EVIDENCE: pending

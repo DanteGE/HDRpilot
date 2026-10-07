@@ -414,3 +414,16 @@ Lizenzkopf. Die Ordner auf der Platte bleiben dieselben (Windows unterscheidet n
 der Autostart-Wert in der Registry. Intern bleiben `HdrPilot`: Projekte, Namensräume und die Namen von Mutex, Fenster-
 klasse und Ereignissen (Kernel-Objektnamen unterscheiden Groß-/Kleinschreibung; alte und neue Version erkennen sich so
 weiter). Prüfung: `phase6-name.ps1` (G6.4).
+
+**E81 Nachprüfung Phase 6:** Vier unabhängige Prüfer (Sitzungslogik, Wrapper und Signale, HDR-Liste, Oberfläche und
+Name) und ein Gegenprüfer; 10 Funde bestätigt, 8 verworfen (begründet im Prüfbericht), alle bestätigten behoben, jeweils
+mit Test und Gegenprobe (ohne Korrektur rot). Sitzungslogik: Der Hinweis „Spiel hängt“ wartet auch bei gesperrtem
+Bildschirm oder Bildschirmschoner (dort zeigt das Tray nichts an; vorher ging der einzige Hinweis verloren). Ein Neustart
+im Neustart-Puffer schaltet HDR wieder ein, falls der Nutzer es zwischendurch von Hand ausgeschaltet hat (wie jeder
+Start, E41; nicht bei pausierter Automatik, nicht in der normalen Nachlaufzeit). Nach einem Neustart von HDRpilot
+übernommene Sitzungen gelten nie als kurz. Ein Launcher-Signal übergeht nur noch laufende Spiele; eine endende oder
+noch wartende Sitzung wird wieder auf den Start eingestellt (Frist neu, keine Tastenkürzel-Notlösung), sonst ging HDR
+mitten im neuen Start aus und an. Abfragepuffer nach gescheiterter Speicheranforderung nie weiterverwendet. Texte:
+Pause-Tooltip und README nennen die Steam-Startoption als Ausnahme der Pause; Lizenzhinweise vollständig umbenannt und
+von `phase6-name.ps1` ganz geprüft. HDR-Liste: Anmeldesperre von PCGamingWiki erkannt (MediaWiki meldet sie als
+„Failed“ mit Begründung), unlesbares gespeichertes Konto lässt sich entfernen, Weiterleitungsketten werden verfolgt.

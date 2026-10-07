@@ -76,7 +76,7 @@
     <value>Automatik pausiert</value>
   </data>
   <data name="Pause_Tooltip" xml:space="preserve">
-    <value>Solange pausiert, schaltet ein Spielstart HDR nicht ein. Laufende Spiele enden normal und werden zurückgestellt.</value>
+    <value>Solange pausiert, schaltet ein erkannter Spielstart HDR nicht ein. „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Laufende Spiele enden normal und werden zurückgestellt.</value>
   </data>
   <data name="Settings_Name" xml:space="preserve">
     <value>Einstellungen</value>

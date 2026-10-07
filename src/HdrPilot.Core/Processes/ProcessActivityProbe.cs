@@ -161,6 +161,7 @@ public sealed unsafe class NtProcessActivityProbe : IProcessActivityProbe, IDisp
             // Puffer vergrößern (mit Reserve, weil zwischen den Aufrufen Prozesse und Threads dazukommen können).
             _bufferSize = Math.Max(_bufferSize * 2, needed + (64 * 1024));
             Marshal.FreeHGlobal(_buffer);
+            _buffer = IntPtr.Zero; // scheitert die Anforderung (kein Speicher), nie den freigegebenen Zeiger weiterverwenden
             _buffer = Marshal.AllocHGlobal((int)_bufferSize);
         }
 

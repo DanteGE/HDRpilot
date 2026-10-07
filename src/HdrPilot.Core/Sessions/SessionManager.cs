@@ -30,6 +30,7 @@ public sealed class SessionManager
     private readonly IReadOnlyList<string> _forbiddenRoots;
     private readonly SessionManagerOptions _options;
     private readonly Func<bool> _fullscreenAppRunning;
+    private readonly Func<bool> _notificationsSuppressed;
     private readonly IProcessActivityProbe _activity;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
@@ -86,6 +87,7 @@ public sealed class SessionManager
         _logger = logger ?? NullLogger.Instance;
         _options = options ?? SessionManagerOptions.Default;
         _fullscreenAppRunning = _options.FullscreenAppRunning ?? ShellNative.IsFullscreenAppRunning;
+        _notificationsSuppressed = _options.NotificationsSuppressed ?? ShellNative.IsNotificationSuppressed;
         _activity = _options.ActivityProbe ?? new NtProcessActivityProbe(_logger);
     }
 
@@ -180,7 +182,13 @@ public sealed class SessionManager
             {
                 if (_sessions.TryGetValue(key, out var session))
                 {
-                    Touch(session, processes, now);
+                    if (Touch(session, processes, now) && !Paused)
+                    {
+                        // Neustart im Puffer: ein neuer Spielstart. Hat der Nutzer HDR in der Zwischenzeit von Hand
+                        // ausgeschaltet, wieder einschalten wie bei jedem anderen Start (E41).
+                        await EnsureOnAsync(session, SessionTrigger.ProcessDetected, cancellationToken).ConfigureAwait(false);
+                    }
+
                     continue;
                 }
 
@@ -452,6 +460,13 @@ public sealed class SessionManager
             session.Phase = SessionPhase.Launching;
             ClearEnding(session);
             session.LaunchRequestedAt = _clock.UtcNow;
+            if (trigger == SessionTrigger.LauncherSignal)
+            {
+                // Der Launcher startet das Spiel gleich, unabhängig von HdrPilot: ab jetzt kann es laufen, also beim
+                // folgenden Einschalten keine Tastenkürzel-Notlösung (E66). Bei neuen Sitzungen sorgt ihr Auslöser dafür.
+                session.LaunchCommandIssued = true;
+            }
+
             _logger.LogInformation("Erneuter {Trigger} für \"{Game}\": Sitzung wartet wieder auf den Spielprozess.", TriggerText(trigger), game.Name);
         }
 
@@ -720,10 +735,11 @@ public sealed class SessionManager
 
                 if (!_sessions.TryGetValue(key, out var session))
                 {
+                    // Ohne FirstProcessAt: wie lange das Spiel schon läuft, ist unbekannt (womöglich Stunden). Eine
+                    // übernommene Sitzung gilt deshalb nie als kurz und endet mit der normalen Nachlaufzeit.
                     session = new ActiveSession(key, game.Name, SessionTrigger.Recovery, _clock.UtcNow, game.RestoreAfter)
                     {
                         Phase = SessionPhase.Running,
-                        FirstProcessAt = _clock.UtcNow,
                         ProcessIds = processes.Select(p => p.ProcessId).ToList(),
                     };
                     _sessions[key] = session;
@@ -746,7 +762,8 @@ public sealed class SessionManager
         Persist();
     }
 
-    private void Touch(ActiveSession session, List<ProcessInfo> processes, DateTimeOffset now)
+    /// <returns>True, wenn das Spiel im Neustart-Puffer neu gestartet wurde.</returns>
+    private bool Touch(ActiveSession session, List<ProcessInfo> processes, DateTimeOffset now)
     {
         session.ProcessIds = processes.Select(p => p.ProcessId).ToList();
         if (session.Phase == SessionPhase.Launching)
@@ -760,11 +777,15 @@ public sealed class SessionManager
         }
         else if (session.Phase == SessionPhase.Ending)
         {
+            var restartedInBuffer = session.BufferUntil is not null;
             session.Phase = SessionPhase.Running;
             _logger.LogInformation(
-                "\"{Game}\" läuft wieder, {Wait} abgebrochen.", session.Name, session.BufferUntil is null ? "Nachlaufzeit" : "Neustart-Puffer");
+                "\"{Game}\" läuft wieder, {Wait} abgebrochen.", session.Name, restartedInBuffer ? "Neustart-Puffer" : "Nachlaufzeit");
             ClearEnding(session);
+            return restartedInBuffer;
         }
+
+        return false;
     }
 
     /// <summary>
@@ -843,6 +864,19 @@ public sealed class SessionManager
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Abfrage „Vollbild-Anwendung läuft“ fehlgeschlagen.");
+            return false;
+        }
+    }
+
+    private bool AreNotificationsSuppressed()
+    {
+        try
+        {
+            return _notificationsSuppressed();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Abfrage „Hinweise werden angezeigt“ fehlgeschlagen.");
             return false;
         }
     }
@@ -973,11 +1007,11 @@ public sealed class SessionManager
             return;
         }
 
-        // Während einer Vollbild-Anwendung zeigt das Tray keine Hinweise (nur Protokoll): dann bei einer späteren
-        // Prüfung nachholen, sonst ginge der einzige Hinweis der Sitzung verloren.
-        if (IsFullscreenAppRunning())
+        // Während einer Vollbild-Anwendung, bei gesperrtem Bildschirm oder Bildschirmschoner zeigt das Tray keine Hinweise
+        // (nur Protokoll): dann bei einer späteren Prüfung nachholen, sonst ginge der einzige Hinweis der Sitzung verloren.
+        if (AreNotificationsSuppressed())
         {
-            _logger.LogDebug("\"{Game}\" scheint zu hängen; der Hinweis wartet, bis keine Vollbild-Anwendung mehr läuft.", session.Name);
+            _logger.LogDebug("\"{Game}\" scheint zu hängen; der Hinweis wartet, bis Hinweise wieder angezeigt werden.", session.Name);
             return;
         }
 

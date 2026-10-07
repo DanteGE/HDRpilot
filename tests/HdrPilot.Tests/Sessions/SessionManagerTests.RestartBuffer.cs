@@ -13,12 +13,15 @@ public sealed partial class SessionManagerTests
     private readonly FakeActivityProbe _activity = new();
     private bool _fullscreen;
     private int _fullscreenQueries;
+    private bool _userAway;
+    private int _suppressedQueries;
     private SessionManagerOptions? _options;
 
     /// <summary>
-    /// Optionen der Attrappe: Vollbild-Abfrage und Prozessaktivität aus dem Test. Die älteren Tests prüfen die eingestellte
-    /// Nachlaufzeit und laufen ohne Neustart-Puffer; <see cref="UseRestartBuffer"/> schaltet ihn mit dem Wert für den
-    /// Betrieb ein (vor dem ersten Zugriff auf <see cref="Manager"/>).
+    /// Optionen der Attrappe: Vollbild-Abfrage, Hinweis-Zustand der Shell (Vollbild oder Nutzer nicht da) und
+    /// Prozessaktivität aus dem Test. Die älteren Tests prüfen die eingestellte Nachlaufzeit und laufen ohne
+    /// Neustart-Puffer; <see cref="UseRestartBuffer"/> schaltet ihn mit dem Wert für den Betrieb ein (vor dem ersten
+    /// Zugriff auf <see cref="Manager"/>).
     /// </summary>
     private SessionManagerOptions Options => _options ??= FakeOptions(TimeSpan.Zero);
 
@@ -29,6 +32,11 @@ public sealed partial class SessionManagerTests
         {
             _fullscreenQueries++;
             return _fullscreen;
+        },
+        NotificationsSuppressed = () =>
+        {
+            _suppressedQueries++;
+            return _fullscreen || _userAway;
         },
         ActivityProbe = _activity,
     };
@@ -66,6 +74,7 @@ public sealed partial class SessionManagerTests
         Assert.Equal(TimeSpan.FromSeconds(30), o.HangCheckInterval);
         Assert.Equal(TimeSpan.FromMinutes(2), o.HangThreshold);
         Assert.Null(o.FullscreenAppRunning); // Betrieb: SHQueryUserNotificationState
+        Assert.Null(o.NotificationsSuppressed); // Betrieb: SHQueryUserNotificationState (auch gesperrt, Bildschirmschoner)
         Assert.Null(o.ActivityProbe); // Betrieb: NtProcessActivityProbe
     }
 
@@ -156,6 +165,86 @@ public sealed partial class SessionManagerTests
         await Poll();
         Assert.False(PrimaryOn);
         Assert.Equal(0, _fullscreenQueries);
+    }
+
+    [Fact]
+    public async Task Restart_within_the_buffer_switches_hdr_on_again_after_a_manual_switch_off()
+    {
+        // Im Puffer schaltet der Nutzer HDR von Hand aus („HDR jetzt ausschalten“ ändert keine Sitzung) und startet das
+        // Spiel dann neu: wie jeder andere Start schaltet das HDR wieder ein (E41), sonst liefe der ganze Neustart in SDR.
+        UseRestartBuffer();
+        _config.AddGame("1", DirA);
+        await Poll();
+        await RunGameFor(60);
+        await Poll(30);
+        _hdr[FakeHdrController.Primary].HdrOn = false;
+
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.Equal(SessionPhase.Running, Assert.Single(Manager.Sessions).Phase);
+        Assert.True(PrimaryOn);
+        Assert.Equal(2, _hdr.SetCalls(enable: true));
+        Assert.Equal([false, false], _hdr.HotkeyAllowed); // das Spiel läuft: nie die Notlösung
+    }
+
+    [Fact]
+    public async Task Restart_within_the_buffer_while_paused_leaves_a_manual_switch_off_alone()
+    {
+        UseRestartBuffer();
+        _config.AddGame("1", DirA);
+        await Poll();
+        await RunGameFor(60);
+        Manager.Paused = true;
+        _hdr[FakeHdrController.Primary].HdrOn = false;
+
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.Equal(SessionPhase.Running, Assert.Single(Manager.Sessions).Phase);
+        Assert.False(PrimaryOn);
+        Assert.Equal(1, _hdr.SetCalls(enable: true));
+    }
+
+    [Fact]
+    public async Task Process_back_within_the_grace_period_leaves_a_manual_switch_off_alone()
+    {
+        // Nur der Neustart im Puffer gilt als neuer Start. Kommt nach einer langen Sitzung innerhalb der Nachlaufzeit
+        // wieder ein Prozess (etwa Starter-Kette), bleibt eine Umschaltung von Hand wie bisher unangetastet.
+        UseRestartBuffer();
+        _config.AddGame("1", DirA);
+        await Poll();
+        await RunGameFor(6 * 60);
+        _hdr[FakeHdrController.Primary].HdrOn = false;
+
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.True(_log.Contains(LogLevel.Information, "läuft wieder, Nachlaufzeit abgebrochen"));
+        Assert.False(PrimaryOn);
+        Assert.Equal(1, _hdr.SetCalls(enable: true));
+    }
+
+    [Fact]
+    public async Task Adopted_session_never_counts_as_short()
+    {
+        // HDRpilot wird während eines langen Spiels neu gestartet (etwa neue Version eingespielt). Wie lange das Spiel
+        // schon läuft, ist unbekannt: endet es kurz danach, gilt die Nachlaufzeit, nicht der Neustart-Puffer.
+        UseRestartBuffer();
+        _hdr[FakeHdrController.Primary].HdrOn = true;
+        _config.AddGame("1", DirA);
+        _store.Preset(new DisplayClaimState { MonitorDevicePath = FakeHdrController.Primary, FriendlyName = "MAG", WasHdrOn = false, Games = ["Steam:1"] });
+        var pid = _processes.StartExe(ExeA);
+        await Poll(60);
+        Assert.Equal(SessionTrigger.Recovery, Assert.Single(Manager.Sessions).Trigger);
+
+        _processes.Stop(pid);
+        await Poll();
+        Assert.Null(Assert.Single(Manager.Sessions).BufferUntil);
+        await Poll(10);
+
+        Assert.False(PrimaryOn);
+        Assert.Empty(Manager.Sessions);
     }
 
     [Theory]

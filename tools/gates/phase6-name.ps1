@@ -73,6 +73,13 @@ $help = & $cli --help | Out-String
 Check ($help -cmatch 'HDRpilot' -and (Find-Old $help).Count -eq 0) 'Kommandozeilen-Hilfe nennt HDRpilot'
 $publish = [IO.File]::ReadAllText((Join-Path $root 'tools\publish.ps1'), [Text.Encoding]::UTF8)
 Check ($publish -cmatch 'HDRpilot – Lizenzhinweise' -and $publish -cmatch "Exe = 'HDRpilot\.exe'") 'Auslieferung: HDRpilot.exe und Lizenzkopf HDRpilot'
+# Ganzer Text der Lizenzhinweise: im Skript und, falls schon veröffentlicht, in der ausgelieferten Datei
+$noticeBlock = [regex]::Match($publish, '(?s)\$notice = @\((.*?)\r?\n\[IO\.File\]::WriteAllText').Groups[1].Value
+$noticeHits = @()
+foreach ($h in (Find-Old $noticeBlock)) { $noticeHits += "publish.ps1: $h" }
+$shipped = Join-Path $root 'artifacts\publish\HDRpilot\THIRD-PARTY-NOTICES.txt'
+if (Test-Path $shipped) { foreach ($h in (Find-Old ([IO.File]::ReadAllText($shipped, [Text.Encoding]::UTF8)))) { $noticeHits += "ausgeliefert: $h" } }
+Check ($noticeBlock.Length -gt 1000 -and $noticeHits.Count -eq 0) ("Lizenzhinweise ohne 'HdrPilot' ({0} Reste{1}) {2}" -f $noticeHits.Count, $(if (Test-Path $shipped) { ', inkl. ausgelieferter Datei' } else { '' }), (($noticeHits | Select-Object -First 3) -join ' | '))
 
 # 7. Gegenprobe
 Check ((Find-Old 'Willkommen bei HdrPilot, Local\HdrPilot.Instance.x').Count -eq 1) 'Gegenprobe: Rest wird gefunden, interner Name nicht'

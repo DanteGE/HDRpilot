@@ -81,8 +81,8 @@ Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
 
 - **HDR jetzt einschalten** / **HDR jetzt ausschalten**
 - **Automatik pausieren**: keine neuen automatischen Schaltungen; laufende Spiele werden noch normal zurückgestellt.
-  „Mit HDR starten“ und „(HDR)“-Verknüpfungen schalten weiterhin. Die Pause gilt, bis du sie aufhebst oder HDRpilot
-  neu startet; sie wird nicht gespeichert.
+  „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Die Pause gilt, bis du sie
+  aufhebst oder HDRpilot neu startet; sie wird nicht gespeichert.
 - **Spieleliste öffnen**, **Einstellungen**, **Protokollordner öffnen**
 - **HDRpilot beenden**
 
@@ -136,8 +136,9 @@ Einschalten, startet das Spiel trotzdem. Doppelte Startanforderungen (doppelter 
 
 **Steam-Startoption:** Mit `"…\HDRpilot.exe" --wrap -- %command%` in den Startoptionen eines Steam-Spiels startet Steam
 zuerst HDRpilot. Läuft HDRpilot, schaltet es HDR ein, wartet die Bestätigung und noch 1,5 s ab, startet dann das Spiel
-und beendet sich sofort (es hält nichts am Spiel fest). Läuft HDRpilot nicht oder ist das Spiel unbekannt, startet das
-Spiel sofort ohne HDR.
+und beendet sich sofort (es hält nichts am Spiel fest). Wie bei „Mit HDR starten“ gilt das auch bei pausierter
+Automatik und für Spiele ohne „HDR automatisch“. Läuft HDRpilot nicht oder ist das Spiel unbekannt, startet das Spiel
+sofort ohne HDR.
 
 **Zurückstellen:** Vor dem Schalten merkt sich HDRpilot den HDR-Zustand jedes betroffenen Bildschirms und speichert
 ihn sofort. Wenn das letzte HDR-Spiel beendet ist und die Nachlaufzeit (10 s) verstrichen ist, stellt HDRpilot diesen
@@ -148,12 +149,14 @@ HDRpilot das nicht; am Ende schaltet es HDR nur aus, wenn es vor dem Spiel aus w
 
 **Neustart-Puffer:** Endet ein Spiel weniger als 5 Minuten nach dem Start (typisch für Hänger oder Abstürze) und hat
 HDRpilot HDR dafür eingeschaltet, bleibt HDR 3 Minuten an statt nur die Nachlaufzeit. Startest du das Spiel in dieser
-Zeit neu, ist HDR schon an. Läuft beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot mit dem
-Zurückstellen, bis sie endet (höchstens 30 Minuten).
+Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es wieder ein). Läuft
+beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30
+Minuten). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
 
 **Hängender Spielprozess:** Läuft ein Spiel nach dem Spielen unsichtbar weiter (kein Fenster, keine Rechenzeit), lässt
 HDRpilot HDR an, weil das Spiel ja noch läuft. Nach 2 Minuten ohne jede Aktivität erscheint einmal ein Hinweis, dass das
-Spiel im Hintergrund zu hängen scheint. HDRpilot beendet nichts selbst.
+Spiel im Hintergrund zu hängen scheint; läuft gerade ein Vollbild-Programm oder ist der Bildschirm gesperrt, wartet
+der Hinweis, bis er wieder angezeigt werden kann. HDRpilot beendet nichts selbst.
 
 **Beenden, Absturz oder Neustart:** Wird HDRpilot während eines Spiels oder in der Nachlaufzeit beendet (auch über
 „HDRpilot beenden“, durch einen Absturz oder beim Abmelden), bleibt HDR zunächst an. Beim nächsten Start stellt

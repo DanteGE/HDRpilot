@@ -1,16 +1,29 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
+using HdrPilot.App.Services;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Util;
 
 namespace HdrPilot.App.ViewModels.Library;
 
+/// <summary>Wo die Rückmeldung der letzten Aktion steht: beim Starten oder bei den EXE-Dateien.</summary>
+public enum DetailMessageArea
+{
+    /// <summary>Starten, Verknüpfungen, Steam-Startoption.</summary>
+    Launch,
+
+    /// <summary>EXE hinzufügen, entfernen, wieder aufnehmen, neu lernen.</summary>
+    Executables,
+}
+
 /// <summary>
-/// Detailbereich des gewählten Spiels: Automatik, Bildschirm, Zurückstellen, EXE-Dateien (mit Herkunft), Start über
-/// HdrPilot, Verknüpfungen und Entfernen (nur manuelle Spiele). Änderungen gehen sofort in die Konfiguration.
+/// Detailbereich des gewählten Spiels: Start über HdrPilot, Verknüpfungen, Steam-Startoption (nur Steam), Automatik,
+/// Bildschirm, Zurückstellen, EXE-Dateien (mit Herkunft) und Entfernen (nur manuelle Spiele). Änderungen gehen sofort
+/// in die Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
 /// </summary>
 public sealed class GameDetailsViewModel : ObservableObject
 {
@@ -21,6 +34,7 @@ public sealed class GameDetailsViewModel : ObservableObject
     private ExecutableItemViewModel? _selectedExecutable;
     private string? _message;
     private StatusKind _messageKind;
+    private DetailMessageArea _messageArea;
     private bool _isLaunching;
     private bool _suppressWrites;
 
@@ -38,6 +52,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         LaunchCommand = new AsyncRelayCommand(LaunchAsync, () => !_isLaunching && Item.IsInstalled && CanLaunchGame);
         CreateDesktopShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: true), () => CanLaunchGame);
         CreateStartMenuShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: false), () => CanLaunchGame);
+        CopySteamLaunchOptionCommand = new RelayCommand(CopySteamLaunchOption, () => IsSteam);
         RemoveGameCommand = new AsyncRelayCommand(RemoveGameAsync, () => Item.IsManual);
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
@@ -51,6 +66,9 @@ public sealed class GameDetailsViewModel : ObservableObject
     public bool HasInstallDir => !string.IsNullOrWhiteSpace(_config.InstallDir);
 
     public bool IsManual => Item.IsManual;
+
+    /// <summary>Spiel aus Steam: Die Steam-Startoption („HdrPilot.exe --wrap -- %command%“) wird angeboten.</summary>
+    public bool IsSteam => Item.Source == GameSource.Steam;
 
     /// <summary>
     /// Ohne Start-Befehl (eigener Eintrag als Ordner mit keiner oder mehreren EXEs) kann HdrPilot das Spiel weder starten
@@ -140,6 +158,13 @@ public sealed class GameDetailsViewModel : ObservableObject
 
     public bool HasMessage => !string.IsNullOrEmpty(_message);
 
+    /// <summary>Abschnitt, in dem die Rückmeldung steht (in der Nähe der Schaltfläche, die sie ausgelöst hat).</summary>
+    public DetailMessageArea MessageArea => _messageArea;
+
+    public bool HasLaunchMessage => HasMessage && _messageArea == DetailMessageArea.Launch;
+
+    public bool HasExecutablesMessage => HasMessage && _messageArea == DetailMessageArea.Executables;
+
     public bool IsLaunching
     {
         get => _isLaunching;
@@ -165,6 +190,9 @@ public sealed class GameDetailsViewModel : ObservableObject
     public RelayCommand CreateDesktopShortcutCommand { get; }
 
     public RelayCommand CreateStartMenuShortcutCommand { get; }
+
+    /// <summary>Legt die Steam-Startoption in die Zwischenablage (nur Steam-Spiele).</summary>
+    public RelayCommand CopySteamLaunchOptionCommand { get; }
 
     public AsyncRelayCommand RemoveGameCommand { get; }
 
@@ -332,10 +360,39 @@ public sealed class GameDetailsViewModel : ObservableObject
     private static bool SameEntry(string a, string b) =>
         string.Equals(NormalizeEntry(a), NormalizeEntry(b), StringComparison.OrdinalIgnoreCase);
 
-    private void ShowMessage(string text, StatusKind kind)
+    private void ShowMessage(string text, StatusKind kind, DetailMessageArea area)
     {
+        _messageArea = area;
         MessageKind = kind;
         Message = text;
+        OnPropertyChanged(nameof(MessageArea));
+        OnPropertyChanged(nameof(HasLaunchMessage));
+        OnPropertyChanged(nameof(HasExecutablesMessage));
+    }
+
+    private void CopySteamLaunchOption()
+    {
+        if (!IsSteam)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_owner.Context.ExecutablePath))
+        {
+            ShowMessage(LibraryText.Format(LibraryStrings.Steam_LaunchOptionFailed, LibraryStrings.Shortcut_NoTarget), StatusKind.Error, DetailMessageArea.Launch);
+            return;
+        }
+
+        try
+        {
+            _owner.Context.Clipboard.SetText(SteamLaunchOption.Build(_owner.Context.ExecutablePath));
+            ShowMessage(LibraryStrings.Steam_LaunchOptionCopied, StatusKind.Success, DetailMessageArea.Launch);
+        }
+        catch (Exception ex) when (ex is ExternalException or InvalidOperationException or ArgumentException)
+        {
+            // Zwischenablage gerade von einem anderen Programm belegt.
+            ShowMessage(LibraryText.Format(LibraryStrings.Steam_LaunchOptionFailed, ex.Message), StatusKind.Error, DetailMessageArea.Launch);
+        }
     }
 
     private async Task AddExecutableAsync()
@@ -359,7 +416,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         }))
         {
             SelectedExecutable = Executables.FirstOrDefault(e => SameEntry(e.Path, path));
-            ShowMessage(LibraryText.Format(LibraryStrings.Exe_Added, System.IO.Path.GetFileName(path)), StatusKind.Success);
+            ShowMessage(LibraryText.Format(LibraryStrings.Exe_Added, System.IO.Path.GetFileName(path)), StatusKind.Success, DetailMessageArea.Executables);
         }
     }
 
@@ -381,7 +438,7 @@ public sealed class GameDetailsViewModel : ObservableObject
             }
         }))
         {
-            ShowMessage(LibraryText.Format(LibraryStrings.Exe_Removed, exe.FileName), StatusKind.Info);
+            ShowMessage(LibraryText.Format(LibraryStrings.Exe_Removed, exe.FileName), StatusKind.Info, DetailMessageArea.Executables);
         }
     }
 
@@ -395,7 +452,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         var path = exe.Path;
         if (await _owner.WriteGameAsync(Item.Key, g => g.ExcludedExecutables.RemoveAll(x => ExcludeMatches(x, path) || SameEntry(x, path))))
         {
-            ShowMessage(LibraryText.Format(LibraryStrings.Exe_Included, exe.FileName), StatusKind.Success);
+            ShowMessage(LibraryText.Format(LibraryStrings.Exe_Included, exe.FileName), StatusKind.Success, DetailMessageArea.Executables);
         }
     }
 
@@ -403,14 +460,14 @@ public sealed class GameDetailsViewModel : ObservableObject
     {
         if (await _owner.WriteGameAsync(Item.Key, g => g.DetectedExecutables.Clear()))
         {
-            ShowMessage(LibraryStrings.Exe_RelearnDone, StatusKind.Info);
+            ShowMessage(LibraryStrings.Exe_RelearnDone, StatusKind.Info, DetailMessageArea.Executables);
         }
     }
 
     private async Task LaunchAsync()
     {
         IsLaunching = true;
-        ShowMessage(LibraryStrings.Launch_Running, StatusKind.Info);
+        ShowMessage(LibraryStrings.Launch_Running, StatusKind.Info, DetailMessageArea.Launch);
         try
         {
             var outcome = await _owner.Context.LaunchAsync(Item.Key);
@@ -420,16 +477,17 @@ public sealed class GameDetailsViewModel : ObservableObject
                     outcome.HdrConfirmedAt is { } t
                         ? LibraryText.Format(LibraryStrings.Launch_Started, t.ToLocalTime().ToString("T", CultureInfo.CurrentCulture))
                         : LibraryStrings.Launch_StartedPlain,
-                    StatusKind.Success);
+                    StatusKind.Success,
+                    DetailMessageArea.Launch);
             }
             else
             {
-                ShowMessage(LibraryText.Format(LibraryStrings.Launch_Failed, outcome.Message), StatusKind.Error);
+                ShowMessage(LibraryText.Format(LibraryStrings.Launch_Failed, outcome.Message), StatusKind.Error, DetailMessageArea.Launch);
             }
         }
         catch (Exception ex)
         {
-            ShowMessage(LibraryText.Format(LibraryStrings.Launch_Failed, ex.Message), StatusKind.Error);
+            ShowMessage(LibraryText.Format(LibraryStrings.Launch_Failed, ex.Message), StatusKind.Error, DetailMessageArea.Launch);
         }
         finally
         {
@@ -444,11 +502,11 @@ public sealed class GameDetailsViewModel : ObservableObject
             var path = desktop
                 ? _owner.Context.Shortcuts.CreateDesktopShortcut(_config)
                 : _owner.Context.Shortcuts.CreateStartMenuShortcut(_config);
-            ShowMessage(LibraryText.Format(LibraryStrings.Shortcut_Created, path), StatusKind.Success);
+            ShowMessage(LibraryText.Format(LibraryStrings.Shortcut_Created, path), StatusKind.Success, DetailMessageArea.Launch);
         }
         catch (Exception ex)
         {
-            ShowMessage(LibraryText.Format(LibraryStrings.Shortcut_Failed, ex.Message), StatusKind.Error);
+            ShowMessage(LibraryText.Format(LibraryStrings.Shortcut_Failed, ex.Message), StatusKind.Error, DetailMessageArea.Launch);
         }
     }
 

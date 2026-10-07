@@ -34,6 +34,13 @@ public interface IGameIconService
     void ClearCache();
 }
 
+/// <summary>Text in die Zwischenablage legen (in Tests ersetzbar, damit kein Test die echte Zwischenablage berührt).</summary>
+public interface IClipboard
+{
+    /// <summary>Ersetzt den Inhalt der Zwischenablage. Ist sie gerade belegt, kommt eine ExternalException.</summary>
+    void SetText(string text);
+}
+
 /// <summary>Autostart über HKCU\Software\Microsoft\Windows\CurrentVersion\Run.</summary>
 public interface IAutostartService
 {

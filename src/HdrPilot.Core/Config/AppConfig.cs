@@ -49,6 +49,19 @@ public sealed class AppSettings
 
     /// <summary>Pflegbare Ausschlussliste für Hilfsprozesse (Glob-Muster). Null: Standardliste.</summary>
     public List<string>? HelperExecutablePatterns { get; set; }
+
+    /// <summary>
+    /// Sortierung der Spielebibliothek: "LastPlayed" (zuletzt gespielt zuerst) oder null für den Standard (Name).
+    /// Bewusst Text statt Aufzählung: ein unbekannter Wert (etwa aus einer neueren Version) macht die Datei nicht
+    /// unlesbar, sondern gilt als Standard.
+    /// </summary>
+    public string? LibrarySortOrder { get; set; }
+
+    /// <summary>
+    /// Anteil des Detailbereichs an der Breite beider Spalten der Spielebibliothek (0 bis 1). Null: Standard.
+    /// Die Oberfläche begrenzt ihn beim Öffnen auf die aktuelle Fenstergröße.
+    /// </summary>
+    public double? LibraryDetailsRatio { get; set; }
 }
 
 /// <summary>Einstellungen je Spiel. Hängt an Quelle und ID, nicht am Namen.</summary>

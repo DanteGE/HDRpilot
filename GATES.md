@@ -119,38 +119,39 @@ und die EXPECT-Marke ausgibt.
 
 ## Phase 4: Oberfläche und Tray
 
-- [ ] G4.1: Alle Punkte aus „Oberfläche“ bedienbar (UI-Automation: Hauptfenster, Suche, Quellenfilter, Auswahl, Detail-Schalter, Listen-Schalter, Einstellungen, weitergereichte Tray-Befehle)
+- [x] G4.1: Alle Punkte aus „Oberfläche“ bedienbar (UI-Automation: Hauptfenster, Suche, Quellenfilter, Auswahl, Detail-Schalter, Listen-Schalter, Einstellungen, weitergereichte Tray-Befehle)
   CHECK: ps tools\gates\phase4-ui.ps1
   EXPECT: PHASE4_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 13:33 exit 0, alle AutomationIds vorhanden; Suche, Quellenfilter, Auswahl, Detail- und Listen-Schalter schreiben die Konfiguration; weitergereichte Befehle --open/--pause/--exit wirken, PHASE4_UI_OK. Sichtbares Tray-Menü: im gemeinsamen Test G4.5
 
-- [ ] G4.2: Einstellungen überleben einen Neustart
+- [x] G4.2: Einstellungen überleben einen Neustart
   CHECK: ps tools\gates\phase4-ui.ps1
   EXPECT: PHASE4_PERSIST_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 13:33 exit 0, nach Neustart Nachlaufzeit=15, Intervall=750, Benachrichtigungen=Off, Spiel-Schalter erhalten, PHASE4_PERSIST_OK
 
-- [ ] G4.3: Nur eine Instanz; zweiter Aufruf mit --run reicht an die laufende Instanz weiter; HDR ist vor dem Prozessstart aktiv (Registry-Zeitpunkt gegen Prozess-Startzeit, Protokoll-Zeitstempel)
+- [x] G4.3: Nur eine Instanz; zweiter Aufruf mit --run reicht an die laufende Instanz weiter; HDR ist vor dem Prozessstart aktiv (Registry-Zeitpunkt gegen Prozess-Startzeit, Protokoll-Zeitstempel)
   CHECK: ps tools\gates\phase4-run.ps1
   EXPECT: PHASE4_SINGLE_INSTANCE_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 13:39 exit 0, zweite Instanz beendet sich und reicht --run weiter; HDR an laut Registry 13:39:17.698, Prozessstart 13:39:18.077 (Vorlauf 379 ms); Protokoll HDR bestätigt 17.986 <= Start 17.986 <= erkannt 18.257; HDR aus 11011 ms nach Ende, PHASE4_SINGLE_INSTANCE_OK, PHASE4_RUN_OK
 
-- [ ] G4.4: Alle UI-Texte in Ressourcendateien (keine festen Texte in XAML, alle verwendeten Schlüssel vorhanden)
+- [x] G4.4: Alle UI-Texte in Ressourcendateien (keine festen Texte in XAML, alle verwendeten Schlüssel vorhanden)
   CHECK: ps tools\gates\phase4-resources.ps1
   EXPECT: PHASE4_RESOURCES_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 13:33 exit 0, keine festen Texte in XAML (erlaubt: HdrPilot, HDR, Logo-Zeichen H), alle 331 Schlüsselverwendungen vorhanden, 2 Protokolltexte von Hand geprüft, PHASE4_RESOURCES_OK
 
 - [ ] G4.5: Start über die App und über die erzeugte Verknüpfung funktioniert für je ein Spiel pro installiertem Launcher; Protokoll belegt mit Zeitstempeln, dass HDR vor dem Prozessstart aktiv war (gemeinsamer Test mit dem Nutzer)
   EVIDENCE: pending
 
-- [ ] G4.6: Wiederanlauf mit der App (hart beenden, Spiel schließen, neu starten: HDR zurückgestellt) und Leerlauf der App ohne Fenster sparsam
+- [x] G4.6: Wiederanlauf mit der App (hart beenden, Spiel schließen, neu starten: HDR zurückgestellt) und Leerlauf der App ohne Fenster sparsam
   CHECK: ps tools\gates\phase4-crash.ps1
   EXPECT: PHASE4_CRASH_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 13:35 exit 0, HDR nach hartem Beenden an, nach Neustart zurückgestellt, Zustandsdatei gelöscht; Leerlauf ohne Fenster CPU 0,391 % eines Kerns (Gegenmessung 2x90 s: 0,10-0,17 %), Handles 618 -> 606, Arbeitssatz 50,9 MB, privat 76,9 MB (vorher 95 MB, E59), PHASE4_CRASH_OK
 
-- [ ] G4.7: Neubau ohne Warnungen, alle Tests aller Testprojekte grün
+- [x] G4.7: Neubau ohne Warnungen, alle Tests aller Testprojekte grün
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 13:31 exit 0, build.ps1 BUILD_OK_0_WARNINGS, 2 Testprojekte 1072/1072 erfolgreich, TESTS_OK 1072
+
 ## Phase 5: Auslieferung
 
 - [ ] G5.1: Einzelne, eigenständige EXE veröffentlicht und lauffähig (ohne installierte .NET-Runtime-Abhängigkeit)

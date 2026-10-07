@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Hintergrund-App: Der GC gibt belegten Speicher eher zurück (gemessen rund 18 MB weniger privater Speicher, E59). -->
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\HdrPilot.ico" />
   </ItemGroup>
 

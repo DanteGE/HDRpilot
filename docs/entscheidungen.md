@@ -203,3 +203,48 @@ Englisch später ergänzt werden kann. Protokolltexte bleiben im Code (nicht Tei
 
 Widerlegt (kein Fehler): „Zurückstellen“-Einstellung während einer Sitzung ändern wirkt ab dem nächsten Spielstart
 (bewusste Lesart); Wettlauf beim Neuaufbau der Zuordnung war nicht erreichbar (trotzdem gehärtet, E43).
+
+## Phase 4: Oberfläche und Tray (2026-10-07)
+
+**E49 Eigenes Testprojekt `HdrPilot.App.Tests`:** Die App heißt `HdrPilot.dll`, die Kommandozeile `hdrpilot.dll`; im
+selben Ausgabeordner überschreiben sie sich (Dateisystem ohne Groß-/Kleinschreibung). Kern- und CLI-Tests bleiben in
+`HdrPilot.Tests`, App-Tests laufen getrennt; `test.ps1` zählt beide Projekte.
+
+**E50 Einzelinstanz über benannten Mutex plus Nachrichtenfenster:** `Local\HdrPilot.Instance.<id>` entscheidet, ein
+unsichtbares Nachrichtenfenster `HdrPilot.Commands.<id>` nimmt weitergereichte Befehle (`--run`, `--open`, `--pause`,
+`--exit`) per WM_COPYDATA an. Keine Named Pipe, also keine Netzwerk-Oberfläche und keine Zugriffsrechte-Fragen. Die
+`<id>` hängt am Konfigurationsordner, damit Prüfläufe mit `--config-dir` die echte Instanz nicht stören.
+
+**E51 Aussehen:** WPF-Fluent (`ThemeMode="System"`) als Grundlage, darüber eigene Farb-Token (`Tokens.Dark/Light.xaml`),
+die der ThemeManager nach der Windows-Einstellung „App-Modus“ tauscht, auch im laufenden Betrieb. Eigene Fensterrahmen
+(ChromeWindow) mit abgerundeten Ecken und dunkler Titelleiste über DWM.
+
+**E52 Gamer-Oberfläche mit Ressourcen-Regeln:** Beim Start entsteht kein Fenster, nur das Tray-Symbol. Fenster werden
+bei Bedarf gebaut und beim Schließen ganz verworfen (Symbol-Zwischenspeicher geleert, GC und Arbeitssatz-Rückgabe).
+Dauer-Animationen laufen nur, solange das Fenster sichtbar, aktiv und nicht minimiert ist.
+
+**E53 Animationen folgen „Animationseffekte“ von Windows** (`SystemParameters.ClientAreaAnimation`) und brauchen
+Grafik-Beschleunigung (RenderCapability.Tier > 0); sonst springen Zustände ohne Übergang. Gilt auch für die gemeinsamen
+Steuerelemente (Schalter, Akzent-Knopf) über `Motion.Instance`.
+
+**E54 Bildschirmfoto-Modus** `HdrPilot.exe --snapshot <ordner> --config-dir <ordner>` rendert die Fenster unsichtbar
+als PNG (für die Durchsicht der Oberfläche ohne Bildschirm-Aufnahme). Kein Teil der normalen Bedienung.
+
+**E55 Speicherfehler der Konfiguration sind sichtbar:** `ConfigService` wirft `ConfigSaveException` und übernimmt die
+Änderung nicht; Oberfläche und Tray melden „nicht gespeichert“ statt still einen anderen Zustand anzuzeigen.
+
+**E56 Bibliothek wird bei jedem Start im Hintergrund neu eingelesen** (nach dem Start der Automatik), damit neue Spiele
+markiert erscheinen, ohne dass jemand „Neu einlesen“ drückt. Danach wird der Speicher zurückgegeben, wenn kein Fenster
+offen ist (das Einlesen liest z. B. Steams rund 15 MB große appinfo.vdf).
+
+**E57 Autostart über `HKCU\…\Run`:** Beim Start wird ein vorhandener, aber auf einen alten Pfad zeigender Eintrag
+korrigiert (EXE verschoben), nur wenn Autostart in der Konfiguration an ist. Mit `--config-dir` wird die Registry nie
+angefasst (`ConfigOnlyAutostartService`), damit Prüfskripte den echten Autostart nicht verändern.
+
+**E58 Verknüpfungen heißen „<Spiel> (HDR).lnk“** (Desktop bzw. Startmenü\Programme) und rufen
+`HdrPilot.exe --run <Quelle:ID>` auf, mit dem Symbol der Spiel-EXE. Der Zusatz „(HDR)“ verhindert Namensgleichheit mit
+den Verknüpfungen der Launcher.
+
+**E59 `System.GC.ConserveMemory = 5`** in der Laufzeit-Konfiguration der App: im Leerlauf ohne Fenster privat rund
+77 statt 95 MB, Arbeitssatz unverändert um 42 MB. Die Leerlauf-CPU blieb gleich (je zwei Messungen über 90 s,
+0,10–0,17 % eines Kerns mit und ohne).

@@ -199,7 +199,17 @@ public sealed partial class AppServices : IAsyncDisposable
         finally
         {
             Volatile.Write(ref _scanRunning, 0);
-            RaiseOnUi(() => ScanStateChanged?.Invoke(this, EventArgs.Empty));
+            RaiseOnUi(() =>
+            {
+                ScanStateChanged?.Invoke(this, EventArgs.Empty);
+
+                // Das Einlesen liest große Launcher-Dateien (Steam appinfo.vdf rund 15 MB): danach Speicher zurückgeben,
+                // wenn kein Fenster offen ist, damit HdrPilot im Hintergrund schlank bleibt.
+                if (_mainWindow is null && _settingsWindow is null)
+                {
+                    ReleaseUiMemory();
+                }
+            });
         }
     }
 

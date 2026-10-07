@@ -119,22 +119,22 @@ und die EXPECT-Marke ausgibt.
 
 ## Phase 4: Oberfläche und Tray
 
-- [ ] G4.1: Alle Punkte aus „Oberfläche“ bedienbar (UI-Automation-Rauchtest über Tray-Menü, Hauptfenster, Spiel-Details, Einstellungen)
+- [ ] G4.1: Alle Punkte aus „Oberfläche“ bedienbar (UI-Automation: Hauptfenster, Suche, Quellenfilter, Auswahl, Detail-Schalter, Listen-Schalter, Einstellungen, weitergereichte Tray-Befehle)
   CHECK: ps tools\gates\phase4-ui.ps1
   EXPECT: PHASE4_UI_OK
   EVIDENCE: pending
 
 - [ ] G4.2: Einstellungen überleben einen Neustart
-  CHECK: ps tools\gates\phase4-persist.ps1
+  CHECK: ps tools\gates\phase4-ui.ps1
   EXPECT: PHASE4_PERSIST_OK
   EVIDENCE: pending
 
-- [ ] G4.3: Nur eine Instanz; zweiter Aufruf mit --run reicht an die laufende Instanz weiter
-  CHECK: ps tools\gates\phase4-single-instance.ps1
+- [ ] G4.3: Nur eine Instanz; zweiter Aufruf mit --run reicht an die laufende Instanz weiter; HDR ist vor dem Prozessstart aktiv (Registry-Zeitpunkt gegen Prozess-Startzeit, Protokoll-Zeitstempel)
+  CHECK: ps tools\gates\phase4-run.ps1
   EXPECT: PHASE4_SINGLE_INSTANCE_OK
   EVIDENCE: pending
 
-- [ ] G4.4: Alle UI-Texte in Ressourcendateien (keine festen Texte in XAML/ViewModels)
+- [ ] G4.4: Alle UI-Texte in Ressourcendateien (keine festen Texte in XAML, alle verwendeten Schlüssel vorhanden)
   CHECK: ps tools\gates\phase4-resources.ps1
   EXPECT: PHASE4_RESOURCES_OK
   EVIDENCE: pending
@@ -142,6 +142,15 @@ und die EXPECT-Marke ausgibt.
 - [ ] G4.5: Start über die App und über die erzeugte Verknüpfung funktioniert für je ein Spiel pro installiertem Launcher; Protokoll belegt mit Zeitstempeln, dass HDR vor dem Prozessstart aktiv war (gemeinsamer Test mit dem Nutzer)
   EVIDENCE: pending
 
+- [ ] G4.6: Wiederanlauf mit der App (hart beenden, Spiel schließen, neu starten: HDR zurückgestellt) und Leerlauf der App ohne Fenster sparsam
+  CHECK: ps tools\gates\phase4-crash.ps1
+  EXPECT: PHASE4_CRASH_OK
+  EVIDENCE: pending
+
+- [ ] G4.7: Neubau ohne Warnungen, alle Tests aller Testprojekte grün
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
 ## Phase 5: Auslieferung
 
 - [ ] G5.1: Einzelne, eigenständige EXE veröffentlicht und lauffähig (ohne installierte .NET-Runtime-Abhängigkeit)

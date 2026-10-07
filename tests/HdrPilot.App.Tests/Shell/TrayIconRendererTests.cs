@@ -88,8 +88,10 @@ public sealed partial class TrayIconRendererTests
 
         var gdiAfter = GetGuiResources(process.Handle, 0);
         var userAfter = GetGuiResources(process.Handle, 1);
-        Assert.True(gdiAfter - gdiBefore < 20, $"GDI-Objekte {gdiBefore} -> {gdiAfter}");
-        Assert.True(userAfter - userBefore < 20, $"USER-Objekte {userBefore} -> {userAfter}");
+        // Mit Vorzeichen rechnen: gibt ein Finalizer eines früheren Tests währenddessen ein Objekt frei, sinkt die Zahl
+        // (uint liefe sonst über und meldete fälschlich ein Leck).
+        Assert.True((int)gdiAfter - (int)gdiBefore < 20, $"GDI-Objekte {gdiBefore} -> {gdiAfter}");
+        Assert.True((int)userAfter - (int)userBefore < 20, $"USER-Objekte {userBefore} -> {userAfter}");
     }
 
     [Fact]

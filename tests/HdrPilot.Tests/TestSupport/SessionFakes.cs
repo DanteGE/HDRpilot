@@ -142,7 +142,14 @@ public sealed class FakeSessionConfig : ISessionConfigSource
         Touch();
     }
 
-    public void RecordLastPlayed(string gameKey, DateTimeOffset when) => Config.FindGame(gameKey)!.LastPlayed = when;
+    /// <summary>Jeder Schreibvorgang für „zuletzt verwendet“ (soll selten sein).</summary>
+    public List<(string Key, DateTimeOffset When)> LastPlayedRecords { get; } = [];
+
+    public void RecordLastPlayed(string gameKey, DateTimeOffset when)
+    {
+        LastPlayedRecords.Add((gameKey, when));
+        Config.FindGame(gameKey)!.LastPlayed = when;
+    }
 }
 
 public sealed class InMemorySessionStateStore : ISessionStateStore

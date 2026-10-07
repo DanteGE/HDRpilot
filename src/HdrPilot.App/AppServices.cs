@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
+using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -126,6 +127,18 @@ public sealed partial class AppServices : IAsyncDisposable
             {
                 await ExitAsync();
                 return;
+            }
+
+            // Steam-Startoption: der Wrapper wartet, also zuerst. Er bekommt immer eine Antwort.
+            if (args.PrepareGameKey is { } prepareKey)
+            {
+                await PrepareRequestHandler.HandleAsync(
+                    prepareKey, args.ReadyEvent, key => Sessions.PrepareAsync(key, SessionTrigger.SteamLaunchOption), _logger);
+                RaiseHdrStateChanged();
+            }
+            else if (args.ReadyEvent is { } readyEvent)
+            {
+                PrepareRequestHandler.Answer(readyEvent, prepared: false, _logger);
             }
 
             if (args.Show)

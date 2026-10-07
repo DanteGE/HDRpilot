@@ -66,6 +66,9 @@
   <data name="LaunchAlreadyStarting" xml:space="preserve">
     <value>"{0}" wird bereits gestartet.</value>
   </data>
+  <data name="PrepareReady" xml:space="preserve">
+    <value>HDR für &quot;{0}&quot; ist bereit, das Spiel startet.</value>
+  </data>
   <data name="LaunchExecuted" xml:space="preserve">
     <value>Start-Befehl ausgeführt: {0}</value>
   </data>

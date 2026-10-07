@@ -15,7 +15,8 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <item>Bibliotheken aus <c>steamapps\libraryfolders.vdf</c>; die Standardbibliothek (Steam-Ordner) immer, auch wenn die
 /// Datei fehlt oder defekt ist. Doppelte Bibliotheken (Groß-/Kleinschreibung, Schrägstriche) zählen einmal, fehlende
 /// werden übersprungen.</item>
-/// <item>Je Bibliothek <c>steamapps\appmanifest_&lt;AppID&gt;.acf</c> mit appid, name, installdir und StateFlags. Spielordner
+/// <item>Je Bibliothek <c>steamapps\appmanifest_&lt;AppID&gt;.acf</c> mit appid, name, installdir, StateFlags und LastPlayed
+/// (Unix-Sekunden, für „zuletzt verwendet“; 0 heißt nie gespielt). Spielordner
 /// ist <c>&lt;Bibliothek&gt;\steamapps\common\&lt;installdir&gt;</c>; fehlt er, entfällt der Eintrag.</item>
 /// <item>Nur vollständig installierte Apps (StateFlags-Bit 4); ausstehende Updates (etwa 6 = 4 + 2) zählen als installiert.</item>
 /// <item>Werkzeuge und Anwendungen filtert <see cref="SteamAppFilter"/> (feste Liste, App-Typ aus appcache\appinfo.vdf, Namensregeln).</item>
@@ -98,6 +99,7 @@ public sealed class SteamScanner : IGameScanner
                 InstallDir = manifest.GameDir,
                 Executables = [],
                 LaunchCommand = LaunchCommandFor(manifest.AppId),
+                LastPlayed = manifest.LastPlayed,
             });
         }
 
@@ -331,7 +333,20 @@ public sealed class SteamScanner : IGameScanner
         }
 
         var gameDir = PathUtil.Normalize(Path.Combine(library, "steamapps", "common", installDir));
-        return new Manifest(appId, state.GetString("name"), installDir, gameDir, stateFlags, file);
+        return new Manifest(appId, state.GetString("name"), installDir, gameDir, stateFlags, file, ParseLastPlayed(state.GetString("LastPlayed")));
+    }
+
+    /// <summary>"LastPlayed" in Unix-Sekunden; "0" (nie gespielt), fehlend oder ungültig: null.</summary>
+    internal static DateTimeOffset? ParseLastPlayed(string? value)
+    {
+        if (!long.TryParse(value?.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)
+            || seconds <= 0
+            || seconds > DateTimeOffset.MaxValue.ToUnixTimeSeconds())
+        {
+            return null;
+        }
+
+        return DateTimeOffset.FromUnixTimeSeconds(seconds);
     }
 
     private List<Manifest> SelectInstalled(List<Manifest> manifests, CancellationToken cancellationToken)
@@ -460,5 +475,5 @@ public sealed class SteamScanner : IGameScanner
         return value.Split('\\', '/').All(part => part.Length == 0 || part.Trim(' ', '.').Length > 0);
     }
 
-    private sealed record Manifest(uint AppId, string? Name, string InstallDirName, string GameDir, uint? StateFlags, string File);
+    private sealed record Manifest(uint AppId, string? Name, string InstallDirName, string GameDir, uint? StateFlags, string File, DateTimeOffset? LastPlayed);
 }

@@ -686,6 +686,42 @@ public sealed class SteamScannerTests
         Assert.Equal(0, spy.Writes);
     }
 
+    // ---------- Zuletzt gespielt ----------
+
+    [Fact]
+    public void Last_played_comes_from_the_manifest_in_unix_seconds()
+    {
+        WithSteam();
+        AddLibraryFolders();
+        AddFixtureGame(DefaultLibrary, "appmanifest_9990110.acf", "Sternenwacht 2"); // "LastPlayed" "1700000000"
+        AddManifest(DefaultLibrary, 9501, "Nie gespielt", "NieGespielt", 4, lastPlayed: "0");
+        AddManifest(DefaultLibrary, 9502, "Ohne Angabe", "OhneAngabe", 4);
+        AddManifest(DefaultLibrary, 9503, "Kaputt", "Kaputt", 4, lastPlayed: "gestern");
+
+        var games = Scan().Games.ToDictionary(g => g.SourceId);
+
+        Assert.Equal(new DateTimeOffset(2023, 11, 14, 22, 13, 20, TimeSpan.Zero), games["9990110"].LastPlayed);
+        Assert.Null(games["9501"].LastPlayed);
+        Assert.Null(games["9502"].LastPlayed);
+        Assert.Null(games["9503"].LastPlayed);
+    }
+
+    [Theory]
+    [InlineData("1727390415", 1727390415L)]
+    [InlineData(" 1700000000 ", 1700000000L)]
+    [InlineData("0", null)]
+    [InlineData("-5", null)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    [InlineData("1.5", null)]
+    [InlineData("99999999999999999", null)]
+    public void Last_played_value_parsing(string? value, long? expectedSeconds)
+    {
+        Assert.Equal(
+            expectedSeconds is { } s ? DateTimeOffset.FromUnixTimeSeconds(s) : null,
+            SteamScanner.ParseLastPlayed(value));
+    }
+
     // ---------- Hilfen ----------
 
     private ScanResult Scan() => CreateScanner().Scan(ScanOptions.Default, Ct);
@@ -714,7 +750,7 @@ public sealed class SteamScannerTests
     private void AddAppInfo(SteamAppInfoBuilder builder) => _fs.AddFile(SteamDir + @"\appcache\appinfo.vdf", builder.Build());
 
     /// <summary>Manifest im Aufbau von Steam (Tabulatoren, Anführungszeichen, Escapes für Backslashes).</summary>
-    private void AddManifest(string library, uint appId, string name, string installDir, uint? stateFlags)
+    private void AddManifest(string library, uint appId, string name, string installDir, uint? stateFlags, string? lastPlayed = null)
     {
         var sb = new StringBuilder();
         sb.Append("\"AppState\"\n{\n");
@@ -727,6 +763,11 @@ public sealed class SteamScannerTests
         }
 
         sb.Append($"\t\"installdir\"\t\t\"{installDir.Replace(@"\", @"\\", StringComparison.Ordinal)}\"\n");
+        if (lastPlayed is not null)
+        {
+            sb.Append($"\t\"LastPlayed\"\t\t\"{lastPlayed}\"\n");
+        }
+
         sb.Append("\t\"UserConfig\"\n\t{\n\t\t\"language\"\t\t\"german\"\n\t}\n}\n");
         _fs.AddFile($@"{library}\steamapps\appmanifest_{appId}.acf", sb.ToString());
         if (!installDir.Contains("..", StringComparison.Ordinal) && !installDir.Contains(':', StringComparison.Ordinal))

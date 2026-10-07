@@ -40,6 +40,7 @@ public static class LibraryMerger
                     IsInstalled = true,
                     FirstSeen = now,
                     LastSeen = now,
+                    LastPlayed = entry.LastPlayed,
                 });
                 added++;
                 continue;
@@ -58,6 +59,7 @@ public static class LibraryMerger
             game.LaunchWorkingDirectory = entry.LaunchWorkingDirectory;
             game.IsInstalled = true;
             game.LastSeen = now;
+            game.LastPlayed = Later(game.LastPlayed, entry.LastPlayed);
             updated++;
         }
 
@@ -95,4 +97,11 @@ public static class LibraryMerger
 
         return new MergeSummary(added, updated, missing, reinstalled);
     }
+
+    /// <summary>
+    /// „Zuletzt verwendet“: der spätere Wert aus Konfiguration (von HdrPilot beim Spielen gemerkt) und Launcher (etwa
+    /// Steam "LastPlayed"); ein fehlender Launcher-Wert löscht nie einen gemerkten.
+    /// </summary>
+    internal static DateTimeOffset? Later(DateTimeOffset? existing, DateTimeOffset? scanned) =>
+        existing is null ? scanned : scanned is null || existing >= scanned ? existing : scanned;
 }

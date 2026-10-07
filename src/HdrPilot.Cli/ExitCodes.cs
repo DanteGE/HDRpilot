@@ -9,4 +9,5 @@ public static class ExitCodes
     public const int DisplayNotFound = 3;
     public const int NotHdrCapable = 4;
     public const int SwitchFailed = 5;
+    public const int GameNotFound = 6;
 }

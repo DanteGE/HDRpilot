@@ -87,35 +87,35 @@ und die EXPECT-Marke ausgibt.
 
 ## Phase 3: Überwachung und Sitzungslogik
 
-- [ ] G3.1: Sitzungslogik vollständig mit Attrappen (IHdrController, IProcessWatcher) und steuerbarer Uhr getestet: Zustand merken/wiederherstellen, mehrere Spiele, Nachlaufzeit, Wiederanlauf nach Absturz, nicht HDR-fähiger Bildschirm
+- [x] G3.1: Sitzungslogik vollständig mit Attrappen (IHdrController, IProcessWatcher) und steuerbarer Uhr getestet: Zustand merken/wiederherstellen, mehrere Spiele, Nachlaufzeit, Wiederanlauf nach Absturz, nicht HDR-fähiger Bildschirm
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Session" -MinTests 25
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 57/57 (SessionManagerTests und GameMatcherTests), TESTS_OK 57; Gesamtlauf 853/853
 
-- [ ] G3.2: Stellvertreter-EXE in einem als Spiel eingetragenen Ordner: Start schaltet HDR innerhalb von 2 s ein, Ende nach der Nachlaufzeit wieder aus
+- [x] G3.2: Stellvertreter-EXE in einem als Spiel eingetragenen Ordner: Start schaltet HDR innerhalb von 2 s ein, Ende nach der Nachlaufzeit wieder aus
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario single
   EXPECT: PHASE3_SINGLE_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:52 exit 0, HDR an nach 1015 ms, aus 11042 ms nach Ende (Nachlaufzeit 10 s), Protokollzeilen mit Auslöser/Bildschirm/vorher/nachher/Ergebnis, PHASE3_SINGLE_OK
 
-- [ ] G3.3: Zwei gleichzeitige Stellvertreter: erst nach dem Ende des zweiten wird zurückgestellt
+- [x] G3.3: Zwei gleichzeitige Stellvertreter: erst nach dem Ende des zweiten wird zurückgestellt
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario two
   EXPECT: PHASE3_TWO_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:53 exit 0, HDR bleibt 14 s nach Ende von A an, aus 11130 ms nach Ende von B, PHASE3_TWO_OK
 
-- [ ] G3.4: War HDR vorher an, bleibt es an
+- [x] G3.4: War HDR vorher an, bleibt es an
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario alreadyon
   EXPECT: PHASE3_ALREADYON_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:53 exit 0, HDR 15 s nach Ende weiter an, Protokoll "war schon an und bleibt", PHASE3_ALREADYON_OK
 
-- [ ] G3.5: App bei laufendem Stellvertreter hart beenden, Stellvertreter schließen, App neu starten: HDR wird zurückgestellt
+- [x] G3.5: App bei laufendem Stellvertreter hart beenden, Stellvertreter schließen, App neu starten: HDR wird zurückgestellt
   CHECK: ps tools\gates\phase3-standin.ps1 -Scenario crash
   EXPECT: PHASE3_CRASH_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 11:54 exit 0, Überwachung per TerminateProcess beendet, gemerkt WasHdrOn=False, HDR blieb an, nach Neustart aus (302 ms nach Startbefehl), Zustandsdatei gelöscht, PHASE3_CRASH_OK. Mit der App wiederholt in G4.6.
 
-- [ ] G3.6: Überwachung im Leerlauf sparsam: CPU-Zeit und Handle-Zahl über 60 s gemessen
+- [x] G3.6: Überwachung im Leerlauf sparsam: CPU-Zeit und Handle-Zahl über 60 s gemessen
   CHECK: ps tools\gates\phase3-idle.ps1
   EXPECT: PHASE3_IDLE_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 646 Spiele, CPU 125 ms in 60 s = 0,208 % eines Kerns, Handles 284 -> 281, 54 MB, PHASE3_IDLE_OK (vorher mit Toolhelp 0,599 %: Gate schlug fehl, siehe E30)
 
 ## Phase 4: Oberfläche und Tray
 

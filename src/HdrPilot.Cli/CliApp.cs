@@ -1,7 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace HdrPilot.Cli;
 
@@ -11,9 +15,17 @@ public interface ICliServices
     IHdrController CreateHdrController(HdrControllerOptions options);
 
     IReadOnlyList<IGameScanner> CreateScanners();
+
+    IFileSystem FileSystem => PhysicalFileSystem.Instance;
+
+    IAppEnvironment Environment => SystemEnvironment.Instance;
+
+    IClock Clock => SystemClock.Instance;
+
+    AutomationHost CreateHost(AppPaths paths, ILoggerProvider consoleLog) => new(paths, [consoleLog]);
 }
 
-public sealed class CliApp(ICliServices services, TextWriter stdout, TextWriter stderr)
+public sealed partial class CliApp(ICliServices services, TextWriter stdout, TextWriter stderr)
 {
     internal static readonly JsonSerializerOptions Json = new()
     {
@@ -42,6 +54,10 @@ public sealed class CliApp(ICliServices services, TextWriter stdout, TextWriter 
             {
                 "hdr" => await RunHdrAsync(parsed, cancellationToken).ConfigureAwait(false),
                 "scan" => await RunScanAsync(parsed, cancellationToken).ConfigureAwait(false),
+                "games" => await RunGamesAsync(parsed, cancellationToken).ConfigureAwait(false),
+                "watch" => await RunWatchAsync(parsed, cancellationToken).ConfigureAwait(false),
+                "run" => await RunLaunchAsync(parsed, cancellationToken).ConfigureAwait(false),
+                "diag" => await RunDiagAsync(parsed, cancellationToken).ConfigureAwait(false),
                 _ => Usage($"Unbekannter Befehl \"{parsed.Positional[0]}\"."),
             };
         }
@@ -70,8 +86,20 @@ public sealed class CliApp(ICliServices services, TextWriter stdout, TextWriter 
             Gibt alle gefundenen Spiele und die Fehler je Scanner als JSON aus.
             <quelle>: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet
 
+        hdrpilot games list [--json]
+        hdrpilot games import
+            Liest alle Launcher ein und übernimmt das Ergebnis in die Konfiguration.
+        hdrpilot games add --path <exe|ordner> [--name <name>] [--hdr on|off]
+        hdrpilot games set <schlüssel> [--hdr on|off] [--restore on|off] [--display <monitorDevicePath>|global]
+            Schlüssel: Quelle:ID, etwa Steam:1091500 (siehe "games list").
+        hdrpilot watch [--verbose]
+            Überwacht Spielstarts im Vordergrund (wie die App, ohne Oberfläche). Beenden mit Strg+C.
+        hdrpilot run <schlüssel>
+            Start über HdrPilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
+        Gemeinsame Option: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HdrPilot, für Tests).
+
         Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
-                    4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen
+                    4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden
         """;
 
     private async Task<int> RunScanAsync(CliArguments args, CancellationToken cancellationToken)

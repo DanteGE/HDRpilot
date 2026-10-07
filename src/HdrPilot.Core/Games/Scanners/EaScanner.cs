@@ -17,7 +17,9 @@ public sealed class EaScanner : IGameScanner
     /// <summary>Wie tief unter einem Suchordner nach Spielordnern gesucht wird (0 = der Suchordner selbst).</summary>
     public const int SearchFolderDepth = 3;
 
-    internal const string InstallerDataRelativePath = @"__Installer\installerdata.xml";
+    internal const string InstallerFolderName = "__Installer";
+
+    internal const string InstallerDataRelativePath = InstallerFolderName + @"\installerdata.xml";
 
     private const string SteamLibraryMarker = @"\steamapps\common\";
 
@@ -116,6 +118,14 @@ public sealed class EaScanner : IGameScanner
                 return;
             }
 
+            if (IsInsideInstallerFolder(folder))
+            {
+                // Zusatzinhalte haben unter <Spiel>\__Installer\DLC\<DLC>\__Installer eine eigene installerdata.xml
+                // (gemessen bei Battlefield 6, contentID leer). Sie sind keine Spiele und keine defekten Dateien.
+                _logger.LogDebug("EA: {Folder} liegt im Installer-Ordner eines Spiels (Zusatzinhalt) und wird übersprungen.", folder);
+                return;
+            }
+
             if (_fileSystem.FileExists(Path.Combine(folder, InstallerDataRelativePath)))
             {
                 result.Add(folder);
@@ -181,6 +191,11 @@ public sealed class EaScanner : IGameScanner
     private void SearchBelow(string folder, int depth, Action<string> consider, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (IsInsideInstallerFolder(folder))
+        {
+            return; // Unter __Installer liegen nur Installer-Dateien und Zusatzinhalte, keine Spiele.
+        }
+
         if (_fileSystem.FileExists(Path.Combine(folder, InstallerDataRelativePath)))
         {
             consider(folder);
@@ -221,6 +236,13 @@ public sealed class EaScanner : IGameScanner
     private GameEntry? ReadGame(string installDir, List<ScanError> errors)
     {
         var path = Path.Combine(installDir, InstallerDataRelativePath);
+        if (IsDriveRoot(installDir))
+        {
+            // Später gilt jeder Prozess unter InstallDir als Spiel; ein ganzes Laufwerk wäre als Spielordner falsch.
+            errors.Add(new ScanError("Spiel liegt direkt im Stammordner eines Laufwerks und wird übersprungen, weil sonst jeder Prozess auf dem Laufwerk als Spiel gälte.", path));
+            return null;
+        }
+
         EaInstallerData data;
         try
         {
@@ -354,6 +376,18 @@ public sealed class EaScanner : IGameScanner
         var comma = t.LastIndexOf(',');
         return comma > 0 && int.TryParse(t[(comma + 1)..], out _) ? t[..comma] : t;
     }
+
+    /// <summary>True für einen Laufwerks- oder Freigabe-Stamm wie <c>D:\</c> oder <c>\\server\share</c>.</summary>
+    private static bool IsDriveRoot(string folder)
+    {
+        var root = Path.GetPathRoot(folder);
+        return !string.IsNullOrEmpty(root) && PathUtil.PathEquals(folder, root);
+    }
+
+    /// <summary>True, wenn ein Pfadteil <c>__Installer</c> heißt, der Ordner also im Installer-Ordner eines Spiels liegt.</summary>
+    private static bool IsInsideInstallerFolder(string folder) =>
+        folder.Split('\\', StringSplitOptions.RemoveEmptyEntries)
+            .Any(part => string.Equals(part, InstallerFolderName, StringComparison.OrdinalIgnoreCase));
 
     private static string? FolderName(string folder)
     {

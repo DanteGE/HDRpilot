@@ -339,6 +339,84 @@ public sealed class BattleNetScannerTests
         Assert.Contains(typeof(BattleNetScanner), ScannerCatalog.ScannerTypes);
     }
 
+    [Fact]
+    public void Registry_values_with_wrong_types_are_ignored_without_exception()
+    {
+        var fs = WithGamesFixture().AddFile(OverwatchDir + @"\Overwatch Launcher.exe", "MZ");
+        var registry = new FakeRegistry()
+            .Set(Hklm, Uninstall32 + "Dword", "UninstallString", 42)
+            .Set(Hklm, Uninstall32 + "Binaer", "UninstallString", new byte[] { 0x42, 0x6C })
+            .Set(Hklm, Uninstall32 + "Overwatch", "UninstallString", "\"C:\\ProgramData\\Battle.net\\Agent\\Blizzard Uninstaller.exe\" --uid=prometheus")
+            .Set(Hklm, Uninstall32 + "Overwatch", "DisplayName", new[] { "Overwatch" })     // REG_MULTI_SZ statt Text
+            .Set(Hklm, Uninstall32 + "Overwatch", "DisplayIcon", new byte[] { 0x43, 0x3A });
+
+        var result = Scan(fs, registry);
+
+        var overwatch = Assert.Single(result.Games);
+        Assert.Equal("Overwatch", overwatch.Name); // Ordnername, weil DisplayName kein Text ist
+        Assert.Empty(overwatch.Executables);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Install_path_with_umlauts_mixed_slashes_and_trailing_separator_is_normalized()
+    {
+        const string dir = @"D:\Spielordner\Über & Co (2)\World of Warcraft";
+        var fs = new InMemoryFileSystem()
+            .AddFile(ProductDb, Install("wow", "wow", "d:/Spielordner\\Über & Co (2)//World of Warcraft/"))
+            .AddDirectory(dir);
+
+        var game = Assert.Single(Scan(fs, new FakeRegistry()).Games);
+
+        Assert.Equal(dir, game.InstallDir, ignoreCase: true);
+        Assert.Equal("World of Warcraft", game.Name);
+    }
+
+    [Fact]
+    public void Broken_length_beyond_the_file_or_int_range_reports_error_without_exception()
+    {
+        byte[] hugeLength = [0x0A, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00];
+        byte[] tooLongVarint = [0x0A, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01];
+
+        foreach (var bytes in new[] { hugeLength, tooLongVarint })
+        {
+            var result = Scan(new InMemoryFileSystem().AddFile(ProductDb, bytes), new FakeRegistry());
+
+            Assert.Empty(result.Games);
+            Assert.StartsWith("product.db ist defekt", Assert.Single(result.Errors).Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Broken_install_path_at_drive_root_is_reported_and_skipped()
+    {
+        // In Phase 3 gilt jeder Prozess unter InstallDir als Spiel; ein Laufwerk als InstallDir träfe jeden Prozess darauf.
+        var fs = new InMemoryFileSystem()
+            .AddFile(ProductDb, Concat(Install("wow", "wow", "D:/"), Install("prometheus", "pro", "C:/Program Files (x86)/Overwatch")))
+            .AddDirectory(@"D:\")
+            .AddDirectory(OverwatchDir);
+
+        var result = Scan(fs, new FakeRegistry());
+
+        Assert.Equal("prometheus", Assert.Single(result.Games).SourceId);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(ProductDb, error.Path);
+        Assert.Contains("Laufwerk", error.Message, StringComparison.Ordinal);
+        Assert.Contains("wow", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Incomplete_install_path_on_missing_drive_is_skipped_without_error()
+    {
+        var fs = new InMemoryFileSystem().AddFile(ProductDb, Install("wow", "wow", "Z:/Games/World of Warcraft"));
+
+        var result = Scan(fs, new FakeRegistry());
+
+        Assert.Empty(result.Games);
+        Assert.Empty(result.Errors);
+        Assert.True(result.LauncherDetected);
+    }
+
     private static ScanResult Scan(IFileSystem fs, IRegistry registry) =>
         new BattleNetScanner(fs, registry, new FakeEnvironment()).Scan(ScanOptions.Default, Ct);
 

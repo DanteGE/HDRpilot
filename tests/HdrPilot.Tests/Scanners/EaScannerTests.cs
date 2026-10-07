@@ -404,6 +404,130 @@ public sealed class EaScannerTests
         Assert.Contains(typeof(EaScanner), ScannerCatalog.ScannerTypes);
     }
 
+    [Fact]
+    public void Dlc_manifests_inside_the_game_installer_folder_are_neither_games_nor_errors()
+    {
+        // Am Zielrechner gemessen: Eisenwall 6\__Installer\DLC\<DLC>\__Installer\installerdata.xml (9 Stück, leere contentID).
+        // Ein Suchordner oder Registry-Eintrag, der in diesen Baum führt, ergab vorher je DLC einen falschen Scanfehler,
+        // mit gefüllter contentID sogar ein DLC als eigenes Spiel.
+        const string dlcRoot = GameDir + @"\__Installer\DLC";
+        var fs = AddEw6(new InMemoryFileSystem())
+            .AddFixture(@"EA\installerdata-ew6-dlc.xml", dlcRoot + @"\EW6_ZUS1_DLC\__Installer\installerdata.xml")
+            .AddFile(dlcRoot + @"\EW6_MARKER_DLC\__Installer\installerdata.xml", WithId("ew_content002"))
+            .AddFile(dlcRoot + @"\EW6_MARKER_DLC\EAAntiCheat.GameServiceLauncher.exe", "MZ")
+            .AddFile(dlcRoot + @"\EW6_MARKER_DLC\SP\ew6.exe", "MZ");
+        var registry = Ew6Uninstall(new FakeRegistry(), GameDir)
+            .Set(Hklm, @"SOFTWARE\EA Games\EW6_MARKER_DLC", "Install Dir", dlcRoot + @"\EW6_MARKER_DLC\");
+
+        var result = Scan(fs, registry, new ScanOptions { SearchFolders = [GameDir + @"\__Installer", dlcRoot, dlcRoot + @"\EW6_ZUS1_DLC"] });
+
+        Assert.Equal("18306642", Assert.Single(result.Games).SourceId);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Broken_empty_file_reports_error_and_keeps_other_games()
+    {
+        AssertBrokenFileReported([], "defekt");
+    }
+
+    [Fact]
+    public void Broken_xml_with_dtd_reports_error_and_keeps_other_games()
+    {
+        var xml = FixtureText.Replace("<DiPManifest version=\"4.0\">", "<!DOCTYPE DiPManifest [<!ENTITY x \"y\">]>\n<DiPManifest version=\"4.0\">", StringComparison.Ordinal);
+        AssertBrokenFileReported(Encoding.UTF8.GetBytes(xml), "defekt");
+    }
+
+    [Theory]
+    [InlineData("x-unbekannt-42")]
+    [InlineData("windows-1252")]
+    public void Broken_unsupported_declared_encoding_reports_error_and_keeps_other_games(string encoding)
+    {
+        var xml = FixtureText.Replace("encoding='utf-8'", "encoding='" + encoding + "'", StringComparison.Ordinal);
+        AssertBrokenFileReported(Encoding.UTF8.GetBytes(xml), "defekt");
+    }
+
+    [Fact]
+    public void Utf16_file_with_byte_order_mark_is_read()
+    {
+        var xml = FixtureText.Replace("encoding='utf-8'", "encoding='utf-16'", StringComparison.Ordinal);
+        var bytes = Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes(xml)).ToArray();
+        var fs = AddEw6(new InMemoryFileSystem()).AddFile(GameDir + @"\__Installer\installerdata.xml", bytes);
+
+        var game = Assert.Single(Scan(fs, new FakeRegistry()).Games);
+
+        Assert.Equal("Eisenwall™ 6", game.Name);
+        Assert.Equal("18306642", game.SourceId);
+    }
+
+    [Fact]
+    public void Registry_values_with_wrong_types_are_ignored_without_exception()
+    {
+        const string other = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\";
+        var fs = AddEw6(new InMemoryFileSystem(), withRootExe: false);
+        var registry = new FakeRegistry()
+            .Set(Hklm, UninstallKey, "Publisher", "Electronic Arts")
+            .Set(Hklm, UninstallKey, "InstallLocation", 42)                                  // DWORD statt Text
+            .Set(Hklm, other + "Binaer", "Publisher", "Electronic Arts")
+            .Set(Hklm, other + "Binaer", "InstallLocation", new byte[] { 0x43, 0x3A, 0x5C })  // REG_BINARY
+            .Set(Hklm, other + "Mehrfach", "Publisher", new[] { "Electronic Arts" })          // REG_MULTI_SZ
+            .Set(Hklm, other + "Mehrfach", "InstallLocation", new[] { GameDir })
+            .Set(Hklm, @"SOFTWARE\EA Games\Eisenwall 6", "Install Dir", 7L)                 // QWORD statt Text
+            .Set(Hklm, UninstallKey.Replace(@"WOW6432Node\", string.Empty, StringComparison.Ordinal), "DisplayIcon", new byte[] { 1, 2 });
+
+        var result = Scan(fs, registry);
+
+        var game = Assert.Single(result.Games); // über den Standardordner gefunden
+        Assert.Equal([GameDir + @"\EAAntiCheat.GameServiceLauncher.exe", GameDir + @"\SP\ew6.exe"], game.Executables);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Paths_with_umlauts_special_characters_forward_slashes_and_trailing_separator_are_normalized()
+    {
+        const string dir = @"D:\Spielordner\Über & Co (2) #1\Eisenwall 6";
+        var fs = AddEw6(new InMemoryFileSystem(), dir);
+        var registry = Ew6Uninstall(new FakeRegistry(), "d:/spielordner/über & co (2) #1/Eisenwall 6/")
+            .Set(Hklm, UninstallKey, "DisplayIcon", "\"" + dir + "\\ew6.exe\",0");
+
+        var game = Assert.Single(Scan(fs, registry).Games);
+
+        Assert.Equal(dir, game.InstallDir, ignoreCase: true);
+        Assert.DoesNotContain("/", game.InstallDir, StringComparison.Ordinal);
+        Assert.False(game.InstallDir.EndsWith('\\'));
+        Assert.Equal(3, game.Executables.Count);
+        Assert.All(game.Executables, e => Assert.StartsWith(game.InstallDir + @"\", e, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Broken_game_directly_in_drive_root_is_reported_and_skipped()
+    {
+        // In Phase 3 gilt jeder Prozess unter InstallDir als Spiel; ein Laufwerk als InstallDir träfe jeden Prozess darauf.
+        var fs = AddEw6(new InMemoryFileSystem(), @"D:\", xml: WithId("2"));
+        AddEw6(fs);
+        var registry = Ew6Uninstall(new FakeRegistry(), "D:/");
+
+        var result = Scan(fs, registry, new ScanOptions { SearchFolders = [@"D:\"] });
+
+        Assert.Equal("18306642", Assert.Single(result.Games).SourceId);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal(@"D:\__Installer\installerdata.xml", error.Path);
+        Assert.Contains("Laufwerk", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Incomplete_registry_entry_on_missing_drive_and_relative_path_is_skipped_without_error()
+    {
+        var registry = Ew6Uninstall(new FakeRegistry(), @"Z:\Spiele\Eisenwall 6\")
+            .Set(Hklm, @"SOFTWARE\EA Games\Relativ", "Install Dir", @"EA Games\Eisenwall 6");
+
+        var result = Scan(new InMemoryFileSystem(), registry, new ScanOptions { SearchFolders = [@"Z:\", "relativ", string.Empty] });
+
+        Assert.Empty(result.Games);
+        Assert.Empty(result.Errors);
+        Assert.False(result.LauncherDetected);
+    }
+
     private static ScanResult Scan(IFileSystem fs, IRegistry registry, ScanOptions? options = null) =>
         new EaScanner(fs, registry, new FakeEnvironment()).Scan(options ?? ScanOptions.Default, Ct);
 

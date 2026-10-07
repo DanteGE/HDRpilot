@@ -16,7 +16,7 @@ kein Blizzard-Spiel installiert; der Scanner liefert hier deshalb korrekt eine l
 | Angabe | Ergebnis | Beleg |
 |---|---|---|
 | Spiele über die Datei product.db des Battle.net-Agenten lesen (Pfad prüfen) | **bestätigt** | `C:\ProgramData\Battle.net\Agent\product.db` = `%ProgramData%\Battle.net\Agent\product.db`, Attribute `-a-h--` (versteckt), unter 1 KB. Daneben `.product.db` (unter 1 KB, ältere Kopie, nicht verwendet). |
-| Vermerk der Vorbereitung „product.db ist 0 Byte“ | **abweichend** | Die Datei ist nicht leer (unter 1 KB), Attribute `Hidden, Archive, NotContentIndexed`. Ohne `-Force` listet `Get-ChildItem` sie nicht (0 Treffer) und `Get-Item` wirft eine IOException; das erklärt vermutlich den Messwert. Gelesen mit `(Get-Item … -Force).Length` und `[IO.File]::ReadAllBytes`. Der Scanner behandelt eine leere Datei trotzdem korrekt (leere Datenbank, kein Fehler; Test `Empty_product_db_yields_no_games_without_errors`). |
+| Vermerk der Vorbereitung „product.db ist 0 Byte“ | **abweichend** | Die Datei ist nicht leer (unter 1 KB), Attribute `Hidden, Archive, NotContentIndexed`. Ohne `-Force` listet `Get-ChildItem` sie nicht (0 Treffer) und `Get-Item` wirft eine IOException; das erklärt vermutlich den Messwert. Gelesen mit `(Get-Item … -Force).Length` und `[IO.File]::ReadAllBytes`. Der Scanner behandelt eine leere Datei trotzdem korrekt (leere Datenbank, kein Fehler; Test `Empty_product_db_yields_no_games_without_errors`). Im Review nachgemessen (nicht leer, `Get-Item` ohne `-Force` wirft „konnte nicht gefunden werden“) und in `docs/umgebung.md` berichtigt. |
 | Aufbau Protobuf (prüfen) | **bestätigt** | Wire-Format ohne Kopf. Oberste Ebene: Feld 1 (Länge) wiederholt je Produkt. Im Produkt: Feld 1 `agent` / `battle.net` (uid), Feld 2 `agent` / `bna` (Produktcode), Feld 3 Einstellungen; darin Feld 1 `C:/ProgramData/Battle.net/Agent` bzw. `C:/Program Files (x86)/Battle.net` (Installationsordner, mit `/`), Feld 2 `us` (Region), Feld 6/7 `deDE` (Sprachen). Hex-Anfang: `0A BE 02 0A 05 61 67 65 6E 74 12 05 61 67 65 6E 74 1A 3E 0A 1F 43 3A 2F 50 72 6F …` = Feld 1 (318 Byte) { Feld 1 "agent", Feld 2 "agent", Feld 3 (62 Byte) { Feld 1 "C:/Pro…" } }. |
 | Sind Blizzard-Spiele installiert? | **nein** | product.db enthält nur Agent und Battle.net-App. `%ProgramData%\Battle.net\Agent\aggregate.json` = `{"installed": []}`. `%AppData%\Battle.net\Battle.net.config`, Abschnitt `Games`, nennt nur `battle_net`. Uninstall-Einträge mit `Blizzard Uninstaller.exe`: nur `Battle.net`. `HKCU\Software\Blizzard Entertainment\Battle.net\Launch Options` hat nur den Unterschlüssel `BNA`. |
 | Verknüpfung product.db ↔ Uninstall-Eintrag | **bestätigt (am Eintrag der Battle.net-App)** | `HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Battle.net`: `UninstallString` = `"C:\ProgramData\Battle.net\Agent\Blizzard Uninstaller.exe" --lang=deDE --uid=battle.net --displayname="Battle.net"`, `DisplayIcon` = `C:\Program Files (x86)\Battle.net\Battle.net.exe`, `InstallLocation` = `C:\Program Files (x86)\Battle.net`. `--uid=battle.net` = uid in product.db. |
@@ -36,7 +36,9 @@ am Zielrechner belegten Felder:
 | Produkt | 3 (Länge) | Einstellungen |
 | Einstellungen | 1 (Text) | Installationsordner mit `/` → `InstallDir` (über `PathUtil.Normalize`) |
 
-Alle anderen Felder (Zustand, Versionen, Build-Schlüssel, Sprachen, Felder 2–6 der obersten Ebene) werden übersprungen.
+Alle anderen Felder (Zustand, Versionen, Build-Schlüssel, Sprachen, Felder 5 und 6 der obersten Ebene) werden
+übersprungen. (Im Review unabhängig mit einem eigenen PowerShell-Wire-Dekoder nachgelesen: oberste Ebene = Feld 1 zweimal,
+Feld 5, Feld 6; je Produkt Felder 1–8, Einstellungen Felder 1–13 mit `DEU`/`DE` in Feld 11/12.)
 Texte müssen gültiges UTF-8 sein. Fehler in einem Produkteintrag betreffen nur diesen Eintrag; ist die Datei
 abgeschnitten, bleiben die Einträge davor erhalten und es gibt einen Fehler mit Byte-Position.
 
@@ -53,6 +55,10 @@ als EXE (nur wenn vorhanden und unterhalb des Installationsordners). Ohne Uninst
 | – | – | – | – |
 
 Keine Spiele. Gelesen wurden zwei Produkte (`agent`, `battle.net`), beide als Nicht-Spiel herausgefiltert.
+Nachprüfung im Review (2026-10-07): gleiches Ergebnis (Exit 0, `launcherDetected: true`, keine Fehler); die
+Beispieldatei `product-launcher-only.db` hat denselben Aufbau wie die echte Datei (ersetzte Werte siehe Abschnitt 4);
+direkt unter `C:\Program Files (x86)`, `C:\Program Files`, `C:\` und `D:\`–`F:\` liegt kein Ordner mit dem Namen
+eines Blizzard-Spiels (Overwatch, World of Warcraft, Diablo, Hearthstone, StarCraft, Heroes of the Storm, Call of Duty).
 
 Zweite Quellen und Vergleich:
 
@@ -79,6 +85,8 @@ Zweite Quellen und Vergleich:
   HDR-Umschaltung hängt davon nicht ab: In Phase 3 zählt jeder Prozess unter dem Installationsordner.
 - **Kein Battle.net.config, kein Katalog-Cache.** Battle.net.config enthält Kontodaten (gespeicherte Anmeldenamen) und
   keine Installationsorte; der Cache ist ein Abbild des Online-Katalogs, nicht der Installationen.
+- **Laufwerksstamm als Installationsordner wird abgelehnt** (Scanfehler mit uid und Pfad, Eintrag übersprungen): In
+  Phase 3 gälte sonst jeder Prozess auf dem Laufwerk als Spiel (Test `Broken_install_path_at_drive_root_is_reported_and_skipped`).
 - **Unlesbare oder defekte product.db** (gesperrt, abgeschnitten, Binärmüll, falsches UTF-8, Eintrag ohne uid oder
   Produktcode): Fehler mit Pfad, übrige Einträge werden geliefert, keine Ausnahme.
 
@@ -94,7 +102,13 @@ Spiel installiert ist, sind diese Einträge nachgebildet, nicht gemessen.
   genau so aussehen wie die Einträge von Agent und Battle.net-App, ist nicht gegengeprüft (gleicher Nachrichtentyp
   „Produkt“ ist wahrscheinlich, aber nicht bewiesen).
 - Der Start über `battlenet://<Produktcode>` ist nicht mit einem Spiel geprüft; je nach Spiel und Battle.net-Version
-  öffnet er womöglich nur die Spielseite.
+  öffnet er womöglich nur die Spielseite. Battle.net selbst nennt im Protokoll andere Kürzel als product.db
+  (`productCode=Fen_retail accountInfo=[Fen-Fen:retail]`, ebenso `Pro_retail`, `WTCG_retail`; die App steht in
+  product.db dagegen als `bna`). Für Spiele, deren Kürzel vom product.db-Code abweicht, ist die URI deshalb womöglich falsch.
+- Teilen sich mehrere Produkte denselben Installationsordner, erscheinen sie als getrennte Einträge mit gleichem
+  `InstallDir`; ein Prozess darunter passt dann zu beiden (nicht prüfbar, kein Spiel installiert).
+- Der Zustand „installiert“ aus product.db wird nicht ausgewertet; eine laufende Erstinstallation mit schon angelegtem
+  Ordner erscheint daher bereits als Spiel.
 - Name und EXE hängen am Uninstall-Eintrag mit `--uid=`; fehlt er, erscheint der Ordnername und keine EXE.
 - Spiele, die Battle.net nicht in product.db führt (etwa von Hand kopierte Ordner), findet der Scanner nicht; dafür
   gibt es manuelle Einträge und Suchordner.

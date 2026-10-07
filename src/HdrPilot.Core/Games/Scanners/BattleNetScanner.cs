@@ -96,6 +96,13 @@ public sealed class BattleNetScanner : IGameScanner
                 continue;
             }
 
+            if (IsDriveRoot(installDir))
+            {
+                // Später gilt jeder Prozess unter InstallDir als Spiel; ein ganzes Laufwerk wäre als Spielordner falsch.
+                errors.Add(new ScanError($"Eintrag {install.Uid} nennt den Stammordner eines Laufwerks ({installDir}) als Installationsordner und wird übersprungen, weil sonst jeder Prozess auf dem Laufwerk als Spiel gälte.", productDbPath));
+                continue;
+            }
+
             if (!seenUids.Add(install.Uid))
             {
                 continue;
@@ -165,6 +172,13 @@ public sealed class BattleNetScanner : IGameScanner
 
         var comma = t.LastIndexOf(',');
         return comma > 0 && int.TryParse(t[(comma + 1)..], out _) ? t[..comma] : t;
+    }
+
+    /// <summary>True für einen Laufwerks- oder Freigabe-Stamm wie <c>D:\</c> oder <c>\\server\share</c>.</summary>
+    private static bool IsDriveRoot(string folder)
+    {
+        var root = Path.GetPathRoot(folder);
+        return !string.IsNullOrEmpty(root) && PathUtil.PathEquals(folder, root);
     }
 
     private static string FirstNonEmpty(params string?[] values) =>

@@ -8,7 +8,7 @@ $app = Join-Path $root 'src\HdrPilot.App'
 $ok = $true
 
 $attr = '(?<![\w.])(Text|Content|Header|ToolTip|Title|PlaceholderText|Description|Label|AutomationProperties\.Name|AutomationProperties\.HelpText)="(?<v>[^"]*)"'
-$allowed = @('HdrPilot', 'HDR', 'H') # Markenname und Logo-Zeichen
+$allowed = @('HDRpilot', 'HDR', 'H') # Markenname und Logo-Zeichen
 $xamlFiles = Get-ChildItem $app -Recurse -Filter *.xaml | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
 foreach ($f in $xamlFiles) {
     $text = Get-Content $f.FullName -Raw -Encoding UTF8

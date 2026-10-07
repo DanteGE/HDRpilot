@@ -8,8 +8,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
-    <Company>HdrPilot</Company>
-    <Product>HdrPilot</Product>
+    <Company>HDRpilot</Company>
+    <Product>HDRpilot</Product>
     <Version>1.0.0</Version>
     <NeutralLanguage>de</NeutralLanguage>
     <!-- Symbole in der Assembly: keine losen .pdb-Dateien neben der EXE, Stapelverfolgungen behalten Datei und Zeile. -->

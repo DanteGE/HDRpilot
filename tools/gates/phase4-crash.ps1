@@ -1,4 +1,4 @@
-﻿# Gate Phase 4: Wiederanlauf mit der App (wie G3.5, aber mit HdrPilot.exe statt hdrpilot watch).
+﻿# Gate Phase 4: Wiederanlauf mit der App (wie G3.5, aber mit HDRpilot.exe statt hdrpilot watch).
 # App bei laufendem Stellvertreter hart beenden (wie Task-Manager), Stellvertreter schließen, App neu starten:
 # HDR wird zurückgestellt. Danach den Leerlauf der App messen (CPU, Handles, Speicher) ohne offenes Fenster.
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')

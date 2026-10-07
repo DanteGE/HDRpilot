@@ -1234,7 +1234,7 @@ public sealed class SessionManager
             Stamp(_clock.UtcNow), trigger, session is null ? "-" : $"{session.Name} ({session.Key})", displayName,
             OnOff(result.Before), OnOff(result.After), result.Status, result.Message, sw.ElapsedMilliseconds);
 
-        var game = session?.Name ?? "HdrPilot";
+        var game = session?.Name ?? "HDRpilot";
         switch (result.Status)
         {
             case HdrSetStatus.Success when enable:

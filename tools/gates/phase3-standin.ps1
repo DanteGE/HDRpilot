@@ -35,6 +35,8 @@ public static class StandIn {
 '@
 }
 if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
+. (Join-Path $PSScriptRoot 'TestConfigSeed.ps1')
+Initialize-TestConfig $cfg
 $dirA = Join-Path $cfg 'games\Stellvertreter A'
 $dirB = Join-Path $cfg 'games\Stellvertreter B'
 New-Item -ItemType Directory -Force $dirA, $dirB | Out-Null

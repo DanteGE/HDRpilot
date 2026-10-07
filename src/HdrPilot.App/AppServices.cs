@@ -183,7 +183,7 @@ public sealed partial class AppServices : IAsyncDisposable
 
     public async Task<LaunchOutcome> LaunchAsync(string gameKey)
     {
-        _logger.LogInformation("Start über HdrPilot angefordert: {Key}", gameKey);
+        _logger.LogInformation("Start über HDRpilot angefordert: {Key}", gameKey);
         var outcome = await Host.LaunchAsync(gameKey);
         if (!outcome.Started)
         {

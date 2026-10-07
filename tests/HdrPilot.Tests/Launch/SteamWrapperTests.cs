@@ -72,7 +72,7 @@ public sealed class SteamWrapperTests : IDisposable
         var outcome = Run();
 
         Assert.False(outcome.Prepared);
-        Assert.Contains("HdrPilot läuft nicht", outcome.PrepareStatus, StringComparison.Ordinal);
+        Assert.Contains("HDRpilot läuft nicht", outcome.PrepareStatus, StringComparison.Ordinal);
         Assert.Empty(_channel.Sent);
         Assert.Empty(_context.Sleeps);
         Assert.Single(_starter.Started);
@@ -200,7 +200,7 @@ public sealed class SteamWrapperTests : IDisposable
         Assert.Contains("Arbeitsordner: " + GameDir, lines[0], StringComparison.Ordinal);
         Assert.Contains("Spiel gestartet: ja", lines[0], StringComparison.Ordinal);
         Assert.EndsWith("Befehlszeile: " + Raw, lines[0], StringComparison.Ordinal);
-        Assert.Contains("HDR vorbereitet: nein (HdrPilot läuft nicht)", lines[1], StringComparison.Ordinal);
+        Assert.Contains("HDR vorbereitet: nein (HDRpilot läuft nicht)", lines[1], StringComparison.Ordinal);
     }
 
     [Fact]

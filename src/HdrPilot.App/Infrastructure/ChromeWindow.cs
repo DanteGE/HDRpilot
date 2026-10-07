@@ -12,7 +12,7 @@ namespace HdrPilot.App.Infrastructure;
 /// </summary>
 public class ChromeWindow : Window
 {
-    private static readonly BitmapFrame AppIcon = BitmapFrame.Create(new Uri("pack://application:,,,/HdrPilot;component/Assets/HdrPilot.ico", UriKind.Absolute));
+    private static readonly BitmapFrame AppIcon = BitmapFrame.Create(new Uri("pack://application:,,,/HDRpilot;component/Assets/HdrPilot.ico", UriKind.Absolute));
 
     public ChromeWindow()
     {

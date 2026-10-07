@@ -1,16 +1,18 @@
 ﻿# Gemeinsame Hilfen für die Phase-4-Gates (wird per Dot-Sourcing geladen).
 $ErrorActionPreference = 'Stop'
 $script:root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$script:AppExe = Join-Path $root 'src\HdrPilot.App\bin\Debug\net10.0-windows\HdrPilot.exe'
+$script:AppExe = Join-Path $root 'src\HdrPilot.App\bin\Debug\net10.0-windows\HDRpilot.exe'
 $script:CliExe = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'
 $script:Started = New-Object System.Collections.ArrayList
 
 function Note([string]$text) { Write-Output ("{0:HH:mm:ss.fff} {1}" -f (Get-Date), $text) }
 
+. (Join-Path $PSScriptRoot 'TestConfigSeed.ps1')
+
 function New-TestConfig([string]$name, [switch]$Import) {
     $dir = Join-Path $root "tools\out\$name"
     if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
-    New-Item -ItemType Directory -Force $dir | Out-Null
+    Initialize-TestConfig $dir
     if ($Import) { & $CliExe games import --config-dir $dir | Out-Null }
     return $dir
 }

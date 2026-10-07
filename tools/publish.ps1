@@ -1,9 +1,9 @@
 ﻿# Veröffentlicht HdrPilot als einzelne, eigenständige EXE (Windows x64), dazu die Kommandozeile und die README.
-# Ergebnis (Standard): artifacts\publish\HdrPilot\HdrPilot.exe, ...\cli\hdrpilot.exe, ...\README.md
+# Ergebnis (Standard): artifacts\publish\HDRpilot\HDRpilot.exe, ...\cli\hdrpilot.exe, ...\README.md
 param([string]$Output)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-if (-not $Output) { $Output = Join-Path $root 'artifacts\publish\HdrPilot' }
+if (-not $Output) { $Output = Join-Path $root 'artifacts\publish\HDRpilot' }
 $staging = Join-Path $root 'artifacts\publish-staging'
 
 foreach ($dir in $Output, $staging) {
@@ -11,7 +11,7 @@ foreach ($dir in $Output, $staging) {
 }
 
 $projects = @(
-    @{ Name = 'App'; Project = 'src\HdrPilot.App\HdrPilot.App.csproj'; Exe = 'HdrPilot.exe'; Target = '' },
+    @{ Name = 'App'; Project = 'src\HdrPilot.App\HdrPilot.App.csproj'; Exe = 'HDRpilot.exe'; Target = '' },
     @{ Name = 'Kommandozeile'; Project = 'src\HdrPilot.Cli\HdrPilot.Cli.csproj'; Exe = 'hdrpilot.exe'; Target = 'cli' }
 )
 
@@ -62,9 +62,9 @@ $desktop = 'Microsoft.WindowsDesktop.App.Runtime.win-x64'
 $extensions = @($deps.Keys | Where-Object { $_ -like 'Microsoft.Extensions.*' } | Sort-Object)
 $rule = '=' * 100
 $notice = @(
-    'HdrPilot – Lizenzhinweise mitgelieferter Fremdbestandteile',
+    'HDRpilot – Lizenzhinweise mitgelieferter Fremdbestandteile',
     '',
-    'HdrPilot.exe und cli\hdrpilot.exe enthalten die folgenden Bestandteile von Microsoft und der .NET Foundation.',
+    'HDRpilot.exe und cli\hdrpilot.exe enthalten die folgenden Bestandteile von Microsoft und der .NET Foundation.',
     'Alle stehen unter der MIT-Lizenz; keiner steht unter GPL oder AGPL.',
     'Zusätzlich zeigt HdrPilot Angaben von PCGamingWiki an (CC BY-NC-SA 3.0, zur Laufzeit abgerufen; Abschnitt am Ende).',
     '',

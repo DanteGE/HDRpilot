@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <AssemblyName>HdrPilot</AssemblyName>
+    <AssemblyName>HDRpilot</AssemblyName>
     <RootNamespace>HdrPilot.App</RootNamespace>
     <UseWPF>true</UseWPF>
     <!-- Nur für NotifyIcon (Tray) und die Symbol-Extraktion aus EXE-Dateien. -->

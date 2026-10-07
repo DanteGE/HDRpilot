@@ -24,8 +24,8 @@ public sealed record AppPaths(string ConfigDirectory, string DataDirectory)
     public string PcgwAccountFile => Path.Combine(DataDirectory, "pcgw-account.dat");
 
     public static AppPaths Default(IAppEnvironment environment) => new(
-        Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HdrPilot"),
-        Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HdrPilot"));
+        Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HDRpilot"),
+        Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HDRpilot"));
 
     /// <summary>Alles unter einem Ordner (Tests, Kommandozeile mit --config-dir).</summary>
     public static AppPaths InDirectory(string directory) => new(directory, directory);

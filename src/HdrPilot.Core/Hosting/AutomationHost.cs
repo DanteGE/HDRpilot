@@ -43,7 +43,7 @@ public sealed class AutomationHost : IAsyncDisposable
         _levelSwitch = new LogLevelSwitch(LogLevel.Information);
         FileLog = new RollingFileLoggerProvider(paths.LogDirectory, () => _levelSwitch.Level, clock);
         LoggerFactory = new CompositeLoggerFactory([FileLog, .. extraLogProviders ?? []]);
-        _logger = LoggerFactory.CreateLogger("HdrPilot");
+        _logger = LoggerFactory.CreateLogger("HDRpilot");
 
         Config = new ConfigService(new ConfigStore(fileSystem, paths.ConfigFile, clock, LoggerFactory.CreateLogger("Config")), clock, LoggerFactory.CreateLogger("Config"));
         _levelSwitch.Level = Config.Current.Settings.LogLevel;
@@ -133,7 +133,7 @@ public sealed class AutomationHost : IAsyncDisposable
         _started = true;
         var s = Config.Current.Settings;
         _logger.LogInformation(
-            "HdrPilot {Version} startet. Konfiguration {Config}, Abfrageintervall {Interval} ms, Nachlaufzeit {Grace} s, Windows-Build {Build}.",
+            "HDRpilot {Version} startet. Konfiguration {Config}, Abfrageintervall {Interval} ms, Nachlaufzeit {Grace} s, Windows-Build {Build}.",
             typeof(AutomationHost).Assembly.GetName().Version, Paths.ConfigFile, s.PollIntervalMs, s.GracePeriodSeconds, _environment.WindowsBuild);
         await Sessions.InitializeAsync(Watcher.Poll(), cancellationToken).ConfigureAwait(false);
         Watcher.Start(OnPollAsync);
@@ -167,7 +167,7 @@ public sealed class AutomationHost : IAsyncDisposable
         _reloadTimer?.Dispose();
         LauncherSignals.Dispose();
         await Watcher.StopAsync().ConfigureAwait(false);
-        _logger.LogInformation("HdrPilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
+        _logger.LogInformation("HDRpilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
         LoggerFactory.Dispose();
     }
 

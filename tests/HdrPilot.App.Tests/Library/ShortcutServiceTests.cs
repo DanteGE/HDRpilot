@@ -68,9 +68,9 @@ public sealed class ShortcutServiceTests : IDisposable
         var first = service.CreateStartMenuShortcut(Game());
         var second = service.CreateStartMenuShortcut(Game());
 
-        Assert.Equal(Path.Combine(_root, "Programs", "HdrPilot", "Cyberpunk 2077 (HDR).lnk"), first);
+        Assert.Equal(Path.Combine(_root, "Programs", "HDRpilot", "Cyberpunk 2077 (HDR).lnk"), first);
         Assert.Equal(first, second);
-        Assert.Single(Directory.GetFiles(Path.Combine(_root, "Programs", "HdrPilot")));
+        Assert.Single(Directory.GetFiles(Path.Combine(_root, "Programs", "HDRpilot")));
         Assert.Equal("--run \"Gog:1423049311\"", ShortcutService.Read(first).Arguments);
     });
 

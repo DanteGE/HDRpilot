@@ -79,7 +79,7 @@ try {
     Check ($app.WaitForExit(10000)) 'Instanz beendet'
 
     # Fall 2: keine Instanz
-    $before = @(Get-Process -Name 'HdrPilot' -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
+    $before = @(Get-Process -Name 'HDRpilot' -ErrorAction SilentlyContinue | ForEach-Object { $_.Id })
     $wrap2 = Invoke-Wrap
     $r2 = Watch-Start $wrap2 8000
     Check ($null -ne $r2.ProcStart) 'Ohne Instanz startet das Spiel trotzdem'
@@ -90,7 +90,7 @@ try {
         Check ($delay -lt 3000) 'Ohne Instanz kein Warten'
     }
     Check (-not (Test-HdrOn $reg)) 'HDR blieb aus'
-    $extra = @(Get-Process -Name 'HdrPilot' -ErrorAction SilentlyContinue | Where-Object { $_.Id -notin $before })
+    $extra = @(Get-Process -Name 'HDRpilot' -ErrorAction SilentlyContinue | Where-Object { $_.Id -notin $before })
     Check ($extra.Count -eq 0) 'Wrapper hat kein HdrPilot gestartet'
     Stop-Process -Name $game.ProcessName -Force -ErrorAction SilentlyContinue
 }

@@ -96,7 +96,7 @@ public sealed class HdrListService : IHdrListService, IDisposable
 
     /// <summary>„HdrPilot/1.0.0 (Windows desktop app; HDR list)“, wie es die Nutzungsregeln des Wikis erbitten.</summary>
     public static string UserAgent { get; } =
-        "HdrPilot/" + (typeof(HdrListService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0") + " (Windows desktop app; HDR list)";
+        "HDRpilot/" + (typeof(HdrListService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0") + " (Windows desktop app; HDR list)";
 
     public bool IsRunning
     {
@@ -357,7 +357,7 @@ public sealed class HdrListService : IHdrListService, IDisposable
         {
             IsBackground = true,
             Priority = ThreadPriority.BelowNormal,
-            Name = "HdrPilot HDR-Liste",
+            Name = "HDRpilot HDR-Liste",
         };
         thread.Start();
         return completion.Task;

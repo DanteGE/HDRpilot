@@ -30,8 +30,8 @@ public sealed class SteamWrapperProcessTests : IDisposable
     public async Task Wrapper_starts_the_stand_in_game_logs_one_line_and_exits_without_starting_hdrpilot()
     {
         Directory.CreateDirectory(_dir);
-        var exe = Path.Combine(AppContext.BaseDirectory, "HdrPilot.exe");
-        Assert.True(File.Exists(exe), "HdrPilot.exe fehlt neben den Tests: " + exe);
+        var exe = Path.Combine(AppContext.BaseDirectory, "HDRpilot.exe");
+        Assert.True(File.Exists(exe), "HDRpilot.exe fehlt neben den Tests: " + exe);
         var marker = Path.Combine(_dir, "gestartet");
         var cmd = Path.Combine(Environment.SystemDirectory, "cmd.exe");
         var gameCommand = $"\"{cmd}\" /c mkdir \"{marker}\"";
@@ -72,7 +72,7 @@ public sealed class SteamWrapperProcessTests : IDisposable
 
         var line = Assert.Single(File.ReadAllLines(Path.Combine(_dir, "logs", "wrap.log")));
         Assert.Contains("SteamAppId: 480", line, StringComparison.Ordinal);
-        Assert.Contains("HDR vorbereitet: nein (HdrPilot läuft nicht)", line, StringComparison.Ordinal);
+        Assert.Contains("HDR vorbereitet: nein (HDRpilot läuft nicht)", line, StringComparison.Ordinal);
         Assert.Contains("Spiel gestartet: ja", line, StringComparison.Ordinal);
         Assert.Contains("Arbeitsordner: " + _dir + " |", line, StringComparison.Ordinal);
         Assert.EndsWith("--wrap -- " + gameCommand, line, StringComparison.Ordinal);

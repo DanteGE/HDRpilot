@@ -11,8 +11,8 @@ namespace HdrPilot.App.Infrastructure;
 public static class ThemeManager
 {
     private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
-    private static readonly Uri DarkUri = new("pack://application:,,,/HdrPilot;component/Themes/Tokens.Dark.xaml", UriKind.Absolute);
-    private static readonly Uri LightUri = new("pack://application:,,,/HdrPilot;component/Themes/Tokens.Light.xaml", UriKind.Absolute);
+    private static readonly Uri DarkUri = new("pack://application:,,,/HDRpilot;component/Themes/Tokens.Dark.xaml", UriKind.Absolute);
+    private static readonly Uri LightUri = new("pack://application:,,,/HDRpilot;component/Themes/Tokens.Light.xaml", UriKind.Absolute);
     private static ResourceDictionary? _current;
     private static IRegistry _registry = WindowsRegistry.Instance;
 

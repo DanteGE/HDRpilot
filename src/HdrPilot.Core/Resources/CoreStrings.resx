@@ -52,7 +52,7 @@
     <value>HDR-Zustand nicht gespeichert</value>
   </data>
   <data name="NotifyStateNotSavedMessage" xml:space="preserve">
-    <value>Der HDR-Zustand vor dem Spiel ließ sich nicht speichern ({0}). Stürzt HdrPilot während des Spiels ab, wird HDR danach nicht von selbst zurückgestellt.</value>
+    <value>Der HDR-Zustand vor dem Spiel ließ sich nicht speichern ({0}). Stürzt HDRpilot während des Spiels ab, wird HDR danach nicht von selbst zurückgestellt.</value>
   </data>
   <data name="NotifyGameSeemsHungTitle" xml:space="preserve">
     <value>Spiel hängt im Hintergrund?</value>

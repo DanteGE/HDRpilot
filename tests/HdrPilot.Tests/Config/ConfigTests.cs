@@ -245,8 +245,8 @@ public sealed class ConfigTests
     public void App_paths_split_roaming_config_and_local_data()
     {
         var paths = AppPaths.Default(new FakeEnvironment());
-        Assert.Equal(@"C:\Users\Test\AppData\Roaming\HdrPilot\config.json", paths.ConfigFile);
-        Assert.Equal(@"C:\Users\Test\AppData\Local\HdrPilot\session-state.json", paths.SessionStateFile);
-        Assert.Equal(@"C:\Users\Test\AppData\Local\HdrPilot\logs", paths.LogDirectory);
+        Assert.Equal(@"C:\Users\Test\AppData\Roaming\HDRpilot\config.json", paths.ConfigFile);
+        Assert.Equal(@"C:\Users\Test\AppData\Local\HDRpilot\session-state.json", paths.SessionStateFile);
+        Assert.Equal(@"C:\Users\Test\AppData\Local\HDRpilot\logs", paths.LogDirectory);
     }
 }

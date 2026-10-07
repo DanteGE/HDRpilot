@@ -17,7 +17,7 @@ public sealed record ShortcutInfo(string TargetPath, string Arguments, string Wo
 /// </summary>
 public sealed class ShortcutService : IShortcutService
 {
-    public const string StartMenuFolderName = "HdrPilot";
+    public const string StartMenuFolderName = "HDRpilot";
 
     private readonly string _desktopDirectory;
     private readonly string _programsDirectory;

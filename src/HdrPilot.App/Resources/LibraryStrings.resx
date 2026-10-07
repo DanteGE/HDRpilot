@@ -15,7 +15,7 @@
 
   <!-- Fenster und Kopf -->
   <data name="Window_Title" xml:space="preserve">
-    <value>HdrPilot – Spielebibliothek</value>
+    <value>HDRpilot – Spielebibliothek</value>
   </data>
   <data name="Header_Title" xml:space="preserve">
     <value>Spielebibliothek</value>
@@ -301,7 +301,7 @@
     <value>Wähle ein Spiel</value>
   </data>
   <data name="Details_EmptyText" xml:space="preserve">
-    <value>Hier legst du fest, ob HdrPilot HDR für ein Spiel automatisch einschaltet, auf welchem Bildschirm und welche EXE-Dateien zum Spiel gehören.</value>
+    <value>Hier legst du fest, ob HDRpilot HDR für ein Spiel automatisch einschaltet, auf welchem Bildschirm und welche EXE-Dateien zum Spiel gehören.</value>
   </data>
   <data name="Details_NotInstalled" xml:space="preserve">
     <value>Dieses Spiel wurde beim letzten Einlesen nicht mehr gefunden. Die Einstellungen bleiben erhalten.</value>
@@ -365,7 +365,7 @@
     <value>Jedes Programm im Installationsordner zählt als Spiel. Ausgeschlossene EXEs schalten nichts, hinzugefügte zählen auch außerhalb des Ordners.</value>
   </data>
   <data name="Exe_Empty" xml:space="preserve">
-    <value>Noch keine EXE bekannt. HdrPilot merkt sich die EXE-Dateien beim ersten Spielen.</value>
+    <value>Noch keine EXE bekannt. HDRpilot merkt sich die EXE-Dateien beim ersten Spielen.</value>
   </data>
   <data name="Exe_OriginDetected" xml:space="preserve">
     <value>beim Spielen erkannt</value>
@@ -419,7 +419,7 @@
     <comment>{0} = Dateiname</comment>
   </data>
   <data name="Exe_RelearnDone" xml:space="preserve">
-    <value>Gemerkte EXE-Dateien vergessen. Beim nächsten Spielen lernt HdrPilot sie neu.</value>
+    <value>Gemerkte EXE-Dateien vergessen. Beim nächsten Spielen lernt HDRpilot sie neu.</value>
   </data>
   <data name="Exe_PickerTitle" xml:space="preserve">
     <value>EXE-Datei des Spiels wählen</value>
@@ -437,7 +437,7 @@
     <value>Schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel (über seinen Launcher oder direkt über die EXE).</value>
   </data>
   <data name="Launch_NoCommand" xml:space="preserve">
-    <value>Für diesen Eintrag kennt HdrPilot keine Start-EXE: Im Ordner liegt keine oder mehr als eine. Die Erkennung beim Spielen wirkt trotzdem. Zum Starten über HdrPilot das Spiel über seine EXE hinzufügen.</value>
+    <value>Für diesen Eintrag kennt HDRpilot keine Start-EXE: Im Ordner liegt keine oder mehr als eine. Die Erkennung beim Spielen wirkt trotzdem. Zum Starten über HDRpilot das Spiel über seine EXE hinzufügen.</value>
   </data>
   <data name="Launch_Running" xml:space="preserve">
     <value>HDR wird eingeschaltet, dann startet das Spiel …</value>
@@ -478,11 +478,11 @@
     <comment>Dateiname der Verknüpfung ohne .lnk; {0} = Spielname</comment>
   </data>
   <data name="Shortcut_Description" xml:space="preserve">
-    <value>Startet {0} über HdrPilot mit HDR</value>
+    <value>Startet {0} über HDRpilot mit HDR</value>
     <comment>{0} = Spielname</comment>
   </data>
   <data name="Shortcut_NoTarget" xml:space="preserve">
-    <value>Der Programmpfad von HdrPilot ist unbekannt.</value>
+    <value>Der Programmpfad von HDRpilot ist unbekannt.</value>
   </data>
   <data name="Steam_CopyLaunchOption" xml:space="preserve">
     <value>Steam-Startoption kopieren</value>
@@ -494,7 +494,7 @@
     <value>Notlösung für den Start direkt aus Steam: HDR geht dann vor dem Spiel an.</value>
   </data>
   <data name="Steam_LaunchOptionCopied" xml:space="preserve">
-    <value>Kopiert. In Steam: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen, dort einfügen. Dann schaltet HdrPilot HDR auch beim Start aus Steam vor dem Spiel ein (HdrPilot muss dafür laufen).</value>
+    <value>Kopiert. In Steam: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen, dort einfügen. Dann schaltet HDRpilot HDR auch beim Start aus Steam vor dem Spiel ein (HDRpilot muss dafür laufen).</value>
   </data>
   <data name="Steam_LaunchOptionFailed" xml:space="preserve">
     <value>Startoption konnte nicht kopiert werden: {0}</value>
@@ -510,7 +510,7 @@
     <value>Spiel entfernen?</value>
   </data>
   <data name="RemoveGame_ConfirmText" xml:space="preserve">
-    <value>„{0}“ wird aus HdrPilot entfernt. Die Dateien auf dem Datenträger bleiben unverändert.</value>
+    <value>„{0}“ wird aus HDRpilot entfernt. Die Dateien auf dem Datenträger bleiben unverändert.</value>
     <comment>{0} = Spielname</comment>
   </data>
   <data name="RemoveGame_Confirm" xml:space="preserve">

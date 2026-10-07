@@ -11,7 +11,8 @@ $Cli = (Resolve-Path $Cli).Path
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $cfg = Join-Path $root 'tools\out\phase3\config-idle'
 if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
-New-Item -ItemType Directory -Force $cfg | Out-Null
+. (Join-Path $PSScriptRoot 'TestConfigSeed.ps1')
+Initialize-TestConfig $cfg
 & $Cli games import --config-dir $cfg | Select-Object -First 1 | ForEach-Object { Write-Output "Import: $_" }
 $games = (& $Cli games list --config-dir $cfg --json | Out-String | ConvertFrom-Json) | ForEach-Object { $_ }
 Write-Output "Spiele in der Konfiguration: $(@($games).Count)"

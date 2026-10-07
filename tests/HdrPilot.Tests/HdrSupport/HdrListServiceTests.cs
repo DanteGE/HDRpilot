@@ -223,7 +223,7 @@ public sealed class HdrListServiceTests : IDisposable
     [Fact]
     public void User_agent_names_app_version_and_purpose()
     {
-        Assert.Matches(@"^HdrPilot/\d+\.\d+\.\d+ \(Windows desktop app; HDR list\)$", HdrListService.UserAgent);
+        Assert.Matches(@"^HDRpilot/\d+\.\d+\.\d+ \(Windows desktop app; HDR list\)$", HdrListService.UserAgent);
     }
 
     [Fact]

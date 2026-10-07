@@ -4,9 +4,9 @@
 # Modulprüfung erkennt beim normalen (runtime-abhängigen) Debug-Build die installierte Runtime.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$out = Join-Path $root 'artifacts\publish\HdrPilot'
+$out = Join-Path $root 'artifacts\publish\HDRpilot'
 $work = Join-Path $env:TEMP 'HdrPilot-gate5'
-$debugApp = Join-Path $root 'src\HdrPilot.App\bin\Debug\net10.0-windows\HdrPilot.exe'
+$debugApp = Join-Path $root 'src\HdrPilot.App\bin\Debug\net10.0-windows\HDRpilot.exe'
 $script:ok = $true
 
 function Note([string]$text) { Write-Output ("{0:HH:mm:ss.fff} {1}" -f (Get-Date), $text) }
@@ -58,12 +58,12 @@ Check ($LASTEXITCODE -eq 0) 'Veröffentlichung ohne Fehler'
 
 # 2. Inhalt, Architektur, Version
 $files = @(Get-ChildItem $out -Recurse -File | ForEach-Object { $_.FullName.Substring($out.Length + 1) } | Sort-Object)
-Check (($files -join ',') -eq 'cli\hdrpilot.exe,HdrPilot.exe,README.md,THIRD-PARTY-NOTICES.txt') ("Ausgabe enthält genau HdrPilot.exe, cli\hdrpilot.exe, README.md, THIRD-PARTY-NOTICES.txt (gefunden: {0})" -f ($files -join ', '))
+Check (($files -join ',') -eq 'cli\hdrpilot.exe,HDRpilot.exe,README.md,THIRD-PARTY-NOTICES.txt') ("Ausgabe enthält genau HDRpilot.exe, cli\hdrpilot.exe, README.md, THIRD-PARTY-NOTICES.txt (gefunden: {0})" -f ($files -join ', '))
 $notices = Join-Path $out 'THIRD-PARTY-NOTICES.txt'
 $noticeText = if (Test-Path $notices) { [IO.File]::ReadAllText($notices) } else { '' }
 $mitCount = ([regex]::Matches($noticeText, 'MIT License')).Count
 Check ($mitCount -ge 2 -and $noticeText -match 'Microsoft\.NETCore\.App\.Runtime\.win-x64 10\.' -and $noticeText -match 'Microsoft\.WindowsDesktop\.App\.Runtime\.win-x64 10\.' -and $noticeText -match 'Microsoft\.Extensions\.Logging\.Abstractions' -and $noticeText.Length -gt 50000) ("Lizenzhinweise: {0} MIT-Lizenztexte, {1:N0} Zeichen" -f $mitCount, $noticeText.Length)
-$appExe = Join-Path $out 'HdrPilot.exe'
+$appExe = Join-Path $out 'HDRpilot.exe'
 $cliExe = Join-Path $out 'cli\hdrpilot.exe'
 foreach ($exe in $appExe, $cliExe) {
     if (Test-Path $exe) {
@@ -96,7 +96,7 @@ $env:DOTNET_ROOT_X64 = $env:DOTNET_ROOT
 $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -and $_ -notmatch '\\dotnet' }) -join ';'
 Check ($null -eq (Get-Command dotnet -ErrorAction SilentlyContinue)) 'dotnet ist im Prüflauf nicht erreichbar'
 
-$runApp = Join-Path $run 'HdrPilot.exe'
+$runApp = Join-Path $run 'HDRpilot.exe'
 $runCli = Join-Path $run 'cli\hdrpilot.exe'
 $cfg = Join-Path $work 'config'
 if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
@@ -110,10 +110,10 @@ $ErrorActionPreference = 'Stop'
 
 $result = Get-AppModules $runApp $cfg
 $runtimeHits = @($result.Modules | Where-Object { $_ -match $installedRuntime })
-$extracted = @($result.Modules | Where-Object { $_ -match '\\\.net\\HdrPilot\\' })
+$extracted = @($result.Modules | Where-Object { $_ -match '\\\.net\\HDRpilot\\' })
 Check $result.Started 'Veröffentlichte App startet und liest die Bibliothek ein'
 Check ($result.Modules.Count -gt 0 -and $runtimeHits.Count -eq 0) ("Keine Module aus einer installierten Runtime ({0} Module geladen, Treffer: {1})" -f $result.Modules.Count, $runtimeHits.Count)
-Check ($result.Modules.Count -gt 0 -and $result.Modules[0] -like '*\HdrPilot-gate5\run\HdrPilot.exe') ("Hauptmodul ist die kopierte EXE: {0}" -f ($result.Modules | Select-Object -First 1))
+Check ($result.Modules.Count -gt 0 -and $result.Modules[0] -like '*\HdrPilot-gate5\run\HDRpilot.exe') ("Hauptmodul ist die kopierte EXE: {0}" -f ($result.Modules | Select-Object -First 1))
 Check ($extracted.Count -gt 0) ("Native WPF-Bibliotheken aus der EXE entpackt: {0}" -f (($extracted | ForEach-Object { Split-Path $_ -Leaf }) -join ', '))
 Check ($result.Exited -and $result.ExitCode -eq 0) ("Beenden über --exit, Exitcode {0}" -f $result.ExitCode)
 

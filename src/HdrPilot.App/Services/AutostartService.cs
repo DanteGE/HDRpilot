@@ -27,7 +27,7 @@ public enum AutostartReconcileResult
 public sealed class AutostartService(IRegistry registry, string? executablePath, ILogger? logger = null) : IAutostartService
 {
     public const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    public const string ValueName = "HdrPilot";
+    public const string ValueName = "HDRpilot";
     public const string MinimizedArgument = "--minimized";
 
     private readonly ILogger _logger = logger ?? NullLogger.Instance;

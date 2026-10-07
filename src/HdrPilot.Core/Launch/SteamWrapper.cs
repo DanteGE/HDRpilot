@@ -180,13 +180,13 @@ public sealed class SteamWrapper(
         prepared = false;
         if (!channel.IsInstanceRunning())
         {
-            return "nein (HdrPilot läuft nicht)";
+            return "nein (HDRpilot läuft nicht)";
         }
 
         using var waiter = new PrepareWaiter();
         if (!channel.TrySend(["--prepare", key, "--ready-event", waiter.Name]))
         {
-            return "nein (HdrPilot hat den Befehl nicht angenommen)";
+            return "nein (HDRpilot hat den Befehl nicht angenommen)";
         }
 
         switch (waiter.Wait(_options.ReadyTimeout))
@@ -196,7 +196,7 @@ public sealed class SteamWrapper(
                 context.Sleep(_options.SettleTime);
                 return "ja";
             case PrepareWaitResult.Skipped:
-                return "nein (HdrPilot hat nichts vorbereitet, etwa weil das Spiel unbekannt ist)";
+                return "nein (HDRpilot hat nichts vorbereitet, etwa weil das Spiel unbekannt ist)";
             default:
                 return "nein (keine Antwort nach " + _options.ReadyTimeout.TotalSeconds.ToString("0.#", CultureInfo.InvariantCulture) + " s)";
         }

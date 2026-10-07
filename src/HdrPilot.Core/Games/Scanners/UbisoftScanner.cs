@@ -13,7 +13,8 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <item>Launcher: HKLM\SOFTWARE\Ubisoft\Launcher über die 32-Bit-Sicht (unter x64 also WOW6432Node). Fehlt der Schlüssel,
 /// gilt der Launcher als nicht installiert.</item>
 /// <item>Je Unterschlüssel von <c>Launcher\Installs\&lt;ID&gt;</c> der Wert <c>InstallDir</c> (gemessen: <c>D:/Ubisoft-Spiele/AFOP/</c>).
-/// Ohne InstallDir (gemessen bei über Steam installierten Ubisoft-Spielen) oder mit fehlendem Ordner entfällt der Eintrag.</item>
+/// Ohne InstallDir (gemessen bei über Steam installierten Ubisoft-Spielen) oder mit fehlendem Ordner entfällt der Eintrag;
+/// eine Laufwerkswurzel als InstallDir wird als Fehler gemeldet und ebenfalls weggelassen.</item>
 /// <item>Name aus dem Produkt-Cache <c>cache\configuration\configurations</c> (siehe <see cref="UbisoftConfigurationCache"/>),
 /// sonst DisplayName des Uninstall-Eintrags „Uplay Install &lt;ID&gt;“ (32-Bit-Sicht), sonst der Ordnername.</item>
 /// <item>EXE-Dateien: die im Produkt-Cache genannten Start-EXEs, sofern sie existieren.</item>
@@ -158,6 +159,17 @@ public sealed class UbisoftScanner : IGameScanner
                 continue;
             }
 
+            if (IsRoot(dir))
+            {
+                // Später gilt jeder Prozess unter InstallDir als Spiel; bei einer Laufwerkswurzel wäre das jeder Prozess
+                // auf dem Laufwerk. Lieber melden und weglassen (manueller Eintrag möglich) als falsch zuordnen.
+                errors.Add(new ScanError(
+                    $"Ubisoft-Installationseintrag {id}: InstallDir ist die Wurzel eines Laufwerks bzw. einer Freigabe ({text}); " +
+                    "jeder Prozess auf dem Laufwerk gälte als Spiel. Eintrag wird übersprungen, bitte den Spielordner manuell eintragen.",
+                    keyPath));
+                continue;
+            }
+
             if (!_fileSystem.DirectoryExists(dir))
             {
                 _logger.LogInformation("Ubisoft: Spielordner {Dir} von {Id} fehlt, Eintrag wird übersprungen.", dir, id);
@@ -239,7 +251,8 @@ public sealed class UbisoftScanner : IGameScanner
             UninstallKeyPath + @"\Uplay Install " + install.Id.ToString(CultureInfo.InvariantCulture),
             RegistryViewKind.Registry32))
         {
-            var displayName = key?.GetString("DisplayName")?.Trim();
+            // Nur REG_SZ: GetString machte aus einem falsch typisierten DWORD eine Zahl als "Namen".
+            var displayName = (key?.GetValue("DisplayName") as string)?.Trim();
             if (!string.IsNullOrEmpty(displayName))
             {
                 return displayName;
@@ -253,6 +266,8 @@ public sealed class UbisoftScanner : IGameScanner
     /// <summary>
     /// Start-EXEs aus dem Produkt-Cache. <c>relative</c> bezieht sich auf den Arbeitsordner (InstallDir plus
     /// <c>working_directory.append</c>); fehlt die Datei dort, wird InstallDir selbst geprüft. Nur vorhandene Dateien.
+    /// Ubisoft hängt <c>relative</c> an den Arbeitsordner an; ein führender Trenner (gemessen bei Watch Dogs 2:
+    /// <c>'\bin\WatchDogs2.exe'</c>) ist deshalb kein absoluter Pfad und wird entfernt.
     /// </summary>
     private IReadOnlyList<string> ResolveExecutables(string installDir, UbisoftProductConfig? config)
     {
@@ -264,14 +279,16 @@ public sealed class UbisoftScanner : IGameScanner
         var result = new List<string>();
         foreach (var exe in config.Executables)
         {
-            foreach (var relative in new[] { exe.RelativePath, exe.TrialRelativePath })
+            var append = TrimLeadingSeparators(exe.WorkingDirectoryAppend);
+            foreach (var raw in new[] { exe.RelativePath, exe.TrialRelativePath })
             {
-                if (relative is null || !IsPlainRelative(relative) || (exe.WorkingDirectoryAppend is { } a && !IsPlainRelative(a)))
+                var relative = TrimLeadingSeparators(raw);
+                if (relative is null || !IsPlainRelative(relative) || (append is not null && !IsPlainRelative(append)))
                 {
                     continue;
                 }
 
-                var candidates = exe.WorkingDirectoryAppend is { } append
+                var candidates = append is not null
                     ? new[] { Path.Combine(installDir, append, relative), Path.Combine(installDir, relative) }
                     : new[] { Path.Combine(installDir, relative) };
                 foreach (var candidate in candidates)
@@ -297,6 +314,20 @@ public sealed class UbisoftScanner : IGameScanner
         !Path.IsPathRooted(value)
         && !value.Contains(':', StringComparison.Ordinal)
         && value.Split('\\', '/').All(part => part.Length == 0 || part.Trim(' ', '.').Length > 0);
+
+    /// <summary>Entfernt führende Trenner; null, wenn nichts übrig bleibt.</summary>
+    private static string? TrimLeadingSeparators(string? value)
+    {
+        var trimmed = value?.TrimStart('\\', '/').Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+    }
+
+    /// <summary>True für eine Laufwerkswurzel ("D:\") oder die Wurzel einer Freigabe ("\\server\freigabe").</summary>
+    private static bool IsRoot(string normalizedDir)
+    {
+        var root = Path.GetPathRoot(normalizedDir);
+        return !string.IsNullOrEmpty(root) && PathUtil.PathEquals(root, normalizedDir);
+    }
 
     private sealed record Install(uint Id, string Dir);
 }

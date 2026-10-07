@@ -46,7 +46,40 @@ public sealed class SteamScannerTests
         Assert.Empty(result.Errors);
     }
 
+    [Theory]
+    [InlineData(1234)]
+    [InlineData(new byte[] { 0x63, 0x3A })]
+    public void Missing_launcher_when_steam_path_has_wrong_registry_type_returns_empty_without_errors(object value)
+    {
+        // Falscher Werttyp (DWORD bzw. REG_BINARY statt REG_SZ) darf weder werfen noch als Pfad gelten.
+        _registry.Set(RegistryHiveKind.CurrentUser, @"Software\Valve\Steam", "SteamPath", value);
+        _fs.AddDirectory(@"C:\1234");
+
+        var result = Scan();
+
+        Assert.False(result.LauncherDetected);
+        Assert.Empty(result.Games);
+        Assert.Empty(result.Errors);
+    }
+
     // ---------- Positive Fälle ----------
+
+    [Fact]
+    public void Library_path_with_umlauts_slashes_and_trailing_backslash_is_normalized()
+    {
+        WithSteam();
+        WriteLibraryFolders("\"libraryfolders\"\n{\n\t\"1\"\n\t{\n\t\t\"path\"\t\t\"E:/Spiele Ä/Steam Bibliothek\\\\\"\n\t}\n\t\"2\"\n\t{\n\t\t\"path\"\t\t\"Z:\\\\Gibt es nicht\"\n\t}\n}\n");
+        AddManifest(@"E:\Spiele Ä\Steam Bibliothek", 9400, "Größenwahn™", "Größenwahn", 4);
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Equal("Größenwahn™", game.Name);
+        Assert.Equal(@"E:\Spiele Ä\Steam Bibliothek\steamapps\common\Größenwahn", game.InstallDir);
+        Assert.Equal("steam://rungameid/9400", game.LaunchCommand);
+        Assert.True(_logger.Contains(LogLevel.Information, @"Z:\Gibt es nicht"));
+    }
 
     [Fact]
     public void Finds_games_in_default_and_additional_library_with_exact_launch_command()
@@ -543,6 +576,22 @@ public sealed class SteamScannerTests
     }
 
     [Fact]
+    public void Broken_empty_manifest_and_empty_libraryfolders_are_reported_and_default_library_scanned()
+    {
+        WithSteam();
+        WriteLibraryFolders(string.Empty);
+        _fs.AddFile(DefaultLibrary + @"\steamapps\appmanifest_9500.acf", Array.Empty<byte>());
+        AddFixtureGame(DefaultLibrary, "appmanifest_9990110.acf", "Sternenwacht 2");
+
+        var result = Scan();
+
+        Assert.Equal(["9990110"], result.Games.Select(g => g.SourceId));
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, e => e.Path!.EndsWith("libraryfolders.vdf", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Errors, e => e.Path!.EndsWith("appmanifest_9500.acf", StringComparison.OrdinalIgnoreCase) && e.Message.Contains("AppState", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Broken_libraryfolders_with_unexpected_root_is_reported()
     {
         WithSteam();
@@ -631,8 +680,9 @@ public sealed class SteamScannerTests
         AddFixtureGame(DefaultLibrary, "appmanifest_9990110.acf", "Sternenwacht 2");
         var spy = new SteamUbisoftGuards.WriteSpyFileSystem(_fs);
 
-        new SteamScanner(spy, new SteamUbisoftGuards.ReadOnlyRegistry(_registry), _environment).Scan(ScanOptions.Default, Ct);
+        var result = new SteamScanner(spy, new SteamUbisoftGuards.ReadOnlyRegistry(_registry), _environment).Scan(ScanOptions.Default, Ct);
 
+        Assert.Single(result.Games); // der Scan lief wirklich durch
         Assert.Equal(0, spy.Writes);
     }
 

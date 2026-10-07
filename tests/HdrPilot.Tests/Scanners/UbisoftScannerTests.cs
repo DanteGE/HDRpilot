@@ -153,6 +153,56 @@ public sealed class UbisoftScannerTests
     }
 
     [Fact]
+    public void Install_dir_with_umlauts_and_trailing_backslash_is_normalized()
+    {
+        WithLauncher();
+        AddInstall(5266, @"E:\Spiele\Für Honor & Ruhm\");
+        _fs.AddFile(@"E:\Spiele\Für Honor & Ruhm\ForHonor.exe", "MZ");
+        AddCache(new UbisoftCacheBuilder().Add(5266, "version: 2.0\nroot:\n  name: Für Honor\n  start_game:\n    online:\n      executables:\n      - path:\n          relative: ForHonor.exe\n"));
+
+        var game = Assert.Single(Scan().Games);
+
+        Assert.Equal(@"E:\Spiele\Für Honor & Ruhm", game.InstallDir);
+        Assert.Equal("Für Honor", game.Name);
+        Assert.Equal([@"E:\Spiele\Für Honor & Ruhm\ForHonor.exe"], game.Executables);
+    }
+
+    [Fact]
+    public void Executables_with_leading_backslash_are_relative_to_install_dir()
+    {
+        // Gemessen im Produkt-Cache (Watch Dogs 2): relative: '\bin\WatchDogs2.exe', trial: '\bin_plus\WatchDogs2.exe', append: ''.
+        WithLauncher();
+        AddInstall(3353, @"E:\Ubisoft\Watch Dogs 2");
+        _fs.AddFile(@"E:\Ubisoft\Watch Dogs 2\bin\WatchDogs2.exe", "MZ");
+        _fs.AddFile(@"E:\Ubisoft\Watch Dogs 2\bin_plus\WatchDogs2.exe", "MZ");
+        AddCache(new UbisoftCacheBuilder().Add(3353, """
+            version: 2.0
+            root:
+              name: l1
+              start_game:
+                online:
+                  executables:
+                  - shortcut_name: WATCH_DOGS® 2
+                    path:
+                      relative: '\bin\WatchDogs2.exe'
+                    trial:
+                      relative: '\bin_plus\WatchDogs2.exe'
+                      arguments: -eac_launcher_settings settings_plus.json
+                    working_directory:
+                      register: HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\WatchDogs2\InstallDir
+                      append: ''
+            localizations:
+              default:
+                l1: WATCH_DOGS® 2
+            """));
+
+        var game = Assert.Single(Scan().Games);
+
+        Assert.Equal("WATCH_DOGS® 2", game.Name);
+        Assert.Equal([@"E:\Ubisoft\Watch Dogs 2\bin\WatchDogs2.exe", @"E:\Ubisoft\Watch Dogs 2\bin_plus\WatchDogs2.exe"], game.Executables);
+    }
+
+    [Fact]
     public void Executables_outside_install_dir_are_ignored()
     {
         WithLauncher();
@@ -219,6 +269,21 @@ public sealed class UbisoftScannerTests
         _fs.AddFile(@"E:\Programme (x86)\Ubisoft\Ubisoft Game Launcher\cache\configuration\configurations", new UbisoftCacheBuilder().AddFixture(4740).Build());
 
         Assert.Equal("Avatar Frontiers of Pandora™", Assert.Single(Scan().Games).Name);
+    }
+
+    [Fact]
+    public void Launcher_dir_with_wrong_registry_type_falls_back_to_program_files_x86()
+    {
+        _registry.Set(RegistryHiveKind.LocalMachine, LauncherKey, "InstallDir", 13225, RegistryViewKind.Registry32);
+        AddInstall(4740, "D:/Ubisoft-Spiele/AFOP/");
+        AddAfopFiles();
+        AddCache(new UbisoftCacheBuilder().AddFixture(4740));
+
+        var result = Scan();
+
+        Assert.True(result.LauncherDetected);
+        Assert.Empty(result.Errors);
+        Assert.Equal("Avatar Frontiers of Pandora™", Assert.Single(result.Games).Name);
     }
 
     [Fact]
@@ -293,6 +358,37 @@ public sealed class UbisoftScannerTests
 
         Assert.Empty(result.Errors);
         Assert.Empty(result.Games);
+    }
+
+    [Fact]
+    public void Incomplete_install_dir_on_missing_drive_is_skipped_without_error()
+    {
+        WithLauncher();
+        AddInstall(4740, "D:/Ubisoft-Spiele/AFOP/");
+        AddInstall(5266, "Z:/Ubisoft/Far Cry 6/"); // Laufwerk gibt es nicht (etwa abgezogene USB-Platte)
+        _fs.AddDirectory(Afop);
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        Assert.Equal(["4740"], result.Games.Select(g => g.SourceId));
+    }
+
+    [Fact]
+    public void Incomplete_empty_product_cache_uses_fallback_names_without_error()
+    {
+        WithLauncher();
+        AddInstall(4740, "D:/Ubisoft-Spiele/AFOP/");
+        AddAfopFiles();
+        _fs.AddFile(CachePath, Array.Empty<byte>());
+        _registry.Set(RegistryHiveKind.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Uplay Install 4740", "DisplayName", "AFOP", RegistryViewKind.Registry32);
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Equal("AFOP", game.Name);
+        Assert.Empty(game.Executables);
     }
 
     [Fact]
@@ -396,6 +492,44 @@ public sealed class UbisoftScannerTests
         Assert.Equal(["4740"], result.Games.Select(g => g.SourceId));
         var error = Assert.Single(result.Errors);
         Assert.Contains("unerwarteten Typ", error.Message, StringComparison.Ordinal);
+        Assert.Equal(@"HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\5266", error.Path);
+    }
+
+    [Theory]
+    [InlineData(4740)]
+    [InlineData(new byte[] { 0x41, 0x00 })]
+    public void Broken_uninstall_display_name_with_wrong_value_type_is_not_used_as_name(object value)
+    {
+        // Ohne Produkt-Cache: Ein DWORD als DisplayName ergäbe sonst den "Namen" 4740.
+        WithLauncher();
+        AddInstall(4740, @"D:\Spielordner\AvatarOrdner");
+        _fs.AddDirectory(@"D:\Spielordner\AvatarOrdner");
+        _registry.Set(RegistryHiveKind.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Uplay Install 4740", "DisplayName", value, RegistryViewKind.Registry32);
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        Assert.Equal("AvatarOrdner", Assert.Single(result.Games).Name);
+    }
+
+    [Theory]
+    [InlineData("D:/")]
+    [InlineData(@"D:\")]
+    [InlineData("D:")]
+    [InlineData(@"\\nas\spiele\")]
+    public void Broken_install_dir_at_drive_root_is_reported_and_not_returned(string installDir)
+    {
+        // Ein Laufwerk als Installationsordner machte in Phase 3 jeden Prozess auf dem Laufwerk zum Spielprozess.
+        WithLauncher();
+        AddInstall(4740, "D:/Ubisoft-Spiele/AFOP/");
+        AddInstall(5266, installDir);
+        _fs.AddDirectory(Afop).AddDirectory(@"\\nas\spiele\Far Cry 6");
+
+        var result = Scan();
+
+        Assert.Equal(["4740"], result.Games.Select(g => g.SourceId));
+        var error = Assert.Single(result.Errors);
+        Assert.Contains("Laufwerk", error.Message, StringComparison.Ordinal);
         Assert.Equal(@"HKEY_LOCAL_MACHINE\SOFTWARE\Ubisoft\Launcher\Installs\5266", error.Path);
     }
 

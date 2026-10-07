@@ -62,28 +62,28 @@ und die EXPECT-Marke ausgibt.
 
 ## Phase 2: Spielbibliothek
 
-- [ ] G2.1: `hdrpilot scan` gibt alle gefundenen Spiele als gültiges JSON aus; jeder Eintrag hat Quelle, ID, Name, vorhandenen Installationsordner und Start-Befehl; Fehler je Scanner stehen im JSON
+- [x] G2.1: `hdrpilot scan` gibt alle gefundenen Spiele als gültiges JSON aus; jeder Eintrag hat Quelle, ID, Name, vorhandenen Installationsordner und Start-Befehl; Fehler je Scanner stehen im JSON
   CHECK: ps tools\gates\phase2-scan.ps1
   EXPECT: PHASE2_SCAN_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 646 Spiele (Steam 631, Epic 7, GOG 5, Xbox 1, Ubisoft 1, EA 1, Battle.net 0), alle 7 Launcher erkannt, 0 Fehler, 631 ms, PHASE2_SCAN_OK; eigene Stichprobe: 637 Steam-Manifeste, im Scan fehlen genau die 6 gefilterten Werkzeuge
 
-- [ ] G2.2: Abgleich mit der Bibliothek jedes installierten Launchers, jede Abweichung mit Begründung in docs\phase2-abgleich.md
-  EVIDENCE: pending
+- [x] G2.2: Abgleich mit der Bibliothek jedes installierten Launchers, jede Abweichung mit Begründung in docs\phase2-abgleich.md
+  EVIDENCE: docs\phase2-abgleich.md (zweite/dritte Quelle je Launcher, von Entwickler und unabhängigem Prüfer am System gemessen); Nutzer bestätigt am 2026-10-07 gegen die Launcher-Ansichten: "Passt so"
 
-- [ ] G2.3: Jeder Scanner hat Unit-Tests gegen Beispieldateien bzw. Registry-Attrappe, darunter defekte und unvollständige Dateien
+- [x] G2.3: Jeder Scanner hat Unit-Tests gegen Beispieldateien bzw. Registry-Attrappe, darunter defekte und unvollständige Dateien
   CHECK: ps tools\gates\phase2-scanner-tests.ps1
   EXPECT: PHASE2_SCANNER_TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 7 Scanner (BattleNet 28, EA 41, Epic 44, GOG 35, Steam 43, Ubisoft 37, Xbox 37 Tests; je Scanner fehlender Launcher, 8–12 defekt, 3–6 unvollständig), Scanner-Tests 408/408, PHASE2_SCANNER_TESTS_OK
 
-- [ ] G2.4: Nicht installierter Launcher ergibt leere Liste ohne Fehler (je Scanner ein Test), ein werfender Scanner stört die anderen nicht
+- [x] G2.4: Nicht installierter Launcher ergibt leere Liste ohne Fehler (je Scanner ein Test), ein werfender Scanner stört die anderen nicht
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Missing_launcher|FullyQualifiedName~LibraryScannerTests" -MinTests 9
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, 18/18, TESTS_OK 18
 
-- [ ] G2.5: Build ohne Warnungen und alle Tests grün am Phasenende
+- [x] G2.5: Build ohne Warnungen und alle Tests grün am Phasenende
   CHECK: ps tools\gates\build.ps1
   EXPECT: BUILD_OK_0_WARNINGS
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-07 exit 0, Warnungen=0, BUILD_OK_0_WARNINGS; tools\gates\test.ps1: 768/768, TESTS_OK 768
 
 ## Phase 3: Überwachung und Sitzungslogik
 

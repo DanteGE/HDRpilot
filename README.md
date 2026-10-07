@@ -105,8 +105,9 @@ Lauf erkannten EXEs merkt sich HdrPilot und zeigt sie in den Details.
 schaltet HDR zuerst ein, wartet die Bestätigung ab und startet erst dann das Spiel: über den Launcher-Link der Quelle
 (etwa `steam://`), GOG-Spiele und selbst eingetragene Spiele direkt über ihre EXE. Das ist der sichere Weg für Spiele,
 die HDR nur beim Start prüfen. Erscheint innerhalb der Startfrist (Standard 120 s) kein erkannter Spielprozess, etwa
-weil der Launcher noch aktualisiert, stellt HdrPilot HDR wieder zurück. Scheitert das Einschalten, startet das Spiel
-trotzdem.
+weil der Launcher noch aktualisiert, stellt HdrPilot HDR wieder zurück. Solange ein Programm aus dem Spielordner läuft
+(etwa ein Launcher-Fenster, das auf die Anmeldung wartet), wartet HdrPilot weiter, höchstens 30 Minuten. Scheitert das
+Einschalten, startet das Spiel trotzdem.
 
 **Zurückstellen:** Vor dem Schalten merkt sich HdrPilot den HDR-Zustand jedes betroffenen Bildschirms und speichert
 ihn sofort. Wenn das letzte HDR-Spiel beendet ist und die Nachlaufzeit (10 s) verstrichen ist, stellt HdrPilot diesen
@@ -233,8 +234,14 @@ gemerkten HDR-Zustand. Vorher HdrPilot beenden oder bei laufender App `HdrPilot.
 - **Nicht automatisch gefunden** werden: in Steam eingetragene Fremdspiele, ältere Store-Spiele direkt unter
   `C:\Program Files\WindowsApps`, Xbox-Spiele auf USB- oder Netzlaufwerken, GOG-Spiele ohne Registry-Eintrag und
   Epic-Spiele ohne Manifest. Solche Spiele über „Spiel hinzufügen“ eintragen.
-- **Start über die Launcher:** Die Reihenfolge (HDR bestätigt vor dem Spielstart) ist automatisch mit einem
-  Testprogramm geprüft. Die Start-Befehle der einzelnen Launcher wurden noch nicht mit echten Spielen ausgeführt.
+- **Start über die Launcher:** Mit echten Spielen geprüft: Steam (Dying Light: The Beast), Epic (Dead Island 2), GOG
+  (Cyberpunk 2077), Ubisoft Connect (Avatar: Frontiers of Pandora), EA app (Battlefield 6, mit EA Javelin) und Xbox
+  (Palworld), jeweils über „Mit HDR starten“ und über die Verknüpfung. HDR war jedes Mal an, bevor der Launcher das
+  Spiel gestartet hat. Battle.net ist ungeprüft (siehe unten).
+- **Umschalten während des Spielstarts:** Bei der automatischen Erkennung schaltet HdrPilot HDR, während das Spiel
+  gerade hochfährt. Das verkraften fast alle Spiele; Dead Island 2 blieb im Test bei einem von zwei automatischen
+  Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Bei empfindlichen Spielen „HDR automatisch“ aus lassen
+  und über „Mit HDR starten“ oder die Verknüpfung starten, dann ist HDR schon vorher an.
 - **GOG:** „Mit HDR starten“ startet die Spiel-EXE direkt, an GOG Galaxy vorbei. Cloud-Speicherstände, Overlay und
   Spielzeit von Galaxy sind dann womöglich nicht aktiv.
 - **EA app:** Die Bibliotheksdatei der EA app ist verschlüsselt und an die Hardware gebunden; HdrPilot entschlüsselt
@@ -260,10 +267,13 @@ gemerkten HDR-Zustand. Vorher HdrPilot beenden oder bei laufender App `HdrPilot.
 - **Spiel wird nicht erkannt:** Ist „HDR automatisch“ an und die Automatik nicht pausiert? Liegt die laufende EXE im
   Installationsordner? Wenn nicht, die EXE in den Details hinzufügen. Ist sie dort als „ausgeschlossen“ markiert, mit
   „Wieder aufnehmen“ zurückholen. Steht sie unter „Hilfsprozesse ausschließen“, das Muster dort entfernen.
-- **HDR kommt für ein Spiel zu spät:** über „Mit HDR starten“ oder eine „(HDR)“-Verknüpfung starten.
+- **HDR kommt für ein Spiel zu spät oder das Spiel hängt beim automatischen Start:** über „Mit HDR starten“ oder eine
+  „(HDR)“-Verknüpfung starten; dann ist HDR schon vor dem Spiel an.
 - **HDR bleibt nach dem Spiel an:** Die Nachlaufzeit abwarten (Standard 10 s). Nennt der Tooltip das Spiel danach
   noch, läuft noch ein Programm aus seinem Ordner (etwa ein Launcher-Rest): im Task-Manager nachsehen und diese EXE in
-  den Details entfernen. Weitere Gründe: Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem
+  den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar weiter (im Test bei
+  Palworld): dann den Spielprozess im Task-Manager beenden. Weitere Gründe: Ein anderes HDR-Spiel läuft noch; HDR war
+  schon vor dem Spiel an; „Nach dem
   Spiel zurückstellen“ ist für dieses oder ein gleichzeitig gelaufenes Spiel aus. Nach „Mit HDR starten“ ohne
   Spielstart bleibt HDR bis zum Ende der Startfrist an.
 - **„Mit HDR starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt

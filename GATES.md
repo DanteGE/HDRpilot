@@ -139,8 +139,8 @@ und die EXPECT-Marke ausgibt.
   EXPECT: PHASE4_RESOURCES_OK
   EVIDENCE: 2026-10-07 13:33 exit 0, keine festen Texte in XAML (erlaubt: HdrPilot, HDR, Logo-Zeichen H), alle 331 Schlüsselverwendungen vorhanden, 2 Protokolltexte von Hand geprüft, PHASE4_RESOURCES_OK
 
-- [ ] G4.5: Start über die App und über die erzeugte Verknüpfung funktioniert für je ein Spiel pro installiertem Launcher; Protokoll belegt mit Zeitstempeln, dass HDR vor dem Prozessstart aktiv war (gemeinsamer Test mit dem Nutzer)
-  EVIDENCE: pending
+- [x] G4.5: Start über die App und über die erzeugte Verknüpfung funktioniert für je ein Spiel pro installiertem Launcher; Protokoll belegt mit Zeitstempeln, dass HDR vor dem Prozessstart aktiv war (gemeinsamer Test mit dem Nutzer)
+  EVIDENCE: 2026-10-07 15:59-16:56 gemeinsam mit dem Nutzer, veröffentlichte EXE (1.0.0+4fd2052) mit echter Ablage. Knopf und Verknüpfung je Launcher, Protokoll HDR bestätigt vor Start-Befehl vor erkanntem Prozess: Steam Dying Light: The Beast 16:01:30,547/,554/16:01:55,761 und Verknüpfung 16:04:32,434/,438/34,975; Epic Dead Island 2 16:08:30,280/,284/52,768 und 16:11:11,774/,779/14,991; Ubisoft Avatar 16:22:51,804/,810/59,205 und 16:27:19,739/,745/22,848; Xbox Palworld 16:30:42,686/,695/44,225 und 16:34:05,476/,482/06,579; GOG Cyberpunk 2077 16:43:14,066/,071/21,175 (erster Versuch nach 120 s Startfrist abgebrochen, Anmeldung im REDlauncher, behoben E69) und Verknüpfung 16:48:54,059/,063/03,835; EA Battlefield 6 16:50:32,813/,819/35,684 und 16:55:43,479/,484/46,154, Javelin ohne Meldung. Automatisch erkannt: Steam, Epic (1 Hänger von 2), Ubisoft. Jedes Mal HDR nach Spielende plus 10 s aus; 0 Warnungen/Fehler im Protokoll. Vom Nutzer bestätigt.
 
 - [x] G4.6: Wiederanlauf mit der App (hart beenden, Spiel schließen, neu starten: HDR zurückgestellt) und Leerlauf der App ohne Fenster sparsam
   CHECK: ps tools\gates\phase4-crash.ps1

@@ -79,7 +79,7 @@ public sealed class ShortcutServiceTests : IDisposable
     {
         var path = Service("--config-dir \"D:\\Test Ablage\"").CreateDesktopShortcut(Game("Halo: Reach / MCC?"));
 
-        Assert.Equal("Halo_ Reach _ MCC_ (HDR).lnk", Path.GetFileName(path));
+        Assert.Equal("Halo - Reach - MCC (HDR).lnk", Path.GetFileName(path));
         Assert.Equal("--run \"Gog:1423049311\" --config-dir \"D:\\Test Ablage\"", ShortcutService.Read(path).Arguments);
     });
 
@@ -101,4 +101,14 @@ public sealed class ShortcutServiceTests : IDisposable
         Assert.Equal("Spiel... (HDR)", ShortcutService.FileNameFor(new GameConfig { Source = GameSource.Steam, SourceId = "1", Name = "  Spiel...  " }));
         Assert.Equal("Tom Clancy's The Division® 2 (HDR)", ShortcutService.FileNameFor(new GameConfig { Source = GameSource.Ubisoft, SourceId = "4932", Name = "Tom Clancy's The Division® 2" }));
     }
+
+    [Theory]
+    [InlineData("Dying Light: The Beast", "Dying Light - The Beast (HDR)")]
+    [InlineData("STAR WARS Jedi: Survivor™", "STAR WARS Jedi - Survivor™ (HDR)")]
+    [InlineData("Half-Life 2: Episode One", "Half-Life 2 - Episode One (HDR)")]
+    [InlineData("AC/DC Rockband", "AC-DC Rockband (HDR)")]
+    [InlineData("Who? *Really* \"Quoted\" <Game>", "Who Really 'Quoted' Game (HDR)")]
+    [InlineData("Re:Zero", "Re - Zero (HDR)")]
+    public void File_names_replace_invalid_characters_readably(string name, string expected) =>
+        Assert.Equal(expected, ShortcutService.FileNameFor(new GameConfig { Source = GameSource.Steam, SourceId = "1", Name = name }));
 }

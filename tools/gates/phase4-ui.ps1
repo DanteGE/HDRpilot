@@ -10,7 +10,7 @@ $cfg = New-TestConfig 'phase4-ui' -Import
 $gameKey = 'Gog:1423049311'   # Cyberpunk 2077 (GOG)
 try {
     $app = Start-App $cfg @('--show')
-    $win = Find-Window 'MainWindow'
+    $win = Find-Window 'MainWindow' $app.Id
     Check ($null -ne $win) 'Hauptfenster geöffnet'
     if (-not $win) { throw 'Hauptfenster fehlt' }
 
@@ -78,7 +78,7 @@ try {
 
     # Einstellungen
     Invoke-El (Find-Id $win 'SettingsButton')
-    $set = Find-Window 'SettingsWindow' 10000
+    $set = Find-Window 'SettingsWindow' $app.Id 10000
     if (-not $set) { $set = Find-Id $win 'SettingsWindow' 3000 }
     Check ($null -ne $set) 'Einstellungen geöffnet'
     if ($set) {
@@ -105,7 +105,7 @@ try {
 
     # Neustart: Einstellungen noch da?
     $app2 = Start-App $cfg @('--settings')
-    $set2 = Find-Window 'SettingsWindow' 15000
+    $set2 = Find-Window 'SettingsWindow' $app2.Id 15000
     if ($set2) {
         $g = Get-Range (Find-Id $set2 'GracePeriod')
         $pi = Get-Range (Find-Id $set2 'PollInterval')

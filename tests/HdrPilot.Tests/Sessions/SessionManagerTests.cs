@@ -183,6 +183,89 @@ public sealed class SessionManagerTests
     }
 
     [Fact]
+    public async Task Launch_waits_while_a_launcher_from_the_game_folder_is_open()
+    {
+        // Wie der REDlauncher von Cyberpunk, der auf die Anmeldung wartet: kein Spielprozess, aber ein Hilfsprogramm
+        // aus dem Spielordner läuft. Die Startfrist läuft nicht ab, HDR bleibt an.
+        _config.Config.Settings.LaunchTimeoutSeconds = 30;
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        var launcher = _processes.StartExe(DirB + @"\CrashLauncher.exe"); // Hilfsprogramm (Testregel: "Crash")
+        await Poll(120);
+        Assert.True(PrimaryOn);
+        Assert.Equal(SessionPhase.Launching, Assert.Single(Manager.Sessions).Phase);
+        Assert.True(_log.Contains(LogLevel.Information, "Startfrist wird verlängert"));
+
+        _processes.StartExe(ExeB);
+        await Poll();
+        Assert.Equal(SessionPhase.Running, Assert.Single(Manager.Sessions).Phase);
+        _processes.Stop(launcher);
+    }
+
+    [Fact]
+    public async Task Launch_times_out_after_the_launcher_closes()
+    {
+        _config.Config.Settings.LaunchTimeoutSeconds = 30;
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        var launcher = _processes.StartExe(DirB + @"\CrashLauncher.exe");
+        await Poll(60);
+        Assert.True(PrimaryOn);
+
+        _processes.Stop(launcher); // Launcher geschlossen, ohne das Spiel zu starten
+        await Poll(35);
+
+        Assert.False(PrimaryOn);
+        Assert.Empty(Manager.Sessions);
+    }
+
+    [Fact]
+    public async Task Launch_waits_for_an_open_launcher_at_most_30_minutes()
+    {
+        _config.Config.Settings.LaunchTimeoutSeconds = 30;
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        _processes.StartExe(DirB + @"\CrashLauncher.exe");
+        await Poll(29 * 60);
+        Assert.True(PrimaryOn);
+
+        await Poll(2 * 60);
+
+        Assert.False(PrimaryOn);
+        Assert.Empty(Manager.Sessions);
+    }
+
+    [Fact]
+    public async Task Launch_request_while_the_game_runs_does_not_start_it_again()
+    {
+        // Doppelter Doppelklick auf die Verknüpfung, während das Spiel schon läuft (beobachtet mit Battlefield 6).
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        _processes.StartExe(ExeB);
+        await Poll();
+
+        var outcome = await Manager.LaunchAsync("Steam:2", Ct);
+
+        Assert.True(outcome.Started);
+        Assert.Single(_launcher.Launched);
+        Assert.True(PrimaryOn);
+        Assert.True(_log.Contains(LogLevel.Information, "übergangen"));
+    }
+
+    [Fact]
+    public async Task Duplicate_launch_request_within_seconds_is_ignored()
+    {
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        await Manager.LaunchAsync("Steam:2", Ct);
+        Assert.Single(_launcher.Launched);
+
+        _clock.Advance(TimeSpan.FromSeconds(20)); // später: echter neuer Startversuch
+        await Manager.LaunchAsync("Steam:2", Ct);
+        Assert.Equal(2, _launcher.Launched.Count);
+    }
+
+    [Fact]
     public async Task Session_state_is_written_to_disk_before_switching()
     {
         _config.AddGame("1", DirA);

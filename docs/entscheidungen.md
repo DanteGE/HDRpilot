@@ -315,3 +315,35 @@ der Notlösung, Manifest `asInvoker`. Eine Gegenprobe zeigt, dass der Scanner Tr
 
 Nicht umgesetzt: Signieren der EXE (kein Zertifikat vorhanden; hilft vor allem gegen SmartScreen), Auspacken der
 WPF-DLLs neben die EXE statt nach %TEMP% (widerspräche „eine einzelne EXE“).
+
+## Gemeinsamer Test mit echten Spielen (G4.5, 2026-10-07)
+
+Veröffentlichte EXE in `%LOCALAPPDATA%\Programs\HdrPilot`, echte Ablage. Je Launcher ein Spiel mit eigenem HDR
+(Recherche PCGamingWiki u. a.), Xbox nur mit Palworld (ohne eigenes HDR). Ergebnis: alle Starts über Knopf und
+Verknüpfung mit HDR bestätigt vor dem Start-Befehl; automatische Erkennung bei Steam, Epic und Ubisoft bestätigt;
+EA Javelin ohne Meldung; keine Warnung und kein Fehler im Protokoll des Tages. Beobachtungen:
+- Dead Island 2 hing einmal beim automatischen Start (HDR-Umschaltung 0,7 s vor dem Engine-Log); die Wiederholung mit
+  gleichem Timing lief. Ursache unbewiesen; Gegenmittel (Neustart-Puffer, Launcher-Vorabsignal, Steam-Hülle) sind für
+  die Rückfrage G5.3 vorgemerkt.
+- Palworld beendet sich manchmal nicht (Prozess ohne Fenster, ohne CPU). HdrPilot lässt HDR dann richtigerweise an.
+  Automatisch beenden oder zurückstellen wäre riskant (Xbox-Spiele werden beim Minimieren angehalten); ein Hinweis ist
+  für G5.3 vorgemerkt.
+- Xbox: Andere Werkzeuge melden den Pfad unter `C:\Program Files\WindowsApps\…`, die Pfadabfrage ohne Handle (E65)
+  unter `C:\XboxGames\…\Content\…` und passt damit zum eingelesenen Ordner.
+
+**E69 Startfrist wartet auf ein offenes Launcher-Fenster:** Läuft beim Start über die App noch ein Programm aus dem
+Spielordner (auch ein Hilfsprogramm wie der REDlauncher, der auf die Anmeldung wartet), beginnt die Startfrist neu,
+höchstens 30 Minuten lang. Im Test schaltete HdrPilot HDR nach 120 s ab, während der Nutzer sich noch anmeldete.
+
+**E70 Lesbare Verknüpfungsnamen:** „:“ wird zu „ - “, Schrägstriche zu „-“, Anführungszeichen zu Apostrophen, übrige
+unzulässige Zeichen entfallen („Dying Light - The Beast (HDR)“ statt „Dying Light_ The Beast (HDR)“).
+
+**E71 Doppelte Startanforderungen werden übergangen:** Läuft das Spiel schon oder kam der letzte Start vor weniger als
+15 s, schickt HdrPilot keinen zweiten Start-Befehl, schaltet aber HDR wie gehabt ein. Beobachtet mit Battlefield 6
+(doppelter Doppelklick); bei direkt gestarteten EXEs (GOG, eigene Einträge) gäbe es sonst eine zweite Instanz.
+
+**E72 Prüfskripte bedienen nur ihre eigene Testinstanz:** `Find-Window` in `tools\gates\Phase4Common.ps1` verlangt die
+Prozess-ID der Testinstanz. Vorher suchte es Fenster nur über die AutomationId; während des gemeinsamen Tests war das
+echte HdrPilot des Nutzers mit offener Bibliothek geöffnet, und `phase4-ui.ps1` hat dort drei Einstellungen geändert
+(Nachlaufzeit 15 s, Intervall 750 ms, Hinweise aus). Sofort zurückgestellt (Konfiguration per FileSystemWatcher neu
+geladen); Gegenprobe mit einer Attrappe mit offenem Fenster: deren Konfiguration bleibt byte-gleich.

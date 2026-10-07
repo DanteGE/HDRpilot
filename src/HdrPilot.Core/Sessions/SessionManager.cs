@@ -28,6 +28,12 @@ public sealed class SessionManager
     private readonly IReadOnlyList<string> _forbiddenRoots;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    /// <summary>So lange wartet ein Start über die App höchstens, solange ein Launcher-Fenster aus dem Spielordner offen ist.</summary>
+    private static readonly TimeSpan MaxLauncherWait = TimeSpan.FromMinutes(30);
+
+    /// <summary>Ein zweiter Start desselben Spiels so kurz danach gilt als doppelt angeklickt.</summary>
+    private static readonly TimeSpan DuplicateLaunchWindow = TimeSpan.FromSeconds(15);
+
     private readonly Dictionary<string, ActiveSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DisplayClaim> _claims = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<int, MatchedProcess> _pidMatches = [];
@@ -182,6 +188,23 @@ public sealed class SessionManager
 
                 if (session.Phase == SessionPhase.Launching)
                 {
+                    if (session.LaunchCommandIssued && now - session.StartedAt < MaxLauncherWait
+                        && _matcher!.FindInInstallDir(session.Key, _pidMatches.Values.Select(m => m.Process)) is { } launcherWindow)
+                    {
+                        // Ein Programm aus dem Spielordner läuft noch (etwa der REDlauncher, der auf die Anmeldung wartet):
+                        // die Startfrist beginnt neu, HDR bleibt an.
+                        if (!session.WaitingForLauncherLogged)
+                        {
+                            session.WaitingForLauncherLogged = true;
+                            _logger.LogInformation(
+                                "\"{Game}\": {Exe} aus dem Spielordner läuft noch, Startfrist wird verlängert (höchstens {Max} min).",
+                                session.Name, launcherWindow.ExeName, MaxLauncherWait.TotalMinutes);
+                        }
+
+                        session.LaunchRequestedAt = now;
+                        continue;
+                    }
+
                     if (now - (session.LaunchRequestedAt ?? session.StartedAt) >= launchTimeout)
                     {
                         // Das gestartete Spiel kann unerkannt laufen (EXE außerhalb des Installationsordners): keine Notlösung.
@@ -253,6 +276,21 @@ public sealed class SessionManager
             }
             else
             {
+                // Läuft das Spiel schon oder wurde es gerade erst gestartet (etwa doppelter Doppelklick auf die Verknüpfung),
+                // keinen zweiten Start-Befehl schicken: bei direkt gestarteten EXEs gäbe das eine zweite Instanz (E71).
+                var duplicate = processes.Count > 0
+                    ? Format(CoreStrings.LaunchAlreadyRunning, game.Name)
+                    : session.Phase == SessionPhase.Launching && session.LaunchCommandIssued
+                      && _clock.UtcNow - (session.LaunchRequestedAt ?? session.StartedAt) < DuplicateLaunchWindow
+                        ? Format(CoreStrings.LaunchAlreadyStarting, game.Name)
+                        : null;
+                if (duplicate is not null)
+                {
+                    await EnsureOnAsync(session, cancellationToken).ConfigureAwait(false);
+                    _logger.LogInformation("Start über die App für \"{Game}\" übergangen: {Reason}", game.Name, duplicate);
+                    return new LaunchOutcome(true, duplicate, session.HdrConfirmedAt, null);
+                }
+
                 if (processes.Count == 0)
                 {
                     // Erneuter Start (etwa während der Nachlaufzeit oder nach einem Neustart des Spiels):
@@ -1017,6 +1055,8 @@ public sealed class SessionManager
 
         /// <summary>Der Start-Befehl wurde ausgeführt: das Spiel kann laufen, auch wenn sein Prozess noch nicht erkannt ist.</summary>
         public bool LaunchCommandIssued { get; set; }
+
+        public bool WaitingForLauncherLogged { get; set; }
 
         public DateTimeOffset? FirstProcessAt { get; set; }
 

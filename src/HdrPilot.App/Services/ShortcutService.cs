@@ -56,14 +56,29 @@ public sealed class ShortcutService : IShortcutService
     public static string FileNameFor(GameConfig game)
     {
         var name = string.Format(System.Globalization.CultureInfo.CurrentCulture, LibraryStrings.Shortcut_FileName, game.Name.Trim());
+
+        // Lesbar statt "_": "Dying Light: The Beast" → "Dying Light - The Beast", Schrägstriche → "-",
+        // Anführungszeichen → Apostroph, sonstige unzulässige Zeichen entfallen.
+        name = System.Text.RegularExpressions.Regex.Replace(name, @"\s*:\s*", " - ");
         var invalid = Path.GetInvalidFileNameChars();
         var clean = new StringBuilder(name.Length);
         foreach (var c in name)
         {
-            clean.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
+            if (Array.IndexOf(invalid, c) < 0)
+            {
+                clean.Append(c);
+            }
+            else if (c is '/' or '\\' or '|')
+            {
+                clean.Append('-');
+            }
+            else if (c == '"')
+            {
+                clean.Append('\'');
+            }
         }
 
-        var result = clean.ToString().Trim().TrimEnd('.');
+        var result = System.Text.RegularExpressions.Regex.Replace(clean.ToString(), @"\s{2,}", " ").Trim().TrimEnd('.');
         if (result.Length > 120)
         {
             result = result[..120].TrimEnd();

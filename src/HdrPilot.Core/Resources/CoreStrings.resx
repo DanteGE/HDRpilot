@@ -60,6 +60,12 @@
   <data name="LaunchNoCommand" xml:space="preserve">
     <value>Für &quot;{0}&quot; ist kein Start-Befehl bekannt.</value>
   </data>
+  <data name="LaunchAlreadyRunning" xml:space="preserve">
+    <value>"{0}" läuft bereits.</value>
+  </data>
+  <data name="LaunchAlreadyStarting" xml:space="preserve">
+    <value>"{0}" wird bereits gestartet.</value>
+  </data>
   <data name="LaunchExecuted" xml:space="preserve">
     <value>Start-Befehl ausgeführt: {0}</value>
   </data>

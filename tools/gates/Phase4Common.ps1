@@ -84,8 +84,13 @@ function Stop-Started {
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 $script:UiaRoot = [Windows.Automation.AutomationElement]::RootElement
 
-function Find-Window([string]$automationId, [int]$timeoutMs = 20000) {
-    $cond = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::AutomationIdProperty, $automationId)
+# Nur Fenster der eigenen Testinstanz: Läuft daneben das echte HdrPilot des Nutzers mit offenem Fenster, darf das
+# Skript es nie bedienen (ist am 2026-10-07 passiert und hat echte Einstellungen geändert).
+function Find-Window([string]$automationId, [int]$processId, [int]$timeoutMs = 20000) {
+    if ($processId -le 0) { throw "Find-Window braucht die Prozess-ID der Testinstanz ($automationId)." }
+    $cond = New-Object Windows.Automation.AndCondition(
+        (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::AutomationIdProperty, $automationId)),
+        (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)))
     $sw = [Diagnostics.Stopwatch]::StartNew()
     while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
         $w = $UiaRoot.FindFirst([Windows.Automation.TreeScope]::Children, $cond)

@@ -32,6 +32,21 @@ public sealed class GameMatcher
             .ToList();
     }
 
+    /// <summary>
+    /// Ein Programm aus dem Installationsordner dieses Spiels, auch ein Hilfsprogramm wie ein Launcher-Fenster, das noch
+    /// auf eine Anmeldung wartet; null, wenn keines läuft oder der Ordner nicht taugt (zu weit).
+    /// </summary>
+    public ProcessInfo? FindInInstallDir(string gameKey, IEnumerable<ProcessInfo> processes)
+    {
+        var entry = _entries.FirstOrDefault(e => string.Equals(e.Game.Key, gameKey, StringComparison.OrdinalIgnoreCase));
+        if (entry?.InstallDir is not { } dir)
+        {
+            return null;
+        }
+
+        return processes.FirstOrDefault(p => p.ExePath is not null && PathUtil.IsUnder(PathUtil.Normalize(p.ExePath), dir));
+    }
+
     public GameConfig? Match(ProcessInfo process)
     {
         var name = process.ExeName;

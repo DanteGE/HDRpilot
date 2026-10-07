@@ -5,10 +5,53 @@
     <AssemblyName>HdrPilot</AssemblyName>
     <RootNamespace>HdrPilot.App</RootNamespace>
     <UseWPF>true</UseWPF>
+    <!-- Nur für NotifyIcon (Tray) und die Symbol-Extraktion aus EXE-Dateien. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets\HdrPilot.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- WFO0003 betrifft WinForms-Apps; dies ist eine WPF-App, deren DPI-Modus (PerMonitorV2) im Manifest steht. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- WPF und WinForms haben gleichnamige Typen (Application, MessageBox): WinForms nur explizit verwenden. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HdrPilot.Core\HdrPilot.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\HdrPilot.ico" />
+  </ItemGroup>
+
+  <!-- Oberflächentexte: Resources\*.resx (neutral = Deutsch), stark typisierte Klassen werden beim Build erzeugt.
+       Englisch kommt später als Resources\*.en.resx dazu. -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\*.resx">
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>HdrPilot.App.Resources</StronglyTypedNamespace>
+      <StronglyTypedClassName>%(Filename)</StronglyTypedClassName>
+      <StronglyTypedFileName>$(IntermediateOutputPath)%(Filename).Designer.cs</StronglyTypedFileName>
+      <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!--
+    WPF übersetzt vor dem eigentlichen Build eine temporäre Assembly (Projekt *_wpftmp), die alle C#-Dateien braucht.
+    Deshalb werden die Ressourcen-Klassen vorher erzeugt und dem temporären Projekt ausdrücklich mitgegeben.
+    Im Hauptprojekt fügt GenerateResource sie selbst hinzu (sonst doppelt).
+  -->
+  <Target Name="HpGenerateResourceClassesEarly" BeforeTargets="MarkupCompilePass1" DependsOnTargets="PrepareResourceNames;ResolveReferences;CoreResGen" />
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('_wpftmp'))">
+    <Compile Include="$(IntermediateOutputPath)*Strings.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HdrPilot.Tests" />
   </ItemGroup>
 
 </Project>

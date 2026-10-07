@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppName" xml:space="preserve">
+    <value>HdrPilot</value>
+  </data>
+  <data name="FirstRunTitle" xml:space="preserve">
+    <value>HdrPilot läuft im Infobereich</value>
+  </data>
+  <data name="FirstRunMessage" xml:space="preserve">
+    <value>Deine Spiele werden gerade eingelesen. Doppelklick auf das Symbol öffnet die Spieleliste.</value>
+  </data>
+  <data name="LaunchFailedTitle" xml:space="preserve">
+    <value>Start fehlgeschlagen</value>
+  </data>
+  <data name="NoHdrDisplayTitle" xml:space="preserve">
+    <value>Kein HDR möglich</value>
+  </data>
+  <data name="NoHdrDisplayMessage" xml:space="preserve">
+    <value>Keiner der gewählten Bildschirme unterstützt gerade HDR.</value>
+  </data>
+  <data name="UnexpectedErrorTitle" xml:space="preserve">
+    <value>HdrPilot – unerwarteter Fehler</value>
+  </data>
+  <data name="UnexpectedErrorMessage" xml:space="preserve">
+    <value>Ein unerwarteter Fehler ist aufgetreten und wurde protokolliert. HdrPilot läuft weiter.</value>
+  </data>
+  <data name="ForwardFailed" xml:space="preserve">
+    <value>HdrPilot läuft bereits, reagiert aber nicht. Bitte über den Task-Manager beenden und neu starten.</value>
+  </data>
+</root>

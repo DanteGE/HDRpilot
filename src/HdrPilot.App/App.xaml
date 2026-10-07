@@ -1,9 +1,14 @@
-﻿<Application x:Class="HdrPilot.App.App"
+<Application x:Class="HdrPilot.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:HdrPilot.App"
-             StartupUri="MainWindow.xaml">
+             ShutdownMode="OnExplicitShutdown"
+             ThemeMode="System">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <!-- Tokens.Dark/Light.xaml setzt ThemeManager zur Laufzeit an Position 0. -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

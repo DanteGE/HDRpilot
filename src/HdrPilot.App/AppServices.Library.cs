@@ -1,30 +1,36 @@
 using System.Windows;
-using System.Windows.Media;
 using HdrPilot.App.Services;
+using HdrPilot.App.ViewModels.Library;
+using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Config;
+using HdrPilot.Core.Util;
 
 namespace HdrPilot.App;
 
-// GERÜST: wird durch die Spieleliste ersetzt (Hauptfenster, Symbole, Verknüpfungen).
+/// <summary>Spielebibliothek: Hauptfenster, Symbole aus den Spiel-EXEs und Verknüpfungen „Mit HDR starten“.</summary>
 public sealed partial class AppServices
 {
-    private partial IGameIconService CreateIconService() => new NoIcons();
+    private partial IGameIconService CreateIconService() =>
+        new GameIconService(FileSystem, () => Config.Current.Settings.HelperExecutablePatterns);
 
-    private partial IShortcutService CreateShortcutService() => new NoShortcuts();
+    private partial IShortcutService CreateShortcutService() => new ShortcutService(
+        iconPath: game => new IconExecutableResolver(FileSystem).Resolve(game, Config.Current.Settings.HelperExecutablePatterns),
+        extraArguments: ConfigDirArgument());
 
-    private partial Window CreateMainWindow() => new MainWindow();
-
-    private sealed class NoIcons : IGameIconService
+    /// <summary>Das Fenster bekommt einen eigenen Kontext; beides wird beim Schließen vollständig freigegeben.</summary>
+    private partial Window CreateMainWindow()
     {
-        public ImageSource? GetCachedIcon(GameConfig game) => null;
-
-        public Task<ImageSource?> GetIconAsync(GameConfig game, CancellationToken cancellationToken = default) => Task.FromResult<ImageSource?>(null);
+        var window = new MainWindow();
+        window.Attach(new LibraryViewModel(new AppLibraryContext(this), new LibraryDialogs(window)));
+        return window;
     }
 
-    private sealed class NoShortcuts : IShortcutService
+    /// <summary>Mit eigener Ablage (--config-dir) gestartet: Verknüpfungen sollen dieselbe Ablage benutzen.</summary>
+    private string? ConfigDirArgument()
     {
-        public string CreateDesktopShortcut(GameConfig game) => throw new NotSupportedException();
-
-        public string CreateStartMenuShortcut(GameConfig game) => throw new NotSupportedException();
+        var standard = AppPaths.Default(Environment);
+        return PathUtil.PathEquals(standard.ConfigDirectory, Paths.ConfigDirectory)
+            ? null
+            : "--config-dir \"" + System.IO.Path.TrimEndingDirectorySeparator(Paths.ConfigDirectory) + "\"";
     }
 }

@@ -12,4 +12,519 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+
+  <!-- Fenster und Kopf -->
+  <data name="Window_Title" xml:space="preserve">
+    <value>HdrPilot – Spielebibliothek</value>
+  </data>
+  <data name="Header_Title" xml:space="preserve">
+    <value>Spielebibliothek</value>
+  </data>
+  <data name="Count_GamesOne" xml:space="preserve">
+    <value>1 Spiel</value>
+  </data>
+  <data name="Count_GamesMany" xml:space="preserve">
+    <value>{0} Spiele</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Stats_HdrAuto" xml:space="preserve">
+    <value>{0} mit HDR automatisch</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Stats_New" xml:space="preserve">
+    <value>{0} neu</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Hdr_Overline" xml:space="preserve">
+    <value>HDR-STATUS</value>
+  </data>
+  <data name="Hdr_StatusOn" xml:space="preserve">
+    <value>HDR an · {0}</value>
+    <comment>{0} = Bildschirmname(n)</comment>
+  </data>
+  <data name="Hdr_StatusOff" xml:space="preserve">
+    <value>HDR aus · {0}</value>
+    <comment>{0} = Bildschirmname(n)</comment>
+  </data>
+  <data name="Hdr_StatusUnavailable" xml:space="preserve">
+    <value>Kein HDR möglich · {0}</value>
+    <comment>{0} = Bildschirmname(n)</comment>
+  </data>
+  <data name="Hdr_StatusNoDisplay" xml:space="preserve">
+    <value>Kein Bildschirm gefunden</value>
+  </data>
+  <data name="Hdr_ActiveSessions" xml:space="preserve">
+    <value>Aktiv für {0}</value>
+    <comment>{0} = Spielname(n)</comment>
+  </data>
+  <data name="Hdr_TurnOn" xml:space="preserve">
+    <value>HDR einschalten</value>
+  </data>
+  <data name="Hdr_TurnOff" xml:space="preserve">
+    <value>HDR ausschalten</value>
+  </data>
+  <data name="Hdr_ToggleTooltip" xml:space="preserve">
+    <value>Schaltet HDR auf den Zielbildschirmen jetzt um, unabhängig von einem Spiel.</value>
+  </data>
+  <data name="Pause_Name" xml:space="preserve">
+    <value>Automatik pausieren</value>
+  </data>
+  <data name="Pause_Label" xml:space="preserve">
+    <value>Automatik pausieren</value>
+  </data>
+  <data name="Pause_Active" xml:space="preserve">
+    <value>Automatik pausiert</value>
+  </data>
+  <data name="Pause_Tooltip" xml:space="preserve">
+    <value>Solange pausiert, schaltet ein Spielstart HDR nicht ein. Laufende Spiele enden normal und werden zurückgestellt.</value>
+  </data>
+  <data name="Settings_Name" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+
+  <!-- Werkzeugleiste -->
+  <data name="Search_Placeholder" xml:space="preserve">
+    <value>Spiele durchsuchen …   Strg+F</value>
+  </data>
+  <data name="Search_Name" xml:space="preserve">
+    <value>Spiele durchsuchen</value>
+  </data>
+  <data name="Search_Clear" xml:space="preserve">
+    <value>Suche leeren</value>
+  </data>
+  <data name="Filter_SourceName" xml:space="preserve">
+    <value>Nach Quelle filtern</value>
+  </data>
+  <data name="Filter_All" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="Filter_SourceWithCount" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>{0} = Quelle, {1} = Anzahl</comment>
+  </data>
+  <data name="Filter_OnlySelected" xml:space="preserve">
+    <value>HDR automatisch</value>
+  </data>
+  <data name="Filter_OnlySelectedName" xml:space="preserve">
+    <value>Nur Spiele mit HDR automatisch</value>
+  </data>
+  <data name="Filter_OnlyNew" xml:space="preserve">
+    <value>Neu</value>
+  </data>
+  <data name="Filter_OnlyNewName" xml:space="preserve">
+    <value>Nur neue Spiele</value>
+  </data>
+  <data name="MarkAllSeen_Name" xml:space="preserve">
+    <value>Alle als gesehen markieren</value>
+  </data>
+  <data name="MarkAllSeen_Done" xml:space="preserve">
+    <value>{0} als gesehen markiert.</value>
+    <comment>{0} = „12 Spiele“</comment>
+  </data>
+  <data name="Rescan_Button" xml:space="preserve">
+    <value>Neu einlesen</value>
+  </data>
+  <data name="Rescan_Running" xml:space="preserve">
+    <value>Liest ein …</value>
+  </data>
+  <data name="Rescan_Tooltip" xml:space="preserve">
+    <value>Alle Launcher neu einlesen. Neue Spiele sind markiert und schalten HDR erst, wenn du es einschaltest.</value>
+  </data>
+  <data name="Rescan_Done" xml:space="preserve">
+    <value>Einlesen abgeschlossen: {0}.</value>
+    <comment>{0} = „646 Spiele“</comment>
+  </data>
+  <data name="AddGame_Button" xml:space="preserve">
+    <value>Spiel hinzufügen</value>
+  </data>
+
+  <!-- Fehler je Scanner -->
+  <data name="ScanErrors_HeaderOne" xml:space="preserve">
+    <value>Beim letzten Einlesen gab es 1 Problem</value>
+  </data>
+  <data name="ScanErrors_HeaderMany" xml:space="preserve">
+    <value>Beim letzten Einlesen gab es {0} Probleme</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="ScanErrors_Item" xml:space="preserve">
+    <value>{0}: {1}</value>
+    <comment>{0} = Quelle, {1} = Meldung</comment>
+  </data>
+
+  <!-- Vorschläge aus Suchordnern -->
+  <data name="Candidates_Title" xml:space="preserve">
+    <value>Vorschläge aus deinen Suchordnern</value>
+  </data>
+  <data name="Candidates_Hint" xml:space="preserve">
+    <value>Nichts wird ohne dich übernommen. Hinzugefügte Spiele schalten HDR automatisch.</value>
+  </data>
+  <data name="Candidates_Toggle" xml:space="preserve">
+    <value>Vorschläge ein- oder ausklappen</value>
+  </data>
+  <data name="Candidate_Add" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="Candidate_ExeCount" xml:space="preserve">
+    <value>{0} EXE-Dateien</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Candidate_Detail" xml:space="preserve">
+    <value>{0}  ·  {1}</value>
+    <comment>{0} = Ordner, {1} = EXE oder Anzahl</comment>
+  </data>
+
+  <!-- Liste -->
+  <data name="List_Name" xml:space="preserve">
+    <value>Spieleliste</value>
+  </data>
+  <data name="List_HdrAutoColumn" xml:space="preserve">
+    <value>HDR AUTOMATISCH</value>
+  </data>
+  <data name="List_ResultFiltered" xml:space="preserve">
+    <value>{0} von {1} Spielen</value>
+    <comment>{0} = sichtbar, {1} = gesamt</comment>
+  </data>
+  <data name="List_EmptyTitle" xml:space="preserve">
+    <value>Noch keine Spiele</value>
+  </data>
+  <data name="List_EmptyText" xml:space="preserve">
+    <value>Lies deine Launcher mit „Neu einlesen“ ein oder füge ein Spiel von Hand hinzu.</value>
+  </data>
+  <data name="List_NoMatchTitle" xml:space="preserve">
+    <value>Keine Treffer</value>
+  </data>
+  <data name="List_NoMatchText" xml:space="preserve">
+    <value>Kein Spiel passt zur Suche und zu den Filtern.</value>
+  </data>
+  <data name="List_ResetFilters" xml:space="preserve">
+    <value>Filter zurücksetzen</value>
+  </data>
+  <data name="Row_HdrAutoName" xml:space="preserve">
+    <value>HDR automatisch</value>
+  </data>
+  <data name="Badge_New" xml:space="preserve">
+    <value>NEU</value>
+  </data>
+  <data name="Badge_Running" xml:space="preserve">
+    <value>Läuft</value>
+  </data>
+  <data name="Badge_NotInstalled" xml:space="preserve">
+    <value>Nicht installiert</value>
+  </data>
+  <data name="Status_Dismiss" xml:space="preserve">
+    <value>Hinweis schließen</value>
+  </data>
+  <data name="Game_Added" xml:space="preserve">
+    <value>„{0}“ wurde hinzugefügt. HDR automatisch ist an.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Game_Removed" xml:space="preserve">
+    <value>„{0}“ wurde entfernt.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Error_SaveFailed" xml:space="preserve">
+    <value>Die Änderung konnte nicht gespeichert werden: {0}</value>
+    <comment>{0} = Fehlermeldung</comment>
+  </data>
+  <data name="Error_Generic" xml:space="preserve">
+    <value>Das hat nicht geklappt: {0}</value>
+    <comment>{0} = Fehlermeldung</comment>
+  </data>
+
+  <!-- Quellen -->
+  <data name="Source_Steam" xml:space="preserve">
+    <value>Steam</value>
+  </data>
+  <data name="Source_Epic" xml:space="preserve">
+    <value>Epic Games</value>
+  </data>
+  <data name="Source_Xbox" xml:space="preserve">
+    <value>Xbox</value>
+  </data>
+  <data name="Source_Gog" xml:space="preserve">
+    <value>GOG</value>
+  </data>
+  <data name="Source_Ubisoft" xml:space="preserve">
+    <value>Ubisoft Connect</value>
+  </data>
+  <data name="Source_EA" xml:space="preserve">
+    <value>EA app</value>
+  </data>
+  <data name="Source_BattleNet" xml:space="preserve">
+    <value>Battle.net</value>
+  </data>
+  <data name="Source_Manual" xml:space="preserve">
+    <value>Manuell</value>
+  </data>
+
+  <!-- Detailbereich -->
+  <data name="Details_Name" xml:space="preserve">
+    <value>Spieldetails</value>
+  </data>
+  <data name="Details_EmptyTitle" xml:space="preserve">
+    <value>Wähle ein Spiel</value>
+  </data>
+  <data name="Details_EmptyText" xml:space="preserve">
+    <value>Hier legst du fest, ob HdrPilot HDR für ein Spiel automatisch einschaltet, auf welchem Bildschirm und welche EXE-Dateien zum Spiel gehören.</value>
+  </data>
+  <data name="Details_NotInstalled" xml:space="preserve">
+    <value>Dieses Spiel wurde beim letzten Einlesen nicht mehr gefunden. Die Einstellungen bleiben erhalten.</value>
+  </data>
+  <data name="Details_LastPlayed" xml:space="preserve">
+    <value>Zuletzt gespielt: {0}</value>
+    <comment>{0} = Datum und Uhrzeit</comment>
+  </data>
+  <data name="Details_SectionAutomation" xml:space="preserve">
+    <value>AUTOMATIK</value>
+  </data>
+  <data name="Details_HdrAuto" xml:space="preserve">
+    <value>HDR automatisch</value>
+  </data>
+  <data name="Details_HdrAutoHint" xml:space="preserve">
+    <value>HDR einschalten, sobald das Spiel startet.</value>
+  </data>
+  <data name="Details_Restore" xml:space="preserve">
+    <value>Nach dem Spiel zurückstellen</value>
+  </data>
+  <data name="Details_RestoreHint" xml:space="preserve">
+    <value>Danach wieder den HDR-Zustand von vorher herstellen.</value>
+  </data>
+  <data name="Details_Display" xml:space="preserve">
+    <value>Bildschirm</value>
+  </data>
+  <data name="Details_DisplayHint" xml:space="preserve">
+    <value>Standard ist die globale Einstellung.</value>
+  </data>
+  <data name="Display_Global" xml:space="preserve">
+    <value>Globale Einstellung</value>
+  </data>
+  <data name="Display_GlobalWith" xml:space="preserve">
+    <value>Globale Einstellung ({0})</value>
+    <comment>{0} = Bildschirmname(n)</comment>
+  </data>
+  <data name="Display_HdrCapable" xml:space="preserve">
+    <value>HDR-fähig</value>
+  </data>
+  <data name="Display_NoHdr" xml:space="preserve">
+    <value>kein HDR</value>
+  </data>
+  <data name="Display_Primary" xml:space="preserve">
+    <value>Hauptbildschirm</value>
+  </data>
+  <data name="Display_NotConnected" xml:space="preserve">
+    <value>Nicht angeschlossener Bildschirm</value>
+  </data>
+  <data name="Display_LabelWithDetail" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} = Name oder Merkmal, {1} = weiteres Merkmal</comment>
+  </data>
+  <data name="Display_NameWithDevice" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>Gleichnamige Bildschirme: {0} = Name, {1} = Gerät wie DISPLAY2</comment>
+  </data>
+  <data name="Details_SectionExecutables" xml:space="preserve">
+    <value>EXE-DATEIEN</value>
+  </data>
+  <data name="Details_ExecutablesHint" xml:space="preserve">
+    <value>Jedes Programm im Installationsordner zählt als Spiel. Ausgeschlossene EXEs schalten nichts, hinzugefügte zählen auch außerhalb des Ordners.</value>
+  </data>
+  <data name="Exe_Empty" xml:space="preserve">
+    <value>Noch keine EXE bekannt. HdrPilot merkt sich die EXE-Dateien beim ersten Spielen.</value>
+  </data>
+  <data name="Exe_OriginDetected" xml:space="preserve">
+    <value>beim Spielen erkannt</value>
+  </data>
+  <data name="Exe_OriginKnown" xml:space="preserve">
+    <value>vom Launcher</value>
+  </data>
+  <data name="Exe_OriginExtra" xml:space="preserve">
+    <value>von dir hinzugefügt</value>
+  </data>
+  <data name="Exe_OriginExcluded" xml:space="preserve">
+    <value>ausgeschlossen</value>
+  </data>
+  <data name="Exe_OriginHelper" xml:space="preserve">
+    <value>Hilfsprogramm, zählt nie</value>
+  </data>
+  <data name="Exe_Add" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="Exe_AddName" xml:space="preserve">
+    <value>EXE-Datei hinzufügen</value>
+  </data>
+  <data name="Exe_Remove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Exe_RemoveName" xml:space="preserve">
+    <value>Gewählte EXE entfernen</value>
+  </data>
+  <data name="Exe_Include" xml:space="preserve">
+    <value>Wieder aufnehmen</value>
+  </data>
+  <data name="Exe_IncludeName" xml:space="preserve">
+    <value>Ausgeschlossene EXE wieder aufnehmen</value>
+  </data>
+  <data name="Exe_Relearn" xml:space="preserve">
+    <value>Neu lernen</value>
+  </data>
+  <data name="Exe_RelearnName" xml:space="preserve">
+    <value>Gemerkte EXEs vergessen und beim nächsten Spielen neu lernen</value>
+  </data>
+  <data name="Exe_Added" xml:space="preserve">
+    <value>„{0}“ gehört jetzt zum Spiel.</value>
+    <comment>{0} = Dateiname</comment>
+  </data>
+  <data name="Exe_Removed" xml:space="preserve">
+    <value>„{0}“ zählt nicht mehr als Spielprozess.</value>
+    <comment>{0} = Dateiname</comment>
+  </data>
+  <data name="Exe_Included" xml:space="preserve">
+    <value>„{0}“ zählt wieder als Spielprozess.</value>
+    <comment>{0} = Dateiname</comment>
+  </data>
+  <data name="Exe_RelearnDone" xml:space="preserve">
+    <value>Gemerkte EXE-Dateien vergessen. Beim nächsten Spielen lernt HdrPilot sie neu.</value>
+  </data>
+  <data name="Exe_PickerTitle" xml:space="preserve">
+    <value>EXE-Datei des Spiels wählen</value>
+  </data>
+  <data name="Exe_PickerFilter" xml:space="preserve">
+    <value>Programme (*.exe)|*.exe</value>
+  </data>
+  <data name="Details_SectionLaunch" xml:space="preserve">
+    <value>STARTEN</value>
+  </data>
+  <data name="Launch_Button" xml:space="preserve">
+    <value>Mit HDR starten</value>
+  </data>
+  <data name="Launch_Hint" xml:space="preserve">
+    <value>Schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel über seinen Launcher.</value>
+  </data>
+  <data name="Launch_Running" xml:space="preserve">
+    <value>HDR wird eingeschaltet, dann startet das Spiel …</value>
+  </data>
+  <data name="Launch_Started" xml:space="preserve">
+    <value>Gestartet. HDR war um {0} bereit.</value>
+    <comment>{0} = Uhrzeit</comment>
+  </data>
+  <data name="Launch_StartedPlain" xml:space="preserve">
+    <value>Gestartet.</value>
+  </data>
+  <data name="Launch_Failed" xml:space="preserve">
+    <value>Start fehlgeschlagen: {0}</value>
+    <comment>{0} = Meldung</comment>
+  </data>
+  <data name="Shortcut_Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="Shortcut_DesktopName" xml:space="preserve">
+    <value>Verknüpfung auf dem Desktop erstellen</value>
+  </data>
+  <data name="Shortcut_StartMenu" xml:space="preserve">
+    <value>Startmenü</value>
+  </data>
+  <data name="Shortcut_StartMenuName" xml:space="preserve">
+    <value>Eintrag im Startmenü erstellen</value>
+  </data>
+  <data name="Shortcut_Created" xml:space="preserve">
+    <value>Verknüpfung erstellt: {0}</value>
+    <comment>{0} = Pfad</comment>
+  </data>
+  <data name="Shortcut_Failed" xml:space="preserve">
+    <value>Verknüpfung konnte nicht erstellt werden: {0}</value>
+    <comment>{0} = Fehlermeldung</comment>
+  </data>
+  <data name="Shortcut_FileName" xml:space="preserve">
+    <value>{0} (HDR)</value>
+    <comment>Dateiname der Verknüpfung ohne .lnk; {0} = Spielname</comment>
+  </data>
+  <data name="Shortcut_Description" xml:space="preserve">
+    <value>Startet {0} über HdrPilot mit HDR</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Shortcut_NoTarget" xml:space="preserve">
+    <value>Der Programmpfad von HdrPilot ist unbekannt.</value>
+  </data>
+  <data name="Details_InstallDir" xml:space="preserve">
+    <value>INSTALLATIONSORDNER</value>
+  </data>
+  <data name="RemoveGame_Button" xml:space="preserve">
+    <value>Aus der Bibliothek entfernen</value>
+  </data>
+  <data name="RemoveGame_ConfirmTitle" xml:space="preserve">
+    <value>Spiel entfernen?</value>
+  </data>
+  <data name="RemoveGame_ConfirmText" xml:space="preserve">
+    <value>„{0}“ wird aus HdrPilot entfernt. Die Dateien auf dem Datenträger bleiben unverändert.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="RemoveGame_Confirm" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+
+  <!-- Dialoge -->
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="AddGame_Title" xml:space="preserve">
+    <value>Spiel hinzufügen</value>
+  </data>
+  <data name="AddGame_Intro" xml:space="preserve">
+    <value>Wähle die EXE-Datei eines Spiels oder seinen Ordner.</value>
+  </data>
+  <data name="AddGame_PathLabel" xml:space="preserve">
+    <value>EXE-Datei oder Ordner</value>
+  </data>
+  <data name="AddGame_PathPlaceholder" xml:space="preserve">
+    <value>z. B. D:\Spielordner\Mein Spiel\Spiel.exe</value>
+  </data>
+  <data name="AddGame_BrowseExe" xml:space="preserve">
+    <value>EXE wählen …</value>
+  </data>
+  <data name="AddGame_BrowseFolder" xml:space="preserve">
+    <value>Ordner wählen …</value>
+  </data>
+  <data name="AddGame_FolderPickerTitle" xml:space="preserve">
+    <value>Ordner des Spiels wählen</value>
+  </data>
+  <data name="AddGame_NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AddGame_NamePlaceholder" xml:space="preserve">
+    <value>Name des Spiels</value>
+  </data>
+  <data name="AddGame_NameHint" xml:space="preserve">
+    <value>Leer lassen, um den Datei- oder Ordnernamen zu verwenden.</value>
+  </data>
+  <data name="AddGame_AutoHint" xml:space="preserve">
+    <value>Von Hand hinzugefügte Spiele schalten HDR automatisch: Der Schalter ist gleich an.</value>
+  </data>
+  <data name="AddGame_Confirm" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="AddGame_ErrorNoPath" xml:space="preserve">
+    <value>Bitte eine EXE-Datei oder einen Ordner angeben.</value>
+  </data>
+  <data name="AddGame_ErrorRelative" xml:space="preserve">
+    <value>Bitte den vollständigen Pfad mit Laufwerk angeben.</value>
+  </data>
+  <data name="AddGame_ErrorNotFound" xml:space="preserve">
+    <value>Diese Datei oder dieser Ordner existiert nicht.</value>
+  </data>
+  <data name="AddGame_ErrorNotExe" xml:space="preserve">
+    <value>Nur EXE-Dateien oder Ordner können hinzugefügt werden.</value>
+  </data>
+  <data name="AddGame_ErrorDriveRoot" xml:space="preserve">
+    <value>Ein ganzes Laufwerk kann kein Spielordner sein, sonst gälte jedes Programm darauf als Spiel. Bitte wähle den Ordner des Spiels.</value>
+  </data>
+  <data name="WideFolder_Title" xml:space="preserve">
+    <value>Sehr weiter Ordner</value>
+  </data>
+  <data name="WideFolder_Text" xml:space="preserve">
+    <value>„{0}“ ist ein Systemordner oder enthält Systemordner. Jedes Programm darin würde als dieses Spiel gelten und HDR einschalten. Trotzdem hinzufügen?</value>
+    <comment>{0} = Ordner</comment>
+  </data>
+  <data name="WideFolder_Confirm" xml:space="preserve">
+    <value>Trotzdem hinzufügen</value>
+  </data>
 </root>

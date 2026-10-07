@@ -1,0 +1,33 @@
+<infra:ChromeWindow x:Class="HdrPilot.App.Views.Library.ConfirmDialog"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
+                    xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    AutomationProperties.AutomationId="ConfirmDialog"
+                    Width="480" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
+                    WindowStartupLocation="CenterOwner">
+    <StackPanel x:Name="Body" Margin="26,4,26,24">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="44" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Width="44" Height="44" VerticalAlignment="Top">
+                <Border x:Name="IconTint" CornerRadius="22" Background="{DynamicResource Hp.Brush.Warning}" Opacity="0.16" />
+                <TextBlock x:Name="IconGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE7BA;" FontSize="20" HorizontalAlignment="Center"
+                           Foreground="{DynamicResource Hp.Brush.Warning}" />
+            </Grid>
+            <TextBlock x:Name="TitleText" Grid.Column="1" Style="{StaticResource Hp.Text.Subtitle}" Margin="16,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
+                       AutomationProperties.AutomationId="ConfirmTitle" />
+        </Grid>
+        <TextBlock x:Name="MessageText" Style="{StaticResource Hp.Text.Body}" Margin="60,10,0,24" LineHeight="21"
+                   Foreground="{DynamicResource Hp.Brush.TextSecondary}" AutomationProperties.AutomationId="ConfirmMessage" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CancelButton" Style="{StaticResource Hp.GhostButton}" IsCancel="True" MinWidth="110"
+                    Content="{x:Static res:LibraryStrings.Dialog_Cancel}"
+                    AutomationProperties.AutomationId="ConfirmCancel" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}" />
+            <Button x:Name="ConfirmButton" Style="{StaticResource Hp.AccentButton}" Margin="10,0,0,0" MinWidth="130" IsDefault="True" Click="OnConfirm"
+                    AutomationProperties.AutomationId="ConfirmOk" />
+        </StackPanel>
+    </StackPanel>
+</infra:ChromeWindow>

@@ -3,7 +3,6 @@ using HdrPilot.Core.Native;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using static HdrPilot.Core.Native.NtNative;
-using static HdrPilot.Core.Native.ToolhelpNative;
 
 namespace HdrPilot.Core.Processes;
 
@@ -11,14 +10,15 @@ namespace HdrPilot.Core.Processes;
 /// Sparsame Prozessliste über NtQuerySystemInformation (winternl.h). Ab Windows 11 24H2 mit
 /// SystemBasicProcessInformation (nur PID, Name, Sequenznummer, keine Thread-Daten; gemessen etwa 30-mal billiger als
 /// CreateToolhelp32Snapshot), sonst SystemProcessInformation, im Notfall Toolhelp. Der Puffer wird wiederverwendet.
-/// Den EXE-Pfad liest es nur für neue Prozesse (PROCESS_QUERY_LIMITED_INFORMATION, Handle sofort geschlossen).
+/// Den EXE-Pfad liest es nur für neue Prozesse, ohne Handle auf sie (<see cref="ProcessImagePathResolver"/>).
 /// </summary>
 public sealed unsafe class NtProcessSnapshotProvider : IProcessSnapshotProvider, IDisposable
 {
     private readonly ILogger _logger;
     private readonly object _gate = new();
     private readonly Dictionary<uint, CacheEntry> _cache = [];
-    private readonly Win32ProcessSnapshotProvider _toolhelpFallback = new();
+    private readonly ProcessImagePathResolver _paths;
+    private readonly Win32ProcessSnapshotProvider _toolhelpFallback;
     private IntPtr _buffer;
     private uint _bufferSize = 128 * 1024;
     private int _infoClass = SystemBasicProcessInformation;
@@ -33,6 +33,8 @@ public sealed unsafe class NtProcessSnapshotProvider : IProcessSnapshotProvider,
     internal NtProcessSnapshotProvider(ILogger? logger, int infoClass)
     {
         _logger = logger ?? NullLogger.Instance;
+        _paths = new ProcessImagePathResolver(logger);
+        _toolhelpFallback = new Win32ProcessSnapshotProvider(_paths);
         _infoClass = infoClass;
         _buffer = Marshal.AllocHGlobal((int)_bufferSize);
     }
@@ -165,23 +167,7 @@ public sealed unsafe class NtProcessSnapshotProvider : IProcessSnapshotProvider,
     private string? QueryPath(uint pid)
     {
         PathQueries++;
-        var handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (handle == IntPtr.Zero)
-        {
-            return null;
-        }
-
-        try
-        {
-            const int capacity = 1024;
-            var buffer = stackalloc char[capacity];
-            var size = (uint)capacity;
-            return QueryFullProcessImageNameW(handle, 0, buffer, ref size) ? new string(buffer, 0, (int)size) : null;
-        }
-        finally
-        {
-            CloseHandle(handle);
-        }
+        return _paths.Resolve((int)pid);
     }
 
     private readonly record struct CacheEntry(ProcessInfo Info, ulong Sequence);

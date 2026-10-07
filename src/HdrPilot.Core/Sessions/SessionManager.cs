@@ -708,6 +708,13 @@ public sealed class SessionManager
         }
     }
 
+    /// <summary>
+    /// Die Tastenkürzel-Notlösung nur, solange kein Prozess eines Spiels läuft (E66): künstliche Tastendrücke an ein
+    /// laufendes Spiel sind genau das, wogegen Anti-Cheat-Systeme vorgehen. Erlaubt bleibt sie vor einem Start über die
+    /// App (das Spiel läuft noch nicht) und beim Zurückstellen nach dem letzten Spiel.
+    /// </summary>
+    private bool HotkeyFallbackAllowed => !_pidMatches.Values.Any(m => m.GameKey is not null);
+
     private Dictionary<string, List<ProcessInfo>> RunningGames()
     {
         var result = new Dictionary<string, List<ProcessInfo>>(StringComparer.OrdinalIgnoreCase);
@@ -753,7 +760,7 @@ public sealed class SessionManager
         HdrSetResult result;
         try
         {
-            result = await _hdr.SetHdrAsync(devicePath, enable, cancellationToken).ConfigureAwait(false);
+            result = await _hdr.SetHdrAsync(devicePath, enable, HotkeyFallbackAllowed, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

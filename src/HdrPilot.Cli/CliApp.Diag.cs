@@ -65,7 +65,7 @@ public sealed partial class CliApp
     {
         public IReadOnlyList<Core.Hdr.DisplayInfo> GetDisplays() => [];
 
-        public Task<Core.Hdr.HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, CancellationToken cancellationToken = default) =>
+        public Task<Core.Hdr.HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, bool allowHotkeyFallback, CancellationToken cancellationToken = default) =>
             Task.FromResult(new Core.Hdr.HdrSetResult { Status = Core.Hdr.HdrSetStatus.NotConnected, MonitorDevicePath = monitorDevicePath, Message = "Diagnose" });
     }
 

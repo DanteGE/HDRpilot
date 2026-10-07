@@ -46,8 +46,12 @@ public sealed class FakeHdrController : IHdrController
         Api = HdrApi.Modern,
     }).ToList();
 
-    public Task<HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, CancellationToken cancellationToken = default)
+    /// <summary>Je Schaltaufruf, ob die Tastenkürzel-Notlösung erlaubt war.</summary>
+    public List<bool> HotkeyAllowed { get; } = [];
+
+    public Task<HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, bool allowHotkeyFallback, CancellationToken cancellationToken = default)
     {
+        HotkeyAllowed.Add(allowHotkeyFallback);
         BeforeSet?.Invoke(monitorDevicePath, enable);
         if (ThrowOnSet)
         {

@@ -88,6 +88,28 @@ public sealed class SessionManagerTests
     }
 
     [Fact]
+    public async Task Hotkey_fallback_is_only_allowed_while_no_game_process_runs()
+    {
+        // E66: beim Erkennen des laufenden Spiels nie, vor dem Start über die App und beim Zurückstellen schon.
+        _config.AddGame("1", DirA);
+        await Poll();
+        var pid = _processes.StartExe(ExeA);
+        await Poll();
+        Assert.True(PrimaryOn);
+        Assert.Equal([false], _hdr.HotkeyAllowed);
+
+        _processes.Stop(pid);
+        await Poll(15);
+        Assert.False(PrimaryOn);
+        Assert.Equal([false, true], _hdr.HotkeyAllowed);
+
+        _config.AddGame("2", DirB, hdrAuto: false);
+        await Launch("Steam:2");
+        Assert.True(PrimaryOn);
+        Assert.Equal([false, true, true], _hdr.HotkeyAllowed);
+    }
+
+    [Fact]
     public async Task Session_state_is_written_to_disk_before_switching()
     {
         _config.AddGame("1", DirA);

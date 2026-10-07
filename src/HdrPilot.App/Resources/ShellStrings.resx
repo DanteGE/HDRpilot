@@ -216,7 +216,7 @@
     <value>Tastenkürzel als Notlösung</value>
   </data>
   <data name="HotkeyFallbackHint" xml:space="preserve">
-    <value>Sendet Win+Alt+B nur, wenn die Windows-Schnittstelle scheitert. Wirkt auf alle HDR-Bildschirme und braucht die Xbox Game Bar.</value>
+    <value>Sendet Win+Alt+B nur, wenn die Windows-Schnittstelle scheitert, und nie, solange ein Spiel läuft (Anti-Cheat-Systeme können künstliche Tastendrücke als Makro werten). Wirkt auf alle HDR-Bildschirme und braucht die Xbox Game Bar.</value>
   </data>
 
   <!-- Einstellungen: Suchordner -->

@@ -275,3 +275,32 @@ und den THIRD-PARTY-NOTICES der .NET-Laufzeit. Die Versionen kommen aus der deps
 Exit-Codes, Standardwerte, Ablageorte und alle fett gesetzten Oberflächen-Bezeichnungen mit Code und resx ab (mit
 Gegenprobe). Die inhaltlichen Aussagen haben fünf unabhängige Prüfer gegen den Code gelesen; 55 Hinweise, alle
 eingearbeitet (darunter E61, E62 und die korrigierte CLI-Hilfe zu `--config-dir`).
+
+## Anti-Cheat-Prüfung (2026-10-07)
+
+Auf Wunsch des Nutzers geprüft, ob HdrPilot ein Anti-Cheat auslösen kann: Code-Prüfung, Bestandsaufnahme der
+installierten Spiele (21 mit Anti-Cheat: EA Javelin, 15× Easy Anti-Cheat, nProtect GameGuard, PunkBuster u. a.),
+Recherche zu EAC, BattlEye, Javelin, Vanguard, FACEIT, Ricochet und vergleichbaren HDR-Werkzeugen, dazu ein Prüfer, der
+gezielt Gegenbelege suchte. Ergebnis: sehr geringes Risiko, kein belegter Fall für Werkzeuge ohne Injektion, Hooks,
+Overlay, Treiber oder künstliche Eingaben. Belegte Fälle harmloser Software betrafen DLL-Hooks (DisplayFusion,
+Javelin), geänderte Priorität fremder Prozesse (Process Lasso, Vanguard) und künstliche Eingaben (AutoHotkey, reWASD).
+
+**E65 EXE-Pfade ohne Handle:** `ProcessImagePathResolver` liest den Pfad zu einer PID über
+NtQuerySystemInformation(SystemProcessIdInformation = 88) und rechnet den NT-Pfad über QueryDosDevice um (auch
+verbundene Netzlaufwerke und UNC). HdrPilot öffnet damit keinen fremden Prozess mehr, auch kein Spiel, und erkennt
+nebenbei geschützte Prozesse über ihren Pfad. Die Klasse ist undokumentiert, aber seit Vista vorhanden (Geoff Chappell,
+phnt; lokal gemessen: Pfade für 277 von 278 Prozessen ohne Adminrechte). Nur wenn Windows die Klasse nicht kennt,
+fällt HdrPilot auf OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) zurück.
+
+**E66 Tastenkürzel-Notlösung nie während eines Spiels:** `IHdrController.SetHdrAsync` bekommt `allowHotkeyFallback`.
+Die Sitzungslogik erlaubt die Notlösung nur, solange kein Prozess eines Spiels läuft (vor einem Start über die App, beim
+Zurückstellen nach dem letzten Spiel); das Umschalten von Hand im Infobereich und `hdrpilot hdr` dürfen sie benutzen.
+Künstliche Tastendrücke an ein laufendes Spiel sind genau das, wogegen Anti-Cheats vorgehen. Der Hinweistext sagt das.
+
+**E67 Architekturtest gegen verbotene Techniken:** `AntiCheatSafetyTests` durchsucht `src` nach Speicherzugriff,
+Einschleusen, Hooks, Debug-, Treiber- und Rechte-Schnittstellen, Modullisten, `Process.GetProcess*`, `WaitForExit`
+und Eingabe-Mitlesen; OpenProcess nur im Rückfall der Pfadabfrage und nur mit dem kleinsten Recht, SendInput nur in
+der Notlösung, Manifest `asInvoker`. Eine Gegenprobe zeigt, dass der Scanner Treffer findet.
+
+Nicht umgesetzt: Signieren der EXE (kein Zertifikat vorhanden; hilft vor allem gegen SmartScreen), Auspacken der
+WPF-DLLs neben die EXE statt nach %TEMP% (widerspräche „eine einzelne EXE“).

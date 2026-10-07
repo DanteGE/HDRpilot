@@ -166,3 +166,8 @@ und die EXPECT-Marke ausgibt.
 
 - [ ] G5.3: Rückfrage beim Nutzer zu WMI-Überwachung, Neustart bei verspätetem HDR, Steam-Hülle, englischer Oberfläche
   EVIDENCE: pending
+
+- [ ] G5.4: Kein Eingriff in Spielprozesse: keine verbotenen Techniken im Quelltext, EXE-Pfade ohne Handle auf fremde Prozesse, Tastenkürzel-Notlösung nie während eines Spiels (Anti-Cheat-Prüfung, E65–E67)
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AntiCheatSafetyTests|FullyQualifiedName~ProcessImagePathResolverTests|FullyQualifiedName~Hotkey" -MinTests 20
+  EXPECT: TESTS_OK
+  EVIDENCE: pending

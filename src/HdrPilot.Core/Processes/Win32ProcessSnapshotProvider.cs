@@ -4,15 +4,20 @@ using static HdrPilot.Core.Native.ToolhelpNative;
 namespace HdrPilot.Core.Processes;
 
 /// <summary>
-/// Prozessliste über CreateToolhelp32Snapshot. Den EXE-Pfad liest es nur für neue Prozesse, mit
-/// PROCESS_QUERY_LIMITED_INFORMATION und QueryFullProcessImageNameW; jedes Handle wird sofort geschlossen.
-/// Bekannte Prozesse (gleiche PID, gleicher Name) kommen aus dem Zwischenspeicher. Es wird nichts in fremde
-/// Prozesse geschrieben oder eingehängt.
+/// Prozessliste über CreateToolhelp32Snapshot. Den EXE-Pfad liest es nur für neue Prozesse, ohne Handle auf sie
+/// (<see cref="ProcessImagePathResolver"/>). Bekannte Prozesse (gleiche PID, gleicher Name) kommen aus dem
+/// Zwischenspeicher. Es wird nichts in fremde Prozesse geschrieben oder eingehängt.
 /// </summary>
 public sealed unsafe class Win32ProcessSnapshotProvider : IProcessSnapshotProvider
 {
     private readonly Dictionary<uint, ProcessInfo> _cache = [];
     private readonly object _gate = new();
+    private readonly ProcessImagePathResolver _paths;
+
+    public Win32ProcessSnapshotProvider(ProcessImagePathResolver? paths = null)
+    {
+        _paths = paths ?? new ProcessImagePathResolver();
+    }
 
     /// <summary>Anzahl Pfadabfragen seit Start (Diagnose: zeigt, dass nur neue Prozesse abgefragt werden).</summary>
     public long PathQueries { get; private set; }
@@ -77,23 +82,7 @@ public sealed unsafe class Win32ProcessSnapshotProvider : IProcessSnapshotProvid
     private string? QueryPath(uint pid)
     {
         PathQueries++;
-        var handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
-        if (handle == IntPtr.Zero)
-        {
-            return null; // geschützter Prozess oder schon beendet
-        }
-
-        try
-        {
-            const int capacity = 1024;
-            var buffer = stackalloc char[capacity];
-            var size = (uint)capacity;
-            return QueryFullProcessImageNameW(handle, 0, buffer, ref size) ? new string(buffer, 0, (int)size) : null;
-        }
-        finally
-        {
-            CloseHandle(handle);
-        }
+        return _paths.Resolve((int)pid);
     }
 
     private static string ReadName(char* buffer)

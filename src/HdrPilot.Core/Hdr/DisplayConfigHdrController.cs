@@ -107,12 +107,12 @@ public sealed class DisplayConfigHdrController : IHdrController
         return displays;
     }
 
-    public async Task<HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, CancellationToken cancellationToken = default)
+    public async Task<HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, bool allowHotkeyFallback, CancellationToken cancellationToken = default)
     {
         await _switchLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            return await SetHdrCoreAsync(monitorDevicePath, enable, cancellationToken).ConfigureAwait(false);
+            return await SetHdrCoreAsync(monitorDevicePath, enable, allowHotkeyFallback, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -131,7 +131,7 @@ public sealed class DisplayConfigHdrController : IHdrController
         return display.ActiveColorMode is not { } mode || (mode == AdvancedColorMode.Hdr) == enable;
     }
 
-    private async Task<HdrSetResult> SetHdrCoreAsync(string monitorDevicePath, bool enable, CancellationToken cancellationToken)
+    private async Task<HdrSetResult> SetHdrCoreAsync(string monitorDevicePath, bool enable, bool allowHotkeyFallback, CancellationToken cancellationToken)
     {
         var display = Find(monitorDevicePath);
         if (display is null)
@@ -188,7 +188,13 @@ public sealed class DisplayConfigHdrController : IHdrController
 
         if (_options.IsHotkeyFallbackEnabled && _hotkey is not null)
         {
-            return await HotkeyFallbackAsync(monitorDevicePath, enable, display, before, cancellationToken).ConfigureAwait(false);
+            if (allowHotkeyFallback)
+            {
+                return await HotkeyFallbackAsync(monitorDevicePath, enable, display, before, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Künstliche Tastendrücke an ein laufendes Spiel sind genau das, wogegen Anti-Cheat-Systeme vorgehen.
+            _logger.LogWarning("Notlösung Win+Alt+B nicht verwendet, weil gerade ein Spiel läuft (Schutz vor Anti-Cheat-Fehlalarmen).");
         }
 
         var detail = rc != DisplayConfigNative.ERROR_SUCCESS

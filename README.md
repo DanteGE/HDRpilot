@@ -88,7 +88,7 @@ Ein Klick auf einen Hinweis von HdrPilot öffnet ebenfalls die Spielebibliothek.
 | Suchordner | Ordner mit Spielen ohne Launcher; Unterordner mit EXE werden vorgeschlagen | keine |
 | Hilfsprozesse ausschließen | Programme, die nie als Spiel zählen (Absturzmelder, Installer und Laufzeitpakete, Anti-Cheat-Installer und -Dienste, reine Launcher-Fenster …) | Standardliste |
 | Protokollstufe (Erweitert) | Wie ausführlich protokolliert wird | Normal |
-| Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
+| Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert und gerade kein Spiel läuft; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
 
 Die Darstellung folgt dem hellen oder dunklen App-Modus von Windows. Animationen laufen nur, wenn in Windows
 „Animationseffekte“ an ist, und nur solange ein Fenster sichtbar ist.
@@ -128,6 +128,26 @@ Spielstart fehlte oder kein HDR konnte, wird dann eingeschaltet, und ein geschei
 und so bestätigt. Ab Windows 11 24H2 (Build 26100) nutzt HdrPilot die neue HDR-Schnittstelle, sonst die ältere
 „Advanced Color“-Schnittstelle. Meldet die neue Schnittstelle einen Fehler, weicht HdrPilot automatisch auf die ältere
 aus.
+
+## Anti-Cheat
+
+HdrPilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme keinen Anlass zum Eingreifen haben:
+
+- Es liest nur die Prozessliste von Windows. Den EXE-Pfad eines Programms erfragt es bei Windows, ohne das Programm
+  selbst zu öffnen; ein Spiel bekommt von HdrPilot also gar nichts mit.
+- Es liest und schreibt keinen Spielspeicher, schleust keinen Code ein, setzt keine Hooks, legt kein Overlay über das
+  Spiel und ändert weder Priorität noch Prozessorzuteilung von Spielen.
+- Es lädt keinen Treiber, braucht keine Administratorrechte und baut keine Netzwerkverbindung auf.
+- HDR schaltet es über die Anzeige-Einstellungen von Windows, wie der HDR-Schalter in den Windows-Einstellungen.
+- Künstliche Tastendrücke gibt es nur in der Tastenkürzel-Notlösung. Sie ist ab Werk aus und sendet nie etwas,
+  solange ein Spiel läuft.
+- Launcher-Spiele startet es über den Launcher-Link, sodass deren Anti-Cheat-Starter wie gewohnt läuft.
+
+Ein automatischer Test stellt sicher, dass solche Techniken nicht in den Quelltext gelangen. Eine Garantie gibt es
+trotzdem nicht, denn die Regeln der Anti-Cheat-Hersteller sind nicht öffentlich. Meldet ein Anti-Cheat HdrPilot (etwa
+„Hack attempt detected“ bei nProtect GameGuard), HdrPilot vor diesem Spiel beenden und den Fall dem Spielhersteller
+melden. Selbst eingetragene Spiele mit Anti-Cheat (etwa mit einem Ordner EasyAntiCheat oder BattlEye) über ihr
+Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über die eigentliche Spiel-EXE.
 
 ## Speicherorte
 
@@ -206,8 +226,7 @@ gemerkten HDR-Zustand. Vorher HdrPilot beenden oder bei laufender App `HdrPilot.
 - **Spiel-EXE außerhalb des Installationsordners:** Manche Starter starten die eigentliche EXE woanders. Solche Spiele
   erkennt HdrPilot erst, wenn du die EXE in den Details hinzufügst; bis dahin stellt auch „Mit HDR starten“ HDR nach
   der Startfrist wieder zurück.
-- **Geschützte Spielprozesse:** Gibt Windows den Pfad eines Prozesses nicht heraus, erkennt HdrPilot ihn nur am
-  EXE-Namen, und nur, wenn diese EXE dem Spiel bekannt ist. Dann die EXE in den Details hinzufügen.
+
 - **Mehrere Bildschirme:** HdrPilot erkennt nicht, auf welchem Bildschirm ein Spiel läuft, sondern schaltet die
   eingestellten (Standard: Hauptbildschirm). Läuft ein Spiel woanders, in den Details den richtigen **Bildschirm**
   wählen. Auf echter Hardware geprüft wurde nur mit einem Bildschirm.
@@ -225,9 +244,10 @@ gemerkten HDR-Zustand. Vorher HdrPilot beenden oder bei laufender App `HdrPilot.
   über „Spiel hinzufügen“ eintragen.
 - **Windows 10:** Die ältere Schnittstelle ist mit Tests abgedeckt und wurde auf echter Hardware unter Windows 11
   (Build 26200) mitgeprüft; ein echtes Windows 10 stand nicht zur Verfügung.
-- **Tastenkürzel-Notlösung:** HdrPilot sendet Win+Alt+B nur, wenn sie eingeschaltet ist und die Windows-Schnittstelle
-  gescheitert ist. Das Kürzel braucht die Xbox Game Bar, schaltet nur um und wirkt auf alle HDR-fähigen Bildschirme;
-  HdrPilot bestätigt aber nur den Zielbildschirm. Auf echter Hardware ist die Notlösung nicht getestet.
+- **Tastenkürzel-Notlösung:** HdrPilot sendet Win+Alt+B nur, wenn sie eingeschaltet ist, die Windows-Schnittstelle
+  gescheitert ist und gerade kein Spiel läuft (siehe „Anti-Cheat“). Das Kürzel braucht die Xbox Game Bar, schaltet nur
+  um und wirkt auf alle HDR-fähigen Bildschirme; HdrPilot bestätigt aber nur den Zielbildschirm. Auf echter Hardware
+  ist die Notlösung nicht getestet.
 - **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs.
 - **Nur auf Deutsch:** Oberfläche, Hinweise, Fehlermeldungen der Launcher-Scanner, Kommandozeile und Protokoll.
 

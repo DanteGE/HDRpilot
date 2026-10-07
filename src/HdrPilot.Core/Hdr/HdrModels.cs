@@ -113,6 +113,8 @@ public interface IHdrController
     /// <summary>
     /// Schaltet HDR am Bildschirm mit diesem monitorDevicePath und bestätigt den Zustand durch erneutes Lesen.
     /// Wirft nicht bei fehlendem oder nicht HDR-fähigem Bildschirm, sondern meldet das im Ergebnis.
+    /// <paramref name="allowHotkeyFallback"/>: ob die Tastenkürzel-Notlösung (falls eingeschaltet) bei diesem
+    /// Schaltvorgang benutzt werden darf; nie, solange ein Spiel läuft (E66).
     /// </summary>
-    Task<HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, CancellationToken cancellationToken = default);
+    Task<HdrSetResult> SetHdrAsync(string monitorDevicePath, bool enable, bool allowHotkeyFallback, CancellationToken cancellationToken = default);
 }

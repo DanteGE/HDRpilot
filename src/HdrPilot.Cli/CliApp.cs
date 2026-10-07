@@ -236,7 +236,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         foreach (var display in selection)
         {
             var enable = target ?? !display.HdrEnabled;
-            results.Add(await controller.SetHdrAsync(display.MonitorDevicePath, enable, cancellationToken).ConfigureAwait(false));
+            results.Add(await controller.SetHdrAsync(display.MonitorDevicePath, enable, allowHotkeyFallback: true, cancellationToken).ConfigureAwait(false));
         }
 
         if (args.Has("--json"))

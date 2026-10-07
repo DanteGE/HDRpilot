@@ -242,7 +242,8 @@ public sealed partial class AppServices : IAsyncDisposable
         var enable = !targets.Any(d => d.HdrEnabled);
         foreach (var d in targets)
         {
-            var result = await Hdr.SetHdrAsync(d.MonitorDevicePath, enable);
+            // Ausdrücklich von Hand im Infobereich: die Notlösung ist erlaubt, wenn sie eingeschaltet ist.
+            var result = await Hdr.SetHdrAsync(d.MonitorDevicePath, enable, allowHotkeyFallback: true);
             _logger.Log(
                 result.IsSuccess ? LogLevel.Information : LogLevel.Warning,
                 "HDR-Schaltung | Auslöser: von Hand (Tray) | Bildschirm: {Display} | vorher: {Before} | nachher: {After} | Ergebnis: {Status} | {Message}",

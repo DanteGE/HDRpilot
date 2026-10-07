@@ -74,7 +74,7 @@ public sealed class HdrControllerTests
         api.SetHdrResult = 31; // ERROR_GEN_FAILURE
         var controller = Create(api);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Success, result.Status);
         Assert.Equal(HdrApi.Legacy, result.Api);
@@ -92,7 +92,7 @@ public sealed class HdrControllerTests
         api.ApplyAfterReads = 3; // Windows braucht drei Lesevorgänge
         var controller = Create(api);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Success, result.Status);
         Assert.False(result.Before);
@@ -110,7 +110,7 @@ public sealed class HdrControllerTests
         var api = FakeDisplayConfigApi.WithSingleHdrMonitor(hdrOn: true, wcgOn: true);
         var controller = Create(api);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: false, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: false, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Success, result.Status);
         Assert.True(result.Before);
@@ -124,7 +124,7 @@ public sealed class HdrControllerTests
         var api = FakeDisplayConfigApi.WithSingleHdrMonitor(hdrOn: true);
         var controller = Create(api);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.AlreadyInState, result.Status);
         Assert.True(result.IsSuccess);
@@ -138,7 +138,7 @@ public sealed class HdrControllerTests
         api.IgnoreSets = true;
         var controller = Create(api, new HdrControllerOptions { VerifyAttempts = 4, VerifyInterval = TimeSpan.FromMilliseconds(250) });
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Failed, result.Status);
         Assert.False(result.IsSuccess);
@@ -154,7 +154,7 @@ public sealed class HdrControllerTests
         api.Monitors[0].HdrNeverActivates = true;
         var controller = Create(api, new HdrControllerOptions { VerifyAttempts = 3 });
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Failed, result.Status);
         Assert.Contains("Richtlinie", result.Message, StringComparison.Ordinal);
@@ -168,8 +168,8 @@ public sealed class HdrControllerTests
         api.AfterSet = m => m.Target = m.Target with { TargetId = m.Target.TargetId + 100 };
         var controller = Create(api);
 
-        var on = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
-        var off = await controller.SetHdrAsync(PathOf(api), enable: false, Ct);
+        var on = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
+        var off = await controller.SetHdrAsync(PathOf(api), enable: false, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Success, on.Status);
         Assert.Equal(HdrSetStatus.Success, off.Status);
@@ -183,7 +183,7 @@ public sealed class HdrControllerTests
         api.Monitors[0].HdrSupported = false;
         var controller = Create(api);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.NotHdrCapable, result.Status);
         Assert.Equal(0, api.CallCount("Set"));
@@ -194,7 +194,7 @@ public sealed class HdrControllerTests
     public async Task Unknown_display_is_not_connected()
     {
         var api = FakeDisplayConfigApi.WithSingleHdrMonitor();
-        var result = await Create(api).SetHdrAsync(@"\\?\DISPLAY#GONE", enable: true, Ct);
+        var result = await Create(api).SetHdrAsync(@"\\?\DISPLAY#GONE", enable: true, allowHotkeyFallback: true, Ct);
         Assert.Equal(HdrSetStatus.NotConnected, result.Status);
         Assert.Equal(0, api.CallCount("Set"));
     }
@@ -219,7 +219,7 @@ public sealed class HdrControllerTests
         var hotkey = new FakeHotkeySender(api);
         var controller = Create(api, hotkey: hotkey);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Failed, result.Status);
         Assert.Equal(0, hotkey.Sent);
@@ -234,12 +234,30 @@ public sealed class HdrControllerTests
         var hotkey = new FakeHotkeySender(api);
         var controller = Create(api, new HdrControllerOptions { HotkeyFallbackEnabled = true }, hotkey);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Success, result.Status);
         Assert.True(result.UsedHotkeyFallback);
         Assert.Equal(1, hotkey.Sent);
         Assert.True(_log.Contains(LogLevel.Warning, "Win+Alt+B"));
+    }
+
+    [Fact]
+    public async Task Hotkey_fallback_is_never_sent_while_a_game_runs()
+    {
+        // Eingeschaltet und die API scheitert, aber ein Spiel läuft: keine künstlichen Tastendrücke (E66).
+        var api = FakeDisplayConfigApi.WithSingleHdrMonitor(hdrOn: false);
+        api.SetHdrResult = 31;
+        api.SetAdvancedColorResult = 31;
+        var hotkey = new FakeHotkeySender(api);
+        var controller = Create(api, new HdrControllerOptions { HotkeyFallbackEnabled = true }, hotkey);
+
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: false, Ct);
+
+        Assert.Equal(HdrSetStatus.Failed, result.Status);
+        Assert.False(result.UsedHotkeyFallback);
+        Assert.Equal(0, hotkey.Sent);
+        Assert.True(_log.Contains(LogLevel.Warning, "Spiel läuft"));
     }
 
     [Fact]
@@ -251,7 +269,7 @@ public sealed class HdrControllerTests
         var hotkey = new FakeHotkeySender(api);
         var controller = Create(api, new HdrControllerOptions { HotkeyFallbackEnabled = true }, hotkey);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Success, result.Status);
         Assert.Equal(0, hotkey.Sent);
@@ -267,7 +285,7 @@ public sealed class HdrControllerTests
         var hotkey = new FakeHotkeySender(api);
         var controller = Create(api, new HdrControllerOptions { HotkeyFallbackEnabled = true, VerifyAttempts = 2 }, hotkey);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(1, hotkey.Sent);
         Assert.Equal(HdrSetStatus.Success, result.Status);
@@ -283,7 +301,7 @@ public sealed class HdrControllerTests
         var hotkey = new FakeHotkeySender(api, succeeds: false);
         var controller = Create(api, new HdrControllerOptions { HotkeyFallbackEnabled = true }, hotkey);
 
-        var result = await controller.SetHdrAsync(PathOf(api), enable: true, Ct);
+        var result = await controller.SetHdrAsync(PathOf(api), enable: true, allowHotkeyFallback: true, Ct);
 
         Assert.Equal(HdrSetStatus.Failed, result.Status);
         Assert.Equal(1, hotkey.Sent);
@@ -296,7 +314,7 @@ public sealed class HdrControllerTests
         var controller = Create(api);
 
         var results = await Task.WhenAll(
-            Enumerable.Range(0, 8).Select(i => Task.Run(() => controller.SetHdrAsync(PathOf(api), enable: i % 2 == 0, Ct))));
+            Enumerable.Range(0, 8).Select(i => Task.Run(() => controller.SetHdrAsync(PathOf(api), enable: i % 2 == 0, allowHotkeyFallback: true, Ct))));
 
         Assert.All(results, r => Assert.True(r.IsSuccess, r.Message));
     }

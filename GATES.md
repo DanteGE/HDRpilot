@@ -206,3 +206,8 @@ und die EXPECT-Marke ausgibt.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrSupport|FullyQualifiedName~HdrList|FullyQualifiedName~Pcgw" -MinTests 140
   EXPECT: TESTS_OK
   EVIDENCE: 2026-10-07 20:40 exit 0, TESTS_OK 157 (Core und App, Filter um die App-Tests der Einstellungen erweitert); live beim Nutzer abgeglichen (siehe G6.6). Kontomodus nur mit Attrappe getestet, nicht live (kein Konto eingerichtet)
+
+- [x] G6.8: Tray-Menü bleibt nach echtem Rechtsklick offen und lässt sich bedienen (Fehlermeldung des Nutzers: schloss sich sofort, E82): offen nach 2 s, Symbolwechsel bei offenem Menü, Esc, Klick daneben, Mausklick auf Eintrag, Tastatur; beim Nutzer an der installierten Version nachgemessen
+  CHECK: ps tools\gates\phase6-traymenu.ps1
+  EXPECT: PHASE6_TRAYMENU_OK
+  EVIDENCE: 2026-10-07 20:53 exit 0, PHASE6_TRAYMENU_OK (alle 6 Prüfungen, Symbol der Testinstanz im Überlauf; dreimal grün). Gegenprobe mit dem alten Code: exit 1 (Menü nach 2 s zu, HDRpilot nicht im Vordergrund). Vorher an der installierten Version gemessen: offen nach 64 ms, zu nach 202 ms, Vordergrund zurück beim zuvor aktiven Programm. Nach dem Einspielen (20:55, HDRpilot.exe SHA256 472830B8…, PHASE5_PUBLISH_OK) am echten Symbol in der Taskleiste: offen nach 147 ms, nach 3000 ms noch offen, Esc schließt. BUILD_OK_0_WARNINGS, TESTS_OK 1610

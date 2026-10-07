@@ -431,3 +431,13 @@ von `phase6-name.ps1` ganz geprüft. HDR-Liste: Anmeldesperre von PCGamingWiki e
 „Failed“ mit Begründung), unlesbares gespeichertes Konto lässt sich entfernen (danach keine veraltete Fehlerzeile mehr;
 die Kontoanzeige folgt jedem Abgleich), Weiterleitungsketten werden verfolgt (höchstens 5 Schritte), Interwiki-Ziele
 gelten als „nicht gefunden“. Beide Korrekturrunden wurden je von einem weiteren Prüfer gegengeprüft.
+
+**E82 Tray-Menü schloss sich sofort (Fehlermeldung des Nutzers):** Nach einem Rechtsklick auf das Symbol öffnete sich das
+Menü und war nach etwa 150 ms wieder zu (Windows 11, Symbol in der Taskleiste wie im Überlauf). Gemessen mit echtem
+Rechtsklick (SendInput): HDRpilot holte erst das unsichtbare Hilfsfenster und nach dem Öffnen auch das Menü-Popup in den
+Vordergrund. Das Popup ist nicht aktivierbar (WS_EX_NOACTIVATE); Windows gab den Vordergrund danach an das vorher aktive
+Programm zurück, WPF schloss das Menü beim Verlust der Aktivierung. Lösung: nur noch das Hilfsfenster in den Vordergrund
+(wie beim klassischen TrackPopupMenu-Muster). Das Gate `phase6-traymenu.ps1` prüft mit echter Maus und Tastatur an einer
+Testinstanz: Menü bleibt offen, Symbolwechsel bei offenem Menü, Esc, Klick daneben, Klick auf einen Eintrag, Tastatur;
+mit dem alten Code fällt es durch. Die bisherigen Tests öffneten das Menü nur ohne echten Rechtsklick und konnten den
+Fehler nicht sehen.

@@ -420,15 +420,14 @@ public sealed partial class TrayService : ITrayService
         _menu = menu;
         _menuModel = model;
 
-        // Ohne Vordergrund schließt sich ein Tray-Menü beim Klick daneben nicht (bekanntes Shell-Verhalten).
-        // Das Menü öffnet nur auf ausdrücklichen Rechtsklick des Nutzers.
+        // Ohne Vordergrund schließt sich ein Tray-Menü beim Klick daneben nicht (bekanntes Shell-Verhalten). Den Vordergrund
+        // bekommt nur das unsichtbare Hilfsfenster, nie das Menü-Popup selbst: das ist nicht aktivierbar (WS_EX_NOACTIVATE),
+        // und in den Vordergrund gezwungen holte Windows 11 nach etwa 150 ms das vorherige Fenster zurück, worauf WPF das
+        // Menü schloss (E82, geprüft mit echtem Rechtsklick: phase6-traymenu.ps1). Das Menü öffnet nur auf ausdrücklichen
+        // Rechtsklick des Nutzers.
         _sink ??= new ForegroundSink();
         _ = SetForegroundWindow(_sink.Handle);
         menu.IsOpen = true;
-        if (PresentationSource.FromVisual(menu) is HwndSource popup && popup.Handle != IntPtr.Zero)
-        {
-            _ = SetForegroundWindow(popup.Handle);
-        }
 
         // Zustand beim Öffnen frisch lesen (z. B. HDR von Hand umgeschaltet).
         Refresh();

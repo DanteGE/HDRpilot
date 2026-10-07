@@ -221,6 +221,40 @@ public sealed class HdrListServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Unreadable_account_is_shown_and_removing_it_returns_to_anonymous_mode()
+    {
+        _fs.AddFile(_paths.PcgwAccountFile, "kaputt!");
+
+        var status = _service.GetStatus();
+        Assert.True(status.AccountUnreadable);
+        Assert.Null(status.AccountUser);
+
+        _service.RemoveAccount();
+
+        Assert.False(_fs.FileExists(_paths.PcgwAccountFile));
+        Assert.False(_service.GetStatus().AccountUnreadable);
+        var result = await _service.SyncNowAsync().WaitAsync(Wait, TestContext.Current.CancellationToken);
+        Assert.Equal(HdrListRunOutcome.Completed, result.Outcome);
+        Assert.False(result.AccountMode);
+        Assert.Single(Requests, r => r["titles"] is not null); // ohne Konto: wieder Titelabfragen
+    }
+
+    [Fact]
+    public async Task Unreadable_account_is_replaced_by_a_newly_tested_one()
+    {
+        _fs.AddFile(_paths.PcgwAccountFile, "kaputt!");
+        _wiki.Accounts["Dante_GE@HdrPilot"] = "abc123geheim";
+        Assert.True(_service.GetStatus().AccountUnreadable);
+
+        Assert.Null(await _service.SaveAccountAsync("Dante_GE@HdrPilot", "abc123geheim").WaitAsync(Wait, TestContext.Current.CancellationToken));
+
+        var status = _service.GetStatus();
+        Assert.False(status.AccountUnreadable);
+        Assert.Equal("Dante_GE@HdrPilot", status.AccountUser);
+        await WaitUntil(() => !_service.IsRunning);
+    }
+
+    [Fact]
     public void User_agent_names_app_version_and_purpose()
     {
         Assert.Matches(@"^HDRpilot/\d+\.\d+\.\d+ \(Windows desktop app; HDR list\)$", HdrListService.UserAgent);

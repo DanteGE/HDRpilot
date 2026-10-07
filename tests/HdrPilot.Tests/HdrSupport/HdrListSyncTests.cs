@@ -152,6 +152,42 @@ public sealed class HdrListSyncTests
     }
 
     [Fact]
+    public void Redirect_chains_are_followed_and_the_game_is_not_asked_again()
+    {
+        _wiki.Page("Doom (2016)", "379720", "true");
+        _wiki.Redirects["DOOM 2016"] = "Doom 4";
+        _wiki.Redirects["Doom 4"] = "Doom (2016)";
+        HdrListGame[] games = [Other(GameSource.Xbox, "doom", "DOOM 2016")];
+
+        var result = Run(games);
+
+        Assert.Equal(1, result.Requests); // keine Suche nötig
+        Assert.Equal("Doom (2016)", Entry("Xbox:doom").PcgwTitle);
+        Assert.Equal(HdrSupportStatus.Native, Entry("Xbox:doom").Status);
+        _clock.Advance(TimeSpan.FromHours(2));
+        Assert.Equal(0, Run(games).Requests); // geprüft: der Name geht nicht bei jedem Start erneut hinaus
+    }
+
+    [Fact]
+    public void Interwiki_titles_count_as_not_found_and_get_the_search()
+    {
+        _wiki.Failures[1] = () => FakeHttpHandler.Json("""
+            {"batchcomplete":true,"query":{
+              "normalized":[{"fromencoded":false,"from":"Wikipedia: The Game","to":"wikipedia:The Game"}],
+              "interwiki":[{"title":"wikipedia:The Game","iw":"wikipedia"}]}}
+            """);
+        _wiki.Page("The Wikipedia Game", "4242", "true");
+        _wiki.Search["Wikipedia: The Game"] = "The Wikipedia Game";
+
+        var result = Run([Steam("4242", "Wikipedia: The Game")]);
+
+        Assert.Equal(2, result.Requests); // Titelabfrage, dann die Suche
+        Assert.Equal("Wikipedia: The Game", Requests[1]["gsrsearch"]);
+        Assert.Equal(HdrSupportStatus.Native, Entry("Steam:4242").Status);
+        Assert.False(Entry("Steam:4242").SearchPending);
+    }
+
+    [Fact]
     public void Gog_games_need_their_gog_id_when_the_page_lists_any()
     {
         _wiki.Page("Mit ID", null, "true", gog: "1207658924")

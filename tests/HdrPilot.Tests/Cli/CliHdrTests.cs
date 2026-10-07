@@ -148,10 +148,14 @@ public sealed class CliHdrTests
     {
         public IHdrController CreateHdrController(HdrControllerOptions options) =>
             new DisplayConfigHdrController(api, new FakeEnvironment(), new FakeClock(), options);
+
+        public IReadOnlyList<HdrPilot.Core.Games.IGameScanner> CreateScanners() => [];
     }
 
     private sealed class ThrowingServices : ICliServices
     {
         public IHdrController CreateHdrController(HdrControllerOptions options) => throw new InvalidOperationException("kaputt");
+
+        public IReadOnlyList<HdrPilot.Core.Games.IGameScanner> CreateScanners() => throw new InvalidOperationException("kaputt");
     }
 }

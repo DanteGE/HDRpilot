@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
 
 namespace HdrPilot.Cli;
@@ -8,6 +9,8 @@ namespace HdrPilot.Cli;
 public interface ICliServices
 {
     IHdrController CreateHdrController(HdrControllerOptions options);
+
+    IReadOnlyList<IGameScanner> CreateScanners();
 }
 
 public sealed class CliApp(ICliServices services, TextWriter stdout, TextWriter stderr)
@@ -38,6 +41,7 @@ public sealed class CliApp(ICliServices services, TextWriter stdout, TextWriter 
             return parsed.Positional[0].ToLowerInvariant() switch
             {
                 "hdr" => await RunHdrAsync(parsed, cancellationToken).ConfigureAwait(false),
+                "scan" => await RunScanAsync(parsed, cancellationToken).ConfigureAwait(false),
                 _ => Usage($"Unbekannter Befehl \"{parsed.Positional[0]}\"."),
             };
         }
@@ -62,9 +66,55 @@ public sealed class CliApp(ICliServices services, TextWriter stdout, TextWriter 
             Schaltet HDR und bestätigt den Zustand durch erneutes Lesen.
             <auswahl>: primary (Standard), all, Nummer aus "hdr status", Teil des Namens oder monitorDevicePath.
 
+        hdrpilot scan [--source <quelle>] [--search "<ordner>;<ordner>"]
+            Gibt alle gefundenen Spiele und die Fehler je Scanner als JSON aus.
+            <quelle>: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet
+
         Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
                     4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen
         """;
+
+    private async Task<int> RunScanAsync(CliArguments args, CancellationToken cancellationToken)
+    {
+        var unknown = args.UnknownOptions("--source", "--search").ToList();
+        if (unknown.Count > 0 || args.Positional.Count > 1)
+        {
+            return Usage("Unbekannte Option oder Argument für scan.");
+        }
+
+        var scanners = services.CreateScanners();
+        if (args.Get("--source") is { } sourceText)
+        {
+            if (!Enum.TryParse<GameSource>(sourceText, ignoreCase: true, out var source) || !Enum.IsDefined(source))
+            {
+                return Usage($"Unbekannte Quelle \"{sourceText}\".");
+            }
+
+            scanners = scanners.Where(s => s.Source == source).ToList();
+        }
+
+        var searchFolders = (args.Get("--search") ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var report = await new LibraryScanner(scanners).ScanAsync(new ScanOptions { SearchFolders = searchFolders }, cancellationToken).ConfigureAwait(false);
+
+        var output = new ScanOutput(
+            report.Games.Select(g => new ScanGame(
+                g.Key, g.Source, g.SourceId, g.Name, g.InstallDir, g.Executables, g.LaunchCommand, g.LaunchArguments, g.LaunchWorkingDirectory)).ToList(),
+            report.Scanners.Select(s => new ScanScanner(
+                s.Result.Source, s.Result.ScannerName, s.Result.LauncherDetected, s.Result.Games.Count,
+                (long)s.Duration.TotalMilliseconds, s.Result.Errors)).ToList());
+        stdout.WriteLine(JsonSerializer.Serialize(output, Json));
+        return ExitCodes.Ok;
+    }
+
+    private sealed record ScanOutput(IReadOnlyList<ScanGame> Games, IReadOnlyList<ScanScanner> Scanners);
+
+    private sealed record ScanGame(
+        string Key, GameSource Source, string SourceId, string Name, string InstallDir, IReadOnlyList<string> Executables,
+        string? LaunchCommand, string? LaunchArguments, string? LaunchWorkingDirectory);
+
+    private sealed record ScanScanner(
+        GameSource Source, string Name, bool LauncherDetected, int GameCount, long DurationMs, IReadOnlyList<ScanError> Errors);
 
     private async Task<int> RunHdrAsync(CliArguments args, CancellationToken cancellationToken)
     {

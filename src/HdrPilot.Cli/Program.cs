@@ -1,5 +1,6 @@
 using HdrPilot.Cli;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Native;
 
@@ -22,4 +23,7 @@ internal sealed class SystemCliServices : ICliServices
             SystemClock.Instance,
             options,
             new Win32HdrHotkeySender());
+
+    public IReadOnlyList<IGameScanner> CreateScanners() =>
+        ScannerCatalog.CreateAll(PhysicalFileSystem.Instance, WindowsRegistry.Instance, SystemEnvironment.Instance);
 }

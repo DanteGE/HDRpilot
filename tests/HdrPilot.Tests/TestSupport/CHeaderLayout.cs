@@ -31,9 +31,15 @@ public sealed partial class CHeaderLayout
     {
     }
 
-    public static CHeaderLayout Parse(string headerText)
+    /// <param name="knownConstants">Konstanten aus anderen Headern (etwa MAX_PATH aus minwindef.h).</param>
+    public static CHeaderLayout Parse(string headerText, IReadOnlyDictionary<string, long>? knownConstants = null)
     {
         var layout = new CHeaderLayout();
+        foreach (var (name, value) in knownConstants ?? new Dictionary<string, long>())
+        {
+            layout._constants[name] = value;
+        }
+
         headerText = headerText.Replace("\r\n", "\n", StringComparison.Ordinal);
         var withoutComments = BlockComment().Replace(headerText, " ");
         withoutComments = LineComment().Replace(withoutComments, string.Empty);

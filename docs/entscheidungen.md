@@ -437,7 +437,13 @@ Menü und war nach etwa 150 ms wieder zu (Windows 11, Symbol in der Taskleiste w
 Rechtsklick (SendInput): HDRpilot holte erst das unsichtbare Hilfsfenster und nach dem Öffnen auch das Menü-Popup in den
 Vordergrund. Das Popup ist nicht aktivierbar (WS_EX_NOACTIVATE); Windows gab den Vordergrund danach an das vorher aktive
 Programm zurück, WPF schloss das Menü beim Verlust der Aktivierung. Lösung: nur noch das Hilfsfenster in den Vordergrund
-(wie beim klassischen TrackPopupMenu-Muster). Das Gate `phase6-traymenu.ps1` prüft mit echter Maus und Tastatur an einer
-Testinstanz: Menü bleibt offen, Symbolwechsel bei offenem Menü, Esc, Klick daneben, Klick auf einen Eintrag, Tastatur;
-mit dem alten Code fällt es durch. Die bisherigen Tests öffneten das Menü nur ohne echten Rechtsklick und konnten den
-Fehler nicht sehen.
+(wie beim klassischen TrackPopupMenu-Muster). Nach der Gegenprüfung ergänzt: Das Hilfsfenster ignoriert WM_CLOSE
+(Alt+F4, solange es vorn ist, hätte es sonst zerstört und alle späteren Menüs ohne Vordergrund geöffnet) und wird bei
+Bedarf neu angelegt; nach einem abgebrochenen Menü geht der Vordergrund an die Taskleiste zurück (wie es die Shell-Doku
+für Tray-Menüs vorsieht), statt bei einem unsichtbaren Fenster zu bleiben; ein Rechtsklick bei offenem Menü schließt es;
+verweigert Windows den Vordergrund, steht das im Protokoll. Das Gate `phase6-traymenu.ps1` prüft mit echter Maus und
+Tastatur an einer Testinstanz, jeweils aus einem anderen aktiven Programm heraus (eigenes Hilfsfenster des Skripts):
+Menü bleibt offen, Symbolwechsel bei offenem Menü, Esc mit Rückgabe an die Taskleiste, WM_CLOSE an das Hilfsfenster,
+Klick in ein anderes Programm, Klick auf einen Eintrag, Tastatur. Vor jedem Klick prüft es das Fenster unter dem Zeiger
+(nur Taskleiste, Überlauf, Testinstanz, eigenes Fenster). Gegenproben: alter Code und fehlende Ergänzungen fallen
+durch. Die bisherigen Tests öffneten das Menü nur ohne echten Rechtsklick und konnten den Fehler nicht sehen.

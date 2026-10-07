@@ -409,8 +409,16 @@ public sealed partial class TrayService : ITrayService
 
     private void ShowMenu()
     {
-        if (_disposed || _menu is { IsOpen: true })
+        if (_disposed)
         {
+            return;
+        }
+
+        if (_menu is { IsOpen: true } open)
+        {
+            // Normalerweise schließt schon das Drücken der rechten Taste das offene Menü. Blieb es ohne Vordergrund offen
+            // (Windows hat ihn verweigert), schließt es der nächste Rechtsklick, statt dass es hängen bleibt.
+            open.IsOpen = false;
             return;
         }
 
@@ -425,8 +433,17 @@ public sealed partial class TrayService : ITrayService
         // und in den Vordergrund gezwungen holte Windows 11 nach etwa 150 ms das vorherige Fenster zurück, worauf WPF das
         // Menü schloss (E82, geprüft mit echtem Rechtsklick: phase6-traymenu.ps1). Das Menü öffnet nur auf ausdrücklichen
         // Rechtsklick des Nutzers.
-        _sink ??= new ForegroundSink();
-        _ = SetForegroundWindow(_sink.Handle);
+        if (_sink is null || !IsWindow(_sink.Handle))
+        {
+            _sink?.Dispose();
+            _sink = new ForegroundSink();
+        }
+
+        if (!SetForegroundWindow(_sink.Handle))
+        {
+            _logger.LogWarning("Tray: Windows hat den Vordergrund für das Menü verweigert; ein Klick daneben schließt es dann nicht.");
+        }
+
         menu.IsOpen = true;
 
         // Zustand beim Öffnen frisch lesen (z. B. HDR von Hand umgeschaltet).
@@ -440,11 +457,34 @@ public sealed partial class TrayService : ITrayService
 
         // Der Befehl des angeklickten Eintrags läuft nach dem Schließen (WPF ruft ihn mit Render-Priorität auf).
         // Die Bindung erst danach lösen, sonst fände er keinen Befehl mehr.
-        _host.Dispatcher.BeginInvoke(DispatcherPriority.Background, () => menu.DataContext = null);
+        _host.Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            menu.DataContext = null;
+            ReturnForeground();
+        });
         if (ReferenceEquals(_menu, menu))
         {
             _menu = null;
             _menuModel = null;
+        }
+    }
+
+    /// <summary>
+    /// Nach dem Menü: Hält das unsichtbare Hilfsfenster noch den Vordergrund (Esc, Befehl ohne eigenes Fenster), geht er an
+    /// die Taskleiste zurück, die der Rechtsklick aktiviert hatte (so sieht es die Shell-Doku für abgebrochene Tray-Menüs
+    /// vor). Sonst bliebe ein unsichtbares Fenster aktiv und Tastendrücke gingen ins Leere.
+    /// </summary>
+    private void ReturnForeground()
+    {
+        if (_sink is null || GetForegroundWindow() != _sink.Handle)
+        {
+            return; // ein anderes Fenster ist schon vorn (Klick daneben, Hauptfenster geöffnet)
+        }
+
+        var taskbar = FindWindow("Shell_TrayWnd", null);
+        if (taskbar != IntPtr.Zero)
+        {
+            _ = SetForegroundWindow(taskbar);
         }
     }
 
@@ -464,11 +504,22 @@ public sealed partial class TrayService : ITrayService
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool SetForegroundWindow(IntPtr hWnd);
 
+    [LibraryImport("user32.dll")]
+    private static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool IsWindow(IntPtr hWnd);
+
+    [LibraryImport("user32.dll", EntryPoint = "FindWindowW", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial IntPtr FindWindow(string? className, string? windowName);
+
     /// <summary>Unsichtbares Hilfsfenster, das vor dem Öffnen des Menüs in den Vordergrund kommt.</summary>
     private sealed class ForegroundSink : IDisposable
     {
         private const int WS_POPUP = unchecked((int)0x80000000);
         private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WM_CLOSE = 0x0010;
         private readonly HwndSource _source;
 
         public ForegroundSink()
@@ -482,10 +533,23 @@ public sealed partial class TrayService : ITrayService
                 PositionX = -32000,
                 PositionY = -32000,
             });
+            _source.AddHook(IgnoreClose);
         }
 
         public IntPtr Handle => _source.Handle;
 
         public void Dispose() => _source.Dispose();
+
+        // Alt+F4, während das Hilfsfenster vorn ist, darf es nicht zerstören (sonst öffneten weitere Menüs ohne Vordergrund).
+        // Beim Beenden zerstört Dispose das Fenster direkt, ohne WM_CLOSE.
+        private static IntPtr IgnoreClose(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_CLOSE)
+            {
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
     }
 }

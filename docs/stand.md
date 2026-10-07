@@ -1,6 +1,6 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-07 20:45. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-07 21:20. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Erledigt (auf `main`, committet)
@@ -14,6 +14,8 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   Spalten, Umbenennung in HDRpilot, Steam-Startoption, Neustart-Puffer, Frühwarnung Epic/Steam, Hänger-Hinweis,
   HDR-Liste von PCGamingWiki (ohne Konto oder mit Bot-Passwort). Nachprüfung mit 4 Prüfern und Gegenprüfer, 10 Funde
   behoben (E81), beide Korrekturrunden gegengeprüft.
+- Fehlermeldung des Nutzers behoben: Tray-Menü schloss sich nach dem Rechtsklick sofort (E82, G6.8, Gate
+  `phase6-traymenu.ps1` mit echter Maus und Tastatur; bewegt die Maus, nur am echten Desktop ausführen).
 - Installierte Version beim Nutzer ersetzt (`%LOCALAPPDATA%\Programs\HdrPilot\HDRpilot.exe`, alte als
   `HdrPilot-vorher.exe.bak` daneben), läuft mit der echten Ablage.
 

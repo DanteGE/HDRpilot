@@ -35,6 +35,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private bool _startWithWindows;
     private bool _notifications;
     private bool _hotkeyFallback;
+    private bool _hdrListSync;
     private string? _selectedSearchFolder;
     private LogLevel _logLevel;
     private string _helperPatternsText = string.Empty;
@@ -62,6 +63,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _startWithWindows = ReadAutostart(s.StartWithWindows);
         _notifications = s.Notifications;
         _hotkeyFallback = s.HotkeyFallback;
+        _hdrListSync = s.HdrListSync;
         _logLevel = LogLevelOption.Clamp(s.LogLevel);
         foreach (var folder in s.SearchFolders.Where(f => !string.IsNullOrWhiteSpace(f)))
         {
@@ -75,6 +77,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         SearchFolders.CollectionChanged += (_, _) => OnSearchFoldersChanged();
         _original = Capture();
         context.HdrStateChanged += OnHdrStateChanged;
+        HdrList = new HdrListViewModel(context.HdrList, context.OpenWebPage);
     }
 
     /// <summary>Speichern oder Abbrechen: Fenster soll sich schließen.</summary>
@@ -194,6 +197,22 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
             }
         }
     }
+
+    /// <summary>„Bei jedem Start abgleichen“ (AppSettings.HdrListSync), wird mit „Speichern“ übernommen.</summary>
+    public bool HdrListSync
+    {
+        get => _hdrListSync;
+        set
+        {
+            if (SetProperty(ref _hdrListSync, value))
+            {
+                UpdateChanges();
+            }
+        }
+    }
+
+    /// <summary>Abschnitt „HDR-Liste (PCGamingWiki)“: Stand, „Jetzt abgleichen“, Konto (wirkt sofort).</summary>
+    public HdrListViewModel HdrList { get; }
 
     public ObservableCollection<string> SearchFolders { get; } = [];
 
@@ -330,6 +349,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 s.StartWithWindows = _startWithWindows;
                 s.Notifications = _notifications;
                 s.HotkeyFallback = _hotkeyFallback;
+                s.HdrListSync = _hdrListSync;
                 s.SearchFolders = folders;
                 s.LogLevel = _logLevel;
                 s.HelperExecutablePatterns = patterns;
@@ -389,6 +409,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
 
         _disposed = true;
         _context.HdrStateChanged -= OnHdrStateChanged;
+        HdrList.Dispose();
         foreach (var d in Displays)
         {
             d.PropertyChanged -= OnDisplayChanged;
@@ -546,6 +567,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _startWithWindows,
         _notifications,
         _hotkeyFallback,
+        _hdrListSync,
         JoinFolders(SearchFolders),
         _logLevel,
         _helperPatterns.IsValid ? string.Join("\n", _helperPatterns.Patterns) : "\u0000" + _helperPatternsText);
@@ -558,6 +580,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         bool StartWithWindows,
         bool Notifications,
         bool HotkeyFallback,
+        bool HdrListSync,
         string Folders,
         LogLevel LogLevel,
         string Patterns);

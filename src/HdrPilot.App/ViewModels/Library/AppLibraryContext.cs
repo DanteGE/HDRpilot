@@ -4,6 +4,7 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 using HdrPilot.Core.Sessions;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +29,7 @@ public sealed class AppLibraryContext : ILibraryContext
         services.Config.Changed += OnConfigChanged;
         services.HdrStateChanged += OnHdrStateChanged;
         services.ScanStateChanged += OnScanStateChanged;
+        services.HdrList.Changed += OnHdrListChanged;
     }
 
     public event EventHandler? ConfigChanged;
@@ -35,6 +37,8 @@ public sealed class AppLibraryContext : ILibraryContext
     public event EventHandler? HdrStateChanged;
 
     public event EventHandler? ScanStateChanged;
+
+    public event EventHandler? HdrSupportChanged;
 
     public AppConfig Config => _services.Config.Current;
 
@@ -73,6 +77,12 @@ public sealed class AppLibraryContext : ILibraryContext
         {
             _writeGate.Release();
         }
+    }
+
+    public Task<IReadOnlyDictionary<string, HdrSupportStatus>> LoadHdrSupportAsync()
+    {
+        var hdrList = _services.HdrList;
+        return Task.Run(hdrList.LoadStatuses);
     }
 
     public IReadOnlyList<DisplayInfo> GetDisplays()
@@ -122,9 +132,11 @@ public sealed class AppLibraryContext : ILibraryContext
         _services.Config.Changed -= OnConfigChanged;
         _services.HdrStateChanged -= OnHdrStateChanged;
         _services.ScanStateChanged -= OnScanStateChanged;
+        _services.HdrList.Changed -= OnHdrListChanged;
         ConfigChanged = null;
         HdrStateChanged = null;
         ScanStateChanged = null;
+        HdrSupportChanged = null;
 
         // Symbole gehören zum Fenster: im Hintergrund kein Bildspeicher.
         _services.Icons.ClearCache();
@@ -153,6 +165,23 @@ public sealed class AppLibraryContext : ILibraryContext
         {
             ScanStateChanged?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    // Kommt vom Thread des Abgleichs; nur das Ende eines Laufs bringt neue Ergebnisse.
+    private void OnHdrListChanged(object? sender, EventArgs e)
+    {
+        if (_services.HdrList.IsRunning)
+        {
+            return;
+        }
+
+        _services.RaiseOnUi(() =>
+        {
+            if (!_disposed)
+            {
+                HdrSupportChanged?.Invoke(this, EventArgs.Empty);
+            }
+        });
     }
 }
 

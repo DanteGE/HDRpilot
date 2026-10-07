@@ -7,7 +7,7 @@
                     Title="{x:Static res:LibraryStrings.Window_Title}"
                     AutomationProperties.AutomationId="MainWindow"
                     AutomationProperties.Name="{x:Static res:LibraryStrings.Window_Title}"
-                    Width="1320" Height="800" MinWidth="1000" MinHeight="620"
+                    Width="1460" Height="800" MinWidth="1000" MinHeight="620"
                     WindowStartupLocation="CenterScreen">
     <infra:ChromeWindow.Resources>
         <!-- Zeile der Spieleliste -->
@@ -28,6 +28,13 @@
                                Foreground="{DynamicResource Hp.Brush.Text}" />
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                         <TextBlock Text="{Binding SourceName}" Style="{StaticResource Lib.SourceText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <!-- HDR laut PCGamingWiki: „HDR“ oder „HDR*“ (eingeschränkt) -->
+                        <Border Style="{StaticResource Lib.HdrBadge}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding HasHdrBadge, Converter={StaticResource Lib.BoolToVisibility}}"
+                                ToolTip="{Binding HdrBadgeTooltip}"
+                                AutomationProperties.AutomationId="HdrSupportBadge" AutomationProperties.Name="{Binding HdrBadgeTooltip}">
+                            <TextBlock Text="{Binding HdrBadgeText}" FontSize="9.5" FontWeight="Bold" />
+                        </Border>
                         <Border Style="{StaticResource Hp.Badge.New}" Margin="8,0,0,0" Padding="6,0,6,1" VerticalAlignment="Center"
                                 Visibility="{Binding IsNew, Converter={StaticResource Lib.BoolToVisibility}}">
                             <TextBlock Text="{x:Static res:LibraryStrings.Badge_New}" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}"
@@ -321,7 +328,7 @@
                           ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ItemTemplate="{StaticResource SourceOptionTemplate}"
                           ItemContainerStyle="{StaticResource Lib.SourceComboBoxItem}"
                           AutomationProperties.AutomationId="SourceFilter" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_SourceName}" />
-                <ComboBox x:Name="SortOrder" Width="186" Margin="8,0,0,0" Style="{StaticResource Lib.ComboBox}"
+                <ComboBox x:Name="SortOrder" Width="206" Margin="8,0,0,0" Style="{StaticResource Lib.ComboBox}"
                           ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSortOption}" ItemTemplate="{StaticResource SortOptionTemplate}"
                           AutomationProperties.AutomationId="SortOrder" AutomationProperties.Name="{x:Static res:LibraryStrings.Sort_Name}"
                           ToolTip="{x:Static res:LibraryStrings.Sort_Name}" />
@@ -339,6 +346,14 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE735;" FontSize="12" Margin="0,0,7,0" />
                         <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyNew}" />
+                    </StackPanel>
+                </ToggleButton>
+                <ToggleButton Margin="8,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlyHdrCapable}"
+                              AutomationProperties.AutomationId="OnlyHdrCapableToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}"
+                              ToolTip="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE790;" FontSize="12" Margin="0,0,7,0" />
+                        <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyHdrCapable}" />
                     </StackPanel>
                 </ToggleButton>
             </StackPanel>

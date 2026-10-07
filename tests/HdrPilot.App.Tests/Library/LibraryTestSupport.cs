@@ -7,6 +7,7 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 using HdrPilot.Core.Sessions;
 using HdrPilot.Tests.TestSupport;
 
@@ -260,6 +261,15 @@ public sealed class TestLibraryContext : ILibraryContext
 
     public event EventHandler? ScanStateChanged;
 
+    public event EventHandler? HdrSupportChanged;
+
+    /// <summary>HDR-Unterstützung laut PCGamingWiki, wie sie der Zwischenspeicher liefern würde.</summary>
+    public Dictionary<string, HdrSupportStatus> HdrSupport { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public int HdrSupportLoads { get; private set; }
+
+    public int HdrSupportChangedSubscribers => HdrSupportChanged?.GetInvocationList().Length ?? 0;
+
     public InMemoryFileSystem Files { get; }
 
     public FakeClock FakeClock { get; }
@@ -355,6 +365,32 @@ public sealed class TestLibraryContext : ILibraryContext
         Updates++;
         ConfigService.Update(mutate);
         return Task.CompletedTask;
+    }
+
+    /// <summary>Wenn gesetzt, scheitert das Laden der HDR-Unterstützung damit (Zwischenspeicher gesperrt).</summary>
+    public Exception? HdrSupportFailure { get; set; }
+
+    public Task<IReadOnlyDictionary<string, HdrSupportStatus>> LoadHdrSupportAsync()
+    {
+        HdrSupportLoads++;
+        if (HdrSupportFailure is { } failure)
+        {
+            return Task.FromException<IReadOnlyDictionary<string, HdrSupportStatus>>(failure);
+        }
+
+        return Task.FromResult<IReadOnlyDictionary<string, HdrSupportStatus>>(new Dictionary<string, HdrSupportStatus>(HdrSupport, StringComparer.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Wie das Ende eines Abgleichs: neue Ergebnisse setzen und melden.</summary>
+    public void PublishHdrSupport(params (string Key, HdrSupportStatus Status)[] statuses)
+    {
+        HdrSupport.Clear();
+        foreach (var (key, status) in statuses)
+        {
+            HdrSupport[key] = status;
+        }
+
+        HdrSupportChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public IReadOnlyList<DisplayInfo> GetDisplays() => Hdr.GetDisplays();

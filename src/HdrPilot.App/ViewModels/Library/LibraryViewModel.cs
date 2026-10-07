@@ -8,6 +8,7 @@ using HdrPilot.App.Resources;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 
 namespace HdrPilot.App.ViewModels.Library;
 
@@ -18,7 +19,9 @@ namespace HdrPilot.App.ViewModels.Library;
 /// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
 /// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert und sortiert wird über eine
 /// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung und Breite des Detailbereichs
-/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryDetailsRatio).
+/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryDetailsRatio). Die HDR-Unterstützung
+/// laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“) wird beim Öffnen und nach jedem Abgleich aus dem
+/// Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
 /// </para>
 /// </summary>
 public sealed class LibraryViewModel : ObservableObject, IDisposable
@@ -62,6 +65,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     private SourceFilterOption _selectedSource;
     private bool _onlySelected;
     private bool _onlyNew;
+    private bool _onlyHdrCapable;
+    private IReadOnlyDictionary<string, HdrSupportStatus> _hdrSupport = new Dictionary<string, HdrSupportStatus>();
+    private int _hdrSupportRun;
     private GameItemViewModel? _selectedGame;
     private GameDetailsViewModel? _details;
 
@@ -111,11 +117,13 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.ConfigChanged += OnConfigChanged;
         _context.HdrStateChanged += OnHdrStateChanged;
         _context.ScanStateChanged += OnScanStateChanged;
+        _context.HdrSupportChanged += OnHdrSupportChanged;
 
         _isScanning = _context.IsScanning;
         SyncFromConfig(); // startet auch die Suche nach Vorschlägen
         RefreshHdrState();
         RefreshScanErrors();
+        _ = RefreshHdrSupportAsync();
     }
 
     /// <summary>Das Fenster soll dieses Spiel in den sichtbaren Bereich holen (nach dem Hinzufügen).</summary>
@@ -218,7 +226,21 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
-    public bool IsFiltered => _searchTokens.Length > 0 || _selectedSource.Source is not null || _onlySelected || _onlyNew;
+    /// <summary>Nur Spiele mit HDR laut PCGamingWiki (auch eingeschränkt).</summary>
+    public bool OnlyHdrCapable
+    {
+        get => _onlyHdrCapable;
+        set
+        {
+            if (SetProperty(ref _onlyHdrCapable, value))
+            {
+                OnPropertyChanged(nameof(IsFiltered));
+                RefreshView();
+            }
+        }
+    }
+
+    public bool IsFiltered => _searchTokens.Length > 0 || _selectedSource.Source is not null || _onlySelected || _onlyNew || _onlyHdrCapable;
 
     // ---------- Sortierung ----------
 
@@ -505,11 +527,13 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _selectedSource = _allSources;
         _onlySelected = false;
         _onlyNew = false;
+        _onlyHdrCapable = false;
         OnPropertyChanged(nameof(SearchText));
         OnPropertyChanged(nameof(HasSearchText));
         OnPropertyChanged(nameof(SelectedSource));
         OnPropertyChanged(nameof(OnlySelected));
         OnPropertyChanged(nameof(OnlyNew));
+        OnPropertyChanged(nameof(OnlyHdrCapable));
         OnPropertyChanged(nameof(IsFiltered));
         RefreshView();
     }
@@ -562,7 +586,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             }
             else
             {
-                item = new GameItemViewModel(this, game);
+                item = new GameItemViewModel(this, game) { HdrSupport = _hdrSupport.GetValueOrDefault(game.Key) };
                 _byKey[game.Key] = item;
                 added.Add(item);
             }
@@ -690,6 +714,46 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Lädt die HDR-Unterstützung laut PCGamingWiki aus dem Zwischenspeicher des Abgleichs (beim Öffnen und nach
+    /// jedem Abgleich) und überträgt sie auf die Zeilen. Nach HDR sortiert oder gefiltert: Sicht neu ordnen.
+    /// </summary>
+    public async Task RefreshHdrSupportAsync()
+    {
+        var run = ++_hdrSupportRun;
+        IReadOnlyDictionary<string, HdrSupportStatus> statuses;
+        try
+        {
+            statuses = await _context.LoadHdrSupportAsync();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return; // Kennzeichen sind nur Zusatz: ohne Zwischenspeicher bleibt die Liste wie sie ist.
+        }
+
+        if (_disposed || run != _hdrSupportRun)
+        {
+            return;
+        }
+
+        _hdrSupport = statuses;
+        var changed = false;
+        foreach (var item in _byKey.Values)
+        {
+            var status = statuses.GetValueOrDefault(item.Key);
+            if (item.HdrSupport != status)
+            {
+                item.HdrSupport = status;
+                changed = true;
+            }
+        }
+
+        if (changed && (_onlyHdrCapable || SortOrder == GameSortOrder.HdrSupport))
+        {
+            RefreshView();
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -706,6 +770,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.ConfigChanged -= OnConfigChanged;
         _context.HdrStateChanged -= OnHdrStateChanged;
         _context.ScanStateChanged -= OnScanStateChanged;
+        _context.HdrSupportChanged -= OnHdrSupportChanged;
         RevealRequested = null;
         _context.Dispose();
     }
@@ -810,7 +875,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
         if ((_selectedSource.Source is { } source && g.Source != source)
             || (_onlySelected && !g.HdrAuto)
-            || (_onlyNew && !g.IsNew))
+            || (_onlyNew && !g.IsNew)
+            || (_onlyHdrCapable && !HdrSupportValues.IsHdrCapable(g.HdrSupport)))
         {
             return false;
         }
@@ -1129,6 +1195,14 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         if (!_disposed)
         {
             RefreshHdrState();
+        }
+    }
+
+    private void OnHdrSupportChanged(object? sender, EventArgs e)
+    {
+        if (!_disposed)
+        {
+            _ = RefreshHdrSupportAsync();
         }
     }
 

@@ -9,6 +9,7 @@ using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.HdrSupport;
 using static HdrPilot.App.Tests.Library.TestLibraryContext;
 
 namespace HdrPilot.App.Tests.Library;
@@ -30,7 +31,7 @@ public sealed class MainWindowLayoutTests
         return game;
     }
 
-    private static (MainWindow Window, TestLibraryContext Context, LibraryViewModel Model) Open(GameConfig selected, double? ratio = null)
+    private static (MainWindow Window, TestLibraryContext Context, LibraryViewModel Model) Open(GameConfig selected, double? ratio = null, bool hdrSupport = false)
     {
         EnsureLibraryResources();
         var context = new TestLibraryContext(
@@ -41,6 +42,14 @@ public sealed class MainWindowLayoutTests
         if (ratio is not null)
         {
             context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = ratio);
+        }
+
+        if (hdrSupport)
+        {
+            // Kennzeichen laut PCGamingWiki: „HDR*“ beim gewählten Spiel, „HDR“ bei Dead Island 2 (neben „NEU“).
+            context.HdrSupport[selected.Key] = HdrSupportStatus.Limited;
+            context.HdrSupport["Epic:Crow"] = HdrSupportStatus.Native;
+            context.HdrSupport["Gog:1"] = HdrSupportStatus.None;
         }
 
         var model = new LibraryViewModel(context, new FakeDialogs());
@@ -93,7 +102,7 @@ public sealed class MainWindowLayoutTests
             foreach (var id in new[]
             {
                 "HdrStatus", "ToggleHdrButton", "PauseToggle", "SettingsButton", "SearchBox", "SourceFilter", "SortOrder", "OnlySelectedToggle",
-                "OnlyNewToggle", "RescanButton", "AddGameButton", "MarkAllSeenButton", "GameList", "LibrarySplitter", "DetailsPanel", "DetailName",
+                "OnlyNewToggle", "OnlyHdrCapableToggle", "RescanButton", "AddGameButton", "MarkAllSeenButton", "GameList", "LibrarySplitter", "DetailsPanel", "DetailName",
                 "DetailHdrAuto", "DetailRestore", "DetailDisplay", "DetailExecutables", "AddExeButton", "RemoveExeButton", "RelearnExeButton",
                 "LaunchButton", "CreateDesktopShortcutButton", "CreateStartMenuShortcutButton", "CopySteamLaunchOptionButton", "DetailMessage",
                 "DetailExeMessage", "RemoveGameButton",
@@ -102,10 +111,15 @@ public sealed class MainWindowLayoutTests
                 Assert.True(ids.ContainsKey(id), "AutomationId fehlt: " + id);
             }
 
-            foreach (var id in new[] { "SortOrder", "LibrarySplitter", "CopySteamLaunchOptionButton" })
+            foreach (var id in new[] { "SortOrder", "LibrarySplitter", "CopySteamLaunchOptionButton", "OnlyHdrCapableToggle" })
             {
                 Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(ids[id])), "Name fehlt: " + id);
             }
+
+            var hdrChip = Assert.IsType<System.Windows.Controls.Primitives.ToggleButton>(ids["OnlyHdrCapableToggle"]);
+            hdrChip.IsChecked = true;
+            Assert.True(model.OnlyHdrCapable);
+            hdrChip.IsChecked = false;
 
             var sort = Assert.IsType<ComboBox>(ids["SortOrder"]);
             Assert.Same(model.SortOptions, sort.ItemsSource);
@@ -123,6 +137,33 @@ public sealed class MainWindowLayoutTests
                 columns.IndexOf((UIElement)window.FindName("ListArea")) < columns.IndexOf(splitter)
                 && columns.IndexOf(splitter) < columns.IndexOf((UIElement)window.FindName("DetailsArea")),
                 "Trenner steht zwischen Liste und Details");
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Hdr_badge_marks_native_and_limited_support_in_the_list()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _) = Open(SteamGame(), hdrSupport: true);
+            WpfTestHost.Layout(window, new Size(1460, 800));
+            WpfTestHost.DoEvents();
+            WpfTestHost.Layout(window, new Size(1460, 800));
+
+            var badges = WpfTestHost.Visuals(window).OfType<Border>()
+                .Where(b => AutomationProperties.GetAutomationId(b) == "HdrSupportBadge")
+                .ToDictionary(b => ((GameItemViewModel)b.DataContext).Key);
+            Assert.Equal(4, badges.Count); // jede Zeile hat den Platz, sichtbar nur bei HDR
+            var limited = badges["Steam:1091500"];
+            Assert.Equal(Visibility.Visible, limited.Visibility);
+            Assert.Equal("HDR*", ((TextBlock)limited.Child).Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrLimitedTooltip, limited.ToolTip);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrLimitedTooltip, AutomationProperties.GetName(limited));
+            Assert.Equal(Visibility.Visible, badges["Epic:Crow"].Visibility);
+            Assert.Equal("HDR", ((TextBlock)badges["Epic:Crow"].Child).Text);
+            Assert.Equal(Visibility.Collapsed, badges["Gog:1"].Visibility); // laut Wiki kein HDR
+            Assert.Equal(Visibility.Collapsed, badges["Manual:m1"].Visibility); // unbekannt
             window.Close();
         });
     }
@@ -243,7 +284,7 @@ public sealed class MainWindowLayoutTests
             var modes = new Dictionary<double, ToolbarMode>();
 
             var searchMin = ((Grid)window.FindName("ToolbarArea")).ColumnDefinitions[0].MinWidth;
-            foreach (var width in new[] { 1700.0, 1320, 1250, 1150, 1000, 1700 })
+            foreach (var width in new[] { 1700.0, 1460, 1320, 1250, 1150, 1000, 1700 })
             {
                 WpfTestHost.Layout(window, new Size(width, 800));
                 var slot = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutSlot(root);
@@ -309,9 +350,9 @@ public sealed class MainWindowLayoutTests
                 try
                 {
                     WpfTestHost.UseTheme(dark);
-                    foreach (var (width, height, name) in new[] { (1320.0, 860.0, "standard"), (1000.0, 700.0, "schmal"), (1720.0, 900.0, "breit") })
+                    foreach (var (width, height, name) in new[] { (1460.0, 860.0, "standard"), (1000.0, 700.0, "schmal"), (1720.0, 900.0, "breit") })
                     {
-                        var (window, _, model) = Open(SteamGame());
+                        var (window, _, model) = Open(SteamGame(), hdrSupport: true);
                         model.SortOrder = GameSortOrder.LastPlayed;
                         model.Details!.CopySteamLaunchOptionCommand.Execute(null);
                         WpfTestHost.Layout(window, new Size(width, height));

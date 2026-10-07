@@ -18,8 +18,8 @@ namespace HdrPilot.App;
 /// <summary>
 /// Zentrale der App: hält die Automatik (<see cref="AutomationHost"/>), die Dienste und die Fenster.
 /// Fenster werden beim Schließen vollständig freigegeben, damit im Hintergrund nur Tray und Überwachung laufen.
-/// Teilklassen: AppServices.Library.cs (Spieleliste, Symbole, Verknüpfungen) und AppServices.Shell.cs
-/// (Tray, Einstellungen, Autostart, Bildschirmereignisse).
+/// Teilklassen: AppServices.Library.cs (Spieleliste, Symbole, Verknüpfungen), AppServices.Shell.cs
+/// (Tray, Einstellungen, Autostart, Bildschirmereignisse) und AppServices.HdrList.cs (HDR-Liste von PCGamingWiki).
 /// </summary>
 public sealed partial class AppServices : IAsyncDisposable
 {
@@ -38,6 +38,7 @@ public sealed partial class AppServices : IAsyncDisposable
         Registry = WindowsRegistry.Instance;
         Environment = SystemEnvironment.Instance;
 
+        CreateHdrList();
         Icons = CreateIconService();
         Shortcuts = CreateShortcutService();
         Autostart = CreateAutostartService();
@@ -108,6 +109,9 @@ public sealed partial class AppServices : IAsyncDisposable
         {
             Tray.Notify(Resources.CommonStrings.FirstRunTitle, Resources.CommonStrings.FirstRunMessage);
         }
+
+        // HDR-Liste von PCGamingWiki: einmaliger Zeitgeber, später im Hintergrund (AppServices.HdrList.cs).
+        StartHdrList();
 
         // Ohne offenes Fenster läuft HdrPilot nur als Tray: Anlauf-Speicher gleich zurückgeben.
         _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
@@ -337,6 +341,7 @@ public sealed partial class AppServices : IAsyncDisposable
     {
         DisplayEvents.DisplaysChanged -= OnDisplaysChanged;
         DisplayEvents.Dispose();
+        StopHdrList();
         Tray.Dispose();
         await Host.DisposeAsync();
         Instance?.Dispose();

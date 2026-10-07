@@ -36,7 +36,13 @@ public partial class SettingsWindow : ChromeWindow
         _model = model;
         DataContext = model;
         model.CloseRequested += OnCloseRequested;
+        model.HdrList.PasswordClearRequested += OnPasswordClearRequested;
     }
+
+    /// <summary>PasswordBox ist nicht bindbar: das Bot-Passwort geht nur in diese Richtung ans ViewModel.</summary>
+    private void OnPcgwPasswordChanged(object sender, RoutedEventArgs e) => _model?.HdrList.SetPassword(PcgwPassword.Password);
+
+    private void OnPasswordClearRequested(object? sender, EventArgs e) => PcgwPassword.Clear();
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -67,9 +73,12 @@ public partial class SettingsWindow : ChromeWindow
         if (_model is not null)
         {
             _model.CloseRequested -= OnCloseRequested;
+            _model.HdrList.PasswordClearRequested -= OnPasswordClearRequested;
             _model.Dispose();
             _model = null;
         }
+
+        PcgwPassword.Clear();
 
         DataContext = null;
     }

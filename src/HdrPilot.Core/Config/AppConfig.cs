@@ -49,6 +49,9 @@ public sealed class AppSettings
     /// <summary>Notlösung Win+Alt+B. Standard aus.</summary>
     public bool HotkeyFallback { get; set; }
 
+    /// <summary>HDR-Liste von PCGamingWiki bei jedem Start abgleichen (verzögert, höchstens einmal pro Stunde, E73).</summary>
+    public bool HdrListSync { get; set; } = true;
+
     public List<string> SearchFolders { get; set; } = [];
 
     public LogLevel LogLevel { get; set; } = LogLevel.Information;

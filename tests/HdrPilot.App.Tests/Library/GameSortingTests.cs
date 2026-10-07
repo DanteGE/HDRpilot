@@ -2,6 +2,7 @@ using HdrPilot.App.Resources;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.HdrSupport;
 using static HdrPilot.App.Tests.Library.TestLibraryContext;
 
 namespace HdrPilot.App.Tests.Library;
@@ -27,11 +28,12 @@ public sealed class GameSortingTests
     private static List<string> Visible(LibraryViewModel vm) => vm.GamesView.Cast<GameItemViewModel>().Select(g => g.Name).ToList();
 
     [Fact]
-    public void Options_are_name_and_last_played_with_name_as_default() => Sta.Run(() =>
+    public void Options_are_name_last_played_and_hdr_support_with_name_as_default() => Sta.Run(() =>
     {
         using var vm = new LibraryViewModel(SampleContext(), new FakeDialogs());
 
-        Assert.Equal([LibraryStrings.Sort_ByName, LibraryStrings.Sort_ByLastPlayed], vm.SortOptions.Select(o => o.ToString()));
+        Assert.Equal([LibraryStrings.Sort_ByName, LibraryStrings.Sort_ByLastPlayed, LibraryStrings.Sort_ByHdrSupport], vm.SortOptions.Select(o => o.ToString()));
+        Assert.Equal("HDR-Unterstützung", LibraryStrings.Sort_ByHdrSupport);
         Assert.Equal(GameSortOrder.Name, vm.SortOrder);
         Assert.Same(vm.SortOptions[0], vm.SelectedSortOption);
         Assert.Equal(["Alan Wake 2", "Baldur's Gate 3", "Cyberpunk 2077", "Dead Island 2", "Elden Ring"], Visible(vm));
@@ -160,6 +162,39 @@ public sealed class GameSortingTests
         using var vm = new LibraryViewModel(context, new FakeDialogs()) { SortOrder = GameSortOrder.LastPlayed };
 
         Assert.Equal(["Ypsilon", "Zeta", "Alpha", "Beta"], Visible(vm));
+    });
+
+    [Fact]
+    public void Hdr_support_puts_native_first_then_limited_then_the_rest_by_name() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        context.HdrSupport["Steam:4"] = HdrSupportStatus.Limited; // Dead Island 2
+        context.HdrSupport["Gog:3"] = HdrSupportStatus.Native; // Cyberpunk 2077
+        context.HdrSupport["Steam:1"] = HdrSupportStatus.Native; // Elden Ring
+        context.HdrSupport["Epic:2"] = HdrSupportStatus.ModOnly; // Alan Wake 2: zählt zu den übrigen
+        context.HdrSupport["Steam:5"] = HdrSupportStatus.None; // Baldur's Gate 3
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+
+        vm.SelectedSortOption = vm.SortOptions.Single(o => o.Order == GameSortOrder.HdrSupport);
+
+        Assert.Equal(["Cyberpunk 2077", "Elden Ring", "Dead Island 2", "Alan Wake 2", "Baldur's Gate 3"], Visible(vm));
+        Assert.Equal("HdrSupport", context.Config.Settings.LibrarySortOrder);
+    });
+
+    [Fact]
+    public void Hdr_support_sort_is_restored_and_follows_a_finished_sync() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        context.ConfigService.Update(c => c.Settings.LibrarySortOrder = "HdrSupport");
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        Assert.Equal(GameSortOrder.HdrSupport, vm.SortOrder);
+        Assert.Equal(["Alan Wake 2", "Baldur's Gate 3", "Cyberpunk 2077", "Dead Island 2", "Elden Ring"], Visible(vm)); // noch nichts bekannt
+
+        // Abgleich fertig: neue Ergebnisse ordnen die Liste neu, ohne Neustart des Fensters.
+        context.PublishHdrSupport(("Steam:5", HdrSupportStatus.Limited), ("Steam:4", HdrSupportStatus.Native));
+
+        Assert.Equal(["Dead Island 2", "Baldur's Gate 3", "Alan Wake 2", "Cyberpunk 2077", "Elden Ring"], Visible(vm));
+        Assert.Equal(2, context.HdrSupportLoads);
     });
 
     [Fact]

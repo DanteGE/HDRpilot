@@ -5,6 +5,7 @@ using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.HdrSupport;
 using Microsoft.Extensions.Logging;
 
 namespace HdrPilot.App;
@@ -71,6 +72,10 @@ public sealed partial class AppServices
         public ConfigService Config => app.Config;
 
         public IAutostartService Autostart => app.Autostart;
+
+        public IHdrListService HdrList => app.HdrList;
+
+        public void OpenWebPage(string url) => AppServices.OpenWebPage(url);
 
         public TrayState QueryTrayState()
         {

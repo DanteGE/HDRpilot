@@ -1,7 +1,9 @@
 using System.Windows.Media;
 using HdrPilot.App.Infrastructure;
+using HdrPilot.App.Resources;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.HdrSupport;
 
 namespace HdrPilot.App.ViewModels.Library;
 
@@ -19,6 +21,7 @@ public sealed class GameItemViewModel : ObservableObject
     private bool _isNew;
     private bool _isInstalled;
     private bool _isRunning;
+    private HdrSupportStatus _hdrSupport;
     private bool _iconRequested;
     private ImageSource? _icon;
 
@@ -95,6 +98,39 @@ public sealed class GameItemViewModel : ObservableObject
         get => _isRunning;
         internal set => SetProperty(ref _isRunning, value);
     }
+
+    /// <summary>HDR-Unterstützung laut PCGamingWiki (aus dem Zwischenspeicher des Abgleichs).</summary>
+    public HdrSupportStatus HdrSupport
+    {
+        get => _hdrSupport;
+        internal set
+        {
+            if (SetProperty(ref _hdrSupport, value))
+            {
+                OnPropertyChanged(nameof(HasHdrBadge));
+                OnPropertyChanged(nameof(HdrBadgeText));
+                OnPropertyChanged(nameof(HdrBadgeTooltip));
+            }
+        }
+    }
+
+    /// <summary>Kennzeichen „HDR“ (eigenes HDR) oder „HDR*“ (eingeschränkt); sonst keines.</summary>
+    public bool HasHdrBadge => HdrSupportValues.IsHdrCapable(_hdrSupport);
+
+    /// <summary>Text des Kennzeichens; leer ohne Kennzeichen (AutomationProperties.Name erlaubt kein null).</summary>
+    public string HdrBadgeText => _hdrSupport switch
+    {
+        HdrSupportStatus.Native => LibraryStrings.Badge_Hdr,
+        HdrSupportStatus.Limited => LibraryStrings.Badge_HdrLimited,
+        _ => string.Empty,
+    };
+
+    public string HdrBadgeTooltip => _hdrSupport switch
+    {
+        HdrSupportStatus.Native => LibraryStrings.Badge_HdrTooltip,
+        HdrSupportStatus.Limited => LibraryStrings.Badge_HdrLimitedTooltip,
+        _ => string.Empty,
+    };
 
     /// <summary>Symbol aus der EXE; null bis geladen (dann Ersatzsymbol der Quelle).</summary>
     public ImageSource? Icon

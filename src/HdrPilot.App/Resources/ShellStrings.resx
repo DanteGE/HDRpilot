@@ -314,4 +314,157 @@
   <data name="SaveFailed" xml:space="preserve">
     <value>Die Einstellungen ließen sich nicht speichern: {0}</value>
   </data>
+  <data name="SectionHdrList" xml:space="preserve">
+    <value>HDR-Liste (PCGamingWiki)</value>
+  </data>
+  <data name="HdrListHint" xml:space="preserve">
+    <value>Zeigt in der Spieleliste, welche Spiele laut PCGamingWiki HDR unterstützen („HDR“, eingeschränkt „HDR*“). Ohne Konto fragt HdrPilot dafür die Namen deiner Spiele bei PCGamingWiki ab, höchstens 100 je Start.</value>
+  </data>
+  <data name="HdrListSyncLabel" xml:space="preserve">
+    <value>Bei jedem Start abgleichen</value>
+  </data>
+  <data name="HdrListSyncHint" xml:space="preserve">
+    <value>30 Sekunden nach dem Start im Hintergrund, höchstens einmal pro Stunde.</value>
+  </data>
+  <data name="HdrListSyncNow" xml:space="preserve">
+    <value>Jetzt abgleichen</value>
+  </data>
+  <data name="HdrListStatusName" xml:space="preserve">
+    <value>Stand der HDR-Liste</value>
+  </data>
+  <data name="HdrListNever" xml:space="preserve">
+    <value>Noch nicht abgeglichen.</value>
+  </data>
+  <data name="HdrListStand" xml:space="preserve">
+    <value>Stand: {0}, {1} von {2} Spielen geprüft</value>
+  </data>
+  <data name="HdrListStandWithError" xml:space="preserve">
+    <value>{0} · Letzter Versuch: {1}</value>
+  </data>
+  <data name="HdrListSyncing" xml:space="preserve">
+    <value>Abgleich läuft …</value>
+  </data>
+  <data name="HdrListModeAnonymous" xml:space="preserve">
+    <value>Ohne Konto: Spielnamen werden einzeln abgefragt.</value>
+  </data>
+  <data name="HdrListModeAccount" xml:space="preserve">
+    <value>Mit Konto {0}: vollständige Liste, es werden keine Spielnamen gesendet.</value>
+  </data>
+  <data name="HdrListErrorNetwork" xml:space="preserve">
+    <value>PCGamingWiki nicht erreichbar</value>
+  </data>
+  <data name="HdrListErrorRateLimited" xml:space="preserve">
+    <value>zu viele Anfragen, später erneut</value>
+  </data>
+  <data name="HdrListErrorHttp" xml:space="preserve">
+    <value>PCGamingWiki antwortet mit einem Fehler</value>
+  </data>
+  <data name="HdrListErrorLoginFailed" xml:space="preserve">
+    <value>Anmeldung abgelehnt (Benutzername oder Bot-Passwort falsch)</value>
+  </data>
+  <data name="HdrListErrorLoginThrottled" xml:space="preserve">
+    <value>zu viele Anmeldeversuche, später erneut</value>
+  </data>
+  <data name="HdrListErrorPermission" xml:space="preserve">
+    <value>dem Bot-Passwort fehlt das Cargo-Recht</value>
+  </data>
+  <data name="HdrListErrorUnexpected" xml:space="preserve">
+    <value>unerwartete Antwort von PCGamingWiki</value>
+  </data>
+  <data name="HdrListErrorAccountUnreadable" xml:space="preserve">
+    <value>gespeichertes Konto nicht lesbar, bitte neu eintragen</value>
+  </data>
+  <data name="HdrListErrorAccountNotSaved" xml:space="preserve">
+    <value>Konto ließ sich nicht speichern</value>
+  </data>
+  <data name="PcgwAccountTitle" xml:space="preserve">
+    <value>PCGamingWiki-Konto (optional)</value>
+  </data>
+  <data name="PcgwAccountHint" xml:space="preserve">
+    <value>Mit einem kostenlosen Konto lädt HdrPilot die vollständige HDR-Liste und gleicht sie nur auf diesem PC ab. Es werden dann keine Spielnamen gesendet, und auch Spiele mit abweichendem Namen werden gefunden.</value>
+  </data>
+  <data name="PcgwStep1" xml:space="preserve">
+    <value>1. Konto bei PCGamingWiki anlegen („Konto anlegen“).</value>
+  </data>
+  <data name="PcgwStep2" xml:space="preserve">
+    <value>2. Unter „Bot-Passwörter“ ein Bot-Passwort mit dem Namen HdrPilot anlegen und nur das Recht „Create, query and delete data through the Cargo extension“ auswählen.</value>
+  </data>
+  <data name="PcgwStep3" xml:space="preserve">
+    <value>3. Den dort angezeigten Benutzernamen (Name@HdrPilot) und das Bot-Passwort hier eintragen.</value>
+  </data>
+  <data name="PcgwCreateAccount" xml:space="preserve">
+    <value>Konto anlegen</value>
+  </data>
+  <data name="PcgwBotPasswords" xml:space="preserve">
+    <value>Bot-Passwörter</value>
+  </data>
+  <data name="PcgwUserNameLabel" xml:space="preserve">
+    <value>Benutzername (Name@BotName)</value>
+  </data>
+  <data name="PcgwPasswordLabel" xml:space="preserve">
+    <value>Bot-Passwort</value>
+  </data>
+  <data name="PcgwSaveAccount" xml:space="preserve">
+    <value>Speichern und testen</value>
+  </data>
+  <data name="PcgwRemoveAccount" xml:space="preserve">
+    <value>Konto entfernen</value>
+  </data>
+  <data name="PcgwAccountStored" xml:space="preserve">
+    <value>Gespeichert: {0} (Passwort verschlüsselt, nur für deinen Windows-Benutzer lesbar)</value>
+  </data>
+  <data name="PcgwPasswordStoredHint" xml:space="preserve">
+    <value>Leer lassen, um das gespeicherte Bot-Passwort erneut zu testen.</value>
+  </data>
+  <data name="PcgwTesting" xml:space="preserve">
+    <value>Anmeldung wird geprüft …</value>
+  </data>
+  <data name="PcgwSaved" xml:space="preserve">
+    <value>Konto gespeichert. Anmeldung und Cargo-Abfrage klappen; die vollständige HDR-Liste wird jetzt geladen.</value>
+  </data>
+  <data name="PcgwRemoved" xml:space="preserve">
+    <value>Konto entfernt. HdrPilot gleicht wieder ohne Konto ab.</value>
+  </data>
+  <data name="PcgwUserInvalid" xml:space="preserve">
+    <value>Benutzernamen im Format Name@BotName eintragen, so wie ihn PCGamingWiki unter „Bot-Passwörter“ anzeigt.</value>
+  </data>
+  <data name="PcgwPasswordMissing" xml:space="preserve">
+    <value>Bitte das Bot-Passwort eintragen.</value>
+  </data>
+  <data name="PcgwLoginFailed" xml:space="preserve">
+    <value>Anmeldung abgelehnt: Benutzername (Name@BotName) oder Bot-Passwort stimmt nicht. Nichts gespeichert.</value>
+  </data>
+  <data name="PcgwLoginThrottled" xml:space="preserve">
+    <value>Zu viele Anmeldeversuche. Bitte einige Minuten warten. Nichts gespeichert.</value>
+  </data>
+  <data name="PcgwPermissionDenied" xml:space="preserve">
+    <value>Die Anmeldung klappt, aber dem Bot-Passwort fehlt das Recht „Create, query and delete data through the Cargo extension“. Unter „Bot-Passwörter“ ergänzen und erneut testen. Nichts gespeichert.</value>
+  </data>
+  <data name="PcgwRateLimited" xml:space="preserve">
+    <value>PCGamingWiki meldet zu viele Anfragen. Bitte in einer Minute erneut versuchen. Nichts gespeichert.</value>
+  </data>
+  <data name="PcgwUnreachable" xml:space="preserve">
+    <value>PCGamingWiki ist gerade nicht erreichbar. Nichts gespeichert.</value>
+  </data>
+  <data name="PcgwUnexpected" xml:space="preserve">
+    <value>Unerwartete Antwort von PCGamingWiki. Nichts gespeichert.</value>
+  </data>
+  <data name="PcgwNotSaved" xml:space="preserve">
+    <value>Die Anmeldung klappt, aber das Konto ließ sich nicht speichern.</value>
+  </data>
+  <data name="PcgwRemoveFailed" xml:space="preserve">
+    <value>Konto ließ sich nicht entfernen: {0}</value>
+  </data>
+  <data name="PcgwOpenFailed" xml:space="preserve">
+    <value>Die Seite ließ sich nicht öffnen: {0}</value>
+  </data>
+  <data name="PcgwAttribution" xml:space="preserve">
+    <value>HDR-Angaben: PCGamingWiki (pcgamingwiki.com), Lizenz CC BY-NC-SA 3.0</value>
+  </data>
+  <data name="PcgwSiteLink" xml:space="preserve">
+    <value>pcgamingwiki.com</value>
+  </data>
+  <data name="PcgwLicenseLink" xml:space="preserve">
+    <value>CC BY-NC-SA 3.0</value>
+  </data>
 </root>

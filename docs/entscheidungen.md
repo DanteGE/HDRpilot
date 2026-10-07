@@ -356,3 +356,29 @@ höchstens einmal pro Stunde, verzögert nach dem Start, abschaltbar, mit Knopf 
 über die Spiele des Nutzers gesendet, der Abgleich läuft lokal. Ohne Netz: zuletzt geladene oder mitgelieferte Liste.
 Daten unter CC BY-NC-SA 3.0 (Quellenangabe in Einstellungen und THIRD-PARTY-NOTICES). Der Steam-Kurator „HDR Games“
 wird nicht genutzt (keine Schnittstelle, nur Auslesen der Store-Seite).
+
+## Phase 6: Feedback nach dem gemeinsamen Test (2026-10-07)
+
+**E74 Bibliothek nach Nutzer-Feedback:** Der Starten-Bereich (Mit HDR starten, Verknüpfungen, Steam-Startoption) steht
+direkt unter dem Spielkopf, vor der Automatik. Meldungen erscheinen beim auslösenden Bereich (`DetailMessage` unter
+Starten, `DetailExeMessage` unter den EXE-Dateien). Sortierung „Name“ oder „Zuletzt gespielt“ (`SortOrder`), gespeichert
+als `AppSettings.LibrarySortOrder` (Zeichenkette, unbekannte Werte gelten als „Name“, Standard wird nicht geschrieben).
+Liste und Details mit `GridSplitter` (`LibrarySplitter`, Pfeiltasten 24 px, Doppelklick setzt zurück); Anteil der
+Details als `AppSettings.LibraryDetailsRatio` (null = 0,35), beim Öffnen auf das Fenster begrenzt; Mindestbreiten 400 und
+340, Werkzeugleiste passt sich in drei Stufen an, Standardbreite 1320. Prüfung: `phase6-ui.ps1` (G6.1).
+
+**E75 Steam-Startoption `"<exe>" --wrap -- %command%`:** Der Wrapper läuft vor Einzelinstanz, Fenster, Tray und Thema,
+liest die rohe Befehlszeile über `GetCommandLineW` (Environment.CommandLine baut sie in .NET neu auf) und übernimmt
+alles nach dem ersten alleinstehenden `--` unverändert. Läuft HdrPilot und ist `SteamAppId` gesetzt, reicht er
+`--prepare Steam:<id> --ready-event <name>` an die Instanz weiter (WM_COPYDATA), wartet höchstens 8 s auf das benannte
+Ereignis, dann 1,5 s Ruhezeit (Starts über HdrPilot hatten 2-3 s Vorlauf und nie Probleme), startet das Spiel mit
+geerbter Umgebung und beendet sich sofort: kein Handle auf das Spiel, kein Warten (E65), Steam verfolgt Nachfahren-
+Prozesse selbst. Ohne Instanz, ohne AppID oder bei unbekanntem Spiel startet das Spiel sofort ohne HDR; der Wrapper
+startet nie das Tray-Programm (Steam würde es dem Spiel zurechnen). Je Lauf eine Zeile in `logs\wrap.log` (256 KB,
+dann rotiert). Die Instanz schaltet über `SessionManager.PrepareAsync` (wie LaunchAsync ohne Start-Befehl, Auslöser
+„Start über Steam-Startoption“). Prüfung: `phase6-wrap.ps1` (G6.2): HDR 1,85 s vor dem Prozessstart, Wrapper endet
+32 ms nach dem Spielstart; ohne Instanz startet das Spiel nach 0,2 s.
+
+**E76 „Zuletzt gespielt“ für alle Spiele:** Der Steam-Scanner liest `LastPlayed` aus den appmanifest-Dateien; beim
+Einlesen gilt der spätere Wert. Zusätzlich vermerkt HdrPilot den Start jedes Bibliotheksspiels, das es laufen sieht
+(einmal je Lauf, nach dem Schalten), nicht nur bei HDR-Sitzungen.

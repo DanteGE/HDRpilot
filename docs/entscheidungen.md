@@ -382,3 +382,35 @@ dann rotiert). Die Instanz schaltet über `SessionManager.PrepareAsync` (wie Lau
 **E76 „Zuletzt gespielt“ für alle Spiele:** Der Steam-Scanner liest `LastPlayed` aus den appmanifest-Dateien; beim
 Einlesen gilt der spätere Wert. Zusätzlich vermerkt HdrPilot den Start jedes Bibliotheksspiels, das es laufen sieht
 (einmal je Lauf, nach dem Schalten), nicht nur bei HDR-Sitzungen.
+
+**E77 Neustart-Puffer und Hänger-Hinweis:** Endet eine Sitzung nach weniger als 5 Minuten und hatte HDRpilot HDR dafür
+eingeschaltet (WasHdrOn = false, Zurückstellen an), gilt statt der Nachlaufzeit der Puffer (Standard 180 s,
+`restartBufferSeconds` in config.json, 0 = aus); ein Neustart im Puffer setzt die Sitzung fort. Läuft beim Ablauf eine
+Vollbild-Anwendung, wartet das Zurückstellen (höchstens 30 min). Der Tooltip zeigt die Restzeit. Hänger-Hinweis: nur
+während laufender Sitzungen alle 30 s eine Abfrage `SystemProcessInformation` (Rechenzeit ohne Handle, Offsets nach
+phnt/Chappell, gegen winternl.h geprüft) und bei Prozessen ohne Rechenzeit `EnumWindows`/`IsWindowVisible` (kein
+Handle, kein Hook). Zwei Minuten ohne Fenster und ohne Rechenzeit: ein Hinweis je Sitzung, kein Beenden, kein
+Zurückstellen. Prüfskripte schalten den Puffer in ihren Testablagen ab (`tools\gates\TestConfigSeed.ps1`).
+
+**E78 Frühwarnung aus Launcher-Protokollen:** `LauncherSignalWatcher` liest EpicGamesLauncher.log (`LaunchWithOptions`,
+`LogUriHandler … ?action=launch`) und Steams console_log.txt (`GameAction [AppID …] : LaunchApp changed task to`) nur
+lesend mit (FileShare.ReadWrite|Delete, ab Dateiende, Rotation erkannt), ausgelöst von FileSystemWatcher und einer
+Längenprüfung im vorhandenen Abfragetakt (gemessen 0,005 % eines Kerns). Für Spiele mit „HDR automatisch“ ohne
+Sitzung ruft es `PrepareAsync(…, LauncherSignal)` auf: HDR 1-2 s vor dem Spielprozess. Rohzeilen werden nie
+protokolliert (Austausch-Codes, Benutzernamen). Beim Launcher-Signal nie die Tastenkürzel-Notlösung (das Spiel startet
+ohnehin gleich). `launcherSignals` in config.json, Standard an.
+
+**E79 HDR-Liste umgesetzt (präzisiert E73):** Freie Cargo-Abfragen bei PCGamingWiki brauchen seit August 2026 ein
+Konto mit Bot-Passwort. Ohne Konto (Standard, vom Nutzer gewählt) fragt HDRpilot die Wiki-Seiten seiner Spiele über die
+normale MediaWiki-API ab; dabei gehen die Spielnamen an PCGamingWiki (der Nutzer wurde darauf hingewiesen). Je Start
+höchstens 2 Seitenanfragen (100 Titel) und 2 Suchen mit 2 s Abstand, 30 s nach dem Start, höchstens stündlich, bekannte
+Spiele alle 14 Tage neu; Zuordnung über Steam-AppID und GOG-ID, sonst über den Namen. Mit Konto (vom Nutzer gewünscht)
+Anmeldung mit Bot-Passwort und vollständige Liste über cargoquery, kein Spielname wird gesendet; Passwort mit DPAPI
+(CurrentUser) in `pcgw-account.dat`. Keine mitgelieferte Liste. Mit `--config-dir` gleicht HDRpilot nicht selbst ab.
+
+**E80 Umbenennung in HDRpilot:** Sichtbar alles: EXE `HDRpilot.exe`, Produkt- und Firmenname, Fenstertitel, Texte,
+Infobereich, Hinweise, Protokollzeilen, Startmenü-Ordner, Autostart-Wert, Datenordner, User-Agent, README und
+Lizenzkopf. Die Ordner auf der Platte bleiben dieselben (Windows unterscheidet nicht nach Groß-/Kleinschreibung), ebenso
+der Autostart-Wert in der Registry. Intern bleiben `HdrPilot`: Projekte, Namensräume und die Namen von Mutex, Fenster-
+klasse und Ereignissen (Kernel-Objektnamen unterscheiden Groß-/Kleinschreibung; alte und neue Version erkennen sich so
+weiter). Prüfung: `phase6-name.ps1` (G6.4).

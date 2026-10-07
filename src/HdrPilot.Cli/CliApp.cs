@@ -74,7 +74,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
     }
 
     public const string HelpText = """
-        HdrPilot Kommandozeile (Diagnose und Tests)
+        HDRpilot Kommandozeile (Diagnose und Tests)
 
         hdrpilot hdr status [--json] [--api modern|legacy]
             Listet alle aktiven Bildschirme mit Name, HDR-fähig und HDR an/aus.
@@ -95,8 +95,8 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         hdrpilot watch [--verbose]
             Überwacht Spielstarts im Vordergrund (wie die App, ohne Oberfläche). Beenden mit Strg+C.
         hdrpilot run <schlüssel>
-            Start über HdrPilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
-        games, watch und run: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HdrPilot, für Tests).
+            Start über HDRpilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
+        games, watch und run: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HDRpilot, für Tests).
 
         Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
                     4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden

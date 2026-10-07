@@ -16,7 +16,7 @@ function Normalize([string]$s) { ($s -replace '\s+', ' ').Trim() }
 
 # --- Fakten aus dem Quelltext ---
 $appArgs = Read-Utf8 'src\HdrPilot.App\AppArguments.cs'
-$devOnlySwitches = @('--snapshot') # Entwicklerwerkzeug (E54), nicht für Nutzer dokumentiert
+$devOnlySwitches = @('--snapshot', '--prepare', '--ready-event') # Entwicklerwerkzeug (E54) und interne Absprache Wrapper/Instanz (E75)
 $appSwitches = @([regex]::Matches($appArgs, '"(--[a-z-]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Where-Object { $_ -notin $devOnlySwitches })
 
 $config = Read-Utf8 'src\HdrPilot.Core\Config\AppConfig.cs'
@@ -66,7 +66,7 @@ function Test-Readme([string]$text) {
     }
 
     # App-Schalter: alle dokumentiert, keine erfundenen
-    $appSection = [regex]::Match($text, '(?s)### HdrPilot\.exe(.*?)### ').Groups[1].Value
+    $appSection = [regex]::Match($text, '(?s)### HDRpilot\.exe(.*?)### ').Groups[1].Value
     $documented = @([regex]::Matches($appSection, '`(--[a-z-]+)') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
     foreach ($s in $appSwitches) { if ($s -notin $documented) { [void]$problems.Add("App-Schalter nicht dokumentiert: $s") } }
     foreach ($s in $documented) { if ($s -notin $appSwitches) { [void]$problems.Add("App-Schalter gibt es nicht: $s") } }

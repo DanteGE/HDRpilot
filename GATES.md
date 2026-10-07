@@ -164,10 +164,45 @@ und die EXPECT-Marke ausgibt.
   EXPECT: PHASE5_README_OK
   EVIDENCE: 2026-10-07 14:05 exit 0, alle Abschnitte, 10 App-Schalter, 9 CLI-Aufrufe und 7 Exit-Codes, Standardwerte, Ablageorte und fett gesetzte Bezeichnungen stimmen mit Code und resx (0 Probleme); Gegenprobe 7/7 eingebaute Fehler erkannt; inhaltlich von 5 unabhängigen Prüfern gelesen, 55 Hinweise eingearbeitet (E64), PHASE5_README_OK
 
-- [ ] G5.3: Rückfrage beim Nutzer zu WMI-Überwachung, Neustart bei verspätetem HDR, Steam-Hülle, englischer Oberfläche
-  EVIDENCE: pending
+- [x] G5.3: Rückfrage beim Nutzer zu WMI-Überwachung, Neustart bei verspätetem HDR, Steam-Hülle, englischer Oberfläche
+  EVIDENCE: 2026-10-07 17:15 Rückfrage beim Nutzer (Auswahl im Chat): Steam-Hülle per Feedback beauftragt ("Steam-Startoption kopieren"); WMI-Überwachung, Neustart bei verspätetem HDR und englische Oberfläche ohne Vorliebe, also nicht umgesetzt (WMI und Neustart wurden nicht empfohlen). Zusätzlich aus dem gemeinsamen Test beauftragt: Neustart-Puffer, Frühwarnung aus Epic-/Steam-Protokollen, Hinweis bei hängendem Spielprozess; dazu Feedback zur Oberfläche (Starten-Bereich oben, Sortierung zuletzt gespielt, verschiebbare Spalten) und Umbenennung in HDRpilot (alles Sichtbare inkl. EXE). Umsetzung in Phase 6 (siehe dort).
 
 - [x] G5.4: Kein Eingriff in Spielprozesse: keine verbotenen Techniken im Quelltext, EXE-Pfade ohne Handle auf fremde Prozesse, Tastenkürzel-Notlösung nie während eines Spiels (Anti-Cheat-Prüfung, E65–E67)
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AntiCheatSafetyTests|FullyQualifiedName~ProcessImagePathResolverTests|FullyQualifiedName~Hotkey" -MinTests 20
   EXPECT: TESTS_OK
   EVIDENCE: 2026-10-07 15:45 exit 0, TESTS_OK 43: Architekturtest (30 Regeln, jede mit Gegenprobe), Pfade ohne Handle (services.exe ohne OpenProcess gelesen), Notlösung gesperrt bei laufendem Bibliotheksspiel, unerkanntem gestarteten Spiel, Nachschalten während des Starts und Vollbild-Anwendung; Gegenproben: ohne jede Korrektur rot. Nach der Härtung erneut grün: PHASE3_SINGLE/TWO/ALREADYON/CRASH_OK, PHASE3_IDLE_OK (0,312 %), PHASE4_RUN_OK, PHASE4_CRASH_OK (0,286 %), PHASE4_UI_OK, PHASE5_PUBLISH_OK, PHASE5_README_OK, TESTS_OK 1114
+
+## Phase 6: Feedback und Erweiterungen nach dem gemeinsamen Test
+
+- [ ] G6.1: Bibliothek: Starten-Bereich über der Automatik, Sortierung „Zuletzt gespielt“ (gespeichert), Spalten mit Trenner verschiebbar und Breite gespeichert, Knopf „Steam-Startoption kopieren“ nur bei Steam-Spielen (UI-Automation an einer Testinstanz)
+  CHECK: ps tools\gates\phase6-ui.ps1
+  EXPECT: PHASE6_UI_OK
+  EVIDENCE: pending
+
+- [ ] G6.2: Steam-Startoption (`--wrap -- %command%`): HDR ist bestätigt an, bevor der gestartete Prozess existiert; ohne laufende Instanz startet das Spiel trotzdem; der Wrapper hält kein Handle und beendet sich sofort
+  CHECK: ps tools\gates\phase6-wrap.ps1
+  EXPECT: PHASE6_WRAP_OK
+  EVIDENCE: pending
+
+- [ ] G6.3: Neustart-Puffer, Frühwarnung aus Epic-/Steam-Protokollen und Hänger-Hinweis per Unit-Tests belegt (mit Gegenproben)
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~RestartBuffer|FullyQualifiedName~LauncherSignal|FullyQualifiedName~HangHint" -MinTests 10
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G6.4: Name „HDRpilot“ überall sichtbar: Oberfläche, Hinweise, README, Produktname, EXE `HDRpilot.exe`; keine sichtbaren Reste „HdrPilot“
+  CHECK: ps tools\gates\phase6-name.ps1
+  EXPECT: PHASE6_NAME_OK
+  EVIDENCE: pending
+
+- [ ] G6.5: Neubau ohne Warnungen, alle Tests grün, alle früheren Gates erneut grün, Auslieferung neu veröffentlicht
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G6.6: Installierte Version beim Nutzer ersetzt und neu gestartet; Autostart und Verknüpfungen zeigen weiter auf die EXE
+  EVIDENCE: pending
+
+- [ ] G6.7: HDR-Liste von PCGamingWiki: Kennzeichen, Sortierung und Filter in der Bibliothek; Abgleich bei jedem Start (höchstens stündlich, abschaltbar), Rückfall auf zwischengespeicherte oder mitgelieferte Liste ohne Netz; Zuordnung über Steam-ID, GOG-ID und exakten Namen; Quellenangabe
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrSupport" -MinTests 10
+  EXPECT: TESTS_OK
+  EVIDENCE: pending

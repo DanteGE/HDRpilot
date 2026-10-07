@@ -347,3 +347,12 @@ Prozess-ID der Testinstanz. Vorher suchte es Fenster nur über die AutomationId;
 echte HdrPilot des Nutzers mit offener Bibliothek geöffnet, und `phase4-ui.ps1` hat dort drei Einstellungen geändert
 (Nachlaufzeit 15 s, Intervall 750 ms, Hinweise aus). Sofort zurückgestellt (Konfiguration per FileSystemWatcher neu
 geladen); Gegenprobe mit einer Attrappe mit offenem Fenster: deren Konfiguration bleibt byte-gleich.
+
+**E73 Netzwerk nur für den Abgleich der HDR-Liste (Entscheidung des Nutzers, 2026-10-07):** Der Auftrag verbot
+Netzwerkzugriff. Auf Wunsch des Nutzers zeigt HDRpilot an, welche Spiele laut PCGamingWiki HDR unterstützen (Kennzeichen,
+Sortierung, Filter), und gleicht diese Liste bei jedem Start ab (Rückfrage im Chat: „mit der Option bei jedem Start
+abzugleichen“). Umfang: nur ein lesender Abruf der öffentlichen Liste über die Cargo-Abfrage von pcgamingwiki.com,
+höchstens einmal pro Stunde, verzögert nach dem Start, abschaltbar, mit Knopf „Jetzt abgleichen“; es werden keine Daten
+über die Spiele des Nutzers gesendet, der Abgleich läuft lokal. Ohne Netz: zuletzt geladene oder mitgelieferte Liste.
+Daten unter CC BY-NC-SA 3.0 (Quellenangabe in Einstellungen und THIRD-PARTY-NOTICES). Der Steam-Kurator „HDR Games“
+wird nicht genutzt (keine Schnittstelle, nur Auslesen der Store-Seite).

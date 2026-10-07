@@ -29,6 +29,9 @@ public interface IGameIconService
     ImageSource? GetCachedIcon(GameConfig game);
 
     Task<ImageSource?> GetIconAsync(GameConfig game, CancellationToken cancellationToken = default);
+
+    /// <summary>Zwischenspeicher leeren (beim Schließen des Fensters), wartende Anfragen freigeben.</summary>
+    void ClearCache();
 }
 
 /// <summary>Autostart über HKCU\Software\Microsoft\Windows\CurrentVersion\Run.</summary>

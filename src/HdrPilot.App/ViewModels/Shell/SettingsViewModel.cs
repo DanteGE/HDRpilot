@@ -318,20 +318,29 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         var folders = SearchFolders.ToList();
         var patterns = HelperPatternList.ToConfigValue(parsed.Patterns);
         var foldersChanged = !string.Equals(_original.Folders, JoinFolders(folders), StringComparison.OrdinalIgnoreCase);
-        _context.Config.Update(c =>
+        try
         {
-            var s = c.Settings;
-            s.TargetDisplays = targets;
-            s.PollIntervalMs = _pollIntervalMs;
-            s.GracePeriodSeconds = _gracePeriodSeconds;
-            s.LaunchTimeoutSeconds = _launchTimeoutSeconds;
-            s.StartWithWindows = _startWithWindows;
-            s.Notifications = _notifications;
-            s.HotkeyFallback = _hotkeyFallback;
-            s.SearchFolders = folders;
-            s.LogLevel = _logLevel;
-            s.HelperExecutablePatterns = patterns;
-        });
+            _context.Config.Update(c =>
+            {
+                var s = c.Settings;
+                s.TargetDisplays = targets;
+                s.PollIntervalMs = _pollIntervalMs;
+                s.GracePeriodSeconds = _gracePeriodSeconds;
+                s.LaunchTimeoutSeconds = _launchTimeoutSeconds;
+                s.StartWithWindows = _startWithWindows;
+                s.Notifications = _notifications;
+                s.HotkeyFallback = _hotkeyFallback;
+                s.SearchFolders = folders;
+                s.LogLevel = _logLevel;
+                s.HelperExecutablePatterns = patterns;
+            });
+        }
+        catch (IOException ex)
+        {
+            // Speichern gescheitert (Platte voll, Datei gesperrt): nichts übernommen, Fenster bleibt offen.
+            ErrorMessage = string.Format(CultureInfo.CurrentCulture, ShellStrings.SaveFailed, ex.Message);
+            return false;
+        }
 
         ErrorMessage = null;
         _patternErrorShown = false;

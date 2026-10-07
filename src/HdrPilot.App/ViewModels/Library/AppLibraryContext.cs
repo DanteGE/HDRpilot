@@ -123,7 +123,7 @@ public sealed class AppLibraryContext : ILibraryContext
         ScanStateChanged = null;
 
         // Symbole gehören zum Fenster: im Hintergrund kein Bildspeicher.
-        (_services.Icons as GameIconService)?.ClearCache();
+        _services.Icons.ClearCache();
     }
 
     // ConfigService.Changed kann von einem Hintergrund-Thread kommen (Speichern, Automatik, Einlesen).

@@ -99,10 +99,12 @@ public sealed partial class AppServices : IAsyncDisposable
         Tray.Initialize();
         DisplayEvents.Start();
         Instance?.Listen(args => _ = HandleCommandAsync(AppArguments.Parse(args)));
-        if (Config.Current.Games.Count == 0)
+        // Bei jedem Start im Hintergrund einlesen (rund 0,6 s): neue Spiele erscheinen markiert und aus,
+        // deinstallierte werden als "nicht installiert" markiert, und die Fehler je Scanner sind sofort sichtbar.
+        var firstRun = Config.Current.Games.Count == 0;
+        _ = RescanAsync();
+        if (firstRun)
         {
-            // Erster Start: Bibliothek im Hintergrund einlesen; neue Spiele sind markiert und aus.
-            _ = RescanAsync();
             Tray.Notify(Resources.CommonStrings.FirstRunTitle, Resources.CommonStrings.FirstRunMessage);
         }
 
@@ -335,7 +337,7 @@ public sealed partial class AppServices : IAsyncDisposable
     private void OnSessionNotification(object? sender, SessionNotification n)
     {
         var warning = n.Kind is NotificationKind.SwitchFailed or NotificationKind.DisplayNotConnected
-            or NotificationKind.DisplayNotHdrCapable or NotificationKind.LaunchFailed;
+            or NotificationKind.DisplayNotHdrCapable or NotificationKind.LaunchFailed or NotificationKind.StateNotSaved;
         RaiseOnUi(() => Tray.Notify(n.Title, n.Message, warning));
     }
 

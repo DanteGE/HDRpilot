@@ -7,6 +7,7 @@ using HdrPilot.Tests.TestSupport;
 
 namespace HdrPilot.Tests.Processes;
 
+[Collection(ProcessHandleCollection.Name)]
 public sealed class NtProcessSnapshotTests
 {
     [Theory]

@@ -182,6 +182,10 @@ public sealed class FakeIcons : IGameIconService
         Requested.Add(game.Key);
         return Task.FromResult<ImageSource?>(null);
     }
+
+    public int Cleared { get; private set; }
+
+    public void ClearCache() => Cleared++;
 }
 
 public sealed class FakeShortcuts : IShortcutService

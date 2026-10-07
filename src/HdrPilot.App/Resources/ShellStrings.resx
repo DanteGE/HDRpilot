@@ -304,4 +304,7 @@
   <data name="OpenLogFolder" xml:space="preserve">
     <value>Protokollordner öffnen</value>
   </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>Die Einstellungen ließen sich nicht speichern: {0}</value>
+  </data>
 </root>

@@ -8,6 +8,7 @@ using HdrPilot.Tests.TestSupport;
 
 namespace HdrPilot.Tests.Processes;
 
+[Collection(ProcessHandleCollection.Name)]
 public sealed class ProcessWatcherTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

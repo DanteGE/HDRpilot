@@ -199,6 +199,33 @@ public sealed class ConfigTests
         Assert.Equal(12, app.Current.Settings.GracePeriodSeconds);
     }
     [Fact]
+    public void Save_failure_is_reported_and_not_applied()
+    {
+        var service = Service();
+        _fs.FailWriting(Path, new IOException("Datenträger voll"));
+
+        var ex = Assert.Throws<ConfigSaveException>(() => service.Update(c => c.Settings.GracePeriodSeconds = 44));
+        Assert.Contains("Datenträger voll", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(10, service.Current.Settings.GracePeriodSeconds); // nicht übernommen
+
+        Assert.Throws<ConfigSaveException>(() => service.Update(c => c.Games.Add(new GameConfig { Source = GameSource.Manual, SourceId = "a", Name = "A" })));
+        Assert.Empty(service.Current.Games);
+    }
+
+    [Fact]
+    public void Background_records_never_throw_on_save_failure()
+    {
+        var service = Service();
+        _fs.FailWriting(Path, null);
+        service.Update(c => c.Games.Add(new GameConfig { Source = GameSource.Manual, SourceId = "a", Name = "A" }));
+        _fs.FailWriting(Path, new IOException("gesperrt"));
+
+        service.RecordDetectedExecutables("Manual:a", [@"D:\A\a.exe"]);
+        service.RecordLastPlayed("Manual:a", _clock.UtcNow);
+
+        Assert.Empty(service.Current.FindGame("Manual:a")!.DetectedExecutables);
+    }
+    [Fact]
     public void Session_state_store_roundtrip_and_broken_file()
     {
         var store = new FileSessionStateStore(_fs, @"C:\Users\Test\AppData\Local\HdrPilot\session-state.json");

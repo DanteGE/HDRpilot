@@ -14,6 +14,7 @@ public sealed class InMemoryFileSystem : IFileSystem
     private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Exception> _readFailures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Exception> _writeFailures = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> FixedDriveRoots { get; } = [@"C:\"];
 
@@ -46,6 +47,21 @@ public sealed class InMemoryFileSystem : IFileSystem
     public InMemoryFileSystem FailReading(string path, Exception exception)
     {
         _readFailures[PathUtil.Normalize(path)] = exception;
+        return this;
+    }
+
+    /// <summary>Schreiben dieser Datei wirft die angegebene Ausnahme (Platte voll, gesperrt). Null hebt es auf.</summary>
+    public InMemoryFileSystem FailWriting(string path, Exception? exception)
+    {
+        if (exception is null)
+        {
+            _writeFailures.Remove(PathUtil.Normalize(path));
+        }
+        else
+        {
+            _writeFailures[PathUtil.Normalize(path)] = exception;
+        }
+
         return this;
     }
 
@@ -105,7 +121,15 @@ public sealed class InMemoryFileSystem : IFileSystem
 
     public void CreateDirectory(string path) => AddDirectory(path);
 
-    public void WriteAllTextAtomic(string path, string contents) => AddFile(path, contents);
+    public void WriteAllTextAtomic(string path, string contents)
+    {
+        if (_writeFailures.TryGetValue(PathUtil.Normalize(path), out var failure))
+        {
+            throw failure;
+        }
+
+        AddFile(path, contents);
+    }
 
     public void DeleteFile(string path) => _files.Remove(PathUtil.Normalize(path));
 

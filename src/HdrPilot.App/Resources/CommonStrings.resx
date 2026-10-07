@@ -39,4 +39,16 @@
   <data name="ForwardFailed" xml:space="preserve">
     <value>HdrPilot läuft bereits, reagiert aber nicht. Bitte über den Task-Manager beenden und neu starten.</value>
   </data>
+  <data name="CaptionMinimize" xml:space="preserve">
+    <value>Minimieren</value>
+  </data>
+  <data name="CaptionMaximize" xml:space="preserve">
+    <value>Maximieren</value>
+  </data>
+  <data name="CaptionRestore" xml:space="preserve">
+    <value>Wiederherstellen</value>
+  </data>
+  <data name="CaptionClose" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
 </root>

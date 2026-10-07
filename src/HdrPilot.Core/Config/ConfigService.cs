@@ -77,7 +77,12 @@ public sealed class ConfigService : ISessionConfigSource
                 var next = baseConfig.Clone();
                 mutate(next);
                 ConfigStore.Normalize(next);
-                TrySave(next);
+                if (!TrySave(next, out var error))
+                {
+                    // Nicht übernehmen: Speicher und Platte bleiben gleich, der Aufrufer erfährt den Fehler.
+                    throw new ConfigSaveException(_store.Path, error);
+                }
+
                 Volatile.Write(ref _current, next);
                 Interlocked.Increment(ref _revision);
             });
@@ -180,6 +185,18 @@ public sealed class ConfigService : ISessionConfigSource
 
     public void RecordDetectedExecutables(string gameKey, IReadOnlyCollection<string> executables)
     {
+        try
+        {
+            RecordDetectedExecutablesCore(gameKey, executables);
+        }
+        catch (ConfigSaveException ex)
+        {
+            _logger.LogWarning("Gemerkte Spiel-EXEs nicht gespeichert: {Error}", ex.Message);
+        }
+    }
+
+    private void RecordDetectedExecutablesCore(string gameKey, IReadOnlyCollection<string> executables)
+    {
         if (Current.FindGame(gameKey) is not { } game || executables.All(e => game.DetectedExecutables.Contains(e, StringComparer.OrdinalIgnoreCase)))
         {
             return;
@@ -202,6 +219,18 @@ public sealed class ConfigService : ISessionConfigSource
 
     public void RecordLastPlayed(string gameKey, DateTimeOffset when)
     {
+        try
+        {
+            RecordLastPlayedCore(gameKey, when);
+        }
+        catch (ConfigSaveException ex)
+        {
+            _logger.LogWarning("Zuletzt gespielt nicht gespeichert: {Error}", ex.Message);
+        }
+    }
+
+    private void RecordLastPlayedCore(string gameKey, DateTimeOffset when)
+    {
         if (Current.FindGame(gameKey) is null)
         {
             return;
@@ -216,15 +245,30 @@ public sealed class ConfigService : ISessionConfigSource
         });
     }
 
-    private void TrySave(AppConfig config)
+    private void TrySave(AppConfig config) => TrySave(config, out _);
+
+    private bool TrySave(AppConfig config, out string error)
     {
         try
         {
             _lastText = _store.Save(config);
+            error = string.Empty;
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogError(ex, "Konfiguration ließ sich nicht speichern ({Path}).", _store.Path);
+            error = ex.Message;
+            return false;
         }
     }
+}
+
+/// <summary>Die Konfiguration ließ sich nicht speichern (Platte voll, Datei gesperrt). Die Änderung wurde nicht übernommen.</summary>
+public sealed class ConfigSaveException(string path, string reason)
+    : IOException($"Konfiguration {path} ließ sich nicht speichern: {reason}")
+{
+    public string ConfigPath { get; } = path;
+
+    public string Reason { get; } = reason;
 }

@@ -21,6 +21,11 @@ public sealed record HdrControllerOptions
 
     /// <summary>Notlösung Win+Alt+B, nur wenn die API scheitert. Standard: aus.</summary>
     public bool HotkeyFallbackEnabled { get; init; }
+
+    /// <summary>Liest die Einstellung bei jedem Schaltvorgang neu (überschreibt <see cref="HotkeyFallbackEnabled"/>).</summary>
+    public Func<bool>? HotkeyFallbackProvider { get; init; }
+
+    internal bool IsHotkeyFallbackEnabled => HotkeyFallbackProvider?.Invoke() ?? HotkeyFallbackEnabled;
 }
 
 /// <summary>Sendet das Windows-Tastenkürzel für HDR (Win+Alt+B, Xbox Game Bar).</summary>
@@ -180,7 +185,7 @@ public sealed class DisplayConfigHdrController : IHdrController
             _logger.LogWarning("HDR-Schaltung für \"{Name}\" über {Api} fehlgeschlagen (Win32-Fehler {Code}).", display.FriendlyName, api, rc);
         }
 
-        if (_options.HotkeyFallbackEnabled && _hotkey is not null)
+        if (_options.IsHotkeyFallbackEnabled && _hotkey is not null)
         {
             return await HotkeyFallbackAsync(monitorDevicePath, enable, display, before, cancellationToken).ConfigureAwait(false);
         }

@@ -23,6 +23,7 @@ public sealed unsafe class NtProcessSnapshotProvider : IProcessSnapshotProvider,
     private uint _bufferSize = 128 * 1024;
     private int _infoClass = SystemBasicProcessInformation;
     private bool _useToolhelp;
+    private bool _disposed;
 
     public NtProcessSnapshotProvider(ILogger? logger = null)
         : this(logger, SystemBasicProcessInformation)
@@ -76,6 +77,7 @@ public sealed unsafe class NtProcessSnapshotProvider : IProcessSnapshotProvider,
     {
         lock (_gate)
         {
+            _disposed = true;
             if (_buffer != IntPtr.Zero)
             {
                 Marshal.FreeHGlobal(_buffer);
@@ -86,6 +88,16 @@ public sealed unsafe class NtProcessSnapshotProvider : IProcessSnapshotProvider,
 
     private uint Query()
     {
+        if (_buffer == IntPtr.Zero)
+        {
+            if (_disposed)
+            {
+                return STATUS_INFO_LENGTH_MISMATCH; // nach Dispose nichts mehr anfordern (wie bisher: Toolhelp)
+            }
+
+            _buffer = Marshal.AllocHGlobal((int)_bufferSize); // nach gescheiterter Vergrößerung neu anfordern
+        }
+
         for (var attempt = 0; attempt < 6; attempt++)
         {
             var status = NtQuerySystemInformation(_infoClass, (void*)_buffer, _bufferSize, out var needed);

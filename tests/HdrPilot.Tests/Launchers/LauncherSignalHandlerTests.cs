@@ -9,7 +9,7 @@ namespace HdrPilot.Tests.Launchers;
 
 /// <summary>
 /// Entscheidung über ein Launcher-Signal mit der echten Sitzungslogik und Attrappen (HDR, Prozesse, Speicher, Uhr):
-/// nur Spiele mit „HDR automatisch“, nicht pausiert, ohne bestehende Sitzung; dann HDR vor dem Spielprozess.
+/// nur Spiele mit „HDR automatisch“, nicht pausiert, nicht während das Spiel läuft; dann HDR vor dem Spielprozess.
 /// </summary>
 public sealed class LauncherSignalHandlerTests
 {

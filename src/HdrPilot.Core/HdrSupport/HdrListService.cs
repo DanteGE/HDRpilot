@@ -123,7 +123,13 @@ public sealed class HdrListService : IHdrListService, IDisposable
         var games = _config().Games;
         var checkedGames = games.Count(g => data.Games.TryGetValue(g.Key, out var e) && string.Equals(e.Name, g.Name, StringComparison.Ordinal));
         var (user, unreadable) = StoredAccount();
-        return new HdrListStatus(data.LastSuccessAt, data.LastError, checkedGames, games.Count, data.AccountMode, IsRunning, user, unreadable);
+
+        // Fehler eines inzwischen entfernten Kontos gelten nicht mehr (sonst stünde „bitte neu eintragen“ neben „Ohne Konto“).
+        var accountGone = user is null && !unreadable;
+        var lastError = accountGone && (data.LastError is PcgwErrorKind.AccountUnreadable or PcgwErrorKind.LoginFailed or PcgwErrorKind.LoginThrottled)
+            ? null
+            : data.LastError;
+        return new HdrListStatus(data.LastSuccessAt, lastError, checkedGames, games.Count, data.AccountMode, IsRunning, user, unreadable);
     }
 
     public IReadOnlyDictionary<string, HdrSupportStatus> LoadStatuses() => _cache.LoadStatuses();
@@ -273,6 +279,14 @@ public sealed class HdrListService : IHdrListService, IDisposable
         {
             var games = _config().Games.Select(g => new HdrListGame(g.Key, g.Source, g.SourceId, g.Name, g.IsInstalled, g.LastPlayed)).ToList();
             var account = _accounts.Load(out var unreadable);
+            lock (_gate)
+            {
+                // Anzeige auf den Stand dieses Laufs bringen (die Datei war beim ersten Lesen vielleicht nur kurz gesperrt).
+                _accountUser = account?.UserName;
+                _accountUnreadable = unreadable;
+                _accountLoaded = true;
+            }
+
             if (unreadable)
             {
                 // Konto eingerichtet, aber nicht lesbar: nicht stillschweigend ohne Konto (mit Spielnamen) abfragen.

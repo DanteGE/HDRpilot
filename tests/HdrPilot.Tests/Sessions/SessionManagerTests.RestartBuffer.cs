@@ -207,6 +207,52 @@ public sealed partial class SessionManagerTests
     }
 
     [Fact]
+    public async Task Restart_within_the_buffer_of_a_game_without_hdr_auto_leaves_a_manual_switch_off_alone()
+    {
+        // Über „Mit HDR starten“ gestartet, ohne „HDR automatisch“: ein erkannter Neustart schaltet bei diesem Spiel nie
+        // etwas, auch im Puffer nicht.
+        UseRestartBuffer();
+        _config.AddGame("1", DirA, hdrAuto: false);
+        await Launch("Steam:1");
+        var pid = _processes.StartExe(ExeA);
+        await Poll(60);
+        _processes.Stop(pid);
+        await Poll(30);
+        Assert.NotNull(Assert.Single(Manager.Sessions).BufferUntil);
+        _hdr[FakeHdrController.Primary].HdrOn = false;
+
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.Equal(SessionPhase.Running, Assert.Single(Manager.Sessions).Phase);
+        Assert.False(PrimaryOn);
+        Assert.Equal(1, _hdr.SetCalls(enable: true));
+    }
+
+    [Fact]
+    public async Task Short_process_gap_in_a_short_session_leaves_a_manual_switch_off_alone()
+    {
+        // Im Spiel von Hand auf SDR gestellt, dann startet sich das Spiel für eine Einstellung selbst neu (Prozess 2 s
+        // weg): das ist kein neuer Start, HDR bleibt aus. Erst eine Lücke länger als die Nachlaufzeit zählt als Neustart.
+        UseRestartBuffer();
+        _config.AddGame("1", DirA);
+        await Poll();
+        var pid = _processes.StartExe(ExeA);
+        await Poll(120);
+        _hdr[FakeHdrController.Primary].HdrOn = false;
+
+        _processes.Stop(pid);
+        await Poll(2);
+        Assert.NotNull(Assert.Single(Manager.Sessions).BufferUntil);
+        _processes.StartExe(ExeA);
+        await Poll();
+
+        Assert.True(_log.Contains(LogLevel.Information, "läuft wieder, Neustart-Puffer abgebrochen"));
+        Assert.False(PrimaryOn);
+        Assert.Equal(1, _hdr.SetCalls(enable: true));
+    }
+
+    [Fact]
     public async Task Process_back_within_the_grace_period_leaves_a_manual_switch_off_alone()
     {
         // Nur der Neustart im Puffer gilt als neuer Start. Kommt nach einer langen Sitzung innerhalb der Nachlaufzeit

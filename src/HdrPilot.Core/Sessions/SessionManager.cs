@@ -178,14 +178,15 @@ public sealed class SessionManager
 
             Learn(running, cfg, now);
 
+            var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
             foreach (var (key, processes) in running)
             {
                 if (_sessions.TryGetValue(key, out var session))
                 {
-                    if (Touch(session, processes, now) && !Paused)
+                    if (Touch(session, processes, now, grace) && !Paused && cfg.FindGame(key) is { HdrAuto: true })
                     {
                         // Neustart im Puffer: ein neuer Spielstart. Hat der Nutzer HDR in der Zwischenzeit von Hand
-                        // ausgeschaltet, wieder einschalten wie bei jedem anderen Start (E41).
+                        // ausgeschaltet, wieder einschalten wie bei jedem erkannten Start (E41).
                         await EnsureOnAsync(session, SessionTrigger.ProcessDetected, cancellationToken).ConfigureAwait(false);
                     }
 
@@ -201,7 +202,6 @@ public sealed class SessionManager
                 await StartSessionAsync(game, SessionTrigger.ProcessDetected, processes, cfg, startRequested: false, cancellationToken).ConfigureAwait(false);
             }
 
-            var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
             var launchTimeout = TimeSpan.FromSeconds(cfg.Settings.LaunchTimeoutSeconds);
             foreach (var session in _sessions.Values.ToList())
             {
@@ -762,8 +762,12 @@ public sealed class SessionManager
         Persist();
     }
 
-    /// <returns>True, wenn das Spiel im Neustart-Puffer neu gestartet wurde.</returns>
-    private bool Touch(ActiveSession session, List<ProcessInfo> processes, DateTimeOffset now)
+    /// <returns>
+    /// True, wenn das Spiel im Neustart-Puffer neu gestartet wurde: Puffer läuft und der Prozess war länger als die
+    /// Nachlaufzeit weg. Kürzere Lücken (Starter-Kette, Spiel startet sich für eine Einstellung selbst neu) zählen
+    /// wie bisher nicht als neuer Start.
+    /// </returns>
+    private bool Touch(ActiveSession session, List<ProcessInfo> processes, DateTimeOffset now, TimeSpan grace)
     {
         session.ProcessIds = processes.Select(p => p.ProcessId).ToList();
         if (session.Phase == SessionPhase.Launching)
@@ -777,10 +781,10 @@ public sealed class SessionManager
         }
         else if (session.Phase == SessionPhase.Ending)
         {
-            var restartedInBuffer = session.BufferUntil is not null;
+            var restartedInBuffer = session.BufferUntil is not null && now - (session.MissingSince ?? now) >= grace;
             session.Phase = SessionPhase.Running;
             _logger.LogInformation(
-                "\"{Game}\" läuft wieder, {Wait} abgebrochen.", session.Name, restartedInBuffer ? "Neustart-Puffer" : "Nachlaufzeit");
+                "\"{Game}\" läuft wieder, {Wait} abgebrochen.", session.Name, session.BufferUntil is null ? "Nachlaufzeit" : "Neustart-Puffer");
             ClearEnding(session);
             return restartedInBuffer;
         }

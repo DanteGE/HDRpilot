@@ -420,10 +420,14 @@ Name) und ein Gegenprüfer; 10 Funde bestätigt, 8 verworfen (begründet im Prü
 mit Test und Gegenprobe (ohne Korrektur rot). Sitzungslogik: Der Hinweis „Spiel hängt“ wartet auch bei gesperrtem
 Bildschirm oder Bildschirmschoner (dort zeigt das Tray nichts an; vorher ging der einzige Hinweis verloren). Ein Neustart
 im Neustart-Puffer schaltet HDR wieder ein, falls der Nutzer es zwischendurch von Hand ausgeschaltet hat (wie jeder
-Start, E41; nicht bei pausierter Automatik, nicht in der normalen Nachlaufzeit). Nach einem Neustart von HDRpilot
+erkannte Start, E41: nur bei „HDR automatisch“, nicht bei pausierter Automatik, und nur wenn der Prozess länger als die
+Nachlaufzeit weg war; kürzere Lücken wie ein Selbstneustart des Spiels lassen eine Umschaltung von Hand unangetastet,
+gefunden bei der Gegenprüfung der Korrektur). Nach einem Neustart von HDRpilot
 übernommene Sitzungen gelten nie als kurz. Ein Launcher-Signal übergeht nur noch laufende Spiele; eine endende oder
 noch wartende Sitzung wird wieder auf den Start eingestellt (Frist neu, keine Tastenkürzel-Notlösung), sonst ging HDR
 mitten im neuen Start aus und an. Abfragepuffer nach gescheiterter Speicheranforderung nie weiterverwendet. Texte:
 Pause-Tooltip und README nennen die Steam-Startoption als Ausnahme der Pause; Lizenzhinweise vollständig umbenannt und
 von `phase6-name.ps1` ganz geprüft. HDR-Liste: Anmeldesperre von PCGamingWiki erkannt (MediaWiki meldet sie als
-„Failed“ mit Begründung), unlesbares gespeichertes Konto lässt sich entfernen, Weiterleitungsketten werden verfolgt.
+„Failed“ mit Begründung), unlesbares gespeichertes Konto lässt sich entfernen (danach keine veraltete Fehlerzeile mehr;
+die Kontoanzeige folgt jedem Abgleich), Weiterleitungsketten werden verfolgt (höchstens 5 Schritte), Interwiki-Ziele
+gelten als „nicht gefunden“. Beide Korrekturrunden wurden je von einem weiteren Prüfer gegengeprüft.

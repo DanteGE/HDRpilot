@@ -224,19 +224,39 @@ public sealed class HdrListServiceTests : IDisposable
     public async Task Unreadable_account_is_shown_and_removing_it_returns_to_anonymous_mode()
     {
         _fs.AddFile(_paths.PcgwAccountFile, "kaputt!");
+        await _service.SyncNowAsync().WaitAsync(Wait, TestContext.Current.CancellationToken);
 
         var status = _service.GetStatus();
         Assert.True(status.AccountUnreadable);
         Assert.Null(status.AccountUser);
+        Assert.Equal(PcgwErrorKind.AccountUnreadable, status.LastError);
 
         _service.RemoveAccount();
 
         Assert.False(_fs.FileExists(_paths.PcgwAccountFile));
         Assert.False(_service.GetStatus().AccountUnreadable);
+        Assert.Null(_service.GetStatus().LastError); // kein „bitte neu eintragen“ mehr neben „Ohne Konto“
         var result = await _service.SyncNowAsync().WaitAsync(Wait, TestContext.Current.CancellationToken);
         Assert.Equal(HdrListRunOutcome.Completed, result.Outcome);
         Assert.False(result.AccountMode);
         Assert.Single(Requests, r => r["titles"] is not null); // ohne Konto: wieder Titelabfragen
+    }
+
+    [Fact]
+    public async Task Account_shown_as_unreadable_is_refreshed_by_the_next_sync()
+    {
+        // Beim ersten Lesen war die Datei kurz nicht lesbar (etwa gesperrt); der Abgleich liest sie neu und die Anzeige
+        // folgt ihm, statt bis zum Neustart „nicht lesbar“ zu zeigen.
+        _fs.AddFile(_paths.PcgwAccountFile, "kaputt!");
+        Assert.True(_service.GetStatus().AccountUnreadable);
+        new PcgwAccountStore(_fs, _paths.PcgwAccountFile, new XorProtector()).Save(new PcgwAccount("Dante_GE@HdrPilot", "abc123geheim"));
+        _wiki.Accounts["Dante_GE@HdrPilot"] = "abc123geheim";
+
+        await _service.SyncNowAsync().WaitAsync(Wait, TestContext.Current.CancellationToken);
+
+        var status = _service.GetStatus();
+        Assert.False(status.AccountUnreadable);
+        Assert.Equal("Dante_GE@HdrPilot", status.AccountUser);
     }
 
     [Fact]

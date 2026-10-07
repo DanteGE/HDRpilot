@@ -149,7 +149,8 @@ HDRpilot das nicht; am Ende schaltet es HDR nur aus, wenn es vor dem Spiel aus w
 
 **Neustart-Puffer:** Endet ein Spiel weniger als 5 Minuten nach dem Start (typisch für Hänger oder Abstürze) und hat
 HDRpilot HDR dafür eingeschaltet, bleibt HDR 3 Minuten an statt nur die Nachlaufzeit. Startest du das Spiel in dieser
-Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es wieder ein). Läuft
+Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es bei Spielen mit
+„HDR automatisch“ wieder ein). Läuft
 beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30
 Minuten). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
 

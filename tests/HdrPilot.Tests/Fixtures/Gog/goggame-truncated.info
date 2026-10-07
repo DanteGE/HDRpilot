@@ -1,0 +1,12 @@
+{
+    "buildId": "50000000000000301",
+    "clientId": "50000000000000003",
+    "gameId": "1511366207",
+    "language": "English",
+    "name": "Showgunners",
+    "playTasks": [
+        {
+            "category": "launcher",
+            "isPrimary": true,
+            "name": "Showgunners",
+            "path": "Showgun

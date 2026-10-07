@@ -1,0 +1,16 @@
+{
+    "buildId": "50000000000000201",
+    "clientId": "50000000000000001",
+    "gameId": "1256837418",
+    "language": "German",
+    "languages": [
+        "de-DE"
+    ],
+    "name": "Cyberpunk 2077: Phantom Liberty",
+    "osBitness": [
+        "64"
+    ],
+    "playTasks": [],
+    "rootGameId": "1423049311",
+    "version": 1
+}

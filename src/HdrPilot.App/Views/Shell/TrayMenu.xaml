@@ -1,0 +1,72 @@
+<ContextMenu x:Class="HdrPilot.App.Views.Shell.TrayMenu"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:res="clr-namespace:HdrPilot.App.Resources"
+             xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Shell"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:TrayMenuViewModel}"
+             Style="{StaticResource Hp.Shell.TrayMenu}"
+             AutomationProperties.AutomationId="TrayMenu"
+             AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuName}">
+    <ContextMenu.Resources>
+        <Style TargetType="MenuItem" BasedOn="{StaticResource Hp.Shell.TrayMenuItem}" />
+        <Style x:Key="MenuGlyph" TargetType="TextBlock" BasedOn="{StaticResource Hp.Shell.Glyph}">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
+    </ContextMenu.Resources>
+
+    <MenuItem AutomationProperties.AutomationId="TrayToggleHdr"
+              AutomationProperties.Name="{Binding ToggleHdrText}"
+              Header="{Binding ToggleHdrText}"
+              Command="{Binding ToggleHdrCommand}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE706;" />
+        </MenuItem.Icon>
+    </MenuItem>
+    <MenuItem AutomationProperties.AutomationId="TrayPause"
+              AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuPause}"
+              Header="{x:Static res:ShellStrings.TrayMenuPause}"
+              IsCheckable="True"
+              IsChecked="{Binding IsPaused, Mode=TwoWay}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE769;" />
+        </MenuItem.Icon>
+    </MenuItem>
+    <Separator Style="{StaticResource Hp.Shell.TrayMenuSeparator}" />
+    <MenuItem AutomationProperties.AutomationId="TrayOpen"
+              AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuOpen}"
+              Header="{x:Static res:ShellStrings.TrayMenuOpen}"
+              FontWeight="SemiBold"
+              Command="{Binding OpenCommand}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7FC;" />
+        </MenuItem.Icon>
+    </MenuItem>
+    <MenuItem AutomationProperties.AutomationId="TraySettings"
+              AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuSettings}"
+              Header="{x:Static res:ShellStrings.TrayMenuSettings}"
+              Command="{Binding SettingsCommand}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE713;" />
+        </MenuItem.Icon>
+    </MenuItem>
+    <MenuItem AutomationProperties.AutomationId="TrayLogs"
+              AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuLogs}"
+              Header="{x:Static res:ShellStrings.TrayMenuLogs}"
+              Command="{Binding LogsCommand}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE838;" />
+        </MenuItem.Icon>
+    </MenuItem>
+    <Separator Style="{StaticResource Hp.Shell.TrayMenuSeparator}" />
+    <MenuItem AutomationProperties.AutomationId="TrayExit"
+              AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuExit}"
+              Header="{x:Static res:ShellStrings.TrayMenuExit}"
+              Command="{Binding ExitCommand}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7E8;" />
+        </MenuItem.Icon>
+    </MenuItem>
+</ContextMenu>

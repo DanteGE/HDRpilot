@@ -117,6 +117,19 @@ public sealed class AddGameViewModelTests
     }
 
     [Fact]
+    public void Unreadable_folder_shows_a_message_instead_of_failing()
+    {
+        _files.AddDirectory(@"D:\Geschützt");
+        var vm = new AddGameViewModel(new DenyingFileSystem(_files, @"D:\Geschützt"), _env, _dialogs) { Path = @"D:\Geschützt" };
+
+        Assert.False(vm.TryConfirm());
+
+        Assert.True(vm.HasError);
+        Assert.Contains("Zugriff verweigert", vm.Error, StringComparison.Ordinal);
+        Assert.Null(vm.Result);
+    }
+
+    [Fact]
     public void Browse_buttons_fill_the_path_and_commands_close_the_dialog()
     {
         _files.AddFile(@"D:\Spielordner\Hades\Hades.exe", "x");

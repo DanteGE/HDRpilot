@@ -26,7 +26,7 @@
             <Button x:Name="CancelButton" Style="{StaticResource Hp.GhostButton}" IsCancel="True" MinWidth="110"
                     Content="{x:Static res:LibraryStrings.Dialog_Cancel}"
                     AutomationProperties.AutomationId="ConfirmCancel" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}" />
-            <Button x:Name="ConfirmButton" Style="{StaticResource Hp.AccentButton}" Margin="10,0,0,0" MinWidth="130" IsDefault="True" Click="OnConfirm"
+            <Button x:Name="ConfirmButton" Style="{StaticResource Lib.AccentButton}" Margin="10,0,0,0" MinWidth="130" IsDefault="True" Click="OnConfirm"
                     AutomationProperties.AutomationId="ConfirmOk" />
         </StackPanel>
     </StackPanel>

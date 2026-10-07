@@ -25,6 +25,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     public static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(150);
     public static readonly TimeSpan StatusDuration = TimeSpan.FromSeconds(5);
 
+    /// <summary>„Angesehen“ wird gesammelt gespeichert (Blättern mit den Pfeiltasten schreibt nicht je Spiel).</summary>
+    public static readonly TimeSpan SeenDelay = TimeSpan.FromMilliseconds(400);
+
     private static readonly StringComparer NameOrder = StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true);
     private static readonly CompareInfo SearchCompare = CultureInfo.InvariantCulture.CompareInfo;
 
@@ -33,6 +36,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     private readonly Dictionary<string, GameItemViewModel> _byKey = new(StringComparer.OrdinalIgnoreCase);
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SourceFilterOption _allSources;
+    private readonly HashSet<string> _seenPending = new(StringComparer.OrdinalIgnoreCase);
+    private IDisposable? _seenDelay;
 
     private AppConfig? _syncedConfig;
     private int _pendingWrites;
@@ -205,8 +210,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         get => _selectedGame;
         set
         {
-            // Beim Neufiltern setzt die Liste die Auswahl kurz auf null: Details bleiben stehen.
-            if ((value is null && _refreshing) || ReferenceEquals(value, _selectedGame))
+            // Beim Neufiltern ändert die Liste die Auswahl nur als Nebenwirkung (null, oder bei einer mit dem
+            // aktuellen Element verbundenen Liste das erste Element): Details bleiben stehen, nichts gilt als angesehen.
+            if (_refreshing || ReferenceEquals(value, _selectedGame))
             {
                 return;
             }
@@ -461,6 +467,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var targetsChanged = _syncedConfig is { } previous
+            && !previous.Settings.TargetDisplays.SequenceEqual(cfg.Settings.TargetDisplays, StringComparer.OrdinalIgnoreCase);
         _syncedConfig = cfg;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var added = new List<GameItemViewModel>();
@@ -482,6 +490,11 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
                 item = new GameItemViewModel(this, game);
                 _byKey[game.Key] = item;
                 added.Add(item);
+            }
+
+            if (_seenPending.Contains(game.Key))
+            {
+                item.IsNew = false; // „Angesehen“ ist schon vorgemerkt, nur noch nicht gespeichert.
             }
         }
 
@@ -539,7 +552,15 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _details?.Apply(_selectedGame.Config);
         }
 
-        ApplyRunningFlags();
+        if (targetsChanged)
+        {
+            RefreshHdrState(); // Zielbildschirme in den Einstellungen geändert: Status und „Globale Einstellung (…)“ nachziehen
+        }
+        else
+        {
+            ApplyRunningFlags();
+        }
+
         UpdateCounts();
 
         var signature = CandidateSignature(cfg);
@@ -592,6 +613,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             return;
         }
 
+        FlushSeen(); // Vorgemerktes „angesehen“ nicht verlieren.
         _disposed = true;
         _lifetime.Cancel();
         _searchDelay?.Dispose();
@@ -678,6 +700,11 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     internal void ShowStatus(string message, StatusKind kind)
     {
+        if (_disposed)
+        {
+            return; // Fenster zu: kein Zeitgeber mehr anlegen.
+        }
+
         StatusKind = kind;
         StatusMessage = message;
         _statusDelay?.Dispose();
@@ -866,15 +893,55 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         HasCandidates = Candidates.Count > 0;
     }
 
+    /// <summary>
+    /// Ansehen setzt „neu“ sofort in der Liste zurück; gespeichert wird gesammelt nach <see cref="SeenDelay"/>
+    /// (oder vor dem nächsten Schreibvorgang bzw. beim Schließen). Bis dahin zählt es als ausstehender
+    /// Schreibvorgang, damit ein Abgleich die Markierung nicht kurz zurückholt.
+    /// </summary>
     private void MarkSeen(GameItemViewModel item)
     {
         item.IsNew = false;
         UpdateCounts();
-        _ = WriteGameAsync(item.Key, g => g.IsNew = false);
+        if (_seenPending.Add(item.Key) && _seenPending.Count == 1)
+        {
+            _pendingWrites++;
+        }
+
+        _seenDelay?.Dispose();
+        _seenDelay = _context.Ui.Delay(SeenDelay, FlushSeen);
+    }
+
+    private void FlushSeen()
+    {
+        _seenDelay?.Dispose();
+        _seenDelay = null;
+        if (_seenPending.Count == 0)
+        {
+            return;
+        }
+
+        var keys = _seenPending.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _seenPending.Clear();
+        _pendingWrites--;
+        _ = WriteAsync(c =>
+        {
+            foreach (var g in c.Games)
+            {
+                if (keys.Contains(g.Key))
+                {
+                    g.IsNew = false;
+                }
+            }
+        });
     }
 
     private async Task<bool> WriteAsync(Action<AppConfig> mutate)
     {
+        if (_seenPending.Count > 0)
+        {
+            FlushSeen(); // in Reihenfolge vor dieser Änderung speichern
+        }
+
         _pendingWrites++;
         var ok = true;
         try
@@ -1045,11 +1112,17 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         GameEntry entry;
         try
         {
+            if (!_context.FileSystem.DirectoryExists(candidate.Folder))
+            {
+                ShowStatus(LibraryStrings.AddGame_ErrorNotFound, StatusKind.Error); // inzwischen gelöscht oder verschoben
+                return;
+            }
+
             entry = ManualGames.Create(_context.FileSystem, candidate.Folder, candidate.Name);
         }
-        catch (ArgumentException ex)
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
         {
-            ShowStatus(ex.Message, StatusKind.Error);
+            ShowStatus(LibraryText.Format(LibraryStrings.Error_Generic, ex.Message), StatusKind.Error);
             return;
         }
 

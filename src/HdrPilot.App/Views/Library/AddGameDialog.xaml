@@ -76,7 +76,7 @@
             <Button Style="{StaticResource Hp.GhostButton}" MinWidth="110" IsCancel="True"
                     Content="{x:Static res:LibraryStrings.Dialog_Cancel}"
                     AutomationProperties.AutomationId="AddGameCancel" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}" />
-            <Button Style="{StaticResource Hp.AccentButton}" Margin="10,0,0,0" MinWidth="140" IsDefault="True" Command="{Binding ConfirmCommand}"
+            <Button Style="{StaticResource Lib.AccentButton}" Margin="10,0,0,0" MinWidth="140" IsDefault="True" Command="{Binding ConfirmCommand}"
                     AutomationProperties.AutomationId="AddGameConfirm" AutomationProperties.Name="{x:Static res:LibraryStrings.AddGame_Confirm}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE710;" FontSize="13" Margin="0,0,8,0" />

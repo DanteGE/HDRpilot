@@ -108,6 +108,85 @@ public sealed class GameIconServiceTests
     }
 
     [Fact]
+    public async Task Latest_requests_load_first_with_limited_parallelism()
+    {
+        // Liste scrollt: zuletzt angefragte (gerade sichtbare) Zeilen zuerst, nie mehr als maxParallel gleichzeitig.
+        var games = Enumerable.Range(1, 4).Select(i =>
+        {
+            Exe($@"D:\G{i}\Game{i}.exe", 10);
+            var g = Game($@"D:\G{i}");
+            g.SourceId = i.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return g;
+        }).ToList();
+        using var gate = new ManualResetEventSlim(false);
+        var order = new List<string>();
+        int running = 0, maxRunning = 0;
+        var image = new DrawingImage();
+        image.Freeze();
+        var service = new GameIconService(_files, fileLength: p => _files.ReadAllBytes(p).Length, maxParallel: 1, extract: p =>
+        {
+            var now = Interlocked.Increment(ref running);
+            lock (order)
+            {
+                maxRunning = Math.Max(maxRunning, now);
+            }
+
+            if (p.EndsWith("Game1.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                gate.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            }
+
+            lock (order)
+            {
+                order.Add(Path.GetFileName(p));
+            }
+
+            Interlocked.Decrement(ref running);
+            return image;
+        });
+
+        var first = service.GetIconAsync(games[0], TestContext.Current.CancellationToken);
+        Assert.True(SpinWait.SpinUntil(() => Volatile.Read(ref running) == 1, TimeSpan.FromSeconds(5)));
+        var rest = games.Skip(1).Select(g => service.GetIconAsync(g, TestContext.Current.CancellationToken)).ToList();
+        gate.Set();
+        await Task.WhenAll([first, .. rest]);
+
+        Assert.Equal(["Game1.exe", "Game4.exe", "Game3.exe", "Game2.exe"], order);
+        Assert.Equal(1, maxRunning);
+    }
+
+    [Fact]
+    public async Task Clearing_the_cache_releases_queued_requests_and_drops_late_results()
+    {
+        Exe(@"D:\A\A.exe", 10);
+        Exe(@"D:\B\B.exe", 10);
+        var a = Game(@"D:\A");
+        var b = Game(@"D:\B");
+        b.SourceId = "2";
+        using var gate = new ManualResetEventSlim(false);
+        using var started = new ManualResetEventSlim(false);
+        var image = new DrawingImage();
+        image.Freeze();
+        var service = new GameIconService(_files, fileLength: p => _files.ReadAllBytes(p).Length, maxParallel: 1, extract: p =>
+        {
+            started.Set();
+            gate.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            return image;
+        });
+
+        var loadingA = service.GetIconAsync(a, TestContext.Current.CancellationToken);
+        Assert.True(started.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        var queuedB = service.GetIconAsync(b, TestContext.Current.CancellationToken);
+
+        service.ClearCache(); // Fenster geschlossen
+        Assert.Null(await queuedB.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+
+        gate.Set();
+        Assert.Same(image, await loadingA.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.Null(service.GetCachedIcon(a)); // spätes Ergebnis bleibt nicht im Speicher
+    }
+
+    [Fact]
     public async Task Games_without_any_exe_get_no_icon()
     {
         _files.AddDirectory(@"D:\Leer");

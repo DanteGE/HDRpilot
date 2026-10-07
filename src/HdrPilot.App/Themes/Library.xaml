@@ -17,7 +17,12 @@
         <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale" />
     </Style>
 
-    <Style x:Key="Lib.SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Overline}">
+    <!-- Kleine Überschrift in Großbuchstaben: wie Hp.Text.Overline, aber kontrastreicher (lesbar in hell und dunkel) -->
+    <Style x:Key="Lib.Overline" TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Overline}">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+    </Style>
+
+    <Style x:Key="Lib.SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Lib.Overline}">
         <Setter Property="Margin" Value="0,0,0,10" />
     </Style>
 
@@ -120,8 +125,8 @@
                         <Border x:Name="FocusFrame" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                         <TextBlock x:Name="SearchGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE721;" Margin="14,0,0,0" HorizontalAlignment="Left"
                                    Foreground="{DynamicResource Hp.Brush.TextMuted}" />
-                        <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}" Margin="39,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
-                                   Foreground="{DynamicResource Hp.Brush.TextMuted}" Visibility="Collapsed" />
+                        <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}" Margin="39,0,12,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextMuted}" Visibility="Collapsed" />
                         <ScrollViewer x:Name="PART_ContentHost" Style="{x:Null}" VerticalAlignment="Center" Focusable="False"
                                       HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
                     </Grid>
@@ -204,6 +209,11 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- Eintrag im Quellen-Filter: Name für UI-Automation mit aktueller Anzahl („Steam (631)“) -->
+    <Style x:Key="Lib.SourceComboBoxItem" TargetType="ComboBoxItem" BasedOn="{StaticResource Lib.ComboBoxItem}">
+        <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}" />
     </Style>
 
     <Style x:Key="Lib.ComboBox" TargetType="ComboBox">
@@ -381,6 +391,47 @@
         </Setter>
     </Style>
 
+    <!-- Kopf eines aufklappbaren Abschnitts: die ganze Zeile ist klickbar, Pfeil rechts (eingeschaltet = offen) -->
+    <Style x:Key="Lib.SectionHeaderToggle" TargetType="ToggleButton">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Body" CornerRadius="10" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="8,6">
+                        <DockPanel>
+                            <TextBlock x:Name="Chevron" DockPanel.Dock="Right" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="11" Margin="12,0,2,0"
+                                       Foreground="{TemplateBinding Foreground}" RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Pause-Chip: eingeschaltet in Warnfarbe -->
     <Style x:Key="Lib.PauseChip" TargetType="ToggleButton" BasedOn="{StaticResource Lib.Chip}">
         <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Warning}" />
@@ -389,6 +440,85 @@
                 <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Warning}" />
             </Trigger>
         </Style.Triggers>
+    </Style>
+
+    <!--
+        Akzent-Schaltfläche wie Hp.AccentButton (Verlauf, Leuchten beim Überfahren), aber Anheben und Einblenden des
+        Leuchtens nur, wenn Windows Animationen erlaubt; sonst leuchtet sie beim Überfahren ohne Bewegung.
+    -->
+    <Style x:Key="Lib.AccentButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Padding" Value="18,9" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <ScaleTransform ScaleX="1" ScaleY="1" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Glow" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0">
+                            <Border.Effect>
+                                <BlurEffect Radius="14" />
+                            </Border.Effect>
+                        </Border>
+                        <Border x:Name="Body" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.Text}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0.75" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                            <MultiDataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.25" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.25" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.ExitActions>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Glow" Property="Opacity" Value="0.6" />
+                        </MultiDataTrigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Kleinere Schaltflächen -->

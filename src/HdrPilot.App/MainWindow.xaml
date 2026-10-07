@@ -75,7 +75,7 @@
                 <TextBlock x:Name="Glyph" DockPanel.Dock="Left" Style="{StaticResource Lib.Glyph}" Text="&#xE7F4;" Margin="0,0,10,0"
                            Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                 <TextBlock x:Name="Detail" DockPanel.Dock="Right" Text="{Binding Detail}" FontSize="11.5" Margin="8,0,0,0" VerticalAlignment="Center"
-                           Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                           Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </DockPanel>
             <DataTemplate.Triggers>
@@ -108,7 +108,8 @@
                                    Foreground="{DynamicResource Hp.Brush.Text}" ToolTip="{Binding Path}" />
                     </DockPanel>
                     <TextBlock Text="{Binding Folder}" FontSize="11.5" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource Hp.Brush.TextMuted}" ToolTip="{Binding Path}" />
+                               Foreground="{DynamicResource Hp.Brush.TextSecondary}" ToolTip="{Binding Path}"
+                               Visibility="{Binding Folder, Converter={StaticResource Lib.BoolToVisibility}}" />
                 </StackPanel>
             </Grid>
             <DataTemplate.Triggers>
@@ -136,7 +137,7 @@
                 </Grid>
                 <StackPanel Grid.Column="1" Margin="12,0,10,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.Text}" />
-                    <TextBlock Text="{Binding DetailText}" FontSize="11.5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextMuted}" ToolTip="{Binding Folder}" />
+                    <TextBlock Text="{Binding DetailText}" FontSize="11.5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextSecondary}" ToolTip="{Binding Folder}" />
                 </StackPanel>
                 <Button Grid.Column="2" Style="{StaticResource Lib.SmallGhostButton}" VerticalAlignment="Center"
                         Command="{Binding DataContext.AddCandidateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"
@@ -154,8 +155,8 @@
         <DataTemplate x:Key="ScanErrorTemplate" DataType="{x:Type vm:ScanErrorItem}">
             <StackPanel Margin="0,0,0,6">
                 <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="13" Foreground="{DynamicResource Hp.Brush.Text}" />
-                <TextBlock Text="{Binding Path}" FontSize="11.5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextMuted}"
-                           Visibility="{Binding HasPath, Converter={StaticResource Lib.BoolToVisibility}}" />
+                <TextBlock Text="{Binding Path}" FontSize="11.5" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
+                           ToolTip="{Binding Path}" Visibility="{Binding HasPath, Converter={StaticResource Lib.BoolToVisibility}}" />
             </StackPanel>
         </DataTemplate>
     </infra:ChromeWindow.Resources>
@@ -232,7 +233,7 @@
                                 </Ellipse>
                             </Grid>
                             <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource Hp.Text.Overline}" Text="{x:Static res:LibraryStrings.Hdr_Overline}" />
+                                <TextBlock Style="{StaticResource Lib.Overline}" Text="{x:Static res:LibraryStrings.Hdr_Overline}" />
                                 <TextBlock Text="{Binding HdrStatusText}" FontSize="14" FontWeight="SemiBold" Margin="0,1,0,0" MaxWidth="320" TextTrimming="CharacterEllipsis"
                                            Foreground="{DynamicResource Hp.Brush.Text}" ToolTip="{Binding HdrStatusText}"
                                            AutomationProperties.AutomationId="HdrStatus" />
@@ -302,6 +303,7 @@
             </Grid>
             <ComboBox Grid.Column="1" Width="196" Margin="10,0,0,0" Style="{StaticResource Lib.ComboBox}"
                       ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ItemTemplate="{StaticResource SourceOptionTemplate}"
+                      ItemContainerStyle="{StaticResource Lib.SourceComboBoxItem}"
                       AutomationProperties.AutomationId="SourceFilter" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_SourceName}" />
             <ToggleButton Grid.Column="2" Margin="10,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlySelected}"
                           AutomationProperties.AutomationId="OnlySelectedToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlySelectedName}"
@@ -319,7 +321,7 @@
                     <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyNew}" />
                 </StackPanel>
             </ToggleButton>
-            <Button Grid.Column="4" Margin="18,0,0,0" Style="{StaticResource Lib.ToolbarIconButton}" Content="&#xE890;" Command="{Binding MarkAllSeenCommand}"
+            <Button x:Name="MarkAllSeenButton" Grid.Column="4" Margin="18,0,0,0" Style="{StaticResource Lib.ToolbarIconButton}" Content="&#xE890;" Command="{Binding MarkAllSeenCommand}"
                     AutomationProperties.AutomationId="MarkAllSeenButton" AutomationProperties.Name="{x:Static res:LibraryStrings.MarkAllSeen_Name}"
                     ToolTip="{x:Static res:LibraryStrings.MarkAllSeen_Name}" ToolTipService.ShowOnDisabled="True" />
             <Button Grid.Column="5" Margin="8,0,0,0" Style="{StaticResource Lib.ToolbarButton}" Command="{Binding RescanCommand}"
@@ -331,7 +333,8 @@
                             <RotateTransform />
                         </TextBlock.RenderTransform>
                     </TextBlock>
-                    <TextBlock>
+                    <!-- Schmales Fenster: nur das Symbol (Name und Tooltip bleiben) -->
+                    <TextBlock x:Name="RescanText">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Text" Value="{x:Static res:LibraryStrings.Rescan_Button}" />
@@ -345,7 +348,7 @@
                     </TextBlock>
                 </StackPanel>
             </Button>
-            <Button Grid.Column="6" Margin="8,0,0,0" Style="{StaticResource Hp.AccentButton}" Height="40" Padding="16,0" Command="{Binding AddGameCommand}"
+            <Button Grid.Column="6" Margin="8,0,0,0" Style="{StaticResource Lib.AccentButton}" Height="40" Padding="16,0" Command="{Binding AddGameCommand}"
                     AutomationProperties.AutomationId="AddGameButton" AutomationProperties.Name="{x:Static res:LibraryStrings.AddGame_Button}">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE710;" FontSize="13" Margin="0,0,8,0" />
@@ -358,7 +361,10 @@
         <Expander x:Name="ScanErrorsExpander" Grid.Row="2" Margin="0,14,0,0" Style="{StaticResource Lib.WarningExpander}" Header="{Binding ScanErrorsHeader}"
                   Visibility="{Binding HasScanErrors, Converter={StaticResource Lib.BoolToVisibility}}"
                   AutomationProperties.AutomationId="ScanErrors" AutomationProperties.Name="{Binding ScanErrorsHeader}">
-            <ItemsControl ItemsSource="{Binding ScanErrors}" ItemTemplate="{StaticResource ScanErrorTemplate}" />
+            <!-- Begrenzte Höhe: viele Fehler dürfen die Spieleliste nicht verdrängen -->
+            <ScrollViewer MaxHeight="116" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <ItemsControl ItemsSource="{Binding ScanErrors}" ItemTemplate="{StaticResource ScanErrorTemplate}" Margin="0,0,8,0" />
+            </ScrollViewer>
         </Expander>
 
         <Grid Grid.Row="3" Margin="0,16,0,0">
@@ -375,40 +381,47 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Style="{StaticResource Hp.Card}" Padding="14,12,10,10" Margin="0,0,0,12"
+                <!-- Vorschläge: ganze Kopfzeile klappt auf und zu; offen höchstens zwei Zeilen hoch, damit die Spieleliste Platz behält -->
+                <Border Style="{StaticResource Hp.Card}" Padding="6" Margin="0,0,0,12"
                         Visibility="{Binding HasCandidates, Converter={StaticResource Lib.BoolToVisibility}}">
                     <StackPanel>
-                        <DockPanel Margin="2,0,0,0">
-                            <ToggleButton x:Name="CandidatesToggle" DockPanel.Dock="Right" Style="{StaticResource Lib.CollapseToggle}" IsChecked="True" Margin="8,0,0,0"
-                                          VerticalAlignment="Center"
-                                          AutomationProperties.AutomationId="CandidatesToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Candidates_Toggle}"
-                                          ToolTip="{x:Static res:LibraryStrings.Candidates_Toggle}" />
-                            <Border DockPanel.Dock="Right" CornerRadius="8" Padding="8,1,8,2" Background="{DynamicResource Hp.Brush.Accent}" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CandidatesCountText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" />
-                            </Border>
-                            <StackPanel>
-                                <TextBlock Text="{x:Static res:LibraryStrings.Candidates_Title}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource Hp.Brush.Text}" />
-                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Candidates_Hint}" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </DockPanel>
-                        <ListBox Style="{StaticResource Lib.ListBox}" MaxHeight="168" Margin="0,8,0,0" ItemsSource="{Binding Candidates}"
+                        <ToggleButton x:Name="CandidatesToggle" Style="{StaticResource Lib.SectionHeaderToggle}" IsChecked="True"
+                                      AutomationProperties.AutomationId="CandidatesToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Candidates_Toggle}"
+                                      ToolTip="{x:Static res:LibraryStrings.Candidates_Toggle}">
+                            <DockPanel>
+                                <Grid Width="30" Height="30" Margin="0,0,12,0">
+                                    <Border CornerRadius="9" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0.16" />
+                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE8B7;" FontSize="14" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.AccentSolid}" />
+                                </Grid>
+                                <Border DockPanel.Dock="Right" CornerRadius="8" Padding="8,1,8,2" Margin="10,0,0,0" Background="{DynamicResource Hp.Brush.Accent}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CandidatesCountText}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" />
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Static res:LibraryStrings.Candidates_Title}" FontWeight="SemiBold" FontSize="14" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                    <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Candidates_Hint}" Margin="0,2,0,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DockPanel>
+                        </ToggleButton>
+                        <ListBox x:Name="CandidateList" Style="{StaticResource Lib.ListBox}" MaxHeight="122" Margin="8,4,4,2" ItemsSource="{Binding Candidates}"
                                  Visibility="{Binding IsChecked, ElementName=CandidatesToggle, Converter={StaticResource Lib.BoolToVisibility}}"
                                  ItemContainerStyle="{StaticResource Lib.PlainRow}" ItemTemplate="{StaticResource CandidateTemplate}"
                                  AutomationProperties.AutomationId="CandidateList" AutomationProperties.Name="{x:Static res:LibraryStrings.Candidates_Title}" />
                     </StackPanel>
                 </Border>
 
-                <Border x:Name="ListCard" Grid.Row="1" Style="{StaticResource Hp.Card}" Padding="8,12,4,8">
+                <Border x:Name="ListCard" Grid.Row="1" Style="{StaticResource Hp.Card}" Padding="8,12,4,8" MinHeight="150">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
                         <DockPanel Margin="12,0,26,10">
-                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Hp.Text.Overline}" Text="{x:Static res:LibraryStrings.List_HdrAutoColumn}" VerticalAlignment="Center" />
-                            <TextBlock Style="{StaticResource Hp.Text.Overline}" Text="{Binding ResultText}" VerticalAlignment="Center" />
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource Lib.Overline}" Text="{x:Static res:LibraryStrings.List_HdrAutoColumn}" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource Lib.Overline}" Text="{Binding ResultText}" VerticalAlignment="Center" />
                         </DockPanel>
+                        <!-- Nicht mit dem aktuellen Element der Sicht verbinden: Neufiltern darf die Auswahl nicht verschieben. -->
                         <ListBox x:Name="GameList" Grid.Row="1" Style="{StaticResource Lib.ListBox}" Padding="4,0,0,0"
+                                 IsSynchronizedWithCurrentItem="False"
                                  ItemsSource="{Binding GamesView}" SelectedItem="{Binding SelectedGame}"
                                  ItemContainerStyle="{StaticResource Lib.GameRow}" ItemTemplate="{StaticResource GameRowTemplate}"
                                  AutomationProperties.AutomationId="GameList" AutomationProperties.Name="{x:Static res:LibraryStrings.List_Name}" />
@@ -609,7 +622,7 @@
                                 <Border Style="{StaticResource Lib.Section}">
                                     <StackPanel>
                                         <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionLaunch}" />
-                                        <Button Style="{StaticResource Hp.AccentButton}" HorizontalAlignment="Stretch" Command="{Binding LaunchCommand}"
+                                        <Button Style="{StaticResource Lib.AccentButton}" HorizontalAlignment="Stretch" Command="{Binding LaunchCommand}"
                                                 AutomationProperties.AutomationId="LaunchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Launch_Button}">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE768;" FontSize="13" Margin="0,0,9,0" />
@@ -655,7 +668,7 @@
 
                                 <!-- Installationsordner -->
                                 <StackPanel Margin="2,0,2,8" Visibility="{Binding HasInstallDir, Converter={StaticResource Lib.BoolToVisibility}}">
-                                    <TextBlock Style="{StaticResource Hp.Text.Overline}" Text="{x:Static res:LibraryStrings.Details_InstallDir}" Margin="0,0,0,4" />
+                                    <TextBlock Style="{StaticResource Lib.Overline}" Text="{x:Static res:LibraryStrings.Details_InstallDir}" Margin="0,0,0,4" />
                                     <TextBlock Text="{Binding InstallDir}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                                 </StackPanel>
 

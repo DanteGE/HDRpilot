@@ -25,11 +25,15 @@ public partial class MainWindow : ChromeWindow
     private Storyboard? _spin;
     private bool _pulseRunning;
     private bool _spinRunning;
+    private bool _compactToolbar;
+    private double _toolbarNeeded;
 
     public MainWindow()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        SizeChanged += (_, _) => UpdateToolbarDensity();
+        DetailsArea.SizeChanged += (_, e) => FitCandidates(e.NewSize.Height);
         Activated += OnActivityChanged;
         Deactivated += OnActivityChanged;
         StateChanged += OnActivityChanged;
@@ -139,9 +143,74 @@ public partial class MainWindow : ChromeWindow
         {
             if (GameList.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem row)
             {
+                CenterInList(row);
                 row.Focus();
             }
         });
+    }
+
+    /// <summary>
+    /// Holt die Zeile in die Mitte der Liste (ScrollIntoView legt sie an den Rand, wo die Hinweiszeile sie verdecken
+    /// würde). Die Liste scrollt pixelweise, der Versatz ist also in geräteunabhängigen Pixeln.
+    /// </summary>
+    private void CenterInList(ListBoxItem row)
+    {
+        if (GameList.Template?.FindName("ScrollHost", GameList) is not ScrollViewer scroll || !row.IsDescendantOf(scroll))
+        {
+            return;
+        }
+
+        var top = row.TransformToAncestor(scroll).Transform(new Point(0, 0)).Y;
+        var target = scroll.VerticalOffset + top - ((scroll.ViewportHeight - row.ActualHeight) / 2);
+        scroll.ScrollToVerticalOffset(Math.Clamp(target, 0, scroll.ScrollableHeight));
+    }
+
+    /// <summary>
+    /// Vorschläge dürfen die Spieleliste nicht verdrängen: Ihre Liste ist höchstens zwei Zeilen hoch und schrumpft in
+    /// niedrigen Fenstern bis auf eine Zeile, damit für die Spiele etwa 260 px bleiben. Gemessen an der Höhe des
+    /// Detailbereichs (gleiche Zeile, wird anders als die Liste beim Überlaufen nicht größer gemeldet).
+    /// </summary>
+    private void FitCandidates(double rowHeight)
+    {
+        const double headerAndMargins = 84;
+        const double keepForGames = 260;
+        CandidateList.MaxHeight = Math.Clamp(rowHeight - headerAndMargins - keepForGames, 56, 122);
+    }
+
+    /// <summary>
+    /// Schmales Fenster: „Neu einlesen“ zeigt nur das Symbol, damit Suche und „Spiel hinzufügen“ Platz behalten.
+    /// Die nötige Breite wird im normalen Zustand gemessen (passt sich an andere Sprachen an).
+    /// </summary>
+    private void UpdateToolbarDensity()
+    {
+        if (!_compactToolbar)
+        {
+            var needed = ToolbarArea.ColumnDefinitions[0].MinWidth;
+            foreach (UIElement child in ToolbarArea.Children)
+            {
+                if (Grid.GetColumn(child) > 0)
+                {
+                    needed += child.DesiredSize.Width; // mit Außenabstand
+                }
+            }
+
+            _toolbarNeeded = needed;
+        }
+
+        // Nicht ToolbarArea.ActualWidth: Ein überlaufendes Grid meldet seine ungekürzte Wunschbreite.
+        // Verfügbar ist die Fensterbreite ohne Rahmen (maximiert: 7 px je Seite) und ohne Außenabstand des Inhalts.
+        var frame = WindowState == WindowState.Maximized ? 14 : 2;
+        var available = ActualWidth - frame - Root.Margin.Left - Root.Margin.Right;
+        var compact = available < _toolbarNeeded;
+        if (compact == _compactToolbar)
+        {
+            return;
+        }
+
+        _compactToolbar = compact;
+        RescanText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        RescanGlyph.Margin = compact ? new Thickness(0) : new Thickness(0, 0, 8, 0);
+        MarkAllSeenButton.Margin = compact ? new Thickness(8, 0, 0, 0) : new Thickness(18, 0, 0, 0);
     }
 
     /// <summary>Zustandswechsel des HDR-Status: Tönung weich ein- bzw. ausblenden.</summary>

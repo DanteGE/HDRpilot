@@ -113,12 +113,105 @@ public sealed class LibraryViewModelTests
 
         vm.SelectedGame = pokemon;
 
-        Assert.False(context.Config.FindGame("Steam:123")!.IsNew);
         Assert.False(pokemon.IsNew);
         Assert.NotNull(vm.Details);
         Assert.Same(pokemon, vm.Details!.Item);
         Assert.Equal(2, vm.NewCount);
+
+        context.Dispatcher.RunDelayed();
+        Assert.False(context.Config.FindGame("Steam:123")!.IsNew);
     });
+
+    [Fact]
+    public void Browsing_new_games_saves_seen_marks_in_one_write() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        var updates = context.Updates;
+
+        // Mit den Pfeiltasten durch drei neue Spiele: keine Schreibvorgänge je Zeile.
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Steam:1174180");
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Steam:123");
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Epic:Crow");
+        Assert.Equal(updates, context.Updates);
+        Assert.Equal(0, vm.NewCount);
+        Assert.Equal(1, context.Dispatcher.PendingDelays);
+
+        // Ein Abgleich mit einer Änderung von außen (etwa Einlesen oder Automatik) holt die Markierung nicht zurück.
+        context.ConfigService.Update(c => c.FindGame("Steam:1091500")!.LastPlayed = DateTimeOffset.UnixEpoch);
+        vm.SyncFromConfig();
+        Assert.All(vm.Games.Where(g => !g.IsManual && g.Key != "Steam:1091500"), g => Assert.False(g.IsNew));
+
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(updates + 1, context.Updates);
+        Assert.DoesNotContain(context.Config.Games, g => g.IsNew);
+        Assert.Equal(DateTimeOffset.UnixEpoch, vm.Games.Single(g => g.Key == "Steam:1091500").Config.LastPlayed); // danach abgeglichen
+    });
+
+    [Fact]
+    public void Pending_seen_marks_are_saved_before_other_changes_and_on_close() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Steam:123");
+        vm.Games.Single(g => g.Key == "Steam:1091500").HdrAuto = false; // anderer Schreibvorgang: Markierung zuerst
+        Assert.False(context.Config.FindGame("Steam:123")!.IsNew);
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Epic:Crow");
+        vm.Dispose();
+        Assert.False(context.Config.FindGame("Epic:Crow")!.IsNew);
+    });
+
+    [Fact]
+    public void Refiltering_never_moves_the_selection_or_marks_games_seen() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        var cyberpunk = vm.Games.Single(g => g.Key == "Steam:1091500");
+        var pokemon = vm.Games.Single(g => g.Key == "Steam:123");
+
+        // Wie eine mit dem aktuellen Element verbundene Liste: Neufiltern setzt das aktuelle Element auf den ersten Treffer.
+        vm.GamesView.CurrentChanged += (_, _) => vm.SelectedGame = vm.GamesView.CurrentItem as GameItemViewModel;
+        vm.GamesView.MoveCurrentTo(cyberpunk);
+        Assert.Same(cyberpunk, vm.SelectedGame);
+
+        vm.SearchText = "pokemon";
+        context.Dispatcher.RunDelayed();
+
+        Assert.Same(pokemon, vm.GamesView.CurrentItem); // die Sicht ist weitergerückt …
+        Assert.Same(cyberpunk, vm.SelectedGame);         // … die Auswahl nicht
+        Assert.Same(cyberpunk, vm.Details?.Item);
+        Assert.True(pokemon.IsNew);
+        Assert.True(context.Config.FindGame("Steam:123")!.IsNew);
+    });
+
+    [Fact]
+    public void Main_window_list_does_not_follow_the_current_item_of_the_view()
+    {
+        // Eine ListCollectionView, die nicht die Standardsicht ist, würde die ListBox sonst mit dem aktuellen Element
+        // verbinden: Jede Suche wählte dann den ersten Treffer aus und markierte ihn als angesehen.
+        var xaml = System.Xml.Linq.XDocument.Load(SourceFiles.MainWindowXaml);
+        var list = xaml.Descendants().Single(e => (string?)e.Attribute(System.Xml.Linq.XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml")) == "GameList");
+
+        Assert.Equal("{Binding GamesView}", (string?)list.Attribute("ItemsSource"));
+        Assert.Equal("False", (string?)list.Attribute("IsSynchronizedWithCurrentItem"));
+    }
+
+    [Fact]
+    public void Source_option_names_follow_the_count()
+    {
+        var option = new SourceFilterOption(GameSource.Steam, 3);
+        var changed = new List<string?>();
+        option.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        option.Count = 4;
+
+        Assert.Equal("Steam (4)", option.AutomationName);
+        Assert.Contains(nameof(SourceFilterOption.AutomationName), changed);
+        Assert.Equal(LibraryStrings.Filter_All, new SourceFilterOption(null, 9).AutomationName);
+    }
 
     [Fact]
     public void Mark_all_seen_clears_every_new_flag() => Sta.Run(async () =>
@@ -144,6 +237,7 @@ public sealed class LibraryViewModelTests
         var context = SampleContext();
         using var vm = new LibraryViewModel(context, new FakeDialogs());
         vm.SelectedGame = vm.Games.Single(g => g.Key == "Epic:Crow");
+        context.Dispatcher.RunDelayed(); // „angesehen“ gespeichert
 
         // Etwa das Einlesen im Hintergrund: ein Spiel neu, eines weg, eines umbenannt.
         context.ConfigService.Update(c =>
@@ -213,6 +307,23 @@ public sealed class LibraryViewModelTests
     });
 
     [Fact]
+    public void Changed_target_displays_update_status_and_global_option() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        context.Hdr.Displays.Add(new FakeDisplay(FakeHdrController.Second, "Odyssey G7"));
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Steam:1091500");
+        Assert.Equal("HDR aus · MAG 341C OLED", vm.HdrStatusText);
+
+        // Etwa im Einstellungsfenster: anderer Zielbildschirm, ohne dass sich der HDR-Zustand ändert.
+        context.ConfigService.Update(c => c.Settings.TargetDisplays = [FakeHdrController.Second]);
+
+        Assert.Equal("HDR aus · Odyssey G7", vm.HdrStatusText);
+        Assert.Equal(LibraryText.Format(LibraryStrings.Display_GlobalWith, "Odyssey G7"), vm.Details!.Displays[0].Label);
+        Assert.True(vm.Details.SelectedDisplay!.IsGlobal);
+    });
+
+    [Fact]
     public void Pause_and_settings_go_to_the_app() => Sta.Run(() =>
     {
         var context = SampleContext();
@@ -274,11 +385,16 @@ public sealed class LibraryViewModelTests
         var vm = new LibraryViewModel(context, new FakeDialogs());
         Assert.Equal(1, context.ConfigChangedSubscribers);
         Assert.Equal(1, context.HdrStateChangedSubscribers);
+        Assert.Equal(1, context.ScanStateChangedSubscribers);
+        vm.SearchText = "x";
+        Assert.Equal(1, context.Dispatcher.PendingDelays);
 
         vm.Dispose();
 
         Assert.Equal(0, context.ConfigChangedSubscribers);
         Assert.Equal(0, context.HdrStateChangedSubscribers);
+        Assert.Equal(0, context.ScanStateChangedSubscribers);
+        Assert.Equal(0, context.Dispatcher.PendingDelays); // kein Zeitgeber hält das Fenster fest
         Assert.True(context.Disposed);
     });
 
@@ -325,6 +441,46 @@ public sealed class LibraryViewModelTests
         Assert.Equal(@"E:\Spiele\SWAT 4\Content\System\Swat4.exe", added.LaunchCommand);
         Assert.Equal(added.Key, vm.SelectedGame?.Key);
         Assert.Equal(["Hades"], vm.Candidates.Select(c => c.Name));
+    });
+
+    [Fact]
+    public void Candidate_in_a_very_wide_folder_needs_confirmation() => Sta.Run(async () =>
+    {
+        var context = new TestLibraryContext();
+        context.Env.Folders[Environment.SpecialFolder.ApplicationData] = @"C:\Users\Test\AppData\Roaming";
+        context.Files.AddFile(@"C:\Users\Test\AppData\Tool\tool.exe", "x");
+        context.ConfigService.Update(c => c.Settings.SearchFolders.Add(@"C:\Users\Test"));
+        var dialogs = new FakeDialogs();
+        using var vm = new LibraryViewModel(context, dialogs);
+        await vm.RefreshCandidatesAsync();
+        var appData = vm.Candidates.Single(c => c.Name == "AppData");
+
+        dialogs.Answers.Enqueue(false);
+        vm.AddCandidateCommand.Execute(appData);
+        await Task.Yield();
+        Assert.Equal(LibraryStrings.WideFolder_Title, Assert.Single(dialogs.Confirms).Title);
+        Assert.Empty(context.Config.Games);
+        Assert.Contains(appData, vm.Candidates); // bleibt als Vorschlag stehen
+
+        dialogs.Answers.Enqueue(true);
+        vm.AddCandidateCommand.Execute(appData);
+        await Task.Yield();
+        Assert.Equal(@"C:\Users\Test\AppData", Assert.Single(context.Config.Games).InstallDir);
+    });
+
+    [Fact]
+    public void Candidate_whose_folder_is_gone_reports_instead_of_adding() => Sta.Run(async () =>
+    {
+        var context = SampleContext();
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        var games = context.Config.Games.Count;
+
+        vm.AddCandidateCommand.Execute(new CandidateItemViewModel(new GameCandidate { Name = "Weg", Folder = @"E:\Spiele\Weg", Executables = [@"E:\Spiele\Weg\Weg.exe"] }));
+        await Task.Yield();
+
+        Assert.Equal(games, context.Config.Games.Count);
+        Assert.Equal(StatusKind.Error, vm.StatusKind);
+        Assert.Equal(LibraryStrings.AddGame_ErrorNotFound, vm.StatusMessage);
     });
 
     [Fact]

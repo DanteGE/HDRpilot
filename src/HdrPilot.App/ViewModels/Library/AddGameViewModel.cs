@@ -154,6 +154,12 @@ public sealed class AddGameViewModel : ObservableObject
             Error = ex.Message;
             return false;
         }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            // Ordner nicht lesbar (etwa geschützter Systemordner): Meldung im Dialog statt Absturz des Befehls.
+            Error = LibraryText.Format(LibraryStrings.Error_Generic, ex.Message);
+            return false;
+        }
     }
 
     /// <summary>

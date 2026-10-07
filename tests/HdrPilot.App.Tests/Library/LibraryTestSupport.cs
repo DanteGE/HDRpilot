@@ -98,6 +98,54 @@ public sealed class ManualUiDispatcher : IUiDispatcher
     }
 }
 
+/// <summary>Pfade zu Quelldateien der App (für Prüfungen am XAML).</summary>
+public static class SourceFiles
+{
+    public static string MainWindowXaml => Path.Combine(RepositoryRoot(), "src", "HdrPilot.App", "MainWindow.xaml");
+
+    private static string RepositoryRoot([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "") =>
+        FindUp(Path.GetDirectoryName(thisFile)) ?? FindUp(AppContext.BaseDirectory)
+        ?? throw new DirectoryNotFoundException("Projektordner (HdrPilot.slnx) nicht gefunden.");
+
+    private static string? FindUp(string? dir)
+    {
+        while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "HdrPilot.slnx")))
+        {
+            dir = Path.GetDirectoryName(dir);
+        }
+
+        return string.IsNullOrEmpty(dir) ? null : dir;
+    }
+}
+
+/// <summary>Dateisystem, das beim Auflisten bestimmter Ordner den Zugriff verweigert (wie geschützte Systemordner).</summary>
+public sealed class DenyingFileSystem(IFileSystem inner, params string[] deniedDirectories) : IFileSystem
+{
+    public bool FileExists(string path) => inner.FileExists(path);
+
+    public bool DirectoryExists(string path) => inner.DirectoryExists(path);
+
+    public string ReadAllText(string path) => inner.ReadAllText(path);
+
+    public byte[] ReadAllBytes(string path) => inner.ReadAllBytes(path);
+
+    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false) =>
+        IsDenied(directory) ? throw new UnauthorizedAccessException("Zugriff verweigert: " + directory) : inner.EnumerateFiles(directory, searchPattern, recursive);
+
+    public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) =>
+        IsDenied(directory) ? throw new UnauthorizedAccessException("Zugriff verweigert: " + directory) : inner.EnumerateDirectories(directory, searchPattern, recursive);
+
+    public void CreateDirectory(string path) => inner.CreateDirectory(path);
+
+    public void WriteAllTextAtomic(string path, string contents) => inner.WriteAllTextAtomic(path, contents);
+
+    public void DeleteFile(string path) => inner.DeleteFile(path);
+
+    public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
+
+    private bool IsDenied(string directory) => deniedDirectories.Any(d => HdrPilot.Core.Util.PathUtil.PathEquals(d, directory));
+}
+
 public sealed class FakeDialogs : ILibraryDialogs
 {
     public Queue<string?> Executables { get; } = new();
@@ -228,6 +276,8 @@ public sealed class TestLibraryContext : ILibraryContext
     public int ConfigChangedSubscribers => ConfigChanged?.GetInvocationList().Length ?? 0;
 
     public int HdrStateChangedSubscribers => HdrStateChanged?.GetInvocationList().Length ?? 0;
+
+    public int ScanStateChangedSubscribers => ScanStateChanged?.GetInvocationList().Length ?? 0;
 
     public AppConfig Config => ConfigService.Current;
 

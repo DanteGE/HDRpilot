@@ -1,0 +1,1143 @@
+using System.IO;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Windows.Data;
+using System.Windows.Media;
+using HdrPilot.App.Infrastructure;
+using HdrPilot.App.Resources;
+using HdrPilot.Core.Config;
+using HdrPilot.Core.Games;
+using HdrPilot.Core.Hdr;
+
+namespace HdrPilot.App.ViewModels.Library;
+
+/// <summary>
+/// Hauptfenster „Spielebibliothek“: Spieleliste mit Suche und Filtern, Kopf mit HDR-Status und Schnellaktionen,
+/// Detailbereich des gewählten Spiels, Fehler je Scanner und Vorschläge aus Suchordnern.
+/// <para>
+/// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
+/// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert wird über eine CollectionView
+/// (Suche entprellt), damit 600+ Spiele flüssig bleiben.
+/// </para>
+/// </summary>
+public sealed class LibraryViewModel : ObservableObject, IDisposable
+{
+    public static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(150);
+    public static readonly TimeSpan StatusDuration = TimeSpan.FromSeconds(5);
+
+    /// <summary>„Angesehen“ wird gesammelt gespeichert (Blättern mit den Pfeiltasten schreibt nicht je Spiel).</summary>
+    public static readonly TimeSpan SeenDelay = TimeSpan.FromMilliseconds(400);
+
+    private static readonly StringComparer NameOrder = StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true);
+    private static readonly CompareInfo SearchCompare = CultureInfo.InvariantCulture.CompareInfo;
+
+    private readonly ILibraryContext _context;
+    private readonly ILibraryDialogs _dialogs;
+    private readonly Dictionary<string, GameItemViewModel> _byKey = new(StringComparer.OrdinalIgnoreCase);
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly SourceFilterOption _allSources;
+    private readonly HashSet<string> _seenPending = new(StringComparer.OrdinalIgnoreCase);
+    private IDisposable? _seenDelay;
+
+    private AppConfig? _syncedConfig;
+    private int _pendingWrites;
+    private bool _syncQueued;
+    private bool _refreshing;
+    private bool _disposed;
+    private IDisposable? _searchDelay;
+    private IDisposable? _statusDelay;
+    private string _candidateSignature = string.Empty;
+    private int _candidateRun;
+
+    private string _searchText = string.Empty;
+    private string[] _searchTokens = [];
+    private SourceFilterOption _selectedSource;
+    private bool _onlySelected;
+    private bool _onlyNew;
+    private GameItemViewModel? _selectedGame;
+    private GameDetailsViewModel? _details;
+
+    private int _totalCount;
+    private int _hdrAutoCount;
+    private int _newCount;
+    private int _visibleCount;
+    private bool _isHdrOn;
+    private bool _canToggleHdr;
+    private string _hdrStatusText = string.Empty;
+    private string? _activeSessionText;
+    private bool _isScanning;
+    private bool _hasScanErrors;
+    private string _scanErrorsHeader = string.Empty;
+    private bool _hasCandidates;
+    private string? _statusMessage;
+    private StatusKind _statusKind;
+
+    public LibraryViewModel(ILibraryContext context, ILibraryDialogs dialogs)
+    {
+        _context = context;
+        _dialogs = dialogs;
+        _allSources = new SourceFilterOption(null, 0);
+        _selectedSource = _allSources;
+        SourceOptions = [_allSources];
+        GamesView = new ListCollectionView(Games) { Filter = Matches };
+
+        ToggleHdrCommand = new AsyncRelayCommand(ToggleHdrAsync, () => CanToggleHdr);
+        OpenSettingsCommand = new RelayCommand(() => _context.ShowSettings());
+        RescanCommand = new AsyncRelayCommand(RescanAsync, () => !IsScanning);
+        AddGameCommand = new AsyncRelayCommand(AddGameAsync);
+        MarkAllSeenCommand = new AsyncRelayCommand(MarkAllSeenAsync, () => NewCount > 0);
+        ClearFiltersCommand = new RelayCommand(ClearFilters);
+        ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
+        AddCandidateCommand = new AsyncRelayCommand(p => AddCandidateAsync(p as CandidateItemViewModel));
+        DismissStatusCommand = new RelayCommand(() => StatusMessage = null);
+
+        _context.ConfigChanged += OnConfigChanged;
+        _context.HdrStateChanged += OnHdrStateChanged;
+        _context.ScanStateChanged += OnScanStateChanged;
+
+        _isScanning = _context.IsScanning;
+        SyncFromConfig(); // startet auch die Suche nach Vorschlägen
+        RefreshHdrState();
+        RefreshScanErrors();
+    }
+
+    /// <summary>Das Fenster soll dieses Spiel in den sichtbaren Bereich holen (nach dem Hinzufügen).</summary>
+    public event EventHandler<GameItemViewModel>? RevealRequested;
+
+    public BulkObservableCollection<GameItemViewModel> Games { get; } = [];
+
+    /// <summary>Gefilterte Sicht auf <see cref="Games"/> (an die Liste gebunden).</summary>
+    public ListCollectionView GamesView { get; }
+
+    public ObservableCollection<SourceFilterOption> SourceOptions { get; }
+
+    public BulkObservableCollection<ScanErrorItem> ScanErrors { get; } = [];
+
+    public BulkObservableCollection<CandidateItemViewModel> Candidates { get; } = [];
+
+    public AsyncRelayCommand ToggleHdrCommand { get; }
+
+    public RelayCommand OpenSettingsCommand { get; }
+
+    public AsyncRelayCommand RescanCommand { get; }
+
+    public AsyncRelayCommand AddGameCommand { get; }
+
+    public AsyncRelayCommand MarkAllSeenCommand { get; }
+
+    public RelayCommand ClearFiltersCommand { get; }
+
+    public RelayCommand ClearSearchCommand { get; }
+
+    public AsyncRelayCommand AddCandidateCommand { get; }
+
+    public RelayCommand DismissStatusCommand { get; }
+
+    internal ILibraryContext Context => _context;
+
+    internal ILibraryDialogs Dialogs => _dialogs;
+
+    internal IReadOnlyList<DisplayInfo> Displays { get; private set; } = [];
+
+    internal IReadOnlyList<DisplayInfo> Targets { get; private set; } = [];
+
+    // ---------- Filter ----------
+
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (SetProperty(ref _searchText, value ?? string.Empty))
+            {
+                OnPropertyChanged(nameof(HasSearchText));
+                _searchDelay?.Dispose();
+                _searchDelay = _context.Ui.Delay(SearchDelay, ApplySearch);
+            }
+        }
+    }
+
+    public bool HasSearchText => _searchText.Length > 0;
+
+    public SourceFilterOption? SelectedSource
+    {
+        get => _selectedSource;
+        set
+        {
+            var next = value ?? _allSources;
+            if (!ReferenceEquals(next, _selectedSource))
+            {
+                _selectedSource = next;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsFiltered));
+                RefreshView();
+            }
+        }
+    }
+
+    public bool OnlySelected
+    {
+        get => _onlySelected;
+        set
+        {
+            if (SetProperty(ref _onlySelected, value))
+            {
+                OnPropertyChanged(nameof(IsFiltered));
+                RefreshView();
+            }
+        }
+    }
+
+    public bool OnlyNew
+    {
+        get => _onlyNew;
+        set
+        {
+            if (SetProperty(ref _onlyNew, value))
+            {
+                OnPropertyChanged(nameof(IsFiltered));
+                RefreshView();
+            }
+        }
+    }
+
+    public bool IsFiltered => _searchTokens.Length > 0 || _selectedSource.Source is not null || _onlySelected || _onlyNew;
+
+    // ---------- Auswahl und Details ----------
+
+    public GameItemViewModel? SelectedGame
+    {
+        get => _selectedGame;
+        set
+        {
+            // Beim Neufiltern ändert die Liste die Auswahl nur als Nebenwirkung (null, oder bei einer mit dem
+            // aktuellen Element verbundenen Liste das erste Element): Details bleiben stehen, nichts gilt als angesehen.
+            if (_refreshing || ReferenceEquals(value, _selectedGame))
+            {
+                return;
+            }
+
+            _selectedGame = value;
+            OnPropertyChanged();
+            Details = value is null ? null : new GameDetailsViewModel(this, value);
+            if (value is { IsNew: true })
+            {
+                MarkSeen(value);
+            }
+        }
+    }
+
+    public GameDetailsViewModel? Details
+    {
+        get => _details;
+        private set
+        {
+            if (SetProperty(ref _details, value))
+            {
+                OnPropertyChanged(nameof(HasDetails));
+            }
+        }
+    }
+
+    public bool HasDetails => _details is not null;
+
+    // ---------- Kennzahlen ----------
+
+    public int TotalCount
+    {
+        get => _totalCount;
+        private set => SetProperty(ref _totalCount, value);
+    }
+
+    public int HdrAutoCount
+    {
+        get => _hdrAutoCount;
+        private set => SetProperty(ref _hdrAutoCount, value);
+    }
+
+    public int NewCount
+    {
+        get => _newCount;
+        private set
+        {
+            if (SetProperty(ref _newCount, value))
+            {
+                MarkAllSeenCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public int VisibleCount
+    {
+        get => _visibleCount;
+        private set => SetProperty(ref _visibleCount, value);
+    }
+
+    public string TotalText => LibraryText.Games(_totalCount);
+
+    public string HdrAutoText => LibraryText.Format(LibraryStrings.Stats_HdrAuto, _hdrAutoCount);
+
+    public string NewText => LibraryText.Format(LibraryStrings.Stats_New, _newCount);
+
+    public string ResultText => IsFiltered
+        ? LibraryText.Format(LibraryStrings.List_ResultFiltered, _visibleCount, _totalCount)
+        : LibraryText.Games(_totalCount);
+
+    public bool IsLibraryEmpty => _totalCount == 0;
+
+    public bool IsFilterEmpty => _totalCount > 0 && _visibleCount == 0;
+
+    // ---------- HDR-Status und Schnellaktionen ----------
+
+    public bool IsHdrOn
+    {
+        get => _isHdrOn;
+        private set => SetProperty(ref _isHdrOn, value);
+    }
+
+    public bool CanToggleHdr
+    {
+        get => _canToggleHdr;
+        private set
+        {
+            if (SetProperty(ref _canToggleHdr, value))
+            {
+                ToggleHdrCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>„HDR an · MAG 341C OLED“ (AutomationId HdrStatus).</summary>
+    public string HdrStatusText
+    {
+        get => _hdrStatusText;
+        private set => SetProperty(ref _hdrStatusText, value);
+    }
+
+    public string HdrToggleText => _isHdrOn ? LibraryStrings.Hdr_TurnOff : LibraryStrings.Hdr_TurnOn;
+
+    public string? ActiveSessionText
+    {
+        get => _activeSessionText;
+        private set
+        {
+            if (SetProperty(ref _activeSessionText, value))
+            {
+                OnPropertyChanged(nameof(HasActiveSession));
+            }
+        }
+    }
+
+    public bool HasActiveSession => !string.IsNullOrEmpty(_activeSessionText);
+
+    /// <summary>Automatik pausiert (Schalter im Kopf).</summary>
+    public bool IsPaused
+    {
+        get => _context.IsPaused;
+        set
+        {
+            if (value != _context.IsPaused)
+            {
+                _context.SetPaused(value);
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
+    // ---------- Einlesen ----------
+
+    public bool IsScanning
+    {
+        get => _isScanning;
+        private set
+        {
+            if (SetProperty(ref _isScanning, value))
+            {
+                RescanCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool HasScanErrors
+    {
+        get => _hasScanErrors;
+        private set => SetProperty(ref _hasScanErrors, value);
+    }
+
+    public string ScanErrorsHeader
+    {
+        get => _scanErrorsHeader;
+        private set => SetProperty(ref _scanErrorsHeader, value);
+    }
+
+    public bool HasCandidates
+    {
+        get => _hasCandidates;
+        private set
+        {
+            if (SetProperty(ref _hasCandidates, value))
+            {
+                OnPropertyChanged(nameof(CandidatesCountText));
+            }
+        }
+    }
+
+    public string CandidatesCountText => Candidates.Count.ToString(CultureInfo.CurrentCulture);
+
+    // ---------- Hinweiszeile ----------
+
+    public string? StatusMessage
+    {
+        get => _statusMessage;
+        private set
+        {
+            if (SetProperty(ref _statusMessage, value))
+            {
+                OnPropertyChanged(nameof(HasStatus));
+            }
+        }
+    }
+
+    public StatusKind StatusKind
+    {
+        get => _statusKind;
+        private set => SetProperty(ref _statusKind, value);
+    }
+
+    public bool HasStatus => !string.IsNullOrEmpty(_statusMessage);
+
+    /// <summary>Wendet eine ausstehende Suche sofort an (Enter-Taste, Tests).</summary>
+    public void ApplySearch()
+    {
+        _searchDelay?.Dispose();
+        _searchDelay = null;
+        var tokens = _searchText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (tokens.SequenceEqual(_searchTokens, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        _searchTokens = tokens;
+        OnPropertyChanged(nameof(IsFiltered));
+        RefreshView();
+    }
+
+    public void ClearFilters()
+    {
+        _searchDelay?.Dispose();
+        _searchDelay = null;
+        _searchText = string.Empty;
+        _searchTokens = [];
+        _selectedSource = _allSources;
+        _onlySelected = false;
+        _onlyNew = false;
+        OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(HasSearchText));
+        OnPropertyChanged(nameof(SelectedSource));
+        OnPropertyChanged(nameof(OnlySelected));
+        OnPropertyChanged(nameof(OnlyNew));
+        OnPropertyChanged(nameof(IsFiltered));
+        RefreshView();
+    }
+
+    /// <summary>Wählt ein Spiel aus und holt es in den sichtbaren Bereich (setzt bei Bedarf die Filter zurück).</summary>
+    public void SelectGame(string key)
+    {
+        if (!_byKey.TryGetValue(key, out var item))
+        {
+            return;
+        }
+
+        if (!GamesView.Contains(item))
+        {
+            ClearFilters();
+        }
+
+        SelectedGame = item;
+        RevealRequested?.Invoke(this, item);
+    }
+
+    /// <summary>Gleicht die Liste mit der aktuellen Konfiguration ab (nur wenn sie sich geändert hat).</summary>
+    public void SyncFromConfig()
+    {
+        var cfg = _context.Config;
+        if (_disposed || ReferenceEquals(cfg, _syncedConfig))
+        {
+            return;
+        }
+
+        var targetsChanged = _syncedConfig is { } previous
+            && !previous.Settings.TargetDisplays.SequenceEqual(cfg.Settings.TargetDisplays, StringComparer.OrdinalIgnoreCase);
+        _syncedConfig = cfg;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var added = new List<GameItemViewModel>();
+        var renamed = false;
+        foreach (var game in cfg.Games)
+        {
+            if (!seen.Add(game.Key))
+            {
+                continue;
+            }
+
+            if (_byKey.TryGetValue(game.Key, out var item))
+            {
+                renamed |= !string.Equals(item.Name, game.Name, StringComparison.Ordinal);
+                item.Apply(game);
+            }
+            else
+            {
+                item = new GameItemViewModel(this, game);
+                _byKey[game.Key] = item;
+                added.Add(item);
+            }
+
+            if (_seenPending.Contains(game.Key))
+            {
+                item.IsNew = false; // „Angesehen“ ist schon vorgemerkt, nur noch nicht gespeichert.
+            }
+        }
+
+        var removed = _byKey.Values.Where(i => !seen.Contains(i.Key)).ToList();
+        foreach (var item in removed)
+        {
+            _byKey.Remove(item.Key);
+        }
+
+        if (renamed || added.Count + removed.Count > 12)
+        {
+            _refreshing = true;
+            try
+            {
+                Games.ReplaceAll(_byKey.Values.OrderBy(g => g.Name, NameOrder).ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+
+            RefreshView();
+        }
+        else if (added.Count + removed.Count > 0)
+        {
+            _refreshing = true;
+            try
+            {
+                foreach (var item in removed)
+                {
+                    Games.Remove(item);
+                }
+
+                foreach (var item in added)
+                {
+                    Games.Insert(InsertIndex(item), item);
+                }
+            }
+            finally
+            {
+                _refreshing = false;
+            }
+
+            UpdateVisibleCount();
+        }
+
+        if (_selectedGame is not null && !_byKey.ContainsKey(_selectedGame.Key))
+        {
+            _selectedGame = null;
+            OnPropertyChanged(nameof(SelectedGame));
+            Details = null;
+        }
+        else if (_selectedGame is not null)
+        {
+            _details?.Apply(_selectedGame.Config);
+        }
+
+        if (targetsChanged)
+        {
+            RefreshHdrState(); // Zielbildschirme in den Einstellungen geändert: Status und „Globale Einstellung (…)“ nachziehen
+        }
+        else
+        {
+            ApplyRunningFlags();
+        }
+
+        UpdateCounts();
+
+        var signature = CandidateSignature(cfg);
+        if (!string.Equals(signature, _candidateSignature, StringComparison.Ordinal))
+        {
+            _ = RefreshCandidatesAsync();
+        }
+    }
+
+    /// <summary>Lädt Kandidaten aus den Suchordnern im Hintergrund neu.</summary>
+    public async Task RefreshCandidatesAsync()
+    {
+        var cfg = _context.Config;
+        _candidateSignature = CandidateSignature(cfg);
+        var run = ++_candidateRun;
+        var folders = cfg.Settings.SearchFolders.ToList();
+        if (folders.Count == 0)
+        {
+            ApplyCandidates([]);
+            return;
+        }
+
+        var installDirs = cfg.Games.Select(g => g.InstallDir).ToList();
+        var fileSystem = _context.FileSystem;
+        var token = _lifetime.Token;
+        IReadOnlyList<GameCandidate> found;
+        try
+        {
+            found = await Task.Run(() => new SearchFolderCandidateFinder(fileSystem).FindCandidates(folders, installDirs, token), token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            found = [];
+        }
+
+        if (!_disposed && run == _candidateRun)
+        {
+            ApplyCandidates(found);
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        FlushSeen(); // Vorgemerktes „angesehen“ nicht verlieren.
+        _disposed = true;
+        _lifetime.Cancel();
+        _searchDelay?.Dispose();
+        _statusDelay?.Dispose();
+        _context.ConfigChanged -= OnConfigChanged;
+        _context.HdrStateChanged -= OnHdrStateChanged;
+        _context.ScanStateChanged -= OnScanStateChanged;
+        RevealRequested = null;
+        _context.Dispose();
+    }
+
+    // ---------- Aufrufe aus Zeilen und Details ----------
+
+    internal ImageSource? RequestIcon(GameItemViewModel item)
+    {
+        var cached = _context.Icons.GetCachedIcon(item.Config);
+        if (cached is not null)
+        {
+            return cached;
+        }
+
+        _ = LoadIconAsync(item);
+        return null;
+    }
+
+    internal void OnHdrAutoChangedByUser(GameItemViewModel item)
+    {
+        var value = item.HdrAuto;
+        item.IsNew = false;
+        UpdateCounts();
+        _ = WriteGameAsync(item.Key, g =>
+        {
+            g.HdrAuto = value;
+            g.IsNew = false;
+        });
+    }
+
+    /// <summary>Ändert ein Spiel in der Konfiguration. False bei Fehler (Hinweis wird gezeigt, Liste zurückgesetzt).</summary>
+    internal Task<bool> WriteGameAsync(string key, Action<GameConfig> mutate) => WriteAsync(c =>
+    {
+        if (c.FindGame(key) is { } g)
+        {
+            mutate(g);
+        }
+    });
+
+    internal async Task AddManualGameAsync(GameEntry entry)
+    {
+        var now = _context.Clock.UtcNow;
+        var ok = await WriteAsync(c => c.Games.Add(new GameConfig
+        {
+            Source = entry.Source,
+            SourceId = entry.SourceId,
+            Name = entry.Name,
+            InstallDir = entry.InstallDir,
+            KnownExecutables = [.. entry.Executables],
+            LaunchCommand = entry.LaunchCommand,
+            LaunchArguments = entry.LaunchArguments,
+            LaunchWorkingDirectory = entry.LaunchWorkingDirectory,
+            // Bewusst hinzugefügt: HDR automatisch an, nicht als „neu“ markiert.
+            HdrAuto = true,
+            IsNew = false,
+            IsInstalled = true,
+            RestoreAfter = true,
+            FirstSeen = now,
+            LastSeen = now,
+        }));
+        if (ok)
+        {
+            SelectGame(entry.Key);
+            ShowStatus(LibraryText.Format(LibraryStrings.Game_Added, entry.Name), StatusKind.Success);
+        }
+    }
+
+    internal async Task RemoveGameAsync(GameItemViewModel item)
+    {
+        var key = item.Key;
+        var ok = await WriteAsync(c => c.Games.RemoveAll(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase)));
+        if (ok)
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.Game_Removed, item.Name), StatusKind.Info);
+        }
+    }
+
+    internal void ShowStatus(string message, StatusKind kind)
+    {
+        if (_disposed)
+        {
+            return; // Fenster zu: kein Zeitgeber mehr anlegen.
+        }
+
+        StatusKind = kind;
+        StatusMessage = message;
+        _statusDelay?.Dispose();
+        _statusDelay = _context.Ui.Delay(StatusDuration, () => StatusMessage = null);
+    }
+
+    // ---------- intern ----------
+
+    private static string CandidateSignature(AppConfig cfg) =>
+        string.Join("|", cfg.Settings.SearchFolders) + "#" + cfg.Games.Count.ToString(CultureInfo.InvariantCulture);
+
+    private bool Matches(object obj)
+    {
+        if (obj is not GameItemViewModel g)
+        {
+            return false;
+        }
+
+        if ((_selectedSource.Source is { } source && g.Source != source)
+            || (_onlySelected && !g.HdrAuto)
+            || (_onlyNew && !g.IsNew))
+        {
+            return false;
+        }
+
+        foreach (var token in _searchTokens)
+        {
+            if (SearchCompare.IndexOf(g.SearchText, token, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) < 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void RefreshView()
+    {
+        _refreshing = true;
+        try
+        {
+            GamesView.Refresh();
+            OnPropertyChanged(nameof(SelectedGame));
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+
+        UpdateVisibleCount();
+    }
+
+    private void UpdateVisibleCount()
+    {
+        VisibleCount = GamesView.Count;
+        OnPropertyChanged(nameof(ResultText));
+        OnPropertyChanged(nameof(IsFilterEmpty));
+        OnPropertyChanged(nameof(IsLibraryEmpty));
+    }
+
+    private int InsertIndex(GameItemViewModel item)
+    {
+        int lo = 0, hi = Games.Count;
+        while (lo < hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (NameOrder.Compare(Games[mid].Name, item.Name) <= 0)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+
+        return lo;
+    }
+
+    private void UpdateCounts()
+    {
+        int auto = 0, fresh = 0;
+        var perSource = new Dictionary<GameSource, int>();
+        foreach (var g in Games)
+        {
+            auto += g.HdrAuto ? 1 : 0;
+            fresh += g.IsNew ? 1 : 0;
+            perSource[g.Source] = perSource.GetValueOrDefault(g.Source) + 1;
+        }
+
+        TotalCount = Games.Count;
+        HdrAutoCount = auto;
+        NewCount = fresh;
+        OnPropertyChanged(nameof(TotalText));
+        OnPropertyChanged(nameof(HdrAutoText));
+        OnPropertyChanged(nameof(NewText));
+        OnPropertyChanged(nameof(ResultText));
+        OnPropertyChanged(nameof(IsLibraryEmpty));
+        OnPropertyChanged(nameof(IsFilterEmpty));
+
+        _allSources.Count = Games.Count;
+        var index = 1;
+        foreach (var source in Enum.GetValues<GameSource>())
+        {
+            var count = perSource.GetValueOrDefault(source);
+            var existing = SourceOptions.Skip(1).FirstOrDefault(o => o.Source == source);
+            if (count == 0)
+            {
+                if (existing is not null)
+                {
+                    SourceOptions.Remove(existing);
+                    if (ReferenceEquals(existing, _selectedSource))
+                    {
+                        SelectedSource = _allSources;
+                    }
+                }
+
+                continue;
+            }
+
+            if (existing is null)
+            {
+                SourceOptions.Insert(index, new SourceFilterOption(source, count));
+            }
+            else
+            {
+                existing.Count = count;
+            }
+
+            index++;
+        }
+    }
+
+    private void ApplyRunningFlags()
+    {
+        var running = new HashSet<string>(_context.Sessions.Select(s => s.GameKey), StringComparer.OrdinalIgnoreCase);
+        foreach (var item in _byKey.Values)
+        {
+            item.IsRunning = running.Contains(item.Key);
+        }
+
+        ActiveSessionText = running.Count == 0
+            ? null
+            : LibraryText.Format(LibraryStrings.Hdr_ActiveSessions, string.Join(", ", _context.Sessions.Select(s => s.GameName)));
+    }
+
+    private void RefreshHdrState()
+    {
+        Displays = _context.GetDisplays();
+        Targets = _context.TargetDisplays();
+        IsHdrOn = Targets.Any(d => d.HdrEnabled);
+        CanToggleHdr = Targets.Any(d => d.HdrSupported);
+        var names = string.Join(", ", Targets.Select(d => d.FriendlyName));
+        HdrStatusText = Targets.Count == 0
+            ? LibraryStrings.Hdr_StatusNoDisplay
+            : IsHdrOn
+                ? LibraryText.Format(LibraryStrings.Hdr_StatusOn, names)
+                : CanToggleHdr
+                    ? LibraryText.Format(LibraryStrings.Hdr_StatusOff, names)
+                    : LibraryText.Format(LibraryStrings.Hdr_StatusUnavailable, names);
+        OnPropertyChanged(nameof(HdrToggleText));
+        OnPropertyChanged(nameof(IsPaused));
+        ApplyRunningFlags();
+        _details?.RefreshDisplays();
+    }
+
+    private void RefreshScanErrors()
+    {
+        var report = _context.LastScan;
+        var items = report is null
+            ? []
+            : report.Scanners
+                .SelectMany(s => s.Result.Errors.Select(e => new ScanErrorItem(LibraryText.SourceName(s.Result.Source), e.Message, e.Path)))
+                .ToList();
+        ScanErrors.ReplaceAll(items);
+        ScanErrorsHeader = items.Count == 1
+            ? LibraryStrings.ScanErrors_HeaderOne
+            : LibraryText.Format(LibraryStrings.ScanErrors_HeaderMany, items.Count);
+        HasScanErrors = items.Count > 0;
+    }
+
+    private void ApplyCandidates(IReadOnlyList<GameCandidate> found)
+    {
+        Candidates.ReplaceAll(found.Select(c => new CandidateItemViewModel(c)));
+        OnPropertyChanged(nameof(CandidatesCountText));
+        HasCandidates = Candidates.Count > 0;
+    }
+
+    /// <summary>
+    /// Ansehen setzt „neu“ sofort in der Liste zurück; gespeichert wird gesammelt nach <see cref="SeenDelay"/>
+    /// (oder vor dem nächsten Schreibvorgang bzw. beim Schließen). Bis dahin zählt es als ausstehender
+    /// Schreibvorgang, damit ein Abgleich die Markierung nicht kurz zurückholt.
+    /// </summary>
+    private void MarkSeen(GameItemViewModel item)
+    {
+        item.IsNew = false;
+        UpdateCounts();
+        if (_seenPending.Add(item.Key) && _seenPending.Count == 1)
+        {
+            _pendingWrites++;
+        }
+
+        _seenDelay?.Dispose();
+        _seenDelay = _context.Ui.Delay(SeenDelay, FlushSeen);
+    }
+
+    private void FlushSeen()
+    {
+        _seenDelay?.Dispose();
+        _seenDelay = null;
+        if (_seenPending.Count == 0)
+        {
+            return;
+        }
+
+        var keys = _seenPending.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _seenPending.Clear();
+        _pendingWrites--;
+        _ = WriteAsync(c =>
+        {
+            foreach (var g in c.Games)
+            {
+                if (keys.Contains(g.Key))
+                {
+                    g.IsNew = false;
+                }
+            }
+        });
+    }
+
+    private async Task<bool> WriteAsync(Action<AppConfig> mutate)
+    {
+        if (_seenPending.Count > 0)
+        {
+            FlushSeen(); // in Reihenfolge vor dieser Änderung speichern
+        }
+
+        _pendingWrites++;
+        var ok = true;
+        try
+        {
+            await _context.UpdateConfigAsync(mutate);
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            _syncedConfig = null; // Liste auf den gespeicherten Stand zurücksetzen.
+            ShowStatus(LibraryText.Format(LibraryStrings.Error_SaveFailed, ex.Message), StatusKind.Error);
+        }
+        finally
+        {
+            _pendingWrites--;
+        }
+
+        if (_pendingWrites == 0)
+        {
+            SyncFromConfig();
+        }
+
+        return ok;
+    }
+
+    private async Task LoadIconAsync(GameItemViewModel item)
+    {
+        try
+        {
+            var icon = await _context.Icons.GetIconAsync(item.Config, _lifetime.Token);
+            if (!_disposed)
+            {
+                item.SetIcon(icon);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Fenster geschlossen.
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Runtime.InteropServices.ExternalException)
+        {
+            // Symbol ist nur Zierde: Ersatzsymbol bleibt.
+        }
+    }
+
+    private void OnConfigChanged(object? sender, EventArgs e)
+    {
+        if (_disposed || _pendingWrites > 0 || _syncQueued)
+        {
+            return; // Nach dem letzten eigenen Schreibvorgang wird ohnehin abgeglichen.
+        }
+
+        _syncQueued = true;
+        _context.Ui.Post(() =>
+        {
+            _syncQueued = false;
+            if (_pendingWrites == 0)
+            {
+                SyncFromConfig();
+            }
+        });
+    }
+
+    private void OnHdrStateChanged(object? sender, EventArgs e)
+    {
+        if (!_disposed)
+        {
+            RefreshHdrState();
+        }
+    }
+
+    private void OnScanStateChanged(object? sender, EventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        IsScanning = _context.IsScanning;
+        if (!IsScanning)
+        {
+            RefreshScanErrors();
+            _ = RefreshCandidatesAsync();
+        }
+    }
+
+    private async Task ToggleHdrAsync()
+    {
+        try
+        {
+            await _context.ToggleHdrNowAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.Error_Generic, ex.Message), StatusKind.Error);
+        }
+
+        RefreshHdrState();
+    }
+
+    private async Task RescanAsync()
+    {
+        IsScanning = true;
+        try
+        {
+            await _context.RescanAsync();
+            SyncFromConfig();
+            ShowStatus(LibraryText.Format(LibraryStrings.Rescan_Done, LibraryText.Games(TotalCount)), StatusKind.Success);
+        }
+        catch (Exception ex)
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.Error_Generic, ex.Message), StatusKind.Error);
+        }
+        finally
+        {
+            IsScanning = _context.IsScanning;
+            RefreshScanErrors();
+        }
+    }
+
+    private async Task AddGameAsync()
+    {
+        var dialog = new AddGameViewModel(_context.FileSystem, _context.Environment, _dialogs);
+        if (_dialogs.ShowAddGame(dialog) && dialog.Result is { } entry)
+        {
+            await AddManualGameAsync(entry);
+        }
+    }
+
+    private async Task MarkAllSeenAsync()
+    {
+        var fresh = Games.Where(g => g.IsNew).ToList();
+        if (fresh.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var item in fresh)
+        {
+            item.IsNew = false;
+        }
+
+        UpdateCounts();
+        RefreshView();
+        if (await WriteAsync(c => c.Games.ForEach(g => g.IsNew = false)))
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.MarkAllSeen_Done, LibraryText.Games(fresh.Count)), StatusKind.Success);
+        }
+    }
+
+    private async Task AddCandidateAsync(CandidateItemViewModel? candidate)
+    {
+        if (candidate is null)
+        {
+            return;
+        }
+
+        if (!AddGameViewModel.ConfirmFolder(candidate.Folder, _context.Environment, _dialogs, out var refusal))
+        {
+            if (refusal is not null)
+            {
+                ShowStatus(refusal, StatusKind.Error);
+            }
+
+            return;
+        }
+
+        GameEntry entry;
+        try
+        {
+            if (!_context.FileSystem.DirectoryExists(candidate.Folder))
+            {
+                ShowStatus(LibraryStrings.AddGame_ErrorNotFound, StatusKind.Error); // inzwischen gelöscht oder verschoben
+                return;
+            }
+
+            entry = ManualGames.Create(_context.FileSystem, candidate.Folder, candidate.Name);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.Error_Generic, ex.Message), StatusKind.Error);
+            return;
+        }
+
+        // Der Suchordner kennt auch tiefer liegende EXEs (etwa Binaries\Win64): als bekannte EXEs übernehmen.
+        var exes = candidate.Candidate.Executables;
+        entry = entry with
+        {
+            Executables = entry.Executables.Concat(exes).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            LaunchCommand = entry.LaunchCommand ?? (exes.Count == 1 ? exes[0] : null),
+            LaunchWorkingDirectory = entry.LaunchWorkingDirectory ?? (exes.Count == 1 ? Path.GetDirectoryName(exes[0]) : null),
+        };
+
+        Candidates.Remove(candidate);
+        OnPropertyChanged(nameof(CandidatesCountText));
+        HasCandidates = Candidates.Count > 0;
+        await AddManualGameAsync(entry);
+    }
+}

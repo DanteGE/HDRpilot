@@ -12,4 +12,296 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+
+  <!-- Tray: Tooltip (höchstens 127 Zeichen, wird gekürzt) -->
+  <data name="TrayTooltipHdrOn" xml:space="preserve">
+    <value>HdrPilot · HDR an</value>
+  </data>
+  <data name="TrayTooltipHdrOff" xml:space="preserve">
+    <value>HdrPilot · HDR aus</value>
+  </data>
+  <data name="TrayTooltipNoHdr" xml:space="preserve">
+    <value>HdrPilot · kein HDR-fähiger Bildschirm</value>
+  </data>
+  <data name="TrayTooltipGame" xml:space="preserve">
+    <value>Spiel: {0}</value>
+    <comment>{0} = Name des laufenden Spiels</comment>
+  </data>
+  <data name="TrayTooltipGames" xml:space="preserve">
+    <value>Spiele: {0}</value>
+    <comment>{0} = Namen der laufenden Spiele, mit Komma getrennt</comment>
+  </data>
+  <data name="TrayTooltipPaused" xml:space="preserve">
+    <value>Automatik pausiert</value>
+  </data>
+  <data name="TrayTooltipActive" xml:space="preserve">
+    <value>Automatik aktiv</value>
+  </data>
+  <data name="ListSeparator" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Ellipsis" xml:space="preserve">
+    <value>…</value>
+  </data>
+
+  <!-- Tray: Menü -->
+  <data name="TrayMenuName" xml:space="preserve">
+    <value>HdrPilot-Menü</value>
+  </data>
+  <data name="TrayMenuToggleHdrOn" xml:space="preserve">
+    <value>HDR jetzt einschalten</value>
+  </data>
+  <data name="TrayMenuToggleHdrOff" xml:space="preserve">
+    <value>HDR jetzt ausschalten</value>
+  </data>
+  <data name="TrayMenuPause" xml:space="preserve">
+    <value>Automatik pausieren</value>
+  </data>
+  <data name="TrayMenuOpen" xml:space="preserve">
+    <value>Spieleliste öffnen</value>
+  </data>
+  <data name="TrayMenuSettings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="TrayMenuLogs" xml:space="preserve">
+    <value>Protokollordner öffnen</value>
+  </data>
+  <data name="TrayMenuExit" xml:space="preserve">
+    <value>HdrPilot beenden</value>
+  </data>
+  <data name="TrayStatusHdrOn" xml:space="preserve">
+    <value>HDR an</value>
+  </data>
+  <data name="TrayStatusHdrOff" xml:space="preserve">
+    <value>HDR aus</value>
+  </data>
+  <data name="TrayStatusActive" xml:space="preserve">
+    <value>Automatik aktiv</value>
+  </data>
+  <data name="TrayStatusPaused" xml:space="preserve">
+    <value>Automatik pausiert</value>
+  </data>
+  <data name="TrayStatusGame" xml:space="preserve">
+    <value>{0} läuft</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="TrayStatusGames" xml:space="preserve">
+    <value>{0} Spiele laufen</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="TrayStatusNoHdr" xml:space="preserve">
+    <value>Kein HDR-fähiger Bildschirm</value>
+  </data>
+
+  <!-- Einstellungen: Fenster -->
+  <data name="SettingsWindowTitle" xml:space="preserve">
+    <value>HdrPilot – Einstellungen</value>
+  </data>
+  <data name="SettingsHeading" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="SettingsSubheading" xml:space="preserve">
+    <value>Wo, wann und wie HdrPilot HDR für deine Spiele schaltet.</value>
+  </data>
+  <data name="SaveSettings" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="CancelSettings" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Ungespeicherte Änderungen</value>
+  </data>
+  <data name="NoChanges" xml:space="preserve">
+    <value>Alles gespeichert</value>
+  </data>
+  <data name="AutostartFailed" xml:space="preserve">
+    <value>Autostart ließ sich nicht ändern: {0}</value>
+    <comment>{0} = Fehlermeldung von Windows</comment>
+  </data>
+  <data name="AutostartPathUnknown" xml:space="preserve">
+    <value>Der Speicherort von HdrPilot.exe ist unbekannt.</value>
+  </data>
+  <data name="OpenLogFolderFailed" xml:space="preserve">
+    <value>Protokollordner ließ sich nicht öffnen: {0}</value>
+    <comment>{0} = Fehlermeldung von Windows</comment>
+  </data>
+
+  <!-- Einstellungen: Bildschirme -->
+  <data name="SectionDisplays" xml:space="preserve">
+    <value>Bildschirme</value>
+  </data>
+  <data name="DisplaysHint" xml:space="preserve">
+    <value>Auf diesen Bildschirmen schaltet HdrPilot HDR. Spiele mit eigener Bildschirm-Wahl behalten ihre Einstellung.</value>
+  </data>
+  <data name="DisplaysPrimaryFallback" xml:space="preserve">
+    <value>Keiner ausgewählt: HdrPilot schaltet den Hauptbildschirm ({0}).</value>
+    <comment>{0} = Name des Hauptbildschirms</comment>
+  </data>
+  <data name="DisplaysPrimaryFallbackUnknown" xml:space="preserve">
+    <value>Keiner ausgewählt: HdrPilot schaltet den Hauptbildschirm.</value>
+  </data>
+  <data name="DisplaysSelected" xml:space="preserve">
+    <value>{0} von {1} ausgewählt</value>
+    <comment>{0} = Anzahl ausgewählt, {1} = Anzahl gesamt</comment>
+  </data>
+  <data name="DisplaysEmpty" xml:space="preserve">
+    <value>Keine aktiven Bildschirme gefunden.</value>
+  </data>
+  <data name="BadgePrimary" xml:space="preserve">
+    <value>Hauptbildschirm</value>
+  </data>
+  <data name="BadgeHdrCapable" xml:space="preserve">
+    <value>HDR-fähig</value>
+  </data>
+  <data name="BadgeNoHdr" xml:space="preserve">
+    <value>Kein HDR</value>
+  </data>
+  <data name="BadgeHdrOn" xml:space="preserve">
+    <value>HDR an</value>
+  </data>
+  <data name="BadgeDisconnected" xml:space="preserve">
+    <value>Nicht verbunden</value>
+  </data>
+  <data name="DisplayUnknownName" xml:space="preserve">
+    <value>Unbekannter Bildschirm</value>
+  </data>
+
+  <!-- Einstellungen: Automatik -->
+  <data name="SectionAutomation" xml:space="preserve">
+    <value>Automatik</value>
+  </data>
+  <data name="PollIntervalLabel" xml:space="preserve">
+    <value>Abfrageintervall</value>
+  </data>
+  <data name="PollIntervalHint" xml:space="preserve">
+    <value>Kürzer reagiert schneller auf Spielstarts, länger spart Rechenzeit.</value>
+  </data>
+  <data name="GracePeriodLabel" xml:space="preserve">
+    <value>Nachlaufzeit</value>
+  </data>
+  <data name="GracePeriodHint" xml:space="preserve">
+    <value>So lange wartet HdrPilot nach dem Spielende, bevor HDR zurückgestellt wird.</value>
+  </data>
+  <data name="LaunchTimeoutLabel" xml:space="preserve">
+    <value>Startfrist</value>
+  </data>
+  <data name="LaunchTimeoutHint" xml:space="preserve">
+    <value>Start über HdrPilot: so lange wird auf das Spiel gewartet.</value>
+  </data>
+  <data name="UnitMilliseconds" xml:space="preserve">
+    <value>{0:N0} ms</value>
+  </data>
+  <data name="UnitSeconds" xml:space="preserve">
+    <value>{0:N0} s</value>
+  </data>
+
+  <!-- Einstellungen: Start und Hinweise -->
+  <data name="SectionStartup" xml:space="preserve">
+    <value>Start und Hinweise</value>
+  </data>
+  <data name="AutostartLabel" xml:space="preserve">
+    <value>Mit Windows starten</value>
+  </data>
+  <data name="AutostartHint" xml:space="preserve">
+    <value>HdrPilot startet unauffällig im Infobereich.</value>
+  </data>
+  <data name="NotificationsLabel" xml:space="preserve">
+    <value>Hinweise anzeigen</value>
+  </data>
+  <data name="NotificationsHint" xml:space="preserve">
+    <value>Kurze Meldungen beim Schalten, nie während Vollbild-Spielen.</value>
+  </data>
+  <data name="HotkeyFallbackLabel" xml:space="preserve">
+    <value>Tastenkürzel als Notlösung</value>
+  </data>
+  <data name="HotkeyFallbackHint" xml:space="preserve">
+    <value>Sendet Win+Alt+B nur, wenn die Windows-Schnittstelle scheitert. Wirkt auf alle HDR-Bildschirme und braucht die Xbox Game Bar.</value>
+  </data>
+
+  <!-- Einstellungen: Suchordner -->
+  <data name="SectionSearchFolders" xml:space="preserve">
+    <value>Suchordner</value>
+  </data>
+  <data name="SearchFoldersHint" xml:space="preserve">
+    <value>Ordner mit Spielen ohne Launcher. Jeder Unterordner mit einer EXE wird beim Einlesen vorgeschlagen.</value>
+  </data>
+  <data name="SearchFoldersEmpty" xml:space="preserve">
+    <value>Noch keine Suchordner. Ordner hinzufügen, um DRM-freie Spiele zu finden.</value>
+  </data>
+  <data name="AddSearchFolder" xml:space="preserve">
+    <value>Ordner hinzufügen</value>
+  </data>
+  <data name="RemoveSearchFolder" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="SearchFolderDialogTitle" xml:space="preserve">
+    <value>Suchordner wählen</value>
+  </data>
+
+  <!-- Einstellungen: Hilfsprozesse -->
+  <data name="SectionHelpers" xml:space="preserve">
+    <value>Hilfsprozesse ausschließen</value>
+  </data>
+  <data name="HelpersHint" xml:space="preserve">
+    <value>Diese Programme in Spielordnern zählen nicht als Spiel (Absturzmelder, Installer, Launcher). Ein Muster je Zeile, * und ? als Platzhalter.</value>
+  </data>
+  <data name="HelperPatternsCount" xml:space="preserve">
+    <value>{0} Muster</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="HelperPatternsDefault" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="HelperPatternsCustom" xml:space="preserve">
+    <value>Angepasst</value>
+  </data>
+  <data name="ResetHelperPatterns" xml:space="preserve">
+    <value>Standard wiederherstellen</value>
+  </data>
+  <data name="HelperPatternFolder" xml:space="preserve">
+    <value>Zeile {0}: Muster dürfen keine Ordner enthalten („{1}“).</value>
+    <comment>{0} = Zeilennummer, {1} = Muster</comment>
+  </data>
+  <data name="HelperPatternInvalidChars" xml:space="preserve">
+    <value>Zeile {0}: unzulässige Zeichen in „{1}“.</value>
+    <comment>{0} = Zeilennummer, {1} = Muster</comment>
+  </data>
+  <data name="HelperPatternTooLong" xml:space="preserve">
+    <value>Zeile {0}: Muster ist länger als {1} Zeichen.</value>
+    <comment>{0} = Zeilennummer, {1} = Höchstlänge</comment>
+  </data>
+  <data name="HelperPatternTooMany" xml:space="preserve">
+    <value>Höchstens {0} Muster erlaubt.</value>
+    <comment>{0} = Höchstzahl</comment>
+  </data>
+
+  <!-- Einstellungen: Protokoll -->
+  <data name="SectionAdvanced" xml:space="preserve">
+    <value>Erweitert</value>
+  </data>
+  <data name="LogLevelLabel" xml:space="preserve">
+    <value>Protokollstufe</value>
+  </data>
+  <data name="LogLevelHint" xml:space="preserve">
+    <value>„Ausführlich“ hilft bei der Fehlersuche.</value>
+  </data>
+  <data name="LogLevelTrace" xml:space="preserve">
+    <value>Alles (Trace)</value>
+  </data>
+  <data name="LogLevelDebug" xml:space="preserve">
+    <value>Ausführlich (Debug)</value>
+  </data>
+  <data name="LogLevelInformation" xml:space="preserve">
+    <value>Normal (Information)</value>
+  </data>
+  <data name="LogLevelWarning" xml:space="preserve">
+    <value>Nur Warnungen</value>
+  </data>
+  <data name="LogLevelError" xml:space="preserve">
+    <value>Nur Fehler</value>
+  </data>
+  <data name="OpenLogFolder" xml:space="preserve">
+    <value>Protokollordner öffnen</value>
+  </data>
 </root>

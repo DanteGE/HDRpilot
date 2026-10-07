@@ -1,61 +1,109 @@
 using System.Windows;
+using System.Windows.Threading;
 using HdrPilot.App.Services;
+using HdrPilot.App.ViewModels.Shell;
+using HdrPilot.App.Views.Shell;
+using HdrPilot.Core.Config;
+using HdrPilot.Core.Hdr;
+using Microsoft.Extensions.Logging;
 
 namespace HdrPilot.App;
 
-// GERÜST: wird durch Tray, Einstellungen, Autostart und Bildschirmereignisse ersetzt.
+/// <summary>Shell: Tray, Einstellungen, Autostart und Bildschirmereignisse.</summary>
 public sealed partial class AppServices
 {
-    private partial ITrayService CreateTrayService() => new NoTray();
+    private ShellHost? _shellHost;
 
-    private partial IAutostartService CreateAutostartService() => new NoAutostart();
+    private ShellHost ShellAdapter => _shellHost ??= new ShellHost(this);
 
-    private partial IDisplayEventsService CreateDisplayEventsService() => new NoDisplayEvents();
+    /// <summary>
+    /// True, wenn HdrPilot mit der normalen Ablage läuft. Mit <c>--config-dir</c> (Tests, Prüfskripte, Bildschirmfotos)
+    /// wird die echte Registry nie verändert.
+    /// </summary>
+    private bool UsesDefaultPaths => Paths == AppPaths.Default(Environment);
 
-    private partial Window CreateSettingsWindow() => new Window { Title = "Einstellungen" };
-
-    private sealed class NoTray : ITrayService
+    private partial ITrayService CreateTrayService()
     {
-        public void Initialize()
-        {
-        }
-
-        public void Refresh()
-        {
-        }
-
-        public void Notify(string title, string message, bool isWarning = false)
-        {
-        }
-
-        public void Dispose()
-        {
-        }
+        var logger = LoggerFactory.CreateLogger("Tray");
+        var gate = new NotificationGate(() => Config.Current.Settings.Notifications, new ShellUserNotificationState(), logger);
+        return new TrayService(ShellAdapter, gate, logger);
     }
 
-    private sealed class NoAutostart : IAutostartService
+    private partial IAutostartService CreateAutostartService()
     {
-        public bool IsEnabled => false;
-
-        public void SetEnabled(bool enabled)
+        var logger = LoggerFactory.CreateLogger("Autostart");
+        if (!UsesDefaultPaths)
         {
+            return new ConfigOnlyAutostartService(Config, logger);
         }
+
+        var service = new AutostartService(Registry, System.Environment.ProcessPath, logger);
+
+        // EXE verschoben: Run-Eintrag zeigt noch auf den alten Pfad. Nur wenn Autostart in der Konfiguration an ist.
+        service.Reconcile(Config.Current.Settings.StartWithWindows);
+        return service;
     }
 
-    private sealed class NoDisplayEvents : IDisplayEventsService
+    private partial IDisplayEventsService CreateDisplayEventsService() => new DisplayEventsService(
+        new SystemDisplayEventSource(),
+        new DispatcherDebounceTimer(Dispatcher, DisplayEventsService.DebounceDelay),
+        RaiseOnUi,
+        LoggerFactory.CreateLogger("Displays"));
+
+    private partial Window CreateSettingsWindow()
     {
-        public event EventHandler? DisplaysChanged
+        var window = new SettingsWindow();
+        window.Attach(new SettingsViewModel(ShellAdapter, new DialogFolderPicker(window)));
+        return window;
+    }
+
+    /// <summary>Adapter: was Tray und Einstellungen von AppServices brauchen. Hält keine Fenster.</summary>
+    private sealed class ShellHost(AppServices app) : ITrayHost, IShellContext
+    {
+        public event EventHandler? HdrStateChanged
         {
-            add { }
-            remove { }
+            add => app.HdrStateChanged += value;
+            remove => app.HdrStateChanged -= value;
         }
 
-        public void Start()
+        public Dispatcher Dispatcher => app.Dispatcher;
+
+        public ConfigService Config => app.Config;
+
+        public IAutostartService Autostart => app.Autostart;
+
+        public TrayState QueryTrayState()
         {
+            var targets = app.TargetDisplays();
+            var games = app.Sessions.Sessions.Select(s => s.GameName).Distinct(StringComparer.CurrentCultureIgnoreCase).ToList();
+            return new TrayState(
+                HdrOn: targets.Any(d => d.HdrEnabled),
+                HdrSupported: targets.Any(d => d.HdrSupported),
+                Paused: app.Sessions.Paused,
+                ActiveGames: games);
         }
 
-        public void Dispose()
+        public IReadOnlyList<DisplayInfo> GetDisplays() => app.Hdr.GetDisplays();
+
+        public Task ToggleHdrNowAsync() => app.ToggleHdrNowAsync();
+
+        public void SetPaused(bool paused) => app.SetPaused(paused);
+
+        public void ShowMainWindow() => app.ShowMainWindow();
+
+        public void ShowSettingsWindow() => app.ShowSettingsWindow();
+
+        public void OpenLogFolder() => app.OpenLogFolder();
+
+        public Task ExitAsync() => app.ExitAsync();
+
+        public void OnSettingsSaved(bool searchFoldersChanged)
         {
+            app.RaiseHdrStateChanged();
+            if (searchFoldersChanged)
+            {
+                _ = app.RescanAsync();
+            }
         }
     }
 }

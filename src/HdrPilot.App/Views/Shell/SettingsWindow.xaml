@@ -1,0 +1,401 @@
+<infra:ChromeWindow x:Class="HdrPilot.App.Views.Shell.SettingsWindow"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
+                    xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Shell"
+                    mc:Ignorable="d"
+                    d:DataContext="{d:DesignInstance vm:SettingsViewModel}"
+                    Title="{x:Static res:ShellStrings.SettingsWindowTitle}"
+                    AutomationProperties.AutomationId="SettingsWindow"
+                    AutomationProperties.Name="{x:Static res:ShellStrings.SettingsWindowTitle}"
+                    Width="1080" SizeToContent="Height" MinWidth="900" MinHeight="560"
+                    WindowStartupLocation="CenterScreen">
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
+    </Window.InputBindings>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Kopf: Symbol-Kachel, Titel, Akzentlinie mit Schimmer (nur bei aktivem Fenster) -->
+        <StackPanel x:Name="Header" Margin="36,2,36,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="50" Height="50" Margin="0,0,18,0">
+                    <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.Accent}" />
+                    <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.BackgroundGlow}" Opacity="0.6" />
+                    <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE713;" FontSize="23"
+                               Foreground="{DynamicResource Hp.Brush.TextOnAccent}" HorizontalAlignment="Center" />
+                </Grid>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Hp.Text.Title}" Text="{x:Static res:ShellStrings.SettingsHeading}" />
+                    <TextBlock Style="{StaticResource Hp.Text.Caption}" FontSize="13" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.SettingsSubheading}" />
+                </StackPanel>
+            </Grid>
+            <Grid x:Name="AccentLine" Height="3" Margin="0,14,0,0" ClipToBounds="True">
+                <Border CornerRadius="1.5" Background="{DynamicResource Hp.Brush.Accent}" />
+                <Rectangle x:Name="Sheen" Width="220" HorizontalAlignment="Left" Fill="{DynamicResource Hp.Brush.TextOnAccent}">
+                    <Rectangle.OpacityMask>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#00000000" Offset="0" />
+                            <GradientStop Color="#C0000000" Offset="0.5" />
+                            <GradientStop Color="#00000000" Offset="1" />
+                        </LinearGradientBrush>
+                    </Rectangle.OpacityMask>
+                    <Rectangle.RenderTransform>
+                        <TranslateTransform x:Name="SheenTransform" X="-220" />
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+            </Grid>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Padding="36,0,28,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Linke Spalte -->
+                <StackPanel Grid.Column="0">
+                    <!-- Bildschirme -->
+                    <HeaderedContentControl x:Name="DisplaysSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionDisplays}" Tag="&#xE7F4;">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,14" Text="{x:Static res:ShellStrings.DisplaysHint}" />
+                            <ListBox AutomationProperties.AutomationId="TargetDisplays"
+                                     AutomationProperties.Name="{x:Static res:ShellStrings.SectionDisplays}"
+                                     Style="{StaticResource Hp.Shell.ListBox}"
+                                     ItemContainerStyle="{StaticResource Hp.Shell.PlainListBoxItem}"
+                                     ItemsSource="{Binding Displays}"
+                                     KeyboardNavigation.TabNavigation="Continue">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:DisplayOptionViewModel}">
+                                        <CheckBox Style="{StaticResource Hp.Shell.CheckCard}"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                  AutomationProperties.Name="{Binding Name}">
+                                            <StackPanel>
+                                                <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <WrapPanel Margin="0,7,0,0">
+                                                    <Border Style="{StaticResource Hp.Badge}" Margin="0,0,6,0"
+                                                            Visibility="{Binding IsPrimary, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE80F;" FontSize="10" Margin="0,0,5,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                                                            <TextBlock Style="{StaticResource Hp.Shell.BadgeText}" Text="{x:Static res:ShellStrings.BadgePrimary}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Style="{StaticResource Hp.Shell.Badge.Accent}" Margin="0,0,6,0"
+                                                            Visibility="{Binding HdrSupported, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                                        <TextBlock Style="{StaticResource Hp.Shell.BadgeText}" Foreground="{DynamicResource Hp.Brush.AccentSolid}" Text="{x:Static res:ShellStrings.BadgeHdrCapable}" />
+                                                    </Border>
+                                                    <Border Style="{StaticResource Hp.Badge}" Margin="0,0,6,0">
+                                                        <Border.Visibility>
+                                                            <MultiBinding Converter="{StaticResource Hp.Shell.NoHdrBadgeVisibility}">
+                                                                <Binding Path="HdrSupported" />
+                                                                <Binding Path="IsConnected" />
+                                                            </MultiBinding>
+                                                        </Border.Visibility>
+                                                        <TextBlock Style="{StaticResource Hp.Shell.BadgeText}" Text="{x:Static res:ShellStrings.BadgeNoHdr}" />
+                                                    </Border>
+                                                    <Border Style="{StaticResource Hp.Badge.New}" Margin="0,0,6,0"
+                                                            Visibility="{Binding HdrEnabled, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                                        <TextBlock Style="{StaticResource Hp.Shell.BadgeText}" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" Text="{x:Static res:ShellStrings.BadgeHdrOn}" />
+                                                    </Border>
+                                                    <Border Style="{StaticResource Hp.Badge}" Margin="0,0,6,0" BorderBrush="{DynamicResource Hp.Brush.Warning}"
+                                                            Visibility="{Binding IsConnected, Converter={StaticResource Hp.Shell.InverseBoolToVisibility}}">
+                                                        <TextBlock Style="{StaticResource Hp.Shell.BadgeText}" Foreground="{DynamicResource Hp.Brush.Warning}" Text="{x:Static res:ShellStrings.BadgeDisconnected}" />
+                                                    </Border>
+                                                </WrapPanel>
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Style="{StaticResource Hp.Text.Body}" Margin="0,0,0,8" Text="{x:Static res:ShellStrings.DisplaysEmpty}"
+                                       Visibility="{Binding HasDisplays, Converter={StaticResource Hp.Shell.InverseBoolToVisibility}}" />
+                            <DockPanel Margin="2,2,0,0">
+                                <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE946;" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding DisplaysSummary}" />
+                            </DockPanel>
+                        </StackPanel>
+                    </HeaderedContentControl>
+
+                    <!-- Automatik -->
+                    <HeaderedContentControl x:Name="AutomationSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionAutomation}" Tag="&#xE916;">
+                        <StackPanel>
+                            <DockPanel>
+                                <Border DockPanel.Dock="Right" Style="{StaticResource Hp.Shell.ValuePill}">
+                                    <TextBlock Style="{StaticResource Hp.Shell.ValueText}" Text="{Binding PollIntervalText}" />
+                                </Border>
+                                <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.PollIntervalLabel}" />
+                            </DockPanel>
+                            <Slider AutomationProperties.AutomationId="PollInterval"
+                                    AutomationProperties.Name="{x:Static res:ShellStrings.PollIntervalLabel}"
+                                    AutomationProperties.HelpText="{x:Static res:ShellStrings.PollIntervalHint}"
+                                    Style="{StaticResource Hp.Shell.Slider}" Margin="0,6,0,2"
+                                    Minimum="250" Maximum="5000"
+                                    TickFrequency="50" IsSnapToTickEnabled="True" SmallChange="50" LargeChange="250"
+                                    Value="{Binding PollIntervalMs, Mode=TwoWay}" />
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:ShellStrings.PollIntervalHint}" />
+
+                            <DockPanel Margin="0,20,0,0">
+                                <Border DockPanel.Dock="Right" Style="{StaticResource Hp.Shell.ValuePill}">
+                                    <TextBlock Style="{StaticResource Hp.Shell.ValueText}" Text="{Binding GracePeriodText}" />
+                                </Border>
+                                <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.GracePeriodLabel}" />
+                            </DockPanel>
+                            <Slider AutomationProperties.AutomationId="GracePeriod"
+                                    AutomationProperties.Name="{x:Static res:ShellStrings.GracePeriodLabel}"
+                                    AutomationProperties.HelpText="{x:Static res:ShellStrings.GracePeriodHint}"
+                                    Style="{StaticResource Hp.Shell.Slider}" Margin="0,6,0,2"
+                                    Minimum="0" Maximum="120"
+                                    TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10"
+                                    Value="{Binding GracePeriodSeconds, Mode=TwoWay}" />
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:ShellStrings.GracePeriodHint}" />
+
+                            <DockPanel Margin="0,20,0,0">
+                                <Border DockPanel.Dock="Right" Style="{StaticResource Hp.Shell.ValuePill}">
+                                    <TextBlock Style="{StaticResource Hp.Shell.ValueText}" Text="{Binding LaunchTimeoutText}" />
+                                </Border>
+                                <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.LaunchTimeoutLabel}" />
+                            </DockPanel>
+                            <Slider AutomationProperties.AutomationId="LaunchTimeout"
+                                    AutomationProperties.Name="{x:Static res:ShellStrings.LaunchTimeoutLabel}"
+                                    AutomationProperties.HelpText="{x:Static res:ShellStrings.LaunchTimeoutHint}"
+                                    Style="{StaticResource Hp.Shell.Slider}" Margin="0,6,0,2"
+                                    Minimum="30" Maximum="600"
+                                    TickFrequency="5" IsSnapToTickEnabled="True" SmallChange="5" LargeChange="30"
+                                    Value="{Binding LaunchTimeoutSeconds, Mode=TwoWay}" />
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:ShellStrings.LaunchTimeoutHint}" />
+                        </StackPanel>
+                    </HeaderedContentControl>
+
+                    <!-- Start und Hinweise -->
+                    <HeaderedContentControl x:Name="StartupSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionStartup}" Tag="&#xE7E8;">
+                        <StackPanel>
+                            <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                              Style="{StaticResource Hp.ToggleSwitch}"
+                                              AutomationProperties.AutomationId="AutostartToggle"
+                                              AutomationProperties.Name="{x:Static res:ShellStrings.AutostartLabel}"
+                                              AutomationProperties.HelpText="{x:Static res:ShellStrings.AutostartHint}"
+                                              IsChecked="{Binding StartWithWindows, Mode=TwoWay}" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.AutostartLabel}" />
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.AutostartHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                              Style="{StaticResource Hp.ToggleSwitch}"
+                                              AutomationProperties.AutomationId="NotificationsToggle"
+                                              AutomationProperties.Name="{x:Static res:ShellStrings.NotificationsLabel}"
+                                              AutomationProperties.HelpText="{x:Static res:ShellStrings.NotificationsHint}"
+                                              IsChecked="{Binding Notifications, Mode=TwoWay}" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.NotificationsLabel}" />
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.NotificationsHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+                    </HeaderedContentControl>
+                </StackPanel>
+
+                <!-- Rechte Spalte -->
+                <StackPanel Grid.Column="2">
+                    <!-- Suchordner -->
+                    <HeaderedContentControl x:Name="SearchSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionSearchFolders}" Tag="&#xE8B7;">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,12" Text="{x:Static res:ShellStrings.SearchFoldersHint}" />
+                            <Border CornerRadius="12" Padding="4" MinHeight="58" Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="1">
+                                <Grid>
+                                    <ListBox AutomationProperties.AutomationId="SearchFolders"
+                                             AutomationProperties.Name="{x:Static res:ShellStrings.SectionSearchFolders}"
+                                             Style="{StaticResource Hp.Shell.ListBox}"
+                                             ItemContainerStyle="{StaticResource Hp.Shell.ListBoxItem}"
+                                             MaxHeight="190"
+                                             ItemsSource="{Binding SearchFolders}"
+                                             SelectedItem="{Binding SelectedSearchFolder, Mode=TwoWay}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE8B7;" FontSize="14" Margin="0,0,10,0" Foreground="{DynamicResource Hp.Brush.AccentSolid}" />
+                                                    <TextBlock Text="{Binding}" FontSize="13" TextTrimming="CharacterEllipsis" ToolTip="{Binding}" VerticalAlignment="Center" />
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="12,0" VerticalAlignment="Center" TextAlignment="Center"
+                                               Text="{x:Static res:ShellStrings.SearchFoldersEmpty}"
+                                               Visibility="{Binding HasSearchFolders, Converter={StaticResource Hp.Shell.InverseBoolToVisibility}}" />
+                                </Grid>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button Style="{StaticResource Hp.GhostButton}"
+                                        AutomationProperties.AutomationId="AddSearchFolderButton"
+                                        AutomationProperties.Name="{x:Static res:ShellStrings.AddSearchFolder}"
+                                        Command="{Binding AddSearchFolderCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE710;" />
+                                        <TextBlock Text="{x:Static res:ShellStrings.AddSearchFolder}" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource Hp.GhostButton}" Margin="8,0,0,0"
+                                        AutomationProperties.AutomationId="RemoveSearchFolderButton"
+                                        AutomationProperties.Name="{x:Static res:ShellStrings.RemoveSearchFolder}"
+                                        Command="{Binding RemoveSearchFolderCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE74D;" />
+                                        <TextBlock Text="{x:Static res:ShellStrings.RemoveSearchFolder}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </HeaderedContentControl>
+
+                    <!-- Hilfsprozesse -->
+                    <HeaderedContentControl x:Name="HelpersSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionHelpers}" Tag="&#xE71C;">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,12" Text="{x:Static res:ShellStrings.HelpersHint}" />
+                            <TextBox AutomationProperties.AutomationId="HelperPatterns"
+                                     AutomationProperties.Name="{x:Static res:ShellStrings.SectionHelpers}"
+                                     AutomationProperties.HelpText="{x:Static res:ShellStrings.HelpersHint}"
+                                     Style="{StaticResource Hp.Shell.TextBox}"
+                                     Height="196" AcceptsReturn="True" AcceptsTab="False" TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                     FontFamily="Cascadia Mono, Consolas" FontSize="12.5"
+                                     SpellCheck.IsEnabled="False"
+                                     Text="{Binding HelperPatternsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <DockPanel Margin="0,12,0,0">
+                                <Button DockPanel.Dock="Right" Style="{StaticResource Hp.GhostButton}"
+                                        AutomationProperties.AutomationId="ResetHelperPatternsButton"
+                                        AutomationProperties.Name="{x:Static res:ShellStrings.ResetHelperPatterns}"
+                                        Command="{Binding ResetHelperPatternsCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE777;" />
+                                        <TextBlock Text="{x:Static res:ShellStrings.ResetHelperPatterns}" />
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Style="{StaticResource Hp.Shell.ValuePill}">
+                                        <TextBlock Style="{StaticResource Hp.Shell.ValueText}" FontSize="12" Text="{Binding HelperPatternCountText}" />
+                                    </Border>
+                                    <Border Style="{StaticResource Hp.Shell.Badge.Accent}" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource Hp.Shell.BadgeText}" Foreground="{DynamicResource Hp.Brush.AccentSolid}" Text="{Binding HelperPatternsKind}" />
+                                    </Border>
+                                </StackPanel>
+                            </DockPanel>
+                        </StackPanel>
+                    </HeaderedContentControl>
+
+                    <!-- Erweitert: Notlösung und Protokoll -->
+                    <HeaderedContentControl x:Name="AdvancedSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionAdvanced}" Tag="&#xE90F;">
+                        <StackPanel>
+                            <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                              Style="{StaticResource Hp.ToggleSwitch}"
+                                              AutomationProperties.AutomationId="HotkeyFallbackToggle"
+                                              AutomationProperties.Name="{x:Static res:ShellStrings.HotkeyFallbackLabel}"
+                                              AutomationProperties.HelpText="{x:Static res:ShellStrings.HotkeyFallbackHint}"
+                                              IsChecked="{Binding HotkeyFallback, Mode=TwoWay}" />
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE765;" FontSize="14" Margin="0,0,8,0" Foreground="{DynamicResource Hp.Brush.Warning}" />
+                                            <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.HotkeyFallbackLabel}" />
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.HotkeyFallbackHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                                <DockPanel>
+                                    <ComboBox DockPanel.Dock="Right" Width="196" Margin="16,0,0,0" VerticalAlignment="Center"
+                                              Style="{StaticResource Hp.Shell.ComboBox}"
+                                              AutomationProperties.AutomationId="LogLevel"
+                                              AutomationProperties.Name="{x:Static res:ShellStrings.LogLevelLabel}"
+                                              AutomationProperties.HelpText="{x:Static res:ShellStrings.LogLevelHint}"
+                                              ItemsSource="{Binding LogLevels}"
+                                              DisplayMemberPath="Label"
+                                              SelectedValuePath="Value"
+                                              SelectedValue="{Binding LogLevel, Mode=TwoWay}" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.LogLevelLabel}" />
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.LogLevelHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Button Style="{StaticResource Hp.GhostButton}" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                    AutomationProperties.AutomationId="OpenLogFolderButton"
+                                    AutomationProperties.Name="{x:Static res:ShellStrings.OpenLogFolder}"
+                                    Command="{Binding OpenLogFolderCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE838;" />
+                                    <TextBlock Text="{x:Static res:ShellStrings.OpenLogFolder}" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </HeaderedContentControl>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Fuß: Status links, Abbrechen/Speichern rechts -->
+        <Border Grid.Row="2" Background="{DynamicResource Hp.Brush.Surface}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="0,1,0,0" Padding="36,14,36,16">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource Hp.GhostButton}" MinWidth="120"
+                            AutomationProperties.AutomationId="CancelSettingsButton"
+                            AutomationProperties.Name="{x:Static res:ShellStrings.CancelSettings}"
+                            Command="{Binding CancelCommand}"
+                            Content="{x:Static res:ShellStrings.CancelSettings}" />
+                    <Button Style="{StaticResource Hp.AccentButton}" MinWidth="150" Margin="12,0,0,0"
+                            AutomationProperties.AutomationId="SaveSettingsButton"
+                            AutomationProperties.Name="{x:Static res:ShellStrings.SaveSettings}"
+                            Command="{Binding SaveCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE74E;" />
+                            <TextBlock Text="{x:Static res:ShellStrings.SaveSettings}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <Grid VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding HasError, Converter={StaticResource Hp.Shell.InverseBoolToVisibility}}">
+                        <Ellipse x:Name="StatusDot" Width="8" Height="8" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Success}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasChanges}" Value="True">
+                                            <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Accent}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Style="{StaticResource Hp.Text.Caption}" FontSize="13" VerticalAlignment="Center" Text="{Binding ChangeStatus}" />
+                    </StackPanel>
+                    <DockPanel Visibility="{Binding HasError, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE7BA;" FontSize="14" Margin="0,0,10,0" Foreground="{DynamicResource Hp.Brush.Danger}" />
+                        <TextBlock Style="{StaticResource Hp.Text.Body}" FontSize="13" Foreground="{DynamicResource Hp.Brush.Danger}" VerticalAlignment="Center" Text="{Binding ErrorMessage}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
+        </Border>
+    </Grid>
+</infra:ChromeWindow>

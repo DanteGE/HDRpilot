@@ -87,24 +87,44 @@ public sealed class ShellViewTests
     }
 
     [Fact]
-    public void Check_pop_animation_follows_the_windows_animation_setting()
+    public void Mouse_wheel_over_a_list_scrolls_the_page_when_the_list_cannot_scroll()
     {
         WpfTestHost.Run(() =>
         {
-            var box = new CheckBox
-            {
-                Style = (Style)Application.Current.FindResource("Hp.Shell.CheckCard"),
-                DataContext = new DisplayOptionViewModel("p", "Bildschirm", true, true, false, true, false),
-            };
-            box.Measure(new Size(400, 100));
-            box.Arrange(new Rect(0, 0, 400, 100));
-            var check = (FrameworkElement)box.Template.FindName("Check", box);
+            var window = CreateSettingsWindow(out _);
+            WpfTestHost.Layout(window, new Size(1080, 560));
+            var page = Logical(window).OfType<ScrollViewer>().Single();
+            Assert.True(page.ScrollableHeight > 100, "Seite muss scrollen können");
 
-            box.IsChecked = true;
-            WpfTestHost.DoEvents();
+            // Über einer Bildschirm-Zeile (Liste ohne eigenen Bildlauf): die Seite scrollt.
+            var displayRow = WpfTestHost.Visuals(window).OfType<CheckBox>().First(c => c.DataContext is DisplayOptionViewModel);
+            Wheel(displayRow, -120);
+            Assert.True(page.VerticalOffset > 0, "Seite hat nicht gescrollt");
+            window.Close();
+        });
+    }
 
-            Assert.Equal(1.0, check.Opacity);
-            Assert.Equal(ShellMotion.IsEnabled, check.RenderTransform.HasAnimatedProperties);
+    [Fact]
+    public void Mouse_wheel_in_the_pattern_editor_scrolls_the_editor_first_then_the_page()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var window = CreateSettingsWindow(out _);
+            WpfTestHost.Layout(window, new Size(1080, 560));
+            var page = Logical(window).OfType<ScrollViewer>().Single();
+            var editor = Logical(window).OfType<TextBox>().Single(t => AutomationProperties.GetAutomationId(t) == "HelperPatterns");
+            var inner = (ScrollViewer)editor.Template.FindName("PART_ContentHost", editor);
+            Assert.True(inner.ScrollableHeight > 0, "Standardliste muss im Editor scrollen");
+
+            Wheel(editor, -120);
+            Assert.True(inner.VerticalOffset > 0, "Editor hat nicht gescrollt");
+            Assert.Equal(0, page.VerticalOffset);
+
+            inner.ScrollToEnd();
+            window.UpdateLayout();
+            Wheel(editor, -120);
+            Assert.True(page.VerticalOffset > 0, "Seite hat am Ende des Editors nicht übernommen");
+            window.Close();
         });
     }
 
@@ -160,6 +180,30 @@ public sealed class ShellViewTests
     }
 
     [Fact]
+    public void Tray_menu_status_without_hdr_display_says_so()
+    {
+        var model = new TrayMenuViewModel(new FakeTrayHost(), new TrayState(HdrOn: false, HdrSupported: false, Paused: false, ActiveGames: []), ex => throw ex);
+
+        Assert.Equal(ShellStrings.TrayStatusNoHdr, model.StatusDetail);
+        Assert.Equal(ShellStrings.TrayStatusHdrOff, model.StatusTitle);
+        Assert.Equal(ShellStrings.TrayMenuToggleHdrOn, model.ToggleHdrText);
+    }
+
+    [Fact]
+    public void Tray_menu_command_failures_are_reported_not_thrown()
+    {
+        var errors = new List<Exception>();
+        var model = new TrayMenuViewModel(new ThrowingTrayHost(), TrayState.Initial, errors.Add);
+
+        model.OpenCommand.Execute(null);
+        model.LogsCommand.Execute(null);
+        model.ToggleHdrCommand.Execute(null);
+        model.IsPaused = true;
+
+        Assert.Equal(4, errors.Count);
+    }
+
+    [Fact]
     public void Tray_menu_and_icons_render_in_both_themes_for_review()
     {
         WpfTestHost.Run(() =>
@@ -209,6 +253,33 @@ public sealed class ShellViewTests
     }
 
     private static (int, int) Limits(Slider slider) => ((int)slider.Minimum, (int)slider.Maximum);
+
+    /// <summary>Mausrad wie vom Eingabesystem: erst PreviewMouseWheel (tunnelnd), dann MouseWheel mit denselben Daten.</summary>
+    private static void Wheel(UIElement target, int delta)
+    {
+        var args = new System.Windows.Input.MouseWheelEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, delta)
+        {
+            RoutedEvent = UIElement.PreviewMouseWheelEvent,
+        };
+        target.RaiseEvent(args);
+        args.RoutedEvent = UIElement.MouseWheelEvent;
+        target.RaiseEvent(args);
+        if (PresentationSource.FromVisual(target) is null)
+        {
+            // Ohne Fenster-Handle ordnet niemand neu an: Layout selbst nachziehen.
+            ((FrameworkElement)VisualTreeRoot(target)).UpdateLayout();
+        }
+    }
+
+    private static DependencyObject VisualTreeRoot(DependencyObject element)
+    {
+        while (VisualTreeHelper.GetParent(element) is { } parent)
+        {
+            element = parent;
+        }
+
+        return element;
+    }
 
     private static IEnumerable<DependencyObject> Logical(DependencyObject root)
     {

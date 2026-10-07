@@ -128,6 +128,15 @@ public sealed class AutostartServiceTests
     public void Command_line_is_quoted_once(string path, string expected) =>
         Assert.Equal(expected, AutostartService.BuildCommand(path));
 
+    [Theory]
+    [InlineData(@"C:\Apps\HdrPilot\HdrPilot.exe", @"C:\Apps\HdrPilot\HdrPilot.exe")]
+    [InlineData(@"C:\Program Files\dotnet\dotnet.exe", null)]
+    [InlineData(@"C:\Program Files\dotnet\DOTNET.EXE", null)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    public void Only_the_hdrpilot_exe_may_go_into_the_run_key(string? processPath, string? expected) =>
+        Assert.Equal(expected, AutostartService.ResolveExecutablePath(processPath));
+
     [Fact]
     public void Config_only_autostart_mirrors_the_config_and_never_writes_the_registry()
     {

@@ -32,6 +32,95 @@ public interface ITrayHost
     Task ExitAsync();
 }
 
+/// <summary>Das sichtbare Symbol im Infobereich. Für Tests austauschbar, damit dort kein echtes Symbol erscheint.</summary>
+public interface ITrayIconSurface : IDisposable
+{
+    /// <summary>Rechtsklick (Maustaste losgelassen): Menü öffnen.</summary>
+    event EventHandler? RightClick;
+
+    /// <summary>Doppelklick mit der linken Taste.</summary>
+    event EventHandler? DoubleClick;
+
+    event EventHandler? BalloonClicked;
+
+    System.Drawing.Icon? Icon { get; set; }
+
+    /// <summary>Tooltip, höchstens <see cref="TrayPresentation.MaxTooltipLength"/> Zeichen.</summary>
+    string Text { get; set; }
+
+    bool Visible { get; set; }
+
+    void ShowBalloon(int timeoutMs, string title, string text, bool isWarning);
+}
+
+/// <summary>WinForms-NotifyIcon als <see cref="ITrayIconSurface"/>.</summary>
+public sealed class NotifyIconSurface : ITrayIconSurface
+{
+    private readonly Forms.NotifyIcon _icon = new();
+
+    public NotifyIconSurface()
+    {
+        _icon.MouseUp += OnMouseUp;
+        _icon.MouseDoubleClick += OnMouseDoubleClick;
+        _icon.BalloonTipClicked += OnBalloonTipClicked;
+    }
+
+    public event EventHandler? RightClick;
+
+    public event EventHandler? DoubleClick;
+
+    public event EventHandler? BalloonClicked;
+
+    public System.Drawing.Icon? Icon
+    {
+        get => _icon.Icon;
+        set => _icon.Icon = value;
+    }
+
+    public string Text
+    {
+        get => _icon.Text;
+        set => _icon.Text = value;
+    }
+
+    public bool Visible
+    {
+        get => _icon.Visible;
+        set => _icon.Visible = value;
+    }
+
+    // Windows zeigt das als Benachrichtigung an; sie nimmt nie den Fokus.
+    public void ShowBalloon(int timeoutMs, string title, string text, bool isWarning) =>
+        _icon.ShowBalloonTip(timeoutMs, title, text, isWarning ? Forms.ToolTipIcon.Warning : Forms.ToolTipIcon.Info);
+
+    public void Dispose()
+    {
+        _icon.MouseUp -= OnMouseUp;
+        _icon.MouseDoubleClick -= OnMouseDoubleClick;
+        _icon.BalloonTipClicked -= OnBalloonTipClicked;
+        _icon.Visible = false;
+        _icon.Dispose();
+    }
+
+    private void OnMouseUp(object? sender, Forms.MouseEventArgs e)
+    {
+        if (e.Button == Forms.MouseButtons.Right)
+        {
+            RightClick?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void OnMouseDoubleClick(object? sender, Forms.MouseEventArgs e)
+    {
+        if (e.Button == Forms.MouseButtons.Left)
+        {
+            DoubleClick?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void OnBalloonTipClicked(object? sender, EventArgs e) => BalloonClicked?.Invoke(this, EventArgs.Empty);
+}
+
 /// <summary>
 /// Tray-Symbol (WinForms-NotifyIcon) mit WPF-Kontextmenü im HdrPilot-Stil. Das Symbol wird zur Laufzeit passend zur
 /// DPI gezeichnet und nur bei Zustandswechsel neu erzeugt; alte HICONs werden freigegeben. Im Hintergrund läuft nur
@@ -42,14 +131,16 @@ public sealed partial class TrayService : ITrayService
 {
     public static readonly TimeSpan RecheckInterval = TimeSpan.FromSeconds(30);
 
-    private const int BalloonTimeoutMs = 4000;
-    private const int MaxBalloonTitle = 63;
-    private const int MaxBalloonText = 255;
+    public const int BalloonTimeoutMs = 4000;
+    public const int MaxBalloonTitle = 63;
+    public const int MaxBalloonText = 255;
 
     private readonly ITrayHost _host;
     private readonly NotificationGate _gate;
     private readonly ILogger _logger;
-    private Forms.NotifyIcon? _notifyIcon;
+    private readonly Func<ITrayIconSurface> _createSurface;
+    private readonly Func<int> _iconSize;
+    private ITrayIconSurface? _notifyIcon;
     private TrayIcon? _icon;
     private TrayState _state = TrayState.Initial;
     private DispatcherTimer? _recheck;
@@ -60,11 +151,15 @@ public sealed partial class TrayService : ITrayService
     private bool _refreshPending;
     private bool _disposed;
 
-    public TrayService(ITrayHost host, NotificationGate gate, ILogger? logger = null)
+    /// <param name="surfaceFactory">Erzeugt das Symbol im Infobereich (Standard: NotifyIcon; Tests: Attrappe).</param>
+    /// <param name="iconSize">Kantenlänge des Symbols in Pixeln (Standard: kleine Symbole bei System-DPI).</param>
+    public TrayService(ITrayHost host, NotificationGate gate, ILogger? logger = null, Func<ITrayIconSurface>? surfaceFactory = null, Func<int>? iconSize = null)
     {
         _host = host;
         _gate = gate;
         _logger = logger ?? NullLogger.Instance;
+        _createSurface = surfaceFactory ?? (() => new NotifyIconSurface());
+        _iconSize = iconSize ?? TrayIconRenderer.SystemSmallIconSize;
     }
 
     public void Initialize()
@@ -75,10 +170,10 @@ public sealed partial class TrayService : ITrayService
             return;
         }
 
-        _notifyIcon = new Forms.NotifyIcon();
-        _notifyIcon.MouseUp += OnMouseUp;
-        _notifyIcon.MouseDoubleClick += OnMouseDoubleClick;
-        _notifyIcon.BalloonTipClicked += OnBalloonTipClicked;
+        _notifyIcon = _createSurface();
+        _notifyIcon.RightClick += OnRightClick;
+        _notifyIcon.DoubleClick += OnDoubleClick;
+        _notifyIcon.BalloonClicked += OnBalloonClicked;
 
         try
         {
@@ -95,6 +190,9 @@ public sealed partial class TrayService : ITrayService
         _recheck = new DispatcherTimer(RecheckInterval, DispatcherPriority.Background, (_, _) => Refresh(), _host.Dispatcher);
         _recheck.Start();
     }
+
+    /// <summary>True, solange ein <see cref="Refresh"/> den Zustand liest (nur auf dem UI-Thread lesen).</summary>
+    public bool IsRefreshing => _refreshRunning;
 
     /// <summary>Zustand im Hintergrund neu lesen und Symbol, Tooltip und offenes Menü anpassen.</summary>
     public void Refresh()
@@ -147,12 +245,11 @@ public sealed partial class TrayService : ITrayService
             return;
         }
 
-        // Windows zeigt das als Benachrichtigung an; sie nimmt nie den Fokus.
-        _notifyIcon.ShowBalloonTip(
+        _notifyIcon.ShowBalloon(
             BalloonTimeoutMs,
             TrayPresentation.Fit(title, MaxBalloonTitle),
             TrayPresentation.Fit(text, MaxBalloonText),
-            isWarning ? Forms.ToolTipIcon.Warning : Forms.ToolTipIcon.Info);
+            isWarning);
     }
 
     public void Dispose()
@@ -174,9 +271,9 @@ public sealed partial class TrayService : ITrayService
 
         if (_notifyIcon is not null)
         {
-            _notifyIcon.MouseUp -= OnMouseUp;
-            _notifyIcon.MouseDoubleClick -= OnMouseDoubleClick;
-            _notifyIcon.BalloonTipClicked -= OnBalloonTipClicked;
+            _notifyIcon.RightClick -= OnRightClick;
+            _notifyIcon.DoubleClick -= OnDoubleClick;
+            _notifyIcon.BalloonClicked -= OnBalloonClicked;
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _notifyIcon = null;
@@ -230,13 +327,22 @@ public sealed partial class TrayService : ITrayService
 
         _state = state;
         var spec = TrayPresentation.IconFor(state);
-        var size = TrayIconRenderer.SystemSmallIconSize();
+        var size = _iconSize();
         if (_icon is null || _icon.Spec != spec || _icon.Size != size)
         {
-            var previous = _icon;
-            _icon = TrayIconRenderer.CreateIcon(spec, size);
-            _notifyIcon.Icon = _icon.Icon;
-            previous?.Dispose();
+            try
+            {
+                var next = TrayIconRenderer.CreateIcon(spec, size);
+                var previous = _icon;
+                _icon = next;
+                _notifyIcon.Icon = next.Icon;
+                previous?.Dispose();
+            }
+            catch (Exception ex) when (ex is ArgumentException or ExternalException or OutOfMemoryException)
+            {
+                // GDI+ am Ende (z. B. zu viele GDI-Objekte im System): altes Symbol behalten, Tooltip trotzdem anpassen.
+                _logger.LogWarning(ex, "Tray: Symbol ließ sich nicht zeichnen.");
+            }
         }
 
         var tooltip = TrayPresentation.TooltipFor(state);
@@ -248,23 +354,11 @@ public sealed partial class TrayService : ITrayService
         _menuModel?.Update(state);
     }
 
-    private void OnMouseUp(object? sender, Forms.MouseEventArgs e)
-    {
-        if (e.Button == Forms.MouseButtons.Right)
-        {
-            ShowMenu();
-        }
-    }
+    private void OnRightClick(object? sender, EventArgs e) => Run(ShowMenu);
 
-    private void OnMouseDoubleClick(object? sender, Forms.MouseEventArgs e)
-    {
-        if (e.Button == Forms.MouseButtons.Left)
-        {
-            Run(_host.ShowMainWindow);
-        }
-    }
+    private void OnDoubleClick(object? sender, EventArgs e) => Run(_host.ShowMainWindow);
 
-    private void OnBalloonTipClicked(object? sender, EventArgs e) => Run(_host.ShowMainWindow);
+    private void OnBalloonClicked(object? sender, EventArgs e) => Run(_host.ShowMainWindow);
 
     private void ShowMenu()
     {
@@ -297,7 +391,10 @@ public sealed partial class TrayService : ITrayService
     {
         var menu = (TrayMenu)sender;
         menu.Closed -= OnMenuClosed;
-        menu.DataContext = null;
+
+        // Der Befehl des angeklickten Eintrags läuft nach dem Schließen (WPF ruft ihn mit Render-Priorität auf).
+        // Die Bindung erst danach lösen, sonst fände er keinen Befehl mehr.
+        _host.Dispatcher.BeginInvoke(DispatcherPriority.Background, () => menu.DataContext = null);
         if (ReferenceEquals(_menu, menu))
         {
             _menu = null;

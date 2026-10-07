@@ -4,6 +4,7 @@ using Drawing = System.Drawing;
 
 namespace HdrPilot.App.Tests.Shell;
 
+[Collection(ShellSerialCollection.Name)]
 public sealed partial class TrayIconRendererTests
 {
     public static TheoryData<int> Sizes => [16, 20, 24, 32, 48];

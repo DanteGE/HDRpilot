@@ -40,6 +40,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private string _helperPatternsText = string.Empty;
     private HelperPatternParseResult _helperPatterns = new([], null);
     private string? _errorMessage;
+    private bool _patternErrorShown;
     private bool _hasChanges;
     private bool _disposed;
 
@@ -236,7 +237,18 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 OnPropertyChanged(nameof(HelperPatternCountText));
                 OnPropertyChanged(nameof(HelperPatternsAreDefault));
                 OnPropertyChanged(nameof(HelperPatternsKind));
-                ErrorMessage = _helperPatterns.Error;
+
+                // Nur die eigene Prüfmeldung setzen oder löschen; ein Autostart- oder Ordnerfehler bleibt stehen.
+                if (_helperPatterns.Error is { } error)
+                {
+                    ErrorMessage = error;
+                }
+                else if (_patternErrorShown)
+                {
+                    ErrorMessage = null;
+                }
+
+                _patternErrorShown = _helperPatterns.Error is not null;
                 UpdateChanges();
             }
         }
@@ -284,6 +296,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         if (!parsed.IsValid)
         {
             ErrorMessage = parsed.Error;
+            _patternErrorShown = true;
             return false;
         }
 
@@ -321,6 +334,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         });
 
         ErrorMessage = null;
+        _patternErrorShown = false;
         _original = Capture();
         HasChanges = false;
         _context.OnSettingsSaved(foldersChanged);

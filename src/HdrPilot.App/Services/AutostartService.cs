@@ -49,6 +49,21 @@ public sealed class AutostartService(IRegistry registry, string? executablePath,
 
     public static string BuildCommand(string executablePath) => "\"" + executablePath.Trim().Trim('"') + "\" " + MinimizedArgument;
 
+    /// <summary>
+    /// Pfad, der in den Run-Schlüssel darf: <see cref="Environment.ProcessPath"/>, außer HdrPilot läuft über den
+    /// .NET-Host (<c>dotnet HdrPilot.dll</c>) – dann wäre der Eintrag „dotnet.exe --minimized“ und startete nichts.
+    /// </summary>
+    public static string? ResolveExecutablePath(string? processPath)
+    {
+        if (string.IsNullOrWhiteSpace(processPath))
+        {
+            return null;
+        }
+
+        var name = Path.GetFileNameWithoutExtension(processPath.Trim().Trim('"'));
+        return string.Equals(name, "dotnet", StringComparison.OrdinalIgnoreCase) ? null : processPath;
+    }
+
     /// <summary>Setzt oder entfernt den Eintrag. Wirft bei Registry-Fehlern (der Aufrufer meldet sie).</summary>
     public void SetEnabled(bool enabled)
     {

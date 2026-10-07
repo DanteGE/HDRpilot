@@ -236,6 +236,8 @@
         <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
         <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
         <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+        <!-- Liste in scrollender Seite: Mausrad geht an die Seite weiter, wenn die Liste nicht (mehr) scrollen kann. -->
+        <Setter Property="views:ShellScroll.ChainWheel" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBox">
@@ -488,7 +490,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
-                    <Grid Margin="10,6,14,16">
+                    <Grid x:Name="PART_Body" Margin="10,6,14,16">
                         <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.WindowBackground}">
                             <Border.Effect>
                                 <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.45" Color="{DynamicResource Hp.Color.Shadow}" />

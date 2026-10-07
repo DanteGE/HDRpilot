@@ -28,7 +28,10 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
 
     public int Subscribers => HdrStateChanged?.GetInvocationList().Length ?? 0;
 
-    public IReadOnlyList<DisplayInfo> GetDisplays() => Hdr.GetDisplays();
+    /// <summary>Wenn gesetzt, scheitert die Bildschirmabfrage mit dieser Ausnahme.</summary>
+    public Exception? DisplayFailure { get; set; }
+
+    public IReadOnlyList<DisplayInfo> GetDisplays() => DisplayFailure is { } failure ? throw failure : Hdr.GetDisplays();
 
     public void OpenLogFolder()
     {
@@ -75,7 +78,7 @@ internal sealed class ReadOnlyRegistry(FakeRegistry inner) : IRegistry
 
 internal sealed class FakeTrayHost : ITrayHost
 {
-    public Dispatcher Dispatcher { get; } = Dispatcher.CurrentDispatcher;
+    public Dispatcher Dispatcher => WpfTestHost.Dispatcher;
 
     public TrayState State { get; set; } = TrayState.Initial;
 
@@ -102,6 +105,37 @@ internal sealed class FakeTrayHost : ITrayHost
         Calls.Add("exit");
         return Task.CompletedTask;
     }
+}
+
+/// <summary>Host, bei dem jeder Befehl scheitert (Menü darf dann nicht abstürzen).</summary>
+internal sealed class ThrowingTrayHost : ITrayHost
+{
+    public Dispatcher Dispatcher => WpfTestHost.Dispatcher;
+
+    public TrayState QueryTrayState() => throw new InvalidOperationException("Zustand");
+
+    public Task ToggleHdrNowAsync() => Task.FromException(new InvalidOperationException("Umschalten"));
+
+    public void SetPaused(bool paused) => throw new InvalidOperationException("Pause");
+
+    public void ShowMainWindow() => throw new InvalidOperationException("Fenster");
+
+    public void ShowSettingsWindow() => throw new InvalidOperationException("Einstellungen");
+
+    public void OpenLogFolder() => throw new System.ComponentModel.Win32Exception(2);
+
+    public Task ExitAsync() => Task.FromException(new InvalidOperationException("Beenden"));
+}
+
+/// <summary>
+/// Tests, die allein laufen müssen: Sie setzen <see cref="HdrPilot.App.Views.Shell.ShellMotion.Override"/> (DoEvents
+/// pumpt verschachtelt und ließe sonst einen parallelen Test den Schalter mitten im Test zurücksetzen) oder zählen
+/// GDI-/USER-Objekte des ganzen Testprozesses (parallele Tests würden mitzählen).
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ShellSerialCollection
+{
+    public const string Name = "ShellSerial";
 }
 
 internal static class ShellTestFactory
@@ -145,6 +179,42 @@ internal static class WpfTestHost
 
     /// <summary>Arbeitet ausstehende Dispatcher-Aufgaben ab (z. B. Bindungen mit DataBind-Priorität). Auf dem Host-Thread aufrufen.</summary>
     public static void DoEvents() => Dispatcher.Invoke(() => { }, DispatcherPriority.ContextIdle);
+
+    /// <summary>Misst und ordnet ein Element (auch ein nie angezeigtes Fenster) an: Vorlagen und Listenzeilen entstehen.</summary>
+    public static void Layout(FrameworkElement element, Size available)
+    {
+        if (element is Window window)
+        {
+            // Ein Fenster ohne Handle misst sich nicht selbst: Vorlage anwenden und deren Wurzel messen.
+            window.ApplyTemplate();
+            element = (FrameworkElement)System.Windows.Media.VisualTreeHelper.GetChild(window, 0);
+        }
+
+        element.Measure(available);
+        var width = double.IsInfinity(available.Width) ? element.DesiredSize.Width : available.Width;
+        var height = double.IsInfinity(available.Height) ? element.DesiredSize.Height : Math.Min(available.Height, Math.Max(element.DesiredSize.Height, 1));
+        element.Arrange(new Rect(0, 0, width, height));
+        element.UpdateLayout();
+    }
+
+    /// <summary>Alle Elemente im visuellen Baum (Tiefensuche).</summary>
+    public static IEnumerable<DependencyObject> Visuals(DependencyObject root)
+    {
+        var stack = new Stack<DependencyObject>();
+        stack.Push(root);
+        while (stack.Count > 0)
+        {
+            var current = stack.Pop();
+            yield return current;
+            if (current is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D)
+            {
+                for (var i = System.Windows.Media.VisualTreeHelper.GetChildrenCount(current) - 1; i >= 0; i--)
+                {
+                    stack.Push(System.Windows.Media.VisualTreeHelper.GetChild(current, i));
+                }
+            }
+        }
+    }
 
     /// <summary>Tauscht die Farb-Token (hell/dunkel). Auf dem Host-Thread aufrufen.</summary>
     public static void UseTheme(bool dark)

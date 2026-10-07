@@ -23,13 +23,15 @@ public static class ShellMotion
     private static readonly Duration LeaveDuration = new(TimeSpan.FromMilliseconds(240));
     private static readonly IEasingFunction EaseOut = Freeze(new CubicEase { EasingMode = EasingMode.EaseOut });
 
+    private static bool? _override;
+
     static ShellMotion()
     {
         SystemParameters.StaticPropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation))
             {
-                StaticPropertyChanged?.Invoke(null, new PropertyChangedEventArgs(nameof(IsEnabled)));
+                RaiseIsEnabledChanged();
             }
         };
     }
@@ -38,7 +40,21 @@ public static class ShellMotion
     public static event EventHandler<PropertyChangedEventArgs>? StaticPropertyChanged;
 
     /// <summary>True, wenn Zier-Animationen laufen dürfen.</summary>
-    public static bool IsEnabled => SystemParameters.ClientAreaAnimation && (RenderCapability.Tier >> 16) > 0;
+    public static bool IsEnabled => _override ?? (SystemParameters.ClientAreaAnimation && (RenderCapability.Tier >> 16) > 0);
+
+    /// <summary>Erzwingt Animationen an oder aus (Tests, Bildschirmfotos). Null: Windows-Einstellung.</summary>
+    public static bool? Override
+    {
+        get => _override;
+        set
+        {
+            if (_override != value)
+            {
+                _override = value;
+                RaiseIsEnabledChanged();
+            }
+        }
+    }
 
     public static bool GetHoverLift(DependencyObject element) => (bool)element.GetValue(HoverLiftProperty);
 
@@ -168,6 +184,8 @@ public static class ShellMotion
         target.BeginAnimation(property, animation, HandoffBehavior.SnapshotAndReplace);
     }
 
+    private static void RaiseIsEnabledChanged() => StaticPropertyChanged?.Invoke(null, new PropertyChangedEventArgs(nameof(IsEnabled)));
+
     private static T Freeze<T>(T freezable)
         where T : Freezable
     {
@@ -198,6 +216,9 @@ public sealed class AmbientAnimation : IDisposable
         window.StateChanged += OnChanged;
         window.IsVisibleChanged += OnVisibleChanged;
         window.Closed += OnClosed;
+
+        // Windows-Einstellung „Animationseffekte“ wirkt sofort, auch bei offenem Fenster (statisch: im Dispose abmelden).
+        ShellMotion.StaticPropertyChanged += OnMotionSettingChanged;
         Update();
     }
 
@@ -216,6 +237,7 @@ public sealed class AmbientAnimation : IDisposable
         _window.StateChanged -= OnChanged;
         _window.IsVisibleChanged -= OnVisibleChanged;
         _window.Closed -= OnClosed;
+        ShellMotion.StaticPropertyChanged -= OnMotionSettingChanged;
         if (_running)
         {
             _running = false;
@@ -228,6 +250,19 @@ public sealed class AmbientAnimation : IDisposable
     private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) => Update();
 
     private void OnClosed(object? sender, EventArgs e) => Dispose();
+
+    private void OnMotionSettingChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // SystemParameters melden sich auf dem UI-Thread des Fensters; sicherheitshalber dorthin wechseln.
+        if (_window.Dispatcher.CheckAccess())
+        {
+            Update();
+        }
+        else
+        {
+            _window.Dispatcher.BeginInvoke(Update);
+        }
+    }
 
     private void Update()
     {

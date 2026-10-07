@@ -366,6 +366,27 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public void Editing_valid_patterns_keeps_an_autostart_error_visible()
+    {
+        var config = ShellTestFactory.NewConfig(_fs);
+        var ctx = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new FailingAutostart(new UnauthorizedAccessException("verweigert")));
+        using var vm = new SettingsViewModel(ctx, _picker);
+        vm.StartWithWindows = true;
+        Assert.False(vm.Save());
+        var autostartError = vm.ErrorMessage;
+        Assert.NotNull(autostartError);
+
+        vm.HelperPatternsText = "Gültig*";
+        Assert.Equal(autostartError, vm.ErrorMessage);
+
+        // Eigene Prüfmeldung ersetzt sie und verschwindet nach der Korrektur wieder.
+        vm.HelperPatternsText = @"a\b";
+        Assert.NotEqual(autostartError, vm.ErrorMessage);
+        vm.HelperPatternsText = "ab";
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact]
     public void Disconnected_target_display_stays_visible_and_selected()
     {
         const string gone = @"\\?\DISPLAY#DEL41A8#abc";
@@ -397,6 +418,60 @@ public sealed class SettingsViewModelTests
         Assert.False(vm.Displays.Single(d => d.Path == FakeHdrController.Second).IsConnected);
         var tv = vm.Displays.Single(d => d.Path == @"\\?\DISPLAY#LGD0001#tv");
         Assert.False(tv.IsSelected);
+        Assert.False(vm.HasChanges);
+    }
+
+    [Fact]
+    public void Failing_display_query_shows_an_empty_list_and_keeps_the_stored_targets()
+    {
+        const string stored = @"\\?\DISPLAY#DEL41A8#abc";
+        var config = ShellTestFactory.NewConfig(_fs, c => c.Settings.TargetDisplays = [stored]);
+        var ctx = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new AutostartService(_registry, Exe))
+        {
+            DisplayFailure = new InvalidOperationException("QueryDisplayConfig fehlgeschlagen"),
+        };
+        using var vm = new SettingsViewModel(ctx, _picker);
+
+        // Nur der gespeicherte (jetzt „nicht verbundene“) Bildschirm bleibt sichtbar und gewählt.
+        var option = Assert.Single(vm.Displays);
+        Assert.Equal(stored, option.Path);
+        Assert.False(option.IsConnected);
+
+        // Abfrage klappt wieder (Bildschirm angesteckt): Liste füllt sich, Auswahl bleibt.
+        ctx.DisplayFailure = null;
+        ctx.RaiseHdrStateChanged();
+        Assert.Equal(3, vm.Displays.Count);
+        Assert.True(vm.Save());
+        Assert.Equal([stored], config.Current.Settings.TargetDisplays);
+    }
+
+    [Fact]
+    public void No_displays_at_all_reports_the_empty_state()
+    {
+        var config = ShellTestFactory.NewConfig(_fs);
+        var ctx = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new AutostartService(_registry, Exe))
+        {
+            DisplayFailure = new InvalidOperationException("kein Grafiktreiber"),
+        };
+        using var vm = new SettingsViewModel(ctx, _picker);
+
+        Assert.False(vm.HasDisplays);
+        Assert.Equal(ShellStrings.DisplaysPrimaryFallbackUnknown, vm.DisplaysSummary);
+        Assert.True(vm.Save());
+        Assert.Empty(config.Current.Settings.TargetDisplays);
+    }
+
+    [Fact]
+    public void Events_after_dispose_are_ignored()
+    {
+        var (vm, ctx) = Create();
+        vm.Dispose();
+        ctx.Hdr.Displays.Add(new FakeDisplay(@"\\?\DISPLAY#LGD0001#tv", "LG OLED TV") { Capable = true });
+
+        vm.Displays[0].IsSelected = true;
+        ctx.RaiseHdrStateChanged();
+
+        Assert.Equal(2, vm.Displays.Count);
         Assert.False(vm.HasChanges);
     }
 

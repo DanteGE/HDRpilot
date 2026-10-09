@@ -1,9 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Windows;
-using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
-using HdrPilot.Core.Processes;
 
 namespace HdrPilot.App.Setup.UI;
 
@@ -38,35 +36,45 @@ public static class SetupRunner
             e.Handled = true;
         };
 
+        return await RunAsync(new WpfSetupHost(app), mode, locations, log);
+    }
+
+    /// <summary>
+    /// Ablauf ohne WPF-Anwendung: Fenster, Prozesse und Engines kommen von <paramref name="host"/>. Passt die
+    /// Befehlszeile nicht (<see cref="SetupMode.RefusedArguments"/>), ändert der Lauf nichts und liefert
+    /// <see cref="SetupExitCodes.BadArguments"/>; die Kopie zum Entfernen räumt auch dann ihren Temp-Ordner weg.
+    /// </summary>
+    public static async Task<int> RunAsync(ISetupHost host, SetupMode mode, SetupLocations locations, SetupLog log)
+    {
+        var args = mode.Arguments;
         if (args.Unknown.Count > 0)
         {
-            // Still: lieber nichts tun als etwas anderes als verlangt. Die Kopie zum Entfernen bekommt ihre Befehlszeile
-            // von uns und räumt in jedem Fall auf.
             log.Warn("Unbekannte Argumente: " + string.Join(' ', args.Unknown));
-            if (args.Quiet && mode.Kind != SetupModeKind.UninstallContinue)
-            {
-                log.Warn("Nichts geändert, Exit-Code " + SetupExitCodes.BadArguments.ToString(CultureInfo.InvariantCulture));
-                return SetupExitCodes.BadArguments;
-            }
         }
 
+        var refused = SetupMode.RefusedArguments(mode.Kind, args);
         if (mode.Kind == SetupModeKind.UninstallContinue)
         {
-            return await RunUninstallContinueAsync(app, args, locations, log);
+            return await RunUninstallContinueAsync(host, args, refused, locations, log);
+        }
+
+        if (refused.Count > 0)
+        {
+            return Refuse(host, mode.Kind, args, refused, log);
         }
 
         try
         {
             return mode.Kind == SetupModeKind.Setup
-                ? await RunSetupAsync(app, mode.Bundle!, args, locations, log)
-                : await RunUninstallAsync(app, args, locations, log);
+                ? await RunSetupAsync(host, mode.Bundle!, args, locations, log)
+                : await RunUninstallAsync(host, args, locations, log);
         }
         catch (Exception ex)
         {
             log.Error("Abgebrochen", ex);
             if (!args.Quiet)
             {
-                ShowUnexpected(mode.Kind == SetupModeKind.Setup ? SetupStrings.SetupWindowTitle : SetupStrings.UninstallWindowTitle, ex, log);
+                host.ShowError(TitleFor(mode.Kind), SetupText.Error(SetupErrorKind.Unexpected, ex.Message, log.FilePath));
             }
 
             return SetupExitCodes.Failed;
@@ -97,32 +105,28 @@ public static class SetupRunner
         return SetupMode.ExitCodeFor(result);
     }
 
-    private static async Task<int> RunSetupAsync(Application app, SetupBundle bundle, SetupArguments args, SetupLocations locations, SetupLog log)
+    /// <summary>
+    /// Befehlszeile der Kopie zum Entfernen: die Wahl aus dem Fenster (auch Daten löschen), die eigene Prozess-ID zum
+    /// Warten und der Testordner als vollständiger Pfad (die Kopie läuft in ihrem Temp-Ordner; ein relativer Pfad zeigte
+    /// dort auf einen anderen Ordner).
+    /// </summary>
+    public static IReadOnlyList<string> ContinueArguments(SetupArguments args, bool removeData, int processId) =>
+        (args with { RemoveData = removeData, TestRoot = args.TestRoot is null ? null : Path.GetFullPath(args.TestRoot) }).ToContinueArguments(processId);
+
+    private static async Task<int> RunSetupAsync(ISetupHost host, SetupBundle bundle, SetupArguments args, SetupLocations locations, SetupLog log)
     {
-        var engine = SetupEngines.CreateSetup(locations, bundle, log);
+        var engine = host.CreateSetup(locations, bundle, log);
         var inspection = engine.Inspect();
         log.Info("Stand: " + inspection.Kind + " " + inspection);
-        if (args.Quiet)
-        {
-            return await RunQuietSetupAsync(engine, inspection, args, log);
-        }
-
-        ThemeManager.Initialize(app);
-        var model = new SetupViewModel(engine, inspection, args, log);
-        var window = new SetupWindow();
-        window.Attach(model);
-        return await ShowAsync(window, () => model.ExitCode);
+        return args.Quiet
+            ? await RunQuietSetupAsync(engine, inspection, args, log)
+            : await host.ShowSetupAsync(engine, inspection, args, log);
     }
 
     /// <summary>Installierte EXE: Rückfrage (oder still sofort), dann die Kopie im Temp-Ordner starten und enden.</summary>
-    private static async Task<int> RunUninstallAsync(Application app, SetupArguments args, SetupLocations locations, SetupLog log)
+    private static async Task<int> RunUninstallAsync(ISetupHost host, SetupArguments args, SetupLocations locations, SetupLog log)
     {
-        var self = Environment.ProcessPath ?? throw new InvalidOperationException("Pfad der eigenen EXE unbekannt.");
-        Task HandOff(bool removeData)
-        {
-            var continueArgs = (args with { RemoveData = removeData }).ToContinueArguments(Environment.ProcessId);
-            return Task.Run(() => UninstallHandoff.Start(self, Path.GetTempPath(), continueArgs, log));
-        }
+        Task HandOff(bool removeData) => host.HandOffAsync(ContinueArguments(args, removeData, host.ProcessId), log);
 
         if (args.Quiet)
         {
@@ -130,44 +134,38 @@ public static class SetupRunner
             return SetupExitCodes.Ok;
         }
 
-        ThemeManager.Initialize(app);
-        var engine = SetupEngines.CreateUninstall(locations, log);
+        var engine = host.CreateUninstall(locations, log);
         var inspection = engine.Inspect();
         log.Info("Stand: " + inspection);
-        var model = new UninstallViewModel(inspection, args, HandOff, log);
-        var window = new UninstallWindow();
-        window.Attach(model);
-        return await ShowAsync(window, () => model.ExitCode);
+        return await host.ShowUninstallAsync(inspection, args, HandOff, log);
     }
 
     /// <summary>
     /// Kopie im Temp-Ordner: warten, bis die installierte EXE beendet ist, entfernen (mit Fenster oder still), Ergebnis
-    /// ins Protokoll, Temp-Ordner nach dem Ende löschen lassen. Läuft auch bei Fehlern bis zum Aufräumen.
+    /// ins Protokoll, Temp-Ordner nach dem Ende löschen lassen. Läuft auch bei Fehlern und abgelehnter Befehlszeile bis
+    /// zum Aufräumen.
     /// </summary>
-    private static async Task<int> RunUninstallContinueAsync(Application app, SetupArguments args, SetupLocations locations, SetupLog log)
+    private static async Task<int> RunUninstallContinueAsync(ISetupHost host, SetupArguments args, IReadOnlyList<string> refused, SetupLocations locations, SetupLog log)
     {
         var code = SetupExitCodes.Failed;
         try
         {
-            if (args.WaitPid is { } pid)
+            if (refused.Count > 0)
             {
-                await WaitForInstalledExeAsync(pid, log);
-            }
-
-            var engine = SetupEngines.CreateUninstall(locations, log);
-            if (args.Quiet)
-            {
-                code = await RunQuietUninstallAsync(engine, args.RemoveData, log);
+                // Die Befehlszeile kommt von der installierten EXE; passt sie nicht, wird nichts entfernt.
+                code = Refuse(host, SetupModeKind.UninstallContinue, args, refused, log);
             }
             else
             {
-                ThemeManager.Initialize(app);
-                var model = new UninstallProgressViewModel(engine, args.RemoveData, locations.DataPaths.ConfigDirectory, log);
-                var window = new UninstallProgressWindow();
-                window.Attach(model);
-                var closed = ShowAsync(window, () => model.ExitCode);
-                await model.RunAsync();
-                code = await closed;
+                if (args.WaitPid is { } pid)
+                {
+                    await host.WaitUntilGoneAsync(pid, log);
+                }
+
+                var engine = host.CreateUninstall(locations, log);
+                code = args.Quiet
+                    ? await RunQuietUninstallAsync(engine, args.RemoveData, log)
+                    : await host.ShowUninstallProgressAsync(engine, args.RemoveData, locations.DataPaths.ConfigDirectory, log);
             }
         }
         catch (Exception ex)
@@ -175,7 +173,7 @@ public static class SetupRunner
             log.Error("Entfernen abgebrochen", ex);
             if (!args.Quiet)
             {
-                ShowUnexpected(SetupStrings.UninstallWindowTitle, ex, log);
+                host.ShowError(SetupStrings.UninstallWindowTitle, SetupText.Error(SetupErrorKind.Unexpected, ex.Message, log.FilePath));
             }
 
             code = SetupExitCodes.Failed;
@@ -183,48 +181,27 @@ public static class SetupRunner
         finally
         {
             // Das Protokoll liegt nicht im Temp-Ordner der Kopie; „ERGEBNIS“ ist seine letzte Zeile (Prüfskripte).
-            UninstallHandoff.ScheduleSelfRemoval(Environment.ProcessPath, Path.GetTempPath(), log);
+            host.ScheduleSelfRemoval(log);
             log.Info("ERGEBNIS: " + code.ToString(CultureInfo.InvariantCulture));
         }
 
         return code;
     }
 
-    /// <summary>Wartet ohne Handle über die Prozessliste (alle 200 ms, höchstens 30 s) auf das Ende der installierten EXE.</summary>
-    private static async Task WaitForInstalledExeAsync(int pid, SetupLog log)
+    /// <summary>Abgelehnte Befehlszeile: nichts ändern, im Protokoll begründen, mit Fenster eine Fehlermeldung.</summary>
+    private static int Refuse(ISetupHost host, SetupModeKind kind, SetupArguments args, IReadOnlyList<string> refused, SetupLog log)
     {
-        using var snapshot = new NtProcessSnapshotProvider();
-        bool IsRunning(int id)
+        var detail = string.Join(' ', refused);
+        log.Warn("Befehlszeile abgelehnt (" + detail + "), nichts geändert, Exit-Code " + SetupExitCodes.BadArguments.ToString(CultureInfo.InvariantCulture));
+        if (!args.Quiet)
         {
-            try
-            {
-                return snapshot.GetProcesses().Any(p => p.ProcessId == id);
-            }
-            catch (Exception ex)
-            {
-                // Ohne Prozessliste nicht ewig warten; scheitert das Entfernen an der laufenden EXE, meldet es das.
-                log.Warn("Prozessliste nicht lesbar: " + ex.Message);
-                return false;
-            }
+            host.ShowError(TitleFor(kind), SetupText.Error(SetupErrorKind.Unexpected, detail, log.FilePath));
         }
 
-        if (!await UninstallHandoff.WaitUntilGoneAsync(pid, IsRunning, UninstallHandoff.WaitInterval, UninstallHandoff.WaitTimeout))
-        {
-            log.Warn(string.Create(CultureInfo.InvariantCulture, $"Prozess {pid} lief nach {UninstallHandoff.WaitTimeout.TotalSeconds:0} s noch; Entfernen versucht es trotzdem."));
-        }
+        return SetupExitCodes.BadArguments;
     }
 
-    private static Task<int> ShowAsync(Window window, Func<int> exitCode)
-    {
-        var closed = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
-        window.Closed += (_, _) => closed.TrySetResult(exitCode());
-        window.Show();
-        window.Activate();
-        return closed.Task;
-    }
-
-    private static void ShowUnexpected(string title, Exception ex, SetupLog log) =>
-        MessageBox.Show(SetupText.Error(SetupErrorKind.Unexpected, ex.Message, log.FilePath), title, MessageBoxButton.OK, MessageBoxImage.Error);
+    private static string TitleFor(SetupModeKind kind) => kind == SetupModeKind.Setup ? SetupStrings.SetupWindowTitle : SetupStrings.UninstallWindowTitle;
 
     /// <summary>Ergebnis einer Installation oder eines Entfernens ins Setup-Protokoll.</summary>
     public static void LogResult(SetupLog log, SetupResult result)

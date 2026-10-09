@@ -204,6 +204,18 @@ public sealed class SetupWindowViewTests : IDisposable
             WpfTestHost.DoEvents();
             Assert.False(Displayed(Ids(plain)["UninstallSteamWarning"]));
             plain.Close();
+
+            // Ohne installierte EXE: Titel ohne Version, „Entfernen“ und die Datenfrage bleiben (die Kopie entscheidet).
+            var missing = new UninstallWindow();
+            missing.Attach(new UninstallViewModel(Uninstall(installed: null), Args("--uninstall"), _ => Task.CompletedTask, _folder.Log));
+            WpfTestHost.Layout(missing, new Size(580, double.PositiveInfinity));
+            WpfTestHost.DoEvents();
+            var missingIds = Ids(missing);
+            Assert.Equal(SetupStrings.UninstallWindowTitle, Text(missingIds["UninstallTitle"]));
+            Assert.True(Displayed(missingIds["UninstallConfirmButton"]));
+            Assert.True(missingIds["UninstallConfirmButton"].IsEnabled);
+            Assert.True(Displayed(missingIds["UninstallRemoveData"]));
+            missing.Close();
         });
     }
 

@@ -33,14 +33,7 @@ public partial class UninstallWindow : ChromeWindow
     {
         Loaded -= OnLoaded;
         ShellMotion.PlayEntrance(Root, [Header, Body]);
-        if (_model?.IsInstalled == true)
-        {
-            ConfirmButton.Focus();
-        }
-        else
-        {
-            CancelButton.Focus();
-        }
+        ConfirmButton.Focus();
     }
 
     private void OnClosing(object? sender, CancelEventArgs e)

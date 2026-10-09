@@ -37,8 +37,8 @@ public static class SetupText
     };
 
     /// <summary>
-    /// Fehlertext je Art. Unerwartete Fehler nennen die technische Angabe (<paramref name="detail"/>) und das Protokoll;
-    /// liefert die Engine dafür schon den fertigen Text, bleibt er unverändert.
+    /// Fehlertext je Art. Unerwartete Fehler nennen die technische Angabe (<paramref name="detail"/>, falls es eine gibt)
+    /// und das Protokoll; liefert die Engine dafür schon den fertigen Text, bleibt er unverändert.
     /// </summary>
     public static string Error(SetupErrorKind? error, string? detail, string logPath) => error switch
     {
@@ -61,7 +61,9 @@ public static class SetupText
             return detail;
         }
 
-        var text = string.IsNullOrWhiteSpace(detail) ? nameof(SetupErrorKind.Unexpected) : detail.Trim().TrimEnd('.');
-        return Format(SetupStrings.SetupErrorUnexpected, text, logPath);
+        var text = detail?.Trim().TrimEnd('.').TrimEnd() ?? string.Empty;
+        return text.Length == 0
+            ? Format(SetupStrings.SetupErrorUnexpectedNoDetail, logPath)
+            : Format(SetupStrings.SetupErrorUnexpected, text, logPath);
     }
 }

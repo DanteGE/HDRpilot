@@ -26,11 +26,35 @@ public sealed class SetupModeTests : IDisposable
         Assert.True(mode.Arguments.NoLaunch);
         Assert.Equal(_folder.Root, mode.Arguments.TestRoot);
 
-        // Auch ohne Schalter (Doppelklick) und selbst mit --uninstall bleibt eine Setup-Datei ein Setup.
+        // Auch ohne Schalter (Doppelklick) bleibt eine Setup-Datei ein Setup; mit --uninstall auch, aber dann lehnt der
+        // Lauf ab, statt zu installieren.
         Assert.True(SetupMode.TryDetect(setup, [], out var plain));
         Assert.Equal(SetupModeKind.Setup, plain.Kind);
+        Assert.Empty(SetupMode.RefusedArguments(plain.Kind, plain.Arguments));
         Assert.True(SetupMode.TryDetect(setup, ["--uninstall"], out var odd));
         Assert.Equal(SetupModeKind.Setup, odd.Kind);
+        Assert.Equal(["--uninstall"], SetupMode.RefusedArguments(odd.Kind, odd.Arguments));
+    }
+
+    [Theory]
+    [InlineData(SetupModeKind.Setup, new[] { "--test-root" }, new[] { "--test-root" })] // Ordner fehlt: nie die echte Installation
+    [InlineData(SetupModeKind.Uninstall, new[] { "--uninstall", "--Test-Root" }, new[] { "--Test-Root" })]
+    [InlineData(SetupModeKind.UninstallContinue, new[] { "--uninstall-continue", "--test-root" }, new[] { "--test-root" })]
+    [InlineData(SetupModeKind.Setup, new[] { "--test-root=C:\\Test" }, new[] { "--test-root=C:\\Test" })]
+    [InlineData(SetupModeKind.Setup, new[] { "--test-root", "--quiet" }, new[] { "--test-root", "--quiet" })] // Schalter als Ordner
+    [InlineData(SetupModeKind.Setup, new[] { "--uninstall", "--quiet", "--remove-data" }, new[] { "--uninstall", "--remove-data" })]
+    [InlineData(SetupModeKind.Setup, new[] { "--uninstall-continue", "--wait-pid", "12" }, new[] { "--uninstall-continue", "--wait-pid", "12" })]
+    [InlineData(SetupModeKind.Setup, new[] { "--quiet", "--bogus" }, new[] { "--bogus" })] // ohne Fenster jeder unbekannte Schalter
+    [InlineData(SetupModeKind.Uninstall, new[] { "--uninstall", "--quiet", "--autostart", "vielleicht" }, new[] { "--autostart", "vielleicht" })]
+    [InlineData(SetupModeKind.UninstallContinue, new[] { "--uninstall-continue", "--bogus" }, new[] { "--bogus" })] // Kopie: auch mit Fenster
+    [InlineData(SetupModeKind.Setup, new[] { "--bogus" }, new string[0])] // mit Fenster sieht der Nutzer, was geschieht
+    [InlineData(SetupModeKind.Uninstall, new[] { "--uninstall", "--bogus" }, new string[0])]
+    [InlineData(SetupModeKind.Setup, new[] { "--quiet", "--no-launch", "--autostart", "off", "--allow-downgrade", "--test-root", "C:\\Test" }, new string[0])]
+    [InlineData(SetupModeKind.Uninstall, new[] { "--uninstall", "--quiet", "--remove-data", "--test-root", "C:\\Test" }, new string[0])]
+    [InlineData(SetupModeKind.UninstallContinue, new[] { "--uninstall-continue", "--wait-pid", "12", "--quiet", "--remove-data", "--test-root", "C:\\Test" }, new string[0])]
+    public void Refused_arguments_are_those_that_would_do_something_else_than_asked(SetupModeKind kind, string[] args, string[] expected)
+    {
+        Assert.Equal(expected, SetupMode.RefusedArguments(kind, Args(args)));
     }
 
     [Fact]

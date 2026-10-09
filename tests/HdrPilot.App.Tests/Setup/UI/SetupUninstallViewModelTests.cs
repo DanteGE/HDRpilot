@@ -18,7 +18,6 @@ public sealed class SetupUninstallViewModelTests : IDisposable
     {
         var model = new UninstallViewModel(Uninstall("1.1.0", "Cyberpunk 2077", "Steam-App 1091500"), Args(), _ => Task.CompletedTask, _folder.Log);
 
-        Assert.True(model.IsInstalled);
         Assert.Equal(Format(SetupStrings.UninstallTitle, "1.1.0"), model.Title);
         Assert.False(model.RemoveData);
         Assert.True(model.HasSteamGames);
@@ -97,21 +96,25 @@ public sealed class SetupUninstallViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Without_installation_there_is_nothing_to_confirm()
+    public async Task Without_installed_exe_removal_is_still_offered_and_the_copy_decides()
     {
-        var handed = 0;
-        var model = new UninstallViewModel(Uninstall(installed: null), Args("--uninstall"), _ =>
+        // Ordner von Hand gelöscht: der Eintrag unter „Installierte Apps“ kann noch da sein, das weiß erst die Engine.
+        var handed = new List<bool>();
+        var model = new UninstallViewModel(Uninstall(installed: null), Args("--uninstall"), r =>
         {
-            handed++;
+            handed.Add(r);
             return Task.CompletedTask;
         }, _folder.Log);
+        var closed = 0;
+        model.CloseRequested += (_, _) => closed++;
 
-        Assert.False(model.IsInstalled);
-        Assert.Equal(SetupStrings.SetupErrorNotInstalled, model.Title);
-        Assert.False(model.ConfirmCommand.CanExecute(null));
+        Assert.Equal(SetupStrings.UninstallWindowTitle, model.Title);
+        Assert.True(model.ConfirmCommand.CanExecute(null));
+        Assert.Equal(SetupExitCodes.Cancelled, model.ExitCode);
         await model.ConfirmAsync();
-        Assert.Equal(0, handed);
-        Assert.Equal(SetupExitCodes.NotInstalled, model.ExitCode);
+        Assert.Equal([false], handed);
+        Assert.Equal(1, closed);
+        Assert.Equal(SetupExitCodes.Ok, model.ExitCode);
     }
 
     [Theory]

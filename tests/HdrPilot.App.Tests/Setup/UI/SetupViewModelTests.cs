@@ -217,6 +217,24 @@ public sealed class SetupViewModelTests : IDisposable
         Assert.Contains("Datenträger getrennt", _folder.LogText, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(SetupErrorKind.Unexpected, null)]
+    [InlineData(SetupErrorKind.Unexpected, "")]
+    [InlineData(SetupErrorKind.Unexpected, " . ")]
+    [InlineData(null, null)]
+    public async Task Failure_without_detail_names_only_the_log(SetupErrorKind? error, string? message)
+    {
+        var engine = Engine(Inspection("1.0.0"));
+        engine.Results.Enqueue(new SetupResult(false, error, message, new Version(1, 0, 0), null, false));
+        var model = new SetupViewModel(engine, engine.Inspection, Args(), _folder.Log);
+
+        await model.InstallAsync();
+
+        Assert.Equal(Format(SetupStrings.SetupErrorUnexpectedNoDetail, _folder.Log.FilePath), model.ResultText);
+        Assert.DoesNotContain(nameof(SetupErrorKind.Unexpected), model.ResultText, StringComparison.Ordinal);
+        Assert.Equal(SetupExitCodes.Failed, model.ExitCode);
+    }
+
     [Fact]
     public void Cancel_before_start_closes_with_cancelled_and_installs_nothing()
     {

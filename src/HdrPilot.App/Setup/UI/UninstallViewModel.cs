@@ -7,7 +7,9 @@ namespace HdrPilot.App.Setup.UI;
 /// <summary>
 /// Rückfrage vor dem Entfernen (installierte EXE mit <c>--uninstall</c>): Version, ob auch die Daten weg sollen
 /// (Standard: behalten) und Warnung vor Steam-Startoptionen, die noch auf HDRpilot zeigen. „Entfernen“ startet die
-/// Kopie im Temp-Ordner, die die eigentliche Arbeit macht; danach schließt sich das Fenster.
+/// Kopie im Temp-Ordner, die die eigentliche Arbeit macht; danach schließt sich das Fenster. Fehlt die installierte
+/// EXE, geht „Entfernen“ trotzdem: Ob noch etwas da ist (etwa der Eintrag unter „Installierte Apps“), weiß erst die
+/// Engine; ist nichts da, meldet die Kopie „nicht installiert“.
 /// </summary>
 public sealed class UninstallViewModel : ObservableObject
 {
@@ -27,18 +29,16 @@ public sealed class UninstallViewModel : ObservableObject
         _handOff = handOff;
         _log = log;
         _removeData = arguments.RemoveData;
-        ExitCode = IsInstalled ? SetupExitCodes.Cancelled : SetupExitCodes.NotInstalled;
         _confirm = new RelayCommand(() => _ = ConfirmAsync(), () => CanConfirm);
         _cancel = new RelayCommand(Cancel, () => !IsBusy);
     }
 
     public event EventHandler? CloseRequested;
 
-    public bool IsInstalled => _inspection.InstalledVersion is not null;
-
-    public string Title => IsInstalled
-        ? SetupText.Format(SetupStrings.UninstallTitle, SetupText.Version(_inspection.InstalledVersion))
-        : SetupStrings.SetupErrorNotInstalled;
+    /// <summary>Mit Version, wenn die installierte EXE da ist; sonst nur „HDRpilot entfernen“.</summary>
+    public string Title => _inspection.InstalledVersion is { } version
+        ? SetupText.Format(SetupStrings.UninstallTitle, SetupText.Version(version))
+        : SetupStrings.UninstallWindowTitle;
 
     public bool RemoveData
     {
@@ -78,10 +78,10 @@ public sealed class UninstallViewModel : ObservableObject
 
     public bool HasError => ErrorText is not null;
 
-    public bool CanConfirm => IsInstalled && !IsBusy;
+    public bool CanConfirm => !IsBusy;
 
-    /// <summary>Exit-Code beim Schließen: abgebrochen (nicht installiert), Ok nach dem Start der Kopie, sonst Fehler.</summary>
-    public int ExitCode { get; private set; }
+    /// <summary>Exit-Code beim Schließen: abgebrochen, Ok nach dem Start der Kopie, sonst Fehler.</summary>
+    public int ExitCode { get; private set; } = SetupExitCodes.Cancelled;
 
     public ICommand ConfirmCommand => _confirm;
 

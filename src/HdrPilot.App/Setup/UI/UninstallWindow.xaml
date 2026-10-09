@@ -45,8 +45,7 @@
                                AutomationProperties.AutomationId="UninstallTitle"
                                Text="{Binding Title}" />
                     <TextBlock Style="{StaticResource Hp.Text.Caption}" FontSize="13" Margin="0,3,0,0"
-                               Text="{x:Static res:SetupStrings.UninstallInfo}"
-                               Visibility="{Binding IsInstalled, Converter={StaticResource Hp.Shell.BoolToVisibility}}" />
+                               Text="{x:Static res:SetupStrings.UninstallInfo}" />
                 </StackPanel>
             </Grid>
             <Border Height="3" Margin="0,14,0,0" CornerRadius="1.5" Background="{DynamicResource Hp.Brush.Accent}" />
@@ -58,8 +57,7 @@
                       AutomationProperties.AutomationId="UninstallRemoveData"
                       AutomationProperties.Name="{x:Static res:SetupStrings.UninstallRemoveData}"
                       AutomationProperties.HelpText="{x:Static res:SetupStrings.UninstallKeepDataNote}"
-                      IsChecked="{Binding RemoveData, Mode=TwoWay}"
-                      Visibility="{Binding IsInstalled, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                      IsChecked="{Binding RemoveData, Mode=TwoWay}">
                 <StackPanel>
                     <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:SetupStrings.UninstallRemoveData}" />
                     <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:SetupStrings.UninstallKeepDataNote}" />
@@ -110,8 +108,7 @@
                 <Button x:Name="ConfirmButton" Style="{StaticResource Hp.AccentButton}" MinWidth="150" Margin="12,0,0,0"
                         AutomationProperties.AutomationId="UninstallConfirmButton"
                         AutomationProperties.Name="{x:Static res:SetupStrings.UninstallConfirmButton}"
-                        Command="{Binding ConfirmCommand}"
-                        Visibility="{Binding IsInstalled, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                        Command="{Binding ConfirmCommand}">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE74D;" />
                         <TextBlock Text="{x:Static res:SetupStrings.UninstallConfirmButton}" />

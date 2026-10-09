@@ -137,6 +137,10 @@
     <value>Unerwarteter Fehler: {0}. Die bisherige Version ist unverändert. Einzelheiten stehen in {1}.</value>
     <comment>{0} = technische Angabe, {1} = Pfad des Setup-Protokolls</comment>
   </data>
+  <data name="SetupErrorUnexpectedNoDetail" xml:space="preserve">
+    <value>Unerwarteter Fehler. Die bisherige Version ist unverändert. Einzelheiten stehen in {0}.</value>
+    <comment>Wie SetupErrorUnexpected, wenn es keine technische Angabe gibt; {0} = Pfad des Setup-Protokolls</comment>
+  </data>
 
   <!-- Entfernen: Rückfrage -->
   <data name="UninstallWindowTitle" xml:space="preserve">

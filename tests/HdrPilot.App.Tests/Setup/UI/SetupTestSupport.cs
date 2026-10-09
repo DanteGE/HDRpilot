@@ -1,4 +1,6 @@
+using System.Globalization;
 using HdrPilot.App.Setup;
+using HdrPilot.App.Setup.UI;
 
 namespace HdrPilot.App.Tests.Setup.UI;
 
@@ -92,6 +94,92 @@ internal sealed class FakeUninstallEngine(UninstallInspection inspection, SetupL
     }
 }
 
+/// <summary>
+/// Umgebung der Abläufe ohne Fenster, Prozesse und echte Orte: schreibt jeden Aufruf in <see cref="Calls"/> mit (in
+/// Reihenfolge), Fenster liefern <see cref="WindowExitCode"/>, die Rückfrage zum Entfernen wählt
+/// <see cref="ConfirmRemoveData"/>, das Aufräumen schreibt <see cref="RemovalMarker"/> ins Protokoll.
+/// </summary>
+internal sealed class FakeSetupHost(FakeSetupEngine setup, FakeUninstallEngine uninstall) : ISetupHost
+{
+    public const string RemovalMarker = "Attrappe: Temp-Ordner wird gelöscht";
+
+    public int ProcessId => 4242;
+
+    public List<string> Calls { get; } = [];
+
+    /// <summary>Befehlszeilen, mit denen die Kopie zum Entfernen gestartet worden wäre.</summary>
+    public List<IReadOnlyList<string>> HandOffs { get; } = [];
+
+    public List<string> Errors { get; } = [];
+
+    public int WindowExitCode { get; set; } = SetupExitCodes.Ok;
+
+    /// <summary>Wahl in der Rückfrage: „Entfernen“ mit oder ohne Daten; null: Abbrechen.</summary>
+    public bool? ConfirmRemoveData { get; set; }
+
+    public ISetupEngine CreateSetup(SetupLocations locations, SetupBundle bundle, SetupLog log)
+    {
+        Calls.Add("CreateSetup");
+        return setup;
+    }
+
+    public IUninstallEngine CreateUninstall(SetupLocations locations, SetupLog log)
+    {
+        Calls.Add("CreateUninstall");
+        return uninstall;
+    }
+
+    public Task<int> ShowSetupAsync(ISetupEngine engine, SetupInspection inspection, SetupArguments arguments, SetupLog log)
+    {
+        Calls.Add("ShowSetup");
+        return Task.FromResult(WindowExitCode);
+    }
+
+    public async Task<int> ShowUninstallAsync(UninstallInspection inspection, SetupArguments arguments, Func<bool, Task> handOff, SetupLog log)
+    {
+        Calls.Add("ShowUninstall");
+        if (ConfirmRemoveData is not { } removeData)
+        {
+            return SetupExitCodes.Cancelled;
+        }
+
+        await handOff(removeData);
+        return SetupExitCodes.Ok;
+    }
+
+    public async Task<int> ShowUninstallProgressAsync(IUninstallEngine engine, bool removeData, string configDirectory, SetupLog log)
+    {
+        Calls.Add("ShowUninstallProgress " + configDirectory);
+        var result = await engine.UninstallAsync(new UninstallOptions(removeData));
+        return SetupMode.ExitCodeFor(result);
+    }
+
+    public void ShowError(string title, string text)
+    {
+        Calls.Add("ShowError");
+        Errors.Add(text);
+    }
+
+    public Task HandOffAsync(IReadOnlyList<string> arguments, SetupLog log)
+    {
+        Calls.Add("HandOff");
+        HandOffs.Add(arguments);
+        return Task.CompletedTask;
+    }
+
+    public Task WaitUntilGoneAsync(int processId, SetupLog log)
+    {
+        Calls.Add("Wait " + processId.ToString(CultureInfo.InvariantCulture));
+        return Task.CompletedTask;
+    }
+
+    public void ScheduleSelfRemoval(SetupLog log)
+    {
+        Calls.Add("ScheduleSelfRemoval");
+        log.Info(RemovalMarker);
+    }
+}
+
 /// <summary>Eigener Ordner im Temp-Ordner je Test (Protokoll, Testablage, Setup-Dateien), wird danach gelöscht.</summary>
 internal sealed class SetupTestFolder : IDisposable
 {
@@ -110,6 +198,16 @@ internal sealed class SetupTestFolder : IDisposable
     public SetupLog Log { get; }
 
     public string LogText => File.Exists(Log.FilePath) ? File.ReadAllText(Log.FilePath) : string.Empty;
+
+    public string[] LogLines => File.Exists(Log.FilePath) ? File.ReadAllLines(Log.FilePath) : [];
+
+    /// <summary>Setup-Datei (EXE mit angehängtem Paket) im Testordner.</summary>
+    public string CreateSetupFile()
+    {
+        var setup = Path.Combine(Root, "HDRpilot-Setup-1.1.0.exe");
+        SetupBundle.Write(CreateFile("HDRpilot.exe"), new Dictionary<string, string>(), setup);
+        return setup;
+    }
 
     /// <summary>Datei mit festem Inhalt (etwa eine „EXE“ für Paket und Kopie).</summary>
     public string CreateFile(string name, byte[]? content = null)

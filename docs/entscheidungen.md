@@ -447,3 +447,21 @@ Menü bleibt offen, Symbolwechsel bei offenem Menü, Esc mit Rückgabe an die Ta
 Klick in ein anderes Programm, Klick auf einen Eintrag, Tastatur. Vor jedem Klick prüft es das Fenster unter dem Zeiger
 (nur Taskleiste, Überlauf, Testinstanz, eigenes Fenster). Gegenproben: alter Code und fehlende Ergänzungen fallen
 durch. Die bisherigen Tests öffneten das Menü nur ohne echten Rechtsklick und konnten den Fehler nicht sehen.
+
+**E83 Installer (Wunsch des Nutzers, hebt „kein Installer“ aus dem Auftrag auf):** Der Nutzer wählte einen eigenen Setup
+statt Inno Setup oder Velopack: kein Download, keine neue Abhängigkeit, keine Adminrechte, kein Netz. Die Setup-Datei
+`HDRpilot-Setup-<Version>.exe` ist die normale `HDRpilot.exe` mit angehängtem Paket (Zip mit README, Lizenzhinweisen und
+`cli\hdrpilot.exe`) und einem Abschluss (Kennung, Längen, SHA-256 der EXE); der .NET-Einzeldatei-Start stört sich an
+angehängten Daten nicht (geprüft). Findet die EXE beim Start diesen Abschluss an sich selbst, läuft sie als Setup (eigenes
+Fenster im Stil der App), sonst normal; die installierte EXE ist byte-gleich mit der portablen und hat keinen Abschluss.
+Installiert wird für den angemeldeten Benutzer nach `%LOCALAPPDATA%\Programs\HDRpilot` (beim Nutzer derselbe Ordner wie
+bisher, Windows unterscheidet nicht nach Groß-/Kleinschreibung; Autostart, Verknüpfungen und Steam-Startoptionen zeigen
+weiter auf dieselbe EXE), Eintrag unter „Installierte Apps“ in HKCU, Startmenü-Verknüpfung, auf Wunsch Desktop-Verknüpfung
+und Autostart. Aktualisieren: einen neueren Setup ausführen; er beendet die laufende App über den vorhandenen Befehlsweg
+(`--exit`, kein Prozess-Handle, kein gewaltsames Beenden, E67), ersetzt die EXE mit Rückfall auf die alte bei Fehlern und
+startet sie wieder. Einstellungen (`%APPDATA%\HDRpilot`) und Daten (`%LOCALAPPDATA%\HDRpilot`) fasst der Setup nie an.
+Entfernen (`HDRpilot.exe --uninstall` aus „Installierte Apps“): läuft aus einer Kopie im Temp-Ordner, entfernt nur die
+eigenen Dateien, Verknüpfungen, die auf die EXE zeigen, den eigenen Autostart-Wert und den Eintrag; stellt einen gemerkten
+HDR-Zustand wieder her; Einstellungen und Daten nur auf ausdrücklichen Wunsch; warnt vor Steam-Startoptionen, die auf
+HDRpilot zeigen (die Spiele starteten sonst nicht mehr). Prüfläufe nur mit `--test-root` (alle Orte und ein eigener
+Registry-Zweig darunter), damit nie die echte Installation berührt wird. Version 1.1.0.

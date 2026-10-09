@@ -211,3 +211,33 @@ und die EXPECT-Marke ausgibt.
   CHECK: ps tools\gates\phase6-traymenu.ps1
   EXPECT: PHASE6_TRAYMENU_OK
   EVIDENCE: 2026-10-07 21:16 (nach der Gegenprüfung, Stand mit WM_CLOSE-Schutz und Rückgabe an die Taskleiste) exit 0, PHASE6_TRAYMENU_OK, alle Prüfungen aus einem anderen aktiven Programm heraus; Gegenproben 21:15 ohne WM_CLOSE-Schutz und ohne Rückgabe: genau diese 2 Prüfungen rot; 21:16 mit dem ursprünglichen Fehler: 9 Prüfungen rot (Vordergrund zurück beim zuvor aktiven Programm). BUILD_OK_0_WARNINGS, TESTS_OK 1610, PHASE4_RESOURCES_OK, PHASE6_NAME_OK, PHASE5_PUBLISH_OK (HDRpilot.exe SHA256 73FE2EB0…). Eingespielt 21:18, am echten Symbol in der Taskleiste: offen nach 146 ms, nach 3000 ms noch offen, nach Esc Taskleiste vorn Erster Stand (vor der Gegenprüfung): 2026-10-07 20:53 exit 0, PHASE6_TRAYMENU_OK (alle 6 Prüfungen, Symbol der Testinstanz im Überlauf; vier Läufe grün, der letzte mit dem später ergänzten Symbolwechsel). Gegenprobe mit dem alten Code: exit 1 (Menü nach 2 s zu, HDRpilot nicht im Vordergrund). Vorher an der installierten Version gemessen: offen nach 64 ms, zu nach 202 ms, Vordergrund zurück beim zuvor aktiven Programm. Nach dem Einspielen (20:55, HDRpilot.exe SHA256 472830B8…, PHASE5_PUBLISH_OK) am echten Symbol in der Taskleiste: offen nach 147 ms, nach 3000 ms noch offen, Esc schließt. BUILD_OK_0_WARNINGS, TESTS_OK 1610
+
+## Phase 7: Installer (Wunsch des Nutzers: installierbar und aktualisierbar, eigener Setup, E83)
+
+Setup = die normale `HDRpilot.exe` mit angehängtem Paket (README, Lizenzhinweise, Kommandozeile) und Prüfsumme; installiert
+für den angemeldeten Benutzer ohne Adminrechte nach `%LOCALAPPDATA%\Programs\HDRpilot`. Einstellungen und Daten liegen
+getrennt (`%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`) und werden vom Setup nie angefasst; beim Entfernen nur auf
+ausdrücklichen Wunsch. Prüfläufe nutzen ausschließlich `--test-root` (eigene Ordner und eigener Registry-Zweig).
+
+- [ ] G7.1: Setup-Logik per Unit-Tests belegt (mit Gegenproben): Paketformat lesen und prüfen (beschädigt, abgeschnitten, fremde Datei), Erstinstallation, Aktualisierung mit Rückfall bei Fehler (alte EXE bleibt lauffähig), gleiche und ältere Version, laufende App beenden ohne Prozess-Handle, Verknüpfungen und Autostart nur für die eigene EXE, Eintrag unter „Installierte Apps“, Entfernen nur der eigenen Dateien und Verknüpfungen, Daten bleiben außer auf Wunsch, Steam-Startoptionen mit HDRpilot werden gefunden, Befehlszeile des Setups
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Setup" -MinTests 40
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G7.2: Ende-zu-Ende mit der echten Setup-Datei in einer Testablage: Erstinstallation (installierte EXE byte-gleich mit der portablen, Startmenü-Verknüpfung, Registry-Eintrag mit Version, Größe, Deinstallations-Befehl), App startet danach; Aktualisierung über die laufende App (wird sauber beendet und neu gestartet, Einstellungen unverändert); Entfernen behält die Einstellungen, mit `--remove-data` sind sie weg; die Kopie zum Entfernen räumt sich selbst weg; der Setup läuft ohne Adminrechte
+  CHECK: ps tools\gates\phase7-setup.ps1
+  EXPECT: PHASE7_SETUP_OK
+  EVIDENCE: pending
+
+- [ ] G7.3: Oberfläche von Setup und Entfernen (UI-Automation an der Testablage): zeigt Version alt → neu und Zielordner, sagt, dass Einstellungen erhalten bleiben, Optionen Autostart, Desktop-Verknüpfung, danach starten; Fortschritt und Ergebnis; Entfernen fragt nach den Daten (Standard: behalten) und warnt vor Steam-Startoptionen; alle Texte aus Ressourcen, Name HDRpilot
+  CHECK: ps tools\gates\phase7-setup-ui.ps1
+  EXPECT: PHASE7_SETUP_UI_OK
+  EVIDENCE: pending
+
+- [ ] G7.4: Auslieferung erzeugt `HDRpilot-Setup-<Version>.exe` neben dem portablen Ordner; Version 1.1.0; README beschreibt Installation, Aktualisierung und Entfernen; Neubau ohne Warnungen, alle Tests und alle früheren Gates grün
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G7.5: Beim Nutzer: bestehende Installation per Setup aktualisiert (nur mit Zustimmung), danach unter „Installierte Apps“ geführt, Einstellungen und Spieleliste unverändert (Prüfsumme der config.json vor/nach dem Setup), App läuft, Autostart und Verknüpfungen funktionieren
+  EVIDENCE: pending

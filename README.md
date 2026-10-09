@@ -186,12 +186,12 @@ HDRpilot das nicht; am Ende schaltet es HDR nur aus, wenn es vor dem Spiel aus w
 
 **Neustart-Puffer:** Endet ein Spiel weniger als 5 Minuten nach dem Start (typisch für Hänger oder Abstürze) und hat
 HDRpilot HDR dafür eingeschaltet, bleibt HDR noch eine Weile an statt nur die Nachlaufzeit: Standard 1 Minute,
-einstellbar unter „Einstellungen“ in Minuten und Sekunden (0:00 bis 30:00, 0:00 schaltet den Puffer ab; ist die
-Nachlaufzeit länger, gilt sie). Eine Änderung gilt ab dem nächsten Spielende, ohne Neustart von HDRpilot. Startest du
-das Spiel in dieser Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es
-bei Spielen mit „HDR automatisch“ wieder ein). Läuft beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot
-mit dem Zurückstellen, bis sie endet (höchstens 30 Minuten). Spiele, die HDRpilot nach einem eigenen Neustart
-übernimmt, gelten nie als kurz.
+einstellbar unter „Einstellungen“ in Minuten und Sekunden (0:00 bis 30:00, 0:00 schaltet den Puffer ab; ist er nicht
+länger als die Nachlaufzeit, wirkt er wie 0:00). Eine Änderung gilt ab dem nächsten Spielende, ohne Neustart von
+HDRpilot. Startest du das Spiel in dieser Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet,
+schaltet HDRpilot es bei Spielen mit „HDR automatisch“ wieder ein). Läuft beim Ablauf des Puffers eine
+Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30 Minuten; nur nach dem Puffer,
+nie nach der Nachlaufzeit). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
 
 **Hängender Spielprozess:** Läuft ein Spiel nach dem Spielen unsichtbar weiter (kein Fenster, keine Rechenzeit), lässt
 HDRpilot HDR an, weil das Spiel ja noch läuft. Nach 2 Minuten ohne jede Aktivität erscheint einmal ein Hinweis, dass das
@@ -381,8 +381,9 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   Spiel gestartet hat. Battle.net ist ungeprüft (siehe unten).
 - **Umschalten während des Spielstarts:** Bei der automatischen Erkennung schaltet HDRpilot HDR, während das Spiel
   gerade hochfährt. Das verkraften fast alle Spiele; Dead Island 2 blieb im Test bei einem von zwei automatischen
-  Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Der Neustart-Puffer hilft beim zweiten Versuch; sicherer
-  sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption.
+  Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Der Neustart-Puffer hilft beim zweiten Versuch, wenn der
+  Neustart in seine Zeit fällt (Standard 1 Minute; wer länger für den Neustart braucht, stellt ihn unter „Einstellungen“
+  höher); sicherer sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption.
 - **Frühwarnung:** nur für den Epic Games Launcher und Steam. Sie beruht auf deren Protokollformat, das sich mit einem
   Launcher-Update ändern kann; dann greift wieder die normale Erkennung.
 - **Steam-Startoption:** wirkt nur, wenn HDRpilot läuft (Autostart empfohlen) und das Spiel beim letzten Einlesen schon

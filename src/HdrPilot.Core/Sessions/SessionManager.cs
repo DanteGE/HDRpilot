@@ -806,12 +806,14 @@ public sealed class SessionManager
     /// Kein Spielprozess mehr: normalerweise beginnt die Nachlaufzeit. War die Sitzung kurz und hat HdrPilot HDR für sie
     /// eingeschaltet (vorher aus, Zurückstellen an), gilt stattdessen der längere Neustart-Puffer. Anlass: Dead Island 2
     /// hing gleich nach dem Umschalten, der Nutzer beendete es und startete 96 s nach dem Zurückstellen neu. Startet das
-    /// Spiel im Puffer wieder, läuft die Sitzung einfach weiter (<see cref="Touch"/>) und HDR bleibt an.
+    /// Spiel im Puffer wieder, läuft die Sitzung einfach weiter (<see cref="Touch"/>) und HDR bleibt an. Ist der Puffer
+    /// nicht länger als die Nachlaufzeit, gilt nur die Nachlaufzeit wie bei 0:00, ohne Warten auf eine
+    /// Vollbild-Anwendung (E85: sonst hielte schon ein Puffer von 0:05 HDR womöglich bis zu 30 Minuten an).
     /// </summary>
     private void BeginEnding(ActiveSession session, TimeSpan grace, TimeSpan restartBuffer, DateTimeOffset now)
     {
         var ran = now - (session.FirstProcessAt ?? now);
-        var shortSession = restartBuffer > TimeSpan.Zero
+        var shortSession = restartBuffer > grace
             && session.FirstProcessAt is not null
             && ran < _options.ShortSessionLimit
             && session.Displays.Any(path => _claims.TryGetValue(path, out var claim) && !claim.WasHdrOn && claim.Restore);
@@ -821,11 +823,10 @@ public sealed class SessionManager
             return;
         }
 
-        var wait = grace > restartBuffer ? grace : restartBuffer;
-        session.BufferUntil = now + wait;
+        session.BufferUntil = now + restartBuffer;
         _logger.LogInformation(
             "Kein Prozess von \"{Game}\" mehr, kurze Sitzung ({Ran:0} s): Neustart-Puffer {Buffer:0} s, HDR bleibt so lange an.",
-            session.Name, ran.TotalSeconds, wait.TotalSeconds);
+            session.Name, ran.TotalSeconds, restartBuffer.TotalSeconds);
     }
 
     /// <summary>

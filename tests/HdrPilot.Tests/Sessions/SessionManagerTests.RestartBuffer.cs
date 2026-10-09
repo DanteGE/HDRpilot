@@ -416,22 +416,52 @@ public sealed partial class SessionManagerTests
         Assert.True(PrimaryOn);
     }
 
+    [Theory]
+    [InlineData(5, 10)] // 0:05 bei der Standard-Nachlaufzeit
+    [InlineData(10, 10)] // gleich lang
+    [InlineData(null, 120)] // Standard 1:00 bei der längsten Nachlaufzeit der Einstellungen
+    public async Task RestartBuffer_not_longer_than_the_grace_period_works_like_off_even_with_a_fullscreen_app(int? buffer, int grace)
+    {
+        // Mit dem Regler ist ein Puffer bis zur Nachlaufzeit leicht einzustellen (E85). Er wirkt wie 0:00: nur die
+        // Nachlaufzeit, kein Warten auf eine Vollbild-Anwendung. Vorher galt die Nachlaufzeit dann als Puffer, und schon
+        // 0:05 hielt HDR bei einer Vollbild-Anwendung bis zu 30 Minuten an.
+        UseRestartBuffer();
+        _fullscreen = true;
+        _config.Config.Settings.RestartBufferSeconds = buffer;
+        _config.Config.Settings.GracePeriodSeconds = grace;
+        _config.AddGame("1", DirA);
+        await Poll();
+
+        await RunGameFor(30);
+
+        Assert.Null(Assert.Single(Manager.Sessions).BufferUntil);
+        Assert.True(_log.Contains(LogLevel.Information, $"Nachlaufzeit {grace} s beginnt"));
+        await Poll(grace - 1);
+        Assert.True(PrimaryOn);
+        await Poll();
+        Assert.False(PrimaryOn);
+        Assert.Empty(Manager.Sessions);
+        Assert.Equal(0, _fullscreenQueries);
+        Assert.False(_log.Contains(LogLevel.Information, "Neustart-Puffer"));
+    }
+
     [Fact]
-    public async Task Longer_grace_period_wins_over_the_buffer()
+    public async Task RestartBuffer_one_second_longer_than_the_grace_period_applies_with_the_fullscreen_wait()
     {
         UseRestartBuffer();
-        _config.Config.Settings.GracePeriodSeconds = 300;
+        _fullscreen = true;
+        _config.Config.Settings.RestartBufferSeconds = 11;
         _config.AddGame("1", DirA);
         await Poll();
 
         var stoppedAt = await RunGameFor(30);
 
-        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(300), Assert.Single(Manager.Sessions).BufferUntil);
-        Assert.True(_log.Contains(LogLevel.Information, "Neustart-Puffer 300 s"));
-        await Poll(299);
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(11), Assert.Single(Manager.Sessions).BufferUntil);
+        Assert.True(_log.Contains(LogLevel.Information, "kurze Sitzung (30 s): Neustart-Puffer 11 s"));
+        await Poll(11);
         Assert.True(PrimaryOn);
-        await Poll();
-        Assert.False(PrimaryOn);
+        Assert.True(Assert.Single(Manager.Sessions).HeldForFullscreen);
+        Assert.Equal(1, FullscreenWaitLogs());
     }
 
     [Fact]

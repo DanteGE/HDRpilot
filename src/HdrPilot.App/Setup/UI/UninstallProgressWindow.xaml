@@ -1,0 +1,95 @@
+<infra:ChromeWindow x:Class="HdrPilot.App.Setup.UI.UninstallProgressWindow"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
+                    xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    xmlns:ui="clr-namespace:HdrPilot.App.Setup.UI"
+                    mc:Ignorable="d"
+                    d:DataContext="{d:DesignInstance ui:UninstallProgressViewModel}"
+                    Title="{x:Static res:SetupStrings.UninstallWindowTitle}"
+                    AutomationProperties.AutomationId="UninstallProgressWindow"
+                    AutomationProperties.Name="{x:Static res:SetupStrings.UninstallWindowTitle}"
+                    Width="580" SizeToContent="Height" ResizeMode="NoResize"
+                    WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <ResourceDictionary Source="SetupResources.xaml" />
+    </Window.Resources>
+    <Window.InputBindings>
+        <KeyBinding Key="Return" Command="{Binding CloseCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CloseCommand}" />
+    </Window.InputBindings>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Kopf mit Akzentlinie; der Lichtreflex läuft nur, solange entfernt wird -->
+        <StackPanel x:Name="Header" Margin="32,2,32,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid Style="{StaticResource Setup.HeaderTile}">
+                    <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.Accent}" />
+                    <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.BackgroundGlow}" Opacity="0.6" />
+                    <TextBlock Style="{StaticResource Setup.HeaderGlyph}" Text="&#xE74D;" />
+                </Grid>
+                <TextBlock Grid.Column="1" Style="{StaticResource Hp.Text.Title}" FontSize="24" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Text="{x:Static res:SetupStrings.UninstallWindowTitle}" />
+            </Grid>
+            <Grid x:Name="AccentLine" Height="3" Margin="0,14,0,0" ClipToBounds="True">
+                <Border CornerRadius="1.5" Background="{DynamicResource Hp.Brush.Accent}" />
+                <Rectangle x:Name="Sheen" Width="180" HorizontalAlignment="Left" Fill="{DynamicResource Hp.Brush.TextOnAccent}">
+                    <Rectangle.OpacityMask>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#00000000" Offset="0" />
+                            <GradientStop Color="#C0000000" Offset="0.5" />
+                            <GradientStop Color="#00000000" Offset="1" />
+                        </LinearGradientBrush>
+                    </Rectangle.OpacityMask>
+                    <Rectangle.RenderTransform>
+                        <TranslateTransform x:Name="SheenTransform" X="-180" />
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel x:Name="Body" Grid.Row="1" Margin="32,16,32,12">
+            <ListBox Focusable="False"
+                     AutomationProperties.AutomationId="UninstallProgress"
+                     Style="{StaticResource Hp.Shell.ListBox}"
+                     ItemContainerStyle="{StaticResource Setup.StepItem}"
+                     ItemTemplate="{StaticResource Setup.StepTemplate}"
+                     ItemsSource="{Binding Steps}" />
+            <Border x:Name="ResultCard" Style="{StaticResource Setup.ResultCard}" Margin="0,14,0,0"
+                    Visibility="{Binding IsDone, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                <DockPanel>
+                    <TextBlock Style="{StaticResource Setup.ResultGlyph}" />
+                    <TextBlock Style="{StaticResource Hp.Text.Body}" LineHeight="21" VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="UninstallResultText"
+                               Text="{Binding ResultText}" />
+                </DockPanel>
+            </Border>
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="{DynamicResource Hp.Brush.Surface}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="0,1,0,0" Padding="32,14,32,16">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" MinHeight="40">
+                <Button x:Name="CloseButton" Style="{StaticResource Hp.AccentButton}" MinWidth="150"
+                        AutomationProperties.AutomationId="UninstallCloseButton"
+                        AutomationProperties.Name="{x:Static res:SetupStrings.UninstallCloseButton}"
+                        Command="{Binding CloseCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE73E;" />
+                        <TextBlock Text="{x:Static res:SetupStrings.UninstallCloseButton}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</infra:ChromeWindow>

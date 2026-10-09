@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
+using HdrPilot.App.Setup;
 using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
@@ -10,7 +11,8 @@ using HdrPilot.Core.Launch;
 namespace HdrPilot.App;
 
 /// <summary>
-/// Start: Steam-Startoption erkennen (dann nur Wrapper, siehe <see cref="SteamWrapperMode"/>), Einzelinstanz prüfen
+/// Start: Steam-Startoption erkennen (dann nur Wrapper, siehe <see cref="SteamWrapperMode"/>), Setup-Datei oder
+/// Entfernen erkennen (dann nur deren Fenster, siehe <see cref="SetupMode"/>), Einzelinstanz prüfen
 /// (sonst Befehle weiterreichen), Automatik starten (inklusive Wiederanlauf nach Absturz), Tray anzeigen. Das Fenster
 /// öffnet sich nur auf Wunsch; HdrPilot startet minimiert.
 /// </summary>
@@ -37,6 +39,15 @@ public partial class App : Application
             }
 
             Shutdown(0);
+            return;
+        }
+
+        // Setup-Datei oder Entfernen (E83): eigene Fenster, nie Einzelinstanz, Automatik, Tray oder Konfiguration.
+        if (SetupMode.TryDetect(Environment.ProcessPath, e.Args, out var setupMode))
+        {
+            var code = await SetupMode.RunAsync(this, setupMode);
+            Environment.ExitCode = code;
+            Shutdown(code);
             return;
         }
 

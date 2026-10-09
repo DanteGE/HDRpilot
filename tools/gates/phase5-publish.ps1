@@ -2,6 +2,7 @@
 # Startet die veröffentlichte EXE als Kopie außerhalb des Repositorys, ohne erreichbare .NET-Installation
 # (DOTNET_ROOT ins Leere, dotnet aus PATH entfernt), und prüft die geladenen Module. Gegenprobe: dieselbe
 # Modulprüfung erkennt beim normalen (runtime-abhängigen) Debug-Build die installierte Runtime.
+# Dazu die Setup-Datei daneben (Phase 7, E83): Format, Prüfsummen, Paketinhalt, Manifest, mit Gegenproben.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $out = Join-Path $root 'artifacts\publish\HDRpilot'
@@ -74,6 +75,49 @@ foreach ($exe in $appExe, $cliExe) {
 $version = ([xml](Get-Content (Join-Path $root 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version
 $productVersion = (Get-Item $appExe).VersionInfo.ProductVersion
 Check ($productVersion -like "$version*") "Produktversion $productVersion passt zu $version"
+
+# 2b. Setup-Datei (E83, Format wie src\HdrPilot.App\Setup\SetupBundle.cs): Abschluss passt zur Dateigröße, der EXE-Teil
+# ist byte-gleich mit der portablen EXE (Prüfsumme im Abschluss und tatsächlich), das Paket enthält genau die drei
+# Beigaben, das Manifest verlangt keine Adminrechte. Gegenproben: ein gekipptes Byte im EXE-Teil fällt bei der
+# Prüfsumme durch, ein abgeschnittenes Ende beim Abschluss, ein um ein Byte gekürztes Paket bei den Längen, die portable
+# EXE hat gar keinen.
+. (Join-Path $PSScriptRoot 'Phase7Common.ps1')
+$appInfo = (Get-Item $appExe).VersionInfo
+$setupVersion = '{0}.{1}.{2}' -f $appInfo.FileMajorPart, $appInfo.FileMinorPart, $appInfo.FileBuildPart
+Check ($setupVersion -eq (Get-ProjectVersion)) "Version der Setup-Datei $setupVersion (aus HDRpilot.exe) passt zu $version"
+$setup = Join-Path (Split-Path $out -Parent) "HDRpilot-Setup-$setupVersion.exe"
+$setupFiles = @(Get-ChildItem (Split-Path $out -Parent) -Filter 'HDRpilot-Setup-*.exe' -File | ForEach-Object { $_.Name })
+Check ($setupFiles.Count -eq 1 -and $setupFiles[0] -eq (Split-Path $setup -Leaf)) ("Genau eine Setup-Datei neben dem portablen Ordner: {0}" -f ($setupFiles -join ', '))
+$bundle = Test-SetupBundle $setup $out
+foreach ($p in $bundle.Problems) { Note "  - $p" }
+function Test-NoProblem($result, [string]$prefix) { @($result.Problems | Where-Object { $_.StartsWith($prefix) }).Count -eq 0 }
+Check ((Test-Path $setup) -and (Test-NoProblem $bundle 'Setup-Datei') -and (Test-NoProblem $bundle 'Abschluss')) ("Setup-Datei {0}: Kennung HDRPILOT-SETUP01, EXE {1:N0} + Paket {2:N0} + 64 Bytes = Dateigröße" -f (Split-Path $setup -Leaf), $bundle.ExeLength, $bundle.PayloadLength)
+Check ($bundle.ExeHash -and (Test-NoProblem $bundle 'EXE-Teil: SHA-256')) ("EXE-Teil SHA256 {0} = Abschluss = portable HDRpilot.exe" -f $bundle.ExeHash)
+Check (@($bundle.Entries).Count -eq 3 -and (Test-NoProblem $bundle 'Paket')) ("Paket enthält genau {0}, inhaltsgleich mit der Auslieferung" -f (@($bundle.Entries) -join ', '))
+Check ($bundle.AsInvoker -and (Test-NoProblem $bundle 'EXE-Teil: Manifest')) 'EXE-Teil enthält das Manifest mit asInvoker, keine erhöhten Rechte'
+if ($bundle.ExeLength -gt 0) {
+    $controlDir = Join-Path $work 'setup-gegenprobe'
+    if (Test-Path $controlDir) { Remove-Item $controlDir -Recurse -Force }
+    New-Item -ItemType Directory -Force $controlDir | Out-Null
+    $flipped = Join-Path $controlDir 'gekippt.exe'
+    Copy-Item $setup $flipped
+    [HdrPilotGates.SetupFile]::FlipByte($flipped, [long][Math]::Floor($bundle.ExeLength / 2))
+    $flippedResult = Test-SetupBundle $flipped $out
+    Check ((Test-NoProblem $flippedResult 'Abschluss') -and $flippedResult.Problems -contains 'EXE-Teil: SHA-256 weicht vom Abschluss ab') ("Gegenprobe gekipptes Byte im EXE-Teil: Prüfsumme fällt durch ({0})" -f ($flippedResult.Problems -join '; '))
+    $truncated = Join-Path $controlDir 'abgeschnitten.exe'
+    [HdrPilotGates.SetupFile]::CopyPrefix($setup, $truncated, (Get-Item $setup).Length - 1000)
+    $truncatedResult = Test-SetupBundle $truncated $out
+    Check (-not (Test-NoProblem $truncatedResult 'Abschluss')) ("Gegenprobe abgeschnittenes Ende: Abschluss fällt durch ({0})" -f ($truncatedResult.Problems -join '; '))
+    # Kennung vorhanden, aber ein Byte des Pakets fehlt: nur der Längenvergleich (EXE + Paket + 64 = Dateigröße) fängt das
+    $shortened = Join-Path $controlDir 'paket-zu-kurz.exe'
+    [HdrPilotGates.SetupFile]::CopyPrefix($setup, $shortened, (Get-Item $setup).Length - 65)
+    [HdrPilotGates.SetupFile]::AppendTail($setup, $shortened, 64)
+    $shortenedResult = Test-SetupBundle $shortened $out
+    Check (@($shortenedResult.Problems | Where-Object { $_.StartsWith('Abschluss: Längen passen nicht zur Datei') }).Count -eq 1) ("Gegenprobe Paket ein Byte zu kurz, Abschluss unverändert: Längen passen nicht ({0})" -f ($shortenedResult.Problems -join '; '))
+    $plain = Test-SetupBundle $appExe $out
+    Check (-not (Test-NoProblem $plain 'Abschluss')) ("Gegenprobe portable HDRpilot.exe: kein Abschluss, startet nie als Setup ({0})" -f ($plain.Problems -join '; '))
+    Remove-Item $controlDir -Recurse -Force
+}
 
 # 3. Gegenprobe: Die Modulprüfung erkennt eine installierte Runtime (Debug-Build ist runtime-abhängig).
 if (Test-Path $debugApp) {

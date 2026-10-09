@@ -40,7 +40,8 @@ public sealed partial class AppServices
 
         var service = new AutostartService(Registry, AutostartService.ResolveExecutablePath(System.Environment.ProcessPath), logger);
 
-        // EXE verschoben: Run-Eintrag zeigt noch auf den alten Pfad. Nur wenn Autostart in der Konfiguration an ist.
+        // EXE verschoben: Run-Eintrag zeigt noch auf den alten Pfad. Nur wenn Autostart in der Konfiguration an ist; ein
+        // fehlender Eintrag bleibt weg (etwa vom Setup entfernt, E83).
         service.Reconcile(Config.Current.Settings.StartWithWindows);
         return service;
     }

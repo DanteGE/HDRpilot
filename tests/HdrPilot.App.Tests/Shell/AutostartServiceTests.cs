@@ -75,13 +75,27 @@ public sealed class AutostartServiceTests
     }
 
     [Fact]
-    public void Reconcile_recreates_a_missing_entry_when_the_config_wants_autostart()
+    public void Reconcile_keeps_a_removed_entry_removed_even_when_the_config_wants_autostart()
     {
+        // Setup mit „Mit Windows starten“ aus (E83): Der Wert ist weg, die Konfiguration sagt noch an. Der nächste Start
+        // darf ihn nicht wieder anlegen, sonst wirkte die Option im Setup nicht.
         var registry = new FakeRegistry();
         var service = new AutostartService(registry, Exe);
 
-        Assert.Equal(AutostartReconcileResult.Created, service.Reconcile(startWithWindows: true));
-        Assert.Equal(Expected, service.CurrentCommand);
+        Assert.Equal(AutostartReconcileResult.Unchanged, service.Reconcile(startWithWindows: true));
+        Assert.Null(service.CurrentCommand);
+        Assert.Null(registry.OpenKey(RegistryHiveKind.CurrentUser, AutostartService.RunKeyPath));
+    }
+
+    [Fact]
+    public void Reconcile_keeps_a_removed_entry_removed_when_the_run_key_has_other_values()
+    {
+        var registry = new FakeRegistry().Set(RegistryHiveKind.CurrentUser, AutostartService.RunKeyPath, "Steam", "\"C:\\Steam\\steam.exe\" -silent");
+        var service = new AutostartService(registry, Exe);
+
+        Assert.Equal(AutostartReconcileResult.Unchanged, service.Reconcile(startWithWindows: true));
+        Assert.Null(registry.Get(RegistryHiveKind.CurrentUser, AutostartService.RunKeyPath, "HdrPilot"));
+        Assert.False(service.IsEnabled);
     }
 
     [Fact]

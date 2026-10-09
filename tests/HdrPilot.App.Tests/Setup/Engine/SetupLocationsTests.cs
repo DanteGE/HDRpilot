@@ -66,7 +66,7 @@ public sealed class SetupLocationsTests
         Assert.Equal(@"C:\Users\Test\AppData\Local\HDRpilot", l.DataPaths.DataDirectory);
         Assert.Equal(string.Empty, l.ExtraLaunchArguments);
         Assert.Equal("default", l.InstanceId);
-        Assert.Equal(SetupSupport.MutexBaseName, SetupSupport.MutexNameFor(l));
+        Assert.Equal(@"Local\HDRpilot.Setup", SetupSupport.MutexNameFor(l)); // so in E83 festgehalten
     }
 
     private static SetupLocations DefaultLocations()

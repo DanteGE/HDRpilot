@@ -10,8 +10,9 @@ namespace HdrPilot.App.Setup;
 public static class SetupSupport
 {
     /// <summary>
-    /// Sperre gegen ein zweites Setup oder Entfernen zur selben Zeit. Neuer Kernel-Name, deshalb schon in der Schreibweise
-    /// HDRpilot (die alten Namen wie HdrPilot.Instance bleiben nur wegen laufender älterer Versionen).
+    /// Sperre gegen ein zweites Setup oder Entfernen zur selben Zeit (Name in E83 festgehalten; Kernel-Namen unterscheiden
+    /// Groß-/Kleinschreibung). Neuer Name, deshalb schon in der Schreibweise HDRpilot: die alten Namen wie
+    /// HdrPilot.Instance bleiben nur wegen laufender älterer Versionen (E80), neue Reste lässt G6.4 nicht zu.
     /// </summary>
     public const string MutexBaseName = @"Local\HDRpilot.Setup";
 
@@ -132,6 +133,32 @@ public static class SetupSupport
         IOException io when IsInUse(io) => SetupErrorKind.FilesInUse,
         _ => SetupErrorKind.Unexpected,
     };
+
+    /// <summary>
+    /// Fehlerart für Schritte außerhalb des Programmordners (Verknüpfungen, Registry, Datenordner): nur „Speicher voll“
+    /// trifft dort zu; „Zugriff verweigert“ oder „in Benutzung“ hieße für den Nutzer „Programmordner“ und wäre falsch.
+    /// Alles andere ist unerwartet, die technische Angabe nennt dann den Schritt.
+    /// </summary>
+    public static SetupErrorKind ClassifyOutsideProgramFolder(Exception ex) =>
+        IsDiskFull(ex) ? SetupErrorKind.DiskFull : SetupErrorKind.Unexpected;
+
+    /// <summary>Löscht einen leeren Ordner; einer mit Inhalt oder einer, der sich nicht löschen lässt, bleibt. Wirft nicht.</summary>
+    public static void DeleteIfEmpty(string folder, SetupLog log)
+    {
+        try
+        {
+            if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
+            {
+                Directory.Delete(folder);
+                log.Info("Leerer Ordner entfernt: " + folder);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Etwa im Explorer geöffnet: der leere Ordner stört nicht.
+            log.Warn("Ordner bleibt: " + folder + " (" + ex.Message + ")");
+        }
+    }
 
     /// <summary>Kurzer technischer Text für Protokoll und Ergebnis.</summary>
     public static string Describe(string what, Exception ex) => what + ": " + ex.GetType().Name + ": " + ex.Message;

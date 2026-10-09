@@ -246,6 +246,33 @@ public sealed class SetupUninstallEngineTests : IDisposable
     }
 
     [Fact]
+    public async Task Failure_in_the_registry_is_not_reported_as_a_program_folder_problem()
+    {
+        await InstallAsync(desktop: false);
+        _h.Entries.FailOnDelete = new UnauthorizedAccessException("Registry gesperrt");
+
+        var result = await _h.UninstallAsync();
+
+        Assert.Equal(SetupErrorKind.Unexpected, result.Error);
+        Assert.StartsWith("Eintrag entfernen: ", result.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(L.ExePath));
+    }
+
+    [Fact]
+    public async Task Shortcut_in_use_is_not_reported_as_a_file_in_the_program_folder()
+    {
+        await InstallAsync(desktop: false);
+        var files = new FailingFileOperations((op, path) =>
+            op == "Delete" && path.Equals(L.StartMenuShortcut, StringComparison.OrdinalIgnoreCase) ? FailingFileOperations.SharingViolation() : null);
+
+        var result = await _h.UninstallAsync(files: files);
+
+        Assert.Equal(SetupErrorKind.Unexpected, result.Error);
+        Assert.Contains(L.StartMenuShortcut, result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(L.ExePath));
+    }
+
+    [Fact]
     public async Task Second_uninstall_at_the_same_time_is_refused()
     {
         await InstallAsync(desktop: false);

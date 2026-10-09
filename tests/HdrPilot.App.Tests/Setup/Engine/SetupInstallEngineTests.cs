@@ -123,7 +123,9 @@ public sealed class SetupInstallEngineTests : IDisposable
 
         var result = await _h.InstallAsync("1.1.0", new InstallOptions(Autostart: false, DesktopShortcut: false, LaunchAfterInstall: true));
 
-        Assert.Equal(SetupErrorKind.AccessDenied, result.Error);
+        // Kein „Kein Schreibzugriff auf den Programmordner“: der war beschreibbar, gescheitert ist die Registry.
+        Assert.Equal(SetupErrorKind.Unexpected, result.Error);
+        Assert.StartsWith("Register: ", result.Message, StringComparison.Ordinal);
         Assert.Equal(SetupHarness.ExeBytes("1.0.0"), File.ReadAllBytes(L.ExePath));
         Assert.Equal("CLI 1.0.0", File.ReadAllText(_h.InstalledFile(@"cli\hdrpilot.exe")));
         AssertNoLeftovers();
@@ -142,12 +144,84 @@ public sealed class SetupInstallEngineTests : IDisposable
 
         Assert.Equal(SetupErrorKind.Unexpected, result.Error);
         Assert.False(File.Exists(L.ExePath));
-        Assert.Empty(Directory.GetFiles(L.InstallDirectory, "*", SearchOption.AllDirectories));
+        Assert.False(Directory.Exists(L.InstallDirectory)); // auch keine leeren Ordner
+        Assert.False(Directory.Exists(Path.GetDirectoryName(L.InstallDirectory)));
         Assert.False(File.Exists(L.StartMenuShortcut));
         Assert.False(File.Exists(L.DesktopShortcut));
         Assert.Null(Autostart);
         Assert.Null(_h.Entries.Entry);
         Assert.Empty(_h.App.Started);
+    }
+
+    [Fact]
+    public async Task Failure_while_copying_a_fresh_install_leaves_no_empty_folders()
+    {
+        var files = new FailingFileOperations((op, path) =>
+            op == "Create" && path.EndsWith(@"cli\hdrpilot.exe.new", StringComparison.OrdinalIgnoreCase) ? FailingFileOperations.DiskFull() : null);
+
+        var result = await _h.InstallAsync("1.1.0", files: files);
+
+        Assert.Equal(SetupErrorKind.DiskFull, result.Error);
+        Assert.False(Directory.Exists(L.InstallDirectory));
+    }
+
+    [Fact]
+    public async Task Failed_fresh_install_keeps_a_program_folder_that_was_already_there()
+    {
+        Directory.CreateDirectory(L.InstallDirectory);
+        File.WriteAllText(_h.InstalledFile("notizen.txt"), "vom Nutzer");
+        _h.Entries.FailOnWrite = new IOException("kaputt");
+
+        var result = await _h.InstallAsync("1.1.0");
+
+        Assert.False(result.Success);
+        Assert.True(File.Exists(_h.InstalledFile("notizen.txt")));
+        Assert.False(Directory.Exists(_h.InstalledFile("cli"))); // selbst angelegt und leer: weg
+        Assert.Equal([_h.InstalledFile("notizen.txt")], Directory.GetFileSystemEntries(L.InstallDirectory));
+    }
+
+    [Fact]
+    public async Task Full_disk_after_copying_is_still_reported_as_full_disk()
+    {
+        _h.Entries.FailOnWrite = FailingFileOperations.DiskFull();
+
+        var result = await _h.InstallAsync("1.1.0");
+
+        Assert.Equal(SetupErrorKind.DiskFull, result.Error);
+    }
+
+    [Fact]
+    public async Task Portable_copy_that_was_stopped_for_a_failed_install_is_started_again()
+    {
+        var portable = _h.ForeignExe(); // läuft mit derselben Einzelinstanz-Kennung aus einem anderen Ordner
+        _h.App.Running = true;
+        _h.App.InstanceExe = portable;
+        _h.Entries.FailOnWrite = new IOException("kaputt");
+
+        var result = await _h.InstallAsync("1.1.0", new InstallOptions(true, false, LaunchAfterInstall: true));
+
+        Assert.Equal(SetupErrorKind.Unexpected, result.Error);
+        Assert.Equal(1, _h.App.StopCalls);
+        Assert.False(File.Exists(L.ExePath));
+        Assert.True(result.AppStarted);
+        Assert.Equal([(portable, "--minimized " + L.ExtraLaunchArguments)], _h.App.Started);
+    }
+
+    [Fact]
+    public async Task Portable_copy_that_was_stopped_is_started_again_instead_of_the_installed_version()
+    {
+        Assert.True((await _h.InstallAsync("1.0.0")).Success);
+        var portable = _h.ForeignExe();
+        _h.App.Running = true;
+        _h.App.InstanceExe = portable;
+        var files = new FailingFileOperations((op, path) =>
+            op == "Replace" && path.Equals(L.ExePath, StringComparison.OrdinalIgnoreCase) ? FailingFileOperations.SharingViolation() : null);
+
+        var result = await _h.InstallAsync("1.1.0", new InstallOptions(true, false, true), files);
+
+        Assert.Equal(SetupErrorKind.FilesInUse, result.Error);
+        Assert.Equal(SetupHarness.ExeBytes("1.0.0"), File.ReadAllBytes(L.ExePath));
+        Assert.Equal([(portable, "--minimized " + L.ExtraLaunchArguments)], _h.App.Started);
     }
 
     [Fact]

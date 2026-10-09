@@ -464,4 +464,6 @@ Entfernen (`HDRpilot.exe --uninstall` aus „Installierte Apps“): läuft aus e
 eigenen Dateien, Verknüpfungen, die auf die EXE zeigen, den eigenen Autostart-Wert und den Eintrag; stellt einen gemerkten
 HDR-Zustand wieder her; Einstellungen und Daten nur auf ausdrücklichen Wunsch; warnt vor Steam-Startoptionen, die auf
 HDRpilot zeigen (die Spiele starteten sonst nicht mehr). Prüfläufe nur mit `--test-root` (alle Orte und ein eigener
-Registry-Zweig darunter), damit nie die echte Installation berührt wird. Version 1.1.0.
+Registry-Zweig darunter), damit nie die echte Installation berührt wird. Setup und Entfernen schließen sich über die
+Sperre `Local\HDRpilot.Setup` aus (neuer Kernel-Name, daher schon HDRpilot; Prüfläufe hängen `.<Hash>` ihrer
+Testablage an, wie im Registry-Zweig). Version 1.1.0.

@@ -69,6 +69,21 @@ public sealed partial class SingleInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Prozess-ID der laufenden Instanz über ihr Nachrichtenfenster (liest nur Fensterdaten, öffnet keinen Prozess) oder
+    /// null, wenn keine Instanz ein Fenster hat.
+    /// </summary>
+    public static int? OwnerProcessId(string id)
+    {
+        var window = FindWindowExW(HWND_MESSAGE, IntPtr.Zero, null, WindowTitle(id));
+        if (window == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        return GetWindowThreadProcessId(window, out var processId) != 0 && processId != 0 ? (int)processId : null;
+    }
+
     /// <summary>Öffnet das Nachrichtenfenster. Befehle kommen auf dem UI-Thread an.</summary>
     public void Listen(Action<IReadOnlyList<string>> onCommand)
     {
@@ -172,6 +187,9 @@ public sealed partial class SingleInstance : IDisposable
 
     [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
     private static partial IntPtr FindWindowExW(IntPtr hWndParent, IntPtr hWndChildAfter, string? lpszClass, string lpszWindow);
+
+    [LibraryImport("user32.dll")]
+    private static partial uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     [LibraryImport("user32.dll")]
     private static partial IntPtr SendMessageTimeoutW(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out nint lpdwResult);

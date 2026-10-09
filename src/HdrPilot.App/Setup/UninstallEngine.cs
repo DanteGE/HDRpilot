@@ -363,23 +363,9 @@ public sealed class UninstallEngine : IUninstallEngine
         }
     }
 
-    private void DeleteIfEmpty(string folder)
-    {
-        try
-        {
-            if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
-            {
-                Directory.Delete(folder);
-                _log.Info("Leerer Ordner entfernt: " + folder);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Etwa im Explorer geöffnet: der leere Ordner stört nicht.
-            _log.Warn("Ordner bleibt: " + folder + " (" + ex.Message + ")");
-        }
-    }
+    private void DeleteIfEmpty(string folder) => SetupSupport.DeleteIfEmpty(folder, _log);
 
+    /// <summary>Ein Schritt außerhalb des Programmordners (Verknüpfung, Registry, Datenordner); Fehler werden gemerkt.</summary>
     private void Run(FirstError errors, string what, Action action)
     {
         try
@@ -388,7 +374,7 @@ public sealed class UninstallEngine : IUninstallEngine
         }
         catch (Exception ex)
         {
-            errors.Add(SetupSupport.Classify(ex), SetupSupport.Describe(what, ex));
+            errors.Add(SetupSupport.ClassifyOutsideProgramFolder(ex), SetupSupport.Describe(what, ex));
             _log.Error(what + " fehlgeschlagen.", ex);
         }
     }

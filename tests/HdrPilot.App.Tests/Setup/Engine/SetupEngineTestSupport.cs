@@ -213,6 +213,9 @@ public sealed class FakeAppControl : ISetupAppControl
 {
     public bool Running { get; set; }
 
+    /// <summary>EXE der laufenden Instanz (null: nicht zuzuordnen, der Setup nimmt dann die installierte).</summary>
+    public string? InstanceExe { get; set; }
+
     public bool StopSucceeds { get; set; } = true;
 
     public int StopCalls { get; private set; }
@@ -220,6 +223,8 @@ public sealed class FakeAppControl : ISetupAppControl
     public List<(string Exe, string Arguments)> Started { get; } = [];
 
     public bool IsRunning() => Running;
+
+    public string? InstanceExePath() => Running ? InstanceExe : null;
 
     public bool Stop(TimeSpan timeout)
     {
@@ -246,6 +251,9 @@ public sealed class InMemoryUninstallEntryStore : IUninstallEntryStore
     /// <summary>Wird bei jedem Schreiben geworfen (Fehler beim Eintragen).</summary>
     public Exception? FailOnWrite { get; set; }
 
+    /// <summary>Wird bei jedem Löschen geworfen (Fehler beim Austragen).</summary>
+    public Exception? FailOnDelete { get; set; }
+
     public UninstallEntry? Read() => Entry;
 
     public void Write(UninstallEntry entry)
@@ -258,7 +266,15 @@ public sealed class InMemoryUninstallEntryStore : IUninstallEntryStore
         Entry = entry;
     }
 
-    public void Delete() => Entry = null;
+    public void Delete()
+    {
+        if (FailOnDelete is not null)
+        {
+            throw FailOnDelete;
+        }
+
+        Entry = null;
+    }
 }
 
 public sealed class FakeHdrRestorer : IHdrStateRestorer

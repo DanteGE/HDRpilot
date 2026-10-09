@@ -105,19 +105,23 @@ public sealed class SetupEngine : ISetupEngine
             return Fail(SetupErrorKind.SetupFileDamaged, problem, previous);
         }
 
-        var wasRunning = false;
+        // Was hier beendet wird, startet nach einem Fehler wieder: meist die installierte EXE, sonst eine portable Kopie
+        // aus einem anderen Ordner (gleiche Einzelinstanz-Kennung).
+        string? stoppedExe = null;
         if (_app.IsRunning())
         {
             Report(progress, SetupStep.StopRunningApp);
-            wasRunning = true;
+            stoppedExe = Guard("Laufende Instanz zuordnen", () => _app.InstanceExePath()) ?? Locations.ExePath;
             if (!_app.Stop(_stopTimeout))
             {
                 return Fail(SetupErrorKind.AppStillRunning, string.Create(CultureInfo.InvariantCulture, $"HDRpilot lief nach {_stopTimeout.TotalSeconds:0} s noch."), previous);
             }
 
-            _log.Info("HDRpilot ist beendet.");
+            _log.Info("HDRpilot ist beendet: " + stoppedExe);
         }
 
+        var wasRunning = stoppedExe is not null;
+        var newFolders = MissingFolders();
         Report(progress, SetupStep.CopyFiles);
         var transaction = new SetupFileTransaction(_files, _log);
         try
@@ -127,8 +131,9 @@ public sealed class SetupEngine : ISetupEngine
         catch (Exception ex)
         {
             transaction.Rollback();
+            RemoveIfEmpty(newFolders);
             var kind = ex is InvalidDataException ? SetupErrorKind.SetupFileDamaged : SetupSupport.Classify(ex, transaction.FailedOnExistingFile);
-            return FailAfterStop(kind, SetupSupport.Describe("Dateien kopieren (" + (transaction.CurrentFile ?? Locations.InstallDirectory) + ")", ex), previous, wasRunning);
+            return FailAfterStop(kind, SetupSupport.Describe("Dateien kopieren (" + (transaction.CurrentFile ?? Locations.InstallDirectory) + ")", ex), previous, stoppedExe);
         }
 
         PreviousState? before = null;
@@ -153,7 +158,11 @@ public sealed class SetupEngine : ISetupEngine
             }
 
             transaction.Rollback();
-            return FailAfterStop(SetupSupport.Classify(ex), SetupSupport.Describe(step.ToString(), ex), previous, wasRunning);
+            RemoveIfEmpty(newFolders);
+
+            // Verknüpfungen und Registry liegen außerhalb des Programmordners: „kein Schreibzugriff auf den Programmordner“
+            // oder „Datei in Benutzung“ wäre hier die falsche Meldung.
+            return FailAfterStop(SetupSupport.ClassifyOutsideProgramFolder(ex), SetupSupport.Describe(step.ToString(), ex), previous, stoppedExe);
         }
 
         transaction.Complete();
@@ -161,7 +170,7 @@ public sealed class SetupEngine : ISetupEngine
         if (options.LaunchAfterInstall)
         {
             Report(progress, SetupStep.LaunchApp);
-            started = Launch(inspection.Kind != SetupKind.Install && wasRunning ? "--minimized" : "--show");
+            started = Launch(Locations.ExePath, inspection.Kind != SetupKind.Install && wasRunning ? "--minimized" : "--show");
         }
 
         _log.Info("Setup fertig: HDRpilot " + _setupVersion.ToString(3) + " ist installiert" + (started ? " und gestartet." : "."));
@@ -238,6 +247,35 @@ public sealed class SetupEngine : ISetupEngine
         }
 
         transaction.CommitAll();
+    }
+
+    /// <summary>Ordner der installierten Dateien (samt übergeordneten), die es vor dem Kopieren noch nicht gibt; tiefste zuerst.</summary>
+    private List<string> MissingFolders()
+    {
+        var missing = new List<string>();
+        foreach (var file in SetupLocations.InstalledFiles)
+        {
+            for (var folder = Path.GetDirectoryName(Path.Combine(Locations.InstallDirectory, file));
+                 !string.IsNullOrEmpty(folder) && !Directory.Exists(folder);
+                 folder = Path.GetDirectoryName(folder))
+            {
+                if (!missing.Contains(folder, StringComparer.OrdinalIgnoreCase))
+                {
+                    missing.Add(folder);
+                }
+            }
+        }
+
+        return [.. missing.OrderByDescending(f => f.Length)];
+    }
+
+    /// <summary>Nach dem Rückfall: selbst angelegte Ordner wieder entfernen, sofern leer (vorhandene bleiben immer).</summary>
+    private void RemoveIfEmpty(IReadOnlyList<string> createdFolders)
+    {
+        foreach (var folder in createdFolders)
+        {
+            SetupSupport.DeleteIfEmpty(folder, _log);
+        }
     }
 
     private static bool HashEquals(string path, IReadOnlyList<byte> expected)
@@ -331,13 +369,13 @@ public sealed class SetupEngine : ISetupEngine
         }
     }
 
-    private bool Launch(string mode)
+    private bool Launch(string exePath, string mode)
     {
         var arguments = Locations.ExtraLaunchArguments.Length == 0 ? mode : mode + " " + Locations.ExtraLaunchArguments;
         try
         {
-            var started = _app.Start(Locations.ExePath, arguments);
-            _log.Info((started ? "Gestartet: " : "Nicht gestartet: ") + Locations.ExePath + " " + arguments);
+            var started = _app.Start(exePath, arguments);
+            _log.Info((started ? "Gestartet: " : "Nicht gestartet: ") + exePath + " " + arguments);
             return started;
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
@@ -347,17 +385,27 @@ public sealed class SetupEngine : ISetupEngine
         }
     }
 
-    /// <summary>Fehler nach dem Beenden der App: die (unveränderte) bisherige Version wieder im Tray starten.</summary>
-    private SetupResult FailAfterStop(SetupErrorKind kind, string detail, Version? previous, bool wasRunning)
+    /// <summary>
+    /// Fehler nach dem Beenden der App: die beendete (unveränderte) Version wieder im Tray starten. Das ist die EXE, aus der
+    /// sie lief (auch eine portable Kopie); gibt es die nicht mehr, die bisher installierte.
+    /// </summary>
+    private SetupResult FailAfterStop(SetupErrorKind kind, string detail, Version? previous, string? stoppedExe)
     {
         var result = Fail(kind, detail, previous);
-        if (wasRunning && File.Exists(Locations.ExePath))
+        if (stoppedExe is null)
         {
-            _log.Info("Die bisherige Version wird wieder gestartet.");
-            return result with { AppStarted = Launch("--minimized") };
+            return result;
         }
 
-        return result;
+        var exe = File.Exists(stoppedExe) ? stoppedExe : Locations.ExePath;
+        if (!File.Exists(exe))
+        {
+            _log.Warn("Die beendete Version lässt sich nicht wieder starten: " + stoppedExe + " fehlt.");
+            return result;
+        }
+
+        _log.Info("Die beendete Version wird wieder gestartet: " + exe);
+        return result with { AppStarted = Launch(exe, "--minimized") };
     }
 
     private SetupResult Fail(SetupErrorKind kind, string detail, Version? previous)
@@ -372,7 +420,8 @@ public sealed class SetupEngine : ISetupEngine
         progress?.Report(step);
     }
 
-    private bool Guard(string what, Func<bool> read)
+    /// <summary>Liest einen Zustand; scheitert das, gilt der Standardwert (false, null) und der Fehler steht im Protokoll.</summary>
+    private T? Guard<T>(string what, Func<T> read)
     {
         try
         {
@@ -381,7 +430,7 @@ public sealed class SetupEngine : ISetupEngine
         catch (Exception ex)
         {
             _log.Warn(SetupSupport.Describe(what, ex));
-            return false;
+            return default;
         }
     }
 

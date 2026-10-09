@@ -12,6 +12,12 @@ public interface ISetupAppControl
     /// <summary>True, wenn die Einzelinstanz läuft oder ein Prozess aus der installierten EXE.</summary>
     bool IsRunning();
 
+    /// <summary>
+    /// EXE der laufenden Einzelinstanz oder null (keine Instanz, Pfad nicht lesbar). Kann eine portable Kopie aus einem
+    /// anderen Ordner sein: Sie teilt sich die Kennung mit der installierten App.
+    /// </summary>
+    string? InstanceExePath();
+
     /// <summary>Bittet die App über den Befehlsweg zu enden und wartet. True, wenn danach nichts mehr läuft.</summary>
     bool Stop(TimeSpan timeout);
 
@@ -53,6 +59,25 @@ public sealed class SetupAppControl : ISetupAppControl
         try
         {
             return IsRunning(snapshot);
+        }
+        finally
+        {
+            (snapshot as IDisposable)?.Dispose();
+        }
+    }
+
+    /// <summary>Prozess-ID über das Nachrichtenfenster der Instanz, Pfad aus der Prozessliste (kein Handle).</summary>
+    public string? InstanceExePath()
+    {
+        if (SingleInstance.OwnerProcessId(_instanceId) is not { } processId)
+        {
+            return null;
+        }
+
+        var snapshot = _snapshots();
+        try
+        {
+            return snapshot.GetProcesses().FirstOrDefault(p => p.ProcessId == processId)?.ExePath;
         }
         finally
         {

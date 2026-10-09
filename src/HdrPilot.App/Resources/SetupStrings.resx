@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Setup: Fenster und Optionen (E83) -->
+  <data name="SetupWindowTitle" xml:space="preserve">
+    <value>HDRpilot Setup</value>
+  </data>
+  <data name="SetupTitleInstall" xml:space="preserve">
+    <value>HDRpilot {0} installieren</value>
+    <comment>{0} = Version des Setups</comment>
+  </data>
+  <data name="SetupTitleUpdate" xml:space="preserve">
+    <value>HDRpilot aktualisieren</value>
+  </data>
+  <data name="SetupTitleReinstall" xml:space="preserve">
+    <value>HDRpilot {0} neu installieren</value>
+    <comment>{0} = Version des Setups (gleich der installierten)</comment>
+  </data>
+  <data name="SetupTitleDowngrade" xml:space="preserve">
+    <value>Ältere Version installieren?</value>
+  </data>
+  <data name="SetupVersionUpdate" xml:space="preserve">
+    <value>Installiert: {0} → neu: {1}</value>
+    <comment>{0} = installierte Version, {1} = Version des Setups</comment>
+  </data>
+  <data name="SetupVersionDowngrade" xml:space="preserve">
+    <value>Installiert ist schon {0}, dieser Setup enthält {1}.</value>
+    <comment>{0} = installierte (neuere) Version, {1} = Version des Setups</comment>
+  </data>
+  <data name="SetupInstallDirLabel" xml:space="preserve">
+    <value>Programmordner</value>
+  </data>
+  <data name="SetupDataNote" xml:space="preserve">
+    <value>Deine Einstellungen, Spieleliste und Protokolle bleiben erhalten (gespeichert in {0} und {1}).</value>
+    <comment>{0} = Ordner der Einstellungen, {1} = Ordner der Daten</comment>
+  </data>
+  <data name="SetupAutostart" xml:space="preserve">
+    <value>Mit Windows starten</value>
+  </data>
+  <data name="SetupDesktopShortcut" xml:space="preserve">
+    <value>Verknüpfung auf dem Desktop</value>
+  </data>
+  <data name="SetupLaunchAfter" xml:space="preserve">
+    <value>HDRpilot danach starten</value>
+  </data>
+  <data name="SetupAllowDowngrade" xml:space="preserve">
+    <value>Trotzdem die ältere Version installieren</value>
+  </data>
+  <data name="SetupRunningNote" xml:space="preserve">
+    <value>HDRpilot läuft gerade und wird dafür kurz beendet.</value>
+  </data>
+  <data name="SetupInstallButton" xml:space="preserve">
+    <value>Installieren</value>
+  </data>
+  <data name="SetupUpdateButton" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="SetupCancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="SetupCloseButton" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="SetupRetryButton" xml:space="preserve">
+    <value>Erneut versuchen</value>
+  </data>
+
+  <!-- Setup: Schritte im Fortschritt -->
+  <data name="SetupStepCheckSetupFile" xml:space="preserve">
+    <value>Setup-Datei prüfen</value>
+  </data>
+  <data name="SetupStepStopRunningApp" xml:space="preserve">
+    <value>HDRpilot beenden</value>
+  </data>
+  <data name="SetupStepCopyFiles" xml:space="preserve">
+    <value>Dateien kopieren</value>
+  </data>
+  <data name="SetupStepShortcuts" xml:space="preserve">
+    <value>Verknüpfungen anlegen</value>
+  </data>
+  <data name="SetupStepAutostart" xml:space="preserve">
+    <value>Autostart einrichten</value>
+  </data>
+  <data name="SetupStepRegister" xml:space="preserve">
+    <value>Unter „Installierte Apps“ eintragen</value>
+  </data>
+  <data name="SetupStepLaunchApp" xml:space="preserve">
+    <value>HDRpilot starten</value>
+  </data>
+
+  <!-- Setup: Ergebnis und Fehler (Fehlertexte gelten auch für das Entfernen) -->
+  <data name="SetupDoneInstall" xml:space="preserve">
+    <value>HDRpilot {0} ist installiert.</value>
+    <comment>{0} = installierte Version</comment>
+  </data>
+  <data name="SetupDoneUpdate" xml:space="preserve">
+    <value>HDRpilot wurde auf {0} aktualisiert. Deine Einstellungen sind unverändert.</value>
+    <comment>{0} = neue Version</comment>
+  </data>
+  <data name="SetupErrorSetupFileDamaged" xml:space="preserve">
+    <value>Die Setup-Datei ist beschädigt oder unvollständig. Bitte kopiere oder lade sie erneut.</value>
+  </data>
+  <data name="SetupErrorAppStillRunning" xml:space="preserve">
+    <value>HDRpilot ließ sich nicht beenden. Beende es über das Tray-Menü („HDRpilot beenden“) und versuche es erneut.</value>
+  </data>
+  <data name="SetupErrorFilesInUse" xml:space="preserve">
+    <value>Eine Datei im Programmordner ist gerade in Benutzung. Schließe HDRpilot und versuche es erneut.</value>
+  </data>
+  <data name="SetupErrorAccessDenied" xml:space="preserve">
+    <value>Kein Schreibzugriff auf den Programmordner.</value>
+  </data>
+  <data name="SetupErrorDiskFull" xml:space="preserve">
+    <value>Nicht genug freier Speicherplatz.</value>
+  </data>
+  <data name="SetupErrorDowngradeNotAllowed" xml:space="preserve">
+    <value>Es ist schon eine neuere Version installiert.</value>
+  </data>
+  <data name="SetupErrorAnotherSetupRunning" xml:space="preserve">
+    <value>Es läuft schon ein Setup oder eine Deinstallation von HDRpilot.</value>
+  </data>
+  <data name="SetupErrorNotInstalled" xml:space="preserve">
+    <value>HDRpilot ist nicht installiert.</value>
+  </data>
+  <data name="SetupErrorUnexpected" xml:space="preserve">
+    <value>Unerwarteter Fehler: {0}. Die bisherige Version ist unverändert. Einzelheiten stehen in {1}.</value>
+    <comment>{0} = technische Angabe, {1} = Pfad des Setup-Protokolls</comment>
+  </data>
+  <data name="SetupErrorUnexpectedNoDetail" xml:space="preserve">
+    <value>Unerwarteter Fehler. Die bisherige Version ist unverändert. Einzelheiten stehen in {0}.</value>
+    <comment>Wie SetupErrorUnexpected, wenn es keine technische Angabe gibt; {0} = Pfad des Setup-Protokolls</comment>
+  </data>
+
+  <!-- Entfernen: Rückfrage -->
+  <data name="UninstallWindowTitle" xml:space="preserve">
+    <value>HDRpilot entfernen</value>
+  </data>
+  <data name="UninstallTitle" xml:space="preserve">
+    <value>HDRpilot {0} entfernen?</value>
+    <comment>{0} = installierte Version</comment>
+  </data>
+  <data name="UninstallInfo" xml:space="preserve">
+    <value>Entfernt das Programm, seine Verknüpfungen und den Autostart.</value>
+  </data>
+  <data name="UninstallRemoveData" xml:space="preserve">
+    <value>Auch Einstellungen, Spieleliste und Protokolle löschen</value>
+  </data>
+  <data name="UninstallKeepDataNote" xml:space="preserve">
+    <value>Ohne Haken bleiben sie erhalten und werden bei einer neuen Installation wieder benutzt.</value>
+  </data>
+  <data name="UninstallSteamWarning" xml:space="preserve">
+    <value>Bei diesen Steam-Spielen steht noch die HDRpilot-Startoption. Entferne sie in Steam (Eigenschaften → Startoptionen), sonst starten die Spiele nicht mehr:</value>
+  </data>
+  <data name="UninstallConfirmButton" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="UninstallCancelButton" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+
+  <!-- Entfernen: Schritte und Ergebnis (Kopie im Temp-Ordner) -->
+  <data name="UninstallStepStopRunningApp" xml:space="preserve">
+    <value>HDRpilot beenden</value>
+  </data>
+  <data name="UninstallStepRestoreHdr" xml:space="preserve">
+    <value>HDR-Zustand wiederherstellen</value>
+  </data>
+  <data name="UninstallStepRemoveFiles" xml:space="preserve">
+    <value>Dateien entfernen</value>
+  </data>
+  <data name="UninstallStepRemoveShortcuts" xml:space="preserve">
+    <value>Verknüpfungen entfernen</value>
+  </data>
+  <data name="UninstallStepRemoveAutostart" xml:space="preserve">
+    <value>Autostart entfernen</value>
+  </data>
+  <data name="UninstallStepUnregister" xml:space="preserve">
+    <value>Eintrag entfernen</value>
+  </data>
+  <data name="UninstallStepRemoveData" xml:space="preserve">
+    <value>Einstellungen und Daten löschen</value>
+  </data>
+  <data name="UninstallDone" xml:space="preserve">
+    <value>HDRpilot wurde entfernt.</value>
+  </data>
+  <data name="UninstallDoneDataKept" xml:space="preserve">
+    <value>Deine Einstellungen liegen weiter in {0}.</value>
+    <comment>{0} = Ordner der Einstellungen</comment>
+  </data>
+  <data name="UninstallDoneDataRemoved" xml:space="preserve">
+    <value>Einstellungen und Daten wurden gelöscht.</value>
+  </data>
+  <data name="UninstallCloseButton" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+</root>

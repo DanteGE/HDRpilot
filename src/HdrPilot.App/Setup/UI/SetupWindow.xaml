@@ -1,0 +1,223 @@
+<infra:ChromeWindow x:Class="HdrPilot.App.Setup.UI.SetupWindow"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
+                    xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    xmlns:ui="clr-namespace:HdrPilot.App.Setup.UI"
+                    mc:Ignorable="d"
+                    d:DataContext="{d:DesignInstance ui:SetupViewModel}"
+                    Title="{x:Static res:SetupStrings.SetupWindowTitle}"
+                    AutomationProperties.AutomationId="SetupWindow"
+                    AutomationProperties.Name="{x:Static res:SetupStrings.SetupWindowTitle}"
+                    Width="620" SizeToContent="Height" ResizeMode="NoResize"
+                    WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <ResourceDictionary Source="SetupResources.xaml" />
+    </Window.Resources>
+    <Window.InputBindings>
+        <KeyBinding Key="Return" Command="{Binding PrimaryCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+    </Window.InputBindings>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Kopf: Symbol je Art (neu, Aktualisierung, Reparatur, ältere Version), Titel, Versionen, Akzentlinie -->
+        <StackPanel x:Name="Header" Margin="32,2,32,4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid Style="{StaticResource Setup.HeaderTile}">
+                    <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.Accent}" />
+                    <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.BackgroundGlow}" Opacity="0.6" />
+                    <TextBlock>
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Setup.HeaderGlyph}">
+                                <Setter Property="Text" Value="&#xE896;" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Kind}" Value="Update">
+                                        <Setter Property="Text" Value="&#xE895;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Kind}" Value="Reinstall">
+                                        <Setter Property="Text" Value="&#xE90F;" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Kind}" Value="Downgrade">
+                                        <Setter Property="Text" Value="&#xE7BA;" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Style="{StaticResource Hp.Text.Title}" FontSize="24" TextWrapping="Wrap"
+                               AutomationProperties.AutomationId="SetupTitle"
+                               Text="{Binding Title}" />
+                    <TextBlock Style="{StaticResource Hp.Text.Caption}" FontSize="13" Margin="0,3,0,0"
+                               AutomationProperties.AutomationId="SetupVersionInfo"
+                               Text="{Binding VersionInfo}"
+                               Visibility="{Binding HasVersionInfo, Converter={StaticResource Hp.Shell.BoolToVisibility}}" />
+                </StackPanel>
+            </Grid>
+            <Grid x:Name="AccentLine" Height="3" Margin="0,14,0,0" ClipToBounds="True">
+                <Border CornerRadius="1.5" Background="{DynamicResource Hp.Brush.Accent}" />
+                <Rectangle x:Name="Sheen" Width="180" HorizontalAlignment="Left" Fill="{DynamicResource Hp.Brush.TextOnAccent}">
+                    <Rectangle.OpacityMask>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#00000000" Offset="0" />
+                            <GradientStop Color="#C0000000" Offset="0.5" />
+                            <GradientStop Color="#00000000" Offset="1" />
+                        </LinearGradientBrush>
+                    </Rectangle.OpacityMask>
+                    <Rectangle.RenderTransform>
+                        <TranslateTransform x:Name="SheenTransform" X="-180" />
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+            </Grid>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="32,16,32,12">
+            <!-- Seite 1: Zielordner, Hinweis auf die Daten, Optionen -->
+            <StackPanel x:Name="OptionsPage" Visibility="{Binding IsOptionsPage, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                <TextBlock Style="{StaticResource Hp.Text.Overline}" Margin="2,0,0,6" Text="{x:Static res:SetupStrings.SetupInstallDirLabel}" />
+                <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                    <DockPanel>
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE8B7;" FontSize="15" Margin="0,0,12,0" Foreground="{DynamicResource Hp.Brush.AccentSolid}" />
+                        <TextBlock Style="{StaticResource Hp.Text.Body}" FontSize="13" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                   AutomationProperties.AutomationId="SetupInstallDir"
+                                   AutomationProperties.HelpText="{x:Static res:SetupStrings.SetupInstallDirLabel}"
+                                   Text="{Binding InstallDirectory}" ToolTip="{Binding InstallDirectory}" />
+                    </DockPanel>
+                </Border>
+                <DockPanel Margin="2,2,0,14">
+                    <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xEA18;" FontSize="14" Margin="0,1,10,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.Success}" />
+                    <TextBlock Style="{StaticResource Hp.Text.Caption}" FontSize="12.5" LineHeight="18"
+                               AutomationProperties.AutomationId="SetupDataNote"
+                               Text="{Binding DataNote}" />
+                </DockPanel>
+
+                <!-- HDRpilot läuft: wird beendet und danach wieder gestartet -->
+                <Border Style="{StaticResource Setup.WarningRow}" Visibility="{Binding ShowRunningNote, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <DockPanel>
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE7BA;" FontSize="15" Margin="0,0,12,0" Foreground="{DynamicResource Hp.Brush.Warning}" />
+                        <TextBlock Style="{StaticResource Hp.Text.Body}" FontSize="13" VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="SetupRunningNote"
+                                   Text="{x:Static res:SetupStrings.SetupRunningNote}" />
+                    </DockPanel>
+                </Border>
+
+                <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                  Style="{StaticResource Hp.ToggleSwitch}"
+                                  AutomationProperties.AutomationId="SetupAutostart"
+                                  AutomationProperties.Name="{x:Static res:SetupStrings.SetupAutostart}"
+                                  IsChecked="{Binding Autostart, Mode=TwoWay}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE7E8;" FontSize="15" Margin="0,0,12,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:SetupStrings.SetupAutostart}" />
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                  Style="{StaticResource Hp.ToggleSwitch}"
+                                  AutomationProperties.AutomationId="SetupDesktopShortcut"
+                                  AutomationProperties.Name="{x:Static res:SetupStrings.SetupDesktopShortcut}"
+                                  IsChecked="{Binding DesktopShortcut, Mode=TwoWay}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE71B;" FontSize="15" Margin="0,0,12,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:SetupStrings.SetupDesktopShortcut}" />
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                  Style="{StaticResource Hp.ToggleSwitch}"
+                                  AutomationProperties.AutomationId="SetupLaunchAfter"
+                                  AutomationProperties.Name="{x:Static res:SetupStrings.SetupLaunchAfter}"
+                                  IsChecked="{Binding LaunchAfter, Mode=TwoWay}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE768;" FontSize="15" Margin="0,0,12,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:SetupStrings.SetupLaunchAfter}" />
+                    </DockPanel>
+                </Border>
+
+                <!-- Ältere Version: erst nach ausdrücklicher Bestätigung -->
+                <CheckBox x:Name="AllowDowngradeBox" Style="{StaticResource Hp.Shell.CheckCard}" Margin="0,14,0,0"
+                          AutomationProperties.AutomationId="SetupAllowDowngrade"
+                          AutomationProperties.Name="{x:Static res:SetupStrings.SetupAllowDowngrade}"
+                          IsChecked="{Binding AllowDowngrade, Mode=TwoWay}"
+                          Visibility="{Binding IsDowngrade, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:SetupStrings.SetupAllowDowngrade}" />
+                </CheckBox>
+            </StackPanel>
+
+            <!-- Seite 2 und 3: Schritte live, danach das Ergebnis darunter -->
+            <StackPanel x:Name="WorkPage" Visibility="{Binding ShowsSteps, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                <ListBox x:Name="StepsList" Focusable="False"
+                         AutomationProperties.AutomationId="SetupProgress"
+                         Style="{StaticResource Hp.Shell.ListBox}"
+                         ItemContainerStyle="{StaticResource Setup.StepItem}"
+                         ItemTemplate="{StaticResource Setup.StepTemplate}"
+                         ItemsSource="{Binding Steps}" />
+                <Border x:Name="ResultCard" Style="{StaticResource Setup.ResultCard}" Margin="0,14,0,0"
+                        Visibility="{Binding IsResultPage, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <DockPanel>
+                        <TextBlock Style="{StaticResource Setup.ResultGlyph}" />
+                        <TextBlock Style="{StaticResource Hp.Text.Body}" LineHeight="21" VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="SetupResultText"
+                                   Text="{Binding ResultText}" />
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- Fuß: je Seite Abbrechen/Installieren, nichts während der Arbeit, Fertig oder Erneut versuchen/Abbrechen -->
+        <Border Grid.Row="2" Background="{DynamicResource Hp.Brush.Surface}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="0,1,0,0" Padding="32,14,32,16">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" MinHeight="40">
+                <Button x:Name="CancelButton" Style="{StaticResource Hp.GhostButton}" MinWidth="120"
+                        AutomationProperties.AutomationId="SetupCancelButton"
+                        AutomationProperties.Name="{x:Static res:SetupStrings.SetupCancelButton}"
+                        Command="{Binding CancelCommand}"
+                        Content="{x:Static res:SetupStrings.SetupCancelButton}"
+                        Visibility="{Binding ShowCancel, Converter={StaticResource Hp.Shell.BoolToVisibility}}" />
+                <Button x:Name="RetryButton" Style="{StaticResource Hp.AccentButton}" MinWidth="170" Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="SetupRetryButton"
+                        AutomationProperties.Name="{x:Static res:SetupStrings.SetupRetryButton}"
+                        Command="{Binding RetryCommand}"
+                        Visibility="{Binding CanRetry, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE72C;" />
+                        <TextBlock Text="{x:Static res:SetupStrings.SetupRetryButton}" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="CloseButton" Style="{StaticResource Hp.AccentButton}" MinWidth="150" Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="SetupCloseButton"
+                        AutomationProperties.Name="{x:Static res:SetupStrings.SetupCloseButton}"
+                        Command="{Binding CloseCommand}"
+                        Visibility="{Binding Succeeded, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE73E;" />
+                        <TextBlock Text="{x:Static res:SetupStrings.SetupCloseButton}" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="InstallButton" Style="{StaticResource Hp.AccentButton}" MinWidth="170" Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="SetupInstallButton"
+                        AutomationProperties.Name="{Binding InstallButtonText}"
+                        Command="{Binding InstallCommand}"
+                        Visibility="{Binding IsOptionsPage, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE896;" />
+                        <TextBlock Text="{Binding InstallButtonText}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</infra:ChromeWindow>

@@ -1,0 +1,92 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="clr-namespace:HdrPilot.App.Setup.UI">
+    <!--
+        Bausteine der Setup-Fenster (Setup, Rückfrage und Fortschritt beim Entfernen). Farben nur aus den Tokens;
+        Zustandswechsel der Schritte sind Setter ohne Animation, Effekte gibt es hier keine.
+    -->
+
+    <!-- Kopf: Kachel mit Symbol im Akzentverlauf -->
+    <Style x:Key="Setup.HeaderTile" TargetType="Grid">
+        <Setter Property="Width" Value="50" />
+        <Setter Property="Height" Value="50" />
+        <Setter Property="Margin" Value="0,0,18,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="Setup.HeaderGlyph" TargetType="TextBlock" BasedOn="{StaticResource Hp.Shell.Glyph}">
+        <Setter Property="FontSize" Value="23" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+    </Style>
+
+    <!-- Fortschrittsliste: Zeilen ohne Auswahl -->
+    <Style x:Key="Setup.StepItem" TargetType="ListBoxItem" BasedOn="{StaticResource Hp.Shell.PlainListBoxItem}">
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="AutomationProperties.ItemStatus" Value="{Binding State}" />
+    </Style>
+
+    <!-- Schritt: Ring (offen), Pfeile im Akzent (läuft), Haken (erledigt), Kreuz (fehlgeschlagen) -->
+    <DataTemplate x:Key="Setup.StepTemplate" DataType="{x:Type ui:ProgressStepItem}">
+        <DockPanel Margin="0,4">
+            <Grid Width="26" Height="26" Margin="0,0,14,0" VerticalAlignment="Center">
+                <Border x:Name="Disc" CornerRadius="13" BorderThickness="1.5" Background="Transparent" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" />
+                <TextBlock x:Name="Glyph" Style="{StaticResource Hp.Shell.Glyph}" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+            </Grid>
+            <TextBlock x:Name="Label" Style="{StaticResource Hp.Text.Body}" VerticalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextSecondary}" Text="{Binding Text}" />
+        </DockPanel>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding State}" Value="Running">
+                <Setter TargetName="Disc" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                <Setter TargetName="Glyph" Property="Text" Value="&#xE895;" />
+                <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Done">
+                <Setter TargetName="Disc" Property="BorderBrush" Value="{DynamicResource Hp.Brush.Success}" />
+                <Setter TargetName="Glyph" Property="Text" Value="&#xE73E;" />
+                <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Hp.Brush.Success}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Failed">
+                <Setter TargetName="Disc" Property="BorderBrush" Value="{DynamicResource Hp.Brush.Danger}" />
+                <Setter TargetName="Glyph" Property="Text" Value="&#xE711;" />
+                <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Hp.Brush.Danger}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Hp.Brush.Danger}" />
+                <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Ergebnis: Karte mit Haken (Erfolg) oder Warnzeichen (Fehler); ViewModel liefert Succeeded -->
+    <Style x:Key="Setup.ResultCard" TargetType="Border">
+        <Setter Property="Padding" Value="16,14" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="BorderThickness" Value="1.5" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceInput}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Danger}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Succeeded}" Value="True">
+                <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Success}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Setup.ResultGlyph" TargetType="TextBlock" BasedOn="{StaticResource Hp.Shell.Glyph}">
+        <Setter Property="FontSize" Value="20" />
+        <Setter Property="Margin" Value="0,0,14,0" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Text" Value="&#xE7BA;" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Danger}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Succeeded}" Value="True">
+                <Setter Property="Text" Value="&#xE930;" />
+                <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Success}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Hinweiszeile mit Rahmen in Warnfarbe (laufende App, Steam-Startoptionen) -->
+    <Style x:Key="Setup.WarningRow" TargetType="Border" BasedOn="{StaticResource Hp.Shell.SettingRow}">
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Warning}" />
+    </Style>
+</ResourceDictionary>

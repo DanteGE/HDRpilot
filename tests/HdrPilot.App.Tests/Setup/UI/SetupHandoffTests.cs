@@ -132,10 +132,10 @@ public sealed class SetupHandoffTests : IDisposable
         var ping = "\"" + Path.Combine(Environment.SystemDirectory, "PING.EXE") + "\"";
 
         // Ohne AutoRun (/d) und verzögerte Erweiterung (/v:off); ping mit vollem Pfad; bis zu 30 Versuche im
-        // Sekundenabstand, Ende, sobald beide Ordner weg sind.
+        // Sekundenabstand für den Temp-Ordner; erst wenn er weg ist (die Kopie also beendet), einmal den Entpack-Ordner.
         Assert.Equal(
-            "/d /v:off /c (" + ping + " -n 4 127.0.0.1 >nul) & for /l %i in (1,1,30) do @(rd /s /q \"" + folder + "\" 2>nul & rd /s /q \"" + extraction + "\" 2>nul"
-                + " & (if not exist \"" + folder + "\\\" if not exist \"" + extraction + "\\\" exit) & " + ping + " -n 2 127.0.0.1 >nul)",
+            "/d /v:off /c (" + ping + " -n 4 127.0.0.1 >nul) & for /l %i in (1,1,30) do @(rd /s /q \"" + folder + "\" 2>nul"
+                + " & (if not exist \"" + folder + "\\\" (rd /s /q \"" + extraction + "\" 2>nul & exit)) & " + ping + " -n 2 127.0.0.1 >nul)",
             UninstallHandoff.RemovalArguments(folder, extraction));
         Assert.Equal(
             "/d /v:off /c (" + ping + " -n 4 127.0.0.1 >nul) & for /l %i in (1,1,30) do @(rd /s /q \"" + folder + "\" 2>nul & (if not exist \"" + folder + "\\\" exit) & " + ping + " -n 2 127.0.0.1 >nul)",
@@ -173,6 +173,33 @@ public sealed class SetupHandoffTests : IDisposable
     }
 
     [Fact]
+    public void Extraction_folder_is_left_alone_while_the_copy_folder_is_still_there_and_removed_once_it_is_gone()
+    {
+        // Solange der Temp-Ordner der Kopie bleibt (hier eine gesperrte Datei), fasst die cmd.exe den Entpack-Ordner nicht
+        // an: eine neue Kopie zum Entfernen könnte dort inzwischen entpackt haben. Erst danach ist er dran.
+        var temp = Path.Combine(_folder.Root, "Temp");
+        var extraction = Path.GetDirectoryName(Path.GetDirectoryName(_folder.CreateFile(Path.Combine("Temp", ".net", "HDRpilot-Uninstall", "A5VsRBt8jVNi", "wpfgfx_cor3.dll"))))!;
+        var copy = UninstallHandoff.CreateTempCopy(_folder.CreateFile("HDRpilot.exe"), temp);
+        var folder = Path.GetDirectoryName(copy)!;
+        var locked = new FileStream(Path.Combine(folder, "gesperrt.tmp"), FileMode.Create, FileAccess.Write, FileShare.None);
+        try
+        {
+            Assert.True(UninstallHandoff.ScheduleSelfRemoval(copy, temp, _folder.Log, extraction));
+            Assert.True(WaitFor(() => !File.Exists(copy), TimeSpan.FromSeconds(15)), "Erster Löschversuch kam nicht"); // EXE weg, Ordner bleibt
+            Thread.Sleep(1500); // ein weiterer Versuch
+
+            Assert.True(Directory.Exists(folder));
+            Assert.True(Directory.Exists(extraction), "Entpack-Ordner gelöscht, obwohl der Temp-Ordner noch da ist");
+        }
+        finally
+        {
+            locked.Dispose();
+        }
+
+        Assert.True(WaitFor(() => !Directory.Exists(folder) && !Directory.Exists(extraction), TimeSpan.FromSeconds(15)), "Ordner nach dem Entsperren nicht gelöscht");
+    }
+
+    [Fact]
     public void Scheduled_removal_never_takes_a_foreign_extraction_folder()
     {
         var temp = Path.Combine(_folder.Root, "Temp");
@@ -191,6 +218,17 @@ public sealed class SetupHandoffTests : IDisposable
         Assert.False(Directory.Exists(folder), "Temp-Ordner der Kopie nicht gelöscht");
         Assert.True(File.Exists(appLibraries));
         Assert.Contains("keiner erkannt", _folder.LogText, StringComparison.Ordinal);
+    }
+
+    private static bool WaitFor(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (!condition() && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(100);
+        }
+
+        return condition();
     }
 
     [Fact]

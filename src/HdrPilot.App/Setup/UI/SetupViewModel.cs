@@ -19,7 +19,8 @@ public enum SetupPage
 /// gemeldeten Schritte live, dann das Ergebnis. Die Arbeit macht die Engine; das ViewModel kennt nur
 /// <see cref="ISetupEngine"/>. Bei „HDRpilot ließ sich nicht beenden“ und gesperrten Dateien gibt es „Erneut versuchen“
 /// (und „Abbrechen“), bei anderen Fehlern nur „Schließen“. Startete HDRpilot danach nicht wie gewählt, wird der Schritt
-/// rot und das Ergebnis sagt es.
+/// rot und das Ergebnis sagt es. Mit Adminrechten startet der Setup HDRpilot nie: dann fehlt der Schritt in der Liste,
+/// und das Ergebnis sagt, warum.
 /// </summary>
 public sealed class SetupViewModel : ObservableObject
 {
@@ -229,8 +230,16 @@ public sealed class SetupViewModel : ObservableObject
         }
 
         SetupRunner.LogResult(_log, result);
+
+        // Mit Adminrechten ließ die Engine den Start bewusst aus: kein Fehler, der Schritt fällt weg (das Ergebnis sagt
+        // es). Meist stand er gar nicht erst in der Liste (siehe StepsFor).
         var elevated = result.Has(SetupWarning.NotLaunchedElevated);
-        var notStarted = result.Success && options.LaunchAfterInstall && !result.AppStarted;
+        if (elevated)
+        {
+            _steps.Remove(SetupStep.LaunchApp);
+        }
+
+        var notStarted = result.Success && options.LaunchAfterInstall && !result.AppStarted && !elevated;
         IEnumerable<SetupStep> alsoFailed = notStarted ? [SetupStep.LaunchApp] : [];
         if (result.Success)
         {
@@ -271,9 +280,9 @@ public sealed class SetupViewModel : ObservableObject
         yield return SetupStep.Shortcuts;
         yield return SetupStep.Autostart;
         yield return SetupStep.Register;
-        if (options.LaunchAfterInstall)
+        if (options.LaunchAfterInstall && !_inspection.Elevated)
         {
-            yield return SetupStep.LaunchApp;
+            yield return SetupStep.LaunchApp; // mit Adminrechten startet der Setup HDRpilot nie
         }
     }
 

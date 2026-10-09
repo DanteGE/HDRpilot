@@ -10,10 +10,11 @@ namespace HdrPilot.App.Setup.UI;
 /// Übergabe beim Entfernen (E83): Die installierte EXE kann ihren eigenen Ordner nicht löschen. Sie kopiert sich nach
 /// %TEMP%\HDRpilot-Uninstall-&lt;guid&gt;\HDRpilot-Uninstall.exe und startet die Kopie mit
 /// <c>--uninstall-continue --wait-pid</c>. Die Kopie wartet ohne Prozess-Handle (nur über die Prozessliste), bis die
-/// installierte EXE beendet ist, und lässt am Ende von einer verzögerten, unsichtbaren cmd.exe ihren Temp-Ordner und den
-/// Entpack-Ordner ihrer nativen Bibliotheken (%TEMP%\.net\HDRpilot-Uninstall) löschen. Gelöscht wird nur ein solcher
-/// Ordner direkt im Temp-Ordner bzw. genau dieser Entpack-Ordner, nie etwas anderes (nie der Entpack-Ordner der App,
-/// %TEMP%\.net\HDRpilot, oder eines Setups, %TEMP%\.net\HDRpilot-Setup-&lt;Version&gt;).
+/// installierte EXE beendet ist, und lässt am Ende von einer verzögerten, unsichtbaren cmd.exe ihren Temp-Ordner und,
+/// sobald der weg ist, einmal den Entpack-Ordner ihrer nativen Bibliotheken (%TEMP%\.net\HDRpilot-Uninstall) löschen
+/// (<see cref="RemovalArguments"/>). Gelöscht wird nur ein solcher Ordner direkt im Temp-Ordner bzw. genau dieser
+/// Entpack-Ordner, nie etwas anderes (nie der Entpack-Ordner der App, %TEMP%\.net\HDRpilot, oder eines Setups,
+/// %TEMP%\.net\HDRpilot-Setup-&lt;Version&gt;).
 /// </summary>
 public static partial class UninstallHandoff
 {
@@ -187,17 +188,17 @@ public static partial class UninstallHandoff
 
     /// <summary>
     /// Befehl für cmd.exe (ohne AutoRun und ohne verzögerte Erweiterung): etwa 3 s warten, bis diese EXE beendet ist, dann
-    /// bis zu <see cref="RemovalAttempts"/>-mal im Sekundenabstand die Ordner löschen und aufhören, sobald alle weg sind.
-    /// ping mit vollem Pfad (nicht über PATH gesucht).
+    /// bis zu <see cref="RemovalAttempts"/>-mal im Sekundenabstand den Temp-Ordner löschen. Sobald er weg ist, ist die
+    /// Kopie beendet (ihre EXE lag darin): dann einmal den Entpack-Ordner löschen und aufhören. Nicht früher und nicht
+    /// öfter: Während eines späteren Versuchs könnte dort schon eine neue Kopie zum Entfernen entpackt haben. ping mit
+    /// vollem Pfad (nicht über PATH gesucht).
     /// </summary>
     public static string RemovalArguments(string folder, string? extractionFolder = null)
     {
         var ping = "\"" + Path.Combine(Environment.SystemDirectory, "PING.EXE") + "\"";
-        string[] folders = extractionFolder is null ? [folder] : [folder, extractionFolder];
-        var remove = string.Join(" & ", folders.Select(f => "rd /s /q \"" + f + "\" 2>nul"));
-        var allGone = string.Concat(folders.Select(f => "if not exist \"" + f + "\\\" ")) + "exit";
+        var whenGone = extractionFolder is null ? "exit" : "(rd /s /q \"" + extractionFolder + "\" 2>nul & exit)";
         return string.Create(CultureInfo.InvariantCulture,
-            $"/d /v:off /c ({ping} -n 4 127.0.0.1 >nul) & for /l %i in (1,1,{RemovalAttempts}) do @({remove} & ({allGone}) & {ping} -n 2 127.0.0.1 >nul)");
+            $"/d /v:off /c ({ping} -n 4 127.0.0.1 >nul) & for /l %i in (1,1,{RemovalAttempts}) do @(rd /s /q \"{folder}\" 2>nul & (if not exist \"{folder}\\\" {whenGone}) & {ping} -n 2 127.0.0.1 >nul)");
     }
 
     /// <summary>

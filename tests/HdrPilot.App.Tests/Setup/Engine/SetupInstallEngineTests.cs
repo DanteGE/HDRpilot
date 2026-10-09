@@ -317,6 +317,29 @@ public sealed class SetupInstallEngineTests : IDisposable
         Assert.Contains("Autostart entfernt: " + otherCopy, _h.LogText, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("\"D:\\Tools\\HDRpilot\\HDRpilot.exe\" --minimized")]
+    [InlineData("d:\\tools\\hdrpilot.EXE --minimized")]
+    public async Task Update_presets_autostart_when_the_value_starts_another_copy_and_moves_it_to_the_installed_exe(string otherCopy)
+    {
+        // Installiert ist 1.0.0, mit Windows startet aber eine andere Kopie: Der Wert gilt als „HDRpilot startet mit
+        // Windows“. Wäre der Haken aus, entfernte „aus“ den Wert, und nach dem Neustart liefe kein HDRpilot mehr.
+        Assert.True((await _h.InstallAsync("1.0.0", new InstallOptions(Autostart: false, false, false))).Success);
+        _h.Registry.Set(RegistryHiveKind.CurrentUser, L.RunKeyPath, AutostartService.ValueName, otherCopy);
+        var engine = _h.Setup("1.1.0");
+        var inspection = engine.Inspect();
+
+        Assert.Equal(SetupKind.Update, inspection.Kind);
+        Assert.True(inspection.AutostartEnabled);
+        Assert.True(new HdrPilot.App.Setup.UI.SetupViewModel(engine, inspection, SetupArguments.Parse([]), _h.Log).Autostart); // mit Fenster
+        var quiet = SetupMode.QuietOptions(SetupArguments.Parse(["--quiet", "--no-launch"]), inspection); // ohne Fenster
+        Assert.True(quiet.Autostart);
+
+        Assert.True((await engine.InstallAsync(quiet, null, TestContext.Current.CancellationToken)).Success);
+
+        Assert.Equal(AutostartService.BuildCommand(L.ExePath), Autostart); // auf die installierte EXE umgebogen
+    }
+
     [Fact]
     public async Task Autostart_off_leaves_a_value_for_another_program_untouched()
     {
@@ -346,7 +369,9 @@ public sealed class SetupInstallEngineTests : IDisposable
     [Fact]
     public async Task Elevated_setup_never_starts_the_app_and_says_why()
     {
+        Assert.False(_h.Setup("1.1.0").Inspect().Elevated);
         _h.Elevated = true;
+        Assert.True(_h.Setup("1.1.0").Inspect().Elevated); // die Oberfläche führt den Startschritt dann nicht
         var progress = new SyncProgress<SetupStep>();
 
         var result = await _h.InstallAsync("1.1.0", new InstallOptions(Autostart: true, DesktopShortcut: false, LaunchAfterInstall: true), progress: progress);

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Security.Principal;
 using HdrPilot.App.Services;
 using HdrPilot.Core.Abstractions;
@@ -7,7 +8,7 @@ using HdrPilot.Core.Util;
 
 namespace HdrPilot.App.Setup;
 
-/// <summary>Gemeinsame Hilfen von Setup und Entfernen: Sperre, Versionen, Fehlerzuordnung, Autostart-Wert.</summary>
+/// <summary>Gemeinsame Hilfen von Setup und Entfernen: Sperre, Versionen, Fehlerzuordnung, Autostart-Wert, STA-Thread.</summary>
 public static class SetupSupport
 {
     /// <summary>
@@ -132,6 +133,42 @@ public static class SetupSupport
     {
         using var identity = WindowsIdentity.GetCurrent();
         return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
+    /// <summary>
+    /// Führt <paramref name="body"/> auf einem STA-Thread aus (Shell und COM brauchen eins): direkt, wenn der aktuelle
+    /// Thread schon einer ist, sonst auf einem eigenen kurzen Thread, auf dessen Ende gewartet wird. Eine Ausnahme kommt
+    /// beim Aufrufer an.
+    /// </summary>
+    internal static T OnSta<T>(string threadName, Func<T> body)
+    {
+        if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA)
+        {
+            return body();
+        }
+
+        T result = default!;
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                result = body();
+            }
+            catch (Exception ex)
+            {
+                failure = ExceptionDispatchInfo.Capture(ex);
+            }
+        })
+        {
+            IsBackground = true,
+            Name = threadName,
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+        return result;
     }
 
     /// <summary>Setzt den Autostart-Wert wieder auf einen früheren Stand (null: Wert entfernen).</summary>

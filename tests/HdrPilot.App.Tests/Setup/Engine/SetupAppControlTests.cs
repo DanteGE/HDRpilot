@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Setup;
@@ -123,16 +124,39 @@ public sealed class SetupAppControlTests
     }
 
     [Fact]
-    public void App_is_started_through_the_shell_without_inheriting_handles_and_without_waiting()
+    public void App_is_started_through_the_shell_without_zone_check_dialog_or_handle()
     {
         const string Exe = @"C:\Users\U\AppData\Local\Programs\HDRpilot\HDRpilot.exe";
 
-        var info = SetupAppControl.StartInfo(Exe, "--show --config-dir \"C:\\Test\\Config\"");
+        // Über die Shell: CreateProcess mit geerbten Handles hielte etwa die Ausgabe eines Skripts offen.
+        var launch = SetupAppControl.LaunchFor(Exe, "--show --config-dir \"C:\\Test\\Config\"");
 
-        Assert.True(info.UseShellExecute); // CreateProcess mit geerbten Handles hielte etwa die Ausgabe eines Skripts offen
-        Assert.Equal(Exe, info.FileName);
-        Assert.Equal("--show --config-dir \"C:\\Test\\Config\"", info.Arguments);
-        Assert.Equal(@"C:\Users\U\AppData\Local\Programs\HDRpilot", info.WorkingDirectory);
+        Assert.Equal(Exe, launch.File);
+        Assert.Equal("--show --config-dir \"C:\\Test\\Config\"", launch.Parameters);
+        Assert.Equal(@"C:\Users\U\AppData\Local\Programs\HDRpilot", launch.Directory);
+
+        // Ohne Zonenprüfung: Eine EXE mit Download-Markierung (File.Replace übernimmt sie von der alten EXE) bekäme sonst
+        // eine Sicherheitsabfrage oder SmartScreen vorgeschaltet, die den Start des Setups aufhält.
+        Assert.Equal(0x00800000u, ShellLaunch.NoZoneChecks);
+        Assert.Equal(ShellLaunch.NoZoneChecks, launch.Mask & ShellLaunch.NoZoneChecks);
+        Assert.Equal(0x00000400u, ShellLaunch.NoUi); // keine Fehlermeldung der Shell: der Setup protokolliert selbst
+        Assert.Equal(ShellLaunch.NoUi, launch.Mask & ShellLaunch.NoUi);
+        Assert.Equal(0x00000100u, ShellLaunch.NoAsync); // erst zurück, wenn gestartet: der Setup endet womöglich gleich
+        Assert.Equal(ShellLaunch.NoAsync, launch.Mask & ShellLaunch.NoAsync);
+        Assert.Equal(0x00000040u, ShellLaunch.NoCloseProcess); // kein Prozess-Handle
+        Assert.Equal(0u, launch.Mask & ShellLaunch.NoCloseProcess);
+    }
+
+    [Fact]
+    public void Shell_start_of_a_missing_exe_fails_with_the_windows_error_and_without_a_dialog()
+    {
+        var missing = Path.Combine(Path.GetTempPath(), "HDRpilot.Tests.fehlt." + Guid.NewGuid().ToString("N") + ".exe");
+        var control = new SetupAppControl(UnusedInstance(), missing, () => new FixedSnapshot());
+
+        // Echter Aufruf von ShellExecuteEx (Aufbau der Struktur, Fehlerweg); ohne Fehlermeldung der Shell, sonst hinge er.
+        var error = Assert.Throws<Win32Exception>(() => control.Start(missing, "--show"));
+
+        Assert.Equal(2, error.NativeErrorCode); // ERROR_FILE_NOT_FOUND
     }
 
     private static string NotInstalledExe() => Path.Combine(Path.GetTempPath(), "HDRpilot.Tests." + Guid.NewGuid().ToString("N"), "HDRpilot.exe");

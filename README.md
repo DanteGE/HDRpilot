@@ -317,7 +317,7 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 | Aufruf | Wirkung |
 |---|---|
 | `HDRpilot-Setup-1.1.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
-| `--autostart on\|off` | Mit Windows starten (ohne Angabe: wie bisher, bei einer neuen Installation an) |
+| `--autostart on\|off` | Mit Windows starten, danach mit der installierten EXE (ohne Angabe: wie bisher, also an, wenn schon eine HDRpilot.exe mit Windows startet, auch aus einem anderen Ordner; bei einer neuen Installation an) |
 | `--desktop-shortcut on\|off` | Desktop-Verknüpfung (ohne Angabe: wie bisher, bei einer neuen Installation aus) |
 | `--no-launch` | HDRpilot danach nicht starten. Für Skripte, die auf das Ende warten (etwa `Start-Process -Wait`, das auch auf gestartete Programme wartet) oder die Ausgabe lesen |
 | `--allow-downgrade` | Eine ältere Version über eine neuere installieren |

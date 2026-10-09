@@ -1,5 +1,6 @@
-using System.Diagnostics;
+using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.Core.Processes;
 using HdrPilot.Core.Util;
@@ -173,23 +174,20 @@ public sealed class SetupAppControl : ISetupAppControl
         }
     }
 
-    public bool Start(string exePath, string arguments)
-    {
-        // Nur starten, nie warten: das Handle wird sofort geschlossen.
-        using var process = Process.Start(StartInfo(exePath, arguments));
-        return process is not null;
-    }
+    /// <summary>Startet über <see cref="LaunchFor"/>; wirft <see cref="Win32Exception"/>, wenn die Shell ablehnt.</summary>
+    public bool Start(string exePath, string arguments) => ShellLaunch.Run(LaunchFor(exePath, arguments));
 
     /// <summary>
-    /// Start über die Shell: Die App erbt keine Handles des Setups (sonst hielte sie etwa die umgeleitete Ausgabe eines
-    /// Skripts offen, das den Setup aufruft und auf das Ende seiner Ausgabe wartet). Arbeitsordner ist der der EXE.
+    /// Start über die Shell (ShellExecuteEx): Die App erbt keine Handles des Setups (sonst hielte sie etwa die umgeleitete
+    /// Ausgabe eines Skripts offen, das den Setup aufruft und auf das Ende seiner Ausgabe wartet). Ohne Zonenprüfung: Eine
+    /// EXE mit Download-Markierung (Zone.Identifier; etwa eine von Hand aus einem ZIP kopierte ältere Version, deren
+    /// Markierung beim Ersetzen auf die neue EXE übergeht, oder eine portable Kopie) löste sonst eine Sicherheitsabfrage
+    /// oder SmartScreen aus, die den Start aufhält oder scheitern lässt. Ohne Fehlermeldung der Shell (der Setup
+    /// protokolliert selbst), erst zurück, wenn gestartet (der Setup endet womöglich gleich danach), ohne Prozess-Handle.
+    /// Arbeitsordner ist der der EXE.
     /// </summary>
-    public static ProcessStartInfo StartInfo(string exePath, string arguments) => new(exePath)
-    {
-        UseShellExecute = true,
-        Arguments = arguments,
-        WorkingDirectory = Path.GetDirectoryName(exePath) ?? string.Empty,
-    };
+    public static ShellLaunch LaunchFor(string exePath, string arguments) =>
+        new(exePath, arguments, Path.GetDirectoryName(exePath) ?? string.Empty, ShellLaunch.NoAsync | ShellLaunch.NoUi | ShellLaunch.NoZoneChecks);
 
     private bool IsRunning(IProcessSnapshotProvider snapshot) => _instance.IsRunning(_instanceId) || RunsFromExe(snapshot);
 
@@ -199,3 +197,84 @@ public sealed class SetupAppControl : ISetupAppControl
         return snapshot.GetProcesses().Any(p => p.ProcessId != own && p.ExePath is { } path && PathUtil.PathEquals(path, _installedExePath));
     }
 }
+
+/// <summary>
+/// Ein Start über ShellExecuteEx: Datei, Parameter, Arbeitsordner und Schalter (SEE_MASK_*). Nie mit Prozess-Handle
+/// (<see cref="NoCloseProcess"/> wird beim Start entfernt), nie ein fremder Prozess geöffnet.
+/// </summary>
+public sealed record ShellLaunch(string File, string Parameters, string Directory, uint Mask)
+{
+    /// <summary>SEE_MASK_NOASYNC: erst zurück, wenn der Start erledigt ist.</summary>
+    public const uint NoAsync = ShellExecuteNative.SEE_MASK_NOASYNC;
+
+    /// <summary>SEE_MASK_FLAG_NO_UI: keine Fehlermeldung der Shell.</summary>
+    public const uint NoUi = ShellExecuteNative.SEE_MASK_FLAG_NO_UI;
+
+    /// <summary>SEE_MASK_NOZONECHECKS: keine Prüfung der Download-Markierung (Sicherheitsabfrage, SmartScreen).</summary>
+    public const uint NoZoneChecks = ShellExecuteNative.SEE_MASK_NOZONECHECKS;
+
+    /// <summary>SEE_MASK_NOCLOSEPROCESS: lieferte ein Prozess-Handle, das offen bliebe.</summary>
+    public const uint NoCloseProcess = ShellExecuteNative.SEE_MASK_NOCLOSEPROCESS;
+
+    /// <summary>Startet auf einem STA-Thread (die Shell braucht eins). True, wenn gestartet; sonst <see cref="Win32Exception"/>.</summary>
+    public static bool Run(ShellLaunch launch) => SetupSupport.OnSta("HDRpilot Setup Start", () => Execute(launch));
+
+    private static unsafe bool Execute(ShellLaunch launch)
+    {
+        fixed (char* file = launch.File, parameters = launch.Parameters, directory = launch.Directory)
+        {
+            var info = new ShellExecuteNative.SHELLEXECUTEINFOW
+            {
+                cbSize = (uint)sizeof(ShellExecuteNative.SHELLEXECUTEINFOW),
+                fMask = launch.Mask & ~NoCloseProcess,
+                lpFile = file,
+                lpParameters = launch.Parameters.Length == 0 ? null : parameters,
+                lpDirectory = launch.Directory.Length == 0 ? null : directory,
+                nShow = ShellExecuteNative.SW_SHOWNORMAL,
+            };
+            if (!ShellExecuteNative.ShellExecuteExW(&info))
+            {
+                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            }
+        }
+
+        return true;
+    }
+}
+
+// shellapi.h (SDK 10.0.26100.0): ShellExecuteExW. Startet eine Datei über die Shell; öffnet keinen fremden Prozess.
+#pragma warning disable IDE1006 // Namen folgen shellapi.h
+
+internal static unsafe partial class ShellExecuteNative
+{
+    public const uint SEE_MASK_NOCLOSEPROCESS = 0x00000040;
+    public const uint SEE_MASK_NOASYNC = 0x00000100;
+    public const uint SEE_MASK_FLAG_NO_UI = 0x00000400;
+    public const uint SEE_MASK_NOZONECHECKS = 0x00800000;
+    public const int SW_SHOWNORMAL = 1;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct SHELLEXECUTEINFOW
+    {
+        public uint cbSize;
+        public uint fMask;
+        public nint hwnd;
+        public char* lpVerb;
+        public char* lpFile;
+        public char* lpParameters;
+        public char* lpDirectory;
+        public int nShow;
+        public nint hInstApp;
+        public nint lpIDList;
+        public char* lpClass;
+        public nint hkeyClass;
+        public uint dwHotKey;
+        public nint hIconOrMonitor;
+        public nint hProcess;
+    }
+
+    [LibraryImport("shell32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ShellExecuteExW(SHELLEXECUTEINFOW* pExecInfo);
+}
+#pragma warning restore IDE1006

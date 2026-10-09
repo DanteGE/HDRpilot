@@ -66,6 +66,11 @@ public sealed class SetupEngine : ISetupEngine
 
     public SetupLocations Locations { get; }
 
+    /// <summary>
+    /// Stand vor dem Setup. „Mit Windows starten“ ist vorbelegt, wenn der Wert HDRpilot eine HDRpilot.exe startet, auch
+    /// eine andere Kopie: „aus“ entfernte einen solchen Wert (<see cref="ApplyAutostart"/>), „an“ biegt ihn auf die
+    /// installierte EXE um.
+    /// </summary>
     public SetupInspection Inspect()
     {
         var installed = InstalledVersion();
@@ -74,9 +79,10 @@ public sealed class SetupEngine : ISetupEngine
             installed,
             Guard("Eintrag lesen", () => _entries.Read() is not null),
             Locations.InstallDirectory,
-            installed is null || Guard("Autostart lesen", () => SetupSupport.AutostartPointsToExe(_registry, Locations)),
+            installed is null || Guard("Autostart lesen", () => SetupSupport.StartsAnyCopy(SetupSupport.ReadAutostart(_registry, Locations))),
             Guard("Desktop-Verknüpfung lesen", () => _shortcuts.PointsTo(Locations.DesktopShortcut, Locations.ExePath)),
-            Guard("Laufende App suchen", _app.IsRunning));
+            Guard("Laufende App suchen", _app.IsRunning),
+            Guard("Adminrechte prüfen", _isElevated));
     }
 
     public Task<SetupResult> InstallAsync(InstallOptions options, IProgress<SetupStep>? progress = null, CancellationToken cancellationToken = default) =>

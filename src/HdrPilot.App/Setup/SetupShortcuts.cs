@@ -1,5 +1,4 @@
 using System.IO;
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using HdrPilot.App.Services;
 using HdrPilot.Core.Util;
@@ -26,14 +25,16 @@ public static class SetupShortcutExtensions
 /// <summary>
 /// Verknüpfungen über die Windows-Shell (<see cref="ShortcutService.Write"/>/<see cref="ShortcutService.Read"/>, COM).
 /// COM braucht ein STA; Setup und Entfernen laufen auf einem Hintergrund-Thread, deshalb geht jeder Aufruf dann über
-/// einen eigenen kurzen STA-Thread.
+/// einen eigenen kurzen STA-Thread (<see cref="SetupSupport.OnSta"/>).
 /// </summary>
 public sealed class ShellSetupShortcuts : ISetupShortcuts
 {
     public static ShellSetupShortcuts Instance { get; } = new();
 
+    private const string StaThreadName = "HDRpilot Setup Verknüpfungen";
+
     public void Write(string shortcutPath, string targetPath, string arguments, string workingDirectory, string description) =>
-        OnSta(() =>
+        SetupSupport.OnSta(StaThreadName, () =>
         {
             ShortcutService.Write(shortcutPath, targetPath, arguments, workingDirectory, targetPath, 0, description);
             return true;
@@ -46,7 +47,7 @@ public sealed class ShellSetupShortcuts : ISetupShortcuts
             return null;
         }
 
-        return OnSta<string?>(() =>
+        return SetupSupport.OnSta<string?>(StaThreadName, () =>
         {
             try
             {
@@ -58,36 +59,5 @@ public sealed class ShellSetupShortcuts : ISetupShortcuts
                 return null; // kaputte oder fremde Datei mit .lnk-Endung
             }
         });
-    }
-
-    private static T OnSta<T>(Func<T> body)
-    {
-        if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA)
-        {
-            return body();
-        }
-
-        T result = default!;
-        ExceptionDispatchInfo? failure = null;
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                result = body();
-            }
-            catch (Exception ex)
-            {
-                failure = ExceptionDispatchInfo.Capture(ex);
-            }
-        })
-        {
-            IsBackground = true,
-            Name = "HDRpilot Setup Verknüpfungen",
-        };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-        failure?.Throw();
-        return result;
     }
 }

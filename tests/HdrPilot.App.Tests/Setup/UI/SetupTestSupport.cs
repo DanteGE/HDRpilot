@@ -238,8 +238,8 @@ internal static class SetupFixtures
 {
     public const string InstallDir = @"C:\Users\Test\AppData\Local\Programs\HDRpilot";
 
-    public static SetupInspection Inspection(string? installed, string setup = "1.1.0", bool autostart = false, bool desktop = false, bool running = false) =>
-        new(Version.Parse(setup), installed is null ? null : Version.Parse(installed), installed is not null, InstallDir, autostart, desktop, running);
+    public static SetupInspection Inspection(string? installed, string setup = "1.1.0", bool autostart = false, bool desktop = false, bool running = false, bool elevated = false) =>
+        new(Version.Parse(setup), installed is null ? null : Version.Parse(installed), installed is not null, InstallDir, autostart, desktop, running, elevated);
 
     public static UninstallInspection Uninstall(string? installed = "1.1.0", params string[] steamGames) =>
         new(InstallDir, installed is null ? null : Version.Parse(installed), steamGames, @"C:\Users\Test\AppData\Roaming\HDRpilot", @"C:\Users\Test\AppData\Local\HDRpilot", false);

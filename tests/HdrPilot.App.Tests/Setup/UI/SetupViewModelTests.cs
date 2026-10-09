@@ -237,19 +237,47 @@ public sealed class SetupViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Elevated_setup_says_why_the_app_was_not_started()
+    public async Task Elevated_setup_leaves_out_the_launch_step_and_says_why_the_app_was_not_started()
     {
-        var engine = Engine(Inspection(installed: null));
+        var engine = Engine(Inspection(installed: null, elevated: true));
         engine.Results.Enqueue(FakeSetupEngine.Success(null, new Version(1, 1, 0), started: false) with { Warnings = [SetupWarning.NotLaunchedElevated] });
+        engine.Pending = new TaskCompletionSource<SetupResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var model = new SetupViewModel(engine, engine.Inspection, Args(), _folder.Log);
+        Assert.True(model.LaunchAfter); // gewünscht, die Engine lässt den Start aus
+
+        var run = model.InstallAsync();
+        Assert.Null(model.StepList.StateOf(SetupStep.LaunchApp)); // bewusst ausgelassen: gar nicht erst in der Liste
+        engine.Pending.SetResult(engine.Results.Dequeue());
+        await run;
+
+        Assert.True(model.Succeeded);
+        Assert.Null(model.StepList.StateOf(SetupStep.LaunchApp));
+        Assert.All(model.Steps, s => Assert.Equal(StepState.Done, s.State)); // nichts „fehlgeschlagen“
+        Assert.Equal(Format(SetupStrings.SetupDoneInstall, "1.1.0") + " " + SetupStrings.SetupNotLaunchedElevated, model.ResultText);
+        Assert.DoesNotContain(SetupStrings.SetupNotLaunched, model.ResultText, StringComparison.Ordinal);
+        Assert.Contains("NotLaunchedElevated", _folder.LogText, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Launch_left_out_for_admin_rights_is_never_marked_failed_even_if_the_inspection_missed_it(bool success)
+    {
+        // Die Prüfung vorab sah keine Adminrechte, die Engine schon: der Schritt verschwindet, statt rot zu werden.
+        var engine = Engine(Inspection("1.0.0", running: true));
+        engine.Report = [SetupStep.CheckSetupFile, SetupStep.StopRunningApp, SetupStep.CopyFiles, SetupStep.Shortcuts, SetupStep.Autostart, SetupStep.Register];
+        var result = success
+            ? FakeSetupEngine.Success(new Version(1, 0, 0), new Version(1, 1, 0), started: false)
+            : SetupResult.Failed(SetupErrorKind.Unexpected, "Register: kaputt", new Version(1, 0, 0)) with { FailedSetupStep = SetupStep.Register };
+        engine.Results.Enqueue(result with { Warnings = [SetupWarning.NotLaunchedElevated] });
         var model = new SetupViewModel(engine, engine.Inspection, Args(), _folder.Log);
 
         await model.InstallAsync();
 
-        Assert.True(model.Succeeded);
-        Assert.Equal(StepState.Failed, model.StepList.StateOf(SetupStep.LaunchApp));
-        Assert.Equal(Format(SetupStrings.SetupDoneInstall, "1.1.0") + " " + SetupStrings.SetupNotLaunchedElevated, model.ResultText);
-        Assert.DoesNotContain(SetupStrings.SetupNotLaunched, model.ResultText, StringComparison.Ordinal);
-        Assert.Contains("NotLaunchedElevated", _folder.LogText, StringComparison.Ordinal);
+        Assert.Equal(success, model.Succeeded);
+        Assert.Null(model.StepList.StateOf(SetupStep.LaunchApp));
+        Assert.Equal(success ? StepState.Done : StepState.Failed, model.StepList.StateOf(SetupStep.Register));
+        Assert.EndsWith(" " + SetupStrings.SetupNotLaunchedElevated, model.ResultText, StringComparison.Ordinal);
     }
 
     [Fact]

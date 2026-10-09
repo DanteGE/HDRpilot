@@ -20,9 +20,16 @@ public enum SetupKind
 /// <param name="SetupVersion">Version dieser Setup-Datei.</param>
 /// <param name="InstalledVersion">Version der installierten EXE; null, wenn keine da ist.</param>
 /// <param name="Registered">Eintrag unter „Installierte Apps“ vorhanden (fehlt etwa bei einer von Hand kopierten EXE).</param>
-/// <param name="AutostartEnabled">Autostart-Wert zeigt auf die installierte EXE (Vorbelegung bei Aktualisierung; neu: an).</param>
+/// <param name="AutostartEnabled">
+/// Autostart-Wert startet eine HDRpilot.exe, die installierte oder eine andere Kopie (Vorbelegung bei Aktualisierung;
+/// neu: an). „An“ biegt ihn auf die installierte EXE um, „aus“ entfernt ihn.
+/// </param>
 /// <param name="DesktopShortcutExists">Desktop-Verknüpfung „HDRpilot“ auf die installierte EXE vorhanden.</param>
 /// <param name="AppRunning">HDRpilot läuft (wird vor dem Kopieren beendet und danach wieder gestartet).</param>
+/// <param name="Elevated">
+/// Der Setup läuft mit Adminrechten: er startet HDRpilot danach nicht (<see cref="SetupWarning.NotLaunchedElevated"/>),
+/// die Fortschrittsliste führt den Schritt deshalb nicht.
+/// </param>
 public sealed record SetupInspection(
     Version SetupVersion,
     Version? InstalledVersion,
@@ -30,7 +37,8 @@ public sealed record SetupInspection(
     string InstallDirectory,
     bool AutostartEnabled,
     bool DesktopShortcutExists,
-    bool AppRunning)
+    bool AppRunning,
+    bool Elevated = false)
 {
     public SetupKind Kind => InstalledVersion is null ? SetupKind.Install
         : InstalledVersion < SetupVersion ? SetupKind.Update

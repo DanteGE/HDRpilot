@@ -114,6 +114,18 @@ public sealed class StepList<TStep>
         MarkFailed(alsoFailed);
     }
 
+    /// <summary>
+    /// Nimmt einen Schritt aus der Liste, der in diesem Lauf bewusst nicht vorkam (etwa der Start bei Adminrechten): er
+    /// ist weder erledigt noch fehlgeschlagen. Steht er nicht in der Liste, passiert nichts.
+    /// </summary>
+    public void Remove(TStep step)
+    {
+        if (_byStep.Remove(step, out var item))
+        {
+            _items.Remove(item);
+        }
+    }
+
     /// <summary>Zustand eines Schritts; null, wenn er nicht in der Liste steht.</summary>
     public StepState? StateOf(TStep step) => _byStep.TryGetValue(step, out var item) ? item.State : null;
 

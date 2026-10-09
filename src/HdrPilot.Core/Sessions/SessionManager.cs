@@ -793,15 +793,21 @@ public sealed class SessionManager
     }
 
     /// <summary>
+    /// Neustart-Puffer aus der Konfiguration (restartBufferSeconds, 0 = aus, höchstens 30:00), sonst der Standard aus den
+    /// Optionen. Wird bei jedem Spielende neu gelesen: Eine geänderte Einstellung gilt ohne Neustart ab dem nächsten
+    /// Spielende; ein schon laufender Puffer behält sein Ende.
+    /// </summary>
+    private TimeSpan RestartBufferFor(AppConfig cfg) =>
+        cfg.Settings.RestartBufferSeconds is { } seconds
+            ? TimeSpan.FromSeconds(Math.Clamp(seconds, 0, AppSettings.RestartBufferMaxSeconds))
+            : _options.RestartBuffer;
+
+    /// <summary>
     /// Kein Spielprozess mehr: normalerweise beginnt die Nachlaufzeit. War die Sitzung kurz und hat HdrPilot HDR für sie
     /// eingeschaltet (vorher aus, Zurückstellen an), gilt stattdessen der längere Neustart-Puffer. Anlass: Dead Island 2
     /// hing gleich nach dem Umschalten, der Nutzer beendete es und startete 96 s nach dem Zurückstellen neu. Startet das
     /// Spiel im Puffer wieder, läuft die Sitzung einfach weiter (<see cref="Touch"/>) und HDR bleibt an.
     /// </summary>
-    /// <summary>Neustart-Puffer aus der Konfiguration (restartBufferSeconds, 0 = aus), sonst der Standard aus den Optionen.</summary>
-    private TimeSpan RestartBufferFor(AppConfig cfg) =>
-        cfg.Settings.RestartBufferSeconds is { } seconds ? TimeSpan.FromSeconds(Math.Clamp(seconds, 0, 1800)) : _options.RestartBuffer;
-
     private void BeginEnding(ActiveSession session, TimeSpan grace, TimeSpan restartBuffer, DateTimeOffset now)
     {
         var ran = now - (session.FirstProcessAt ?? now);

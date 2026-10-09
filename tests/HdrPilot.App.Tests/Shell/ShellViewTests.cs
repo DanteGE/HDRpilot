@@ -19,8 +19,8 @@ public sealed class ShellViewTests
 {
     private static readonly string[] SettingsIds =
     [
-        "TargetDisplays", "PollInterval", "GracePeriod", "LaunchTimeout", "AutostartToggle", "NotificationsToggle",
-        "HotkeyFallbackToggle", "SearchFolders", "AddSearchFolderButton", "RemoveSearchFolderButton", "LogLevel",
+        "TargetDisplays", "PollInterval", "GracePeriod", "RestartBufferMinutes", "RestartBufferSeconds", "LaunchTimeout",
+        "AutostartToggle", "NotificationsToggle", "HotkeyFallbackToggle", "SearchFolders", "AddSearchFolderButton", "RemoveSearchFolderButton", "LogLevel",
         "HelperPatterns", "ResetHelperPatternsButton", "OpenLogFolderButton", "SaveSettingsButton", "CancelSettingsButton",
     ];
 
@@ -63,6 +63,8 @@ public sealed class ShellViewTests
             Assert.Equal((SettingsViewModel.PollIntervalMin, SettingsViewModel.PollIntervalMax), Limits(sliders["PollInterval"]));
             Assert.Equal((SettingsViewModel.GracePeriodMin, SettingsViewModel.GracePeriodMax), Limits(sliders["GracePeriod"]));
             Assert.Equal((SettingsViewModel.LaunchTimeoutMin, SettingsViewModel.LaunchTimeoutMax), Limits(sliders["LaunchTimeout"]));
+            Assert.Equal((0, SettingsViewModel.RestartBufferMinutesMax), Limits(sliders["RestartBufferMinutes"]));
+            Assert.Equal((0, SettingsViewModel.RestartBufferSecondsMax), Limits(sliders["RestartBufferSeconds"]));
         });
     }
 

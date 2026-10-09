@@ -130,6 +130,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Bildschirme | Auf welchen Bildschirmen HDR geschaltet wird | Hauptbildschirm |
 | Abfrageintervall | Wie oft nach Spielstarts gesehen wird | 1000 ms |
 | Nachlaufzeit | Wartezeit nach dem Spielende, bevor zurückgestellt wird | 10 s |
+| Neustart-Puffer | Endet ein Spiel weniger als 5 Minuten nach dem Start, bleibt HDR so lange an (Minuten und Sekunden, höchstens 30:00, 0:00 = aus; siehe „So funktioniert es“) | 1:00 |
 | Startfrist | Bei „Mit HDR starten“: so lange wird auf den Spielprozess gewartet | 120 s |
 | Mit Windows starten | Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | aus |
 | Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
@@ -142,8 +143,9 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 Im Bereich „HDR-Liste (PCGamingWiki)“ gibt es außerdem **Jetzt abgleichen**, den Stand der Liste und das optionale
 PCGamingWiki-Konto (siehe unten).
 
-Nur in `config.json` einstellbar: `restartBufferSeconds` (Neustart-Puffer in Sekunden, Standard 180, 0 = aus) und
-`launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard `true`).
+Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard
+`true`). Den Neustart-Puffer speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der
+Standard von 1 Minute.
 
 Die Darstellung folgt dem hellen oder dunklen App-Modus von Windows. Animationen laufen nur, wenn in Windows
 „Animationseffekte“ an ist, und nur solange ein Fenster sichtbar ist.
@@ -183,11 +185,13 @@ dem Spiel an, schaltet HDRpilot am Ende nichts. Schaltest du HDR während des Sp
 HDRpilot das nicht; am Ende schaltet es HDR nur aus, wenn es vor dem Spiel aus war, und nie wieder ein.
 
 **Neustart-Puffer:** Endet ein Spiel weniger als 5 Minuten nach dem Start (typisch für Hänger oder Abstürze) und hat
-HDRpilot HDR dafür eingeschaltet, bleibt HDR 3 Minuten an statt nur die Nachlaufzeit. Startest du das Spiel in dieser
-Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es bei Spielen mit
-„HDR automatisch“ wieder ein). Läuft
-beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30
-Minuten). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
+HDRpilot HDR dafür eingeschaltet, bleibt HDR noch eine Weile an statt nur die Nachlaufzeit: Standard 1 Minute,
+einstellbar unter „Einstellungen“ in Minuten und Sekunden (0:00 bis 30:00, 0:00 schaltet den Puffer ab; ist die
+Nachlaufzeit länger, gilt sie). Eine Änderung gilt ab dem nächsten Spielende, ohne Neustart von HDRpilot. Startest du
+das Spiel in dieser Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es
+bei Spielen mit „HDR automatisch“ wieder ein). Läuft beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot
+mit dem Zurückstellen, bis sie endet (höchstens 30 Minuten). Spiele, die HDRpilot nach einem eigenen Neustart
+übernimmt, gelten nie als kurz.
 
 **Hängender Spielprozess:** Läuft ein Spiel nach dem Spielen unsichtbar weiter (kein Fenster, keine Rechenzeit), lässt
 HDRpilot HDR an, weil das Spiel ja noch läuft. Nach 2 Minuten ohne jede Aktivität erscheint einmal ein Hinweis, dass das
@@ -417,14 +421,15 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   „(HDR)“-Verknüpfung oder (bei Steam) die Steam-Startoption starten; dann ist HDR schon vor dem Spiel an.
 - **Steam-Startoption wirkt nicht:** Läuft HDRpilot? In `logs\wrap.log` steht je Start, ob HDR vorbereitet wurde und
   warum nicht. Kennt HDRpilot das Spiel noch nicht, einmal „Neu einlesen“.
-- **HDR bleibt nach dem Spiel an:** Endete das Spiel kurz nach dem Start, hält der Neustart-Puffer HDR bis zu 3 Minuten
-  an (der Tooltip zeigt die Restzeit). Sonst die Nachlaufzeit abwarten (Standard 10 s). Nennt der Tooltip das Spiel
-  danach noch, läuft noch ein Programm aus seinem Ordner (etwa ein Launcher-Rest): im Task-Manager nachsehen und diese
-  EXE in den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar weiter (im Test bei
-  Palworld); HDRpilot weist nach 2 Minuten darauf hin. Dann den Spielprozess im Task-Manager beenden. Weitere Gründe:
-  Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem Spiel zurückstellen“ ist für dieses oder
-  ein gleichzeitig gelaufenes Spiel aus. Nach „Mit HDR starten“ ohne Spielstart bleibt HDR bis zum Ende der Startfrist
-  an.
+- **HDR bleibt nach dem Spiel an:** Endete das Spiel weniger als 5 Minuten nach dem Start, hält der Neustart-Puffer HDR
+  noch an (Standard 1 Minute, der Tooltip zeigt die Restzeit). Ist dir das zu lang, stelle unter „Einstellungen“ beim
+  Neustart-Puffer eine kürzere Zeit oder 0:00 (aus) ein. Sonst die Nachlaufzeit abwarten (Standard 10 s). Nennt der
+  Tooltip das Spiel danach noch, läuft noch ein Programm aus seinem Ordner (etwa ein Launcher-Rest): im Task-Manager
+  nachsehen und diese EXE in den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar
+  weiter (im Test bei Palworld); HDRpilot weist nach 2 Minuten darauf hin. Dann den Spielprozess im Task-Manager
+  beenden. Weitere Gründe: Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem Spiel
+  zurückstellen“ ist für dieses oder ein gleichzeitig gelaufenes Spiel aus. Nach „Mit HDR starten“ ohne Spielstart
+  bleibt HDR bis zum Ende der Startfrist an.
 - **„Mit HDR starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
   HDRpilot keine Start-EXE. Dann das Spiel über seine EXE hinzufügen.
 - **Keine HDR-Kennzeichen in der Liste:** Der erste Abgleich läuft 30 s nach dem Start; ohne Konto sind je Start nur

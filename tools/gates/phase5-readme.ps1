@@ -1,8 +1,8 @@
 ﻿# Gate G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche, abgeglichen mit dem Quelltext.
 # Prüft Abschnitte, Befehlszeilen-Schalter der App, die Hilfe der Kommandozeile, Standardwerte, Ablageorte und alle fett
 # gesetzten Oberflächen-Bezeichnungen gegen die resx-Dateien (inkl. SetupStrings.resx), dazu Schalter, Exit-Codes und
-# Orte von Setup und Entfernen (E83). Gegenprobe: eine absichtlich verfälschte README muss genau die eingebauten Fehler
-# liefern.
+# Orte von Setup und Entfernen (E83) und den Standard des Neustart-Puffers in der Einstellungstabelle (E85). Gegenprobe:
+# eine absichtlich verfälschte README muss genau die eingebauten Fehler liefern.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $cliExe = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'
@@ -23,6 +23,11 @@ $appSwitches = @([regex]::Matches($appArgs, '"(--[a-z-]+)"') | ForEach-Object { 
 $config = Read-Utf8 'src\HdrPilot.Core\Config\AppConfig.cs'
 function Default([string]$name) { [int]([regex]::Match($config, "$name \{ get; set; \} = (\d+);").Groups[1].Value) }
 $defaults = @{ Poll = Default 'PollIntervalMs'; Grace = Default 'GracePeriodSeconds'; Launch = Default 'LaunchTimeoutSeconds' }
+
+# Neustart-Puffer (E85): Standard aus SessionManagerOptions (gilt, solange restartBufferSeconds fehlt), in der Tabelle m:ss
+$bufferMatch = [regex]::Match((Read-Utf8 'src\HdrPilot.Core\Sessions\SessionManagerOptions.cs'), 'RestartBuffer \{ get; init; \} = TimeSpan\.From(Minutes|Seconds)\((\d+)\);')
+$bufferSeconds = [int]$bufferMatch.Groups[2].Value * $(if ($bufferMatch.Groups[1].Value -eq 'Minutes') { 60 } else { 1 })
+$defaults.Buffer = '{0}:{1:00}' -f [Math]::Floor($bufferSeconds / 60), ($bufferSeconds % 60)
 
 $logger = Read-Utf8 'src\HdrPilot.Core\Logging\RollingFileLoggerProvider.cs'
 $retainDays = [regex]::Match($logger, 'int retainDays = (\d+)').Groups[1].Value
@@ -65,7 +70,7 @@ $helpExitCodes = Normalize ((($helpText -split "`r?`n") | Where-Object { $_ -mat
 $helpExitPairs = @([regex]::Matches($helpExitCodes, '(\d) ([^,]+?)(?=,|$)') | ForEach-Object { Normalize ($_.Groups[1].Value + ' ' + $_.Groups[2].Value) })
 
 Check ($appSwitches.Count -ge 9) ("App-Schalter aus AppArguments.cs: {0}" -f ($appSwitches -join ' '))
-Check ($defaults.Poll -gt 0 -and $defaults.Grace -gt 0 -and $defaults.Launch -gt 0) ("Standardwerte: Intervall {0} ms, Nachlauf {1} s, Startfrist {2} s" -f $defaults.Poll, $defaults.Grace, $defaults.Launch)
+Check ($defaults.Poll -gt 0 -and $defaults.Grace -gt 0 -and $defaults.Launch -gt 0 -and $bufferMatch.Success) ("Standardwerte: Intervall {0} ms, Nachlauf {1} s, Startfrist {2} s, Neustart-Puffer {3}" -f $defaults.Poll, $defaults.Grace, $defaults.Launch, $defaults.Buffer)
 Check ($helpUsage.Count -ge 8 -and $helpExitPairs.Count -eq 7) ("Hilfe: {0} Aufrufzeilen, {1} Exit-Codes" -f $helpUsage.Count, $helpExitPairs.Count)
 Check ($uiLabels.Count -gt 200 -and $missingResx.Count -eq 0) ("Oberflächen-Texte aus resx: {0}{1}" -f $uiLabels.Count, $(if ($missingResx) { ', fehlt: ' + ($missingResx -join ', ') } else { ' (inkl. SetupStrings.resx)' }))
 Check ($setupSwitches.Count -ge 8 -and $setupExitCodes.Count -ge 7) ("Setup-Schalter aus SetupArguments.cs: {0}; Exit-Codes {1}" -f ($setupSwitches -join ' '), ($setupExitCodes -join ' '))
@@ -117,6 +122,7 @@ function Test-Readme([string]$text) {
     foreach ($name in $fileNames) {
         if ($text -notmatch [regex]::Escape($name)) { [void]$problems.Add("Ablageort fehlt: $name") }
     }
+    if ($text -notmatch "(?m)^\| Neustart-Puffer \|[^\r\n]*\| $([regex]::Escape($defaults.Buffer)) \|\r?$") { [void]$problems.Add("Fakt fehlt oder weicht ab: Neustart-Puffer $($defaults.Buffer)") }
 
     # Fett gesetzte Bezeichnungen in Einrichtung, Bedienung und Entfernen (dort ist Fettdruck immer ein Oberflächen-Text)
     # und die erste Spalte der Einstellungstabelle müssen Oberflächen-Texte sein.
@@ -146,9 +152,12 @@ $broken = $readme.Replace('**Neu einlesen**', '**Neu laden**').Replace('| `--res
 # Setup (E83): Bezeichnung nur aus SetupStrings.resx, Schalter des Setups (jede Nennung, auch im Text zu --quiet),
 # Protokollort
 $broken = $broken.Replace('**Verknüpfung auf dem Desktop**', '**Desktop-Symbol**').Replace('`--no-launch`', '`--no-start`').Replace("``$setupLog``", '`%TEMP%\HDRpilot.log`')
+# Neustart-Puffer (E85): alter Standard in der Tabelle
+$broken = $broken.Replace("| $($defaults.Buffer) |", '| 3:00 |')
 $expected = @('Bezeichnung nicht in der Oberfläche: Neu laden', 'App-Schalter nicht dokumentiert: --rescan', 'App-Schalter gibt es nicht: --reload',
               "Fakt fehlt oder weicht ab: Nachlaufzeit ($($defaults.Grace) s)", 'Abschnitt fehlt: Fehlersuche', 'CLI-Aufruf fehlt oder weicht ab: hdrpilot games list [--json]', 'CLI-Aufruf nicht in der Hilfe: hdrpilot games list',
-              'Bezeichnung nicht in der Oberfläche: Desktop-Symbol', 'Setup-Schalter nicht dokumentiert: --no-launch', 'Setup-Schalter gibt es nicht: --no-start', "Fakt fehlt oder weicht ab: ``$setupLog``")
+              'Bezeichnung nicht in der Oberfläche: Desktop-Symbol', 'Setup-Schalter nicht dokumentiert: --no-launch', 'Setup-Schalter gibt es nicht: --no-start', "Fakt fehlt oder weicht ab: ``$setupLog``",
+              "Fakt fehlt oder weicht ab: Neustart-Puffer $($defaults.Buffer)")
 $found = Test-Readme $broken
 $missed = @($expected | Where-Object { $_ -notin $found })
 Check ($missed.Count -eq 0 -and $found.Count -eq $expected.Count) ("Gegenprobe: {0} von {1} eingebauten Fehlern erkannt, {2} Meldungen insgesamt{3}" -f ($expected.Count - $missed.Count), $expected.Count, $found.Count, $(if ($missed) { '; übersehen: ' + ($missed -join ' | ') } else { '' }))

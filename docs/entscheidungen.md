@@ -482,3 +482,23 @@ Fehlers; ein nicht wiederhergestellter HDR-Zustand ist nur ein Hinweis. Die Kopi
 Temp-Ordner (cmd.exe ohne AutoRun und verzögerte Erweiterung, bis zu 30 Versuche im Sekundenabstand) und, sobald der weg
 und sie damit beendet ist, einmal ihren Entpack-Ordner `%TEMP%\.net\HDRpilot-Uninstall` (nicht öfter: dort könnte
 inzwischen eine neue Kopie entpackt haben); den Entpack-Ordner der App und den der Setup-Datei fasst sie nie an.
+
+**E85 Neustart-Puffer einstellbar, Standard 1 Minute (Wunsch des Nutzers nach dem Helldivers-2-Test):** Der Nutzer
+testete Helldivers 2 mit der installierten Version: Nach einer kurzen Sitzung war HDR knapp 2 Minuten nach dem Schließen
+des Spiels noch an, weil der Neustart-Puffer lief (E77, damals 3 Minuten). Er entschied: Standard 1:00 statt 3:00, in
+den Einstellungen mit Minuten und Sekunden einstellbar (0:00 bis 30:00, 0:00 = aus). Begründung: Der Puffer soll nur
+einen schnellen Neustart nach Hänger oder Absturz abfangen; nach einem gewollten Beenden wirken 3 Minuten HDR wie ein
+Fehler. Wer länger für einen Neustart braucht (Dead Island 2: 96 s, E77), stellt den Wert selbst höher. Die Grenze für
+kurze Sitzungen (5 Minuten) und das Warten auf eine Vollbild-Anwendung bleiben. Umsetzung: Der Standard
+`SessionManagerOptions.RestartBuffer` = 60 s gilt, solange `restartBufferSeconds` in config.json fehlt (Werte über 1800
+gelten als 30:00, negative als aus). Die Einstellung „Neustart-Puffer“ steht direkt nach der Nachlaufzeit: zwei
+Regler wie bei den übrigen Zahlenwerten (Minuten 0 bis 30, Sekunden 0 bis 59, AutomationIds `RestartBufferMinutes` und
+`RestartBufferSeconds`), Anzeige „1:00 min“ bzw. „aus“; 30 Minuten plus Sekunden wird auf 30:00 begrenzt (der
+Sekunden-Regler springt auf 0 zurück). Gespeichert wird mit „Speichern“ als `restartBufferSeconds`; ein fehlender Wert
+bleibt ungeschrieben, solange der Nutzer den Standard nicht ändert (so gilt ein späterer neuer Standard auch für ihn,
+G7.8). Die Sitzungslogik liest den Wert bei jedem Spielende aus demselben ConfigService wie die Einstellungen: Eine
+Änderung gilt ohne Neustart ab dem nächsten Spielende, ein schon laufender Puffer behält sein Ende. Der Countdown im
+Tooltip bleibt unverändert. Prüfung: G7.6 (Unit-Tests mit `RestartBuffer` im Namen, auch Einstellungen und
+Sitzungslogik über einen gemeinsamen ConfigService; `phase4-ui.ps1` stellt an einer Testinstanz 30:05 ein, prüft die
+Begrenzung auf 30:00, speichert 0:45 und prüft `restartBufferSeconds` = 45, auch nach einem Neustart);
+`phase5-readme.ps1` gleicht den Standard in der Einstellungstabelle der README mit dem Quelltext ab.

@@ -69,7 +69,7 @@ public sealed partial class SessionManagerTests
         var o = SessionManagerOptions.Default;
 
         Assert.Equal(TimeSpan.FromMinutes(5), o.ShortSessionLimit);
-        Assert.Equal(TimeSpan.FromMinutes(3), o.RestartBuffer);
+        Assert.Equal(TimeSpan.FromMinutes(1), o.RestartBuffer); // E85, vorher 3 Minuten
         Assert.Equal(TimeSpan.FromMinutes(30), o.MaxFullscreenHold);
         Assert.Equal(TimeSpan.FromSeconds(30), o.HangCheckInterval);
         Assert.Equal(TimeSpan.FromMinutes(2), o.HangThreshold);
@@ -79,21 +79,23 @@ public sealed partial class SessionManagerTests
     }
 
     [Fact]
-    public async Task Short_session_keeps_hdr_on_for_the_restart_buffer_then_restores()
+    public async Task RestartBuffer_default_of_one_minute_keeps_hdr_on_after_a_short_session_then_restores()
     {
+        // restartBufferSeconds nicht gesetzt: Standard 1:00 (E85; nach dem Helldivers-2-Test war 3:00 zu lang).
         UseRestartBuffer();
         _config.AddGame("1", DirA);
         await Poll();
+        Assert.Null(_config.Config.Settings.RestartBufferSeconds);
 
-        var stoppedAt = await RunGameFor(60);
+        var stoppedAt = await RunGameFor(77);
 
         var s = Assert.Single(Manager.Sessions);
         Assert.Equal(SessionPhase.Ending, s.Phase);
-        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(180), s.BufferUntil);
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(60), s.BufferUntil);
         Assert.False(s.HeldForFullscreen);
-        Assert.True(_log.Contains(LogLevel.Information, "kurze Sitzung (60 s): Neustart-Puffer 180 s"));
+        Assert.True(_log.Contains(LogLevel.Information, "kurze Sitzung (77 s): Neustart-Puffer 60 s"));
 
-        await Poll(179); // die Nachlaufzeit (10 s) ist längst vorbei, der Puffer läuft noch
+        await Poll(59); // die Nachlaufzeit (10 s) ist längst vorbei, der Puffer läuft noch
         Assert.True(PrimaryOn);
         Assert.Equal(0, _hdr.SetCalls(enable: false));
 
@@ -107,22 +109,24 @@ public sealed partial class SessionManagerTests
     }
 
     [Fact]
-    public async Task Restart_buffer_from_the_configuration_overrides_the_default()
+    public async Task RestartBuffer_from_the_configuration_overrides_the_default()
     {
         UseRestartBuffer();
-        _config.Config.Settings.RestartBufferSeconds = 60;
+        _config.Config.Settings.RestartBufferSeconds = 125; // 2:05 in den Einstellungen
         _config.AddGame("1", DirA);
         await Poll();
 
         var stoppedAt = await RunGameFor(30);
 
-        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(60), Assert.Single(Manager.Sessions).BufferUntil);
-        await Poll(60);
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(125), Assert.Single(Manager.Sessions).BufferUntil);
+        await Poll(124);
+        Assert.True(PrimaryOn);
+        await Poll();
         Assert.False(PrimaryOn);
     }
 
     [Fact]
-    public async Task Restart_buffer_zero_in_the_configuration_switches_it_off()
+    public async Task RestartBuffer_zero_in_the_configuration_switches_it_off()
     {
         UseRestartBuffer();
         _config.Config.Settings.RestartBufferSeconds = 0;
@@ -137,15 +141,85 @@ public sealed partial class SessionManagerTests
     }
 
     [Fact]
+    public async Task RestartBuffer_changed_in_the_settings_applies_to_the_next_ending_session_without_restart()
+    {
+        // Die Einstellungen schreiben über den ConfigService; die Sitzungslogik liest den Puffer bei jedem Spielende neu.
+        UseRestartBuffer();
+        _config.AddGame("1", DirA);
+        await Poll();
+
+        var first = await RunGameFor(30);
+        Assert.Equal(first + TimeSpan.FromSeconds(60), Assert.Single(Manager.Sessions).BufferUntil); // Standard
+        await Poll(60);
+        Assert.Empty(Manager.Sessions);
+
+        _config.Config.Settings.RestartBufferSeconds = 45; // gespeichert als 0:45
+        var second = await RunGameFor(30);
+        Assert.Equal(second + TimeSpan.FromSeconds(45), Assert.Single(Manager.Sessions).BufferUntil);
+        Assert.True(_log.Contains(LogLevel.Information, "kurze Sitzung (30 s): Neustart-Puffer 45 s"));
+        await Poll(45);
+        Assert.Empty(Manager.Sessions);
+        Assert.False(PrimaryOn);
+
+        _config.Config.Settings.RestartBufferSeconds = 0; // gespeichert als 0:00 = aus
+        await RunGameFor(30);
+        Assert.Null(Assert.Single(Manager.Sessions).BufferUntil);
+        await Poll(10);
+        Assert.Empty(Manager.Sessions);
+        Assert.Equal(3, _hdr.SetCalls(enable: true));
+        Assert.Equal(3, _hdr.SetCalls(enable: false));
+    }
+
+    [Fact]
+    public async Task RestartBuffer_change_during_a_running_buffer_keeps_its_end()
+    {
+        // Ein schon laufender Puffer behält sein Ende; die neue Einstellung gilt ab dem nächsten Spielende.
+        UseRestartBuffer();
+        _config.AddGame("1", DirA);
+        await Poll();
+        var stoppedAt = await RunGameFor(30);
+        await Poll(10);
+
+        _config.Config.Settings.RestartBufferSeconds = 0;
+        await Poll(10);
+
+        Assert.True(PrimaryOn);
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(60), Assert.Single(Manager.Sessions).BufferUntil);
+        await Poll(39);
+        Assert.True(PrimaryOn);
+        await Poll();
+        Assert.False(PrimaryOn);
+    }
+
+    [Theory]
+    [InlineData(1800, 1800)]
+    [InlineData(1801, 1800)]
+    [InlineData(5000, 1800)]
+    [InlineData(-5, 0)]
+    public async Task RestartBuffer_outside_0_to_30_minutes_in_the_configuration_is_limited(int configured, int expected)
+    {
+        // config.json von Hand bearbeitet: höchstens 30:00, negative Werte gelten als aus.
+        UseRestartBuffer();
+        _config.Config.Settings.RestartBufferSeconds = configured;
+        _config.AddGame("1", DirA);
+        await Poll();
+
+        var stoppedAt = await RunGameFor(30);
+
+        var expectedEnd = expected == 0 ? (DateTimeOffset?)null : stoppedAt + TimeSpan.FromSeconds(expected);
+        Assert.Equal(expectedEnd, Assert.Single(Manager.Sessions).BufferUntil);
+    }
+
+    [Fact]
     public async Task Restart_within_the_buffer_continues_the_session_and_keeps_hdr_on()
     {
         UseRestartBuffer();
         _config.AddGame("1", DirA);
         await Poll();
         await RunGameFor(20); // hängt kurz nach dem Umschalten, Nutzer beendet es
-        await Poll(95);
+        await Poll(44);
 
-        var pid = _processes.StartExe(ExeA); // 96 s nach dem Ende wieder gestartet
+        var pid = _processes.StartExe(ExeA); // 45 s nach dem Ende wieder gestartet (Dead Island 2 brauchte 96 s, E85)
         await Poll();
 
         var s = Assert.Single(Manager.Sessions);
@@ -367,7 +441,7 @@ public sealed partial class SessionManagerTests
         _config.AddGame("1", DirA);
         await Poll();
         await RunGameFor(30);
-        await Poll(179);
+        await Poll(59);
         Assert.Equal(0, _fullscreenQueries); // während des Puffers wird nicht gefragt
 
         _fullscreen = true; // ein anderes Spiel startet gerade im Vollbild
@@ -396,7 +470,7 @@ public sealed partial class SessionManagerTests
         _config.AddGame("1", DirA);
         await Poll();
         await RunGameFor(30);
-        await Poll(180); // Puffer abgelaufen, Warten beginnt
+        await Poll(60); // Puffer abgelaufen, Warten beginnt
         Assert.True(Assert.Single(Manager.Sessions).HeldForFullscreen);
 
         await Poll((30 * 60) - 1);
@@ -438,17 +512,17 @@ public sealed partial class SessionManagerTests
         var stoppedAt = _clock.UtcNow;
         await Poll();
         Assert.Equal(1, changes);
-        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(180), Assert.Single(Manager.Sessions).BufferUntil);
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(60), Assert.Single(Manager.Sessions).BufferUntil);
 
         _fullscreen = true;
-        await Poll(179);
+        await Poll(59);
         Assert.Equal(1, changes); // den Countdown führt das Tray selbst nach
 
         await Poll();
         Assert.Equal(2, changes);
         var held = Assert.Single(Manager.Sessions);
         Assert.True(held.HeldForFullscreen);
-        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(180), held.BufferUntil);
+        Assert.Equal(stoppedAt + TimeSpan.FromSeconds(60), held.BufferUntil);
     }
 
     [Fact]
@@ -484,7 +558,7 @@ public sealed partial class SessionManagerTests
         await Poll();
         await RunGameFor(30);
 
-        await Poll(180);
+        await Poll(60);
 
         Assert.False(PrimaryOn);
         Assert.True(_log.Contains(LogLevel.Warning, "Vollbild-Anwendung läuft“ fehlgeschlagen"));

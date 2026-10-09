@@ -266,6 +266,7 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
 | Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
 | Entpackte Grafik-Bibliotheken (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot\` |
+| Dasselbe für Setup und Entfernen (je rund 8 MB) | `%TEMP%\.net\HDRpilot-Setup-<Version>\`, `%TEMP%\.net\HDRpilot-Uninstall\` |
 
 Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nicht nach Groß- und Kleinschreibung, die
 bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
@@ -277,7 +278,9 @@ sichert HDRpilot sie beim nächsten Start als `config.json.defekt-<Zeit>.bak` un
 Auswahl steckt dann nur noch in dieser Sicherung.
 
 Die Grafik-Bibliotheken entpackt HDRpilot beim ersten Start und nach jedem Update auf eine neue Version. Ordner
-älterer Versionen bleiben liegen und können bei beendetem HDRpilot gelöscht werden.
+älterer Versionen bleiben liegen und können bei beendetem HDRpilot gelöscht werden. Setup-Datei und die Kopie zum
+Entfernen entpacken ihre eigenen (Ordner nach dem Namen der EXE); auch diese bleiben liegen und dürfen gelöscht werden,
+wenn gerade kein Setup läuft.
 
 ## Befehlszeile
 
@@ -316,7 +319,7 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 | `HDRpilot.exe --uninstall` | Entfernen wie aus „Installierte Apps“ (läuft aus einer Kopie im Temp-Ordner) |
 | `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück, das Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll |
 | `--remove-data` | Beim Entfernen auch Einstellungen, Spieleliste, Protokolle und HDR-Liste löschen |
-| `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen, Ablage und ein eigener Registry-Zweig unter diesem Ordner |
+| `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen und Ablage unter diesem Ordner, dazu ein eigener Registry-Zweig unter `HKCU\Software\HDRpilot.Tests` |
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 ältere Version abgelehnt, 4 HDRpilot ließ sich nicht beenden,
 5 abgebrochen, 6 nicht installiert. Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
@@ -446,9 +449,10 @@ Mit dem Setup installiert:
    `%LOCALAPPDATA%\HDRpilot` erhalten und werden bei einer neuen Installation wieder benutzt; mit Haken sind sie weg,
    samt HDR-Liste und gespeichertem PCGamingWiki-Konto.
 3. **Entfernen** beendet HDRpilot, stellt einen gemerkten HDR-Zustand wieder her und entfernt das Programm, seine
-   Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die sich danach selbst löscht.
-4. Bleiben „(HDR)“-Verknüpfungen für einzelne Spiele oder `%TEMP%\.net\HDRpilot` (entpackte Grafik-Bibliotheken)
-   übrig, kannst du sie löschen.
+   Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die ihren Ordner danach selbst löscht.
+4. Bleiben „(HDR)“-Verknüpfungen für einzelne Spiele übrig, kannst du sie löschen, ebenso die entpackten
+   Grafik-Bibliotheken in `%TEMP%\.net\HDRpilot`, `%TEMP%\.net\HDRpilot-Setup-<Version>` und
+   `%TEMP%\.net\HDRpilot-Uninstall` (rund 8 MB je Ordner).
 
 Ohne Installation:
 

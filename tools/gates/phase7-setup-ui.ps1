@@ -1,10 +1,15 @@
 ﻿# Gate G7.3: Oberfläche von Setup und Entfernen per UI-Automation (nur Invoke-/Toggle-Muster, keine Maus, keine Tastatur)
 # an einer eigenen Testablage (--test-root). Fenster nur über AutomationId und die Prozess-ID des selbst gestarteten
 # Prozesses. Texte werden gegen SetupStrings.resx geprüft.
+#   - Probe: Setup-Datei und installierte EXE laufen wirklich im Setup-Modus (harmloser Aufruf, Exitcode 2)
 #   - Setup: Titel mit Version, Programmordner, Hinweis auf die erhaltene Ablage, Optionen (Autostart an, Desktop aus,
 #     danach starten an), "danach starten" aus, Installieren, Fortschritt und Ergebnis, Fertig, Exitcode 0
-#   - Entfernen: Rückfrage (Daten löschen standardmäßig aus), Bestätigen; die Fortsetzung läuft als neuer Prozess aus
-#     %TEMP%\HDRpilot-Uninstall-*, zeigt Fortschritt und Ergebnis; danach ist alles entfernt, die Ablage bleibt
+#   - Entfernen: Rückfrage (Daten löschen standardmäßig aus), Warnung vor der Steam-Startoption eines Spiels (Steam-Ordner
+#     der Testablage), Bestätigen; die Fortsetzung läuft als neuer Prozess aus %TEMP%\HDRpilot-Uninstall-* (laut
+#     Setup-Protokoll dieses Laufs), zeigt Fortschritt und Ergebnis; danach ist alles entfernt, die Ablage bleibt
+#   - Aktualisieren einer älteren, nicht eingetragenen EXE (wie beim Nutzer): Titel "aktualisieren", Version alt → neu,
+#     Knopf Aktualisieren, Autostart wie bisher an, danach starten aus (lief nicht), Ergebnis, Exitcode 0
+# Die App läuft in diesem Gate nie; die Ablage (config.json, Kanarien-Datei) muss nach jedem Schritt byte-gleich sein.
 # Der echte Stand wird vorher und nachher verglichen (wie phase7-setup.ps1).
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
 . (Join-Path $PSScriptRoot 'Phase7Common.ps1')
@@ -55,19 +60,64 @@ function Get-AllNames($el) {
     return ,$names
 }
 
-function Find-Continuation([string[]]$before) {
-    foreach ($dir in Get-UninstallTempDirs) {
-        if ($dir -in $before) { continue }
+# Fortsetzung DIESES Laufs: Temp-Ordner laut eigenem Setup-Protokoll, Prozess darin mit --test-root dieses Testordners.
+function Find-Continuation([long]$logOffset) {
+    foreach ($dir in Get-OwnUninstallTempDirs (Get-LogSince $layout.SetupLog $logOffset)) {
         [void]$tempSeen.Add($dir)
-        $p = @(Get-ProcessesUnder 'HDRpilot-Uninstall' $dir) | Select-Object -First 1
-        if ($p) { return $p }
+        foreach ($p in @(Get-ProcessesUnder 'HDRpilot-Uninstall' $dir)) {
+            if (Test-OwnTestProcess $p.Id $layout) { return $p }
+        }
     }
     return $null
+}
+
+# Ablage byte-gleich mit dem Stand zu Beginn (die App läuft in diesem Gate nie).
+function Assert-ConfigUnchanged([string]$step, [string[]]$before) {
+    $diff = @(Compare-TreeHashes $before @(Get-TreeHashes $layout.Config))
+    foreach ($line in $diff) { Note "     $line" }
+    $hasConfig = @($before | Where-Object { $_ -like 'config.json|*' }).Count -eq 1
+    Check ($hasConfig -and $diff.Count -eq 0) ("{0}: Ablage byte-gleich, alle {1} Dateien unter Config (mit config.json) haben dieselbe SHA-256" -f $step, @($before).Count)
+}
+
+# Steam-Spiel mit HDRpilot-Startoption wie beim Nutzer: Name in config.json (Quelle Steam), Startoption in
+# <Testordner>\Steam\userdata\<Konto>\config\localconfig.vdf (im Prüflauf liest das Entfernen nur diesen Steam-Ordner).
+function Add-SteamLaunchOption([string]$appId, [string]$name) {
+    $file = Join-Path $layout.Config 'config.json'
+    $json = [IO.File]::ReadAllText($file) | ConvertFrom-Json
+    $json.games = @($json.games) + @([pscustomobject]@{ source = 'Steam'; sourceId = $appId; name = $name; hdrAuto = $false })
+    [IO.File]::WriteAllText($file, ($json | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
+    $vdf = Join-Path $layout.Root 'Steam\userdata\12345678\config\localconfig.vdf'
+    New-Item -ItemType Directory -Force (Split-Path $vdf) | Out-Null
+    $option = ('"{0}" --wrap -- %command%' -f $layout.Exe).Replace('\', '\\').Replace('"', '\"')
+    $template = @'
+"UserLocalConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"apps"
+				{
+					"APPID"
+					{
+						"LaunchOptions"		"OPTION"
+						"LastPlayed"		"1759000000"
+					}
+				}
+			}
+		}
+	}
+}
+'@
+    [IO.File]::WriteAllText($vdf, $template.Replace('APPID', $appId).Replace('OPTION', $option), (New-Object Text.UTF8Encoding $false))
 }
 
 try {
     Note '--- Voraussetzungen'
     Check (-not (Test-Elevated)) 'Prüflauf ohne Adminrechte (Skript nicht erhöht)'
+    Check (Test-CompareRealStateCase) 'Gegenprobe: Vergleich des echten Stands erkennt eine Änderung nur in der Groß-/Kleinschreibung'
     Update-SetupFile $setup | ForEach-Object { Note $_ }
     $bundle = Test-SetupBundle $setup $PortableDir
     foreach ($p in $bundle.Problems) { Note "  - $p" }
@@ -82,8 +132,16 @@ try {
     $layout = New-SetupTestLayout 'HDRpilot-Gate7UI'
     Note "Testablage $($layout.Root), Registry $($layout.RegistryBranch), Instanz $($layout.InstanceId)"
     Check (-not (Test-Path $layout.RegistryBranch)) 'Registry-Zweig der Testablage ist neu'
-    $canaryFile = Join-Path $layout.Config 'canary.bin'
+    $probe = @(Test-SetupModeAtRuntime $layout $setup (Join-Path $PortableDir 'HDRpilot.exe'))
+    foreach ($p in $probe) { Note "  - $p" }
+    Check ($probe.Count -eq 0) 'Probe: Setup-Datei und HDRpilot.exe --uninstall laufen im Setup-Modus (mit --quiet und unbekannten Schaltern: Exitcode 2, Setup-Protokoll, keine App)'
+    if ($probe) { throw 'Setup-Modus wirkt zur Laufzeit nicht: die Setup-Datei liefe als normale App, deshalb kein Fenster-Start' }
+
     $canary = Initialize-SetupTestConfig $layout.Config
+    $steamGame = 'Gate7 Steam-Spiel'
+    Add-SteamLaunchOption '4711' $steamGame
+    $cfgStart = @(Get-TreeHashes $layout.Config)
+    Note ("Ablage vorbereitet: Kanarien-Datei {0}, Steam-Spiel 4711 mit HDRpilot-Startoption, {1} Dateien" -f $canary.Substring(0, 8), $cfgStart.Count)
 
     Note '--- Setup-Fenster'
     $proc = Start-Exe $setup @('--test-root', $layout.Root)
@@ -135,9 +193,10 @@ try {
     if ($close) { Invoke-El $close }
     $exited = $proc.WaitForExit(15000)
     Check ($exited -and $proc.ExitCode -eq 0) ("Setup nach Fertig beendet, Exitcode {0}" -f $(if ($exited) { $proc.ExitCode } else { 'läuft noch' }))
+    Assert-ConfigUnchanged 'Nach dem Installieren' $cfgStart
 
     Note '--- Entfernen: Rückfrage'
-    $tempBefore = @(Get-UninstallTempDirs)
+    $logOffset = Get-FileLength $layout.SetupLog
     $first = Start-Exe $layout.Exe @('--uninstall', '--test-root', $layout.Root)
     $uwin = Find-Window 'UninstallWindow' $first.Id 30000
     Check ($null -ne $uwin) "Rückfrage zum Entfernen geöffnet (UninstallWindow, PID $($first.Id))"
@@ -148,13 +207,12 @@ try {
     $removeData = Find-Id $uwin 'UninstallRemoveData' 2000
     $removeState = if ($removeData) { [string](Get-Toggle $removeData) } else { 'fehlt' }
     Check ($removeData -and $removeState -eq 'Off' -and $removeData.Current.Name -ceq $s.UninstallRemoveData) ("Daten löschen standardmäßig aus: '{0}' {1}" -f $(if ($removeData) { $removeData.Current.Name } else { '' }), $removeState)
-    $steam = Find-Id $uwin 'UninstallSteamWarning' 500
-    if (Test-Shown $steam) {
-        $steamText = [string](Get-Text $steam)
-        Check ((($steamText -replace '\s+', ' ').Trim()).StartsWith(($s.UninstallSteamWarning -replace '\s+', ' ').Trim())) "Warnung vor Steam-Startoptionen (es gibt Einträge): $steamText"
-    } else {
-        Note '     Keine Warnung vor Steam-Startoptionen (keine Einträge gefunden)'
-    }
+    $steam = Find-Id $uwin 'UninstallSteamWarning' 2000
+    $steamText = if ($steam) { [string](Get-Text $steam) } else { '' }
+    Check ((Test-Shown $steam) -and (($steamText -replace '\s+', ' ').Trim()).StartsWith(($s.UninstallSteamWarning -replace '\s+', ' ').Trim(), [StringComparison]::Ordinal)) "Warnung vor Steam-Startoptionen sichtbar: $steamText"
+    $gameCondition = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty, $steamGame)
+    $gameEl = $uwin.FindFirst([Windows.Automation.TreeScope]::Descendants, $gameCondition)
+    Check (Test-Shown $gameEl) "Warnung nennt sichtbar das Spiel mit HDRpilot-Startoption ($steamGame, Name aus config.json)"
     $confirm = Find-Id $uwin 'UninstallConfirmButton' 2000
     Check ($confirm -and $confirm.Current.Name -ceq $s.UninstallConfirmButton) ("Knopf {0}" -f $(if ($confirm) { $confirm.Current.Name } else { 'fehlt' }))
     $ucancel = Find-Id $uwin 'UninstallCancelButton' 2000
@@ -165,10 +223,10 @@ try {
     Note '--- Entfernen: Fortsetzung aus dem Temp-Ordner'
     $cont = $null
     $sw = [Diagnostics.Stopwatch]::StartNew()
-    while (-not $cont -and $sw.ElapsedMilliseconds -lt 30000) { $cont = Find-Continuation $tempBefore; if (-not $cont) { Start-Sleep -Milliseconds 100 } }
+    while (-not $cont -and $sw.ElapsedMilliseconds -lt 30000) { $cont = Find-Continuation $logOffset; if (-not $cont) { Start-Sleep -Milliseconds 100 } }
     $firstExited = $first.WaitForExit(30000)
     Check ($firstExited -and $first.ExitCode -eq 0) ("Erste Instanz aus dem Programmordner beendet sich, Exitcode {0}" -f $(if ($firstExited) { $first.ExitCode } else { 'läuft noch' }))
-    Check ($null -ne $cont) ("Fortsetzung läuft als neuer Prozess {0} (PID {1})" -f $(if ($cont) { $cont.Path } else { 'fehlt' }), $(if ($cont) { $cont.Id } else { '' }))
+    Check ($null -ne $cont) ("Fortsetzung läuft als neuer Prozess {0} (PID {1}, Befehlszeile mit --test-root dieses Laufs)" -f $(if ($cont) { $cont.Path } else { 'fehlt' }), $(if ($cont) { $cont.Id } else { '' }))
     if (-not $cont) { throw 'Fortsetzung fehlt' }
     $null = $cont.Handle # Handle halten, damit der Exitcode lesbar bleibt
     $pwin = Find-Window 'UninstallProgressWindow' $cont.Id 30000
@@ -189,10 +247,48 @@ try {
     Check (-not (Test-Path -LiteralPath $layout.InstallDir)) 'Programmordner entfernt'
     Check (-not (Test-Path -LiteralPath $layout.StartMenuLnk) -and -not (Test-Path -LiteralPath $layout.DesktopLnk)) 'Verknüpfungen entfernt'
     Check ($null -eq (Get-RegValue $layout.RunKey $RunValueName)) 'Autostart-Wert entfernt'
-    Check ((Test-Path -LiteralPath (Join-Path $layout.Config 'config.json')) -and (Get-Sha $canaryFile) -eq $canary) 'Ablage bleibt: config.json vorhanden, Kanarien-Datei unverändert'
+    Assert-ConfigUnchanged 'Nach dem Entfernen ohne Haken' $cfgStart
     $contDirs = @($tempSeen)
     $gone = Wait-Until { @($contDirs | Where-Object { Test-Path -LiteralPath $_ }).Count -eq 0 } 20000
     Check ($contDirs.Count -ge 1 -and $gone) ("Temp-Ordner der Fortsetzung hat sich innerhalb von 20 s selbst entfernt ({0})" -f ($contDirs -join ', '))
+
+    Note '--- Setup-Fenster: Aktualisieren einer älteren, nicht eingetragenen Version (wie beim Nutzer)'
+    $older = Initialize-OlderInstall $layout
+    Check ($older.Version -eq '1.0.0' -and -not (Test-Path $layout.UninstallKey) -and (Test-Contains (Get-RegValue $layout.RunKey $RunValueName) $layout.Exe)) ("Vorher: Attrappe HDRpilot.exe {0} im Programmordner, Autostart-Wert zeigt darauf, kein Eintrag" -f $older.Version)
+    $proc = Start-Exe $setup @('--test-root', $layout.Root)
+    $win = Find-Window 'SetupWindow' $proc.Id 30000
+    Check ($null -ne $win) "Setup-Fenster geöffnet (SetupWindow, PID $($proc.Id))"
+    if (-not $win) { throw 'Setup-Fenster zum Aktualisieren fehlt' }
+    $title = Get-IdText $win 'SetupTitle'
+    Check ($title -ceq $s.SetupTitleUpdate) "Überschrift: $title"
+    $versionLine = Get-IdText $win 'SetupVersionInfo'
+    Check ($versionLine -ceq [string]::Format($s.SetupVersionUpdate, $older.Version, $version)) "Version alt → neu: $versionLine"
+    Check (Test-SamePath (Get-IdText $win 'SetupInstallDir') $layout.InstallDir) 'Programmordner wie bisher'
+    Check (Test-Template (Get-IdText $win 'SetupDataNote') $s.SetupDataNote) 'Hinweis, dass Einstellungen erhalten bleiben'
+    Check (-not (Test-Shown (Find-Id $win 'SetupRunningNote' 500))) 'Kein Hinweis auf laufendes HDRpilot (die frühere Version läuft nicht)'
+    Check (-not (Test-Shown (Find-Id $win 'SetupAllowDowngrade' 500))) 'Kein Ankreuzfeld für ältere Version (Aktualisierung)'
+    $expected = [ordered]@{ SetupAutostart = 'On'; SetupDesktopShortcut = 'Off'; SetupLaunchAfter = 'Off' }
+    foreach ($id in $expected.Keys) {
+        $box = Find-Id $win $id 2000
+        $state = if ($box) { [string](Get-Toggle $box) } else { 'fehlt' }
+        Check ($box -and $state -eq $expected[$id]) ("Option {0}: {1} (erwartet {2}: wie bisher, lief nicht)" -f $id, $state, $expected[$id])
+    }
+    $update = Find-Id $win 'SetupInstallButton' 2000
+    Check ($update -and $update.Current.Name -ceq $s.SetupUpdateButton -and $update.Current.IsEnabled) ("Knopf {0} (statt {1})" -f $(if ($update) { $update.Current.Name } else { 'fehlt' }), $s.SetupInstallButton)
+    if (-not $update) { throw 'Aktualisieren-Knopf fehlt' }
+    Invoke-El $update
+    $close = Wait-Shown $win 'SetupCloseButton' 120000
+    Check ($null -ne $close) 'Fertig-Knopf erscheint nach dem Aktualisieren'
+    $result = Get-IdText $win 'SetupResultText'
+    Check ($result -ceq [string]::Format($s.SetupDoneUpdate, $version)) "Ergebnis: $result"
+    Check ((Get-Sha $layout.Exe) -eq $portableHash) 'HDRpilot.exe ersetzt, byte-gleich mit der portablen'
+    Check ((Get-RegValue $layout.UninstallKey 'DisplayVersion') -eq $version) "Eintrag unter Installierte Apps angelegt, Version $version"
+    Check (Test-Contains (Get-RegValue $layout.RunKey $RunValueName) $layout.Exe) 'Autostart bleibt an'
+    Check (-not (Test-InstanceRunning $layout.InstanceId)) 'HDRpilot nicht gestartet (Option war aus)'
+    if ($close) { Invoke-El $close }
+    $exited = $proc.WaitForExit(15000)
+    Check ($exited -and $proc.ExitCode -eq 0) ("Setup nach Fertig beendet, Exitcode {0}" -f $(if ($exited) { $proc.ExitCode } else { 'läuft noch' }))
+    Assert-ConfigUnchanged 'Nach dem Aktualisieren' $cfgStart
 }
 catch {
     Note "FEHLER Abbruch: $($_.Exception.Message)"

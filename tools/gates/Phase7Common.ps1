@@ -3,7 +3,8 @@
 #   - Testablage (--test-root): Orte, Registry-Zweig und Kennung der Einzelinstanz genau wie SetupLocations.ForTestRoot
 #     und SingleInstance.IdFor
 #   - Stand der echten Installation vor und nach einem Prüflauf (darf sich nie ändern)
-# Fremde Prozesse werden nie geöffnet: Prozesse nur über ihren Namen (HDRpilot, HDRpilot-Uninstall) gesucht.
+# Fremde Prozesse werden nie geöffnet: Prozesse nur über ihren Namen (HDRpilot, HDRpilot-Uninstall) gesucht, ihre
+# Befehlszeile per WMI gelesen.
 $script:Phase7Root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $script:PublishDir = Join-Path $Phase7Root 'artifacts\publish'
 $script:PortableDir = Join-Path $PublishDir 'HDRpilot'
@@ -203,6 +204,22 @@ namespace HdrPilotGates
             }
         }
 
+        /// <summary>Hängt die letzten <paramref name="count"/> Bytes von <paramref name="source"/> an <paramref name="destination"/> an.</summary>
+        public static void AppendTail(string source, string destination, int count)
+        {
+            var tail = new byte[count];
+            using (var input = Open(source))
+            {
+                input.Seek(-count, SeekOrigin.End);
+                ReadExactly(input, tail, count);
+            }
+
+            using (var output = new FileStream(destination, FileMode.Append, FileAccess.Write, FileShare.None))
+            {
+                output.Write(tail, 0, count);
+            }
+        }
+
         /// <summary>
         /// Wie SetupLocations.ForTestRoot und SingleInstance.IdFor: SHA-256 über UTF-8 des vollen Pfads (ohne Trenner am
         /// Ende, in Großbuchstaben), die ersten 16 Hex-Zeichen.
@@ -349,8 +366,9 @@ function Test-SetupBundle([string]$setup, [string]$portableDir) {
 
 # Schutz vor dem gefährlichsten Fehler eines Prüflaufs: Kann die gebaute EXE den Abschluss oder --uninstall noch nicht
 # auswerten, liefe die Setup-Datei als normale App mit der ECHTEN Ablage (--test-root wäre ein unbekannter Schalter).
-# Deshalb vor jedem Start prüfen, dass der Quelltext, aus dem die Setup-Datei gebaut ist, den Setup-Modus enthält.
-# Liefert die fehlenden Teile (leer = vorhanden).
+# Deshalb vor jedem Start prüfen, dass der Quelltext, aus dem die Setup-Datei gebaut ist, den Setup-Modus enthält
+# (erste, grobe Sperre; die Probe zur Laufzeit folgt mit Test-SetupModeAtRuntime). Liefert die fehlenden Teile (leer =
+# vorhanden).
 function Get-MissingSetupMode {
     $missing = @()
     $setupDir = Join-Path $Phase7Root 'src\HdrPilot.App\Setup'
@@ -396,18 +414,101 @@ function New-SetupTestLayout([string]$prefix) {
     }
 }
 
-# Test-Ablage wie in den anderen Gates (TestConfigSeed.ps1) und ohne Hinweise; dazu eine Kanarien-Datei, die kein Setup
-# anfassen darf. Liefert deren SHA-256.
-function Initialize-SetupTestConfig([string]$cfg) {
+# Test-Ablage wie in den anderen Gates (TestConfigSeed.ps1: ohne Netz, ohne Launcher-Signale) und ohne Hinweise.
+function Initialize-QuietTestConfig([string]$cfg) {
     Initialize-TestConfig $cfg
     $file = Join-Path $cfg 'config.json'
     $json = [IO.File]::ReadAllText($file) | ConvertFrom-Json
     $json.settings | Add-Member -NotePropertyName 'notifications' -NotePropertyValue $false -Force
     [IO.File]::WriteAllText($file, ($json | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
+}
+
+# Wie Initialize-QuietTestConfig, dazu eine Kanarien-Datei, die kein Setup anfassen darf. Liefert deren SHA-256.
+function Initialize-SetupTestConfig([string]$cfg) {
+    Initialize-QuietTestConfig $cfg
     $bytes = New-Object byte[] 65536
     (New-Object Random).NextBytes($bytes)
     [IO.File]::WriteAllBytes((Join-Path $cfg 'canary.bin'), $bytes)
     return Get-Sha (Join-Path $cfg 'canary.bin')
+}
+
+# Prüfsummen aller Dateien unter einem Ordner als "relativer Pfad|SHA-256" (fehlt der Ordner: leer). Nur aufrufen, wenn
+# keine Instanz der Ablage läuft (sonst schreibt die App gerade ihr Protokoll).
+function Get-TreeHashes([string]$dir) {
+    if (-not (Test-Path -LiteralPath $dir)) { return @() }
+    $full = (Get-Item -LiteralPath $dir).FullName.TrimEnd('\')
+    return @(Get-ChildItem -LiteralPath $dir -Recurse -File -Force | Sort-Object FullName | ForEach-Object {
+        '{0}|{1}' -f $_.FullName.Substring($full.Length + 1), [HdrPilotGates.SetupFile]::Sha256($_.FullName, 0, $_.Length)
+    })
+}
+
+# Unterschiede zweier Stände aus Get-TreeHashes ("geändert: ...", "fehlt: ...", "neu: ..."); leer = byte-gleich.
+function Compare-TreeHashes([string[]]$before, [string[]]$after) {
+    $old = @{}
+    foreach ($entry in @($before)) { $name, $hash = $entry -split '\|', 2; $old[$name] = $hash }
+    $new = @{}
+    foreach ($entry in @($after)) { $name, $hash = $entry -split '\|', 2; $new[$name] = $hash }
+    $diff = @()
+    foreach ($name in @($old.Keys | Sort-Object)) {
+        if (-not $new.ContainsKey($name)) { $diff += "fehlt: $name" } elseif ($new[$name] -cne $old[$name]) { $diff += "geändert: $name" }
+    }
+    foreach ($name in @($new.Keys | Sort-Object)) { if (-not $old.ContainsKey($name)) { $diff += "neu: $name" } }
+    return $diff
+}
+
+# Frühere, nicht eingetragene Installation wie beim Nutzer (portable HDRpilot.exe von Hand in den Programmordner kopiert,
+# Autostart zeigt darauf, kein Eintrag unter "Installierte Apps"): eine Attrappe mit Dateiversion 1.0.0.0, die nie
+# gestartet wird, alte Beigaben und der Autostart-Wert im Test-Zweig. Liefert Version und Prüfsumme der Attrappe.
+function Initialize-OlderInstall($layout) {
+    $stub = Join-Path $layout.Root 'FruehereVersion\HDRpilot.exe'
+    if (-not (Test-Path -LiteralPath $stub)) {
+        New-Item -ItemType Directory -Force (Split-Path $stub) | Out-Null
+        Add-Type -OutputAssembly $stub -OutputType WindowsApplication -TypeDefinition @'
+[assembly: System.Reflection.AssemblyVersion("1.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.0.0.0")]
+public static class FruehereHdrPilotVersion
+{
+    public static int Main() { return 0; }
+}
+'@
+    }
+    New-Item -ItemType Directory -Force $layout.InstallDir | Out-Null
+    Copy-Item -LiteralPath $stub -Destination $layout.Exe -Force
+    foreach ($f in 'README.md', 'THIRD-PARTY-NOTICES.txt') { [IO.File]::WriteAllText((Join-Path $layout.InstallDir $f), "Stand 1.0.0: $f`n") }
+    if (-not (Test-Path $layout.RunKey)) { New-Item -Path $layout.RunKey -Force | Out-Null }
+    New-ItemProperty -Path $layout.RunKey -Name $RunValueName -Value ('"{0}" --minimized' -f $layout.Exe) -PropertyType String -Force | Out-Null
+    $info = (Get-Item -LiteralPath $layout.Exe).VersionInfo
+    return [pscustomobject]@{
+        Version = '{0}.{1}.{2}' -f $info.FileMajorPart, $info.FileMinorPart, $info.FileBuildPart
+        ExeHash = Get-Sha $layout.Exe
+    }
+}
+
+# Probe zur Laufzeit, bevor die Setup-Datei oder die installierte EXE wirklich startet (die Textsuche in
+# Get-MissingSetupMode sähe nicht, wenn der Aufruf beim Start verloren ginge). Beide Aufrufe sind in jedem Fall harmlos:
+# Im Setup-Modus ändern --quiet und unbekannte Schalter (--config-dir, --exit) nichts, die EXE endet mit Exitcode 2
+# (SetupExitCodes.BadArguments) und schreibt ins Setup-Protokoll der Testablage. Liefe sie als normale App, beträfe es
+# nur die eigene Probe-Ablage (ohne Netz und Hinweise), und --exit beendet sie gleich wieder. Die installierte EXE ist
+# byte-gleich mit der portablen, deshalb wird diese geprüft. Liefert Probleme (leer = Setup-Modus wirkt).
+function Test-SetupModeAtRuntime($layout, [string]$setup, [string]$portableExe) {
+    $problems = @()
+    $probe = Join-Path $layout.Root 'Probe'
+    Initialize-QuietTestConfig $probe
+    $cases = @(
+        [pscustomobject]@{ Name = (Split-Path $setup -Leaf) + ' --quiet'; Exe = $setup; Switches = @('--quiet') },
+        [pscustomobject]@{ Name = 'HDRpilot.exe --uninstall --quiet'; Exe = $portableExe; Switches = @('--uninstall', '--quiet') })
+    foreach ($case in $cases) {
+        $offset = Get-FileLength $layout.SetupLog
+        $r = Invoke-Exe $case.Exe (@($case.Switches) + @('--test-root', $layout.Root, '--config-dir', $probe, '--exit')) 60000
+        $logged = (Get-FileLength $layout.SetupLog) -gt $offset
+        $appRan = Test-Path -LiteralPath (Join-Path $probe 'logs')
+        if (-not ($r.Exited -and $r.ExitCode -eq 2 -and $logged -and -not $appRan)) {
+            $problems += ('{0}: Exitcode {1} statt 2, Setup-Protokoll {2}, {3}' -f $case.Name, $(if ($r.Exited) { $r.ExitCode } else { 'läuft noch' }),
+                $(if ($logged) { 'geschrieben' } else { 'nicht geschrieben' }), $(if ($appRan) { 'lief als normale App (Protokoll in der Probe-Ablage)' } else { 'keine App gestartet' }))
+        }
+    }
+    if ($problems.Count -eq 0) { Remove-Item -LiteralPath $probe -Recurse -Force -ErrorAction SilentlyContinue }
+    return $problems
 }
 
 function Test-SamePath([string]$a, [string]$b) {
@@ -484,7 +585,19 @@ function Get-LogSince([string]$path, [long]$offset) {
     }
 }
 
-function Get-UninstallTempDirs { @(Get-ChildItem (Get-TempBase) -Directory -Filter 'HDRpilot-Uninstall-*' -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }) }
+# Temp-Ordner der Kopien zum Entfernen, die DIESER Lauf gestartet hat: Erste Instanz und Kopie schreiben ihren Pfad ins
+# Setup-Protokoll der eigenen Testablage. Ordner eines parallelen Prüflaufs oder eines echten Entfernens zählen so nie
+# dazu (die Namen enthalten eine GUID). Nur die Namen zählen, der Temp-Pfad kann im Protokoll als Kurzname stehen.
+function Get-OwnUninstallTempDirs([string]$logText) {
+    $names = @([regex]::Matches([string]$logText, 'HDRpilot-Uninstall-[0-9a-fA-F]{32}') | ForEach-Object { $_.Value } | Sort-Object -Unique)
+    return @($names | ForEach-Object { Join-Path (Get-TempBase) $_ })
+}
+
+# True, wenn die Befehlszeile des Prozesses (per WMI gelesen, kein Handle) --test-root mit diesem Testordner enthält.
+function Test-OwnTestProcess([int]$processId, $layout) {
+    $cmd = [string](Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction SilentlyContinue).CommandLine
+    return ($cmd -match '--test-root') -and (Test-Contains $cmd $layout.Root)
+}
 
 # Prozesse mit diesem Namen, deren EXE unter dem Ordner liegt (nur eigene Namen, nie fremde Prozesse öffnen).
 function Get-ProcessesUnder([string]$name, [string]$directory) {
@@ -562,11 +675,20 @@ function Get-RealState {
     return ,$state.ToArray()
 }
 
+# Unterschiede mit Groß-/Kleinschreibung: Auch ein nur anders geschriebener Pfad (HdrPilot statt HDRpilot) im echten
+# Autostart-Wert oder Eintrag wäre eine Änderung durch den Prüflauf.
 function Compare-RealState([string[]]$before, [string[]]$after) {
     $diff = New-Object System.Collections.ArrayList
-    foreach ($line in $before) { if ($line -notin $after) { [void]$diff.Add("vorher: $line") } }
-    foreach ($line in $after) { if ($line -notin $before) { [void]$diff.Add("nachher: $line") } }
+    foreach ($line in $before) { if ($line -cnotin $after) { [void]$diff.Add("vorher: $line") } }
+    foreach ($line in $after) { if ($line -cnotin $before) { [void]$diff.Add("nachher: $line") } }
     return $diff.ToArray()
+}
+
+# Gegenprobe für Compare-RealState: ein nur in der Schreibweise geänderter Autostart-Wert muss auffallen.
+function Test-CompareRealStateCase {
+    $before = @('Autostart HKCU Run HDRpilot = "C:\Users\X\AppData\Local\Programs\HdrPilot\HDRpilot.exe" --minimized', 'config.json = (fehlt)')
+    $after = @($before[0].Replace('\HdrPilot\', '\HDRpilot\'), $before[1])
+    return @(Compare-RealState $before $after).Count -eq 2 -and @(Compare-RealState $before $before).Count -eq 0
 }
 
 # --- Aufräumen (nur die eigene Testablage, ihr Registry-Zweig und die Temp-Kopien dieses Laufs) ---

@@ -239,7 +239,9 @@ offen ist (das Einlesen liest z. B. Steams rund 15 MB große appinfo.vdf).
 
 **E57 Autostart über `HKCU\…\Run`:** Beim Start wird ein vorhandener, aber auf einen alten Pfad zeigender Eintrag
 korrigiert (EXE verschoben), nur wenn Autostart in der Konfiguration an ist. Mit `--config-dir` wird die Registry nie
-angefasst (`ConfigOnlyAutostartService`), damit Prüfskripte den echten Autostart nicht verändern.
+angefasst (`ConfigOnlyAutostartService`), damit Prüfskripte den echten Autostart nicht verändern. Ein fehlender
+Eintrag wird nicht neu angelegt (präzisiert mit E83): Den haben der Setup („Mit Windows starten“ aus) oder der Nutzer
+entfernt, und die Einstellungen zeigen ohnehin den Stand der Registry.
 
 **E58 Verknüpfungen heißen „<Spiel> (HDR).lnk“** (Desktop bzw. Startmenü\Programme) und rufen
 `HdrPilot.exe --run <Quelle:ID>` auf, mit dem Symbol der Spiel-EXE. Der Zusatz „(HDR)“ verhindert Namensgleichheit mit

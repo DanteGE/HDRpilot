@@ -11,9 +11,6 @@ public enum AutostartReconcileResult
 {
     Unchanged,
 
-    /// <summary>Eintrag fehlte, obwohl die Konfiguration Autostart verlangt; neu angelegt.</summary>
-    Created,
-
     /// <summary>Eintrag zeigte auf einen anderen Pfad (EXE verschoben); korrigiert.</summary>
     PathUpdated,
 
@@ -90,9 +87,10 @@ public sealed class AutostartService(IRegistry registry, string? executablePath,
     }
 
     /// <summary>
-    /// Beim Start: Verlangt die Konfiguration Autostart und zeigt der Eintrag auf einen anderen Pfad (EXE verschoben)
-    /// oder fehlt er, wird er korrigiert. Ist Autostart in der Konfiguration aus, bleibt die Registry unberührt.
-    /// Wirft nicht.
+    /// Beim Start: Verlangt die Konfiguration Autostart und zeigt der vorhandene Eintrag auf einen anderen Pfad (EXE
+    /// verschoben), wird er korrigiert (E57). Ein fehlender Eintrag bleibt weg: Ihn hat der Setup („Mit Windows starten“
+    /// aus, E83) oder der Nutzer entfernt, und die Einstellungen zeigen ohnehin den Stand der Registry. Ist Autostart in
+    /// der Konfiguration aus, bleibt die Registry unberührt. Wirft nicht.
     /// </summary>
     public AutostartReconcileResult Reconcile(bool startWithWindows)
     {
@@ -104,7 +102,7 @@ public sealed class AutostartService(IRegistry registry, string? executablePath,
         try
         {
             var current = CurrentCommand;
-            if (string.Equals(current?.Trim(), expected, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(current) || string.Equals(current.Trim(), expected, StringComparison.OrdinalIgnoreCase))
             {
                 return AutostartReconcileResult.Unchanged;
             }
@@ -114,8 +112,8 @@ public sealed class AutostartService(IRegistry registry, string? executablePath,
                 key.SetValue(ValueName, expected);
             }
 
-            _logger.LogInformation("Autostart-Eintrag korrigiert: vorher {Before}, jetzt {After}", current ?? "(fehlte)", expected);
-            return current is null ? AutostartReconcileResult.Created : AutostartReconcileResult.PathUpdated;
+            _logger.LogInformation("Autostart-Eintrag korrigiert: vorher {Before}, jetzt {After}", current, expected);
+            return AutostartReconcileResult.PathUpdated;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {

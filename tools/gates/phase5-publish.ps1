@@ -79,7 +79,8 @@ Check ($productVersion -like "$version*") "Produktversion $productVersion passt 
 # 2b. Setup-Datei (E83, Format wie src\HdrPilot.App\Setup\SetupBundle.cs): Abschluss passt zur Dateigröße, der EXE-Teil
 # ist byte-gleich mit der portablen EXE (Prüfsumme im Abschluss und tatsächlich), das Paket enthält genau die drei
 # Beigaben, das Manifest verlangt keine Adminrechte. Gegenproben: ein gekipptes Byte im EXE-Teil fällt bei der
-# Prüfsumme durch, ein abgeschnittenes Ende beim Abschluss, die portable EXE hat gar keinen.
+# Prüfsumme durch, ein abgeschnittenes Ende beim Abschluss, ein um ein Byte gekürztes Paket bei den Längen, die portable
+# EXE hat gar keinen.
 . (Join-Path $PSScriptRoot 'Phase7Common.ps1')
 $appInfo = (Get-Item $appExe).VersionInfo
 $setupVersion = '{0}.{1}.{2}' -f $appInfo.FileMajorPart, $appInfo.FileMinorPart, $appInfo.FileBuildPart
@@ -107,6 +108,12 @@ if ($bundle.ExeLength -gt 0) {
     [HdrPilotGates.SetupFile]::CopyPrefix($setup, $truncated, (Get-Item $setup).Length - 1000)
     $truncatedResult = Test-SetupBundle $truncated $out
     Check (-not (Test-NoProblem $truncatedResult 'Abschluss')) ("Gegenprobe abgeschnittenes Ende: Abschluss fällt durch ({0})" -f ($truncatedResult.Problems -join '; '))
+    # Kennung vorhanden, aber ein Byte des Pakets fehlt: nur der Längenvergleich (EXE + Paket + 64 = Dateigröße) fängt das
+    $shortened = Join-Path $controlDir 'paket-zu-kurz.exe'
+    [HdrPilotGates.SetupFile]::CopyPrefix($setup, $shortened, (Get-Item $setup).Length - 65)
+    [HdrPilotGates.SetupFile]::AppendTail($setup, $shortened, 64)
+    $shortenedResult = Test-SetupBundle $shortened $out
+    Check (@($shortenedResult.Problems | Where-Object { $_.StartsWith('Abschluss: Längen passen nicht zur Datei') }).Count -eq 1) ("Gegenprobe Paket ein Byte zu kurz, Abschluss unverändert: Längen passen nicht ({0})" -f ($shortenedResult.Problems -join '; '))
     $plain = Test-SetupBundle $appExe $out
     Check (-not (Test-NoProblem $plain 'Abschluss')) ("Gegenprobe portable HDRpilot.exe: kein Abschluss, startet nie als Setup ({0})" -f ($plain.Problems -join '; '))
     Remove-Item $controlDir -Recurse -Force

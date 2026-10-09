@@ -322,12 +322,13 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 | `--no-launch` | HDRpilot danach nicht starten. Für Skripte, die auf das Ende warten (etwa `Start-Process -Wait`, das auch auf gestartete Programme wartet) oder die Ausgabe lesen |
 | `--allow-downgrade` | Eine ältere Version über eine neuere installieren |
 | `HDRpilot.exe --uninstall` | Entfernen wie aus „Installierte Apps“ (läuft aus einer Kopie im Temp-Ordner) |
-| `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück, das Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll |
+| `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück. 0 heißt, die Kopie im Temp-Ordner entfernt jetzt; ihr Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll. 1 (Kopie nicht gestartet), 2 (Aufruf falsch) und 7 (Container) kommen direkt vom ersten Aufruf, ohne `ERGEBNIS`-Zeile; dann wurde nichts entfernt |
 | `--remove-data` | Beim Entfernen auch Einstellungen, Spieleliste, Protokolle und HDR-Liste löschen |
 | `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen und Ablage unter diesem Ordner, dazu ein eigener Registry-Zweig unter `HKCU\Software\HDRpilot.Tests` |
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 ältere Version abgelehnt, 4 HDRpilot ließ sich nicht beenden,
-5 abgebrochen, 6 nicht installiert. Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
+5 abgebrochen, 6 nicht installiert, 7 aus dem Container einer anderen App gestartet, nichts geändert (siehe
+„Fehlersuche“). Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
 
 ### cli\hdrpilot.exe
 
@@ -433,6 +434,15 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
 - **Setup oder Entfernen meldet einen Fehler:** Einzelheiten stehen in `%TEMP%\HDRpilot-Setup.log`; nach einem Fehler
   im Setup ist die bisherige Version unverändert. Lässt sich HDRpilot nicht beenden, im Infobereich „HDRpilot beenden“
   wählen und es erneut versuchen.
+- **HDRpilot startet nicht von selbst, oder Einstellungen sind weg nach einem Start aus einer anderen App:** Manche
+  Apps aus dem Microsoft Store oder als MSIX-Paket (etwa die Claude-App) lassen alles, was aus ihnen heraus startet, in
+  ihrem eigenen Container laufen. Windows leitet dann Registry-Einträge wie den Autostart in den privaten Speicher dieser
+  App um (`%LOCALAPPDATA%\Packages\<App>\LocalCache`), Einstellungen und Protokolle dann, wenn ihr Ordner außerhalb
+  noch fehlte oder schon dort liegt. Außerhalb fehlt, was umgeleitet wurde, und der Autostart wirkt nicht. HDRpilot
+  erkennt das, egal wo seine Ordner liegen: Beim Start steht eine Warnung „HDRpilot läuft im Container der App …“ im
+  Protokoll (je nach Ordner in der umgeleiteten Kopie unter `…\LocalCache\Local\HDRpilot\logs`), Setup und Entfernen
+  ändern nichts und sagen es (still: Exit-Code 7). Abhilfe: HDRpilot beenden und über das Startmenü oder die
+  Verknüpfung starten, Setup-Dateien per Doppelklick im Explorer ausführen, Entfernen über „Installierte Apps“.
 - **Ein Spiel fehlt in der Liste:** „Neu einlesen“ drücken; fehlt es weiter, über „Spiel hinzufügen“ eintragen oder
   seinen übergeordneten Ordner als Suchordner angeben. Fehler einzelner Launcher stehen in der Bibliothek und im
   Protokoll.

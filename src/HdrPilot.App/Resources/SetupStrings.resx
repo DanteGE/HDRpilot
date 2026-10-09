@@ -175,6 +175,14 @@
     <value>Diese Befehlszeile passt nicht ({0}); es wurde nichts geändert. Einzelheiten stehen in {1}.</value>
     <comment>Setup oder Entfernen mit abgelehnten Schaltern; {0} = abgelehnte Schalter, {1} = Pfad des Setup-Protokolls</comment>
   </data>
+  <data name="SetupErrorContainer" xml:space="preserve">
+    <value>Der Setup läuft im Container einer anderen App ({0}). Windows würde Registry-Einträge und Einstellungen dorthin umleiten, HDRpilot wäre danach nur halb installiert. Es wurde nichts geändert. Starte die Setup-Datei bitte per Doppelklick im Explorer.</value>
+    <comment>Setup aus einer anderen App heraus gestartet, die Windows in einem eigenen Container laufen lässt (E84); {0} = Ordner dieser App unter %LOCALAPPDATA%\Packages</comment>
+  </data>
+  <data name="UninstallErrorContainer" xml:space="preserve">
+    <value>Das Entfernen läuft im Container einer anderen App ({0}). Windows würde Änderungen an Registry und Einstellungen dorthin umleiten, HDRpilot würde nur zum Teil entfernt. Es wurde nichts geändert. Entferne HDRpilot bitte über Einstellungen → Apps → Installierte Apps.</value>
+    <comment>Wie SetupErrorContainer, beim Entfernen; {0} = Ordner der App unter %LOCALAPPDATA%\Packages</comment>
+  </data>
   <data name="SetupSteamAppFallback" xml:space="preserve">
     <value>Steam-App {0}</value>
     <comment>Steam-Spiel ohne bekannten Namen in der Warnung vor Steam-Startoptionen; {0} = Steam-AppID</comment>

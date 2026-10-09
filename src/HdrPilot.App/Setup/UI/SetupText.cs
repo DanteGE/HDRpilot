@@ -78,6 +78,10 @@ public static class SetupText
     /// <summary>Abgelehnte Befehlszeile (<see cref="SetupMode.RefusedArguments"/>): nichts geändert.</summary>
     public static string RefusedArguments(string refused, string logPath) => Format(SetupStrings.SetupErrorRefusedArguments, refused, logPath);
 
+    /// <summary>Setup oder Entfernen im Container einer anderen App (E84, <paramref name="package"/> = deren Ordner unter Packages): nichts geändert.</summary>
+    public static string Container(SetupModeKind kind, string package) =>
+        Format(kind == SetupModeKind.Setup ? SetupStrings.SetupErrorContainer : SetupStrings.UninstallErrorContainer, package);
+
     private static string Unexpected(string? detail, string logPath, string withDetail, string withoutDetail)
     {
         var prefix = withDetail.Split("{0}")[0];

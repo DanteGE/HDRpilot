@@ -1,6 +1,7 @@
 using System.Globalization;
 using HdrPilot.App.Setup;
 using HdrPilot.App.Setup.UI;
+using HdrPilot.Core.Platform;
 
 namespace HdrPilot.App.Tests.Setup.UI;
 
@@ -177,6 +178,22 @@ internal sealed class FakeSetupHost(FakeSetupEngine setup, FakeUninstallEngine u
     {
         Calls.Add("ScheduleSelfRemoval");
         log.Info(RemovalMarker);
+    }
+
+    /// <summary>Ordner der Probe im Ergebnis der Container-Prüfung (%LOCALAPPDATA% eines Testbenutzers).</summary>
+    public const string ContainerProbeFolder = @"C:\Users\Test\AppData\Local";
+
+    /// <summary>Ergebnis der Container-Prüfung (E84): Paketordner der App, null = kein Container.</summary>
+    public string? ContainerPackage { get; set; }
+
+    public string? ContainerProblem { get; set; }
+
+    public bool ContainerCheckForced { get; set; }
+
+    public ContainerRedirection DetectContainer()
+    {
+        Calls.Add("DetectContainer");
+        return new ContainerRedirection(ContainerProbeFolder, ContainerPackage, ContainerProblem);
     }
 }
 

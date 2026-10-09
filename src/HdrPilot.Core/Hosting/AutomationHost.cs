@@ -5,6 +5,7 @@ using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Launchers;
 using HdrPilot.Core.Logging;
 using HdrPilot.Core.Native;
+using HdrPilot.Core.Platform;
 using HdrPilot.Core.Processes;
 using HdrPilot.Core.Sessions;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,7 @@ public sealed class AutomationHost : IAsyncDisposable
     private readonly IFileSystem _fileSystem;
     private readonly IRegistry _registry;
     private readonly IAppEnvironment _environment;
+    private readonly IContainerDetector _containerDetector;
     private readonly ILogger _logger;
     private readonly LogLevelSwitch _levelSwitch;
     private bool _started;
@@ -31,13 +33,21 @@ public sealed class AutomationHost : IAsyncDisposable
     {
     }
 
+    /// <param name="containerDetector">Prüft beim Start, ob HDRpilot im Container einer anderen App läuft (Standard: <see cref="ContainerDetector"/>, E84).</param>
     public AutomationHost(
-        AppPaths paths, IFileSystem fileSystem, IRegistry registry, IAppEnvironment environment, IClock clock, IReadOnlyList<ILoggerProvider>? extraLogProviders = null)
+        AppPaths paths,
+        IFileSystem fileSystem,
+        IRegistry registry,
+        IAppEnvironment environment,
+        IClock clock,
+        IReadOnlyList<ILoggerProvider>? extraLogProviders = null,
+        IContainerDetector? containerDetector = null)
     {
         Paths = paths;
         _fileSystem = fileSystem;
         _registry = registry;
         _environment = environment;
+        _containerDetector = containerDetector ?? new ContainerDetector(environment);
         Clock = clock;
 
         _levelSwitch = new LogLevelSwitch(LogLevel.Information);
@@ -122,6 +132,9 @@ public sealed class AutomationHost : IAsyncDisposable
 
     public RollingFileLoggerProvider FileLog { get; }
 
+    /// <summary>Container-Prüfung dieses Starts (E84); wirft nie. Vor dem Start bereits erledigt.</summary>
+    internal Task ContainerCheck { get; private set; } = Task.CompletedTask;
+
     /// <summary>Erster Zyklus (Wiederanlauf nach Absturz), dann Hintergrundüberwachung.</summary>
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -135,6 +148,11 @@ public sealed class AutomationHost : IAsyncDisposable
         _logger.LogInformation(
             "HDRpilot {Version} startet. Konfiguration {Config}, Abfrageintervall {Interval} ms, Nachlaufzeit {Grace} s, Windows-Build {Build}.",
             typeof(AutomationHost).Assembly.GetName().Version, Paths.ConfigFile, s.PollIntervalMs, s.GracePeriodSeconds, _environment.WindowsBuild);
+
+        // E84: Im Container einer anderen App (etwa aus der Claude-App gestartet) landen der Autostart und je nach Ordner
+        // auch Einstellungen und Protokolle in deren privatem Speicher. Einmal je Start im Hintergrund prüfen, ohne den
+        // Start aufzuhalten.
+        ContainerCheck = Task.Run(CheckContainer, CancellationToken.None);
         await Sessions.InitializeAsync(Watcher.Poll(), cancellationToken).ConfigureAwait(false);
         Watcher.Start(OnPollAsync);
         LauncherSignals.Start(); // erst nach dem ersten Zyklus: vorher lehnt die Sitzungslogik Vorbereitungen ab
@@ -167,8 +185,36 @@ public sealed class AutomationHost : IAsyncDisposable
         _reloadTimer?.Dispose();
         LauncherSignals.Dispose();
         await Watcher.StopAsync().ConfigureAwait(false);
+        await ContainerCheck.ConfigureAwait(false); // Probe nie liegen lassen (dauert höchstens Sekundenbruchteile)
         _logger.LogInformation("HDRpilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
         LoggerFactory.Dispose();
+    }
+
+    /// <summary>
+    /// Prüft, ob HDRpilot im Container einer anderen App läuft (E84), unabhängig davon, wo die Ablage liegt, und warnt dann
+    /// im Protokoll (nur dort, Entscheidung des Nutzers). Läuft einmal je Start. Wirft nie.
+    /// </summary>
+    private void CheckContainer()
+    {
+        try
+        {
+            var result = _containerDetector.Detect();
+            if (result.Redirected)
+            {
+                _logger.LogWarning(
+                    "HDRpilot läuft im Container der App {Package}: Windows leitet Registry-Einträge wie den Autostart und je nach Ordner auch Einstellungen und Protokolle in deren privaten Speicher um. Bitte HDRpilot über das Startmenü oder die Verknüpfung starten.",
+                    result.PackageFolder);
+            }
+
+            if (result.Problem is not null)
+            {
+                _logger.LogInformation("Container-Prüfung mit Probe in {Folder}: {Problem}", result.Folder, result.Problem);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation(ex, "Container-Prüfung fehlgeschlagen.");
+        }
     }
 
     /// <summary>Ein Zyklus der Prozessüberwachung; die Frühwarnung prüft im selben Takt mit (kein eigener Zeitgeber).</summary>

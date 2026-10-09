@@ -37,7 +37,7 @@ public interface ISetupHost
     /// <summary>Wartet ohne Prozess-Handle, bis der Prozess beendet ist (höchstens <see cref="UninstallHandoff.WaitTimeout"/>).</summary>
     Task WaitUntilGoneAsync(int processId, SetupLog log);
 
-    /// <summary>Lässt den Temp-Ordner der Kopie nach dem Ende löschen (nur, wenn diese EXE die Kopie ist).</summary>
+    /// <summary>Lässt Temp- und Entpack-Ordner der Kopie nach dem Ende löschen (nur, wenn diese EXE die Kopie ist).</summary>
     void ScheduleSelfRemoval(SetupLog log);
 }
 
@@ -111,7 +111,11 @@ public sealed class WpfSetupHost(Application app) : ISetupHost
         }
     }
 
-    public void ScheduleSelfRemoval(SetupLog log) => UninstallHandoff.ScheduleSelfRemoval(Environment.ProcessPath, Path.GetTempPath(), log);
+    public void ScheduleSelfRemoval(SetupLog log)
+    {
+        var temp = Path.GetTempPath();
+        UninstallHandoff.ScheduleSelfRemoval(Environment.ProcessPath, temp, log, UninstallHandoff.OwnExtractionFolder(temp));
+    }
 
     private static Task<int> ShowAsync(Window window, Func<int> exitCode)
     {

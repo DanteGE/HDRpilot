@@ -36,9 +36,18 @@ public static class SetupText
         _ => SetupStrings.UninstallStepRemoveData,
     };
 
+    /// <summary>Zustand eines Schritts für die Bedienungshilfen (ItemStatus der Listenzeile).</summary>
+    public static string State(StepState state) => state switch
+    {
+        StepState.Running => SetupStrings.SetupStepStateRunning,
+        StepState.Done => SetupStrings.SetupStepStateDone,
+        StepState.Failed => SetupStrings.SetupStepStateFailed,
+        _ => SetupStrings.SetupStepStatePending,
+    };
+
     /// <summary>
-    /// Fehlertext je Art. Unerwartete Fehler nennen die technische Angabe (<paramref name="detail"/>, falls es eine gibt)
-    /// und das Protokoll; liefert die Engine dafür schon den fertigen Text, bleibt er unverändert.
+    /// Fehlertext des Setups je Art. Unerwartete Fehler nennen die technische Angabe (<paramref name="detail"/>, falls es
+    /// eine gibt) und das Protokoll; liefert die Engine dafür schon den fertigen Text, bleibt er unverändert.
     /// </summary>
     public static string Error(SetupErrorKind? error, string? detail, string logPath) => error switch
     {
@@ -50,12 +59,28 @@ public static class SetupText
         SetupErrorKind.DowngradeNotAllowed => SetupStrings.SetupErrorDowngradeNotAllowed,
         SetupErrorKind.AnotherSetupRunning => SetupStrings.SetupErrorAnotherSetupRunning,
         SetupErrorKind.NotInstalled => SetupStrings.SetupErrorNotInstalled,
-        _ => Unexpected(detail, logPath),
+        _ => Unexpected(detail, logPath, SetupStrings.SetupErrorUnexpected, SetupStrings.SetupErrorUnexpectedNoDetail),
     };
 
-    private static string Unexpected(string? detail, string logPath)
+    /// <summary>
+    /// Fehlertext beim Entfernen (Kopie im Temp-Ordner). Unerwartete Fehler sagen „nicht vollständig“ statt „die
+    /// bisherige Version ist unverändert“ (bis dahin ist womöglich schon etwas entfernt). Eine gesperrte Datei
+    /// (<paramref name="lockedFile"/>), nachdem der Eintrag schon weg ist, wird genannt, ohne einen neuen Versuch
+    /// vorzuschlagen; ohne sie (etwa die gesperrte EXE: der Eintrag bleibt) gilt der Text des Setups.
+    /// </summary>
+    public static string UninstallError(SetupErrorKind? error, string? detail, string logPath, string? lockedFile = null) => error switch
     {
-        var prefix = SetupStrings.SetupErrorUnexpected.Split("{0}")[0];
+        SetupErrorKind.FilesInUse when lockedFile is not null => Format(SetupStrings.UninstallErrorFilesInUse, lockedFile),
+        null or SetupErrorKind.Unexpected => Unexpected(detail, logPath, SetupStrings.UninstallErrorUnexpected, SetupStrings.UninstallErrorUnexpectedNoDetail),
+        _ => Error(error, detail, logPath),
+    };
+
+    /// <summary>Abgelehnte Befehlszeile (<see cref="SetupMode.RefusedArguments"/>): nichts geändert.</summary>
+    public static string RefusedArguments(string refused, string logPath) => Format(SetupStrings.SetupErrorRefusedArguments, refused, logPath);
+
+    private static string Unexpected(string? detail, string logPath, string withDetail, string withoutDetail)
+    {
+        var prefix = withDetail.Split("{0}")[0];
         if (detail is not null && prefix.Length > 0 && detail.StartsWith(prefix, StringComparison.Ordinal))
         {
             return detail;
@@ -63,7 +88,7 @@ public static class SetupText
 
         var text = detail?.Trim().TrimEnd('.').TrimEnd() ?? string.Empty;
         return text.Length == 0
-            ? Format(SetupStrings.SetupErrorUnexpectedNoDetail, logPath)
-            : Format(SetupStrings.SetupErrorUnexpected, text, logPath);
+            ? Format(withoutDetail, logPath)
+            : Format(withDetail, text, logPath);
     }
 }

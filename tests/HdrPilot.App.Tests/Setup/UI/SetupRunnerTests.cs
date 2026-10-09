@@ -47,7 +47,7 @@ public sealed class SetupRunnerTests : IDisposable
         if (!quiet)
         {
             expected.Add("ShowError");
-            Assert.Contains("--test-root", Assert.Single(_host.Errors), StringComparison.Ordinal);
+            Assert.Equal(SetupText.RefusedArguments("--test-root", _folder.Log.FilePath), Assert.Single(_host.Errors)); // „nichts geändert“
         }
 
         if (kind == SetupModeKind.UninstallContinue)
@@ -207,7 +207,8 @@ public sealed class SetupRunnerTests : IDisposable
 
         Assert.Equal(SetupExitCodes.Failed, code);
         Assert.Equal(["Wait 77", "CreateUninstall", "ShowUninstallProgress " + _folder.Locations.DataPaths.ConfigDirectory, "ShowError", "ScheduleSelfRemoval"], _host.Calls);
-        Assert.Contains("Registry weg", Assert.Single(_host.Errors), StringComparison.Ordinal);
+        // Beim Entfernen ist womöglich schon etwas weg: „nicht vollständig“, nicht „die bisherige Version ist unverändert“.
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, HdrPilot.App.Resources.SetupStrings.UninstallErrorUnexpected, "Registry weg", _folder.Log.FilePath), Assert.Single(_host.Errors));
         AssertResultIsTheLastLineAfterRemoval(SetupExitCodes.Failed);
     }
 

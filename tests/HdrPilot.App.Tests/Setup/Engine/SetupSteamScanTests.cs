@@ -155,7 +155,9 @@ public sealed class SetupSteamScanTests : IDisposable
         Assert.Empty(Scanner().FindGamesWithLaunchOption()); // Steam-Ordner ohne userdata
 
         WriteAccount("111", AccountA);
-        Assert.Equal(["Steam-App 1091500"], new SteamLaunchOptionScanner(() => _steam, Path.Combine(_root, "fehlt.json")).FindGamesWithLaunchOption());
+        var games = new SteamLaunchOptionScanner(() => _steam, Path.Combine(_root, "fehlt.json")).FindGamesWithLaunchOption();
+        Assert.Equal(["Steam-App 1091500"], games);
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, HdrPilot.App.Resources.SetupStrings.SetupSteamAppFallback, "1091500"), Assert.Single(games)); // Text aus den Ressourcen
     }
 
     [Fact]

@@ -173,7 +173,8 @@ public static class SetupRunner
             log.Error("Entfernen abgebrochen", ex);
             if (!args.Quiet)
             {
-                host.ShowError(SetupStrings.UninstallWindowTitle, SetupText.Error(SetupErrorKind.Unexpected, ex.Message, log.FilePath));
+                // Bis hierher kann schon etwas entfernt sein: „die bisherige Version ist unverändert“ wäre falsch.
+                host.ShowError(SetupStrings.UninstallWindowTitle, SetupText.UninstallError(SetupErrorKind.Unexpected, ex.Message, log.FilePath));
             }
 
             code = SetupExitCodes.Failed;
@@ -195,7 +196,7 @@ public static class SetupRunner
         log.Warn("Befehlszeile abgelehnt (" + detail + "), nichts geändert, Exit-Code " + SetupExitCodes.BadArguments.ToString(CultureInfo.InvariantCulture));
         if (!args.Quiet)
         {
-            host.ShowError(TitleFor(kind), SetupText.Error(SetupErrorKind.Unexpected, detail, log.FilePath));
+            host.ShowError(TitleFor(kind), SetupText.RefusedArguments(detail, log.FilePath));
         }
 
         return SetupExitCodes.BadArguments;
@@ -203,16 +204,19 @@ public static class SetupRunner
 
     private static string TitleFor(SetupModeKind kind) => kind == SetupModeKind.Setup ? SetupStrings.SetupWindowTitle : SetupStrings.UninstallWindowTitle;
 
-    /// <summary>Ergebnis einer Installation oder eines Entfernens ins Setup-Protokoll.</summary>
+    /// <summary>Ergebnis einer Installation oder eines Entfernens ins Setup-Protokoll (mit Schritt, Datei und Hinweisen).</summary>
     public static void LogResult(SetupLog log, SetupResult result)
     {
+        var warnings = result.Warnings is { Count: > 0 } list ? ", Hinweise: " + string.Join(", ", list) : string.Empty;
         if (result.Success)
         {
-            log.Info(string.Create(CultureInfo.InvariantCulture, $"Erfolg: {result.PreviousVersion} -> {result.NewVersion}, gestartet: {result.AppStarted}"));
+            log.Info(string.Create(CultureInfo.InvariantCulture, $"Erfolg: {result.PreviousVersion} -> {result.NewVersion}, gestartet: {result.AppStarted}{warnings}"));
         }
         else
         {
-            log.Error(string.Create(CultureInfo.InvariantCulture, $"Fehler {result.Error}: {result.Message}"));
+            var step = (object?)result.FailedSetupStep ?? result.FailedUninstallStep;
+            var where = (step is null ? string.Empty : " im Schritt " + step) + (result.FailedFile is null ? string.Empty : " (" + result.FailedFile + ")");
+            log.Error(string.Create(CultureInfo.InvariantCulture, $"Fehler {result.Error}{where}: {result.Message}{warnings}"));
         }
     }
 }

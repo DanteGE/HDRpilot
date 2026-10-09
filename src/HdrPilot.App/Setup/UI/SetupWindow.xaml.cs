@@ -63,7 +63,7 @@ public partial class SetupWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Fokus auf den Knopf, den die Eingabetaste auslöst (Installieren, Erneut versuchen, Fertig, Abbrechen); bei
+    /// Fokus auf den Knopf, den die Eingabetaste auslöst (Installieren, Erneut versuchen, Fertig, Schließen); bei
     /// einer älteren Version zuerst auf die Bestätigung.
     /// </summary>
     private void FocusPrimary()
@@ -74,7 +74,7 @@ public partial class SetupWindow : ChromeWindow
             { IsOptionsPage: true } => InstallButton,
             { CanRetry: true } => RetryButton,
             { Succeeded: true } => CloseButton,
-            { HasError: true } => CancelButton,
+            { HasError: true } => CloseErrorButton,
             _ => null,
         };
         target?.Focus();

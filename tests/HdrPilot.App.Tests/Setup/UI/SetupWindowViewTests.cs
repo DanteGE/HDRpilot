@@ -24,7 +24,7 @@ public sealed class SetupWindowViewTests : IDisposable
     [
         "SetupTitle", "SetupVersionInfo", "SetupInstallDir", "SetupDataNote", "SetupRunningNote", "SetupAutostart",
         "SetupDesktopShortcut", "SetupLaunchAfter", "SetupAllowDowngrade", "SetupInstallButton", "SetupCancelButton",
-        "SetupRetryButton", "SetupCloseButton", "SetupProgress", "SetupResultText",
+        "SetupRetryButton", "SetupCloseButton", "SetupCloseErrorButton", "SetupProgress", "SetupResultText",
     ];
 
     private static readonly string[] UninstallIds = ["UninstallTitle", "UninstallRemoveData", "UninstallSteamWarning", "UninstallConfirmButton", "UninstallCancelButton"];
@@ -73,6 +73,7 @@ public sealed class SetupWindowViewTests : IDisposable
             Assert.False(Displayed(ids["SetupProgress"]));
             Assert.False(Displayed(ids["SetupRetryButton"]));
             Assert.False(Displayed(ids["SetupCloseButton"]));
+            Assert.False(Displayed(ids["SetupCloseErrorButton"]));
 
             var autostart = (CheckBox)ids["SetupAutostart"];
             Assert.True(autostart.IsChecked);
@@ -119,10 +120,22 @@ public sealed class SetupWindowViewTests : IDisposable
             Assert.True(Displayed(ids["SetupRetryButton"]));
             Assert.True(Displayed(ids["SetupCancelButton"]));
             Assert.False(Displayed(ids["SetupCloseButton"]));
+            Assert.False(Displayed(ids["SetupCloseErrorButton"]));
             Assert.False(Displayed(ids["SetupInstallButton"]));
             Assert.False(Displayed(ids["SetupAutostart"]));
-            var rows = ((ListBox)ids["SetupProgress"]).Items.Cast<ProgressStepItem>().ToList();
+            var list = (ListBox)ids["SetupProgress"];
+            var rows = list.Items.Cast<ProgressStepItem>().ToList();
             Assert.Contains(rows, r => r.State == StepState.Failed);
+
+            // Bedienungshilfen: Zustand jeder Zeile als Text aus den Ressourcen, nicht als Enum-Name.
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var container = Assert.IsType<ListBoxItem>(list.ItemContainerGenerator.ContainerFromIndex(i));
+                Assert.Equal(SetupText.State(rows[i].State), AutomationProperties.GetItemStatus(container));
+            }
+
+            var failedRow = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(rows.First(r => r.State == StepState.Failed));
+            Assert.Equal(SetupStrings.SetupStepStateFailed, AutomationProperties.GetItemStatus(failedRow));
             SaveForReview(window, "setup-fehler");
 
             model.RetryCommand.Execute(null);
@@ -136,6 +149,33 @@ public sealed class SetupWindowViewTests : IDisposable
 
             ((Button)ids["SetupCloseButton"]).Command.Execute(null);
             Assert.Null(window.DataContext); // geschlossen und abgemeldet
+        });
+    }
+
+    [Fact]
+    public void Error_without_a_useful_retry_offers_only_close()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, engine) = CreateSetupWindow(Inspection("1.0.0"));
+            engine.Results.Enqueue(SetupResult.Failed(SetupErrorKind.AccessDenied, "verweigert"));
+            model.InstallAsync().GetAwaiter().GetResult();
+            WpfTestHost.Layout(window, new Size(620, double.PositiveInfinity));
+            WpfTestHost.DoEvents();
+            var ids = Ids(window);
+
+            Assert.Equal(SetupStrings.SetupErrorAccessDenied, Text(ids["SetupResultText"]));
+            Assert.True(Displayed(ids["SetupCloseErrorButton"]));
+            Assert.Equal(SetupStrings.SetupCloseErrorButton, AutomationProperties.GetName(ids["SetupCloseErrorButton"]));
+            Assert.True(ids["SetupCloseErrorButton"].IsEnabled);
+            Assert.False(Displayed(ids["SetupCancelButton"]));
+            Assert.False(Displayed(ids["SetupRetryButton"]));
+            Assert.False(Displayed(ids["SetupCloseButton"]));
+            SaveForReview(window, "setup-fehler-schliessen");
+
+            ((Button)ids["SetupCloseErrorButton"]).Command.Execute(null);
+            Assert.Null(window.DataContext); // geschlossen
+            Assert.Equal(SetupExitCodes.Failed, model.ExitCode);
         });
     }
 
@@ -259,6 +299,38 @@ public sealed class SetupWindowViewTests : IDisposable
             SaveForReview(window, "entfernen-fertig");
             window.Close();
             Assert.Null(window.DataContext);
+        });
+    }
+
+    [Fact]
+    public void Uninstall_progress_window_marks_only_the_failed_step_after_a_mid_run_failure()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var readme = Path.Combine(_folder.Locations.InstallDirectory, "README.md");
+            var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations)
+            {
+                Report = [UninstallStep.StopRunningApp, UninstallStep.RestoreHdr, UninstallStep.RemoveFiles, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart, UninstallStep.Unregister],
+                Result = SetupResult.Failed(SetupErrorKind.FilesInUse, "gesperrt") with { FailedUninstallStep = UninstallStep.RemoveFiles, FailedFile = readme },
+            };
+            var model = new UninstallProgressViewModel(engine, removeData: false, @"C:\Users\Test\AppData\Roaming\HDRpilot", _folder.Log);
+            var window = new UninstallProgressWindow();
+            window.Attach(model);
+            model.RunAsync().GetAwaiter().GetResult(); // Attrappe endet sofort
+            WpfTestHost.Layout(window, new Size(580, double.PositiveInfinity));
+            WpfTestHost.DoEvents();
+            var ids = Ids(window);
+            var list = (ListBox)ids["UninstallProgress"];
+
+            var statuses = Enumerable.Range(0, list.Items.Count)
+                .Select(i => AutomationProperties.GetItemStatus(list.ItemContainerGenerator.ContainerFromIndex(i)))
+                .ToList();
+            var done = SetupStrings.SetupStepStateDone;
+            Assert.Equal([done, done, SetupStrings.SetupStepStateFailed, done, done, done], statuses);
+            Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, SetupStrings.UninstallErrorFilesInUse, readme), Text(ids["UninstallResultText"]));
+            Assert.True(ids["UninstallCloseButton"].IsEnabled);
+            SaveForReview(window, "entfernen-fehler");
+            window.Close();
         });
     }
 

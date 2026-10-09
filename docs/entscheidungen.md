@@ -464,8 +464,17 @@ und Autostart. Aktualisieren: einen neueren Setup ausführen; er beendet die lau
 startet sie wieder. Einstellungen (`%APPDATA%\HDRpilot`) und Daten (`%LOCALAPPDATA%\HDRpilot`) fasst der Setup nie an.
 Entfernen (`HDRpilot.exe --uninstall` aus „Installierte Apps“): läuft aus einer Kopie im Temp-Ordner, entfernt nur die
 eigenen Dateien, Verknüpfungen, die auf die EXE zeigen, den eigenen Autostart-Wert und den Eintrag; stellt einen gemerkten
-HDR-Zustand wieder her; Einstellungen und Daten nur auf ausdrücklichen Wunsch; warnt vor Steam-Startoptionen, die auf
-HDRpilot zeigen (die Spiele starteten sonst nicht mehr). Prüfläufe nur mit `--test-root` (alle Orte und ein eigener
-Registry-Zweig darunter), damit nie die echte Installation berührt wird. Setup und Entfernen schließen sich über die
-Sperre `Local\HDRpilot.Setup` aus (neuer Kernel-Name, daher schon HDRpilot; Prüfläufe hängen `.<Hash>` ihrer
-Testablage an, wie im Registry-Zweig). Version 1.1.0.
+HDR-Zustand wieder her und verwirft danach `session-state.json` (die einzige Ausnahme); Einstellungen und Daten sonst nur
+auf ausdrücklichen Wunsch; warnt vor Steam-Startoptionen, die auf HDRpilot zeigen (die Spiele starteten sonst nicht
+mehr). Prüfläufe nur mit `--test-root` (alle Orte und ein eigener Registry-Zweig darunter), damit nie die echte
+Installation berührt wird. Setup und Entfernen schließen sich über die Sperre `Local\HDRpilot.Setup` aus (neuer
+Kernel-Name, daher schon HDRpilot; Prüfläufe hängen `.<Hash>` ihrer Testablage an, wie im Registry-Zweig). Version 1.1.0.
+Nach der Gegenprüfung ergänzt: Der Setup startet die App über die Shell (sie erbt keine Handles, etwa die umgeleitete
+Ausgabe eines Skripts) und nie, wenn er mit Adminrechten läuft (sie liefe sonst ebenfalls erhöht; das Ergebnis sagt es).
+`--exit` geht genau einmal an die laufende Instanz; hat sie beim Start noch kein Nachrichtenfenster, sieht der Setup
+innerhalb der Frist etwa jede Sekunde nach. „Mit Windows starten“ aus entfernt den Wert `HDRpilot` auch, wenn er eine
+andere HDRpilot.exe startet (der Wertname gehört HDRpilot); Werte für andere Programme bleiben. Schreibgeschützte
+Programmdateien werden ersetzt. Das Entfernen nennt Schritt und Datei seines ersten Fehlers; ein nicht
+wiederhergestellter HDR-Zustand ist nur ein Hinweis. Die Kopie zum Entfernen löscht am Ende ihren Temp-Ordner und ihren
+Entpack-Ordner `%TEMP%\.net\HDRpilot-Uninstall` (cmd.exe ohne AutoRun und verzögerte Erweiterung, bis zu 30 Versuche
+im Sekundenabstand); den Entpack-Ordner der App und den der Setup-Datei fasst sie nie an.

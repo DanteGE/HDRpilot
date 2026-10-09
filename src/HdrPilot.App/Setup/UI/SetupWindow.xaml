@@ -178,7 +178,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- Fuß: je Seite Abbrechen/Installieren, nichts während der Arbeit, Fertig oder Erneut versuchen/Abbrechen -->
+        <!-- Fuß: je Seite Abbrechen/Installieren, nichts während der Arbeit, Fertig, Erneut versuchen/Abbrechen oder Schließen -->
         <Border Grid.Row="2" Background="{DynamicResource Hp.Brush.Surface}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="0,1,0,0" Padding="32,14,32,16">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" MinHeight="40">
                 <Button x:Name="CancelButton" Style="{StaticResource Hp.GhostButton}" MinWidth="120"
@@ -205,6 +205,17 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE73E;" />
                         <TextBlock Text="{x:Static res:SetupStrings.SetupCloseButton}" />
+                    </StackPanel>
+                </Button>
+                <!-- Fehler ohne sinnvollen neuen Versuch: nur Schließen (der Exit-Code bleibt der des Fehlers) -->
+                <Button x:Name="CloseErrorButton" Style="{StaticResource Hp.AccentButton}" MinWidth="150" Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="SetupCloseErrorButton"
+                        AutomationProperties.Name="{x:Static res:SetupStrings.SetupCloseErrorButton}"
+                        Command="{Binding CloseCommand}"
+                        Visibility="{Binding ShowCloseOnError, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE711;" />
+                        <TextBlock Text="{x:Static res:SetupStrings.SetupCloseErrorButton}" />
                     </StackPanel>
                 </Button>
                 <Button x:Name="InstallButton" Style="{StaticResource Hp.AccentButton}" MinWidth="170" Margin="12,0,0,0"

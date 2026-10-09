@@ -19,10 +19,11 @@
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
     </Style>
 
-    <!-- Fortschrittsliste: Zeilen ohne Auswahl -->
+    <!-- Fortschrittsliste: Zeilen ohne Auswahl; der Zustand geht als Text aus den Ressourcen an die Bedienungshilfen -->
+    <ui:StepStateTextConverter x:Key="Setup.StepStateText" />
     <Style x:Key="Setup.StepItem" TargetType="ListBoxItem" BasedOn="{StaticResource Hp.Shell.PlainListBoxItem}">
         <Setter Property="Margin" Value="0" />
-        <Setter Property="AutomationProperties.ItemStatus" Value="{Binding State}" />
+        <Setter Property="AutomationProperties.ItemStatus" Value="{Binding State, Converter={StaticResource Setup.StepStateText}}" />
     </Style>
 
     <!-- Schritt: Ring (offen), Pfeile im Akzent (läuft), Haken (erledigt), Kreuz (fehlgeschlagen) -->

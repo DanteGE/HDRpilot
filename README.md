@@ -30,7 +30,8 @@ Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HD
    **Installieren** kopiert HDRpilot dorthin, legt eine Verknüpfung im Startmenü an und trägt HDRpilot unter
    *Einstellungen → Apps → Installierte Apps* ein. Die Kommandozeile liegt danach in `<Programmordner>\cli`, daneben
    README und Lizenzhinweise.
-3. Mit der dritten Option öffnet sich nach der Installation die Spielebibliothek. Im Alltag läuft HDRpilot als Symbol
+3. Mit der dritten Option öffnet sich nach der Installation die Spielebibliothek (nicht, wenn der Setup mit
+   Administratorrechten läuft; dann startest du HDRpilot über das Startmenü). Im Alltag läuft HDRpilot als Symbol
    im Infobereich (unten rechts neben der Uhr) und liest bei jedem Start deine Spiele ein. Siehst du das Symbol nicht,
    hat Windows es hinter dem Pfeil (˄) ausgeblendet; von dort kannst du es in die Taskleiste ziehen. Ein Doppelklick
    auf das Symbol (oder ein Start über das Startmenü) öffnet die Spielebibliothek.
@@ -51,10 +52,11 @@ Verknüpfungen und Steam-Startoptionen legst du neu an.
 
 Den Setup der neuen Version starten. Er zeigt die installierte und die neue Version; Autostart und Desktop-Verknüpfung
 sind wie bisher vorbelegt. **Aktualisieren** beendet ein laufendes HDRpilot kurz, ersetzt die Programmdateien und
-startet HDRpilot wieder (lief es vorher, wieder nur im Infobereich). Schlägt dabei etwas fehl, bleibt die bisherige
-Version unverändert und lauffähig. Einstellungen, Spieleliste, Protokolle und HDR-Liste bleiben erhalten, weil sie in
-`%APPDATA%\HDRpilot` und `%LOCALAPPDATA%\HDRpilot` liegen. Denselben Setup noch einmal auszuführen repariert die
-Installation. Eine ältere Version installiert er nur, wenn du **Trotzdem die ältere Version installieren** ankreuzt.
+startet HDRpilot wieder, wenn es vorher lief (wieder nur im Infobereich); lief es nicht, entscheidest du mit
+**HDRpilot danach starten**. Schlägt dabei etwas fehl, bleibt die bisherige Version unverändert und lauffähig.
+Einstellungen, Spieleliste, Protokolle und HDR-Liste bleiben erhalten, weil sie in `%APPDATA%\HDRpilot` und
+`%LOCALAPPDATA%\HDRpilot` liegen. Denselben Setup noch einmal auszuführen repariert die Installation. Eine ältere
+Version installiert er nur, wenn du **Trotzdem die ältere Version installieren** ankreuzt.
 
 ### Ohne Installation
 
@@ -266,11 +268,13 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
 | Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
 | Entpackte Grafik-Bibliotheken (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot\` |
-| Dasselbe für Setup und Entfernen (je rund 8 MB) | `%TEMP%\.net\HDRpilot-Setup-<Version>\`, `%TEMP%\.net\HDRpilot-Uninstall\` |
+| Dasselbe für den Setup (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot-Setup-<Version>\` |
+| Dasselbe für das Entfernen (rund 8 MB, löscht sich danach selbst) | `%TEMP%\.net\HDRpilot-Uninstall\` |
 
 Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nicht nach Groß- und Kleinschreibung, die
 bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
-ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht.
+ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht. Einzige
+Ausnahme: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach `session-state.json`.
 
 Einstellungen gelten je Spiel über Quelle und ID (etwa `Steam:1091500`), nicht über den Namen. `config.json` wird
 atomar geschrieben. Von Hand bearbeitest du sie am besten bei beendetem HDRpilot. Ist sie danach kein gültiges JSON,
@@ -279,8 +283,9 @@ Auswahl steckt dann nur noch in dieser Sicherung.
 
 Die Grafik-Bibliotheken entpackt HDRpilot beim ersten Start und nach jedem Update auf eine neue Version. Ordner
 älterer Versionen bleiben liegen und können bei beendetem HDRpilot gelöscht werden. Setup-Datei und die Kopie zum
-Entfernen entpacken ihre eigenen (Ordner nach dem Namen der EXE); auch diese bleiben liegen und dürfen gelöscht werden,
-wenn gerade kein Setup läuft.
+Entfernen entpacken ihre eigenen (Ordner nach dem Namen der EXE). Den der Setup-Datei
+(`%TEMP%\.net\HDRpilot-Setup-<Version>`) darfst du löschen, wenn gerade kein Setup läuft; den der Kopie zum Entfernen
+(`%TEMP%\.net\HDRpilot-Uninstall`) löscht sie am Ende zusammen mit ihrem Temp-Ordner selbst.
 
 ## Befehlszeile
 
@@ -311,10 +316,10 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 
 | Aufruf | Wirkung |
 |---|---|
-| `HDRpilot-Setup-1.1.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code |
+| `HDRpilot-Setup-1.1.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
 | `--autostart on\|off` | Mit Windows starten (ohne Angabe: wie bisher, bei einer neuen Installation an) |
 | `--desktop-shortcut on\|off` | Desktop-Verknüpfung (ohne Angabe: wie bisher, bei einer neuen Installation aus) |
-| `--no-launch` | HDRpilot danach nicht starten |
+| `--no-launch` | HDRpilot danach nicht starten. Für Skripte, die auf das Ende warten (etwa `Start-Process -Wait`, das auch auf gestartete Programme wartet) oder die Ausgabe lesen |
 | `--allow-downgrade` | Eine ältere Version über eine neuere installieren |
 | `HDRpilot.exe --uninstall` | Entfernen wie aus „Installierte Apps“ (läuft aus einer Kopie im Temp-Ordner) |
 | `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück, das Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll |
@@ -449,10 +454,10 @@ Mit dem Setup installiert:
    `%LOCALAPPDATA%\HDRpilot` erhalten und werden bei einer neuen Installation wieder benutzt; mit Haken sind sie weg,
    samt HDR-Liste und gespeichertem PCGamingWiki-Konto.
 3. **Entfernen** beendet HDRpilot, stellt einen gemerkten HDR-Zustand wieder her und entfernt das Programm, seine
-   Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die ihren Ordner danach selbst löscht.
+   Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die danach ihren Ordner und ihre entpackten
+   Grafik-Bibliotheken (`%TEMP%\.net\HDRpilot-Uninstall`) selbst löscht.
 4. Bleiben „(HDR)“-Verknüpfungen für einzelne Spiele übrig, kannst du sie löschen, ebenso die entpackten
-   Grafik-Bibliotheken in `%TEMP%\.net\HDRpilot`, `%TEMP%\.net\HDRpilot-Setup-<Version>` und
-   `%TEMP%\.net\HDRpilot-Uninstall` (rund 8 MB je Ordner).
+   Grafik-Bibliotheken in `%TEMP%\.net\HDRpilot` und `%TEMP%\.net\HDRpilot-Setup-<Version>` (rund 8 MB je Ordner).
 
 Ohne Installation:
 

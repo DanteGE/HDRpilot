@@ -25,6 +25,36 @@ public interface ISetupAppControl
     bool Start(string exePath, string arguments);
 }
 
+/// <summary>Einzelinstanz der App, wie Setup und Entfernen sie sehen: Sperre, Nachrichtenfenster, Befehlsweg (Naht für Tests).</summary>
+public interface ISetupInstanceChannel
+{
+    /// <summary>Sperre der Einzelinstanz vorhanden.</summary>
+    bool IsRunning(string id);
+
+    /// <summary>Nachrichtenfenster vorhanden, die Instanz nimmt also Befehle an.</summary>
+    bool CommandWindowExists(string id);
+
+    /// <summary>Prozess-ID über das Nachrichtenfenster (ohne Prozess-Handle) oder null.</summary>
+    int? OwnerProcessId(string id);
+
+    /// <summary>Sendet Befehle; true, wenn die Instanz sie angenommen hat.</summary>
+    bool TrySend(string id, IReadOnlyList<string> args, TimeSpan timeout);
+}
+
+/// <summary>Der echte Befehlsweg (<see cref="SingleInstance"/>).</summary>
+public sealed class SingleInstanceChannel : ISetupInstanceChannel
+{
+    public static SingleInstanceChannel Instance { get; } = new();
+
+    public bool IsRunning(string id) => SingleInstance.IsRunning(id);
+
+    public bool CommandWindowExists(string id) => SingleInstance.CommandWindowExists(id);
+
+    public int? OwnerProcessId(string id) => SingleInstance.OwnerProcessId(id);
+
+    public bool TrySend(string id, IReadOnlyList<string> args, TimeSpan timeout) => SingleInstance.TrySend(id, args, timeout);
+}
+
 /// <summary>
 /// Echte App-Steuerung. Erkennen ohne Handle auf fremde Prozesse: Einzelinstanz-Sperre und EXE-Pfade aus der
 /// Prozessliste (<see cref="NtProcessSnapshotProvider"/>, E65). Beenden nur über den vorhandenen Befehlsweg
@@ -36,9 +66,13 @@ public sealed class SetupAppControl : ISetupAppControl
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>Abstand, in dem nach dem Nachrichtenfenster einer gerade startenden Instanz gesehen wird.</summary>
+    private static readonly TimeSpan SendRetryInterval = TimeSpan.FromSeconds(1);
+
     private readonly string _instanceId;
     private readonly string _installedExePath;
     private readonly Func<IProcessSnapshotProvider> _snapshots;
+    private readonly ISetupInstanceChannel _instance;
 
     public SetupAppControl(SetupLocations locations)
         : this(locations.InstanceId, locations.ExePath)
@@ -46,11 +80,13 @@ public sealed class SetupAppControl : ISetupAppControl
     }
 
     /// <param name="snapshots">Liefert die Prozessliste (Standard: <see cref="NtProcessSnapshotProvider"/>; Tests: feste Liste).</param>
-    public SetupAppControl(string instanceId, string installedExePath, Func<IProcessSnapshotProvider>? snapshots = null)
+    /// <param name="instance">Befehlsweg zur Einzelinstanz (Standard: <see cref="SingleInstanceChannel"/>; Tests: Attrappe).</param>
+    public SetupAppControl(string instanceId, string installedExePath, Func<IProcessSnapshotProvider>? snapshots = null, ISetupInstanceChannel? instance = null)
     {
         _instanceId = instanceId;
         _installedExePath = installedExePath;
         _snapshots = snapshots ?? (() => new NtProcessSnapshotProvider());
+        _instance = instance ?? SingleInstanceChannel.Instance;
     }
 
     public bool IsRunning()
@@ -69,7 +105,7 @@ public sealed class SetupAppControl : ISetupAppControl
     /// <summary>Prozess-ID über das Nachrichtenfenster der Instanz, Pfad aus der Prozessliste (kein Handle).</summary>
     public string? InstanceExePath()
     {
-        if (SingleInstance.OwnerProcessId(_instanceId) is not { } processId)
+        if (_instance.OwnerProcessId(_instanceId) is not { } processId)
         {
             return null;
         }
@@ -85,6 +121,11 @@ public sealed class SetupAppControl : ISetupAppControl
         }
     }
 
+    /// <summary>
+    /// Stellt <c>--exit</c> genau einmal zu: Hat die Instanz ihre Sperre, aber noch kein Nachrichtenfenster (sie startet
+    /// gerade), wird etwa jede Sekunde erneut nachgesehen, solange die Frist läuft. Ist das Fenster da, wird gesendet und
+    /// danach nie wieder (auch wenn die Antwort ausbleibt: eine zweite Aufforderung käme womöglich doppelt an).
+    /// </summary>
     public bool Stop(TimeSpan timeout)
     {
         var snapshot = _snapshots();
@@ -96,13 +137,28 @@ public sealed class SetupAppControl : ISetupAppControl
             }
 
             var deadline = DateTime.UtcNow + timeout;
-            if (SingleInstance.IsRunning(_instanceId))
+            var exitSent = false;
+            var nextAttempt = DateTime.MinValue;
+            while (true)
             {
-                SingleInstance.TrySend(_instanceId, ["--exit"], SendTimeout);
-            }
+                if (!exitSent && DateTime.UtcNow >= nextAttempt && _instance.IsRunning(_instanceId))
+                {
+                    if (_instance.CommandWindowExists(_instanceId))
+                    {
+                        exitSent = true;
+                        _instance.TrySend(_instanceId, ["--exit"], SendTimeout);
+                    }
+                    else
+                    {
+                        nextAttempt = DateTime.UtcNow + SendRetryInterval;
+                    }
+                }
 
-            while (IsRunning(snapshot))
-            {
+                if (!IsRunning(snapshot))
+                {
+                    return true;
+                }
+
                 if (DateTime.UtcNow >= deadline)
                 {
                     return false;
@@ -110,8 +166,6 @@ public sealed class SetupAppControl : ISetupAppControl
 
                 Thread.Sleep(PollInterval);
             }
-
-            return true;
         }
         finally
         {
@@ -121,19 +175,23 @@ public sealed class SetupAppControl : ISetupAppControl
 
     public bool Start(string exePath, string arguments)
     {
-        var info = new ProcessStartInfo(exePath)
-        {
-            UseShellExecute = false,
-            Arguments = arguments,
-            WorkingDirectory = Path.GetDirectoryName(exePath) ?? string.Empty,
-        };
-
         // Nur starten, nie warten: das Handle wird sofort geschlossen.
-        using var process = Process.Start(info);
+        using var process = Process.Start(StartInfo(exePath, arguments));
         return process is not null;
     }
 
-    private bool IsRunning(IProcessSnapshotProvider snapshot) => SingleInstance.IsRunning(_instanceId) || RunsFromExe(snapshot);
+    /// <summary>
+    /// Start über die Shell: Die App erbt keine Handles des Setups (sonst hielte sie etwa die umgeleitete Ausgabe eines
+    /// Skripts offen, das den Setup aufruft und auf das Ende seiner Ausgabe wartet). Arbeitsordner ist der der EXE.
+    /// </summary>
+    public static ProcessStartInfo StartInfo(string exePath, string arguments) => new(exePath)
+    {
+        UseShellExecute = true,
+        Arguments = arguments,
+        WorkingDirectory = Path.GetDirectoryName(exePath) ?? string.Empty,
+    };
+
+    private bool IsRunning(IProcessSnapshotProvider snapshot) => _instance.IsRunning(_instanceId) || RunsFromExe(snapshot);
 
     private bool RunsFromExe(IProcessSnapshotProvider snapshot)
     {

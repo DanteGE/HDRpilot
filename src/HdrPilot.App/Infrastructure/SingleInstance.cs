@@ -84,6 +84,12 @@ public sealed partial class SingleInstance : IDisposable
         return GetWindowThreadProcessId(window, out var processId) != 0 && processId != 0 ? (int)processId : null;
     }
 
+    /// <summary>
+    /// True, wenn das Nachrichtenfenster der Instanz da ist, sie also Befehle annimmt (liest nur Fensterdaten). Direkt nach
+    /// dem Start gibt es die Sperre schon, das Fenster aber noch nicht.
+    /// </summary>
+    public static bool CommandWindowExists(string id) => FindWindowExW(HWND_MESSAGE, IntPtr.Zero, null, WindowTitle(id)) != IntPtr.Zero;
+
     /// <summary>Öffnet das Nachrichtenfenster. Befehle kommen auf dem UI-Thread an.</summary>
     public void Listen(Action<IReadOnlyList<string>> onCommand)
     {

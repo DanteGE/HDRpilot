@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Security.Principal;
 using HdrPilot.App.Services;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Util;
@@ -99,6 +100,38 @@ public static class SetupSupport
         using var key = registry.CreateKey(RegistryHiveKind.CurrentUser, locations.RunKeyPath);
         key.DeleteValue(AutostartService.ValueName);
         return true;
+    }
+
+    /// <summary>True, wenn die Befehlszeile eine HDRpilot.exe startet, egal aus welchem Ordner (ohne Groß-/Kleinschreibung).</summary>
+    public static bool StartsAnyCopy(string? command) =>
+        CommandTarget(command) is { } target && string.Equals(Path.GetFileName(target.Trim()), SetupLocations.ExeName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// „Mit Windows starten“ aus: entfernt den Autostart-Wert, wenn er eine HDRpilot.exe startet, auch eine andere Kopie
+    /// (der Wertname gehört HDRpilot; sonst startete etwa eine alte portable Version weiter mit Windows). Ein Wert, der ein
+    /// anderes Programm startet, bleibt. Liefert den entfernten Wert oder null.
+    /// </summary>
+    public static string? RemoveAutostartOfAnyCopy(IRegistry registry, SetupLocations locations)
+    {
+        var value = ReadAutostart(registry, locations);
+        if (!StartsAnyCopy(value))
+        {
+            return null;
+        }
+
+        using var key = registry.CreateKey(RegistryHiveKind.CurrentUser, locations.RunKeyPath);
+        key.DeleteValue(AutostartService.ValueName);
+        return value;
+    }
+
+    /// <summary>
+    /// True, wenn dieser Prozess mit Adminrechten läuft. Unter der Benutzerkontensteuerung gilt das nur für ein erhöhtes
+    /// Token (etwa „Als Administrator ausführen“); ein normaler Start eines Administrators zählt nicht.
+    /// </summary>
+    public static bool IsElevated()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
     }
 
     /// <summary>Setzt den Autostart-Wert wieder auf einen früheren Stand (null: Wert entfernen).</summary>
@@ -226,19 +259,25 @@ internal sealed class SetupLock : IDisposable
     }
 }
 
-/// <summary>Merkt sich den ersten Fehler eines Laufs, der trotz Fehlern weitermacht (Entfernen).</summary>
+/// <summary>Merkt sich den ersten Fehler eines Laufs, der trotz Fehlern weitermacht (Entfernen): Art, Angabe, Schritt, Datei.</summary>
 internal sealed class FirstError
 {
     public SetupErrorKind? Kind { get; private set; }
 
     public string? Detail { get; private set; }
 
-    public void Add(SetupErrorKind kind, string detail)
+    public UninstallStep? Step { get; private set; }
+
+    public string? File { get; private set; }
+
+    public void Add(SetupErrorKind kind, string detail, UninstallStep step, string? file = null)
     {
         if (Kind is null)
         {
             Kind = kind;
             Detail = detail;
+            Step = step;
+            File = file;
         }
     }
 }

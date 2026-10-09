@@ -98,11 +98,89 @@ public sealed class SetupAppControlTests
         Assert.Null(new SetupAppControl(UnusedInstance(), NotInstalledExe(), () => processes).InstanceExePath());
     }
 
+    [Fact]
+    public void Exit_reaches_an_instance_whose_command_window_appears_only_later()
+    {
+        // Die Instanz hat ihre Sperre schon, das Nachrichtenfenster erst beim dritten Nachsehen (sie startet gerade).
+        var channel = new FakeInstanceChannel(hiddenWindowChecks: 2, exitOnRequest: true);
+        var control = new SetupAppControl(UnusedInstance(), NotInstalledExe(), () => new FixedSnapshot(), channel);
+
+        Assert.True(control.Stop(TimeSpan.FromSeconds(8)));
+
+        Assert.Equal(["--exit"], Assert.Single(channel.Sent));
+        Assert.True(channel.WindowChecks >= 3, "Nachrichtenfenster nur " + channel.WindowChecks + "-mal gesucht");
+    }
+
+    [Fact]
+    public void Accepted_exit_is_never_sent_a_second_time()
+    {
+        var channel = new FakeInstanceChannel(hiddenWindowChecks: 0, exitOnRequest: false);
+        var control = new SetupAppControl(UnusedInstance(), NotInstalledExe(), () => new FixedSnapshot(), channel);
+
+        Assert.False(control.Stop(TimeSpan.FromMilliseconds(2500)));
+
+        Assert.Equal(["--exit"], Assert.Single(channel.Sent));
+    }
+
+    [Fact]
+    public void App_is_started_through_the_shell_without_inheriting_handles_and_without_waiting()
+    {
+        const string Exe = @"C:\Users\U\AppData\Local\Programs\HDRpilot\HDRpilot.exe";
+
+        var info = SetupAppControl.StartInfo(Exe, "--show --config-dir \"C:\\Test\\Config\"");
+
+        Assert.True(info.UseShellExecute); // CreateProcess mit geerbten Handles hielte etwa die Ausgabe eines Skripts offen
+        Assert.Equal(Exe, info.FileName);
+        Assert.Equal("--show --config-dir \"C:\\Test\\Config\"", info.Arguments);
+        Assert.Equal(@"C:\Users\U\AppData\Local\Programs\HDRpilot", info.WorkingDirectory);
+    }
+
     private static string NotInstalledExe() => Path.Combine(Path.GetTempPath(), "HDRpilot.Tests." + Guid.NewGuid().ToString("N"), "HDRpilot.exe");
 
     private sealed class FixedSnapshot(params ProcessInfo[] processes) : IProcessSnapshotProvider
     {
         public IReadOnlyList<ProcessInfo> GetProcesses() => processes;
+    }
+
+    /// <summary>
+    /// Befehlsweg ohne echtes Fenster: Sperre von Anfang an, Nachrichtenfenster erst nach <c>hiddenWindowChecks</c>
+    /// Abfragen. Senden klappt nur mit Fenster; mit <c>exitOnRequest</c> endet die Instanz bei „--exit“.
+    /// </summary>
+    private sealed class FakeInstanceChannel(int hiddenWindowChecks, bool exitOnRequest) : ISetupInstanceChannel
+    {
+        private bool _running = true;
+
+        public int WindowChecks { get; private set; }
+
+        public List<string[]> Sent { get; } = [];
+
+        private bool WindowShown => WindowChecks > hiddenWindowChecks;
+
+        public bool IsRunning(string id) => _running;
+
+        public bool CommandWindowExists(string id)
+        {
+            WindowChecks++;
+            return _running && WindowShown;
+        }
+
+        public int? OwnerProcessId(string id) => null;
+
+        public bool TrySend(string id, IReadOnlyList<string> args, TimeSpan timeout)
+        {
+            if (!_running || !WindowShown)
+            {
+                return false; // wie SingleInstance.TrySend, wenn das Fenster in der Frist nicht erscheint
+            }
+
+            Sent.Add([.. args]);
+            if (exitOnRequest && args.Contains("--exit"))
+            {
+                _running = false;
+            }
+
+            return true;
+        }
     }
 
     /// <summary>

@@ -143,8 +143,9 @@ Check ($problems.Count -eq 0) ("README stimmt mit dem Quelltext überein ({0} Pr
 
 # Gegenprobe: eingebaute Fehler müssen gefunden werden
 $broken = $readme.Replace('**Neu einlesen**', '**Neu laden**').Replace('| `--rescan` | Spiele neu einlesen |', '| `--reload` | Spiele neu einlesen |').Replace("Nachlaufzeit ($($defaults.Grace) s)", 'Nachlaufzeit (5 s)').Replace('## Fehlersuche', '## Hilfe').Replace('hdrpilot games list [--json]', 'hdrpilot games list')
-# Setup (E83): Bezeichnung nur aus SetupStrings.resx, Schalter des Setups, Protokollort
-$broken = $broken.Replace('**Verknüpfung auf dem Desktop**', '**Desktop-Symbol**').Replace('| `--no-launch` |', '| `--no-start` |').Replace("``$setupLog``", '`%TEMP%\HDRpilot.log`')
+# Setup (E83): Bezeichnung nur aus SetupStrings.resx, Schalter des Setups (jede Nennung, auch im Text zu --quiet),
+# Protokollort
+$broken = $broken.Replace('**Verknüpfung auf dem Desktop**', '**Desktop-Symbol**').Replace('`--no-launch`', '`--no-start`').Replace("``$setupLog``", '`%TEMP%\HDRpilot.log`')
 $expected = @('Bezeichnung nicht in der Oberfläche: Neu laden', 'App-Schalter nicht dokumentiert: --rescan', 'App-Schalter gibt es nicht: --reload',
               "Fakt fehlt oder weicht ab: Nachlaufzeit ($($defaults.Grace) s)", 'Abschnitt fehlt: Fehlersuche', 'CLI-Aufruf fehlt oder weicht ab: hdrpilot games list [--json]', 'CLI-Aufruf nicht in der Hilfe: hdrpilot games list',
               'Bezeichnung nicht in der Oberfläche: Desktop-Symbol', 'Setup-Schalter nicht dokumentiert: --no-launch', 'Setup-Schalter gibt es nicht: --no-start', "Fakt fehlt oder weicht ab: ``$setupLog``")

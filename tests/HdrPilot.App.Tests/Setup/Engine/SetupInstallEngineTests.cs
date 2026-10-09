@@ -100,6 +100,7 @@ public sealed class SetupInstallEngineTests : IDisposable
 
         Assert.False(result.Success);
         Assert.Equal(SetupErrorKind.FilesInUse, result.Error);
+        Assert.Equal(SetupStep.CopyFiles, result.FailedSetupStep);
         Assert.Equal(new Version(1, 0, 0), result.PreviousVersion);
         Assert.Contains("hdrpilot.exe", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(SetupHarness.ExeBytes("1.0.0"), File.ReadAllBytes(L.ExePath)); // alte EXE bleibt lauffähig
@@ -126,6 +127,7 @@ public sealed class SetupInstallEngineTests : IDisposable
         // Kein „Kein Schreibzugriff auf den Programmordner“: der war beschreibbar, gescheitert ist die Registry.
         Assert.Equal(SetupErrorKind.Unexpected, result.Error);
         Assert.StartsWith("Register: ", result.Message, StringComparison.Ordinal);
+        Assert.Equal(SetupStep.Register, result.FailedSetupStep);
         Assert.Equal(SetupHarness.ExeBytes("1.0.0"), File.ReadAllBytes(L.ExePath));
         Assert.Equal("CLI 1.0.0", File.ReadAllText(_h.InstalledFile(@"cli\hdrpilot.exe")));
         AssertNoLeftovers();
@@ -300,17 +302,92 @@ public sealed class SetupInstallEngineTests : IDisposable
         Assert.False(_h.Setup("1.1.0").Inspect().AutostartEnabled);
     }
 
-    [Fact]
-    public async Task Autostart_off_leaves_a_foreign_value_untouched()
+    [Theory]
+    [InlineData("\"D:\\Portable\\HDRpilot\\HDRpilot.exe\" --minimized")]
+    [InlineData("d:\\portable\\hdrpilot.EXE --minimized")]
+    public async Task Autostart_off_also_removes_a_value_that_starts_another_hdrpilot_exe(string otherCopy)
     {
-        const string Foreign = "\"D:\\Portable\\HDRpilot\\HDRpilot.exe\" --minimized";
-        _h.Registry.Set(RegistryHiveKind.CurrentUser, L.RunKeyPath, AutostartService.ValueName, Foreign);
+        // Der Wertname gehört HDRpilot: „nicht mit Windows starten“ gilt auch für eine alte portable Kopie.
+        _h.Registry.Set(RegistryHiveKind.CurrentUser, L.RunKeyPath, AutostartService.ValueName, otherCopy);
         Assert.True(_h.Setup("1.1.0").Inspect().AutostartEnabled); // nichts installiert: Vorbelegung an
+
+        Assert.True((await _h.InstallAsync("1.1.0", new InstallOptions(Autostart: false, false, false))).Success);
+
+        Assert.Null(Autostart);
+        Assert.Contains("Autostart entfernt: " + otherCopy, _h.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Autostart_off_leaves_a_value_for_another_program_untouched()
+    {
+        const string Foreign = "\"C:\\Tools\\HDRpilot-Helfer\\Helfer.exe\" --tray";
+        _h.Registry.Set(RegistryHiveKind.CurrentUser, L.RunKeyPath, AutostartService.ValueName, Foreign);
 
         Assert.True((await _h.InstallAsync("1.1.0", new InstallOptions(Autostart: false, false, false))).Success);
 
         Assert.Equal(Foreign, Autostart);
         Assert.False(_h.Setup("1.1.0").Inspect().AutostartEnabled);
+    }
+
+    [Fact]
+    public async Task Read_only_file_in_the_program_folder_is_replaced_on_update()
+    {
+        Assert.True((await _h.InstallAsync("1.0.0")).Success);
+        File.SetAttributes(_h.InstalledFile("README.md"), FileAttributes.ReadOnly);
+
+        var result = await _h.InstallAsync("1.1.0");
+
+        Assert.True(result.Success, result.Message);
+        Assert.Equal("README 1.1.0", File.ReadAllText(_h.InstalledFile("README.md")));
+        Assert.Equal(SetupHarness.ExeBytes("1.1.0"), File.ReadAllBytes(L.ExePath));
+        AssertNoLeftovers();
+    }
+
+    [Fact]
+    public async Task Elevated_setup_never_starts_the_app_and_says_why()
+    {
+        _h.Elevated = true;
+        var progress = new SyncProgress<SetupStep>();
+
+        var result = await _h.InstallAsync("1.1.0", new InstallOptions(Autostart: true, DesktopShortcut: false, LaunchAfterInstall: true), progress: progress);
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(result.AppStarted);
+        Assert.True(result.Has(SetupWarning.NotLaunchedElevated));
+        Assert.Empty(_h.App.Started);
+        Assert.DoesNotContain(SetupStep.LaunchApp, progress.Items);
+        Assert.Contains("Adminrechten", _h.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Elevated_setup_does_not_restart_the_stopped_version_after_a_failure()
+    {
+        Assert.True((await _h.InstallAsync("1.0.0")).Success);
+        _h.Elevated = true;
+        _h.App.Running = true;
+        _h.Entries.FailOnWrite = new IOException("kaputt");
+
+        var result = await _h.InstallAsync("1.1.0", new InstallOptions(true, false, LaunchAfterInstall: true));
+
+        Assert.Equal(SetupErrorKind.Unexpected, result.Error);
+        Assert.Equal(1, _h.App.StopCalls);
+        Assert.False(result.AppStarted);
+        Assert.True(result.Has(SetupWarning.NotLaunchedElevated));
+        Assert.Empty(_h.App.Started);
+        Assert.Equal(SetupHarness.ExeBytes("1.0.0"), File.ReadAllBytes(L.ExePath));
+    }
+
+    [Fact]
+    public async Task Failed_start_after_install_is_still_a_success_without_the_elevated_note()
+    {
+        _h.App.StartSucceeds = false;
+
+        var result = await _h.InstallAsync("1.1.0", new InstallOptions(true, false, LaunchAfterInstall: true));
+
+        Assert.True(result.Success, result.Message);
+        Assert.False(result.AppStarted);
+        Assert.False(result.Has(SetupWarning.NotLaunchedElevated));
+        Assert.Single(_h.App.Started);
     }
 
     [Fact]

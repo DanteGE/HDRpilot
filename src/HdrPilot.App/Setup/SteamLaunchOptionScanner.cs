@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
+using HdrPilot.App.Resources;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -11,7 +13,7 @@ namespace HdrPilot.App.Setup;
 /// <summary>Steam-Spiele, deren Startoption noch HDRpilot aufruft (Warnung beim Entfernen).</summary>
 public interface ISteamLaunchOptionScanner
 {
-    /// <summary>Namen der Spiele (sonst „Steam-App &lt;ID&gt;“), sortiert. Wirft nicht.</summary>
+    /// <summary>Namen der Spiele (sonst „Steam-App &lt;ID&gt;“, <c>SetupSteamAppFallback</c>), sortiert. Wirft nicht.</summary>
     IReadOnlyList<string> FindGamesWithLaunchOption();
 }
 
@@ -60,7 +62,7 @@ public sealed class SteamLaunchOptionScanner : ISteamLaunchOptionScanner
 
         var names = ReadSteamNames();
         return ids
-            .Select(id => names.TryGetValue(id, out var name) ? name : "Steam-App " + id)
+            .Select(id => names.TryGetValue(id, out var name) ? name : string.Format(CultureInfo.CurrentCulture, SetupStrings.SetupSteamAppFallback, id))
             .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
     }

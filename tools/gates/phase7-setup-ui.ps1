@@ -155,7 +155,8 @@ try {
     $dir = Get-IdText $win 'SetupInstallDir'
     Check (Test-SamePath $dir $layout.InstallDir) "Programmordner: $dir"
     $note = Get-IdText $win 'SetupDataNote'
-    Check ((Test-Contains $note $layout.Config) -and (Test-Template $note $s.SetupDataNote)) "Hinweis, dass Einstellungen erhalten bleiben: $note"
+    # Testablage: Einstellungen und Daten im selben Ordner, der Hinweis nennt ihn nur einmal (SetupDataNoteSingle).
+    Check ((Test-Contains $note $layout.Config) -and (Test-Template $note $s.SetupDataNoteSingle)) "Hinweis, dass Einstellungen erhalten bleiben: $note"
     Check (-not (Test-Shown (Find-Id $win 'SetupRunningNote' 500))) 'Kein Hinweis auf laufendes HDRpilot (läuft nicht)'
     Check (-not (Test-Shown (Find-Id $win 'SetupAllowDowngrade' 500))) 'Kein Ankreuzfeld für ältere Version (Erstinstallation)'
     $expected = [ordered]@{ SetupAutostart = 'On'; SetupDesktopShortcut = 'Off'; SetupLaunchAfter = 'On' }
@@ -264,7 +265,7 @@ try {
     $versionLine = Get-IdText $win 'SetupVersionInfo'
     Check ($versionLine -ceq [string]::Format($s.SetupVersionUpdate, $older.Version, $version)) "Version alt → neu: $versionLine"
     Check (Test-SamePath (Get-IdText $win 'SetupInstallDir') $layout.InstallDir) 'Programmordner wie bisher'
-    Check (Test-Template (Get-IdText $win 'SetupDataNote') $s.SetupDataNote) 'Hinweis, dass Einstellungen erhalten bleiben'
+    Check (Test-Template (Get-IdText $win 'SetupDataNote') $s.SetupDataNoteSingle) 'Hinweis, dass Einstellungen erhalten bleiben'
     Check (-not (Test-Shown (Find-Id $win 'SetupRunningNote' 500))) 'Kein Hinweis auf laufendes HDRpilot (die frühere Version läuft nicht)'
     Check (-not (Test-Shown (Find-Id $win 'SetupAllowDowngrade' 500))) 'Kein Ankreuzfeld für ältere Version (Aktualisierung)'
     $expected = [ordered]@{ SetupAutostart = 'On'; SetupDesktopShortcut = 'Off'; SetupLaunchAfter = 'Off' }

@@ -9,8 +9,10 @@ namespace HdrPilot.App.Setup;
 /// Entfernen (E83). Läuft aus einer Kopie im Temp-Ordner, damit der Programmordner gelöscht werden kann. Ablauf: Sperre,
 /// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, nur die eigenen Dateien löschen
 /// (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene EXE, eigenen Autostart-Wert und Eintrag entfernen;
-/// Einstellungen und Daten nur auf ausdrücklichen Wunsch. Jeder Schritt macht nach Fehlern weiter, wo das sicher ist;
-/// das Ergebnis nennt den ersten Fehler. Lässt sich die EXE nicht löschen, bleibt der Eintrag für einen neuen Versuch.
+/// Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige Ausnahme: der gemerkte HDR-Zustand
+/// (session-state.json) wird nach dem Wiederherstellen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher
+/// ist; das Ergebnis nennt den ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag
+/// für einen neuen Versuch. Ein nicht wiederhergestellter HDR-Zustand ist nur ein Hinweis (<see cref="SetupWarning.HdrNotRestored"/>).
 /// </summary>
 public sealed class UninstallEngine : IUninstallEngine
 {
@@ -116,14 +118,17 @@ public sealed class UninstallEngine : IUninstallEngine
             Report(progress, UninstallStep.StopRunningApp);
             if (!_app.Stop(_stopTimeout))
             {
-                return Fail(SetupErrorKind.AppStillRunning, string.Create(CultureInfo.InvariantCulture, $"HDRpilot lief nach {_stopTimeout.TotalSeconds:0} s noch."), version);
+                return Fail(SetupErrorKind.AppStillRunning, string.Create(CultureInfo.InvariantCulture, $"HDRpilot lief nach {_stopTimeout.TotalSeconds:0} s noch."), version) with
+                {
+                    FailedUninstallStep = UninstallStep.StopRunningApp,
+                };
             }
 
             _log.Info("HDRpilot ist beendet.");
         }
 
         var errors = new FirstError();
-        RestoreHdr(progress, cancellationToken);
+        IReadOnlyList<SetupWarning>? warnings = RestoreHdr(progress, cancellationToken) ? null : [SetupWarning.HdrNotRestored];
 
         Report(progress, UninstallStep.RemoveFiles);
         RemoveFiles(errors);
@@ -132,7 +137,7 @@ public sealed class UninstallEngine : IUninstallEngine
         RemoveShortcuts(errors);
 
         Report(progress, UninstallStep.RemoveAutostart);
-        Run(errors, "Autostart entfernen", () =>
+        Run(errors, UninstallStep.RemoveAutostart, "Autostart entfernen", () =>
         {
             if (SetupSupport.RemoveOwnAutostart(_registry, Locations))
             {
@@ -147,7 +152,7 @@ public sealed class UninstallEngine : IUninstallEngine
         else
         {
             Report(progress, UninstallStep.Unregister);
-            Run(errors, "Eintrag entfernen", () =>
+            Run(errors, UninstallStep.Unregister, "Eintrag entfernen", () =>
             {
                 _entries.Delete();
                 _log.Info("Eintrag unter „Installierte Apps“ entfernt.");
@@ -166,11 +171,16 @@ public sealed class UninstallEngine : IUninstallEngine
 
         if (errors.Kind is { } kind)
         {
-            return Fail(kind, errors.Detail!, version);
+            return Fail(kind, errors.Detail!, version) with
+            {
+                FailedUninstallStep = errors.Step,
+                FailedFile = errors.File,
+                Warnings = warnings,
+            };
         }
 
-        _log.Info("Entfernen fertig.");
-        return new SetupResult(true, null, null, version, null, false);
+        _log.Info("Entfernen fertig" + (warnings is null ? "." : ", der gemerkte HDR-Zustand ist aber nicht wiederhergestellt."));
+        return new SetupResult(true, null, null, version, null, false, Warnings: warnings);
     }
 
     private Version? InstalledVersion()
@@ -206,15 +216,16 @@ public sealed class UninstallEngine : IUninstallEngine
 
     /// <summary>
     /// Gemerkte Bildschirme (session-state.json) auf den Zustand vor dem Spiel zurückstellen, wo die Spiele es wollten;
-    /// danach die Datei löschen. Scheitert ein Bildschirm, bleibt sie (die App prüft sie beim nächsten Start). Fehler hier
-    /// verhindern das Entfernen nicht.
+    /// danach die Datei verwerfen (die einzige Änderung an den Daten ohne Haken). Scheitert ein Bildschirm, bleibt sie
+    /// (die App prüft sie beim nächsten Start). Fehler hier verhindern das Entfernen nicht. False, wenn ein Bildschirm
+    /// nicht zurückgestellt ist (Hinweis im Ergebnis).
     /// </summary>
-    private void RestoreHdr(IProgress<UninstallStep>? progress, CancellationToken cancellationToken)
+    private bool RestoreHdr(IProgress<UninstallStep>? progress, CancellationToken cancellationToken)
     {
         var path = Locations.DataPaths.SessionStateFile;
         if (!File.Exists(path))
         {
-            return;
+            return true;
         }
 
         Report(progress, UninstallStep.RestoreHdr);
@@ -244,7 +255,7 @@ public sealed class UninstallEngine : IUninstallEngine
         if (!allRestored)
         {
             _log.Warn("Gemerkter HDR-Zustand bleibt gespeichert: " + path);
-            return;
+            return false;
         }
 
         try
@@ -256,6 +267,8 @@ public sealed class UninstallEngine : IUninstallEngine
         {
             _log.Warn("Gemerkter HDR-Zustand nicht gelöscht: " + ex.Message);
         }
+
+        return true;
     }
 
     /// <summary>Nur die installierten Dateien (und ihre „.new“/„.old“-Reste), dann leere eigene Ordner.</summary>
@@ -278,7 +291,7 @@ public sealed class UninstallEngine : IUninstallEngine
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    errors.Add(SetupSupport.Classify(ex, existingFile: true), SetupSupport.Describe("Löschen von " + path, ex));
+                    errors.Add(SetupSupport.Classify(ex, existingFile: true), SetupSupport.Describe("Löschen von " + path, ex), UninstallStep.RemoveFiles, path);
                     _log.Error("Nicht gelöscht: " + path, ex);
                 }
             }
@@ -326,11 +339,11 @@ public sealed class UninstallEngine : IUninstallEngine
                 continue;
             }
 
-            Run(errors, "Verknüpfung " + shortcut + " entfernen", () =>
+            Run(errors, UninstallStep.RemoveShortcuts, "Verknüpfung " + shortcut + " entfernen", () =>
             {
                 _files.Delete(shortcut);
                 _log.Info("Verknüpfung entfernt: " + shortcut);
-            });
+            }, shortcut);
         }
 
         DeleteIfEmpty(Locations.GameShortcutsDirectory);
@@ -355,18 +368,18 @@ public sealed class UninstallEngine : IUninstallEngine
                 continue;
             }
 
-            Run(errors, "Ordner " + folder + " löschen", () =>
+            Run(errors, UninstallStep.RemoveData, "Ordner " + folder + " löschen", () =>
             {
                 Directory.Delete(folder, recursive: true);
                 _log.Info("Gelöscht: " + folder);
-            });
+            }, folder);
         }
     }
 
     private void DeleteIfEmpty(string folder) => SetupSupport.DeleteIfEmpty(folder, _log);
 
     /// <summary>Ein Schritt außerhalb des Programmordners (Verknüpfung, Registry, Datenordner); Fehler werden gemerkt.</summary>
-    private void Run(FirstError errors, string what, Action action)
+    private void Run(FirstError errors, UninstallStep step, string what, Action action, string? path = null)
     {
         try
         {
@@ -374,7 +387,7 @@ public sealed class UninstallEngine : IUninstallEngine
         }
         catch (Exception ex)
         {
-            errors.Add(SetupSupport.ClassifyOutsideProgramFolder(ex), SetupSupport.Describe(what, ex));
+            errors.Add(SetupSupport.ClassifyOutsideProgramFolder(ex), SetupSupport.Describe(what, ex), step, path);
             _log.Error(what + " fehlgeschlagen.", ex);
         }
     }

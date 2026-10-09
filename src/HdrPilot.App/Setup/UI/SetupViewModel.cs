@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Input;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
@@ -16,7 +17,9 @@ public enum SetupPage
 /// <summary>
 /// Setup-Fenster (E83): Optionen mit Vorbelegung je Art (neu, Aktualisierung, gleiche oder ältere Version), dann die
 /// gemeldeten Schritte live, dann das Ergebnis. Die Arbeit macht die Engine; das ViewModel kennt nur
-/// <see cref="ISetupEngine"/>. Bei „HDRpilot ließ sich nicht beenden“ und gesperrten Dateien gibt es „Erneut versuchen“.
+/// <see cref="ISetupEngine"/>. Bei „HDRpilot ließ sich nicht beenden“ und gesperrten Dateien gibt es „Erneut versuchen“
+/// (und „Abbrechen“), bei anderen Fehlern nur „Schließen“. Startete HDRpilot danach nicht wie gewählt, wird der Schritt
+/// rot und das Ergebnis sagt es.
 /// </summary>
 public sealed class SetupViewModel : ObservableObject
 {
@@ -80,8 +83,17 @@ public sealed class SetupViewModel : ObservableObject
 
     public string InstallDirectory => _inspection.InstallDirectory;
 
-    /// <summary>Wo Einstellungen und Daten liegen (der Setup fasst sie nie an).</summary>
-    public string DataNote => SetupText.Format(SetupStrings.SetupDataNote, _engine.Locations.DataPaths.ConfigDirectory, _engine.Locations.DataPaths.DataDirectory);
+    /// <summary>Wo Einstellungen und Daten liegen (der Setup fasst sie nie an); ein gemeinsamer Ordner (Prüfläufe) nur einmal.</summary>
+    public string DataNote
+    {
+        get
+        {
+            var paths = _engine.Locations.DataPaths;
+            return string.Equals(Path.TrimEndingDirectorySeparator(paths.ConfigDirectory), Path.TrimEndingDirectorySeparator(paths.DataDirectory), StringComparison.OrdinalIgnoreCase)
+                ? SetupText.Format(SetupStrings.SetupDataNoteSingle, paths.ConfigDirectory)
+                : SetupText.Format(SetupStrings.SetupDataNote, paths.ConfigDirectory, paths.DataDirectory);
+        }
+    }
 
     public bool ShowRunningNote => _inspection.AppRunning;
 
@@ -136,6 +148,7 @@ public sealed class SetupViewModel : ObservableObject
                 OnPropertyChanged(nameof(HasError));
                 OnPropertyChanged(nameof(CanRetry));
                 OnPropertyChanged(nameof(ShowCancel));
+                OnPropertyChanged(nameof(ShowCloseOnError));
                 RaiseCommands();
             }
         }
@@ -158,7 +171,11 @@ public sealed class SetupViewModel : ObservableObject
 
     public bool CanRetry => HasError && _result?.Error is SetupErrorKind.AppStillRunning or SetupErrorKind.FilesInUse;
 
-    public bool ShowCancel => IsOptionsPage || HasError;
+    /// <summary>„Abbrechen“ vor dem Installieren und neben „Erneut versuchen“.</summary>
+    public bool ShowCancel => IsOptionsPage || CanRetry;
+
+    /// <summary>„Schließen“ nach einem Fehler, bei dem ein erneuter Versuch nicht hilft.</summary>
+    public bool ShowCloseOnError => HasError && !CanRetry;
 
     public bool CanInstall => IsOptionsPage && (!IsDowngrade || AllowDowngrade);
 
@@ -212,20 +229,33 @@ public sealed class SetupViewModel : ObservableObject
         }
 
         SetupRunner.LogResult(_log, result);
+        var elevated = result.Has(SetupWarning.NotLaunchedElevated);
+        var notStarted = result.Success && options.LaunchAfterInstall && !result.AppStarted;
+        IEnumerable<SetupStep> alsoFailed = notStarted ? [SetupStep.LaunchApp] : [];
         if (result.Success)
         {
-            _steps.Complete();
+            _steps.Complete(alsoFailed);
         }
         else
         {
-            _steps.Fail();
+            _steps.Fail(result.FailedSetupStep, alsoFailed);
         }
 
         _result = result;
         ExitCode = SetupMode.ExitCodeFor(result);
-        ResultText = result.Success
+        var text = result.Success
             ? SetupText.Format(Kind == SetupKind.Update ? SetupStrings.SetupDoneUpdate : SetupStrings.SetupDoneInstall, SetupText.Version(result.NewVersion ?? _inspection.SetupVersion))
             : SetupText.Error(result.Error, result.Message, _log.FilePath);
+        if (elevated)
+        {
+            text += " " + SetupStrings.SetupNotLaunchedElevated;
+        }
+        else if (notStarted)
+        {
+            text += " " + SetupStrings.SetupNotLaunched;
+        }
+
+        ResultText = text;
         Page = SetupPage.Result;
     }
 

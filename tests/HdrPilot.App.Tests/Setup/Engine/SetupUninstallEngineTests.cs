@@ -154,9 +154,21 @@ public sealed class SetupUninstallEngineTests : IDisposable
         var result = await _h.UninstallAsync();
 
         Assert.True(result.Success, result.Message);
+        Assert.True(result.Has(SetupWarning.HdrNotRestored)); // Hinweis im Ergebnis, Entfernen gilt trotzdem
         Assert.Equal([(@"\\?\DISPLAY#AAA", true)], _h.Hdr.Calls);
         Assert.True(File.Exists(L.DataPaths.SessionStateFile));
         Assert.False(File.Exists(L.ExePath));
+    }
+
+    [Fact]
+    public async Task Restored_or_missing_hdr_state_gives_no_warning()
+    {
+        await InstallAsync(desktop: false);
+        Assert.Null((await _h.UninstallAsync()).Warnings);
+
+        await InstallAsync(desktop: false);
+        SaveSessionState(new DisplayClaimState { MonitorDevicePath = @"\\?\DISPLAY#AAA", FriendlyName = "Monitor A", WasHdrOn = false, Restore = true });
+        Assert.False((await _h.UninstallAsync()).Has(SetupWarning.HdrNotRestored));
     }
 
     [Fact]
@@ -222,6 +234,7 @@ public sealed class SetupUninstallEngineTests : IDisposable
         var result = await _h.UninstallAsync(removeData: true);
 
         Assert.Equal(SetupErrorKind.AppStillRunning, result.Error);
+        Assert.Equal(UninstallStep.StopRunningApp, result.FailedUninstallStep);
         Assert.True(File.Exists(L.ExePath));
         Assert.True(File.Exists(L.StartMenuShortcut));
         Assert.True(File.Exists(L.DesktopShortcut));
@@ -239,10 +252,31 @@ public sealed class SetupUninstallEngineTests : IDisposable
         var result = await _h.UninstallAsync(files: files);
 
         Assert.Equal(SetupErrorKind.FilesInUse, result.Error);
+        Assert.Equal(UninstallStep.RemoveFiles, result.FailedUninstallStep);
+        Assert.Equal(L.ExePath, result.FailedFile);
         Assert.True(File.Exists(L.ExePath));
         Assert.False(File.Exists(_h.InstalledFile("README.md")));
         Assert.False(File.Exists(L.StartMenuShortcut));
         Assert.NotNull(_h.Entries.Entry);
+    }
+
+    [Fact]
+    public async Task Locked_file_after_the_exe_is_named_with_its_step_and_the_rest_goes_on()
+    {
+        await InstallAsync(desktop: false);
+        var readme = _h.InstalledFile("README.md");
+        var files = new FailingFileOperations((op, path) =>
+            op == "Delete" && path.Equals(readme, StringComparison.OrdinalIgnoreCase) ? FailingFileOperations.SharingViolation() : null);
+        var progress = new SyncProgress<UninstallStep>();
+
+        var result = await _h.UninstallAsync(files: files, progress: progress);
+
+        Assert.Equal(SetupErrorKind.FilesInUse, result.Error);
+        Assert.Equal(UninstallStep.RemoveFiles, result.FailedUninstallStep);
+        Assert.Equal(readme, result.FailedFile);
+        Assert.False(File.Exists(L.ExePath));
+        Assert.Null(_h.Entries.Entry); // EXE weg: Eintrag entfernt, ein neuer Versuch geht nicht mehr
+        Assert.Equal([UninstallStep.RemoveFiles, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart, UninstallStep.Unregister], progress.Items);
     }
 
     [Fact]
@@ -255,6 +289,7 @@ public sealed class SetupUninstallEngineTests : IDisposable
 
         Assert.Equal(SetupErrorKind.Unexpected, result.Error);
         Assert.StartsWith("Eintrag entfernen: ", result.Message, StringComparison.Ordinal);
+        Assert.Equal(UninstallStep.Unregister, result.FailedUninstallStep);
         Assert.False(File.Exists(L.ExePath));
     }
 

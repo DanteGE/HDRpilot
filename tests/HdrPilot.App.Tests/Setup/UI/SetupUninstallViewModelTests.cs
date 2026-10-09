@@ -167,7 +167,7 @@ public sealed class SetupUninstallViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Progress_engine_exception_is_an_unexpected_error()
+    public async Task Progress_engine_exception_is_an_incomplete_removal_not_an_unchanged_version()
     {
         var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations) { Failure = new InvalidOperationException("Registry weg") };
         var model = new UninstallProgressViewModel(engine, removeData: true, "C:\\Config", _folder.Log);
@@ -175,8 +175,81 @@ public sealed class SetupUninstallViewModelTests : IDisposable
         await model.RunAsync();
 
         Assert.Equal(SetupExitCodes.Failed, model.ExitCode);
-        Assert.Equal(Format(SetupStrings.SetupErrorUnexpected, "Registry weg", _folder.Log.FilePath), model.ResultText);
+        Assert.Equal(Format(SetupStrings.UninstallErrorUnexpected, "Registry weg", _folder.Log.FilePath), model.ResultText);
         Assert.True(model.CloseCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Progress_failure_in_the_middle_marks_exactly_the_failed_step()
+    {
+        // Das Entfernen macht nach der gesperrten Datei weiter: rot wird nur „Dateien entfernen“, nicht der zuletzt gemeldete Schritt.
+        var readme = Path.Combine(_folder.Locations.InstallDirectory, "README.md");
+        var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations)
+        {
+            Report = [UninstallStep.StopRunningApp, UninstallStep.RestoreHdr, UninstallStep.RemoveFiles, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart, UninstallStep.Unregister],
+            Result = SetupResult.Failed(SetupErrorKind.FilesInUse, "Löschen von README.md: gesperrt", new Version(1, 1, 0)) with
+            {
+                FailedUninstallStep = UninstallStep.RemoveFiles,
+                FailedFile = readme,
+            },
+        };
+        var model = new UninstallProgressViewModel(engine, removeData: false, "C:\\Config", _folder.Log);
+
+        await model.RunAsync();
+
+        Assert.True(model.HasError);
+        Assert.Equal(SetupExitCodes.Failed, model.ExitCode);
+        Assert.Equal(StepState.Failed, model.StepList.StateOf(UninstallStep.RemoveFiles));
+        foreach (var done in new[] { UninstallStep.StopRunningApp, UninstallStep.RestoreHdr, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart, UninstallStep.Unregister })
+        {
+            Assert.Equal(StepState.Done, model.StepList.StateOf(done));
+        }
+
+        // Der Eintrag ist schon weg: die Datei wird genannt, kein „versuche es erneut“.
+        Assert.Equal(Format(SetupStrings.UninstallErrorFilesInUse, readme), model.ResultText);
+        Assert.Contains("RemoveFiles", _folder.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Progress_locked_exe_keeps_the_retry_text_because_the_entry_stays()
+    {
+        var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations)
+        {
+            Report = [UninstallStep.RemoveFiles, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart],
+            Result = SetupResult.Failed(SetupErrorKind.FilesInUse, "gesperrt") with
+            {
+                FailedUninstallStep = UninstallStep.RemoveFiles,
+                FailedFile = _folder.Locations.ExePath.ToUpperInvariant(),
+            },
+        };
+        var model = new UninstallProgressViewModel(engine, removeData: false, "C:\\Config", _folder.Log);
+
+        await model.RunAsync();
+
+        Assert.Equal(SetupStrings.SetupErrorFilesInUse, model.ResultText);
+        Assert.Equal(StepState.Failed, model.StepList.StateOf(UninstallStep.RemoveFiles));
+        Assert.Equal(StepState.Pending, model.StepList.StateOf(UninstallStep.Unregister));
+    }
+
+    [Fact]
+    public async Task Progress_hdr_not_restored_is_a_warning_on_its_step_and_still_a_success()
+    {
+        var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations)
+        {
+            Report = [UninstallStep.RestoreHdr, UninstallStep.RemoveFiles],
+            Result = new SetupResult(true, null, null, new Version(1, 1, 0), null, false, Warnings: [SetupWarning.HdrNotRestored]),
+        };
+        var model = new UninstallProgressViewModel(engine, removeData: false, @"C:\Users\Test\AppData\Roaming\HDRpilot", _folder.Log);
+
+        await model.RunAsync();
+
+        Assert.True(model.Succeeded);
+        Assert.Equal(SetupExitCodes.Ok, model.ExitCode);
+        Assert.Equal(StepState.Failed, model.StepList.StateOf(UninstallStep.RestoreHdr));
+        Assert.Equal(StepState.Done, model.StepList.StateOf(UninstallStep.RemoveFiles));
+        Assert.Equal(StepState.Done, model.StepList.StateOf(UninstallStep.Unregister));
+        var expected = SetupStrings.UninstallDone + " " + Format(SetupStrings.UninstallDoneDataKept, @"C:\Users\Test\AppData\Roaming\HDRpilot") + " " + SetupStrings.UninstallHdrNotRestored;
+        Assert.Equal(expected, model.ResultText);
     }
 
     private static string Format(string format, params object[] args) => string.Format(CultureInfo.CurrentCulture, format, args);

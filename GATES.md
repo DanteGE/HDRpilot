@@ -217,14 +217,15 @@ und die EXPECT-Marke ausgibt.
 Setup = die normale `HDRpilot.exe` mit angehängtem Paket (README, Lizenzhinweise, Kommandozeile) und Prüfsumme; installiert
 für den angemeldeten Benutzer ohne Adminrechte nach `%LOCALAPPDATA%\Programs\HDRpilot`. Einstellungen und Daten liegen
 getrennt (`%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`) und werden vom Setup nie angefasst; beim Entfernen nur auf
-ausdrücklichen Wunsch. Prüfläufe nutzen ausschließlich `--test-root` (eigene Ordner und eigener Registry-Zweig).
+ausdrücklichen Wunsch. Einzige Ausnahme: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach
+`session-state.json`. Prüfläufe nutzen ausschließlich `--test-root` (eigene Ordner und eigener Registry-Zweig).
 
 - [ ] G7.1: Setup-Logik per Unit-Tests belegt (mit Gegenproben): Paketformat lesen und prüfen (beschädigt, abgeschnitten, fremde Datei), Erstinstallation, Aktualisierung mit Rückfall bei Fehler (alte EXE bleibt lauffähig), gleiche und ältere Version, laufende App beenden ohne Prozess-Handle, Verknüpfungen und Autostart nur für die eigene EXE, Eintrag unter „Installierte Apps“, Entfernen nur der eigenen Dateien und Verknüpfungen, Daten bleiben außer auf Wunsch, Steam-Startoptionen mit HDRpilot werden gefunden, Befehlszeile des Setups
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Setup" -MinTests 40
   EXPECT: TESTS_OK
   EVIDENCE: pending
 
-- [ ] G7.2: Ende-zu-Ende mit der echten Setup-Datei in einer Testablage: Erstinstallation (installierte EXE byte-gleich mit der portablen, Startmenü-Verknüpfung, Registry-Eintrag mit Version, Größe, Deinstallations-Befehl), App startet danach; Aktualisierung über die laufende App (wird sauber beendet und neu gestartet, Einstellungen unverändert); Entfernen behält die Einstellungen, mit `--remove-data` sind sie weg; die Kopie zum Entfernen räumt sich selbst weg; der Setup läuft ohne Adminrechte
+- [ ] G7.2: Ende-zu-Ende mit der echten Setup-Datei in einer Testablage: Erstinstallation (installierte EXE byte-gleich mit der portablen, Startmenü-Verknüpfung, Registry-Eintrag mit Version, Größe, Deinstallations-Befehl), App startet danach; Neuinstallation (gleiche Version) über die laufende App (wird sauber beendet und neu gestartet, Einstellungen unverändert); Aktualisieren einer älteren, nicht laufenden EXE (Stand des Nutzers ohne Eintrag: EXE und Beigaben byte-gleich ersetzt, Autostart bleibt, Eintrag neu, Einstellungen unverändert); Entfernen behält die Einstellungen, mit `--remove-data` sind sie weg; die Kopie zum Entfernen räumt sich selbst weg; der Setup läuft ohne Adminrechte
   CHECK: ps tools\gates\phase7-setup.ps1
   EXPECT: PHASE7_SETUP_OK
   EVIDENCE: pending
@@ -234,7 +235,7 @@ ausdrücklichen Wunsch. Prüfläufe nutzen ausschließlich `--test-root` (eigene
   EXPECT: PHASE7_SETUP_UI_OK
   EVIDENCE: pending
 
-- [ ] G7.4: Auslieferung erzeugt `HDRpilot-Setup-<Version>.exe` neben dem portablen Ordner; Version 1.1.0; README beschreibt Installation, Aktualisierung und Entfernen; Neubau ohne Warnungen, alle Tests und alle früheren Gates grün
+- [ ] G7.4: Auslieferung erzeugt `HDRpilot-Setup-<Version>.exe` neben dem portablen Ordner; Version 1.1.0; README beschreibt Installation, Aktualisierung und Entfernen; Neubau ohne Warnungen, alle Tests und alle früheren Gates grün. Auslieferung und README belegen außer dem Testlauf `tools\gates\phase5-publish.ps1` (PHASE5_PUBLISH_OK) und `tools\gates\phase5-readme.ps1` (PHASE5_README_OK)
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
   EVIDENCE: pending

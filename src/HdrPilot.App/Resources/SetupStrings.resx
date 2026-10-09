@@ -15,7 +15,7 @@
 
   <!-- Setup: Fenster und Optionen (E83) -->
   <data name="SetupWindowTitle" xml:space="preserve">
-    <value>HDRpilot Setup</value>
+    <value>HDRpilot-Setup</value>
   </data>
   <data name="SetupTitleInstall" xml:space="preserve">
     <value>HDRpilot {0} installieren</value>
@@ -46,6 +46,10 @@
     <value>Deine Einstellungen, Spieleliste und Protokolle bleiben erhalten (gespeichert in {0} und {1}).</value>
     <comment>{0} = Ordner der Einstellungen, {1} = Ordner der Daten</comment>
   </data>
+  <data name="SetupDataNoteSingle" xml:space="preserve">
+    <value>Deine Einstellungen, Spieleliste und Protokolle bleiben erhalten (gespeichert in {0}).</value>
+    <comment>Wie SetupDataNote, wenn Einstellungen und Daten im selben Ordner liegen (Prüfläufe); {0} = dieser Ordner</comment>
+  </data>
   <data name="SetupAutostart" xml:space="preserve">
     <value>Mit Windows starten</value>
   </data>
@@ -73,6 +77,10 @@
   <data name="SetupCloseButton" xml:space="preserve">
     <value>Fertig</value>
   </data>
+  <data name="SetupCloseErrorButton" xml:space="preserve">
+    <value>Schließen</value>
+    <comment>Nach einem Fehler, bei dem ein erneuter Versuch nicht hilft</comment>
+  </data>
   <data name="SetupRetryButton" xml:space="preserve">
     <value>Erneut versuchen</value>
   </data>
@@ -91,13 +99,27 @@
     <value>Verknüpfungen anlegen</value>
   </data>
   <data name="SetupStepAutostart" xml:space="preserve">
-    <value>Autostart einrichten</value>
+    <value>Autostart anpassen</value>
   </data>
   <data name="SetupStepRegister" xml:space="preserve">
     <value>Unter „Installierte Apps“ eintragen</value>
   </data>
   <data name="SetupStepLaunchApp" xml:space="preserve">
     <value>HDRpilot starten</value>
+  </data>
+
+  <!-- Zustand eines Schritts für die Bedienungshilfen (ItemStatus der Listenzeile), Setup und Entfernen -->
+  <data name="SetupStepStatePending" xml:space="preserve">
+    <value>offen</value>
+  </data>
+  <data name="SetupStepStateRunning" xml:space="preserve">
+    <value>läuft</value>
+  </data>
+  <data name="SetupStepStateDone" xml:space="preserve">
+    <value>erledigt</value>
+  </data>
+  <data name="SetupStepStateFailed" xml:space="preserve">
+    <value>fehlgeschlagen</value>
   </data>
 
   <!-- Setup: Ergebnis und Fehler (Fehlertexte gelten auch für das Entfernen) -->
@@ -109,11 +131,19 @@
     <value>HDRpilot wurde auf {0} aktualisiert. Deine Einstellungen sind unverändert.</value>
     <comment>{0} = neue Version</comment>
   </data>
+  <data name="SetupNotLaunched" xml:space="preserve">
+    <value>HDRpilot ließ sich nicht starten; starte es über das Startmenü.</value>
+    <comment>Zusatz zum Ergebnis, wenn „HDRpilot danach starten“ gewählt war, der Start aber scheiterte</comment>
+  </data>
+  <data name="SetupNotLaunchedElevated" xml:space="preserve">
+    <value>HDRpilot wurde nicht gestartet, weil der Setup mit Administratorrechten lief. Starte HDRpilot über das Startmenü.</value>
+    <comment>Zusatz zum Ergebnis: ein Setup mit Adminrechten startet HDRpilot nie</comment>
+  </data>
   <data name="SetupErrorSetupFileDamaged" xml:space="preserve">
-    <value>Die Setup-Datei ist beschädigt oder unvollständig. Bitte kopiere oder lade sie erneut.</value>
+    <value>Die Setup-Datei ist beschädigt oder unvollständig. Bitte kopiere sie erneut oder lade sie erneut herunter.</value>
   </data>
   <data name="SetupErrorAppStillRunning" xml:space="preserve">
-    <value>HDRpilot ließ sich nicht beenden. Beende es über das Tray-Menü („HDRpilot beenden“) und versuche es erneut.</value>
+    <value>HDRpilot ließ sich nicht beenden. Beende es über das Menü im Infobereich („HDRpilot beenden“) und versuche es erneut.</value>
   </data>
   <data name="SetupErrorFilesInUse" xml:space="preserve">
     <value>Eine Datei im Programmordner ist gerade in Benutzung. Schließe HDRpilot und versuche es erneut.</value>
@@ -128,7 +158,7 @@
     <value>Es ist schon eine neuere Version installiert.</value>
   </data>
   <data name="SetupErrorAnotherSetupRunning" xml:space="preserve">
-    <value>Es läuft schon ein Setup oder eine Deinstallation von HDRpilot.</value>
+    <value>Es läuft schon ein Setup oder das Entfernen von HDRpilot.</value>
   </data>
   <data name="SetupErrorNotInstalled" xml:space="preserve">
     <value>HDRpilot ist nicht installiert.</value>
@@ -141,6 +171,14 @@
     <value>Unerwarteter Fehler. Die bisherige Version ist unverändert. Einzelheiten stehen in {0}.</value>
     <comment>Wie SetupErrorUnexpected, wenn es keine technische Angabe gibt; {0} = Pfad des Setup-Protokolls</comment>
   </data>
+  <data name="SetupErrorRefusedArguments" xml:space="preserve">
+    <value>Diese Befehlszeile passt nicht ({0}); es wurde nichts geändert. Einzelheiten stehen in {1}.</value>
+    <comment>Setup oder Entfernen mit abgelehnten Schaltern; {0} = abgelehnte Schalter, {1} = Pfad des Setup-Protokolls</comment>
+  </data>
+  <data name="SetupSteamAppFallback" xml:space="preserve">
+    <value>Steam-App {0}</value>
+    <comment>Steam-Spiel ohne bekannten Namen in der Warnung vor Steam-Startoptionen; {0} = Steam-AppID</comment>
+  </data>
 
   <!-- Entfernen: Rückfrage -->
   <data name="UninstallWindowTitle" xml:space="preserve">
@@ -151,13 +189,13 @@
     <comment>{0} = installierte Version</comment>
   </data>
   <data name="UninstallInfo" xml:space="preserve">
-    <value>Entfernt das Programm, seine Verknüpfungen und den Autostart.</value>
+    <value>Entfernt das Programm, seine Verknüpfungen (auch die „(HDR)“-Verknüpfungen deiner Spiele) und den Autostart.</value>
   </data>
   <data name="UninstallRemoveData" xml:space="preserve">
     <value>Auch Einstellungen, Spieleliste und Protokolle löschen</value>
   </data>
   <data name="UninstallKeepDataNote" xml:space="preserve">
-    <value>Ohne Haken bleiben sie erhalten und werden bei einer neuen Installation wieder benutzt.</value>
+    <value>Ohne Haken bleiben sie erhalten und werden bei einer neuen Installation wieder benutzt. Mit Haken werden auch die HDR-Liste und ein gespeichertes PCGamingWiki-Konto gelöscht.</value>
   </data>
   <data name="UninstallSteamWarning" xml:space="preserve">
     <value>Bei diesen Steam-Spielen steht noch die HDRpilot-Startoption. Entferne sie in Steam (Eigenschaften → Startoptionen), sonst starten die Spiele nicht mehr:</value>
@@ -200,6 +238,22 @@
   </data>
   <data name="UninstallDoneDataRemoved" xml:space="preserve">
     <value>Einstellungen und Daten wurden gelöscht.</value>
+  </data>
+  <data name="UninstallHdrNotRestored" xml:space="preserve">
+    <value>Der HDR-Zustand ließ sich nicht wiederherstellen; schalte HDR bei Bedarf in den Windows-Anzeigeeinstellungen um.</value>
+    <comment>Zusatz zum Ergebnis, wenn der gemerkte HDR-Zustand nicht zurückgestellt werden konnte (Entfernen gilt trotzdem)</comment>
+  </data>
+  <data name="UninstallErrorUnexpected" xml:space="preserve">
+    <value>Entfernen nicht vollständig: {0}. Einzelheiten stehen in {1}.</value>
+    <comment>{0} = technische Angabe, {1} = Pfad des Setup-Protokolls</comment>
+  </data>
+  <data name="UninstallErrorUnexpectedNoDetail" xml:space="preserve">
+    <value>Entfernen nicht vollständig. Einzelheiten stehen in {0}.</value>
+    <comment>Wie UninstallErrorUnexpected, wenn es keine technische Angabe gibt; {0} = Pfad des Setup-Protokolls</comment>
+  </data>
+  <data name="UninstallErrorFilesInUse" xml:space="preserve">
+    <value>Eine Datei ließ sich nicht entfernen, weil sie gerade benutzt wird: {0}. Lösche sie später von Hand.</value>
+    <comment>Gesperrte Datei, nachdem der Eintrag unter „Installierte Apps“ schon entfernt ist (ein neuer Versuch geht nicht); {0} = Pfad der Datei</comment>
   </data>
   <data name="UninstallCloseButton" xml:space="preserve">
     <value>Fertig</value>

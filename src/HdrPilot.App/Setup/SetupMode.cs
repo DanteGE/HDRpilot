@@ -114,7 +114,8 @@ public sealed record SetupMode(SetupModeKind Kind, SetupArguments Arguments, Set
 
     /// <summary>
     /// Optionen ohne Fenster (<c>--quiet</c>): Schalter der Befehlszeile, sonst bisheriger Stand (neu: Autostart an,
-    /// Desktop-Verknüpfung nur, wenn schon eine da ist); gestartet wird, außer mit <c>--no-launch</c>.
+    /// Desktop-Verknüpfung nur, wenn schon eine da ist); gestartet wird, außer mit <c>--no-launch</c> (und nie, wenn der
+    /// Setup mit Adminrechten läuft; das Ergebnis bleibt dann Ok).
     /// </summary>
     public static InstallOptions QuietOptions(SetupArguments args, SetupInspection inspection) => new(
         args.Autostart ?? (inspection.Kind == SetupKind.Install || inspection.AutostartEnabled),

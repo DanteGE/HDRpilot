@@ -38,9 +38,15 @@ public sealed record SetupInspection(
         : SetupKind.Downgrade;
 }
 
-/// <param name="Autostart">Mit Windows starten (Run-Wert auf die installierte EXE, sonst eigenen Wert entfernen).</param>
+/// <param name="Autostart">
+/// Mit Windows starten (Run-Wert auf die installierte EXE). Sonst wird der Wert „HDRpilot“ entfernt, wenn er eine
+/// HDRpilot.exe startet (auch eine andere Kopie: der Wertname gehört HDRpilot); Werte für andere Programme bleiben.
+/// </param>
 /// <param name="DesktopShortcut">Desktop-Verknüpfung „HDRpilot“ anlegen (sonst eine eigene entfernen).</param>
-/// <param name="LaunchAfterInstall">Danach starten (neu: mit Fenster; lief die App vorher, startet sie wieder im Tray).</param>
+/// <param name="LaunchAfterInstall">
+/// Danach starten (neu: mit Fenster; lief die App vorher, startet sie wieder im Infobereich). Nie, wenn der Setup mit
+/// Adminrechten läuft (<see cref="SetupWarning.NotLaunchedElevated"/>).
+/// </param>
 /// <param name="AllowDowngrade">Ältere Version über eine neuere installieren.</param>
 public sealed record InstallOptions(bool Autostart, bool DesktopShortcut, bool LaunchAfterInstall, bool AllowDowngrade = false);
 
@@ -93,11 +99,37 @@ public enum SetupErrorKind
     Unexpected,
 }
 
+/// <summary>Hinweis zu einem Ergebnis, das trotzdem gelten kann (Erfolg bleibt Erfolg).</summary>
+public enum SetupWarning
+{
+    /// <summary>Entfernen: der gemerkte HDR-Zustand ließ sich nicht wiederherstellen (session-state.json bleibt).</summary>
+    HdrNotRestored,
+
+    /// <summary>Setup lief mit Adminrechten: HDRpilot wurde bewusst nicht gestartet (es liefe sonst ebenso erhöht).</summary>
+    NotLaunchedElevated,
+}
+
 /// <summary>Ergebnis von Installation oder Entfernen. Bei Fehlern ist der vorige Zustand wiederhergestellt.</summary>
-/// <param name="Message">Fehlertext für den Nutzer (aus den Ressourcen) oder null.</param>
-public sealed record SetupResult(bool Success, SetupErrorKind? Error, string? Message, Version? PreviousVersion, Version? NewVersion, bool AppStarted)
+/// <param name="Message">Technische Angabe zum Fehler (Protokoll; die Oberfläche nimmt ihre Texte aus den Ressourcen) oder null.</param>
+/// <param name="FailedUninstallStep">Entfernen: Schritt des ersten Fehlers (das Entfernen macht danach weiter, wo es sicher ist).</param>
+/// <param name="FailedSetupStep">Setup: Schritt, in dem der Fehler auftrat.</param>
+/// <param name="Warnings">Hinweise neben dem Ergebnis (auch bei Erfolg), sonst null.</param>
+/// <param name="FailedFile">Datei, die der Fehler betrifft (etwa eine gesperrte Datei beim Entfernen), sonst null.</param>
+public sealed record SetupResult(
+    bool Success,
+    SetupErrorKind? Error,
+    string? Message,
+    Version? PreviousVersion,
+    Version? NewVersion,
+    bool AppStarted,
+    UninstallStep? FailedUninstallStep = null,
+    SetupStep? FailedSetupStep = null,
+    IReadOnlyList<SetupWarning>? Warnings = null,
+    string? FailedFile = null)
 {
     public static SetupResult Failed(SetupErrorKind error, string message, Version? previous = null) => new(false, error, message, previous, null, false);
+
+    public bool Has(SetupWarning warning) => Warnings?.Contains(warning) == true;
 }
 
 /// <summary>Installation und Aktualisierung (Logik ohne Oberfläche).</summary>
@@ -111,7 +143,7 @@ public interface ISetupEngine
 }
 
 /// <summary>Stand vor dem Entfernen.</summary>
-/// <param name="SteamGamesWithLaunchOption">Steam-Spiele, deren Startoption noch HDRpilot aufruft (Namen, sonst „Steam-App &lt;ID&gt;“).</param>
+/// <param name="SteamGamesWithLaunchOption">Steam-Spiele, deren Startoption noch HDRpilot aufruft (Namen, sonst „Steam-App &lt;ID&gt;“ aus den Ressourcen).</param>
 public sealed record UninstallInspection(
     string InstallDirectory,
     Version? InstalledVersion,

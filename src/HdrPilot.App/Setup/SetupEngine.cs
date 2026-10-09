@@ -11,7 +11,8 @@ namespace HdrPilot.App.Setup;
 /// Befehlsweg beenden, Dateien als „.new“ ablegen und prüfen, dann ersetzen (bisherige als „.old“), Verknüpfungen,
 /// Autostart, Eintrag unter „Installierte Apps“, „.old“ löschen, App starten. Scheitert ein Schritt nach dem Kopieren,
 /// wird alles bisher Geänderte zurückgenommen: die vorige Version bleibt lauffähig und startet wieder, wenn sie lief.
-/// Einstellungen und Daten (<see cref="SetupLocations.DataPaths"/>) fasst der Setup nie an.
+/// Einstellungen und Daten (<see cref="SetupLocations.DataPaths"/>) fasst der Setup nie an. Läuft der Setup mit
+/// Adminrechten, startet er HDRpilot nie (auch nicht nach einem Fehler): die App liefe sonst ebenfalls erhöht.
 /// </summary>
 public sealed class SetupEngine : ISetupEngine
 {
@@ -28,9 +29,11 @@ public sealed class SetupEngine : ISetupEngine
     private readonly Func<string, Version?> _versionReader;
     private readonly TimeSpan _stopTimeout;
     private readonly string _mutexName;
+    private readonly Func<bool> _isElevated;
 
     /// <param name="setupVersion">Version dieser Setup-Datei (Standard: Version dieser Assembly).</param>
     /// <param name="versionReader">Version einer installierten EXE (Standard: Dateiversion).</param>
+    /// <param name="isElevated">Läuft der Setup mit Adminrechten (Standard: <see cref="SetupSupport.IsElevated"/>)?</param>
     public SetupEngine(
         SetupLocations locations,
         SetupBundle bundle,
@@ -43,7 +46,8 @@ public sealed class SetupEngine : ISetupEngine
         Version? setupVersion = null,
         Func<string, Version?>? versionReader = null,
         TimeSpan? stopTimeout = null,
-        string? mutexName = null)
+        string? mutexName = null,
+        Func<bool>? isElevated = null)
     {
         Locations = locations;
         _bundle = bundle;
@@ -57,6 +61,7 @@ public sealed class SetupEngine : ISetupEngine
         _versionReader = versionReader ?? SetupSupport.ReadFileVersion;
         _stopTimeout = stopTimeout ?? DefaultStopTimeout;
         _mutexName = mutexName ?? SetupSupport.MutexNameFor(locations);
+        _isElevated = isElevated ?? SetupSupport.IsElevated;
     }
 
     public SetupLocations Locations { get; }
@@ -102,7 +107,7 @@ public sealed class SetupEngine : ISetupEngine
         Report(progress, SetupStep.CheckSetupFile);
         if (!CheckBundle(out var payload, out var problem))
         {
-            return Fail(SetupErrorKind.SetupFileDamaged, problem, previous);
+            return Fail(SetupErrorKind.SetupFileDamaged, problem, previous, SetupStep.CheckSetupFile);
         }
 
         // Was hier beendet wird, startet nach einem Fehler wieder: meist die installierte EXE, sonst eine portable Kopie
@@ -114,7 +119,7 @@ public sealed class SetupEngine : ISetupEngine
             stoppedExe = Guard("Laufende Instanz zuordnen", () => _app.InstanceExePath()) ?? Locations.ExePath;
             if (!_app.Stop(_stopTimeout))
             {
-                return Fail(SetupErrorKind.AppStillRunning, string.Create(CultureInfo.InvariantCulture, $"HDRpilot lief nach {_stopTimeout.TotalSeconds:0} s noch."), previous);
+                return Fail(SetupErrorKind.AppStillRunning, string.Create(CultureInfo.InvariantCulture, $"HDRpilot lief nach {_stopTimeout.TotalSeconds:0} s noch."), previous, SetupStep.StopRunningApp);
             }
 
             _log.Info("HDRpilot ist beendet: " + stoppedExe);
@@ -133,7 +138,7 @@ public sealed class SetupEngine : ISetupEngine
             transaction.Rollback();
             RemoveIfEmpty(newFolders);
             var kind = ex is InvalidDataException ? SetupErrorKind.SetupFileDamaged : SetupSupport.Classify(ex, transaction.FailedOnExistingFile);
-            return FailAfterStop(kind, SetupSupport.Describe("Dateien kopieren (" + (transaction.CurrentFile ?? Locations.InstallDirectory) + ")", ex), previous, stoppedExe);
+            return FailAfterStop(kind, SetupSupport.Describe("Dateien kopieren (" + (transaction.CurrentFile ?? Locations.InstallDirectory) + ")", ex), previous, stoppedExe, SetupStep.CopyFiles);
         }
 
         PreviousState? before = null;
@@ -162,19 +167,53 @@ public sealed class SetupEngine : ISetupEngine
 
             // Verknüpfungen und Registry liegen außerhalb des Programmordners: „kein Schreibzugriff auf den Programmordner“
             // oder „Datei in Benutzung“ wäre hier die falsche Meldung.
-            return FailAfterStop(SetupSupport.ClassifyOutsideProgramFolder(ex), SetupSupport.Describe(step.ToString(), ex), previous, stoppedExe);
+            return FailAfterStop(SetupSupport.ClassifyOutsideProgramFolder(ex), SetupSupport.Describe(step.ToString(), ex), previous, stoppedExe, step);
         }
 
         transaction.Complete();
         var started = false;
+        IReadOnlyList<SetupWarning>? warnings = null;
         if (options.LaunchAfterInstall)
         {
-            Report(progress, SetupStep.LaunchApp);
-            started = Launch(Locations.ExePath, inspection.Kind != SetupKind.Install && wasRunning ? "--minimized" : "--show");
+            if (RunsElevated())
+            {
+                warnings = [SetupWarning.NotLaunchedElevated];
+            }
+            else
+            {
+                Report(progress, SetupStep.LaunchApp);
+                started = Launch(Locations.ExePath, inspection.Kind != SetupKind.Install && wasRunning ? "--minimized" : "--show");
+            }
         }
 
         _log.Info("Setup fertig: HDRpilot " + _setupVersion.ToString(3) + " ist installiert" + (started ? " und gestartet." : "."));
-        return new SetupResult(true, null, null, previous, _setupVersion, started);
+        return new SetupResult(true, null, null, previous, _setupVersion, started, Warnings: warnings);
+    }
+
+    /// <summary>
+    /// True, wenn der Setup mit Adminrechten läuft: dann startet er HDRpilot nicht (die App erbte das erhöhte Token, und
+    /// ihr Autostart und ihre Spielstarts liefen anders als gewohnt). Steht im Protokoll. Ist es nicht feststellbar, gilt
+    /// der normale Fall.
+    /// </summary>
+    private bool RunsElevated()
+    {
+        bool elevated;
+        try
+        {
+            elevated = _isElevated();
+        }
+        catch (Exception ex)
+        {
+            _log.Warn(SetupSupport.Describe("Adminrechte prüfen", ex));
+            return false;
+        }
+
+        if (elevated)
+        {
+            _log.Warn("Der Setup läuft mit Adminrechten: HDRpilot wird nicht gestartet (es liefe sonst ebenfalls mit Adminrechten).");
+        }
+
+        return elevated;
     }
 
     private Version? InstalledVersion()
@@ -311,13 +350,13 @@ public sealed class SetupEngine : ISetupEngine
             SetupSupport.EnableAutostart(_registry, Locations);
             _log.Info("Autostart eingetragen.");
         }
-        else if (SetupSupport.RemoveOwnAutostart(_registry, Locations))
+        else if (SetupSupport.RemoveAutostartOfAnyCopy(_registry, Locations) is { } removed)
         {
-            _log.Info("Autostart entfernt.");
+            _log.Info("Autostart entfernt: " + removed);
         }
         else if (SetupSupport.ReadAutostart(_registry, Locations) is { } foreign)
         {
-            _log.Info("Fremder Autostart-Wert bleibt unberührt: " + foreign);
+            _log.Info("Autostart-Wert für ein anderes Programm bleibt unberührt: " + foreign);
         }
     }
 
@@ -386,12 +425,12 @@ public sealed class SetupEngine : ISetupEngine
     }
 
     /// <summary>
-    /// Fehler nach dem Beenden der App: die beendete (unveränderte) Version wieder im Tray starten. Das ist die EXE, aus der
-    /// sie lief (auch eine portable Kopie); gibt es die nicht mehr, die bisher installierte.
+    /// Fehler nach dem Beenden der App: die beendete (unveränderte) Version wieder im Infobereich starten. Das ist die EXE,
+    /// aus der sie lief (auch eine portable Kopie); gibt es die nicht mehr, die bisher installierte. Mit Adminrechten nie.
     /// </summary>
-    private SetupResult FailAfterStop(SetupErrorKind kind, string detail, Version? previous, string? stoppedExe)
+    private SetupResult FailAfterStop(SetupErrorKind kind, string detail, Version? previous, string? stoppedExe, SetupStep step)
     {
-        var result = Fail(kind, detail, previous);
+        var result = Fail(kind, detail, previous, step);
         if (stoppedExe is null)
         {
             return result;
@@ -404,14 +443,19 @@ public sealed class SetupEngine : ISetupEngine
             return result;
         }
 
+        if (RunsElevated())
+        {
+            return result with { Warnings = [SetupWarning.NotLaunchedElevated] };
+        }
+
         _log.Info("Die beendete Version wird wieder gestartet: " + exe);
         return result with { AppStarted = Launch(exe, "--minimized") };
     }
 
-    private SetupResult Fail(SetupErrorKind kind, string detail, Version? previous)
+    private SetupResult Fail(SetupErrorKind kind, string detail, Version? previous, SetupStep? step = null)
     {
-        _log.Error("Setup nicht abgeschlossen (" + kind + "): " + detail);
-        return SetupResult.Failed(kind, detail, previous);
+        _log.Error("Setup nicht abgeschlossen (" + kind + (step is null ? string.Empty : ", Schritt " + step) + "): " + detail);
+        return SetupResult.Failed(kind, detail, previous) with { FailedSetupStep = step };
     }
 
     private void Report(IProgress<SetupStep>? progress, SetupStep step)
@@ -459,5 +503,6 @@ public static partial class SetupEngines
         WindowsRegistry.Instance,
         new WindowsUninstallEntryStore(locations.UninstallKeyPath),
         new SetupAppControl(locations),
-        ShellSetupShortcuts.Instance);
+        ShellSetupShortcuts.Instance,
+        isElevated: SetupSupport.IsElevated);
 }

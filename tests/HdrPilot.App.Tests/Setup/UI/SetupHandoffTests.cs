@@ -51,9 +51,54 @@ public sealed class SetupHandoffTests : IDisposable
         Assert.Null(UninstallHandoff.RemovableTempFolder(Path.Combine(temp, "HDRpilot-Uninstall-" + Guid1, "HDRpilot-Uninstall.exe"), null));
         Assert.Null(UninstallHandoff.RemovableTempFolder(Path.Combine(temp, "HDRpilot-Uninstall-" + Guid1, "HDRpilot-Uninstall.exe"), Path.Combine(_folder.Root, "Other")));
 
-        // cmd.exe läse %…% auch in Anführungszeichen: solche Temp-Pfade bleiben liegen.
-        var odd = Path.Combine(_folder.Root, "100%TEMP%");
-        Assert.Null(UninstallHandoff.RemovableTempFolder(Path.Combine(odd, "HDRpilot-Uninstall-" + Guid1, "HDRpilot-Uninstall.exe"), odd));
+        // cmd.exe läse %…% auch in Anführungszeichen (und ! mit verzögerter Erweiterung): solche Temp-Pfade bleiben liegen.
+        foreach (var name in new[] { "100%TEMP%", "Hallo!Welt", "Zitat\"" })
+        {
+            var odd = Path.Combine(_folder.Root, name);
+            Assert.Null(UninstallHandoff.RemovableTempFolder(Path.Combine(odd, "HDRpilot-Uninstall-" + Guid1, "HDRpilot-Uninstall.exe"), odd));
+            Assert.Null(UninstallHandoff.RemovableExtractionFolder(Path.Combine(odd, ".net", "HDRpilot-Uninstall"), odd));
+        }
+    }
+
+    [Theory]
+    [InlineData(@".net\HDRpilot-Uninstall", true)]
+    [InlineData(@".net\HDRpilot-Uninstall\", true)]
+    [InlineData(@".net\HDRpilot", false)] // Bibliotheken der App
+    [InlineData(@".net\HdrPilot", false)] // dieselben, Ordner einer früheren Version
+    [InlineData(@".net\HDRpilot-Setup-1.1.0", false)] // Bibliotheken eines Setups bleiben
+    [InlineData(@".net\HDRpilot-Uninstall-Alt", false)] // Name nicht genau
+    [InlineData(@".net\hdrpilot-uninstall", false)]
+    [InlineData(@".net\HDRpilot-Uninstall\0f8fad5bd9cb", false)] // Unterordner statt des Ordners
+    [InlineData(@".net", false)]
+    [InlineData(@"Andere\HDRpilot-Uninstall", false)] // nicht unter .net
+    [InlineData(@"Sub\.net\HDRpilot-Uninstall", false)] // .net nicht direkt im Temp-Ordner
+    [InlineData(@".net\x\..\HDRpilot-Uninstall", true)] // „..“ aufgelöst: derselbe Ordner
+    [InlineData(@".net\HDRpilot-Uninstall\..\HDRpilot", false)]
+    public void Extraction_folder_is_only_exactly_hdrpilot_uninstall_under_dot_net_in_temp(string relative, bool allowed)
+    {
+        var temp = Path.Combine(_folder.Root, "Temp");
+
+        var folder = UninstallHandoff.RemovableExtractionFolder(Path.Combine(temp, relative), temp);
+
+        Assert.Equal(allowed, folder is not null);
+        if (folder is not null)
+        {
+            Assert.Equal(Path.Combine(temp, ".net", "HDRpilot-Uninstall"), folder);
+        }
+    }
+
+    [Fact]
+    public void Extraction_folder_refuses_relative_paths_other_temp_folders_and_this_test_process()
+    {
+        var temp = Path.Combine(_folder.Root, "Temp");
+
+        Assert.Null(UninstallHandoff.RemovableExtractionFolder(@".net\HDRpilot-Uninstall", temp));
+        Assert.Null(UninstallHandoff.RemovableExtractionFolder(null, temp));
+        Assert.Null(UninstallHandoff.RemovableExtractionFolder(Path.Combine(temp, ".net", "HDRpilot-Uninstall"), null));
+        Assert.Null(UninstallHandoff.RemovableExtractionFolder(Path.Combine(temp, ".net", "HDRpilot-Uninstall"), Path.Combine(_folder.Root, "Anderer")));
+
+        // Der Testprozess ist keine Einzeldatei-EXE: seine WPF-Bibliotheken liegen in der .NET-Installation.
+        Assert.Null(UninstallHandoff.OwnExtractionFolder(Path.GetTempPath()));
     }
 
     [Fact]
@@ -80,34 +125,72 @@ public sealed class SetupHandoffTests : IDisposable
     }
 
     [Fact]
-    public void Removal_command_waits_then_deletes_only_the_quoted_folder()
+    public void Removal_command_waits_retries_and_deletes_only_the_quoted_folders()
     {
         var folder = @"C:\Users\Tom & Jerry\AppData\Local\Temp\HDRpilot-Uninstall-" + Guid1;
+        var extraction = @"C:\Users\Tom & Jerry\AppData\Local\Temp\.net\HDRpilot-Uninstall";
+        var ping = "\"" + Path.Combine(Environment.SystemDirectory, "PING.EXE") + "\"";
 
-        Assert.Equal("/c ping -n 4 127.0.0.1 >nul & rd /s /q \"" + folder + "\"", UninstallHandoff.RemovalArguments(folder));
+        // Ohne AutoRun (/d) und verzögerte Erweiterung (/v:off); ping mit vollem Pfad; bis zu 30 Versuche im
+        // Sekundenabstand, Ende, sobald beide Ordner weg sind.
+        Assert.Equal(
+            "/d /v:off /c (" + ping + " -n 4 127.0.0.1 >nul) & for /l %i in (1,1,30) do @(rd /s /q \"" + folder + "\" 2>nul & rd /s /q \"" + extraction + "\" 2>nul"
+                + " & (if not exist \"" + folder + "\\\" if not exist \"" + extraction + "\\\" exit) & " + ping + " -n 2 127.0.0.1 >nul)",
+            UninstallHandoff.RemovalArguments(folder, extraction));
+        Assert.Equal(
+            "/d /v:off /c (" + ping + " -n 4 127.0.0.1 >nul) & for /l %i in (1,1,30) do @(rd /s /q \"" + folder + "\" 2>nul & (if not exist \"" + folder + "\\\" exit) & " + ping + " -n 2 127.0.0.1 >nul)",
+            UninstallHandoff.RemovalArguments(folder));
+        Assert.Equal(30, UninstallHandoff.RemovalAttempts);
     }
 
     [Fact]
-    public void Scheduled_removal_deletes_the_copy_folder_after_a_delay_and_nothing_else()
+    public void Scheduled_removal_deletes_copy_and_extraction_folder_after_a_delay_and_nothing_else()
     {
         var temp = Path.Combine(_folder.Root, "Temp");
         var neighbour = _folder.CreateFile(Path.Combine("Temp", "Nachbar.txt"));
+        var extraction = Path.GetDirectoryName(Path.GetDirectoryName(_folder.CreateFile(Path.Combine("Temp", ".net", "HDRpilot-Uninstall", "A5VsRBt8jVNi", "wpfgfx_cor3.dll"))))!;
+        var appLibraries = _folder.CreateFile(Path.Combine("Temp", ".net", "HDRpilot", "A5VsRBt8jVNi", "wpfgfx_cor3.dll"));
+        var setupLibraries = _folder.CreateFile(Path.Combine("Temp", ".net", "HDRpilot-Setup-1.1.0", "A5VsRBt8jVNi", "wpfgfx_cor3.dll"));
         var copy = UninstallHandoff.CreateTempCopy(_folder.CreateFile("HDRpilot.exe"), temp);
         var folder = Path.GetDirectoryName(copy)!;
 
-        Assert.False(UninstallHandoff.ScheduleSelfRemoval(_folder.CreateFile("HDRpilot.exe"), temp, _folder.Log));
-        Assert.True(UninstallHandoff.ScheduleSelfRemoval(copy, temp, _folder.Log));
+        Assert.False(UninstallHandoff.ScheduleSelfRemoval(_folder.CreateFile("HDRpilot.exe"), temp, _folder.Log, extraction));
+        Assert.True(UninstallHandoff.ScheduleSelfRemoval(copy, temp, _folder.Log, extraction));
         Assert.True(Directory.Exists(folder)); // erst nach der Wartezeit
 
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+        while ((Directory.Exists(folder) || Directory.Exists(extraction)) && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(100);
+        }
+
+        Assert.False(Directory.Exists(folder), "Temp-Ordner der Kopie nicht gelöscht");
+        Assert.False(Directory.Exists(extraction), "Entpack-Ordner der Kopie nicht gelöscht");
+        Assert.True(File.Exists(neighbour));
+        Assert.True(File.Exists(appLibraries)); // Bibliotheken der App und eines Setups bleiben
+        Assert.True(File.Exists(setupLibraries));
+        Assert.True(Directory.Exists(temp));
+    }
+
+    [Fact]
+    public void Scheduled_removal_never_takes_a_foreign_extraction_folder()
+    {
+        var temp = Path.Combine(_folder.Root, "Temp");
+        var appLibraries = _folder.CreateFile(Path.Combine("Temp", ".net", "HDRpilot", "A5VsRBt8jVNi", "wpfgfx_cor3.dll"));
+        var copy = UninstallHandoff.CreateTempCopy(_folder.CreateFile("HDRpilot.exe"), temp);
+        var folder = Path.GetDirectoryName(copy)!;
+
+        Assert.True(UninstallHandoff.ScheduleSelfRemoval(copy, temp, _folder.Log, Path.Combine(temp, ".net", "HDRpilot")));
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(20);
         while (Directory.Exists(folder) && DateTime.UtcNow < deadline)
         {
             Thread.Sleep(100);
         }
 
         Assert.False(Directory.Exists(folder), "Temp-Ordner der Kopie nicht gelöscht");
-        Assert.True(File.Exists(neighbour));
-        Assert.True(Directory.Exists(temp));
+        Assert.True(File.Exists(appLibraries));
+        Assert.Contains("keiner erkannt", _folder.LogText, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -10,7 +10,10 @@ public interface ISetupFileOperations
     /// <summary>Legt eine Datei neu an (vorhandene wird überschrieben) und öffnet sie zum Schreiben.</summary>
     Stream Create(string path);
 
-    /// <summary>Ersetzt <paramref name="destination"/> durch <paramref name="source"/>; die bisherige Datei wird zu <paramref name="backup"/>.</summary>
+    /// <summary>
+    /// Ersetzt <paramref name="destination"/> (auch schreibgeschützt) durch <paramref name="source"/>; die bisherige Datei
+    /// wird zu <paramref name="backup"/>.
+    /// </summary>
     void Replace(string source, string destination, string backup);
 
     /// <summary>Verschiebt eine Datei; ein vorhandenes Ziel wird überschrieben.</summary>
@@ -28,8 +31,12 @@ public sealed class SetupFileOperations : ISetupFileOperations
 
     public Stream Create(string path) => new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
 
-    public void Replace(string source, string destination, string backup) =>
+    public void Replace(string source, string destination, string backup)
+    {
+        // ReplaceFile verweigert ein schreibgeschütztes Ziel (etwa eine von Hand geschützte README): wie beim Löschen.
+        ClearReadOnly(new FileInfo(destination));
         File.Replace(source, destination, backup, ignoreMetadataErrors: true);
+    }
 
     public void Move(string source, string destination) => File.Move(source, destination, overwrite: true);
 
@@ -41,11 +48,15 @@ public sealed class SetupFileOperations : ISetupFileOperations
             return;
         }
 
-        if (info.IsReadOnly)
+        ClearReadOnly(info);
+        info.Delete();
+    }
+
+    private static void ClearReadOnly(FileInfo info)
+    {
+        if (info.Exists && info.IsReadOnly)
         {
             info.IsReadOnly = false;
         }
-
-        info.Delete();
     }
 }

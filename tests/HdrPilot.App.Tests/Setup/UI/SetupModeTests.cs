@@ -165,6 +165,17 @@ public sealed class SetupModeTests : IDisposable
     }
 
     [Fact]
+    public async Task Quiet_setup_with_admin_rights_skips_the_start_but_still_succeeds()
+    {
+        var engine = new FakeSetupEngine(Inspection(installed: null), _folder.Locations);
+        engine.Results.Enqueue(FakeSetupEngine.Success(null, new Version(1, 1, 0), started: false) with { Warnings = [SetupWarning.NotLaunchedElevated] });
+
+        Assert.Equal(SetupExitCodes.Ok, await SetupRunner.RunQuietSetupAsync(engine, engine.Inspection, Args("--quiet"), _folder.Log));
+        Assert.True(Assert.Single(engine.Calls).LaunchAfterInstall); // gewünscht war der Start, die Engine lässt ihn aus
+        Assert.Contains("Hinweise: NotLaunchedElevated", _folder.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Quiet_uninstall_in_the_copy_passes_the_data_choice_and_maps_the_result()
     {
         var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations) { Result = SetupResult.Failed(SetupErrorKind.NotInstalled, "weg") };

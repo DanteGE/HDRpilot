@@ -41,6 +41,9 @@ public sealed class SetupHarness : IDisposable
 
     public FakeSteamScanner Steam { get; } = new();
 
+    /// <summary>Läuft der Setup „mit Adminrechten“ (nur für die Engine; der Testlauf selbst ist nie erhöht)?</summary>
+    public bool Elevated { get; set; }
+
     public string LogText => File.Exists(Log.FilePath) ? File.ReadAllText(Log.FilePath) : string.Empty;
 
     public string InstalledFile(string relative) => Path.Combine(Locations.InstallDirectory, relative);
@@ -94,7 +97,8 @@ public sealed class SetupHarness : IDisposable
         ShellSetupShortcuts.Instance,
         files,
         Version.Parse(version),
-        ReadVersion);
+        ReadVersion,
+        isElevated: () => Elevated);
 
     public Task<SetupResult> InstallAsync(string version, InstallOptions? options = null, ISetupFileOperations? files = null, IProgress<SetupStep>? progress = null) =>
         Setup(version, files).InstallAsync(options ?? new InstallOptions(Autostart: true, DesktopShortcut: false, LaunchAfterInstall: false), progress);
@@ -218,6 +222,9 @@ public sealed class FakeAppControl : ISetupAppControl
 
     public bool StopSucceeds { get; set; } = true;
 
+    /// <summary>Ergebnis von <see cref="Start"/> (false: der Start scheitert, aufgezeichnet wird er trotzdem).</summary>
+    public bool StartSucceeds { get; set; } = true;
+
     public int StopCalls { get; private set; }
 
     public List<(string Exe, string Arguments)> Started { get; } = [];
@@ -240,7 +247,7 @@ public sealed class FakeAppControl : ISetupAppControl
     public bool Start(string exePath, string arguments)
     {
         Started.Add((exePath, arguments));
-        return true;
+        return StartSucceeds;
     }
 }
 

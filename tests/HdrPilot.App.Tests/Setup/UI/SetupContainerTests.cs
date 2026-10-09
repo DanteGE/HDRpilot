@@ -11,8 +11,8 @@ using static HdrPilot.App.Tests.Setup.UI.SetupFixtures;
 namespace HdrPilot.App.Tests.Setup.UI;
 
 /// <summary>
-/// Setup und Entfernen im Container einer anderen App (E84): Vor jeder Änderung wird der Datenordner geprüft; ist er
-/// umgeleitet, ändert der Lauf nichts, sagt im Fenster warum und endet still mit <see cref="SetupExitCodes.Container"/>.
+/// Setup und Entfernen im Container einer anderen App (E84): Vor jeder Änderung wird geprüft, ob der Lauf darin steckt;
+/// dann ändert er nichts, sagt im Fenster warum und endet still mit <see cref="SetupExitCodes.Container"/>.
 /// Prüfläufe (<c>--test-root</c>) prüfen nur, wenn ein Prüfskript es verlangt. Mit Attrappen der Umgebung und, als
 /// Gegenstück, mit den echten Engines in einer Testablage (Registry als Attrappe).
 /// </summary>
@@ -44,7 +44,7 @@ public sealed class SetupContainerTests : IDisposable
 
     public void Dispose() => _folder.Dispose();
 
-    private string CheckData => "DetectContainer " + _normal.DataPaths.DataDirectory;
+    private const string ContainerCheck = "DetectContainer";
 
     [Theory]
     [InlineData(false)]
@@ -57,7 +57,7 @@ public sealed class SetupContainerTests : IDisposable
 
         Assert.Equal(SetupExitCodes.Container, code);
         Assert.Equal(7, code);
-        string[] expected = quiet ? [CheckData] : [CheckData, "ShowError"];
+        string[] expected = quiet ? [ContainerCheck] : [ContainerCheck, "ShowError"];
         Assert.Equal(expected, _host.Calls); // keine Bestandsaufnahme, kein Setup
         Assert.Empty(_setup.Calls);
         if (!quiet)
@@ -84,7 +84,7 @@ public sealed class SetupContainerTests : IDisposable
         var code = await SetupRunner.RunAsync(_host, Mode(SetupModeKind.Uninstall, quiet ? ["--quiet", "--remove-data"] : []), _normal, _folder.Log);
 
         Assert.Equal(SetupExitCodes.Container, code);
-        string[] expected = quiet ? [CheckData] : [CheckData, "ShowError"];
+        string[] expected = quiet ? [ContainerCheck] : [ContainerCheck, "ShowError"];
         Assert.Equal(expected, _host.Calls); // keine Rückfrage, keine Kopie
         Assert.Empty(_host.HandOffs);
         Assert.Empty(_uninstall.Calls);
@@ -105,7 +105,7 @@ public sealed class SetupContainerTests : IDisposable
         var code = await SetupRunner.RunAsync(_host, Mode(SetupModeKind.UninstallContinue, quiet ? ["--quiet", "--remove-data"] : ["--remove-data"]), _normal, _folder.Log);
 
         Assert.Equal(SetupExitCodes.Container, code);
-        string[] expected = quiet ? [CheckData, "ScheduleSelfRemoval"] : [CheckData, "ShowError", "ScheduleSelfRemoval"];
+        string[] expected = quiet ? [ContainerCheck, "ScheduleSelfRemoval"] : [ContainerCheck, "ShowError", "ScheduleSelfRemoval"];
         Assert.Equal(expected, _host.Calls); // ohne Warten und Entfernen
         Assert.Empty(_uninstall.Calls);
         if (!quiet)
@@ -128,12 +128,12 @@ public sealed class SetupContainerTests : IDisposable
         var code = await SetupRunner.RunAsync(_host, Mode(SetupModeKind.Setup, ["--quiet", "--no-launch"]), _normal, _folder.Log);
 
         Assert.Equal(SetupExitCodes.Ok, code);
-        Assert.Equal([CheckData, "CreateSetup"], _host.Calls);
+        Assert.Equal([ContainerCheck, "CreateSetup"], _host.Calls);
         Assert.Single(_setup.Calls);
-        Assert.Contains("wird nicht umgeleitet", _folder.LogText, StringComparison.Ordinal);
+        Assert.Contains("Container-Prüfung: kein Container erkannt (Probe in " + FakeSetupHost.ContainerProbeFolder + " nicht umgeleitet).", _folder.LogText, StringComparison.Ordinal);
         if (problem is not null)
         {
-            Assert.Contains("Container-Prüfung für " + _normal.DataPaths.DataDirectory + ": " + problem, _folder.LogText, StringComparison.Ordinal);
+            Assert.Contains("Container-Prüfung mit Probe in " + FakeSetupHost.ContainerProbeFolder + ": " + problem, _folder.LogText, StringComparison.Ordinal);
         }
     }
 
@@ -154,7 +154,7 @@ public sealed class SetupContainerTests : IDisposable
         var forced = await SetupRunner.RunAsync(_host, mode, _folder.Locations, _folder.Log);
 
         Assert.Equal(SetupExitCodes.Container, forced);
-        Assert.Equal(["DetectContainer " + _folder.Locations.DataPaths.DataDirectory], _host.Calls);
+        Assert.Equal([ContainerCheck], _host.Calls);
         Assert.Single(_setup.Calls); // nur der erste Lauf
     }
 
@@ -261,7 +261,7 @@ public sealed class SetupContainerTests : IDisposable
 
         public bool ContainerCheckForced => true;
 
-        public ContainerRedirection DetectContainer(string folder) => new(folder, ContainerPackage);
+        public ContainerRedirection DetectContainer() => new(FakeSetupHost.ContainerProbeFolder, ContainerPackage);
 
         public ISetupEngine CreateSetup(SetupLocations locations, SetupBundle bundle, SetupLog log)
         {

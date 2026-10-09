@@ -219,9 +219,11 @@ public static class SetupRunner
 
     /// <summary>
     /// Ordner der App unter %LOCALAPPDATA%\Packages, in deren Container dieser Lauf steckt (E84), sonst null. Geprüft wird
-    /// der Datenordner (%LOCALAPPDATA%\HDRpilot) per Probe; Registry-Einträge leitet Windows im selben Fall um. Prüfläufe
-    /// (<c>--test-root</c>) überspringen das, außer <see cref="ISetupHost.ContainerCheckForced"/>: Sie berühren nie die echte
-    /// Installation und laufen auch aus einem Container heraus vollständig darin ab. Ohne sicheres Ergebnis geht es weiter.
+    /// der Prozess (Probe direkt in %LOCALAPPDATA%), nicht der Datenordner: Gibt es den schon außerhalb des Containers,
+    /// landen Dateien darin echt, Registry-Einträge (Eintrag unter „Installierte Apps“, Autostart) aber trotzdem nur im
+    /// Container. Prüfläufe (<c>--test-root</c>) überspringen das, außer <see cref="ISetupHost.ContainerCheckForced"/>: Sie
+    /// berühren nie die echte Installation und laufen auch aus einem Container heraus vollständig darin ab. Ohne sicheres
+    /// Ergebnis geht es weiter.
     /// </summary>
     private static string? ContainerPackage(ISetupHost host, SetupLocations locations, SetupLog log)
     {
@@ -231,15 +233,15 @@ public static class SetupRunner
             return null;
         }
 
-        var result = host.DetectContainer(locations.DataPaths.DataDirectory);
+        var result = host.DetectContainer();
         if (result.Problem is not null)
         {
-            log.Warn("Container-Prüfung für " + result.Folder + ": " + result.Problem);
+            log.Warn("Container-Prüfung mit Probe in " + result.Folder + ": " + result.Problem);
         }
 
         if (!result.Redirected)
         {
-            log.Info("Container-Prüfung: " + result.Folder + " wird nicht umgeleitet.");
+            log.Info("Container-Prüfung: kein Container erkannt (Probe in " + result.Folder + " nicht umgeleitet).");
             return null;
         }
 

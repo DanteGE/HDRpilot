@@ -180,17 +180,20 @@ internal sealed class FakeSetupHost(FakeSetupEngine setup, FakeUninstallEngine u
         log.Info(RemovalMarker);
     }
 
-    /// <summary>Ergebnis der Container-Prüfung (E84): Paketordner der App, null = nicht umgeleitet.</summary>
+    /// <summary>Ordner der Probe im Ergebnis der Container-Prüfung (%LOCALAPPDATA% eines Testbenutzers).</summary>
+    public const string ContainerProbeFolder = @"C:\Users\Test\AppData\Local";
+
+    /// <summary>Ergebnis der Container-Prüfung (E84): Paketordner der App, null = kein Container.</summary>
     public string? ContainerPackage { get; set; }
 
     public string? ContainerProblem { get; set; }
 
     public bool ContainerCheckForced { get; set; }
 
-    public ContainerRedirection DetectContainer(string folder)
+    public ContainerRedirection DetectContainer()
     {
-        Calls.Add("DetectContainer " + folder);
-        return new ContainerRedirection(folder, ContainerPackage, ContainerProblem);
+        Calls.Add("DetectContainer");
+        return new ContainerRedirection(ContainerProbeFolder, ContainerPackage, ContainerProblem);
     }
 }
 

@@ -42,8 +42,8 @@ public interface ISetupHost
     /// <summary>Lässt Temp- und Entpack-Ordner der Kopie nach dem Ende löschen (nur, wenn diese EXE die Kopie ist).</summary>
     void ScheduleSelfRemoval(SetupLog log);
 
-    /// <summary>Leitet Windows Schreibzugriffe auf <paramref name="folder"/> in den Container einer anderen App um (E84)? Wirft nie.</summary>
-    ContainerRedirection DetectContainer(string folder);
+    /// <summary>Läuft dieser Prozess im Container einer anderen App, die Windows Registry und AppData umleiten lässt (E84)? Wirft nie.</summary>
+    ContainerRedirection DetectContainer();
 
     /// <summary>
     /// Prüfläufe (<c>--test-root</c>) überspringen die Container-Prüfung, außer diese Angabe verlangt sie (Umgebungsvariable
@@ -128,7 +128,7 @@ public sealed class WpfSetupHost(Application app) : ISetupHost
         UninstallHandoff.ScheduleSelfRemoval(Environment.ProcessPath, temp, log, UninstallHandoff.OwnExtractionFolder(temp));
     }
 
-    public ContainerRedirection DetectContainer(string folder) => new ContainerDetector(SystemEnvironment.Instance).Detect(folder);
+    public ContainerRedirection DetectContainer() => new ContainerDetector(SystemEnvironment.Instance).Detect();
 
     public bool ContainerCheckForced => Environment.GetEnvironmentVariable(SetupRunner.ForceContainerCheckVariable) == "1";
 

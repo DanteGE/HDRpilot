@@ -33,7 +33,7 @@ public sealed class AutomationHost : IAsyncDisposable
     {
     }
 
-    /// <param name="containerDetector">Prüft beim Start, ob die Ablage in den Container einer anderen App umgeleitet wird (Standard: <see cref="ContainerDetector"/>, E84).</param>
+    /// <param name="containerDetector">Prüft beim Start, ob HDRpilot im Container einer anderen App läuft (Standard: <see cref="ContainerDetector"/>, E84).</param>
     public AutomationHost(
         AppPaths paths,
         IFileSystem fileSystem,
@@ -149,8 +149,9 @@ public sealed class AutomationHost : IAsyncDisposable
             "HDRpilot {Version} startet. Konfiguration {Config}, Abfrageintervall {Interval} ms, Nachlaufzeit {Grace} s, Windows-Build {Build}.",
             typeof(AutomationHost).Assembly.GetName().Version, Paths.ConfigFile, s.PollIntervalMs, s.GracePeriodSeconds, _environment.WindowsBuild);
 
-        // E84: Im Container einer anderen App (etwa aus der Claude-App gestartet) landen Einstellungen, Protokolle und
-        // Autostart in deren privatem Speicher. Einmal je Start im Hintergrund prüfen, ohne den Start aufzuhalten.
+        // E84: Im Container einer anderen App (etwa aus der Claude-App gestartet) landen der Autostart und je nach Ordner
+        // auch Einstellungen und Protokolle in deren privatem Speicher. Einmal je Start im Hintergrund prüfen, ohne den
+        // Start aufzuhalten.
         ContainerCheck = Task.Run(CheckContainer, CancellationToken.None);
         await Sessions.InitializeAsync(Watcher.Poll(), cancellationToken).ConfigureAwait(false);
         Watcher.Start(OnPollAsync);
@@ -190,24 +191,24 @@ public sealed class AutomationHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// Prüft die Ablage für Daten und Protokolle (E84) und warnt im Protokoll, wenn Windows sie in den Container einer
-    /// anderen App umleitet (nur dort, Entscheidung des Nutzers). Läuft einmal je Start. Wirft nie.
+    /// Prüft, ob HDRpilot im Container einer anderen App läuft (E84), unabhängig davon, wo die Ablage liegt, und warnt dann
+    /// im Protokoll (nur dort, Entscheidung des Nutzers). Läuft einmal je Start. Wirft nie.
     /// </summary>
     private void CheckContainer()
     {
         try
         {
-            var result = _containerDetector.Detect(Paths.DataDirectory);
+            var result = _containerDetector.Detect();
             if (result.Redirected)
             {
                 _logger.LogWarning(
-                    "HDRpilot läuft im Container der App {Package}: Windows leitet Einstellungen, Protokolle und Registry-Einträge (Autostart) in deren privaten Speicher um. Bitte HDRpilot über das Startmenü oder die Verknüpfung starten.",
+                    "HDRpilot läuft im Container der App {Package}: Windows leitet Registry-Einträge wie den Autostart und je nach Ordner auch Einstellungen und Protokolle in deren privaten Speicher um. Bitte HDRpilot über das Startmenü oder die Verknüpfung starten.",
                     result.PackageFolder);
             }
 
             if (result.Problem is not null)
             {
-                _logger.LogInformation("Container-Prüfung für {Folder}: {Problem}", result.Folder, result.Problem);
+                _logger.LogInformation("Container-Prüfung mit Probe in {Folder}: {Problem}", result.Folder, result.Problem);
             }
         }
         catch (Exception ex)

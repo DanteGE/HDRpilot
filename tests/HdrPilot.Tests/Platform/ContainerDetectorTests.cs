@@ -5,10 +5,11 @@ using HdrPilot.Tests.TestSupport;
 namespace HdrPilot.Tests.Platform;
 
 /// <summary>
-/// Container-Erkennung (E84) mit nachgebildetem Profil: %LOCALAPPDATA%, %APPDATA% und Packages liegen in einem
-/// Temp-Ordner, die Umleitung bildet ein Haken nach, der die Probe dorthin kopiert, wo Windows sie im Container ablegt
-/// (<c>Packages\&lt;App&gt;\LocalCache\Local|Roaming\&lt;relativer Pfad&gt;</c>). Dazu zwei Läufe gegen das echte Profil, die
-/// nichts zurücklassen.
+/// Container-Erkennung (E84) mit nachgebildetem Profil: %LOCALAPPDATA% samt Packages liegt in einem Temp-Ordner, die
+/// Umleitung bildet ein Haken nach, der wie Windows umleitet (gemessen im Container der Claude-App): Neues landet nur
+/// dann in <c>Packages\&lt;App&gt;\LocalCache\Local\&lt;relativer Pfad&gt;</c>, wenn es seinen Ordner dort gibt. Die Wurzel
+/// gibt es dort immer, einen Ordner, der nur außerhalb besteht (etwa ein schon vorhandenes HDRpilot), nicht. Dazu ein Lauf
+/// gegen das echte Profil, der nichts zurücklässt.
 /// </summary>
 public sealed class ContainerDetectorTests : IDisposable
 {
@@ -20,8 +21,6 @@ public sealed class ContainerDetectorTests : IDisposable
     public ContainerDetectorTests()
     {
         _environment.Folders[Environment.SpecialFolder.LocalApplicationData] = Local;
-        _environment.Folders[Environment.SpecialFolder.ApplicationData] = Roaming;
-        Directory.CreateDirectory(Roaming);
         foreach (var app in new[] { "Microsoft.WindowsTerminal_8wekyb3d8bbwe", Package, "Spotify_zpdnekdrzrea0" })
         {
             Directory.CreateDirectory(Path.Combine(Local, "Packages", app, "LocalCache", "Local"));
@@ -30,8 +29,6 @@ public sealed class ContainerDetectorTests : IDisposable
     }
 
     private string Local => Path.Combine(_root, "Local");
-
-    private string Roaming => Path.Combine(_root, "Roaming");
 
     public void Dispose()
     {
@@ -42,47 +39,53 @@ public sealed class ContainerDetectorTests : IDisposable
     }
 
     [Fact]
-    public void Redirected_local_folder_names_the_app_and_deletes_the_probe()
+    public void Probe_directly_in_local_app_data_names_the_app_and_is_deleted()
     {
-        var folder = Path.Combine(Local, "HDRpilot");
-        Directory.CreateDirectory(Path.Combine(folder, "logs"));
-        File.WriteAllText(Path.Combine(folder, "session-state.json"), "{}");
-
-        var result = Detector(Redirect(Package, "Local")).Detect(folder);
+        var result = Detector(Windows(Package)).Detect();
 
         Assert.True(result.Redirected);
         Assert.Equal(Package, result.PackageFolder);
         Assert.Null(result.Problem);
-        Assert.Equal(folder, result.Folder);
+        Assert.Equal(Local, result.Folder);
         var probe = Assert.Single(_probes);
-        Assert.StartsWith(Path.Combine(folder, ContainerDetector.ProbePrefix), probe, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Local, Path.GetDirectoryName(probe));
+        Assert.StartsWith(ContainerDetector.ProbePrefix, Path.GetFileName(probe), StringComparison.Ordinal);
+        Assert.EndsWith(".tmp", probe, StringComparison.Ordinal);
         Assert.False(File.Exists(probe));
-        Assert.Empty(Directory.EnumerateFiles(folder, ContainerDetector.ProbePrefix + "*"));
-        Assert.True(File.Exists(Path.Combine(folder, "session-state.json"))); // Vorhandenes bleibt
-        Assert.True(Directory.Exists(Path.Combine(folder, "logs")));
+        Assert.Equal(["Packages"], Directory.EnumerateFileSystemEntries(Local).Select(Path.GetFileName)); // nichts angelegt, nichts liegen gelassen
     }
 
     [Fact]
-    public void Redirected_roaming_folder_is_found_under_LocalCache_Roaming()
+    public void Container_is_found_even_when_the_data_folder_exists_only_outside_it()
     {
-        var folder = Path.Combine(Roaming, "HDRpilot");
-        Directory.CreateDirectory(folder);
+        // Befund der Gegenprüfung: Wer HDRpilot normal installiert hat, hat ein echtes %LOCALAPPDATA%\HDRpilot. Neues darin
+        // schreibt Windows auch aus dem Container echt, die Registry (Eintrag, Autostart) aber nur virtuell. Eine Probe im
+        // Datenordner hätte „kein Container“ gemeldet; die Erkennung darf deshalb nicht von ihm abhängen.
+        var data = Path.Combine(Local, "HDRpilot");
+        Directory.CreateDirectory(Path.Combine(data, "logs"));
+        File.WriteAllText(Path.Combine(data, "session-state.json"), "{}");
+        var inData = Path.Combine(data, "vorbedingung.tmp");
+        File.WriteAllText(inData, string.Empty);
+        Windows(Package)(inData);
+        Assert.False(File.Exists(Path.Combine(Local, "Packages", Package, "LocalCache", "Local", "HDRpilot", "vorbedingung.tmp"))); // Modell wie gemessen
+        File.Delete(inData);
+        _probes.Clear();
 
-        var result = Detector(Redirect(Package, "Roaming")).Detect(folder);
+        var result = Detector(Windows(Package)).Detect();
 
         Assert.Equal(Package, result.PackageFolder);
         Assert.Null(result.Problem);
-        Assert.False(File.Exists(Assert.Single(_probes)));
+        Assert.Equal(Local, Path.GetDirectoryName(Assert.Single(_probes)));
+        Assert.Equal(["logs", "session-state.json"], Directory.EnumerateFileSystemEntries(data).Select(Path.GetFileName).Order());
+        Assert.False(Directory.Exists(Path.Combine(Local, "Packages", Package, "LocalCache", "Local", "HDRpilot")));
     }
 
     [Theory]
-    [InlineData("Roaming", "HDRpilot")] // richtige App und Pfad, aber unter Roaming statt Local
-    [InlineData("Local", "Anderer")] // anderer relativer Pfad
+    [InlineData("Roaming", "")] // richtige App und Name, aber unter Roaming statt Local
+    [InlineData("Local", "HDRpilot")] // anderer relativer Pfad
     [InlineData(null, null)] // keine Kopie: kein Container
-    public void Probe_counts_only_at_the_same_relative_path_under_the_right_kind(string? kind, string? relativeFolder)
+    public void Copy_counts_only_under_LocalCache_Local_with_the_same_name(string? kind, string? relativeFolder)
     {
-        var folder = Path.Combine(Local, "HDRpilot");
-        Directory.CreateDirectory(folder);
         Action<string> hook = kind is null
             ? _probes.Add
             : probe =>
@@ -93,7 +96,7 @@ public sealed class ContainerDetectorTests : IDisposable
                 File.Copy(probe, copy);
             };
 
-        var result = Detector(hook).Detect(folder);
+        var result = Detector(hook).Detect();
 
         Assert.False(result.Redirected);
         Assert.Null(result.PackageFolder);
@@ -102,146 +105,97 @@ public sealed class ContainerDetectorTests : IDisposable
     }
 
     [Fact]
-    public void Missing_folder_is_created_for_the_probe_and_removed_again()
+    public void Missing_local_app_data_reports_a_problem_instead_of_throwing()
     {
-        var folder = Path.Combine(Local, "HDRpilot", "Neu");
-        var existedDuringProbe = false;
+        var missing = Path.Combine(_root, "Fehlt", "Local");
+        _environment.Folders[Environment.SpecialFolder.LocalApplicationData] = missing;
 
-        var result = Detector(probe =>
-        {
-            existedDuringProbe = Directory.Exists(folder);
-            Redirect(Package, "Local")(probe);
-        }).Detect(folder);
-
-        Assert.True(existedDuringProbe);
-        Assert.Equal(Package, result.PackageFolder);
-        Assert.Null(result.Problem);
-        Assert.False(Directory.Exists(Path.Combine(Local, "HDRpilot"))); // auch der übergeordnete, selbst angelegte Ordner
-        Assert.True(Directory.Exists(Local));
-    }
-
-    [Fact]
-    public void Created_folder_that_got_other_content_is_kept_and_reported()
-    {
-        // Legt währenddessen jemand anderes etwas in den neuen Ordner, bleibt er samt Inhalt; das steht im Ergebnis.
-        var folder = Path.Combine(Local, "HDRpilot");
-
-        var result = Detector(probe =>
-        {
-            _probes.Add(probe);
-            File.WriteAllText(Path.Combine(folder, "config.json"), "{}");
-        }).Detect(folder);
+        var result = Detector(_probes.Add).Detect();
 
         Assert.False(result.Redirected);
-        Assert.Contains("Ordner bleibt, weil nicht leer: " + folder + " (config.json)", result.Problem, StringComparison.Ordinal);
-        Assert.False(File.Exists(Assert.Single(_probes)));
-        Assert.Equal("{}", File.ReadAllText(Path.Combine(folder, "config.json")));
-    }
-
-    [Fact]
-    public void Folder_outside_AppData_is_not_probed_and_not_created()
-    {
-        var folder = Path.Combine(_root, "Projekte", "Ablage");
-
-        var result = Detector(_probes.Add).Detect(folder);
-
-        Assert.False(result.Redirected);
-        Assert.Null(result.Problem);
+        Assert.Equal(missing, result.Folder);
+        Assert.Contains("Probe schreiben oder suchen: DirectoryNotFoundException", result.Problem, StringComparison.Ordinal);
         Assert.Empty(_probes);
-        Assert.False(Directory.Exists(folder));
+        Assert.False(Directory.Exists(Path.Combine(_root, "Fehlt"))); // nichts angelegt
     }
 
     [Fact]
-    public void Unusable_folder_reports_a_problem_instead_of_throwing()
+    public void Unknown_local_app_data_reports_a_problem_instead_of_throwing()
     {
-        // Eine Datei, wo der Ordner hin soll: Ordner und Probe lassen sich nicht anlegen.
-        var folder = Path.Combine(Local, "HDRpilot");
-        File.WriteAllText(folder, "keine Ablage");
+        _environment.Folders[Environment.SpecialFolder.LocalApplicationData] = string.Empty;
 
-        var result = Detector(_probes.Add).Detect(folder);
+        var result = Detector(_probes.Add).Detect();
 
         Assert.False(result.Redirected);
-        Assert.Contains("Probe schreiben oder suchen", result.Problem, StringComparison.Ordinal);
+        Assert.Equal("%LOCALAPPDATA%", result.Folder);
+        Assert.StartsWith("Ordner bestimmen: ArgumentException: ", result.Problem, StringComparison.Ordinal);
         Assert.Empty(_probes);
-        Assert.Equal("keine Ablage", File.ReadAllText(folder));
     }
 
     [Fact]
     public void Probe_is_deleted_even_when_the_search_fails()
     {
-        var folder = Path.Combine(Local, "HDRpilot");
-        Directory.CreateDirectory(folder);
-
         var result = Detector(probe =>
         {
             _probes.Add(probe);
             throw new UnauthorizedAccessException("Packages nicht lesbar");
-        }).Detect(folder);
+        }).Detect();
 
         Assert.False(result.Redirected);
         Assert.Contains("Packages nicht lesbar", result.Problem, StringComparison.Ordinal);
         Assert.False(File.Exists(Assert.Single(_probes)));
-        Assert.True(Directory.Exists(folder)); // war schon da, bleibt
     }
 
     [Fact]
     public void Without_a_Packages_folder_nothing_is_redirected()
     {
         Directory.Delete(Path.Combine(Local, "Packages"), recursive: true);
-        var folder = Path.Combine(Local, "HDRpilot");
 
-        var result = Detector(_probes.Add).Detect(folder);
+        var result = Detector(_probes.Add).Detect();
 
         Assert.False(result.Redirected);
         Assert.Null(result.Problem);
         Assert.False(File.Exists(Assert.Single(_probes)));
-        Assert.False(Directory.Exists(folder));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(Local));
     }
 
     [Fact]
-    public void Real_temp_folder_is_not_redirected_and_leaves_nothing_behind()
-    {
-        // %TEMP% liegt unter %LOCALAPPDATA%, wird aber nie umgeleitet (auch nicht im Container der Claude-App).
-        var folder = Path.Combine(Path.GetTempPath(), "HDRpilot.Tests.Container-" + Guid.NewGuid().ToString("N"));
-
-        var result = new ContainerDetector(SystemEnvironment.Instance).Detect(folder);
-
-        Assert.False(result.Redirected, "umgeleitet nach " + result.PackageFolder);
-        Assert.Null(result.Problem);
-        Assert.False(Directory.Exists(folder));
-    }
-
-    [Fact]
-    public void Real_local_app_data_folder_records_the_container_and_leaves_nothing_behind()
+    public void Real_local_app_data_records_the_container_and_leaves_nothing_behind()
     {
         // Im Container einer anderen App (etwa diese Testläufe aus der Claude-App) ist das Ergebnis „umgeleitet“, sonst
         // nicht; beides ist richtig und wird nur festgehalten. Prüfbar ist: kein Fehler, nichts bleibt liegen.
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var name = "HDRpilot.Tests.Container-" + Guid.NewGuid().ToString("N");
-        var folder = Path.Combine(local, name);
+        var probes = new List<string>();
 
-        var result = new ContainerDetector(SystemEnvironment.Instance).Detect(folder);
+        var result = new ContainerDetector(SystemEnvironment.Instance, probes.Add).Detect();
 
         TestContext.Current.TestOutputHelper?.WriteLine(result.Redirected
             ? "Dieser Testlauf läuft im Container der App " + result.PackageFolder
             : "Dieser Testlauf läuft in keinem Container");
         Assert.Null(result.Problem);
-        Assert.False(Directory.Exists(folder));
+        Assert.Equal(Path.TrimEndingDirectorySeparator(local), result.Folder, ignoreCase: true);
+        var probe = Assert.Single(probes);
+        Assert.Equal(result.Folder, Path.GetDirectoryName(probe));
+        Assert.False(File.Exists(probe));
         if (result.PackageFolder is { } package)
         {
-            Assert.False(Directory.Exists(Path.Combine(local, "Packages", package, "LocalCache", "Local", name)));
+            Assert.False(File.Exists(Path.Combine(local, "Packages", package, "LocalCache", "Local", Path.GetFileName(probe))));
         }
     }
 
     private ContainerDetector Detector(Action<string> afterProbeWritten) => new(_environment, afterProbeWritten);
 
-    /// <summary>Bildet die Umleitung nach: Kopie der Probe unter Packages\&lt;App&gt;\LocalCache\&lt;Local|Roaming&gt;\&lt;relativ&gt;.</summary>
-    private Action<string> Redirect(string app, string kind) => probe =>
+    /// <summary>
+    /// Bildet die Umleitung im Container von <paramref name="app"/> nach, wie gemessen: Kopie unter
+    /// <c>Packages\&lt;App&gt;\LocalCache\Local\&lt;relativer Pfad&gt;</c>, aber nur, wenn es den Ordner dort schon gibt.
+    /// </summary>
+    private Action<string> Windows(string app) => file =>
     {
-        _probes.Add(probe);
-        var relative = Path.GetRelativePath(kind == "Local" ? Local : Roaming, probe);
-        var copy = Path.Combine(Local, "Packages", app, "LocalCache", kind, relative);
-        Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
-        File.Copy(probe, copy);
+        _probes.Add(file);
+        var copy = Path.Combine(Local, "Packages", app, "LocalCache", "Local", Path.GetRelativePath(Local, file));
+        if (Directory.Exists(Path.GetDirectoryName(copy)))
+        {
+            File.Copy(file, copy);
+        }
     };
 }

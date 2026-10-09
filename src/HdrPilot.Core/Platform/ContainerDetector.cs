@@ -3,14 +3,14 @@ using HdrPilot.Core.Abstractions;
 namespace HdrPilot.Core.Platform;
 
 /// <summary>Ergebnis der Container-Prüfung (E84).</summary>
-/// <param name="Folder">Geprüfter Ordner.</param>
+/// <param name="Folder">Ordner der Probe (%LOCALAPPDATA%).</param>
 /// <param name="PackageFolder">
-/// Ordner der App unter %LOCALAPPDATA%\Packages, in deren Container Windows die Schreibzugriffe umleitet (etwa
-/// „Claude_pzs8sxrjxfjjc“); null, wenn nicht umgeleitet oder unbekannt.
+/// Ordner der App unter %LOCALAPPDATA%\Packages, in deren Container dieser Prozess läuft und Windows die Schreibzugriffe
+/// umleitet (etwa „Claude_pzs8sxrjxfjjc“); null, wenn kein Container erkannt ist.
 /// </param>
 /// <param name="Problem">
 /// Warum die Prüfung nichts sagen kann (Probe nicht schreibbar, Packages nicht lesbar) oder was beim Aufräumen
-/// scheiterte; sonst null. Ohne <paramref name="PackageFolder"/> gilt dann „nicht umgeleitet“: blockiert wird nur, was
+/// scheiterte; sonst null. Ohne <paramref name="PackageFolder"/> gilt dann „kein Container“: blockiert wird nur, was
 /// sicher erkannt ist.
 /// </param>
 public sealed record ContainerRedirection(string Folder, string? PackageFolder, string? Problem = null)
@@ -18,23 +18,25 @@ public sealed record ContainerRedirection(string Folder, string? PackageFolder, 
     public bool Redirected => PackageFolder is not null;
 }
 
-/// <summary>Prüft, ob Windows Schreibzugriffe auf einen Ordner in den Container einer anderen App umleitet (E84).</summary>
+/// <summary>Prüft, ob dieser Prozess im Container einer anderen App läuft, die Windows Schreibzugriffe umleiten lässt (E84).</summary>
 public interface IContainerDetector
 {
     /// <summary>Wirft nie; Fehler stehen in <see cref="ContainerRedirection.Problem"/>.</summary>
-    ContainerRedirection Detect(string folder);
+    ContainerRedirection Detect();
 }
 
 /// <summary>
 /// Erkennt, ob dieser Prozess im MSIX-Container einer anderen App läuft (E84), etwa weil er aus der Claude-App heraus
-/// gestartet wurde. Windows leitet dann neue Dateien unter %APPDATA% und %LOCALAPPDATA% (und HKCU\Software) in den
-/// privaten Speicher dieser App um (<c>%LOCALAPPDATA%\Packages\&lt;App&gt;\LocalCache\Local|Roaming\…</c>); im Container
-/// sieht alles normal aus, von außen fehlt es. <c>GetCurrentPackageFullName</c> meldet für solche Prozesse kein Paket,
-/// deshalb eine Probe: eine eindeutige Datei in den Ordner schreiben und unter <c>Packages\*\LocalCache</c> am gleichen
-/// relativen Pfad suchen. Die Probe wird immer gelöscht (im Container verschwindet damit auch die umgeleitete Kopie),
-/// selbst angelegte Ordner ebenso, sobald sie leer sind. Ordner außerhalb von %APPDATA% und %LOCALAPPDATA% gelten ohne
-/// Probe als nicht umgeleitet; %TEMP% liegt darunter und wird geprüft (Windows leitet ihn nicht um, die Probe findet sich
-/// dann nirgends). Kostet einmal eine Ordnerliste von Packages (gemessen 76 ms bei 168 Apps).
+/// gestartet wurde. Windows leitet dann HKCU\Software (Autostart, Eintrag unter „Installierte Apps“) und Neues unter
+/// %APPDATA% und %LOCALAPPDATA% in den privaten Speicher dieser App um
+/// (<c>%LOCALAPPDATA%\Packages\&lt;App&gt;\LocalCache\Local|Roaming\…</c>); im Container sieht alles normal aus, von außen
+/// fehlt es. <c>GetCurrentPackageFullName</c> meldet für solche Prozesse kein Paket, deshalb eine Probe: eine eindeutige
+/// Datei direkt in %LOCALAPPDATA% anlegen und unter <c>Packages\*\LocalCache\Local</c> am gleichen Namen suchen. Direkt
+/// in der Wurzel, nicht im Datenordner: Windows leitet nur um, was in einem Ordner entsteht, den es im Container gibt
+/// (die Wurzel gibt es dort immer); in einem Ordner, der nur außerhalb besteht (etwa ein schon vorhandenes
+/// %LOCALAPPDATA%\HDRpilot), schreibt es echt. Eine Probe dort sähe unverdächtig aus, obwohl die Registry trotzdem nur
+/// virtuell geändert würde. Die Probe wird immer gelöscht (im Container verschwindet damit auch die umgeleitete Kopie).
+/// Kostet einmal eine Ordnerliste von Packages (gemessen 76 ms bei 168 Apps).
 /// </summary>
 public sealed class ContainerDetector : IContainerDetector
 {
@@ -44,7 +46,7 @@ public sealed class ContainerDetector : IContainerDetector
     private readonly IAppEnvironment _environment;
     private readonly Action<string>? _afterProbeWritten;
 
-    /// <param name="environment">Liefert %LOCALAPPDATA% (mit Packages) und %APPDATA%.</param>
+    /// <param name="environment">Liefert %LOCALAPPDATA% (Ort der Probe, darunter Packages).</param>
     /// <param name="afterProbeWritten">
     /// Nur für Tests: wird mit dem Pfad der Probe aufgerufen, bevor gesucht wird (bildet dort die Umleitung nach).
     /// </param>
@@ -54,42 +56,32 @@ public sealed class ContainerDetector : IContainerDetector
         _afterProbeWritten = afterProbeWritten;
     }
 
-    public ContainerRedirection Detect(string folder)
+    public ContainerRedirection Detect()
     {
-        string full;
-        string localAppData;
-        string? cacheRelative;
+        string root;
         try
         {
-            full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
-            localAppData = _environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            cacheRelative = RedirectedRelative(full, localAppData, "Local")
-                ?? RedirectedRelative(full, _environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Roaming");
+            root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(_environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
         }
         catch (Exception ex)
         {
-            return new ContainerRedirection(folder, null, Describe("Ordner bestimmen", ex));
+            return new ContainerRedirection("%LOCALAPPDATA%", null, Describe("Ordner bestimmen", ex));
         }
 
-        if (cacheRelative is null)
-        {
-            return new ContainerRedirection(full, null); // nicht unter AppData: keine Umleitung möglich
-        }
-
-        var created = MissingFolders(full);
-        var probe = Path.Combine(full, ProbePrefix + Guid.NewGuid().ToString("N") + ".tmp");
+        var name = ProbePrefix + Guid.NewGuid().ToString("N") + ".tmp";
+        var probe = Path.Combine(root, name);
+        var written = false;
         string? package = null;
         string? problem = null;
         try
         {
-            Directory.CreateDirectory(full);
             using (new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                // leere Datei genügt
+                written = true; // leere Datei genügt
             }
 
             _afterProbeWritten?.Invoke(probe);
-            package = FindPackage(Path.Combine(localAppData, "Packages"), Path.Combine(cacheRelative, Path.GetFileName(probe)));
+            package = FindPackage(Path.Combine(root, "Packages"), Path.Combine("Local", name));
         }
         catch (Exception ex)
         {
@@ -97,32 +89,13 @@ public sealed class ContainerDetector : IContainerDetector
         }
         finally
         {
-            problem = Join(problem, Cleanup(probe, created));
+            if (written)
+            {
+                problem = Join(problem, Delete(probe));
+            }
         }
 
-        return new ContainerRedirection(full, package, problem);
-    }
-
-    /// <summary>
-    /// Pfad unter <c>LocalCache</c> (<paramref name="kind"/> = Local oder Roaming plus relativer Pfad), wenn
-    /// <paramref name="full"/> unter <paramref name="root"/> liegt; sonst null.
-    /// </summary>
-    private static string? RedirectedRelative(string full, string root, string kind)
-    {
-        if (string.IsNullOrWhiteSpace(root))
-        {
-            return null;
-        }
-
-        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-        if (string.Equals(full, normalizedRoot, StringComparison.OrdinalIgnoreCase))
-        {
-            return kind;
-        }
-
-        return full.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-            ? Path.Combine(kind, full[(normalizedRoot.Length + 1)..])
-            : null;
+        return new ContainerRedirection(root, package, problem);
     }
 
     /// <summary>Erste App unter <paramref name="packagesRoot"/>, deren LocalCache die Probe enthält; sonst null.</summary>
@@ -144,85 +117,17 @@ public sealed class ContainerDetector : IContainerDetector
         return null;
     }
 
-    /// <summary>Ordner, die es vor der Probe noch nicht gibt (der Ordner selbst und fehlende übergeordnete), tiefste zuerst.</summary>
-    private static List<string> MissingFolders(string full)
+    /// <summary>Löscht die Probe; liefert, was dabei scheiterte (sonst null).</summary>
+    private static string? Delete(string probe)
     {
-        var missing = new List<string>();
         try
         {
-            for (var dir = full; !string.IsNullOrEmpty(dir) && !Directory.Exists(dir); dir = Path.GetDirectoryName(dir))
-            {
-                missing.Add(dir);
-            }
-        }
-        catch (Exception)
-        {
-            // Ungültiger Pfad: das Anlegen scheitert gleich mit einer eigenen Meldung.
-        }
-
-        return missing;
-    }
-
-    /// <summary>Probe löschen, dann die selbst angelegten Ordner, wenn leer. Liefert, was dabei scheiterte (sonst null).</summary>
-    private static string? Cleanup(string probe, IReadOnlyList<string> createdFolders)
-    {
-        string? problem = null;
-        try
-        {
-            if (File.Exists(probe))
-            {
-                File.Delete(probe);
-            }
+            File.Delete(probe);
+            return null;
         }
         catch (Exception ex)
         {
-            problem = Describe("Probe löschen (" + probe + ")", ex);
-        }
-
-        foreach (var dir in createdFolders)
-        {
-            try
-            {
-                if (!RemoveIfEmpty(dir))
-                {
-                    problem = Join(problem, "Ordner bleibt, weil nicht leer: " + dir + " (" + string.Join(", ", Directory.EnumerateFileSystemEntries(dir).Select(Path.GetFileName)) + ")");
-                }
-            }
-            catch (Exception ex)
-            {
-                problem = Join(problem, Describe("Ordner entfernen (" + dir + ")", ex));
-            }
-        }
-
-        return problem;
-    }
-
-    /// <summary>
-    /// Entfernt einen selbst angelegten Ordner, sobald er leer ist. Eine eben gelöschte Probe kann noch kurz darin stehen
-    /// (etwa solange ein Virenscanner sie offen hält); deshalb höchstens eine halbe Sekunde lang erneut nachsehen.
-    /// False, wenn er danach noch etwas enthält (dann bleibt er).
-    /// </summary>
-    private static bool RemoveIfEmpty(string dir)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            if (!Directory.Exists(dir))
-            {
-                return true;
-            }
-
-            if (!Directory.EnumerateFileSystemEntries(dir).Any())
-            {
-                Directory.Delete(dir);
-                return true;
-            }
-
-            if (attempt == 20)
-            {
-                return false;
-            }
-
-            Thread.Sleep(25);
+            return Describe("Probe löschen (" + probe + ")", ex);
         }
     }
 

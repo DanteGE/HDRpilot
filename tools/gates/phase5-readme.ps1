@@ -1,8 +1,8 @@
 ﻿# Gate G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche, abgeglichen mit dem Quelltext.
 # Prüft Abschnitte, Befehlszeilen-Schalter der App, die Hilfe der Kommandozeile, Standardwerte, Ablageorte und alle fett
 # gesetzten Oberflächen-Bezeichnungen gegen die resx-Dateien (inkl. SetupStrings.resx), dazu Schalter, Exit-Codes und
-# Orte von Setup und Entfernen (E83). Gegenprobe: eine absichtlich verfälschte README muss genau die eingebauten Fehler
-# liefern.
+# Orte von Setup und Entfernen (E83) und die Exit-Codes, die stilles Entfernen ohne ERGEBNIS-Zeile direkt liefert (E84).
+# Gegenprobe: eine absichtlich verfälschte README muss genau die eingebauten Fehler liefern.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $cliExe = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'
@@ -40,6 +40,9 @@ $setupArgs = Read-Utf8 'src\HdrPilot.App\Setup\SetupArguments.cs'
 $setupDevOnly = @('--uninstall-continue', '--wait-pid') # intern: die Kopie im Temp-Ordner setzt das Entfernen fort
 $setupSwitches = @([regex]::Matches($setupArgs, '"(--[a-z-]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Where-Object { $_ -notin $setupDevOnly })
 $setupExitCodes = @([regex]::Matches($setupArgs, 'public const int \w+ = (\d+);') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object)
+# Stilles Entfernen kehrt sofort zurück; diese Codes liefert der erste Aufruf selbst (Kopie nicht gestartet, Aufruf
+# falsch, Container), ohne Kopie und damit ohne ERGEBNIS-Zeile im Protokoll
+$directUninstallCodes = @('Failed', 'BadArguments', 'Container' | ForEach-Object { [regex]::Match($setupArgs, "public const int $_ = (\d+);").Groups[1].Value } | Where-Object { $_ })
 $props = [xml](Read-Utf8 'Directory.Build.props')
 $productVersion = [Version](@($props.Project.PropertyGroup) | ForEach-Object { $_.Version } | Where-Object { $_ } | Select-Object -First 1)
 $setupFile = 'HDRpilot-Setup-{0}.{1}.{2}.exe' -f $productVersion.Major, $productVersion.Minor, [Math]::Max(0, $productVersion.Build)
@@ -69,6 +72,7 @@ Check ($defaults.Poll -gt 0 -and $defaults.Grace -gt 0 -and $defaults.Launch -gt
 Check ($helpUsage.Count -ge 8 -and $helpExitPairs.Count -eq 7) ("Hilfe: {0} Aufrufzeilen, {1} Exit-Codes" -f $helpUsage.Count, $helpExitPairs.Count)
 Check ($uiLabels.Count -gt 200 -and $missingResx.Count -eq 0) ("Oberflächen-Texte aus resx: {0}{1}" -f $uiLabels.Count, $(if ($missingResx) { ', fehlt: ' + ($missingResx -join ', ') } else { ' (inkl. SetupStrings.resx)' }))
 Check ($setupSwitches.Count -ge 8 -and $setupExitCodes.Count -ge 7) ("Setup-Schalter aus SetupArguments.cs: {0}; Exit-Codes {1}" -f ($setupSwitches -join ' '), ($setupExitCodes -join ' '))
+Check ($directUninstallCodes.Count -eq 3) ("Stilles Entfernen, Exit-Codes direkt vom ersten Aufruf: {0}" -f ($directUninstallCodes -join ' '))
 Check ($programDir -eq '%LOCALAPPDATA%\Programs\HDRpilot' -and $uninstallKey -like 'HKCU\Software\*\Uninstall\HDRpilot' -and $setupLog -like '%TEMP%\*.log') ("Setup-Orte: {0}, {1}, {2}, {3}" -f $setupFile, $programDir, $uninstallKey, $setupLog)
 
 # --- Prüfung einer README, liefert die Liste der Probleme ---
@@ -100,6 +104,11 @@ function Test-Readme([string]$text) {
     $setupExitLine = Normalize ([regex]::Match($setupSection.Groups[1].Value, '(?s)Exit-Codes:(.*?)(\r?\n\r?\n|\z)').Groups[1].Value)
     $readmeExitCodes = @([regex]::Matches($setupExitLine, '(?:^|, )(\d+) ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object)
     if (($readmeExitCodes -join ',') -ne ($setupExitCodes -join ',')) { [void]$problems.Add("Setup-Exit-Codes weichen ab: README $($readmeExitCodes -join ',') statt $($setupExitCodes -join ',')") }
+    # Zeile zu --quiet beim Entfernen: nennt jeden Code, der ohne ERGEBNIS-Zeile direkt zurückkommt, als "<Code> (…)"
+    $quietUninstallRow = [regex]::Match($setupSection.Groups[1].Value, '(?m)^\| `--quiet` \| Entfernen[^\r\n]*').Value
+    foreach ($c in $directUninstallCodes) {
+        if ($quietUninstallRow -notmatch "(?<![\w-])$c \(") { [void]$problems.Add("Stilles Entfernen: Exit-Code $c kommt direkt vom ersten Aufruf, fehlt in der Zeile zu --quiet") }
+    }
 
     # Kommandozeile: Aufrufzeilen identisch mit der Hilfe, Exit-Codes vollständig
     $cliBlock = [regex]::Match($text, '(?s)### cli\\hdrpilot\.exe.*?```\r?\n(.*?)```').Groups[1].Value
@@ -146,9 +155,12 @@ $broken = $readme.Replace('**Neu einlesen**', '**Neu laden**').Replace('| `--res
 # Setup (E83): Bezeichnung nur aus SetupStrings.resx, Schalter des Setups (jede Nennung, auch im Text zu --quiet),
 # Protokollort
 $broken = $broken.Replace('**Verknüpfung auf dem Desktop**', '**Desktop-Symbol**').Replace('`--no-launch`', '`--no-start`').Replace("``$setupLog``", '`%TEMP%\HDRpilot.log`')
+# Stilles Entfernen (E84): die Zeile in der alten Fassung, die nur die ERGEBNIS-Zeile versprach
+$broken = [regex]::Replace($broken, '(?m)^\| `--quiet` \| Entfernen[^\r\n]*', '| `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück, das Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll |')
 $expected = @('Bezeichnung nicht in der Oberfläche: Neu laden', 'App-Schalter nicht dokumentiert: --rescan', 'App-Schalter gibt es nicht: --reload',
               "Fakt fehlt oder weicht ab: Nachlaufzeit ($($defaults.Grace) s)", 'Abschnitt fehlt: Fehlersuche', 'CLI-Aufruf fehlt oder weicht ab: hdrpilot games list [--json]', 'CLI-Aufruf nicht in der Hilfe: hdrpilot games list',
               'Bezeichnung nicht in der Oberfläche: Desktop-Symbol', 'Setup-Schalter nicht dokumentiert: --no-launch', 'Setup-Schalter gibt es nicht: --no-start', "Fakt fehlt oder weicht ab: ``$setupLog``")
+$expected += @($directUninstallCodes | ForEach-Object { "Stilles Entfernen: Exit-Code $_ kommt direkt vom ersten Aufruf, fehlt in der Zeile zu --quiet" })
 $found = Test-Readme $broken
 $missed = @($expected | Where-Object { $_ -notin $found })
 Check ($missed.Count -eq 0 -and $found.Count -eq $expected.Count) ("Gegenprobe: {0} von {1} eingebauten Fehlern erkannt, {2} Meldungen insgesamt{3}" -f ($expected.Count - $missed.Count), $expected.Count, $found.Count, $(if ($missed) { '; übersehen: ' + ($missed -join ' | ') } else { '' }))

@@ -1,14 +1,18 @@
 ﻿# Veröffentlicht HdrPilot als einzelne, eigenständige EXE (Windows x64), dazu die Kommandozeile und die README.
 # Ergebnis (Standard): artifacts\publish\HDRpilot\HDRpilot.exe, ...\cli\hdrpilot.exe, ...\README.md
+# und daneben die Setup-Datei artifacts\publish\HDRpilot-Setup-<Version>.exe (E83).
 param([string]$Output)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 if (-not $Output) { $Output = Join-Path $root 'artifacts\publish\HDRpilot' }
 $staging = Join-Path $root 'artifacts\publish-staging'
+$setupDir = Split-Path $Output -Parent
 
 foreach ($dir in $Output, $staging) {
     if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
 }
+# Ältere Setup-Dateien zuerst weg: Scheitert die Veröffentlichung, liegt kein veralteter Setup neben dem leeren Ordner.
+Get-ChildItem $setupDir -Filter 'HDRpilot-Setup-*.exe' -File -ErrorAction SilentlyContinue | Remove-Item -Force
 
 $projects = @(
     @{ Name = 'App'; Project = 'src\HdrPilot.App\HdrPilot.App.csproj'; Exe = 'HDRpilot.exe'; Target = '' },
@@ -109,8 +113,55 @@ if (Test-Path $readme) {
 
 Remove-Item $staging -Recurse -Force
 
+# Setup-Datei (E83, Format wie src\HdrPilot.App\Setup\SetupBundle.cs): die veröffentlichte HDRpilot.exe unverändert,
+# dahinter ein Zip mit README.md, THIRD-PARTY-NOTICES.txt und cli/hdrpilot.exe und ein Abschluss von 64 Bytes:
+# 16 Bytes ASCII "HDRPILOT-SETUP01" | Int64 Länge der EXE | Int64 Länge des Zips | 32 Bytes SHA-256 der EXE (little endian).
+# Das Zip entsteht erst im Speicher: Direkt hinter die EXE geschrieben, stünden im Zip Positionen ab Dateianfang.
+$appExe = Join-Path $Output 'HDRpilot.exe'
+$appInfo = (Get-Item $appExe).VersionInfo
+$setupVersion = '{0}.{1}.{2}' -f $appInfo.FileMajorPart, $appInfo.FileMinorPart, $appInfo.FileBuildPart
+$setup = Join-Path $setupDir "HDRpilot-Setup-$setupVersion.exe"
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+$zipBuffer = New-Object IO.MemoryStream
+$zip = New-Object IO.Compression.ZipArchive($zipBuffer, [IO.Compression.ZipArchiveMode]::Create, $true)
+try {
+    foreach ($entry in 'README.md', 'THIRD-PARTY-NOTICES.txt', 'cli/hdrpilot.exe') {
+        $source = Join-Path $Output ($entry -replace '/', '\')
+        if (-not (Test-Path $source)) { throw "Setup: $source fehlt" }
+        [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $source, $entry, [IO.Compression.CompressionLevel]::Optimal)
+    }
+} finally {
+    $zip.Dispose()
+}
+$sha = [Security.Cryptography.SHA256]::Create()
+$exeStream = [IO.File]::OpenRead($appExe)
+try { $exeHash = $sha.ComputeHash($exeStream) } finally { $exeStream.Dispose(); $sha.Dispose() }
+$setupStream = New-Object IO.FileStream($setup, [IO.FileMode]::Create, [IO.FileAccess]::Write,[IO.FileShare]::None)
+try {
+    $exeStream = [IO.File]::OpenRead($appExe)
+    try { $exeStream.CopyTo($setupStream, 1MB) } finally { $exeStream.Dispose() }
+    $exeLength = $setupStream.Length
+    $zipBuffer.WriteTo($setupStream)
+    $payloadLength = $setupStream.Length - $exeLength
+    $footer = New-Object byte[] 64
+    [Text.Encoding]::ASCII.GetBytes('HDRPILOT-SETUP01').CopyTo($footer, 0)
+    [BitConverter]::GetBytes([long]$exeLength).CopyTo($footer, 16)
+    [BitConverter]::GetBytes([long]$payloadLength).CopyTo($footer, 24)
+    $exeHash.CopyTo($footer, 32)
+    $setupStream.Write($footer, 0, $footer.Length)
+} catch {
+    $setupStream.Dispose()
+    Remove-Item $setup -Force -ErrorAction SilentlyContinue
+    throw
+} finally {
+    $setupStream.Dispose()
+    $zipBuffer.Dispose()
+}
+
 Get-ChildItem $Output -Recurse -File | ForEach-Object {
     $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
     Write-Output ("{0,-18} {1,8:N1} MB  SHA256 {2}" -f $_.FullName.Substring($Output.Length + 1), ($_.Length / 1MB), $hash)
 }
+$setupFile = Get-Item $setup
+Write-Output ("{0,-18} {1,8:N1} MB  SHA256 {2} (EXE {3:N0} Bytes, Paket {4:N0} Bytes)" -f $setupFile.Name, ($setupFile.Length / 1MB), (Get-FileHash $setup -Algorithm SHA256).Hash, $exeLength, $payloadLength)
 Write-Output "PUBLISH_DONE $Output"

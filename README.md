@@ -6,7 +6,7 @@ Ubisoft Connect, EA app, Battle.net). Spiele ohne Launcher trägst du selbst ein
 Suchordnern vor. Welche Spiele HDR unterstützen, zeigt es dir laut PCGamingWiki an. Im Alltag läuft es unauffällig im
 Infobereich.
 
-- Eine einzelne EXE, keine Installation, keine Administratorrechte, kein Windows-Dienst.
+- Ein Setup ohne Administratorrechte, alternativ eine einzelne EXE ganz ohne Installation; kein Windows-Dienst.
 - Keine Telemetrie und keine Eingriffe in Spielprozesse. Ins Netz geht HDRpilot nur für den Abgleich der HDR-Liste mit
   PCGamingWiki; das lässt sich abschalten.
 - Im Hintergrund sparsam: eine Prozessabfrage pro Sekunde, gemessen rund 0,1–0,4 % eines CPU-Kerns und etwa 40–50 MB
@@ -20,21 +20,54 @@ Infobereich.
 
 ## Einrichtung
 
-1. `HDRpilot.exe` in einen dauerhaften Ordner legen, etwa `%LOCALAPPDATA%\Programs\HDRpilot\`. Autostart,
-   Verknüpfungen und Steam-Startoptionen zeigen auf diesen Ort. Verschiebst du die EXE später, korrigiert HDRpilot den
-   Autostart-Eintrag beim nächsten Start selbst; Verknüpfungen und Steam-Startoptionen musst du neu anlegen.
-2. `HDRpilot.exe` starten. Die EXE ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten Start nach
-   („Weitere Informationen“ → „Trotzdem ausführen“).
-3. Es öffnet sich kein Fenster. HDRpilot läuft als Symbol im Infobereich (unten rechts neben der Uhr), meldet sich
-   kurz und liest deine Spiele ein. Siehst du das Symbol nicht, hat Windows es hinter dem Pfeil (˄) ausgeblendet; von
-   dort kannst du es in die Taskleiste ziehen. Ein Doppelklick auf das Symbol (oder ein zweiter Start der EXE) öffnet
-   die Spielebibliothek.
+Empfohlen ist der Setup `HDRpilot-Setup-1.1.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
+Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HDRpilot` (siehe „Ohne Installation“).
+
+1. `HDRpilot-Setup-1.1.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
+   Start nach („Weitere Informationen“ → „Trotzdem ausführen“).
+2. Der Setup zeigt den Programmordner `%LOCALAPPDATA%\Programs\HDRpilot` und drei Optionen: **Mit Windows starten**
+   (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
+   **Installieren** kopiert HDRpilot dorthin, legt eine Verknüpfung im Startmenü an und trägt HDRpilot unter
+   *Einstellungen → Apps → Installierte Apps* ein. Die Kommandozeile liegt danach in `<Programmordner>\cli`, daneben
+   README und Lizenzhinweise.
+3. Mit der dritten Option öffnet sich nach der Installation die Spielebibliothek. Im Alltag läuft HDRpilot als Symbol
+   im Infobereich (unten rechts neben der Uhr) und liest bei jedem Start deine Spiele ein. Siehst du das Symbol nicht,
+   hat Windows es hinter dem Pfeil (˄) ausgeblendet; von dort kannst du es in die Taskleiste ziehen. Ein Doppelklick
+   auf das Symbol (oder ein Start über das Startmenü) öffnet die Spielebibliothek.
 4. Bei den Spielen, die HDR bekommen sollen, den Schalter **HDR automatisch** einschalten. Eingelesene Spiele sind
    anfangs immer aus; Spiele, die du selbst hinzufügst, haben den Schalter gleich an. Der Filter **HDR-fähig** zeigt
    dir, welche deiner Spiele laut PCGamingWiki HDR unterstützen.
-5. Optional in den Einstellungen **Mit Windows starten** einschalten.
 
 Das Fenster zu schließen beendet HDRpilot nicht. Beenden über das Infobereich-Menü → **HDRpilot beenden**.
+
+Einstellungen, Spieleliste, Protokolle und HDR-Liste liegen nicht im Programmordner, sondern in `%APPDATA%\HDRpilot`
+und `%LOCALAPPDATA%\HDRpilot`. Der Setup fasst sie nie an: Hattest du HDRpilot schon, gelten sie nach der Installation
+unverändert weiter. Lag deine bisherige `HDRpilot.exe` schon in `%LOCALAPPDATA%\Programs\HDRpilot`, ersetzt der Setup
+sie dort, und Autostart, Verknüpfungen und Steam-Startoptionen zeigen weiter auf dieselbe EXE. Lag sie woanders,
+beendet der Setup eine laufende alte Version und startet danach die neue; die alte EXE kannst du dann löschen, ihre
+Verknüpfungen und Steam-Startoptionen legst du neu an.
+
+### Aktualisieren
+
+Den Setup der neuen Version starten. Er zeigt die installierte und die neue Version; Autostart und Desktop-Verknüpfung
+sind wie bisher vorbelegt. **Aktualisieren** beendet ein laufendes HDRpilot kurz, ersetzt die Programmdateien und
+startet HDRpilot wieder (lief es vorher, wieder nur im Infobereich). Schlägt dabei etwas fehl, bleibt die bisherige
+Version unverändert und lauffähig. Einstellungen, Spieleliste, Protokolle und HDR-Liste bleiben erhalten, weil sie in
+`%APPDATA%\HDRpilot` und `%LOCALAPPDATA%\HDRpilot` liegen. Denselben Setup noch einmal auszuführen repariert die
+Installation. Eine ältere Version installiert er nur, wenn du **Trotzdem die ältere Version installieren** ankreuzt.
+
+### Ohne Installation
+
+1. Den Ordner `HDRpilot` (mit `HDRpilot.exe` und `cli\hdrpilot.exe`) an einen dauerhaften Ort legen, etwa nach
+   `%LOCALAPPDATA%\Programs\HDRpilot\`. Autostart, Verknüpfungen und Steam-Startoptionen zeigen auf diesen Ort.
+   Verschiebst du die EXE später, korrigiert HDRpilot den Autostart-Eintrag beim nächsten Start selbst; Verknüpfungen
+   und Steam-Startoptionen musst du neu anlegen.
+2. `HDRpilot.exe` starten (SmartScreen wie oben). Es öffnet sich kein Fenster: HDRpilot meldet sich kurz im
+   Infobereich und liest deine Spiele ein. Ein Doppelklick auf das Symbol oder ein zweiter Start der EXE öffnet die
+   Spielebibliothek; weiter wie oben in Schritt 4.
+3. Optional in den Einstellungen **Mit Windows starten** einschalten.
+
+Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und Spieleliste bleiben dabei erhalten.
 
 ## Bedienung
 
@@ -219,6 +252,10 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 
 | Was | Wo |
 |---|---|
+| Programm (Setup): HDRpilot.exe, `cli\hdrpilot.exe`, README, Lizenzhinweise | `%LOCALAPPDATA%\Programs\HDRpilot\` |
+| Eintrag unter „Installierte Apps“ (Setup) | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\HDRpilot` |
+| Verknüpfung im Startmenü (Setup) | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot.lnk` |
+| Protokoll von Setup und Entfernen | `%TEMP%\HDRpilot-Setup.log` |
 | Einstellungen und Spieleliste | `%APPDATA%\HDRpilot\config.json` |
 | Gemerkter HDR-Zustand während eines Spiels | `%LOCALAPPDATA%\HDRpilot\session-state.json` |
 | Protokoll (täglich neue Datei, höchstens 5 MB je Datei, 14 Tage) | `%LOCALAPPDATA%\HDRpilot\logs\` |
@@ -231,7 +268,8 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | Entpackte Grafik-Bibliotheken (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot\` |
 
 Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nicht nach Groß- und Kleinschreibung, die
-bisherigen Ordner `HdrPilot` werden also weiter benutzt.
+bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
+ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht.
 
 Einstellungen gelten je Spiel über Quelle und ID (etwa `Steam:1091500`), nicht über den Namen. `config.json` wird
 atomar geschrieben. Von Hand bearbeitest du sie am besten bei beendetem HDRpilot. Ist sie danach kein gültiges JSON,
@@ -263,6 +301,25 @@ Läuft HDRpilot schon, reicht ein zweiter Aufruf seine Befehle an die laufende I
 Den Schlüssel `<Quelle:ID>` zeigt die Oberfläche nicht an. Du findest ihn in der ersten Spalte von
 `cli\hdrpilot.exe games list` oder im Ziel einer „(HDR)“-Verknüpfung hinter `--run`. Meist ist es einfacher, die
 Verknüpfung in den Details anlegen zu lassen.
+
+### Setup-Datei und Entfernen
+
+Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Installierte Apps“.
+
+| Aufruf | Wirkung |
+|---|---|
+| `HDRpilot-Setup-1.1.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code |
+| `--autostart on\|off` | Mit Windows starten (ohne Angabe: wie bisher, bei einer neuen Installation an) |
+| `--desktop-shortcut on\|off` | Desktop-Verknüpfung (ohne Angabe: wie bisher, bei einer neuen Installation aus) |
+| `--no-launch` | HDRpilot danach nicht starten |
+| `--allow-downgrade` | Eine ältere Version über eine neuere installieren |
+| `HDRpilot.exe --uninstall` | Entfernen wie aus „Installierte Apps“ (läuft aus einer Kopie im Temp-Ordner) |
+| `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück, das Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll |
+| `--remove-data` | Beim Entfernen auch Einstellungen, Spieleliste, Protokolle und HDR-Liste löschen |
+| `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen, Ablage und ein eigener Registry-Zweig unter diesem Ordner |
+
+Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 ältere Version abgelehnt, 4 HDRpilot ließ sich nicht beenden,
+5 abgebrochen, 6 nicht installiert. Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
 
 ### cli\hdrpilot.exe
 
@@ -336,7 +393,7 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   gescheitert ist und gerade kein Spiel läuft (siehe „Anti-Cheat“). Das Kürzel braucht die Xbox Game Bar, schaltet nur
   um und wirkt auf alle HDR-fähigen Bildschirme; HDRpilot bestätigt aber nur den Zielbildschirm. Auf echter Hardware
   ist die Notlösung nicht getestet.
-- **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs.
+- **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.
 - **Nur auf Deutsch:** Oberfläche, Hinweise, Fehlermeldungen der Launcher-Scanner, Kommandozeile und Protokoll.
 
 ## Fehlersuche
@@ -365,6 +422,9 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
 - **Keine HDR-Kennzeichen in der Liste:** Der erste Abgleich läuft 30 s nach dem Start; ohne Konto sind je Start nur
   100 Spiele dran. Den Stand und den letzten Fehler zeigt der Bereich „HDR-Liste (PCGamingWiki)“ in den Einstellungen.
 - **HDRpilot war abgestürzt oder beendet:** einfach neu starten, der gemerkte Zustand wird dann wiederhergestellt.
+- **Setup oder Entfernen meldet einen Fehler:** Einzelheiten stehen in `%TEMP%\HDRpilot-Setup.log`; nach einem Fehler
+  im Setup ist die bisherige Version unverändert. Lässt sich HDRpilot nicht beenden, im Infobereich „HDRpilot beenden“
+  wählen und es erneut versuchen.
 - **Ein Spiel fehlt in der Liste:** „Neu einlesen“ drücken; fehlt es weiter, über „Spiel hinzufügen“ eintragen oder
   seinen übergeordneten Ordner als Suchordner angeben. Fehler einzelner Launcher stehen in der Bibliothek und im
   Protokoll.
@@ -375,6 +435,22 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   nächsten Start neu eingelesen; deine Auswahl geht dabei verloren.
 
 ## Entfernen
+
+Mit dem Setup installiert:
+
+1. In Steam die Startoption `--wrap -- %command%` bei den Spielen löschen, bei denen du sie eingetragen hast
+   (Rechtsklick auf das Spiel → Eigenschaften → Allgemein → Startoptionen), sonst starten diese Spiele nicht mehr.
+   Das Entfernen nennt dir die Spiele, bei denen sie noch steht.
+2. Unter *Einstellungen → Apps → Installierte Apps* bei HDRpilot *Deinstallieren* wählen. HDRpilot fragt nach: Ohne
+   Haken bei **Auch Einstellungen, Spieleliste und Protokolle löschen** (Standard) bleiben `%APPDATA%\HDRpilot` und
+   `%LOCALAPPDATA%\HDRpilot` erhalten und werden bei einer neuen Installation wieder benutzt; mit Haken sind sie weg,
+   samt HDR-Liste und gespeichertem PCGamingWiki-Konto.
+3. **Entfernen** beendet HDRpilot, stellt einen gemerkten HDR-Zustand wieder her und entfernt das Programm, seine
+   Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die sich danach selbst löscht.
+4. Bleiben „(HDR)“-Verknüpfungen für einzelne Spiele oder `%TEMP%\.net\HDRpilot` (entpackte Grafik-Bibliotheken)
+   übrig, kannst du sie löschen.
+
+Ohne Installation:
 
 1. In den Einstellungen **Mit Windows starten** ausschalten und gegebenenfalls **Konto entfernen**.
 2. In Steam die Startoption `--wrap -- %command%` bei den Spielen wieder löschen, bei denen du sie eingetragen hast.
@@ -397,9 +473,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gates\test.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
-`tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab. Projekte und Namensräume im
-Quelltext heißen weiter `HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die
-Prüfnachweise in `GATES.md`.
+`tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab und daneben den Setup
+`artifacts\publish\HDRpilot-Setup-1.1.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenzhinweisen und
+Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
+`HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
+`GATES.md`.
 
 ## Lizenzen von Fremdbestandteilen
 

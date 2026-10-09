@@ -1,7 +1,8 @@
 ﻿# Gate G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche, abgeglichen mit dem Quelltext.
 # Prüft Abschnitte, Befehlszeilen-Schalter der App, die Hilfe der Kommandozeile, Standardwerte, Ablageorte und alle fett
-# gesetzten Oberflächen-Bezeichnungen gegen die resx-Dateien. Gegenprobe: eine absichtlich verfälschte README muss
-# genau die eingebauten Fehler liefern.
+# gesetzten Oberflächen-Bezeichnungen gegen die resx-Dateien (inkl. SetupStrings.resx), dazu Schalter, Exit-Codes und
+# Orte von Setup und Entfernen (E83). Gegenprobe: eine absichtlich verfälschte README muss genau die eingebauten Fehler
+# liefern.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $cliExe = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'
@@ -34,8 +35,23 @@ $runValue = [regex]::Match($autostart, 'ValueName = "([^"]+)"').Groups[1].Value
 $paths = Read-Utf8 'src\HdrPilot.Core\Config\AppPaths.cs'
 $fileNames = @([regex]::Matches($paths, 'Path\.Combine\((?:ConfigDirectory|DataDirectory), "([^"]+)"\)') | ForEach-Object { $_.Groups[1].Value })
 
+# Setup und Entfernen (E83): Schalter, Exit-Codes, Name der Setup-Datei, Programmordner, Protokoll, Eintrag
+$setupArgs = Read-Utf8 'src\HdrPilot.App\Setup\SetupArguments.cs'
+$setupDevOnly = @('--uninstall-continue', '--wait-pid') # intern: die Kopie im Temp-Ordner setzt das Entfernen fort
+$setupSwitches = @([regex]::Matches($setupArgs, '"(--[a-z-]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Where-Object { $_ -notin $setupDevOnly })
+$setupExitCodes = @([regex]::Matches($setupArgs, 'public const int \w+ = (\d+);') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object)
+$props = [xml](Read-Utf8 'Directory.Build.props')
+$productVersion = [Version](@($props.Project.PropertyGroup) | ForEach-Object { $_.Version } | Where-Object { $_ } | Select-Object -First 1)
+$setupFile = 'HDRpilot-Setup-{0}.{1}.{2}.exe' -f $productVersion.Major, $productVersion.Minor, [Math]::Max(0, $productVersion.Build)
+$locations = Read-Utf8 'src\HdrPilot.App\Setup\SetupLocations.cs'
+$programDir = '%LOCALAPPDATA%\' + (@([regex]::Match($locations, 'LocalApplicationData\), ("[^)]+)\)').Groups[1].Value -split ',\s*' | ForEach-Object { $_.Trim('"') }) -join '\')
+$uninstallKey = 'HKCU\' + [regex]::Match($locations, 'WindowsRegistryRoot = @"([^"]+)"').Groups[1].Value + '\Uninstall\' + [regex]::Match($locations, 'UninstallKeyName = "([^"]+)"').Groups[1].Value
+$setupLog = '%TEMP%\' + [regex]::Match((Read-Utf8 'src\HdrPilot.App\Setup\SetupLog.cs'), 'GetTempPath\(\), "([^"]+)"').Groups[1].Value
+
 $uiLabels = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
-foreach ($resx in 'src\HdrPilot.App\Resources\ShellStrings.resx', 'src\HdrPilot.App\Resources\LibraryStrings.resx', 'src\HdrPilot.App\Resources\CommonStrings.resx') {
+$missingResx = @()
+foreach ($resx in 'src\HdrPilot.App\Resources\ShellStrings.resx', 'src\HdrPilot.App\Resources\LibraryStrings.resx', 'src\HdrPilot.App\Resources\CommonStrings.resx', 'src\HdrPilot.App\Resources\SetupStrings.resx') {
+    if (-not (Test-Path (Join-Path $root $resx))) { $missingResx += $resx; continue }
     ([xml](Read-Utf8 $resx)).root.data | ForEach-Object { [void]$uiLabels.Add((Normalize $_.value)) }
 }
 
@@ -51,7 +67,9 @@ $helpExitPairs = @([regex]::Matches($helpExitCodes, '(\d) ([^,]+?)(?=,|$)') | Fo
 Check ($appSwitches.Count -ge 9) ("App-Schalter aus AppArguments.cs: {0}" -f ($appSwitches -join ' '))
 Check ($defaults.Poll -gt 0 -and $defaults.Grace -gt 0 -and $defaults.Launch -gt 0) ("Standardwerte: Intervall {0} ms, Nachlauf {1} s, Startfrist {2} s" -f $defaults.Poll, $defaults.Grace, $defaults.Launch)
 Check ($helpUsage.Count -ge 8 -and $helpExitPairs.Count -eq 7) ("Hilfe: {0} Aufrufzeilen, {1} Exit-Codes" -f $helpUsage.Count, $helpExitPairs.Count)
-Check ($uiLabels.Count -gt 200) ("Oberflächen-Texte aus resx: {0}" -f $uiLabels.Count)
+Check ($uiLabels.Count -gt 200 -and $missingResx.Count -eq 0) ("Oberflächen-Texte aus resx: {0}{1}" -f $uiLabels.Count, $(if ($missingResx) { ', fehlt: ' + ($missingResx -join ', ') } else { ' (inkl. SetupStrings.resx)' }))
+Check ($setupSwitches.Count -ge 8 -and $setupExitCodes.Count -ge 7) ("Setup-Schalter aus SetupArguments.cs: {0}; Exit-Codes {1}" -f ($setupSwitches -join ' '), ($setupExitCodes -join ' '))
+Check ($programDir -eq '%LOCALAPPDATA%\Programs\HDRpilot' -and $uninstallKey -like 'HKCU\Software\*\Uninstall\HDRpilot' -and $setupLog -like '%TEMP%\*.log') ("Setup-Orte: {0}, {1}, {2}, {3}" -f $setupFile, $programDir, $uninstallKey, $setupLog)
 
 # --- Prüfung einer README, liefert die Liste der Probleme ---
 function Test-Readme([string]$text) {
@@ -71,6 +89,18 @@ function Test-Readme([string]$text) {
     foreach ($s in $appSwitches) { if ($s -notin $documented) { [void]$problems.Add("App-Schalter nicht dokumentiert: $s") } }
     foreach ($s in $documented) { if ($s -notin $appSwitches) { [void]$problems.Add("App-Schalter gibt es nicht: $s") } }
 
+    # Setup und Entfernen: eigener Unterabschnitt unter "## Befehlszeile", alle Schalter (in Code-Abschnitten, auch
+    # hinter dem Programmnamen) dokumentiert, keine erfundenen, Exit-Codes wie in SetupExitCodes
+    $commandLine = [regex]::Match($text, '(?ms)^## Befehlszeile\s*$(.*?)(?=^## |\z)').Groups[1].Value
+    $setupSection = [regex]::Match($commandLine, '(?ms)^### Setup-Datei und Entfernen\s*$(.*?)(?=^### |\z)')
+    if (-not $setupSection.Success) { [void]$problems.Add('Abschnitt fehlt: ### Setup-Datei und Entfernen (unter ## Befehlszeile)') }
+    $setupDocumented = @([regex]::Matches($setupSection.Groups[1].Value, '`([^`]+)`') | ForEach-Object { [regex]::Matches($_.Groups[1].Value, '(?<![\w-])(--[a-z][a-z-]*)') } | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    foreach ($s in $setupSwitches) { if ($s -notin $setupDocumented) { [void]$problems.Add("Setup-Schalter nicht dokumentiert: $s") } }
+    foreach ($s in $setupDocumented) { if ($s -notin $setupSwitches) { [void]$problems.Add("Setup-Schalter gibt es nicht: $s") } }
+    $setupExitLine = Normalize ([regex]::Match($setupSection.Groups[1].Value, '(?s)Exit-Codes:(.*?)(\r?\n\r?\n|\z)').Groups[1].Value)
+    $readmeExitCodes = @([regex]::Matches($setupExitLine, '(?:^|, )(\d+) ') | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object)
+    if (($readmeExitCodes -join ',') -ne ($setupExitCodes -join ',')) { [void]$problems.Add("Setup-Exit-Codes weichen ab: README $($readmeExitCodes -join ',') statt $($setupExitCodes -join ',')") }
+
     # Kommandozeile: Aufrufzeilen identisch mit der Hilfe, Exit-Codes vollständig
     $cliBlock = [regex]::Match($text, '(?s)### cli\\hdrpilot\.exe.*?```\r?\n(.*?)```').Groups[1].Value
     $readmeUsage = @($cliBlock -split "`r?`n" | Where-Object { $_ -cmatch '^hdrpilot ' } | ForEach-Object { Normalize $_ })
@@ -80,7 +110,8 @@ function Test-Readme([string]$text) {
 
     # Standardwerte und Ablageorte
     foreach ($fact in @("| Abfrageintervall | Wie oft nach Spielstarts gesehen wird | $($defaults.Poll) ms |", "Nachlaufzeit ($($defaults.Grace) s)", "| $($defaults.Launch) s |",
-                        "höchstens $maxMb MB je Datei, $retainDays Tage", "HKCU\$runKey", "Wert ``$runValue``")) {
+                        "höchstens $maxMb MB je Datei, $retainDays Tage", "HKCU\$runKey", "Wert ``$runValue``",
+                        "``$setupFile``", "``$programDir", "``$uninstallKey``", "``$setupLog``")) {
         if ($text.IndexOf($fact, [StringComparison]::Ordinal) -lt 0) { [void]$problems.Add("Fakt fehlt oder weicht ab: $fact") }
     }
     foreach ($name in $fileNames) {
@@ -112,8 +143,11 @@ Check ($problems.Count -eq 0) ("README stimmt mit dem Quelltext überein ({0} Pr
 
 # Gegenprobe: eingebaute Fehler müssen gefunden werden
 $broken = $readme.Replace('**Neu einlesen**', '**Neu laden**').Replace('| `--rescan` | Spiele neu einlesen |', '| `--reload` | Spiele neu einlesen |').Replace("Nachlaufzeit ($($defaults.Grace) s)", 'Nachlaufzeit (5 s)').Replace('## Fehlersuche', '## Hilfe').Replace('hdrpilot games list [--json]', 'hdrpilot games list')
+# Setup (E83): Bezeichnung nur aus SetupStrings.resx, Schalter des Setups, Protokollort
+$broken = $broken.Replace('**Verknüpfung auf dem Desktop**', '**Desktop-Symbol**').Replace('| `--no-launch` |', '| `--no-start` |').Replace("``$setupLog``", '`%TEMP%\HDRpilot.log`')
 $expected = @('Bezeichnung nicht in der Oberfläche: Neu laden', 'App-Schalter nicht dokumentiert: --rescan', 'App-Schalter gibt es nicht: --reload',
-              "Fakt fehlt oder weicht ab: Nachlaufzeit ($($defaults.Grace) s)", 'Abschnitt fehlt: Fehlersuche', 'CLI-Aufruf fehlt oder weicht ab: hdrpilot games list [--json]', 'CLI-Aufruf nicht in der Hilfe: hdrpilot games list')
+              "Fakt fehlt oder weicht ab: Nachlaufzeit ($($defaults.Grace) s)", 'Abschnitt fehlt: Fehlersuche', 'CLI-Aufruf fehlt oder weicht ab: hdrpilot games list [--json]', 'CLI-Aufruf nicht in der Hilfe: hdrpilot games list',
+              'Bezeichnung nicht in der Oberfläche: Desktop-Symbol', 'Setup-Schalter nicht dokumentiert: --no-launch', 'Setup-Schalter gibt es nicht: --no-start', "Fakt fehlt oder weicht ab: ``$setupLog``")
 $found = Test-Readme $broken
 $missed = @($expected | Where-Object { $_ -notin $found })
 Check ($missed.Count -eq 0 -and $found.Count -eq $expected.Count) ("Gegenprobe: {0} von {1} eingebauten Fehlern erkannt, {2} Meldungen insgesamt{3}" -f ($expected.Count - $missed.Count), $expected.Count, $found.Count, $(if ($missed) { '; übersehen: ' + ($missed -join ' | ') } else { '' }))

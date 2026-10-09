@@ -1,6 +1,6 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-07 21:20. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-09 23:20. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Erledigt (auf `main`, committet)
@@ -16,16 +16,23 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   behoben (E81), beide Korrekturrunden gegengeprüft.
 - Fehlermeldung des Nutzers behoben: Tray-Menü schloss sich nach dem Rechtsklick sofort (E82, G6.8, Gate
   `phase6-traymenu.ps1` mit echter Maus und Tastatur; bewegt die Maus, nur am echten Desktop ausführen).
-- Installierte Version beim Nutzer ersetzt (`%LOCALAPPDATA%\Programs\HdrPilot\HDRpilot.exe`, alte als
-  `HdrPilot-vorher.exe.bak` daneben), läuft mit der echten Ablage.
+- Phase 7 Installer (Wunsch des Nutzers, E83): eigener Setup `HDRpilot-Setup-1.1.0.exe` (normale EXE mit angehängtem
+  Paket), installiert für den Benutzer ohne Adminrechte, Eintrag unter „Installierte Apps“, Aktualisieren mit Rückfall,
+  Entfernen aus einer Temp-Kopie; Einstellungen und Daten bleiben. Drei parallele Teile, je gegengeprüft, Schlussprüfung
+  mit 4 Blickwinkeln und Gegenprüfer (17 Funde), zweite Gegenprüfung (4 Funde), alles behoben. Gates G7.1–G7.5 belegt.
+- Beim Nutzer per Setup auf 1.1.0 aktualisiert (G7.5): `%LOCALAPPDATA%\Programs\HDRpilot` (derselbe Ordner wie bisher),
+  eingetragen unter „Installierte Apps“, Startmenü-Verknüpfung, Autostart; Einstellungen unverändert. Die alte EXE liegt
+  noch als `HdrPilot-vorher.exe.bak` daneben (bleibt beim Entfernen stehen, da nicht vom Setup).
 
 ## Offen (nichts blockiert)
 - Kontomodus der HDR-Liste nur mit Attrappe getestet; live erst, wenn der Nutzer ein Bot-Passwort einträgt.
 - Battle.net ohne installiertes Spiel nicht live getestet.
 - Ursache des Dead-Island-2-Hängers beim automatischen Umschalten nicht bewiesen (Neustart-Puffer und Frühwarnung
   mildern ihn; sicher sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption).
-- Aufräumen beim Nutzer (nur auf Wunsch): `config.json.vor-ruecksetzung.bak` im Roaming-Ordner, die alte Verknüpfung
-  „Dying Light_ The Beast (HDR).lnk“ (neue Verknüpfungen heißen „Dying Light - The Beast (HDR)“), die gesicherte alte EXE.
+- Aufräumen beim Nutzer (nur auf Wunsch): `config.json.vor-ruecksetzung.bak` im Roaming-Ordner, die gesicherte alte EXE
+  `HdrPilot-vorher.exe.bak` im Programmordner. Die 6 Desktop-Verknüpfungen „(HDR)“ hat der Nutzer am 07.10. selbst gelöscht.
+- Setup: Aktualisieren über eine laufende ältere Version lief beim Nutzer nicht live (die App lief gerade nicht); belegt
+  durch die Neuinstallation über die laufende App (G7.2) und Unit-Tests. Neue Version: `tools\publish.ps1`, dann Setup.
 - Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben; englische Oberfläche.
 
 ## Arbeitsweise und Fallen

@@ -327,7 +327,8 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 | `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen und Ablage unter diesem Ordner, dazu ein eigener Registry-Zweig unter `HKCU\Software\HDRpilot.Tests` |
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 ältere Version abgelehnt, 4 HDRpilot ließ sich nicht beenden,
-5 abgebrochen, 6 nicht installiert. Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
+5 abgebrochen, 6 nicht installiert, 7 aus dem Container einer anderen App gestartet, nichts geändert (siehe
+„Fehlersuche“). Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
 
 ### cli\hdrpilot.exe
 
@@ -433,6 +434,14 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
 - **Setup oder Entfernen meldet einen Fehler:** Einzelheiten stehen in `%TEMP%\HDRpilot-Setup.log`; nach einem Fehler
   im Setup ist die bisherige Version unverändert. Lässt sich HDRpilot nicht beenden, im Infobereich „HDRpilot beenden“
   wählen und es erneut versuchen.
+- **HDRpilot startet nicht von selbst, oder Einstellungen sind weg nach einem Start aus einer anderen App:** Manche
+  Apps aus dem Microsoft Store oder als MSIX-Paket (etwa die Claude-App) lassen alles, was aus ihnen heraus startet, in
+  ihrem eigenen Container laufen. Windows leitet dann Einstellungen, Protokolle und Registry-Einträge wie den Autostart
+  in den privaten Speicher dieser App um (`%LOCALAPPDATA%\Packages\<App>\LocalCache`). Außerhalb fehlen sie, und der
+  Autostart wirkt nicht. HDRpilot erkennt das: Beim Start steht eine Warnung „HDRpilot läuft im Container der App …“ im
+  Protokoll (in der umgeleiteten Kopie unter `…\LocalCache\Local\HDRpilot\logs`), Setup und Entfernen ändern nichts und
+  sagen es (still: Exit-Code 7). Abhilfe: HDRpilot beenden und über das Startmenü oder die Verknüpfung starten,
+  Setup-Dateien per Doppelklick im Explorer ausführen, Entfernen über „Installierte Apps“.
 - **Ein Spiel fehlt in der Liste:** „Neu einlesen“ drücken; fehlt es weiter, über „Spiel hinzufügen“ eintragen oder
   seinen übergeordneten Ordner als Suchordner angeben. Fehler einzelner Launcher stehen in der Bibliothek und im
   Protokoll.

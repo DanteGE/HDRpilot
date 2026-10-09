@@ -129,4 +129,7 @@ public static class SetupExitCodes
     public const int AppStillRunning = 4;
     public const int Cancelled = 5;
     public const int NotInstalled = 6;
+
+    /// <summary>Läuft im Container einer anderen App (E84): Windows leitete Registry und AppData um, nichts geändert.</summary>
+    public const int Container = 7;
 }

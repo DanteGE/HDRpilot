@@ -482,3 +482,27 @@ Fehlers; ein nicht wiederhergestellter HDR-Zustand ist nur ein Hinweis. Die Kopi
 Temp-Ordner (cmd.exe ohne AutoRun und verzögerte Erweiterung, bis zu 30 Versuche im Sekundenabstand) und, sobald der weg
 und sie damit beendet ist, einmal ihren Entpack-Ordner `%TEMP%\.net\HDRpilot-Uninstall` (nicht öfter: dort könnte
 inzwischen eine neue Kopie entpackt haben); den Entpack-Ordner der App und den der Setup-Datei fasst sie nie an.
+
+**E84 Container der Claude-App (Befund 2026-10-09):** Die Claude-Desktop-App ist ein MSIX-Paket. Prozesse, die aus
+einer Sitzung darin gestartet werden (Skripte, Prüfläufe, auch HDRpilot und sein Setup), laufen in ihrem Container,
+obwohl `GetCurrentPackageFullName` für sie kein Paket meldet. Windows leitet ihre Schreibzugriffe auf Ordner unter
+`%APPDATA%` und `%LOCALAPPDATA%` sowie auf `HKCU\Software` in den privaten Speicher der App um
+(`%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local|Roaming\…` und eine eigene Registry-Datei); im
+Container sieht alles normal aus, von außen fehlt es. Nicht umgeleitet: `%LOCALAPPDATA%\Programs`, `%TEMP%`, Startmenü,
+Projektordner. Folgen vom 2026-10-07 bis 2026-10-09: Konfiguration und Protokolle der aus der Sitzung gestarteten
+Instanzen lagen nur in der Container-Kopie (dort auch die bisherigen Einstellungen des Nutzers; die echte `config.json`
+entstand erst am 2026-10-09 um 23:18); der Autostart-Wert war nur virtuell, deshalb startete HDRpilot nach einem Neustart
+nicht von selbst; die Eintragung des Setups unter „Installierte Apps“ war ebenfalls nur virtuell. Der Nachweis zu G7.5
+ist korrigiert. Erkennung (`ContainerDetector`): eine Probe-Datei mit GUID im Zielordner anlegen, unter
+`%LOCALAPPDATA%\Packages\*\LocalCache\Local` bzw. `…\Roaming` am gleichen relativen Pfad suchen und immer löschen (mit
+ihr verschwindet die umgeleitete Kopie); gemessen 76 ms bei 168 Apps. Fehlt der Ordner, wird er dafür angelegt und danach
+wieder entfernt; Ordner außerhalb von AppData gelten ohne Probe als nicht umgeleitet, Fehler ebenso (gesperrt wird nur,
+was sicher erkannt ist). Entscheidungen des Nutzers: Setup und Entfernen prüfen vor jeder Änderung den Datenordner
+`%LOCALAPPDATA%\HDRpilot`; wird er umgeleitet, ändern sie nichts, nennen im Fenster die App und den richtigen Weg
+(Doppelklick im Explorer bzw. „Installierte Apps“) und enden still mit Exit-Code 7; die Kopie zum Entfernen räumt dabei
+trotzdem ihren Temp-Ordner weg. Prüfläufe mit `--test-root` überspringen die Prüfung (sie laufen auch im Container
+vollständig darin ab), außer die Umgebungsvariable `HDRPILOT_TEST_CONTAINER_CHECK=1` verlangt sie. Die App prüft ihren
+Datenordner einmal je Start im Hintergrund und schreibt bei Umleitung eine Warnung ins Protokoll (das dann selbst in der
+Container-Kopie liegt). Arbeitsregel: Aktionen am echten System (installieren, starten, Einstellungen, Registry und
+Dateien des Nutzers prüfen) nur von außerhalb des Containers ausführen, etwa per WMI (`Win32_Process`), und von außen
+nachprüfen.

@@ -2,6 +2,8 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using HdrPilot.App.Infrastructure;
+using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Platform;
 using HdrPilot.Core.Processes;
 
 namespace HdrPilot.App.Setup.UI;
@@ -39,6 +41,15 @@ public interface ISetupHost
 
     /// <summary>Lässt Temp- und Entpack-Ordner der Kopie nach dem Ende löschen (nur, wenn diese EXE die Kopie ist).</summary>
     void ScheduleSelfRemoval(SetupLog log);
+
+    /// <summary>Leitet Windows Schreibzugriffe auf <paramref name="folder"/> in den Container einer anderen App um (E84)? Wirft nie.</summary>
+    ContainerRedirection DetectContainer(string folder);
+
+    /// <summary>
+    /// Prüfläufe (<c>--test-root</c>) überspringen die Container-Prüfung, außer diese Angabe verlangt sie (Umgebungsvariable
+    /// <see cref="SetupRunner.ForceContainerCheckVariable"/> = 1, nur für Prüfskripte).
+    /// </summary>
+    bool ContainerCheckForced { get; }
 }
 
 /// <summary>Echte Umgebung: Fenster im Stil der App, die eigene EXE, Prozessliste und Temp-Ordner.</summary>
@@ -116,6 +127,10 @@ public sealed class WpfSetupHost(Application app) : ISetupHost
         var temp = Path.GetTempPath();
         UninstallHandoff.ScheduleSelfRemoval(Environment.ProcessPath, temp, log, UninstallHandoff.OwnExtractionFolder(temp));
     }
+
+    public ContainerRedirection DetectContainer(string folder) => new ContainerDetector(SystemEnvironment.Instance).Detect(folder);
+
+    public bool ContainerCheckForced => Environment.GetEnvironmentVariable(SetupRunner.ForceContainerCheckVariable) == "1";
 
     private static Task<int> ShowAsync(Window window, Func<int> exitCode)
     {

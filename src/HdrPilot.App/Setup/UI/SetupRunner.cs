@@ -12,6 +12,9 @@ namespace HdrPilot.App.Setup.UI;
 /// </summary>
 public static class SetupRunner
 {
+    /// <summary>Umgebungsvariable nur für Prüfskripte: „1“ verlangt die Container-Prüfung (E84) auch mit <c>--test-root</c>.</summary>
+    public const string ForceContainerCheckVariable = "HDRPILOT_TEST_CONTAINER_CHECK";
+
     public static async Task<int> RunAsync(Application app, SetupMode mode)
     {
         // Zwischen zwei Fenstern (Rückfrage, Fortschritt) darf WPF nicht von selbst beenden; den Code setzt App.
@@ -42,7 +45,8 @@ public static class SetupRunner
     /// <summary>
     /// Ablauf ohne WPF-Anwendung: Fenster, Prozesse und Engines kommen von <paramref name="host"/>. Passt die
     /// Befehlszeile nicht (<see cref="SetupMode.RefusedArguments"/>), ändert der Lauf nichts und liefert
-    /// <see cref="SetupExitCodes.BadArguments"/>; die Kopie zum Entfernen räumt auch dann ihren Temp-Ordner weg.
+    /// <see cref="SetupExitCodes.BadArguments"/>; läuft er im Container einer anderen App (E84), ebenso mit
+    /// <see cref="SetupExitCodes.Container"/>. Die Kopie zum Entfernen räumt auch dann ihren Temp-Ordner weg.
     /// </summary>
     public static async Task<int> RunAsync(ISetupHost host, SetupMode mode, SetupLocations locations, SetupLog log)
     {
@@ -65,6 +69,12 @@ public static class SetupRunner
 
         try
         {
+            // Vor allem anderen (Bestandsaufnahme, Kopie zum Entfernen): im Container wäre jede Änderung nur halb echt.
+            if (ContainerPackage(host, locations, log) is { } package)
+            {
+                return RefuseInContainer(host, mode.Kind, args, package, log);
+            }
+
             return mode.Kind == SetupModeKind.Setup
                 ? await RunSetupAsync(host, mode.Bundle!, args, locations, log)
                 : await RunUninstallAsync(host, args, locations, log);
@@ -155,6 +165,11 @@ public static class SetupRunner
                 // Die Befehlszeile kommt von der installierten EXE; passt sie nicht, wird nichts entfernt.
                 code = Refuse(host, SetupModeKind.UninstallContinue, args, refused, log);
             }
+            else if (ContainerPackage(host, locations, log) is { } package)
+            {
+                // Sonst prüft schon die installierte EXE; die Kopie prüft selbst, falls sie anders gestartet wurde.
+                code = RefuseInContainer(host, SetupModeKind.UninstallContinue, args, package, log);
+            }
             else
             {
                 if (args.WaitPid is { } pid)
@@ -200,6 +215,48 @@ public static class SetupRunner
         }
 
         return SetupExitCodes.BadArguments;
+    }
+
+    /// <summary>
+    /// Ordner der App unter %LOCALAPPDATA%\Packages, in deren Container dieser Lauf steckt (E84), sonst null. Geprüft wird
+    /// der Datenordner (%LOCALAPPDATA%\HDRpilot) per Probe; Registry-Einträge leitet Windows im selben Fall um. Prüfläufe
+    /// (<c>--test-root</c>) überspringen das, außer <see cref="ISetupHost.ContainerCheckForced"/>: Sie berühren nie die echte
+    /// Installation und laufen auch aus einem Container heraus vollständig darin ab. Ohne sicheres Ergebnis geht es weiter.
+    /// </summary>
+    private static string? ContainerPackage(ISetupHost host, SetupLocations locations, SetupLog log)
+    {
+        if (locations.IsTest && !host.ContainerCheckForced)
+        {
+            log.Info("Container-Prüfung im Prüflauf übersprungen.");
+            return null;
+        }
+
+        var result = host.DetectContainer(locations.DataPaths.DataDirectory);
+        if (result.Problem is not null)
+        {
+            log.Warn("Container-Prüfung für " + result.Folder + ": " + result.Problem);
+        }
+
+        if (!result.Redirected)
+        {
+            log.Info("Container-Prüfung: " + result.Folder + " wird nicht umgeleitet.");
+            return null;
+        }
+
+        return result.PackageFolder;
+    }
+
+    /// <summary>Im Container einer anderen App (E84): nichts ändern, im Protokoll begründen, mit Fenster eine Fehlermeldung.</summary>
+    private static int RefuseInContainer(ISetupHost host, SetupModeKind kind, SetupArguments args, string package, SetupLog log)
+    {
+        log.Error("Läuft im Container der App " + package + ": Windows leitet Registry-Einträge und AppData dorthin um. Nichts geändert, Exit-Code "
+            + SetupExitCodes.Container.ToString(CultureInfo.InvariantCulture) + ". Bitte per Doppelklick im Explorer bzw. über „Installierte Apps“ starten.");
+        if (!args.Quiet)
+        {
+            host.ShowError(TitleFor(kind), SetupText.Container(kind, package));
+        }
+
+        return SetupExitCodes.Container;
     }
 
     private static string TitleFor(SetupModeKind kind) => kind == SetupModeKind.Setup ? SetupStrings.SetupWindowTitle : SetupStrings.UninstallWindowTitle;

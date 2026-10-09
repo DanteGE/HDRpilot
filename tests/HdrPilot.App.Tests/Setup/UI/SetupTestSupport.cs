@@ -1,6 +1,7 @@
 using System.Globalization;
 using HdrPilot.App.Setup;
 using HdrPilot.App.Setup.UI;
+using HdrPilot.Core.Platform;
 
 namespace HdrPilot.App.Tests.Setup.UI;
 
@@ -177,6 +178,19 @@ internal sealed class FakeSetupHost(FakeSetupEngine setup, FakeUninstallEngine u
     {
         Calls.Add("ScheduleSelfRemoval");
         log.Info(RemovalMarker);
+    }
+
+    /// <summary>Ergebnis der Container-Prüfung (E84): Paketordner der App, null = nicht umgeleitet.</summary>
+    public string? ContainerPackage { get; set; }
+
+    public string? ContainerProblem { get; set; }
+
+    public bool ContainerCheckForced { get; set; }
+
+    public ContainerRedirection DetectContainer(string folder)
+    {
+        Calls.Add("DetectContainer " + folder);
+        return new ContainerRedirection(folder, ContainerPackage, ContainerProblem);
     }
 }
 

@@ -190,6 +190,28 @@
   <data name="GracePeriodHint" xml:space="preserve">
     <value>So lange wartet HDRpilot nach dem Spielende, bevor HDR zurückgestellt wird.</value>
   </data>
+  <data name="RestartBufferLabel" xml:space="preserve">
+    <value>Neustart-Puffer</value>
+  </data>
+  <data name="RestartBufferHint" xml:space="preserve">
+    <value>Endet ein Spiel weniger als 5 Minuten nach dem Start und hat HDRpilot HDR dafür eingeschaltet, bleibt HDR so lange an (für einen schnellen Neustart). 0:00 = aus.</value>
+  </data>
+  <data name="RestartBufferMinutesLabel" xml:space="preserve">
+    <value>Minuten</value>
+  </data>
+  <data name="RestartBufferSecondsLabel" xml:space="preserve">
+    <value>Sekunden</value>
+  </data>
+  <data name="RestartBufferMinutesName" xml:space="preserve">
+    <value>Neustart-Puffer, Minuten</value>
+  </data>
+  <data name="RestartBufferSecondsName" xml:space="preserve">
+    <value>Neustart-Puffer, Sekunden</value>
+  </data>
+  <data name="RestartBufferOff" xml:space="preserve">
+    <value>aus</value>
+    <comment>Wertanzeige des Neustart-Puffers bei 0:00</comment>
+  </data>
   <data name="LaunchTimeoutLabel" xml:space="preserve">
     <value>Startfrist</value>
   </data>
@@ -201,6 +223,10 @@
   </data>
   <data name="UnitSeconds" xml:space="preserve">
     <value>{0:N0} s</value>
+  </data>
+  <data name="UnitMinutesSeconds" xml:space="preserve">
+    <value>{0}:{1:00} min</value>
+    <comment>{0} = Minuten, {1} = Sekunden</comment>
   </data>
 
   <!-- Einstellungen: Start und Hinweise -->

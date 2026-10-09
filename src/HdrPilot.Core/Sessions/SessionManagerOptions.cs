@@ -4,7 +4,8 @@ namespace HdrPilot.Core.Sessions;
 
 /// <summary>
 /// Feste Schwellen der Sitzungslogik für Neustart-Puffer und Hinweis „Spiel hängt“ (vom Nutzer im gemeinsamen Test
-/// G4.5 abgestimmt, keine Einstellung) und die Abfragen dafür. Standard: Werte für den Betrieb; Tests setzen eigene.
+/// G4.5 abgestimmt, keine Einstellung; nur die Länge des Neustart-Puffers ist einstellbar, E85) und die Abfragen dafür.
+/// Standard: Werte für den Betrieb; Tests setzen eigene.
 /// </summary>
 public sealed class SessionManagerOptions
 {
@@ -17,11 +18,14 @@ public sealed class SessionManagerOptions
     public TimeSpan ShortSessionLimit { get; init; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// Nachlauf nach einer kurzen Sitzung, die HdrPilot selbst eingeschaltet hat (die längere von dieser und der
-    /// eingestellten Nachlaufzeit gilt). Startet das Spiel in dieser Zeit neu, läuft die Sitzung einfach weiter.
-    /// <see cref="TimeSpan.Zero"/> schaltet den Neustart-Puffer ab.
+    /// Nachlauf nach einer kurzen Sitzung, die HdrPilot selbst eingeschaltet hat (nur wenn er länger als die eingestellte
+    /// Nachlaufzeit ist, sonst gilt die Nachlaufzeit wie bei 0:00). Startet das Spiel in dieser Zeit neu, läuft die
+    /// Sitzung einfach weiter.
+    /// Standard, solange <see cref="Config.AppSettings.RestartBufferSeconds"/> nicht gesetzt ist (Einstellung
+    /// „Neustart-Puffer“). 1 Minute seit dem Helldivers-2-Test des Nutzers (E85, vorher 3 Minuten: HDR blieb nach dem
+    /// Schließen spürbar zu lange an). <see cref="TimeSpan.Zero"/> schaltet den Neustart-Puffer ab.
     /// </summary>
-    public TimeSpan RestartBuffer { get; init; } = TimeSpan.FromMinutes(3);
+    public TimeSpan RestartBuffer { get; init; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Läuft nach dem Neustart-Puffer eine Vollbild-Anwendung (etwa ein anderes Spiel beim Start), wartet das

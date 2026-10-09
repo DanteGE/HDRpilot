@@ -20,10 +20,10 @@ Infobereich.
 
 ## Einrichtung
 
-Empfohlen ist der Setup `HDRpilot-Setup-1.1.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
+Empfohlen ist der Setup `HDRpilot-Setup-1.2.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
 Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HDRpilot` (siehe „Ohne Installation“).
 
-1. `HDRpilot-Setup-1.1.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
+1. `HDRpilot-Setup-1.2.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
    Start nach („Weitere Informationen“ → „Trotzdem ausführen“).
 2. Der Setup zeigt den Programmordner `%LOCALAPPDATA%\Programs\HDRpilot` und drei Optionen: **Mit Windows starten**
    (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
@@ -130,6 +130,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Bildschirme | Auf welchen Bildschirmen HDR geschaltet wird | Hauptbildschirm |
 | Abfrageintervall | Wie oft nach Spielstarts gesehen wird | 1000 ms |
 | Nachlaufzeit | Wartezeit nach dem Spielende, bevor zurückgestellt wird | 10 s |
+| Neustart-Puffer | Endet ein Spiel weniger als 5 Minuten nach dem Start, bleibt HDR so lange an (Minuten und Sekunden, höchstens 30:00, 0:00 = aus; siehe „So funktioniert es“) | 1:00 |
 | Startfrist | Bei „Mit HDR starten“: so lange wird auf den Spielprozess gewartet | 120 s |
 | Mit Windows starten | Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | aus |
 | Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
@@ -142,8 +143,9 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 Im Bereich „HDR-Liste (PCGamingWiki)“ gibt es außerdem **Jetzt abgleichen**, den Stand der Liste und das optionale
 PCGamingWiki-Konto (siehe unten).
 
-Nur in `config.json` einstellbar: `restartBufferSeconds` (Neustart-Puffer in Sekunden, Standard 180, 0 = aus) und
-`launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard `true`).
+Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard
+`true`). Den Neustart-Puffer speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der
+Standard von 1 Minute.
 
 Die Darstellung folgt dem hellen oder dunklen App-Modus von Windows. Animationen laufen nur, wenn in Windows
 „Animationseffekte“ an ist, und nur solange ein Fenster sichtbar ist.
@@ -183,11 +185,13 @@ dem Spiel an, schaltet HDRpilot am Ende nichts. Schaltest du HDR während des Sp
 HDRpilot das nicht; am Ende schaltet es HDR nur aus, wenn es vor dem Spiel aus war, und nie wieder ein.
 
 **Neustart-Puffer:** Endet ein Spiel weniger als 5 Minuten nach dem Start (typisch für Hänger oder Abstürze) und hat
-HDRpilot HDR dafür eingeschaltet, bleibt HDR 3 Minuten an statt nur die Nachlaufzeit. Startest du das Spiel in dieser
-Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet, schaltet HDRpilot es bei Spielen mit
-„HDR automatisch“ wieder ein). Läuft
-beim Ablauf des Puffers eine Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30
-Minuten). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
+HDRpilot HDR dafür eingeschaltet, bleibt HDR noch eine Weile an statt nur die Nachlaufzeit: Standard 1 Minute,
+einstellbar unter „Einstellungen“ in Minuten und Sekunden (0:00 bis 30:00, 0:00 schaltet den Puffer ab; ist er nicht
+länger als die Nachlaufzeit, wirkt er wie 0:00). Eine Änderung gilt ab dem nächsten Spielende, ohne Neustart von
+HDRpilot. Startest du das Spiel in dieser Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet,
+schaltet HDRpilot es bei Spielen mit „HDR automatisch“ wieder ein). Läuft beim Ablauf des Puffers eine
+Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30 Minuten; nur nach dem Puffer,
+nie nach der Nachlaufzeit). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
 
 **Hängender Spielprozess:** Läuft ein Spiel nach dem Spielen unsichtbar weiter (kein Fenster, keine Rechenzeit), lässt
 HDRpilot HDR an, weil das Spiel ja noch läuft. Nach 2 Minuten ohne jede Aktivität erscheint einmal ein Hinweis, dass das
@@ -316,7 +320,7 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 
 | Aufruf | Wirkung |
 |---|---|
-| `HDRpilot-Setup-1.1.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
+| `HDRpilot-Setup-1.2.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
 | `--autostart on\|off` | Mit Windows starten, danach mit der installierten EXE (ohne Angabe: wie bisher, also an, wenn schon eine HDRpilot.exe mit Windows startet, auch aus einem anderen Ordner; bei einer neuen Installation an) |
 | `--desktop-shortcut on\|off` | Desktop-Verknüpfung (ohne Angabe: wie bisher, bei einer neuen Installation aus) |
 | `--no-launch` | HDRpilot danach nicht starten. Für Skripte, die auf das Ende warten (etwa `Start-Process -Wait`, das auch auf gestartete Programme wartet) oder die Ausgabe lesen |
@@ -378,8 +382,9 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   Spiel gestartet hat. Battle.net ist ungeprüft (siehe unten).
 - **Umschalten während des Spielstarts:** Bei der automatischen Erkennung schaltet HDRpilot HDR, während das Spiel
   gerade hochfährt. Das verkraften fast alle Spiele; Dead Island 2 blieb im Test bei einem von zwei automatischen
-  Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Der Neustart-Puffer hilft beim zweiten Versuch; sicherer
-  sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption.
+  Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Der Neustart-Puffer hilft beim zweiten Versuch, wenn der
+  Neustart in seine Zeit fällt (Standard 1 Minute; wer länger für den Neustart braucht, stellt ihn unter „Einstellungen“
+  höher); sicherer sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption.
 - **Frühwarnung:** nur für den Epic Games Launcher und Steam. Sie beruht auf deren Protokollformat, das sich mit einem
   Launcher-Update ändern kann; dann greift wieder die normale Erkennung.
 - **Steam-Startoption:** wirkt nur, wenn HDRpilot läuft (Autostart empfohlen) und das Spiel beim letzten Einlesen schon
@@ -418,14 +423,15 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   „(HDR)“-Verknüpfung oder (bei Steam) die Steam-Startoption starten; dann ist HDR schon vor dem Spiel an.
 - **Steam-Startoption wirkt nicht:** Läuft HDRpilot? In `logs\wrap.log` steht je Start, ob HDR vorbereitet wurde und
   warum nicht. Kennt HDRpilot das Spiel noch nicht, einmal „Neu einlesen“.
-- **HDR bleibt nach dem Spiel an:** Endete das Spiel kurz nach dem Start, hält der Neustart-Puffer HDR bis zu 3 Minuten
-  an (der Tooltip zeigt die Restzeit). Sonst die Nachlaufzeit abwarten (Standard 10 s). Nennt der Tooltip das Spiel
-  danach noch, läuft noch ein Programm aus seinem Ordner (etwa ein Launcher-Rest): im Task-Manager nachsehen und diese
-  EXE in den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar weiter (im Test bei
-  Palworld); HDRpilot weist nach 2 Minuten darauf hin. Dann den Spielprozess im Task-Manager beenden. Weitere Gründe:
-  Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem Spiel zurückstellen“ ist für dieses oder
-  ein gleichzeitig gelaufenes Spiel aus. Nach „Mit HDR starten“ ohne Spielstart bleibt HDR bis zum Ende der Startfrist
-  an.
+- **HDR bleibt nach dem Spiel an:** Endete das Spiel weniger als 5 Minuten nach dem Start, hält der Neustart-Puffer HDR
+  noch an (Standard 1 Minute, der Tooltip zeigt die Restzeit). Ist dir das zu lang, stelle unter „Einstellungen“ beim
+  Neustart-Puffer eine kürzere Zeit oder 0:00 (aus) ein. Sonst die Nachlaufzeit abwarten (Standard 10 s). Nennt der
+  Tooltip das Spiel danach noch, läuft noch ein Programm aus seinem Ordner (etwa ein Launcher-Rest): im Task-Manager
+  nachsehen und diese EXE in den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar
+  weiter (im Test bei Palworld); HDRpilot weist nach 2 Minuten darauf hin. Dann den Spielprozess im Task-Manager
+  beenden. Weitere Gründe: Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem Spiel
+  zurückstellen“ ist für dieses oder ein gleichzeitig gelaufenes Spiel aus. Nach „Mit HDR starten“ ohne Spielstart
+  bleibt HDR bis zum Ende der Startfrist an.
 - **„Mit HDR starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
   HDRpilot keine Start-EXE. Dann das Spiel über seine EXE hinzufügen.
 - **Keine HDR-Kennzeichen in der Liste:** Der erste Abgleich läuft 30 s nach dem Start; ohne Konto sind je Start nur
@@ -493,7 +499,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
 `tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab und daneben den Setup
-`artifacts\publish\HDRpilot-Setup-1.1.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenzhinweisen und
+`artifacts\publish\HDRpilot-Setup-1.2.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenzhinweisen und
 Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
 `HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
 `GATES.md`.

@@ -7,6 +7,7 @@ using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
+using HdrPilot.Core.Sessions;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 
@@ -24,14 +25,20 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public const int GracePeriodMax = 120;
     public const int LaunchTimeoutMin = 30;
     public const int LaunchTimeoutMax = 600;
+    public const int RestartBufferMinutesMax = AppSettings.RestartBufferMaxSeconds / 60;
+    public const int RestartBufferSecondsMax = 59;
 
     private readonly IShellContext _context;
     private readonly IFolderPicker _folderPicker;
     private readonly RelayCommand _removeSearchFolderCommand;
+
+    /// <summary>restartBufferSeconds fehlt in config.json: Der Standard bleibt ungeschrieben, solange er nicht geändert wird.</summary>
+    private readonly bool _restartBufferUnset;
     private Snapshot _original;
     private int _pollIntervalMs;
     private int _gracePeriodSeconds;
     private int _launchTimeoutSeconds;
+    private int _restartBufferTotalSeconds;
     private bool _startWithWindows;
     private bool _notifications;
     private bool _hotkeyFallback;
@@ -60,6 +67,8 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _pollIntervalMs = Math.Clamp(s.PollIntervalMs, PollIntervalMin, PollIntervalMax);
         _gracePeriodSeconds = Math.Clamp(s.GracePeriodSeconds, GracePeriodMin, GracePeriodMax);
         _launchTimeoutSeconds = Math.Clamp(s.LaunchTimeoutSeconds, LaunchTimeoutMin, LaunchTimeoutMax);
+        _restartBufferUnset = s.RestartBufferSeconds is null;
+        _restartBufferTotalSeconds = Math.Clamp(s.RestartBufferSeconds ?? RestartBufferDefaultSeconds, 0, AppSettings.RestartBufferMaxSeconds);
         _startWithWindows = ReadAutostart(s.StartWithWindows);
         _notifications = s.Notifications;
         _hotkeyFallback = s.HotkeyFallback;
@@ -161,6 +170,31 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     }
 
     public string LaunchTimeoutText => string.Format(CultureInfo.CurrentCulture, ShellStrings.UnitSeconds, _launchTimeoutSeconds);
+
+    /// <summary>Standard des Neustart-Puffers, wenn restartBufferSeconds nicht gesetzt ist (60 s, E85).</summary>
+    public static int RestartBufferDefaultSeconds => (int)SessionManagerOptions.Default.RestartBuffer.TotalSeconds;
+
+    /// <summary>Neustart-Puffer, Minuten (0–30). Bei 30 Minuten werden die Sekunden auf 0 begrenzt (höchstens 30:00).</summary>
+    public int RestartBufferMinutes
+    {
+        get => _restartBufferTotalSeconds / 60;
+        set => SetRestartBuffer((Math.Clamp(value, 0, RestartBufferMinutesMax) * 60) + RestartBufferSeconds);
+    }
+
+    /// <summary>Neustart-Puffer, Sekunden (0–59); zusammen mit den Minuten höchstens 30:00.</summary>
+    public int RestartBufferSeconds
+    {
+        get => _restartBufferTotalSeconds % 60;
+        set => SetRestartBuffer((RestartBufferMinutes * 60) + Math.Clamp(value, 0, RestartBufferSecondsMax));
+    }
+
+    /// <summary>Gespeicherter Wert (restartBufferSeconds): 0 bis 1800, 0 = aus.</summary>
+    public int RestartBufferTotalSeconds => _restartBufferTotalSeconds;
+
+    /// <summary>„1:00 min“ oder „aus“.</summary>
+    public string RestartBufferText => _restartBufferTotalSeconds == 0
+        ? ShellStrings.RestartBufferOff
+        : string.Format(CultureInfo.CurrentCulture, ShellStrings.UnitMinutesSeconds, RestartBufferMinutes, RestartBufferSeconds);
 
     public bool StartWithWindows
     {
@@ -346,6 +380,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 s.PollIntervalMs = _pollIntervalMs;
                 s.GracePeriodSeconds = _gracePeriodSeconds;
                 s.LaunchTimeoutSeconds = _launchTimeoutSeconds;
+                s.RestartBufferSeconds = _restartBufferUnset && _restartBufferTotalSeconds == RestartBufferDefaultSeconds ? null : _restartBufferTotalSeconds;
                 s.StartWithWindows = _startWithWindows;
                 s.Notifications = _notifications;
                 s.HotkeyFallback = _hotkeyFallback;
@@ -557,6 +592,25 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Begrenzt auf 0 bis 30:00 und meldet beide Regler immer: Bei 30 Minuten springt ein Sekunden-Regler auf 5 wieder
+    /// auf 0 zurück, obwohl sich der Wert nicht ändert.
+    /// </summary>
+    private void SetRestartBuffer(int totalSeconds)
+    {
+        var clamped = Math.Clamp(totalSeconds, 0, AppSettings.RestartBufferMaxSeconds);
+        var changed = clamped != _restartBufferTotalSeconds;
+        _restartBufferTotalSeconds = clamped;
+        OnPropertyChanged(nameof(RestartBufferMinutes));
+        OnPropertyChanged(nameof(RestartBufferSeconds));
+        if (changed)
+        {
+            OnPropertyChanged(nameof(RestartBufferTotalSeconds));
+            OnPropertyChanged(nameof(RestartBufferText));
+            UpdateChanges();
+        }
+    }
+
     private void UpdateChanges() => HasChanges = Capture() != _original;
 
     private Snapshot Capture() => new(
@@ -564,6 +618,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _pollIntervalMs,
         _gracePeriodSeconds,
         _launchTimeoutSeconds,
+        _restartBufferTotalSeconds,
         _startWithWindows,
         _notifications,
         _hotkeyFallback,
@@ -577,6 +632,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         int PollIntervalMs,
         int GracePeriodSeconds,
         int LaunchTimeoutSeconds,
+        int RestartBufferSeconds,
         bool StartWithWindows,
         bool Notifications,
         bool HotkeyFallback,

@@ -1,5 +1,6 @@
 ﻿# Gate Phase 4: Oberfläche per UI-Automation bedienen (eigene Test-Ablage, echte Bibliothek eingelesen).
 #   PHASE4_UI_OK       Hauptfenster, Suche, Filter, Auswahl, Detail-Schalter, Liste-Schalter, Einstellungen bedienbar
+#                      (auch Neustart-Puffer in Minuten und Sekunden, G7.6/E85: 30:05 wird 30:00, 0:45 gespeichert)
 #   PHASE4_PERSIST_OK  geänderte Einstellungen überleben einen Neustart der App
 # Schaltet kein HDR und startet kein Spiel.
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
@@ -82,11 +83,27 @@ try {
     if (-not $set) { $set = Find-Id $win 'SettingsWindow' 3000 }
     Check ($null -ne $set) 'Einstellungen geöffnet'
     if ($set) {
-        foreach ($id in 'TargetDisplays', 'PollInterval', 'GracePeriod', 'LaunchTimeout', 'AutostartToggle', 'NotificationsToggle', 'HotkeyFallbackToggle', 'SearchFolders', 'AddSearchFolderButton', 'RemoveSearchFolderButton', 'LogLevel', 'HelperPatterns', 'ResetHelperPatternsButton', 'OpenLogFolderButton', 'SaveSettingsButton', 'CancelSettingsButton') {
+        foreach ($id in 'TargetDisplays', 'PollInterval', 'GracePeriod', 'RestartBufferMinutes', 'RestartBufferSeconds', 'LaunchTimeout', 'AutostartToggle', 'NotificationsToggle', 'HotkeyFallbackToggle', 'SearchFolders', 'AddSearchFolderButton', 'RemoveSearchFolderButton', 'LogLevel', 'HelperPatterns', 'ResetHelperPatternsButton', 'OpenLogFolderButton', 'SaveSettingsButton', 'CancelSettingsButton') {
             Check ($null -ne (Find-Id $set $id 3000)) "Einstellung $id vorhanden"
         }
         Set-Range (Find-Id $set 'GracePeriod') 15
         Set-Range (Find-Id $set 'PollInterval') 750
+
+        # Neustart-Puffer (G7.6): Die Testablage startet mit 0:00 (TestConfigSeed). 30:05 gibt es nicht (höchstens
+        # 30:00), danach 0:45 einstellen und speichern.
+        $bufMin = Find-Id $set 'RestartBufferMinutes'
+        $bufSec = Find-Id $set 'RestartBufferSeconds'
+        Check ((Get-Range $bufMin) -eq 0 -and (Get-Range $bufSec) -eq 0) ("Neustart-Puffer aus der Testablage: {0}:{1:00}" -f (Get-Range $bufMin), (Get-Range $bufSec))
+        Set-Range $bufMin 30
+        Set-Range $bufSec 5
+        Start-Sleep -Milliseconds 300
+        Check ((Get-Range $bufMin) -eq 30 -and (Get-Range $bufSec) -eq 0) ("Neustart-Puffer 30:05 auf 30:00 begrenzt ({0}:{1:00})" -f (Get-Range $bufMin), (Get-Range $bufSec))
+        Set-Range $bufMin 0
+        Set-Range $bufSec 45
+        Start-Sleep -Milliseconds 300
+        $pill = $set.FindFirst([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty, '0:45 min')))
+        Check ($null -ne $pill) 'Neustart-Puffer zeigt 0:45 min'
+
         $notif = Find-Id $set 'NotificationsToggle'
         if ((Get-Toggle $notif) -eq 'On') { [void](Toggle-El $notif) }
         Invoke-El (Find-Id $set 'SaveSettingsButton')
@@ -94,6 +111,7 @@ try {
         $s = (Read-Config $cfg).settings
         Check ($s.gracePeriodSeconds -eq 15) "Nachlaufzeit gespeichert ($($s.gracePeriodSeconds))"
         Check ($s.pollIntervalMs -eq 750) "Abfrageintervall gespeichert ($($s.pollIntervalMs))"
+        Check ($s.restartBufferSeconds -eq 45) "Neustart-Puffer 0:45 als restartBufferSeconds gespeichert ($($s.restartBufferSeconds))"
         Check ($s.notifications -eq $false) 'Benachrichtigungen aus gespeichert'
     }
 
@@ -110,8 +128,10 @@ try {
         $g = Get-Range (Find-Id $set2 'GracePeriod')
         $pi = Get-Range (Find-Id $set2 'PollInterval')
         $n = Get-Toggle (Find-Id $set2 'NotificationsToggle')
-        if ($g -ne 15 -or $pi -ne 750 -or $n -ne 'Off') { $persistOk = $false }
-        Note "Nach Neustart: Nachlaufzeit=$g, Intervall=$pi, Benachrichtigungen=$n"
+        $bm = Get-Range (Find-Id $set2 'RestartBufferMinutes')
+        $bs = Get-Range (Find-Id $set2 'RestartBufferSeconds')
+        if ($g -ne 15 -or $pi -ne 750 -or $n -ne 'Off' -or $bm -ne 0 -or $bs -ne 45) { $persistOk = $false }
+        Note ("Nach Neustart: Nachlaufzeit=$g, Intervall=$pi, Benachrichtigungen=$n, Neustart-Puffer={0}:{1:00}" -f $bm, $bs)
         Invoke-El (Find-Id $set2 'CancelSettingsButton')
     } else { $persistOk = $false; Note 'FEHLER Einstellungen nach Neustart nicht geöffnet' }
     Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null

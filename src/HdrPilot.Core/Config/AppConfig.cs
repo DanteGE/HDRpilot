@@ -25,6 +25,9 @@ public sealed class AppConfig
 
 public sealed class AppSettings
 {
+    /// <summary>Obergrenze für <see cref="RestartBufferSeconds"/>: 30:00 (größere Werte gelten als 30:00).</summary>
+    public const int RestartBufferMaxSeconds = 1800;
+
     /// <summary>monitorDevicePath der zu schaltenden Bildschirme. Leer: Hauptbildschirm.</summary>
     public List<string> TargetDisplays { get; set; } = [];
 
@@ -44,7 +47,8 @@ public sealed class AppSettings
 
     /// <summary>
     /// Neustart-Puffer in Sekunden: Endet ein Spiel kurz nach dem Start (Hänger, Absturz), bleibt HDR so lange an, damit
-    /// ein Neustart HDR schon vorfindet. Null: Standard (180 s), 0: aus.
+    /// ein Neustart HDR schon vorfindet. Null: Standard (60 s), 0: aus, höchstens <see cref="RestartBufferMaxSeconds"/>.
+    /// In den Einstellungen mit Minuten und Sekunden einstellbar (E85), gilt ab dem nächsten Spielende.
     /// </summary>
     public int? RestartBufferSeconds { get; set; }
 

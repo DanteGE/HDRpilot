@@ -9,7 +9,8 @@
 #   4. Alt+F4 (WM_CLOSE) an das unsichtbare Hilfsfenster zerstört es nicht, das nächste Menü bleibt offen
 #   5. ein Klick in ein anderes Programm (das Hilfsfenster des Skripts) schließt es
 #   6. ein Mausklick auf „Spieleliste öffnen“ öffnet das Hauptfenster
-#   7. Tastatur: Pfeil nach oben wählt „HDRpilot beenden“, Eingabe beendet die Testinstanz
+#   7. Tastatur: Die Versionszeile unter dem Kopf zeigt die Dateiversion der EXE und ist nicht aktiv (G8.1). Pfeil nach
+#      oben wählt „HDRpilot beenden“, nie die Versionszeile; Eingabe beendet die Testinstanz
 # Liegt das Symbol im Überlauf (Standard für neue Programme unter Windows 11), öffnet das Skript zuerst den Überlauf.
 # Bewegt die Maus und klickt: nur am echten Desktop ausführen. Vor jedem Klick prüft es das Fenster unter dem Zeiger
 # (nur Taskleiste, Überlauf, Testinstanz oder das eigene Hilfsfenster) und bricht sonst ab; Tasten gehen nur raus, wenn
@@ -233,6 +234,9 @@ function Open-Menu([int]$processId) {
 }
 
 $cfg = New-TestConfig 'phase6-traymenu'
+# Versionszeile (G8.1): „HDRpilot <Major.Minor.Build>“, dieselbe Zahl wie die Dateiversion der gebauten EXE
+$exeVersion = (Get-Item $AppExe).VersionInfo
+$expectedVersion = 'HDRpilot {0}.{1}.{2}' -f $exeVersion.FileMajorPart, $exeVersion.FileMinorPart, $exeVersion.FileBuildPart
 # Ohne Hinweise: der Willkommens-Hinweis der leeren Bibliothek läge sonst als Toast über dem Infobereich.
 $cfgFile = Join-Path $cfg 'config.json'
 [IO.File]::WriteAllText($cfgFile, ([IO.File]::ReadAllText($cfgFile).Replace('"settings": {', '"settings": { "notifications": false,')), (New-Object Text.UTF8Encoding $false))
@@ -307,6 +311,12 @@ try {
     Check ($null -ne $m) 'Menü für die Tastatur geöffnet'
     if ($m) {
         Pump 400
+        # Versionszeile vor dem ersten Tastendruck lesen: Text wie die Dateiversion der EXE, nicht aktiv (nicht anklickbar)
+        $menuEl = Menu-Element $m.Hwnd
+        $versionItem = if ($menuEl) { Find-Id $menuEl 'TrayVersion' 2000 } else { $null }
+        $versionName = if ($versionItem) { $versionItem.Current.Name } else { '' }
+        Check ($versionName -ceq $expectedVersion) "Versionszeile im Menü: '$versionName' (Dateiversion der EXE: '$expectedVersion')"
+        Check ($null -ne $versionItem -and -not $versionItem.Current.IsEnabled) 'Versionszeile nicht aktiv'
         Check ([TrayInput]::KeyTo($app.Id, $VK_UP)) 'Pfeil nach oben an die Testinstanz gesendet'
         Pump 300
         # Welcher Eintrag den Tastaturfokus hat, meldet WPF über UI Automation (HasKeyboardFocus des Eintrags).
@@ -314,6 +324,8 @@ try {
         $exitItem = if ($menuEl) { Find-Id $menuEl 'TrayExit' 2000 } else { $null }
         $exitFocused = $null -ne $exitItem -and $exitItem.Current.HasKeyboardFocus
         Check $exitFocused ('Pfeil nach oben wählt „HDRpilot beenden“ (Tastaturfokus: ' + $exitFocused + ')')
+        $versionItem = if ($menuEl) { Find-Id $menuEl 'TrayVersion' 2000 } else { $null }
+        Check ($null -ne $versionItem -and -not $versionItem.Current.HasKeyboardFocus) 'Versionszeile hat nach Pfeil nach oben keinen Tastaturfokus'
         if ($exitFocused) {
             Check ([TrayInput]::KeyTo($app.Id, $VK_RETURN)) 'Eingabe an die Testinstanz gesendet'
             Check ($app.WaitForExit(10000)) 'Eingabe beendet die Testinstanz über das Menü'

@@ -44,7 +44,11 @@
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
     </Style>
 
-    <!-- Versions-Pille rechts im Kopf der Einstellungen: wie die Wert-Anzeige, mit Akzent-Punkt, Text zurückgenommen -->
+    <!--
+        Versions-Pille rechts im Kopf der Einstellungen: wie die Wert-Anzeige, Info-Symbol und Text zurückgenommen. Kein
+        farbiger Punkt: Der steht in HDRpilot für einen Status (unten in den Einstellungen ungespeicherte Änderungen, Legende
+        im Hauptfenster).
+    -->
     <Style x:Key="Hp.Shell.VersionPill" TargetType="Border" BasedOn="{StaticResource Hp.Shell.ValuePill}">
         <Setter Property="CornerRadius" Value="11" />
         <Setter Property="Padding" Value="10,4,12,5" />

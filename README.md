@@ -57,7 +57,7 @@ startet HDRpilot wieder, wenn es vorher lief (wieder nur im Infobereich); lief e
 Einstellungen, Spieleliste, Protokolle und HDR-Liste bleiben erhalten, weil sie in `%APPDATA%\HDRpilot` und
 `%LOCALAPPDATA%\HDRpilot` liegen. Denselben Setup noch einmal auszuführen repariert die Installation. Eine ältere
 Version installiert er nur, wenn du **Trotzdem die ältere Version installieren** ankreuzt. Welche Version läuft, zeigen
-die oberste Zeile des Infobereich-Menüs und der Kopf der Einstellungen.
+das Infobereich-Menü (graue Zeile unter dem Menükopf) und der Kopf der Einstellungen.
 
 ### Ohne Installation
 
@@ -122,8 +122,8 @@ Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
 - **Spieleliste öffnen**, **Einstellungen**, **Protokollordner öffnen**
 - **HDRpilot beenden**
 
-Ganz oben im Menü steht grau und nicht anklickbar die Version („HDRpilot“ mit Versionsnummer), dieselbe Nummer wie im
-Setup und unter „Installierte Apps“.
+Direkt unter dem Kopf des Menüs (Symbol, „HDRpilot“ und Status) steht grau und nicht anklickbar die Version („HDRpilot“
+mit Versionsnummer), dieselbe Nummer wie im Setup und unter „Installierte Apps“.
 
 Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 
@@ -151,7 +151,7 @@ Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protok
 `true`). Den Neustart-Puffer speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der
 Standard von 1 Minute.
 
-Rechts im Kopf der Einstellungen steht die Version von HDRpilot, dieselbe Nummer wie oben im Infobereich-Menü.
+Rechts im Kopf der Einstellungen steht die Version von HDRpilot, dieselbe Nummer wie im Infobereich-Menü.
 
 Die Darstellung folgt dem hellen oder dunklen App-Modus von Windows. Animationen laufen nur, wenn in Windows
 „Animationseffekte“ an ist, und nur solange ein Fenster sichtbar ist.

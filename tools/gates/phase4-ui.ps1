@@ -99,8 +99,12 @@ try {
         if ($version) {
             $vr = $version.Current.BoundingRectangle
             $wr = $set.Current.BoundingRectangle
-            $captionHit = @('CaptionMinimize', 'CaptionMaximize', 'CaptionClose' | ForEach-Object { Find-Id $set $_ 1000 } | Where-Object { $_ -and $_.Current.BoundingRectangle.IntersectsWith($vr) })
-            Check (-not $vr.IsEmpty -and $vr.Width -gt 0 -and $wr.Contains($vr) -and $captionHit.Count -eq 0) ("Version sichtbar im Fenster, frei von den Titelzeilen-Schaltflächen ({0:0},{1:0} {2:0}x{3:0})" -f $vr.X, $vr.Y, $vr.Width, $vr.Height)
+            # Gefundene Schaltflächen getrennt sammeln: Ohne sie wäre „keine Überschneidung“ ohne Aussage, Schließen muss da sein
+            $captions = @{}
+            foreach ($id in 'CaptionMinimize', 'CaptionMaximize', 'CaptionClose') { $el = Find-Id $set $id 1000; if ($el) { $captions[$id] = $el } }
+            Check ($captions.ContainsKey('CaptionClose')) ("Titelzeilen-Schaltflächen gefunden: " + (@($captions.Keys | Sort-Object) -join ', '))
+            $captionHit = @($captions.Keys | Where-Object { $captions[$_].Current.BoundingRectangle.IntersectsWith($vr) })
+            Check (-not $vr.IsEmpty -and $vr.Width -gt 0 -and $wr.Contains($vr) -and $captions.ContainsKey('CaptionClose') -and $captionHit.Count -eq 0) ("Version sichtbar im Fenster, frei von den Titelzeilen-Schaltflächen ({0:0},{1:0} {2:0}x{3:0}; überdeckt: {4})" -f $vr.X, $vr.Y, $vr.Width, $vr.Height, $(if ($captionHit.Count) { $captionHit -join ', ' } else { 'keine' }))
         }
 
         Set-Range (Find-Id $set 'GracePeriod') 15

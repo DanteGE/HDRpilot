@@ -9,8 +9,8 @@ namespace HdrPilot.App.Infrastructure;
 /// Version der App an genau einer Stelle (G8.1): Major.Minor.Build der HDRpilot-Assembly (Version aus
 /// Directory.Build.props) nach derselben Regel wie Setup und Eintrag unter „Installierte Apps“
 /// (<see cref="SetupSupport.Normalize"/>: die vierte Stelle setzt der Build nicht). Der Setup übernimmt
-/// <see cref="Current"/> als eigene Version. Angezeigt im Kopf der Einstellungen und als oberste Zeile des Tray-Menüs,
-/// nie fest im Text.
+/// <see cref="Current"/> als eigene Version. Angezeigt im Kopf der Einstellungen und im Tray-Menü als erste Zeile unter
+/// dem Kopf, nie fest im Text.
 /// </summary>
 public static class AppVersion
 {

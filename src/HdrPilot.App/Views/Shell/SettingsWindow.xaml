@@ -45,7 +45,8 @@
                 </StackPanel>
                 <Border x:Name="VersionPill" Grid.Column="2" Style="{StaticResource Hp.Shell.VersionPill}" Margin="18,0,0,0">
                     <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="7" Height="7" Margin="0,1,8,0" VerticalAlignment="Center" Fill="{DynamicResource Hp.Brush.Accent}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE946;" FontSize="13" Margin="0,0,7,0"
+                                   Foreground="{DynamicResource Hp.Brush.TextMuted}" />
                         <TextBlock Style="{StaticResource Hp.Shell.VersionText}" Text="{x:Static infra:AppVersion.DisplayText}"
                                    AutomationProperties.AutomationId="SettingsVersion"
                                    AutomationProperties.Name="{x:Static infra:AppVersion.DisplayText}" />

@@ -28,6 +28,9 @@ public sealed class ShellViewTests
 
     private static readonly string[] TrayIds = ["TrayVersion", "TrayToggleHdr", "TrayPause", "TrayOpen", "TraySettings", "TrayLogs", "TrayExit"];
 
+    /// <summary>Maßstab der Bilder von <see cref="Render"/> (1,5 wie ein Bildschirm mit 150 %).</summary>
+    private const double RenderScale = 1.5;
+
     [Fact]
     public void Settings_window_exposes_every_automation_id_with_a_name()
     {
@@ -313,6 +316,7 @@ public sealed class ShellViewTests
 
             // Pfeiltasten: WPF springt nur zu aktiven, fokussierbaren Einträgen (ItemsControl.FindFocusable). Pfeil nach
             // unten vom Start trifft „HDR jetzt …“, Pfeil nach oben vom Start weiter „HDRpilot beenden“ (phase6-traymenu).
+            // Mit Tastendrücken am geöffneten Menü: TrayMenuKeyboardTests.
             var navigable = menu.Items.OfType<Control>().Where(c => c.IsEnabled && c.Focusable).Select(AutomationProperties.GetAutomationId).ToList();
             Assert.Equal("TrayToggleHdr", navigable[0]);
             Assert.Equal("TrayExit", navigable[^1]);
@@ -330,6 +334,36 @@ public sealed class ShellViewTests
     }
 
     [Fact]
+    public void AppVersion_line_renders_readably_in_the_tray_menu_in_both_themes()
+    {
+        WpfTestHost.Run(() =>
+        {
+            try
+            {
+                foreach (var dark in new[] { true, false })
+                {
+                    WpfTestHost.UseTheme(dark);
+                    var model = new TrayMenuViewModel(new FakeTrayHost(), TrayState.Initial, ex => throw ex);
+                    var menu = new TrayMenu { DataContext = model };
+                    var bitmap = Render(menu);
+
+                    // Text der Versionszeile in Textfarbe (TextSecondary), nicht nur Platz dafür. Gemessen: 59 von 7975 in
+                    // beiden Themen (dünnere Schrift als in der Pille, Textfeld über die ganze Zeile).
+                    var version = menu.Items.OfType<MenuItem>().Single(i => AutomationProperties.GetAutomationId(i) == "TrayVersion");
+                    var text = WpfTestHost.Visuals(version).OfType<TextBlock>().Single(t => t.Text == model.VersionText);
+                    var (ink, total) = TextInk(bitmap, text.TransformToAncestor(menu).TransformBounds(new Rect(text.RenderSize)), RenderScale, Token("Hp.Brush.TextSecondary"));
+                    Assert.True(ink >= 30 && ink <= total / 2, $"Versionszeile im Tray-Menü ({(dark ? "dunkel" : "hell")}) nicht lesbar: {ink} von {total} Pixeln in Textfarbe");
+                    menu.DataContext = null;
+                }
+            }
+            finally
+            {
+                WpfTestHost.UseTheme(dark: true);
+            }
+        });
+    }
+
+    [Fact]
     public void AppVersion_in_settings_header_renders_in_both_themes_for_review()
     {
         WpfTestHost.Run(() =>
@@ -342,21 +376,19 @@ public sealed class ShellViewTests
                     var window = CreateSettingsWindow(out _);
                     WpfTestHost.Layout(window, new Size(window.MinWidth, window.MinHeight));
                     var root = (FrameworkElement)VisualTreeHelper.GetChild(window, 0);
-                    var pill = (FrameworkElement)window.FindName("VersionPill");
                     var accent = (FrameworkElement)window.FindName("AccentLine");
                     var bottom = accent.TransformToAncestor(root).TransformBounds(new Rect(accent.RenderSize)).Bottom + 16;
 
-                    const double scale = 1.5;
+                    const double scale = RenderScale;
                     var full = new RenderTargetBitmap((int)Math.Ceiling(root.ActualWidth * scale), (int)Math.Ceiling(root.ActualHeight * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
                     full.Render(root);
                     var head = new CroppedBitmap(full, new Int32Rect(0, 0, full.PixelWidth, (int)Math.Ceiling(bottom * scale)));
 
-                    // In der Pille ist etwas gezeichnet (Punkt und Text), nicht nur eine Fläche
-                    var area = pill.TransformToAncestor(root).TransformBounds(new Rect(pill.RenderSize));
-                    var region = new CroppedBitmap(full, new Int32Rect((int)(area.X * scale), (int)(area.Y * scale), (int)(area.Width * scale), (int)(area.Height * scale)));
-                    var pixels = new int[region.PixelWidth * region.PixelHeight];
-                    region.CopyPixels(pixels, region.PixelWidth * 4, 0);
-                    Assert.True(pixels.Distinct().Count() > 20, "Versions-Pille ohne Inhalt gezeichnet");
+                    // Der Versionstext ist zu lesen: genug Pixel in Textfarbe, aber nicht die ganze Fläche (sonst hätte die
+                    // Pille selbst die Textfarbe). Gemessen: 214 von 2875 in beiden Themen.
+                    var text = Logical(window).OfType<TextBlock>().Single(t => AutomationProperties.GetAutomationId(t) == "SettingsVersion");
+                    var (ink, total) = TextInk(full, text.TransformToAncestor(root).TransformBounds(new Rect(text.RenderSize)), scale, Token("Hp.Brush.TextSecondary"));
+                    Assert.True(ink >= 100 && ink <= total / 2, $"Versions-Pille ({(dark ? "dunkel" : "hell")}) nicht lesbar: {ink} von {total} Pixeln in Textfarbe");
 
                     SaveForReview(head, $"einstellungen-kopf-{(dark ? "dunkel" : "hell")}.png");
                     window.Close();
@@ -379,6 +411,33 @@ public sealed class ShellViewTests
     }
 
     private static (int, int) Limits(Slider slider) => ((int)slider.Minimum, (int)slider.Maximum);
+
+    /// <summary>Farbe eines Farb-Tokens im gerade geladenen Thema (hell/dunkel).</summary>
+    private static Color Token(string key) => ((SolidColorBrush)Application.Current.FindResource(key)).Color;
+
+    /// <summary>
+    /// Pixel in Textfarbe: deckende Pixel im Bereich (DIP, Bild mit <paramref name="scale"/> gerendert), die je Farbkanal
+    /// höchstens 24 von <paramref name="color"/> abweichen, dazu alle Pixel im Bereich. Die Kantenglättung mischt nur die
+    /// Ränder der Striche, ihr Inneres hat genau die Textfarbe. Ist der Text nicht zu sehen (Opacity 0, ausgeblendet, in
+    /// Hintergrundfarbe), bleibt keins übrig; ein Hintergrundverlauf allein trifft die Textfarbe nicht.
+    /// </summary>
+    private static (int Ink, int Total) TextInk(BitmapSource bitmap, Rect area, double scale, Color color)
+    {
+        const int tolerance = 24;
+        var x = Math.Max(0, (int)Math.Floor(area.X * scale));
+        var y = Math.Max(0, (int)Math.Floor(area.Y * scale));
+        var width = Math.Min(bitmap.PixelWidth - x, (int)Math.Ceiling(area.Right * scale) - x);
+        var height = Math.Min(bitmap.PixelHeight - y, (int)Math.Ceiling(area.Bottom * scale) - y);
+        var pixels = new int[width * height];
+        bitmap.CopyPixels(new Int32Rect(x, y, width, height), pixels, width * 4, 0);
+
+        // Pbgra32 als int: Alpha in den obersten Bits, dann Rot, Grün, Blau; deckende Pixel sind nicht vormultipliziert
+        var ink = pixels.Count(p => (p >>> 24) == 0xFF
+            && Math.Abs(((p >> 16) & 0xFF) - color.R) <= tolerance
+            && Math.Abs(((p >> 8) & 0xFF) - color.G) <= tolerance
+            && Math.Abs((p & 0xFF) - color.B) <= tolerance);
+        return (ink, pixels.Length);
+    }
 
     /// <summary>Breite des Textes in einer Zeile, unabhängig vom Platz, den das Layout ihm gerade gibt.</summary>
     private static double NaturalWidth(TextBlock text)
@@ -441,9 +500,8 @@ public sealed class ShellViewTests
         element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         element.Arrange(new Rect(element.DesiredSize));
         element.UpdateLayout();
-        const double scale = 1.5;
         var bitmap = new RenderTargetBitmap(
-            (int)Math.Ceiling(element.ActualWidth * scale), (int)Math.Ceiling(element.ActualHeight * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+            (int)Math.Ceiling(element.ActualWidth * RenderScale), (int)Math.Ceiling(element.ActualHeight * RenderScale), 96 * RenderScale, 96 * RenderScale, PixelFormats.Pbgra32);
         bitmap.Render(element);
         bitmap.Freeze();
         return bitmap;

@@ -17,7 +17,7 @@
         </Style>
     </ContextMenu.Resources>
 
-    <!-- Oberste Zeile: Version (grau, nicht anklickbar, von den Pfeiltasten übersprungen) -->
+    <!-- Erste Zeile unter dem Kopf: Version (grau, nicht anklickbar, von den Pfeiltasten übersprungen) -->
     <MenuItem Style="{StaticResource Hp.Shell.TrayMenuInfo}"
               AutomationProperties.AutomationId="TrayVersion"
               AutomationProperties.Name="{Binding VersionText}"

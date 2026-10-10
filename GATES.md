@@ -255,3 +255,10 @@ ausdrücklichen Wunsch. Einzige Ausnahme: Das Entfernen stellt einen gemerkten H
 
 - [x] G7.8: Version 1.2.0 beim Nutzer installiert, von außerhalb des Containers (WMI) ausgeführt und von außen geprüft: App läuft echt, Eintrag 1.2.0, Einstellungen des Nutzers unverändert (echte config.json inhaltlich gleich, neuer Puffer-Standard nur wirksam, weil `restartBufferSeconds` dort nicht gesetzt ist)
   EVIDENCE: 2026-10-10 00:40 von außerhalb des Containers (WMI) ausgeführt und geprüft: HDRpilot-Setup-1.2.0.exe (203.9 MB, SHA256 62F3B8F4CD2434F7…) --quiet, Exit 0; vorher 1.1.0 (PID 9412), nachher 1.2.0.0 (PID 2124), echtes Protokoll 
+
+## Phase 8: Nachträge nach Version 1.2.0
+
+- [ ] G8.1: Versionsnummer sichtbar (Wunsch des Nutzers): im Kopf der Einstellungen und als graue, nicht anklickbare oberste Zeile im Tray-Menü, jeweils „HDRpilot <Major.Minor.Build>“ aus der Assembly (nie fest im Text; gleiche Zahl wie Setup und „Installierte Apps“); per Unit-Tests (mit Gegenprobe) und UI-Automation an einer Testinstanz belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AppVersion" -MinTests 4
+  EXPECT: TESTS_OK
+  EVIDENCE: pending

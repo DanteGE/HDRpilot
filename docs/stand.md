@@ -1,7 +1,34 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-10 00:45. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-10 14:35. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Angehalten (2026-10-10 14:30, auf Wunsch des Nutzers)
+Alle laufenden Arbeiten sind gestoppt. Nichts läuft mehr im Hintergrund, und der Stand ist committet. Die Wünsche des
+Nutzers vom 2026-10-10 bilden Phase 8 (G8.1–G8.3 in `GATES.md`, alle noch offen).
+
+| Wunsch | Zweig / Arbeitsordner | Stand | Übergabe |
+|---|---|---|---|
+| Versionsnummer sichtbar (G8.1) | `feature/version-display` / `.worktrees/s9-version` | Umsetzung geprüft (`67d9136`). Korrekturrunde angefangen (`85ba0db`, WIP, nicht gebaut). 4 kleine Funde offen | `docs/uebergabe/versionsanzeige.md` |
+| Ersatz-Symbole, auch statt Anti-Cheat-Symbolen (G8.2), und eigenes Symbol per Rechtsklick (G8.3) | `feature/icons` / `.worktrees/s9-icons` | etwa zur Hälfte umgesetzt (`b1eedc5`, WIP, nicht gebaut). Es fehlen Kontextmenü-XAML, Tests, E86, README und die Messung | `docs/recherche/symbole/auftrag.md` |
+| Auto HDR / RTX HDR pro Spiel | – | recherchiert, vom Nutzer zurückgestellt (siehe unten) | `docs/recherche/auto-hdr-rtx-hdr.md` |
+
+**Reihenfolge beim Weitermachen:**
+1. G8.1 fertigstellen.
+2. G8.2 und G8.3 fertigstellen und an der echten Bibliothek messen (nur lesend, Kopie per WMI). Gears of War: E-Day und
+   The Isle gezielt prüfen.
+3. Beide Zweige nach `phase5/release` zusammenführen. G8.x belegen und alle Gates laufen lassen.
+4. Version auf **1.3.0** setzen, dann `tools\publish.ps1` und den Setup bauen.
+5. Mit Zustimmung des Nutzers per WMI außerhalb des Containers installieren (wie G7.8).
+6. `main` per `merge --ff-only phase5/release` nachziehen.
+
+**Hinweise:**
+- Die Recherche-Unterlagen lagen nur im Sitzungs-Scratchpad. Alles Nötige ist jetzt unter `docs/recherche/` gesichert.
+  - Nicht gesichert: die Bibliothekskopie `g78\after-config.json` (Nutzerdaten, neu zu ziehen) und 1697 Bilder. Ein
+    Agent hatte diese Bilder aus Launcher-Caches in den Repo-Ordner kopiert. Ich hatte sie in den Scratchpad verschoben;
+    es sind entbehrliche Kopien.
+- Die Workflows selbst lassen sich in einer neuen Sitzung nicht fortsetzen. Weitergemacht wird anhand der Übergabe-
+  dokumente und der WIP-Commits.
 
 ## Erledigt (auf `main`, committet)
 - Phase 1 HDR-Kern und Kommandozeile – alle Gates belegt (G1.5c vom Nutzer gestrichen).

@@ -1,0 +1,9 @@
+# exact 48px pixel hashes (first 16 hex of SHA-256 over normalised BGRA) of icons confirmed generic by visual review
+BFF8A9D4CC3574F3	EasyAntiCheat bootstrapper default (start_protected_game.exe etc.)
+21704A055F2F2AF1	Unreal Engine default (black 'U')
+D970DE3C3B3B97F1	Unreal Engine default (outlined 'U' variant)
+CAFA9E41B8D0CFCE	Epic Games / EOS bootstrapper logo
+94DA36B9F4063577	Godot 3 default (GodotWorkshopUtility.exe, Brotato)
+D30DAE223B9DC3FB	Godot 3 default (Dome Keeper)
+F9F095E9485D704F	Godot 4 default (GodotWorkshopUtility.exe, Pathogenic)
+89AEAB8B670448CD	Unity default (Slyders)

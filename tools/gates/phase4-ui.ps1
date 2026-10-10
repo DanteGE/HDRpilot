@@ -1,6 +1,7 @@
 ﻿# Gate Phase 4: Oberfläche per UI-Automation bedienen (eigene Test-Ablage, echte Bibliothek eingelesen).
 #   PHASE4_UI_OK       Hauptfenster, Suche, Filter, Auswahl, Detail-Schalter, Liste-Schalter, Einstellungen bedienbar
-#                      (auch Neustart-Puffer in Minuten und Sekunden, G7.6/E85: 30:05 wird 30:00, 0:45 gespeichert)
+#                      (auch Neustart-Puffer in Minuten und Sekunden, G7.6/E85: 30:05 wird 30:00, 0:45 gespeichert;
+#                      Version im Kopf der Einstellungen gleich der Dateiversion der gebauten EXE, G8.1)
 #   PHASE4_PERSIST_OK  geänderte Einstellungen überleben einen Neustart der App
 # Schaltet kein HDR und startet kein Spiel.
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
@@ -9,6 +10,10 @@ function Check([bool]$cond, [string]$what) { if ($cond) { Note "ok   $what" } el
 
 $cfg = New-TestConfig 'phase4-ui' -Import
 $gameKey = 'Gog:1423049311'   # Cyberpunk 2077 (GOG)
+# Version (G8.1): „HDRpilot <Major.Minor.Build>“, dieselbe Zahl wie die Dateiversion der gebauten EXE (so liest sie der
+# Setup, so steht sie unter „Installierte Apps“)
+$exeVersion = (Get-Item $AppExe).VersionInfo
+$expectedVersion = 'HDRpilot {0}.{1}.{2}' -f $exeVersion.FileMajorPart, $exeVersion.FileMinorPart, $exeVersion.FileBuildPart
 try {
     $app = Start-App $cfg @('--show')
     $win = Find-Window 'MainWindow' $app.Id
@@ -86,6 +91,18 @@ try {
         foreach ($id in 'TargetDisplays', 'PollInterval', 'GracePeriod', 'RestartBufferMinutes', 'RestartBufferSeconds', 'LaunchTimeout', 'AutostartToggle', 'NotificationsToggle', 'HotkeyFallbackToggle', 'SearchFolders', 'AddSearchFolderButton', 'RemoveSearchFolderButton', 'LogLevel', 'HelperPatterns', 'ResetHelperPatternsButton', 'OpenLogFolderButton', 'SaveSettingsButton', 'CancelSettingsButton') {
             Check ($null -ne (Find-Id $set $id 3000)) "Einstellung $id vorhanden"
         }
+
+        # Version im Kopf: Text wie erwartet, sichtbar, im Fenster und nicht unter den Titelzeilen-Schaltflächen
+        $version = Find-Id $set 'SettingsVersion' 3000
+        $versionText = if ($version) { $version.Current.Name } else { '' }
+        Check ($versionText -ceq $expectedVersion) "Version im Kopf der Einstellungen: '$versionText' (Dateiversion der EXE: '$expectedVersion')"
+        if ($version) {
+            $vr = $version.Current.BoundingRectangle
+            $wr = $set.Current.BoundingRectangle
+            $captionHit = @('CaptionMinimize', 'CaptionMaximize', 'CaptionClose' | ForEach-Object { Find-Id $set $_ 1000 } | Where-Object { $_ -and $_.Current.BoundingRectangle.IntersectsWith($vr) })
+            Check (-not $vr.IsEmpty -and $vr.Width -gt 0 -and $wr.Contains($vr) -and $captionHit.Count -eq 0) ("Version sichtbar im Fenster, frei von den Titelzeilen-Schaltflächen ({0:0},{1:0} {2:0}x{3:0})" -f $vr.X, $vr.Y, $vr.Width, $vr.Height)
+        }
+
         Set-Range (Find-Id $set 'GracePeriod') 15
         Set-Range (Find-Id $set 'PollInterval') 750
 

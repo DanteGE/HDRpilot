@@ -25,12 +25,13 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Kopf: Symbol-Kachel, Titel, Akzentlinie mit Schimmer (nur bei aktivem Fenster) -->
+        <!-- Kopf: Symbol-Kachel, Titel, rechts die Version, Akzentlinie mit Schimmer (nur bei aktivem Fenster) -->
         <StackPanel x:Name="Header" Margin="36,2,36,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Grid Width="50" Height="50" Margin="0,0,18,0">
                     <Border CornerRadius="17" Background="{DynamicResource Hp.Brush.Accent}" />
@@ -42,6 +43,14 @@
                     <TextBlock Style="{StaticResource Hp.Text.Title}" Text="{x:Static res:ShellStrings.SettingsHeading}" />
                     <TextBlock Style="{StaticResource Hp.Text.Caption}" FontSize="13" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.SettingsSubheading}" />
                 </StackPanel>
+                <Border x:Name="VersionPill" Grid.Column="2" Style="{StaticResource Hp.Shell.VersionPill}" Margin="18,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="7" Height="7" Margin="0,1,8,0" VerticalAlignment="Center" Fill="{DynamicResource Hp.Brush.Accent}" />
+                        <TextBlock Style="{StaticResource Hp.Shell.VersionText}" Text="{x:Static infra:AppVersion.DisplayText}"
+                                   AutomationProperties.AutomationId="SettingsVersion"
+                                   AutomationProperties.Name="{x:Static infra:AppVersion.DisplayText}" />
+                    </StackPanel>
+                </Border>
             </Grid>
             <Grid x:Name="AccentLine" Height="3" Margin="0,14,0,0" ClipToBounds="True">
                 <Border CornerRadius="1.5" Background="{DynamicResource Hp.Brush.Accent}" />

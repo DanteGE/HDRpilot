@@ -84,6 +84,9 @@ public sealed class TrayMenuViewModel : ObservableObject
 
     public string ToggleHdrText => _state.HdrOn ? ShellStrings.TrayMenuToggleHdrOff : ShellStrings.TrayMenuToggleHdrOn;
 
+    /// <summary>Oberste, graue Zeile des Menüs: „HDRpilot 1.2.0“ (<see cref="AppVersion"/>).</summary>
+    public string VersionText => AppVersion.DisplayText;
+
     public void Update(TrayState state)
     {
         if (state == _state)

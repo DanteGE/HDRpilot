@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.Core.Abstractions;
 
 namespace HdrPilot.App.Setup;
@@ -31,7 +32,7 @@ public sealed class SetupEngine : ISetupEngine
     private readonly string _mutexName;
     private readonly Func<bool> _isElevated;
 
-    /// <param name="setupVersion">Version dieser Setup-Datei (Standard: Version dieser Assembly).</param>
+    /// <param name="setupVersion">Version dieser Setup-Datei (Standard: <see cref="AppVersion.Current"/>, dieselbe Zahl wie in der App).</param>
     /// <param name="versionReader">Version einer installierten EXE (Standard: Dateiversion).</param>
     /// <param name="isElevated">Läuft der Setup mit Adminrechten (Standard: <see cref="SetupSupport.IsElevated"/>)?</param>
     public SetupEngine(
@@ -57,7 +58,7 @@ public sealed class SetupEngine : ISetupEngine
         _app = app;
         _shortcuts = shortcuts;
         _files = files ?? SetupFileOperations.Instance;
-        _setupVersion = SetupSupport.Normalize(setupVersion ?? typeof(SetupEngine).Assembly.GetName().Version ?? new Version(0, 0, 0));
+        _setupVersion = SetupSupport.Normalize(setupVersion ?? AppVersion.Current);
         _versionReader = versionReader ?? SetupSupport.ReadFileVersion;
         _stopTimeout = stopTimeout ?? DefaultStopTimeout;
         _mutexName = mutexName ?? SetupSupport.MutexNameFor(locations);

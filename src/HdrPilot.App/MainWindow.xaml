@@ -10,6 +10,35 @@
                     Width="1460" Height="800" MinWidth="1000" MinHeight="620"
                     WindowStartupLocation="CenterScreen">
     <infra:ChromeWindow.Resources>
+        <!--
+            Eigenes Symbol (E86): Rechtsklick auf ein Spiel (die Zeile wird dabei gewählt) oder Klick auf das große Symbol im
+            Detailbereich. Das Menü wirkt auf das gewählte Spiel; seinen DataContext (die Bibliothek) bekommt es über Tag des
+            Elements, an dem es aufgeht. Je Verwendung eine Instanz (x:Shared): eine für alle Zeilen (über den Zeilenstil), eine
+            für das große Symbol. Eine Vorlage bekommt es erst beim Öffnen.
+        -->
+        <ContextMenu x:Key="GameIconMenu" x:Shared="False" Style="{StaticResource Lib.ContextMenu}"
+                     DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"
+                     AutomationProperties.AutomationId="GameIconMenu" AutomationProperties.Name="{x:Static res:LibraryStrings.Icon_MenuName}">
+            <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.Icon_Change}" Command="{Binding ChangeIconCommand}"
+                      AutomationProperties.AutomationId="ChangeIconMenuItem" AutomationProperties.Name="{x:Static res:LibraryStrings.Icon_Change}">
+                <MenuItem.Icon>
+                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xEB9F;" FontSize="15" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.Icon_Reset}" Command="{Binding ResetIconCommand}"
+                      AutomationProperties.AutomationId="ResetIconMenuItem" AutomationProperties.Name="{x:Static res:LibraryStrings.Icon_Reset}">
+                <MenuItem.Icon>
+                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE777;" FontSize="15" />
+                </MenuItem.Icon>
+            </MenuItem>
+        </ContextMenu>
+
+        <!-- Zeile der Spieleliste mit Kontextmenü auf der ganzen Fläche -->
+        <Style x:Key="GameRowWithMenu" TargetType="ListBoxItem" BasedOn="{StaticResource Lib.GameRow}">
+            <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+            <Setter Property="ContextMenu" Value="{StaticResource GameIconMenu}" />
+        </Style>
+
         <!-- Zeile der Spieleliste -->
         <DataTemplate x:Key="GameRowTemplate" DataType="{x:Type vm:GameItemViewModel}">
             <Grid x:Name="Row" Height="40">
@@ -466,7 +495,7 @@
                         <ListBox x:Name="GameList" Grid.Row="1" Style="{StaticResource Lib.ListBox}" Padding="4,0,0,0"
                                  IsSynchronizedWithCurrentItem="False"
                                  ItemsSource="{Binding GamesView}" SelectedItem="{Binding SelectedGame}"
-                                 ItemContainerStyle="{StaticResource Lib.GameRow}" ItemTemplate="{StaticResource GameRowTemplate}"
+                                 ItemContainerStyle="{StaticResource GameRowWithMenu}" ItemTemplate="{StaticResource GameRowTemplate}"
                                  AutomationProperties.AutomationId="GameList" AutomationProperties.Name="{x:Static res:LibraryStrings.List_Name}" />
 
                         <!-- Leere Bibliothek -->
@@ -544,12 +573,19 @@
                                         <ColumnDefinition Width="64" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <Grid Width="64" Height="64" VerticalAlignment="Top" DataContext="{Binding Item}">
-                                        <Border CornerRadius="16" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0.2" />
-                                        <Border CornerRadius="16" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0.6" />
-                                        <TextBlock x:Name="DetailGlyph" Style="{StaticResource Lib.SourceGlyph}" FontSize="26" />
-                                        <Image x:Name="DetailIcon" Source="{Binding Icon}" Width="48" Height="48" RenderOptions.BitmapScalingMode="HighQuality" />
-                                    </Grid>
+                                    <!-- Klick öffnet „Symbol ändern…“ / „Symbol zurücksetzen“ (dasselbe Menü wie der Rechtsklick in der Liste) -->
+                                    <Button x:Name="DetailIconButton" Style="{StaticResource Lib.IconButton}" Width="64" Height="64" VerticalAlignment="Top"
+                                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            ContextMenu="{StaticResource GameIconMenu}" Click="OnDetailIconClick"
+                                            ToolTip="{x:Static res:LibraryStrings.Icon_ButtonName}" ToolTipService.InitialShowDelay="900"
+                                            AutomationProperties.AutomationId="DetailIconButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Icon_ButtonName}">
+                                        <Grid Width="64" Height="64" DataContext="{Binding Item}">
+                                            <Border CornerRadius="16" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0.2" />
+                                            <Border CornerRadius="16" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0.6" />
+                                            <TextBlock x:Name="DetailGlyph" Style="{StaticResource Lib.SourceGlyph}" FontSize="26" />
+                                            <Image x:Name="DetailIcon" Source="{Binding Icon}" Width="48" Height="48" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        </Grid>
+                                    </Button>
                                     <StackPanel Grid.Column="1" Margin="16,2,0,0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Item.Name}" Style="{StaticResource Hp.Text.Subtitle}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"
                                                    AutomationProperties.AutomationId="DetailName" />

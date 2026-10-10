@@ -1055,4 +1055,108 @@
         <Setter Property="Padding" Value="14,12" />
         <Setter Property="Margin" Value="0,0,0,12" />
     </Style>
+
+    <!--
+        Kontextmenü der Bibliothek (Rechtsklick auf ein Spiel, Klick auf das große Symbol): abgerundet, App-Verlauf als
+        Hintergrund, Schatten auf einem eigenen Element hinter dem Menü (Texte bleiben ClearType-scharf). Nur geöffnet sichtbar,
+        kostet also nichts in der Liste.
+    -->
+    <Style x:Key="Lib.ContextMenu" TargetType="ContextMenu">
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="MinWidth" Value="230" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Grid Margin="6,4,12,14">
+                        <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.WindowBackground}">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="{DynamicResource Hp.Color.Shadow}" />
+                            </Border.Effect>
+                        </Border>
+                        <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.WindowBackground}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" BorderThickness="1">
+                            <Grid>
+                                <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.BackgroundGlow}" />
+                                <ItemsPresenter Margin="5" KeyboardNavigation.DirectionalNavigation="Cycle" KeyboardNavigation.TabNavigation="Cycle" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Eintrag im Kontextmenü: Symbol links, Leiste und Fläche beim Überfahren wie im Tray-Menü -->
+    <Style x:Key="Lib.MenuItem" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid Background="Transparent" Margin="0,1">
+                        <Border x:Name="Hover" CornerRadius="8" Background="{DynamicResource Hp.Brush.SurfaceHover}" Opacity="0" />
+                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" Margin="2,8" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Grid Margin="{TemplateBinding Padding}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter x:Name="IconHost" ContentSource="Icon" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                              TextElement.Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
+                        </Grid>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Hover" Property="Opacity" Value="1" />
+                            <Setter TargetName="Bar" Property="Opacity" Value="1" />
+                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Großes Spielsymbol im Detailbereich als Schaltfläche: Klick öffnet das Menü „Symbol ändern…“. Beim Überfahren
+        leuchtet der Rahmen und ein Stift-Abzeichen erscheint (nur Flächen, keine Effekte).
+    -->
+    <Style x:Key="Lib.IconButton" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid Background="Transparent">
+                        <ContentPresenter />
+                        <Border x:Name="Glow" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
+                        <Border x:Name="Badge" Width="22" Height="22" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-5,-5"
+                                Background="{DynamicResource Hp.Brush.AccentSolid}" BorderBrush="{DynamicResource Hp.Brush.WindowBackground}" BorderThickness="2" Opacity="0">
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE70F;" FontSize="10" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource Hp.Brush.TextOnAccent}" />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Glow" Property="Opacity" Value="0.85" />
+                            <Setter TargetName="Badge" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
+                            <Setter TargetName="Badge" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

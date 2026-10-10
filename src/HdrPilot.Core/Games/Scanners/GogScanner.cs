@@ -12,7 +12,10 @@ namespace HdrPilot.Core.Games.Scanners;
 /// Registry (kein handgeschriebener WOW6432Node-Pfad). Zusatzinhalte (Wert <c>dependsOn</c> gesetzt oder
 /// <c>rootGameId</c> der Spielinfo ≠ ID) werden übersprungen. Start direkt über die EXE aus der Registry; fehlt sie,
 /// über die primäre playTask der <c>goggame-&lt;ID&gt;.info</c>. Bekannte EXE-Dateien zusätzlich aus den playTasks der
-/// Kategorie "game" (das eigentliche Spiel hinter einem Starter). Liest nur, schreibt nichts.
+/// Kategorie "game" (das eigentliche Spiel hinter einem Starter). Symbol-Hinweise (E86): <c>goggame-&lt;ID&gt;.ico</c> im
+/// Spielordner (gemessen 5 von 5, 256 px), danach das quadratische Symbol aus dem Zwischenspeicher von GOG Galaxy
+/// (<c>%ProgramData%\GOG.com\Galaxy\webcache\&lt;Benutzer&gt;\gog\&lt;ID&gt;\*_glx_square_icon_v2.webp</c>, 112 px, braucht den
+/// WebP-Decoder von Windows). Liest nur, schreibt nichts.
 /// </summary>
 public sealed class GogScanner : IGameScanner
 {
@@ -20,8 +23,12 @@ public sealed class GogScanner : IGameScanner
     internal const string GalaxyClientKeyPath = @"Software\GOG.com\GalaxyClient";
     internal const string GalaxyClientPathsKeyPath = @"Software\GOG.com\GalaxyClient\paths";
 
+    /// <summary>Endung des quadratischen Symbols im Zwischenspeicher von GOG Galaxy.</summary>
+    internal const string GalaxySquareIconPattern = "*_glx_square_icon_v2.webp";
+
     private readonly IFileSystem _fileSystem;
     private readonly IRegistry _registry;
+    private readonly IAppEnvironment _environment;
     private readonly ILogger _logger;
 
     public GogScanner(IFileSystem fileSystem, IRegistry registry, IAppEnvironment environment, ILogger? logger = null)
@@ -31,6 +38,7 @@ public sealed class GogScanner : IGameScanner
         ArgumentNullException.ThrowIfNull(environment);
         _fileSystem = fileSystem;
         _registry = registry;
+        _environment = environment;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -51,10 +59,11 @@ public sealed class GogScanner : IGameScanner
         var games = new List<GameEntry>();
         var errors = new List<ScanError>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var webCaches = GalaxyWebCaches();
         foreach (var keyName in gamesKey.GetSubKeyNames().OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var entry = ReadEntry(gamesKey, keyName, galaxyClientDir, errors);
+            var entry = ReadEntry(gamesKey, keyName, galaxyClientDir, webCaches, errors);
             if (entry is null)
             {
                 continue;
@@ -95,7 +104,7 @@ public sealed class GogScanner : IGameScanner
         return (installed, normalized is not null && Path.IsPathFullyQualified(normalized) ? normalized : null);
     }
 
-    private GameEntry? ReadEntry(IRegistryKey gamesKey, string keyName, string? galaxyClientDir, List<ScanError> errors)
+    private GameEntry? ReadEntry(IRegistryKey gamesKey, string keyName, string? galaxyClientDir, IReadOnlyList<string> webCaches, List<ScanError> errors)
     {
         var keyPath = gamesKey.Name + "\\" + keyName;
         GogRegistryEntry reg;
@@ -187,7 +196,59 @@ public sealed class GogScanner : IGameScanner
             LaunchCommand = launch.Value.Command,
             LaunchArguments = launch.Value.Arguments,
             LaunchWorkingDirectory = launch.Value.WorkingDirectory,
+            IconCandidates = FindIcons(installDir, id, webCaches),
         };
+    }
+
+    /// <summary>Symbol-Hinweise: goggame-ID.ico im Spielordner, dann das Galaxy-Symbol (nur vorhandene Dateien).</summary>
+    private List<string> FindIcons(string installDir, string id, IReadOnlyList<string> webCaches)
+    {
+        var icons = new List<string>();
+        IconFiles.AddExisting(icons, _fileSystem, installDir + "\\goggame-" + id + ".ico");
+        foreach (var cache in webCaches)
+        {
+            try
+            {
+                foreach (var file in _fileSystem.EnumerateFiles(Path.Combine(cache, id), GalaxySquareIconPattern).Take(1))
+                {
+                    IconFiles.AddExisting(icons, _fileSystem, file);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or ArgumentException)
+            {
+                _logger.LogDebug("GOG: Galaxy-Zwischenspeicher {Dir} nicht lesbar: {Message}", cache, ex.Message);
+            }
+        }
+
+        return icons;
+    }
+
+    /// <summary>
+    /// Ordner <c>webcache\&lt;Benutzer&gt;\gog</c> von GOG Galaxy (je angemeldetem Benutzer einer; Ordner wie
+    /// „…-overlay“ ohne Unterordner gog fallen weg). Leer, wenn Galaxy fehlt.
+    /// </summary>
+    private List<string> GalaxyWebCaches()
+    {
+        var programData = PathUtil.Normalize(_environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData));
+        if (!Path.IsPathFullyQualified(programData))
+        {
+            return [];
+        }
+
+        var webcache = Path.Combine(programData, "GOG.com", "Galaxy", "webcache");
+        try
+        {
+            return _fileSystem.EnumerateDirectories(webcache)
+                .Select(user => Path.Combine(user, "gog"))
+                .Where(_fileSystem.DirectoryExists)
+                .Take(8)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or ArgumentException)
+        {
+            _logger.LogDebug("GOG: Galaxy-Zwischenspeicher {Dir} nicht lesbar: {Message}", webcache, ex.Message);
+            return [];
+        }
     }
 
     /// <summary>Spielinfo aus dem Spielordner; fehlt sie, ist das kein Fehler (nicht jeder Installer legt sie an).</summary>

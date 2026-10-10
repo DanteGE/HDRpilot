@@ -109,6 +109,14 @@ public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock cloc
             g.DetectedExecutables ??= [];
             g.ExcludedExecutables ??= [];
             g.ExtraExecutables ??= [];
+            g.IconCandidates ??= [];
+
+            // Nur ein schlichter Dateiname im Symbolordner, nie ein Pfad (eine von Hand geänderte Datei darf nicht
+            // auf fremde Dateien zeigen, „Symbol zurücksetzen“ löscht die genannte Datei).
+            if (g.CustomIcon is not null && !Games.CustomIcons.IsValidFileName(g.CustomIcon))
+            {
+                g.CustomIcon = null;
+            }
         }
     }
 

@@ -4,14 +4,25 @@ using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Util;
+using Microsoft.Extensions.Logging;
 
 namespace HdrPilot.App;
 
-/// <summary>Spielebibliothek: Hauptfenster, Symbole aus den Spiel-EXEs und Verknüpfungen „Mit HDR starten“.</summary>
+/// <summary>Spielebibliothek: Hauptfenster, Symbole der Spiele (E86) und Verknüpfungen „Mit HDR starten“.</summary>
 public sealed partial class AppServices
 {
-    private partial IGameIconService CreateIconService() =>
-        new GameIconService(FileSystem, () => Config.Current.Settings.HelperExecutablePatterns);
+    /// <summary>
+    /// Nur für Prüfläufe mit eigener Ablage (--config-dir): Diese Datei nimmt „Symbol ändern…“ statt des Dateidialogs
+    /// (UI-Automation kann keinen Dateidialog bedienen, phase8-icons.ps1). Ohne --config-dir wirkt sie nie.
+    /// </summary>
+    public const string TestIconFileVariable = "HDRPILOT_TEST_ICON_FILE";
+
+    private partial IGameIconService CreateIconService() => new GameIconService(
+        FileSystem,
+        () => Config.Current.Settings.HelperExecutablePatterns,
+        iconDirectory: Paths.IconDirectory,
+        choiceCacheFile: Paths.IconCacheFile,
+        logger: LoggerFactory.CreateLogger("Symbole"));
 
     private partial IShortcutService CreateShortcutService() => new ShortcutService(
         iconPath: game => new IconExecutableResolver(FileSystem).Resolve(game, Config.Current.Settings.HelperExecutablePatterns),
@@ -21,7 +32,8 @@ public sealed partial class AppServices
     private partial Window CreateMainWindow()
     {
         var window = new MainWindow();
-        window.Attach(new LibraryViewModel(new AppLibraryContext(this), new LibraryDialogs(window)));
+        var testIconFile = ConfigDirArgument() is null ? null : System.Environment.GetEnvironmentVariable(TestIconFileVariable);
+        window.Attach(new LibraryViewModel(new AppLibraryContext(this), new LibraryDialogs(window, string.IsNullOrWhiteSpace(testIconFile) ? null : testIconFile)));
         return window;
     }
 

@@ -18,6 +18,7 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <item>Name aus dem Produkt-Cache <c>cache\configuration\configurations</c> (siehe <see cref="UbisoftConfigurationCache"/>),
 /// sonst DisplayName des Uninstall-Eintrags „Uplay Install &lt;ID&gt;“ (32-Bit-Sicht), sonst der Ordnername.</item>
 /// <item>EXE-Dateien: die im Produkt-Cache genannten Start-EXEs, sofern sie existieren.</item>
+/// <item>Symbol-Hinweis: <c>DisplayIcon</c> des Uninstall-Eintrags (siehe <see cref="ResolveIcons"/>).</item>
 /// </list>
 /// Start: <c>uplay://launch/&lt;ID&gt;/0</c> (so legt Ubisoft Connect seine Verknüpfungen an).
 /// </summary>
@@ -84,6 +85,7 @@ public sealed class UbisoftScanner : IGameScanner
                     InstallDir = install.Dir,
                     Executables = ResolveExecutables(install.Dir, config),
                     LaunchCommand = LaunchCommandFor(install.Id),
+                    IconCandidates = ResolveIcons(install),
                 });
             }
         }
@@ -261,6 +263,21 @@ public sealed class UbisoftScanner : IGameScanner
 
         var folder = Path.GetFileName(install.Dir);
         return string.IsNullOrEmpty(folder) ? install.Dir : folder;
+    }
+
+    /// <summary>
+    /// Symbol-Hinweis (E86): <c>DisplayIcon</c> des Uninstall-Eintrags „Uplay Install &lt;ID&gt;“ (32-Bit-Sicht wie der
+    /// Name). Ubisoft Connect legt dort eine .ico mit 256 px unter <c>data\games</c> ab (gemessen 1 von 1, mit Schrägstrichen).
+    /// </summary>
+    private List<string> ResolveIcons(Install install)
+    {
+        var icons = new List<string>();
+        using var key = _registry.OpenKey(
+            RegistryHiveKind.LocalMachine,
+            UninstallKeyPath + @"\Uplay Install " + install.Id.ToString(CultureInfo.InvariantCulture),
+            RegistryViewKind.Registry32);
+        IconFiles.AddExisting(icons, _fileSystem, IconFiles.ParseIconLocation(key?.GetValue("DisplayIcon") as string));
+        return icons;
     }
 
     /// <summary>

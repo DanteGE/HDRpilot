@@ -127,7 +127,8 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
 
         var output = new ScanOutput(
             report.Games.Select(g => new ScanGame(
-                g.Key, g.Source, g.SourceId, g.Name, g.InstallDir, g.Executables, g.LaunchCommand, g.LaunchArguments, g.LaunchWorkingDirectory)).ToList(),
+                g.Key, g.Source, g.SourceId, g.Name, g.InstallDir, g.Executables, g.LaunchCommand, g.LaunchArguments, g.LaunchWorkingDirectory,
+                g.IconCandidates)).ToList(),
             report.Scanners.Select(s => new ScanScanner(
                 s.Result.Source, s.Result.ScannerName, s.Result.LauncherDetected, s.Result.Games.Count,
                 (long)s.Duration.TotalMilliseconds, s.Result.Errors)).ToList());
@@ -139,7 +140,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
 
     private sealed record ScanGame(
         string Key, GameSource Source, string SourceId, string Name, string InstallDir, IReadOnlyList<string> Executables,
-        string? LaunchCommand, string? LaunchArguments, string? LaunchWorkingDirectory);
+        string? LaunchCommand, string? LaunchArguments, string? LaunchWorkingDirectory, IReadOnlyList<string> IconCandidates);
 
     private sealed record ScanScanner(
         GameSource Source, string Name, bool LauncherDetected, int GameCount, long DurationMs, IReadOnlyList<ScanError> Errors);

@@ -163,6 +163,11 @@ public sealed class FakeDialogs : ILibraryDialogs
 
     public string? PickFolder(string? initialDirectory) => Folders.Count > 0 ? Folders.Dequeue() : null;
 
+    /// <summary>Antworten für „Symbol ändern…“ (null: abgebrochen).</summary>
+    public Queue<string?> IconFiles { get; } = new();
+
+    public string? PickIconFile(string? initialDirectory) => IconFiles.Count > 0 ? IconFiles.Dequeue() : null;
+
     public bool Confirm(string title, string message, string confirmText, bool isDanger)
     {
         Confirms.Add((title, message));
@@ -187,6 +192,31 @@ public sealed class FakeIcons : IGameIconService
     public int Cleared { get; private set; }
 
     public void ClearCache() => Cleared++;
+
+    public List<string> Forgotten { get; } = [];
+
+    /// <summary>Gespeicherte eigene Symbole: Spielschlüssel und gewählte Datei.</summary>
+    public List<(string Key, string Source)> Saved { get; } = [];
+
+    public List<string?> Deleted { get; } = [];
+
+    /// <summary>Wenn gesetzt, scheitert „Symbol ändern…“ damit (etwa kein Bild in der Datei).</summary>
+    public Exception? SaveFailure { get; set; }
+
+    public void Forget(string gameKey) => Forgotten.Add(gameKey);
+
+    public string SaveCustomIcon(GameConfig game, string sourcePath)
+    {
+        if (SaveFailure is not null)
+        {
+            throw SaveFailure;
+        }
+
+        Saved.Add((game.Key, sourcePath));
+        return CustomIcons.FileNameFor(game.Key);
+    }
+
+    public void DeleteCustomIcon(string? fileName) => Deleted.Add(fileName);
 }
 
 public sealed class FakeShortcuts : IShortcutService

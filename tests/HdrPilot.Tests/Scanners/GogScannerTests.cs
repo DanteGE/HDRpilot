@@ -543,6 +543,36 @@ public sealed class GogScannerTests
         Assert.Equal("GOG Galaxy", scanner.Name);
     }
 
+    // ---- Symbol-Hinweise (E86) ----
+
+    [Fact]
+    public void Icon_hints_are_goggame_ico_then_galaxy_square_icon()
+    {
+        AddGalaxyClient();
+        AddCyberpunk();
+        _fs.AddFile(CyberpunkDir + @"\goggame-1423049311.ico", "ico");
+        const string Cache = @"C:\ProgramData\GOG.com\Galaxy\webcache\12345678901234567\gog\1423049311";
+        _fs.AddFile(Cache + @"\d874e44db18f_glx_vertical_cover.webp", "webp");
+        _fs.AddFile(Cache + @"\d874e44db18f_glx_square_icon_v2.webp", "webp");
+        _fs.AddDirectory(@"C:\ProgramData\GOG.com\Galaxy\webcache\12345678901234567-overlay");
+
+        var game = Assert.Single(Scan().Games);
+
+        Assert.Equal([CyberpunkDir + @"\goggame-1423049311.ico", Cache + @"\d874e44db18f_glx_square_icon_v2.webp"], game.IconCandidates);
+    }
+
+    [Fact]
+    public void Icon_hints_are_empty_without_goggame_ico_and_galaxy_cache()
+    {
+        AddGalaxyClient();
+        AddCyberpunk();
+
+        var result = Scan();
+
+        Assert.Empty(result.Errors);
+        Assert.Empty(Assert.Single(result.Games).IconCandidates);
+    }
+
     // ---- Hilfen ----
 
     private ScanResult Scan()

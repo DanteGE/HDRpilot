@@ -1,5 +1,6 @@
 using System.IO;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -9,62 +10,131 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Util;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HdrPilot.App.Services;
 
+/// <summary>Woher das Symbol eines Spiels stammt.</summary>
+public enum IconOrigin
+{
+    /// <summary>Eigenes Symbol (Rechtsklick „Symbol ändern…“).</summary>
+    Custom,
+
+    /// <summary>Symbol-Hinweis des Launchers (<see cref="GameConfig.IconCandidates"/>), etwa das offizielle Steam-Symbol.</summary>
+    Launcher,
+
+    /// <summary>Symbol der Spiel-EXE (<see cref="IconExecutableResolver"/>).</summary>
+    Executable,
+}
+
+/// <summary>Gewähltes Symbol eines Spiels: Datei, Art der Quelle und das gelesene Symbol.</summary>
+public sealed record IconSelection(string Path, IconOrigin Origin, IconImage Icon);
+
 /// <summary>
-/// Symbole aus den EXE-Dateien der Spiele. Geladen wird im Hintergrund mit begrenzter Parallelität, zuletzt
-/// angefragte zuerst (die gerade sichtbaren Zeilen). Bilder sind in Zielgröße dekodiert und eingefroren.
-/// Der Zwischenspeicher gehört zum Fenster und wird beim Schließen geleert (<see cref="ClearCache"/>).
+/// Symbole der Spiele (E86). Je Spiel gilt die erste Quelle, die taugt:
+/// <list type="number">
+/// <item>ein eigenes Symbol (Rechtsklick „Symbol ändern…“, PNG im Datenordner), solange die Datei lesbar ist;</item>
+/// <item>die Symbol-Hinweise des Launchers in ihrer Reihenfolge (<see cref="GameConfig.IconCandidates"/>: Steam das
+/// offizielle Steam-Symbol, GOG goggame-ID.ico und Galaxy-Symbol, Xbox-Logos, Ubisoft DisplayIcon);</item>
+/// <item>die EXE des Spiels (<see cref="IconExecutableResolver"/>), nur gesucht, wenn kein Hinweis taugt.</item>
+/// </list>
+/// „Taugt“ heißt vorhanden, kein bekanntes Standardsymbol (<see cref="GenericIconDetector"/>) und in der Datei mindestens
+/// 48 px groß (<see cref="IconImage.IsGood"/>). Taugt keine Quelle, gewinnt die erste vorhandene ohne Standardsymbol, notfalls
+/// ein Standardsymbol. Für Steam heißt das: das offizielle Symbol zuerst; die EXE nur, wenn es fehlt, ein Standardsymbol ist
+/// oder kleiner als 48 px, während die EXE mindestens 48 px hat. Die tiefere EXE-Suche läuft nur, wenn es sonst gar kein
+/// echtes Symbol gibt (ein richtiges 32-px-Symbol wird nie gegen eine fremde EXE aus der Tiefe getauscht).
+/// <para>
+/// Geladen wird im Hintergrund mit begrenzter Parallelität, zuletzt angefragte zuerst (die gerade sichtbaren Zeilen);
+/// Bilder sind in Zielgröße dekodiert und eingefroren, Fehler (fehlender WebP-Decoder, unlesbare Datei) gelten als
+/// „kein Symbol“. Der Zwischenspeicher gehört zum Fenster und wird beim Schließen geleert (<see cref="ClearCache"/>);
+/// die gewählte Quelle merkt sich <see cref="IconChoiceCache"/> über Neustarts hinweg.
+/// </para>
 /// </summary>
 public sealed class GameIconService : IGameIconService
 {
     /// <summary>Kantenlänge der Symbole in Pixeln (Liste 32, Detailbereich 48).</summary>
     public const int IconSize = 48;
 
+    /// <summary>
+    /// Eine gemerkte Wahl ohne gutes Symbol (keins, Standardsymbol oder unter 48 px) wird nach dieser Zeit neu geprüft: Ein
+    /// Update des Spiels kann eine bessere EXE bringen, ohne dass sich die Eingaben des Spiels ändern.
+    /// </summary>
+    public static readonly TimeSpan RecheckAfter = TimeSpan.FromDays(7);
+
     private readonly IconExecutableResolver _resolver;
-    private readonly Func<string, ImageSource?> _extract;
+    private readonly Func<string, IconImage?> _read;
     private readonly Func<IReadOnlyList<string>?> _helperPatterns;
+    private readonly Func<string, string?> _fileStamp;
+    private readonly Func<DateTimeOffset> _now;
+    private readonly CustomIconStore? _customIcons;
+    private readonly IconChoiceCache _choices;
+    private readonly ILogger _logger;
     private readonly int _maxParallel;
-    private readonly ConcurrentDictionary<string, string?> _exeByGame = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, ImageSource?> _iconByExe = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, CachedIcon> _byGame = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, IconImage> _byPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, Task<ImageSource?>> _inflight = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, int> _epochs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<WorkItem> _queue = new();
     private readonly object _gate = new();
     private int _workers;
     private int _generation;
 
-    /// <param name="fileSystem">Dateizugriff für die EXE-Wahl.</param>
+    /// <param name="fileSystem">Dateizugriff für die EXE-Wahl und den gemerkten Stand.</param>
     /// <param name="helperPatterns">Ausschlussliste aus der Konfiguration (null: Standardliste).</param>
     /// <param name="fileLength">Dateigröße (Standard: echte Datei).</param>
-    /// <param name="extract">Symbol aus einer EXE (Standard: <see cref="ExtractIcon"/>).</param>
+    /// <param name="extract">Nur Bild aus einer Datei (Tests); gilt als scharf und nicht als Standardsymbol.</param>
+    /// <param name="maxParallel">Höchstens so viele Symbole gleichzeitig.</param>
+    /// <param name="read">Symbol samt Größe und Standardsymbol-Erkennung (Standard: <see cref="IconReader"/>).</param>
+    /// <param name="iconDirectory">Ordner der eigenen Symbole (null: keine eigenen Symbole).</param>
+    /// <param name="choiceCacheFile">Datei der gemerkten Wahl (null: nichts merken).</param>
+    /// <param name="fileStamp">Größe und Änderungszeit einer Datei als Text, null wenn sie fehlt (Standard: echte Datei).</param>
+    /// <param name="now">Uhr (Standard: jetzt).</param>
+    /// <param name="deepSearchBudget">Zeitgrenze der tieferen EXE-Suche (Standard 1 s).</param>
+    /// <param name="logger">Protokoll (nur Debug-Meldungen).</param>
     public GameIconService(
         IFileSystem fileSystem,
         Func<IReadOnlyList<string>?>? helperPatterns = null,
         Func<string, long>? fileLength = null,
         Func<string, ImageSource?>? extract = null,
-        int maxParallel = 2)
+        int maxParallel = 2,
+        Func<string, IconImage?>? read = null,
+        string? iconDirectory = null,
+        string? choiceCacheFile = null,
+        Func<string, string?>? fileStamp = null,
+        Func<DateTimeOffset>? now = null,
+        TimeSpan? deepSearchBudget = null,
+        ILogger? logger = null)
     {
-        _resolver = new IconExecutableResolver(fileSystem, fileLength);
+        _logger = logger ?? NullLogger.Instance;
+        _resolver = new IconExecutableResolver(fileSystem, fileLength, deepSearchBudget);
         _helperPatterns = helperPatterns ?? (() => null);
-        _extract = extract ?? (path => ExtractIcon(path, IconSize));
+        var reader = new IconReader(logger: _logger);
+        _read = read
+            ?? (extract is null ? path => reader.Read(path) : path => extract(path) is { } image ? new IconImage(image, IconImage.SharpSize, false) : null);
+        _fileStamp = fileStamp ?? RealFileStamp;
+        _now = now ?? (() => DateTimeOffset.UtcNow);
+        _customIcons = iconDirectory is null ? null : new CustomIconStore(iconDirectory);
+        _choices = new IconChoiceCache(fileSystem, choiceCacheFile, _logger);
         _maxParallel = Math.Max(1, maxParallel);
     }
 
     public ImageSource? GetCachedIcon(GameConfig game) =>
-        _exeByGame.TryGetValue(game.Key, out var exe) && exe is not null && _iconByExe.TryGetValue(exe, out var icon) ? icon : null;
+        _byGame.TryGetValue(game.Key, out var cached) && cached.Signature == MemorySignature(game) ? cached.Icon : null;
 
     public Task<ImageSource?> GetIconAsync(GameConfig game, CancellationToken cancellationToken = default)
     {
-        if (_exeByGame.TryGetValue(game.Key, out var exe) && (exe is null || _iconByExe.ContainsKey(exe)))
+        var signature = MemorySignature(game);
+        if (_byGame.TryGetValue(game.Key, out var cached) && cached.Signature == signature)
         {
-            return Task.FromResult(exe is null ? null : _iconByExe.GetValueOrDefault(exe));
+            return Task.FromResult(cached.Icon);
         }
 
-        return _inflight.GetOrAdd(game.Key, _ => Enqueue(game, cancellationToken));
+        var key = game.Key + "|" + signature;
+        return _inflight.GetOrAdd(key, _ => Enqueue(game, key, signature, cancellationToken));
     }
 
-    /// <summary>Gibt alle zwischengespeicherten Symbole frei (Fenster geschlossen).</summary>
+    /// <summary>Gibt alle zwischengespeicherten Symbole frei (Fenster geschlossen); die gemerkte Wahl wird geschrieben.</summary>
     public void ClearCache()
     {
         lock (_gate)
@@ -76,13 +146,45 @@ public sealed class GameIconService : IGameIconService
             }
         }
 
-        _exeByGame.Clear();
-        _iconByExe.Clear();
+        _byGame.Clear();
+        _byPath.Clear();
         _inflight.Clear();
+        _ = Task.Run(_choices.Release);
+    }
+
+    /// <summary>Vergisst das Symbol eines Spiels (nach „Symbol ändern…“ oder „Symbol zurücksetzen“); die nächste Anfrage lädt neu.</summary>
+    public void Forget(string gameKey)
+    {
+        _epochs.AddOrUpdate(gameKey, 1, (_, epoch) => epoch + 1);
+        _byGame.TryRemove(gameKey, out _);
+    }
+
+    /// <summary>Erzeugt das eigene Symbol aus einer Bild- oder EXE-Datei; liefert den Namen für <see cref="GameConfig.CustomIcon"/>.</summary>
+    public string SaveCustomIcon(GameConfig game, string sourcePath) =>
+        (_customIcons ?? throw new InvalidOperationException("Kein Ordner für eigene Symbole festgelegt.")).Save(game.Key, sourcePath);
+
+    /// <summary>Löscht die PNG eines eigenen Symbols (fehlt sie, passiert nichts).</summary>
+    public void DeleteCustomIcon(string? fileName) => _customIcons?.Delete(fileName);
+
+    /// <summary>
+    /// Wählt das Symbol eines Spiels sofort auf dem aufrufenden Thread, ohne Zwischenspeicher im Fenster (Messung und
+    /// Prüfung). Ohne <paramref name="remember"/> wird immer neu gewählt; mit wie in der Liste: die gemerkte Wahl gilt, eine
+    /// neue wird gemerkt und gleich geschrieben. Null, wenn keine Quelle ein Symbol hergibt. Nie auf dem UI-Thread aufrufen.
+    /// </summary>
+    public IconSelection? Select(GameConfig game, bool remember = false)
+    {
+        if (!remember)
+        {
+            return Custom(game) ?? Choose(game, _helperPatterns());
+        }
+
+        var selection = Custom(game) ?? Automatic(game);
+        _choices.Flush();
+        return selection;
     }
 
     /// <summary>
-    /// Symbol einer EXE in Zielgröße als eingefrorenes Bild; null, wenn die Datei keines enthält (dann zeigt die
+    /// Symbol einer EXE oder .ico in Zielgröße als eingefrorenes Bild; null, wenn die Datei keines enthält (dann zeigt die
     /// Liste das Ersatzsymbol der Quelle statt des allgemeinen Windows-Programmsymbols).
     /// <see cref="System.Drawing.Icon.ExtractIcon(string, int, int)"/> liefert die gewünschte Größe direkt (statt
     /// fester 32 px von ExtractAssociatedIcon). Das Icon besitzt sein Handle: Dispose ruft DestroyIcon.
@@ -112,12 +214,29 @@ public sealed class GameIconService : IGameIconService
         }
     }
 
-    private Task<ImageSource?> Enqueue(GameConfig game, CancellationToken cancellationToken)
+    private static string? RealFileStamp(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.Exists ? info.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + info.LastWriteTimeUtc.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture) : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Kennung für den Zwischenspeicher im Fenster: Eingaben des Spiels, eigenes Symbol und „vergessen“-Zähler.</summary>
+    private string MemorySignature(GameConfig game) =>
+        IconSignature.Of(game, _helperPatterns()) + "|" + game.CustomIcon + "|" + _epochs.GetValueOrDefault(game.Key);
+
+    private Task<ImageSource?> Enqueue(GameConfig game, string inflightKey, string signature, CancellationToken cancellationToken)
     {
         var completion = new TaskCompletionSource<ImageSource?>(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate)
         {
-            _queue.Push(new WorkItem(game, completion, cancellationToken, _generation));
+            _queue.Push(new WorkItem(game, inflightKey, signature, completion, cancellationToken, _generation));
             if (_workers < _maxParallel)
             {
                 _workers++;
@@ -138,7 +257,7 @@ public sealed class GameIconService : IGameIconService
                 if (_queue.Count == 0)
                 {
                     _workers--;
-                    return;
+                    break;
                 }
 
                 item = _queue.Pop();
@@ -160,41 +279,165 @@ public sealed class GameIconService : IGameIconService
             }
             finally
             {
-                _inflight.TryRemove(item.Game.Key, out _);
+                _inflight.TryRemove(item.InflightKey, out _);
             }
         }
+
+        // Nichts steht mehr an: gemerkte Wahl gesammelt schreiben.
+        _choices.Flush();
     }
 
     private ImageSource? Load(WorkItem item)
     {
-        var exe = _resolver.Resolve(item.Game, _helperPatterns());
-        ImageSource? icon = null;
-        if (exe is not null && !_iconByExe.TryGetValue(exe, out icon))
+        var game = item.Game;
+        var icon = (Custom(game) ?? Automatic(game))?.Icon.Image;
+        if (Volatile.Read(ref _generation) == item.Generation && MemorySignature(game) == item.Signature)
         {
-            icon = _extract(exe);
-        }
-
-        if (Volatile.Read(ref _generation) == item.Generation)
-        {
-            _exeByGame[item.Game.Key] = exe;
-            if (exe is not null)
-            {
-                _iconByExe[exe] = icon;
-            }
+            _byGame[game.Key] = new CachedIcon(item.Signature, icon);
         }
 
         return icon;
     }
 
-    private sealed record WorkItem(GameConfig Game, TaskCompletionSource<ImageSource?> Completion, CancellationToken CancellationToken, int Generation);
+    /// <summary>Eigenes Symbol; null, wenn keins gesetzt ist oder die Datei fehlt bzw. unlesbar ist (dann automatisch).</summary>
+    private IconSelection? Custom(GameConfig game)
+    {
+        if (_customIcons?.PathFor(game.CustomIcon) is not { } path)
+        {
+            return null;
+        }
+
+        // Nie aus dem Zwischenspeicher nach Pfad: „Symbol ändern…“ ersetzt dieselbe Datei.
+        if (_read(path) is { } icon)
+        {
+            return new IconSelection(path, IconOrigin.Custom, icon);
+        }
+
+        _logger.LogDebug("Eigenes Symbol {Path} von {Game} fehlt oder ist unlesbar, es gilt das automatische.", path, game.Key);
+        return null;
+    }
+
+    /// <summary>
+    /// Automatisches Symbol: die gemerkte Wahl, solange Spiel und Datei unverändert sind und die Quelle noch erlaubt ist (eine
+    /// Wahl ohne gutes Symbol nur <see cref="RecheckAfter"/> lang), sonst neu wählen und merken.
+    /// </summary>
+    private IconSelection? Automatic(GameConfig game)
+    {
+        var patterns = _helperPatterns();
+        var signature = IconSignature.Of(game, patterns);
+        var now = _now();
+        if (_choices.Get(game.Key) is { } choice && choice.Signature == signature)
+        {
+            var fresh = now - choice.Checked < RecheckAfter && now >= choice.Checked;
+            if (choice.Path is null)
+            {
+                if (fresh)
+                {
+                    return null;
+                }
+            }
+            else if ((choice.Good || fresh)
+                && IsAllowedSource(game, choice.Path, patterns)
+                && string.Equals(_fileStamp(choice.Path), choice.Stamp, StringComparison.Ordinal)
+                && ReadPath(choice.Path) is { } remembered
+                && remembered.IsGood == choice.Good)
+            {
+                _byPath[choice.Path] = remembered;
+                return new IconSelection(choice.Path, choice.Origin, remembered);
+            }
+        }
+
+        var selection = Choose(game, patterns);
+        _choices.Set(game.Key, selection is null
+            ? new IconChoice(signature, null, IconOrigin.Executable, null, 0, false, now)
+            : new IconChoice(signature, selection.Path, selection.Origin, _fileStamp(selection.Path), selection.Icon.NativeSize, selection.Icon.IsGood, now));
+        return selection;
+    }
+
+    /// <summary>Die eigentliche Wahl (siehe Klassenbeschreibung). Das gewählte Bild bleibt nach Pfad im Speicher.</summary>
+    private IconSelection? Choose(GameConfig game, IReadOnlyList<string>? patterns)
+    {
+        IconSelection? fallback = null;
+        void Consider(IconSelection selection)
+        {
+            if (fallback is null || (fallback.Icon.IsGeneric && !selection.Icon.IsGeneric))
+            {
+                fallback = selection;
+            }
+        }
+
+        IconSelection? Chosen(IconSelection? selection)
+        {
+            if (selection is not null)
+            {
+                _byPath[selection.Path] = selection.Icon;
+            }
+
+            return selection;
+        }
+
+        foreach (var candidate in game.IconCandidates)
+        {
+            if (!IconFiles.IsReadableCandidate(candidate) || ReadPath(candidate) is not { } icon)
+            {
+                continue;
+            }
+
+            var hint = new IconSelection(candidate, IconOrigin.Launcher, icon);
+            if (icon.IsGood)
+            {
+                return Chosen(hint);
+            }
+
+            Consider(hint);
+        }
+
+        // Die tiefere Suche nur, wenn noch kein echtes Symbol da ist.
+        var deepSearch = fallback is null || fallback.Icon.IsGeneric;
+        if (_resolver.ResolveWithIcon(game, patterns, ReadPath, deepSearch) is { } exe)
+        {
+            var selection = new IconSelection(exe.Path, IconOrigin.Executable, exe.Icon);
+            if (exe.Icon.IsGood)
+            {
+                return Chosen(selection);
+            }
+
+            Consider(selection);
+        }
+
+        return Chosen(fallback);
+    }
+
+    /// <summary>
+    /// Darf eine gemerkte Quelle (aus icon-cache.json) noch gelesen werden? Nur ein aktueller Hinweis des Launchers oder eine
+    /// EXE, die die EXE-Wahl heute noch zulässt (etwa nach einer erweiterten Ausschlussliste nicht mehr).
+    /// </summary>
+    private bool IsAllowedSource(GameConfig game, string path, IReadOnlyList<string>? patterns) =>
+        game.IconCandidates.Contains(path, StringComparer.OrdinalIgnoreCase)
+        || (IconFiles.IsLocalPath(path) && _resolver.IsAllowed(game, path, patterns));
+
+    private IconImage? ReadPath(string path) => _byPath.TryGetValue(path, out var cached) ? cached : _read(path);
+
+    private sealed record CachedIcon(string Signature, ImageSource? Icon);
+
+    private sealed record WorkItem(
+        GameConfig Game, string InflightKey, string Signature, TaskCompletionSource<ImageSource?> Completion, CancellationToken CancellationToken, int Generation);
 }
 
+/// <summary>Gewählte EXE samt ihrem Symbol.</summary>
+public sealed record ResolvedIcon(string Path, IconImage Icon);
+
 /// <summary>
-/// Wählt die EXE, deren Symbol ein Spiel zeigt: gemerkte EXEs, dann vom Launcher genannte (jeweils die größte
-/// vorhandene), sonst die größte EXE im Installationsordner bis eine Ebene tief. Hilfsprogramme und vom Nutzer
-/// ausgeschlossene EXEs zählen nie. Die Ordnersuche ist begrenzt (Steam nennt keine EXEs).
+/// Wählt die EXE, deren Symbol ein Spiel zeigt, in Gruppen: erkannte EXEs, dann vom Launcher genannte, dann der
+/// Installationsordner; je Gruppe die größte zuerst. Im Ordner kommen Unreal-Spiele zuerst mit
+/// <c>[&lt;Projekt&gt;\]Binaries\Win64\*.exe</c> dran, <c>*-Shipping.exe</c> vorn (die Starter im Spielordner tragen oft nur das
+/// Unreal- oder EasyAntiCheat-Symbol), danach die EXEs bis eine Ebene tief. Hilfsprogramme, vom Nutzer ausgeschlossene EXEs
+/// und die Ausschlussliste nur für Symbole (<see cref="IconExcludedExecutables"/>) zählen nie. Mit Symbolprobe
+/// (<see cref="ResolveWithIcon"/>, nur auf dem Arbeits-Thread der Symbole) werden EXEs ohne Symbol oder mit Standardsymbol
+/// übersprungen, solange es eine andere gibt, und als Ersatz wird bis drei Ebenen tief gesucht, begrenzt auf
+/// <see cref="DeepSearchMaxDirectories"/> Ordner und 1 s (gemessen ohne Grenze: im Mittel 66 ms, schlimmstenfalls 12 s).
 /// </summary>
-public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, long>? fileLength = null)
+public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, long>? fileLength = null, TimeSpan? deepSearchBudget = null)
 {
     /// <summary>Höchstens so viele Unterordner werden durchsucht.</summary>
     public const int MaxSubdirectories = 32;
@@ -202,43 +445,95 @@ public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, 
     /// <summary>Höchstens so viele EXEs werden je Spiel verglichen.</summary>
     public const int MaxCandidates = 64;
 
-    private readonly Func<string, long> _fileLength = fileLength ?? RealFileLength;
+    /// <summary>Tiefe der Ersatzsuche unter dem Installationsordner.</summary>
+    public const int DeepSearchDepth = 3;
 
+    /// <summary>Höchstens so viele Ordner besucht die Ersatzsuche.</summary>
+    public const int DeepSearchMaxDirectories = 300;
+
+    /// <summary>Höchstens so viele EXEs liest die Symbolprobe je Spiel.</summary>
+    public const int MaxProbes = 24;
+
+    /// <summary>Ordner, die die Ersatzsuche nie betritt: Engine-Dateien von Unreal und die Ordner aus <see cref="IconExcludedExecutables.Folders"/>.</summary>
+    private static readonly HashSet<string> SkippedFolders = new(["Engine", .. IconExcludedExecutables.Folders], StringComparer.OrdinalIgnoreCase);
+
+    private readonly Func<string, long> _fileLength = fileLength ?? RealFileLength;
+    private readonly TimeSpan _deepSearchBudget = deepSearchBudget ?? DefaultDeepSearchBudget;
+
+    /// <summary>Standard-Zeitgrenze der Ersatzsuche.</summary>
+    public static TimeSpan DefaultDeepSearchBudget { get; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>EXE für das Symbol ohne Probe (etwa für Verknüpfungen): die erste der ersten nicht leeren Gruppe.</summary>
     public string? Resolve(GameConfig game, IReadOnlyList<string>? helperPatterns = null)
     {
-        bool Usable(string path) =>
-            !string.IsNullOrWhiteSpace(path)
-            && path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-            && Path.IsPathFullyQualified(path)
-            && !HelperExecutables.IsHelper(path, helperPatterns)
-            && !game.ExcludedExecutables.Any(x => IsExcludedBy(x, path))
-            && SafeFileExists(path);
-
-        var chosen = Largest(game.DetectedExecutables.Select(PathUtil.Normalize).Where(Usable))
-            ?? Largest(game.KnownExecutables.Select(PathUtil.Normalize).Where(Usable));
-        if (chosen is not null)
+        foreach (var group in Groups(game, helperPatterns))
         {
-            return chosen;
-        }
-
-        var dir = PathUtil.Normalize(game.InstallDir);
-        if (dir.Length <= 3 || !Path.IsPathFullyQualified(dir) || !SafeDirectoryExists(dir))
-        {
-            return null; // Nie eine Laufwerkswurzel durchsuchen.
-        }
-
-        var candidates = new List<string>(SafeExecutables(dir));
-        foreach (var sub in SafeDirectories(dir).Take(MaxSubdirectories))
-        {
-            if (candidates.Count >= MaxCandidates)
+            if (group.Count > 0)
             {
-                break;
+                return group[0];
             }
-
-            candidates.AddRange(SafeExecutables(sub));
         }
 
-        return Largest(candidates.Take(MaxCandidates).Select(PathUtil.Normalize).Where(Usable));
+        return null;
+    }
+
+    /// <summary>
+    /// Erste EXE in Gruppenreihenfolge, deren Symbol vorhanden und kein Standardsymbol ist; ohne Treffer mit
+    /// <paramref name="deepSearch"/> die Ersatzsuche. Sonst die erste mit Standardsymbol, sonst null.
+    /// </summary>
+    public ResolvedIcon? ResolveWithIcon(GameConfig game, IReadOnlyList<string>? helperPatterns, Func<string, IconImage?> probe, bool deepSearch = true)
+    {
+        ResolvedIcon? fallback = null;
+        var tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var probes = 0;
+        var groups = Groups(game, helperPatterns);
+        if (deepSearch)
+        {
+            groups = groups.Concat(DeepSearch(game, helperPatterns));
+        }
+
+        foreach (var group in groups)
+        {
+            foreach (var exe in group)
+            {
+                if (!tried.Add(exe))
+                {
+                    continue;
+                }
+
+                if (probes++ >= MaxProbes)
+                {
+                    return fallback;
+                }
+
+                if (probe(exe) is not { } icon)
+                {
+                    continue;
+                }
+
+                if (!icon.IsGeneric)
+                {
+                    return new ResolvedIcon(exe, icon);
+                }
+
+                fallback ??= new ResolvedIcon(exe, icon);
+            }
+        }
+
+        return fallback;
+    }
+
+    /// <summary>
+    /// True, wenn die EXE heute als Symbolquelle des Spiels zulässig wäre: vorhanden, nicht ausgeschlossen und erkannt, vom
+    /// Launcher genannt oder unter dem Installationsordner (für gemerkte Wahlen aus icon-cache.json).
+    /// </summary>
+    public bool IsAllowed(GameConfig game, string path, IReadOnlyList<string>? helperPatterns)
+    {
+        var normalized = PathUtil.Normalize(path);
+        return IsUsable(game, normalized, helperPatterns)
+            && (PathUtil.IsUnder(normalized, game.InstallDir)
+                || game.DetectedExecutables.Any(x => PathUtil.PathEquals(x, normalized))
+                || game.KnownExecutables.Any(x => PathUtil.PathEquals(x, normalized)));
     }
 
     private static bool IsExcludedBy(string entry, string path) =>
@@ -258,22 +553,108 @@ public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, 
         }
     }
 
-    private string? Largest(IEnumerable<string> paths)
+    private static bool IsShipping(string path) => path.EndsWith("-Shipping.exe", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Installationsordner, falls durchsuchbar (nie eine Laufwerkswurzel), sonst null.</summary>
+    private string? SearchableInstallDir(GameConfig game)
     {
-        string? best = null;
-        long bestSize = -1;
-        foreach (var path in paths)
+        var dir = PathUtil.Normalize(game.InstallDir);
+        return dir.Length <= 3 || !Path.IsPathFullyQualified(dir) || !SafeDirectoryExists(dir) ? null : dir;
+    }
+
+    /// <summary>Die Gruppen in Reihenfolge, je Gruppe beste zuerst. Wird erst bei Bedarf ausgewertet.</summary>
+    private IEnumerable<List<string>> Groups(GameConfig game, IReadOnlyList<string>? helperPatterns)
+    {
+        bool Usable(string path) => IsUsable(game, path, helperPatterns);
+
+        yield return BySize(game.DetectedExecutables.Select(PathUtil.Normalize).Where(Usable));
+        yield return BySize(game.KnownExecutables.Select(PathUtil.Normalize).Where(Usable));
+
+        if (SearchableInstallDir(game) is not { } dir)
         {
-            var size = SafeLength(path);
-            if (size > bestSize)
+            yield break;
+        }
+
+        // Unreal: [<Projekt>\]Binaries\Win64, Shipping zuerst; der Ordner Engine gehört nie zum Spiel.
+        var unreal = new List<string>(UnrealBinaries(dir));
+        var candidates = new List<string>(SafeExecutables(dir));
+        foreach (var sub in SafeDirectories(dir, MaxSubdirectories))
+        {
+            if (!SkippedFolders.Contains(Path.GetFileName(sub)))
             {
-                best = path;
-                bestSize = size;
+                unreal.AddRange(UnrealBinaries(sub));
+            }
+
+            if (candidates.Count < MaxCandidates)
+            {
+                candidates.AddRange(SafeExecutables(sub));
             }
         }
 
-        return best;
+        var usableUnreal = unreal.Select(PathUtil.Normalize).Where(Usable).ToList();
+        yield return BySize(usableUnreal.Where(IsShipping))
+            .Concat(BySize(usableUnreal.Where(p => !IsShipping(p))))
+            .Concat(BySize(candidates.Take(MaxCandidates).Select(PathUtil.Normalize).Where(Usable)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
+
+    private List<string> UnrealBinaries(string projectDir)
+    {
+        var win64 = Path.Combine(projectDir, "Binaries", "Win64");
+        return SafeDirectoryExists(win64) ? SafeExecutables(win64) : [];
+    }
+
+    /// <summary>
+    /// Ersatzsuche: alle EXEs bis <see cref="DeepSearchDepth"/> Ebenen unter dem Installationsordner (Breitensuche, ohne
+    /// <see cref="SkippedFolders"/>), begrenzt auf <see cref="DeepSearchMaxDirectories"/> Ordner, ebenso viele EXEs und die
+    /// Zeitgrenze; Shipping-EXEs zuerst, dann die größten.
+    /// </summary>
+    private IEnumerable<List<string>> DeepSearch(GameConfig game, IReadOnlyList<string>? helperPatterns)
+    {
+        if (SearchableInstallDir(game) is not { } dir)
+        {
+            yield break;
+        }
+
+        var clock = Stopwatch.StartNew();
+        var found = new List<string>();
+        var pending = new Queue<(string Dir, int Depth)>();
+        pending.Enqueue((dir, 0));
+        var visited = 0;
+        while (pending.Count > 0 && visited < DeepSearchMaxDirectories && clock.Elapsed < _deepSearchBudget && found.Count < DeepSearchMaxDirectories)
+        {
+            var (current, depth) = pending.Dequeue();
+            visited++;
+            found.AddRange(SafeExecutables(current).Select(PathUtil.Normalize).Where(p => IsUsable(game, p, helperPatterns)));
+            if (depth < DeepSearchDepth)
+            {
+                foreach (var sub in SafeDirectories(current, DeepSearchMaxDirectories - visited - pending.Count))
+                {
+                    if (!SkippedFolders.Contains(Path.GetFileName(sub)))
+                    {
+                        pending.Enqueue((sub, depth + 1));
+                    }
+                }
+            }
+        }
+
+        yield return BySize(found.Where(IsShipping)).Concat(BySize(found.Where(p => !IsShipping(p)))).ToList();
+    }
+
+    private bool IsUsable(GameConfig game, string path, IReadOnlyList<string>? helperPatterns) =>
+        !string.IsNullOrWhiteSpace(path)
+        && path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+        && Path.IsPathFullyQualified(path)
+        && !HelperExecutables.IsHelper(path, helperPatterns)
+        && !IconExcludedExecutables.IsExcluded(path, game.InstallDir)
+        && !game.ExcludedExecutables.Any(x => IsExcludedBy(x, path))
+        && SafeFileExists(path);
+
+    /// <summary>Größte zuerst (bei gleicher Größe in Fundreihenfolge).</summary>
+    private List<string> BySize(IEnumerable<string> paths) =>
+        paths.Distinct(StringComparer.OrdinalIgnoreCase).Select((p, i) => (Path: p, Index: i, Size: SafeLength(p)))
+            .OrderByDescending(x => x.Size).ThenBy(x => x.Index).Select(x => x.Path).ToList();
 
     private long SafeLength(string path)
     {
@@ -311,11 +692,11 @@ public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, 
         }
     }
 
-    private List<string> SafeExecutables(string dir)
+    private List<string> SafeExecutables(string dir, string pattern = "*.exe")
     {
         try
         {
-            return fileSystem.EnumerateFiles(dir, "*.exe").Take(MaxCandidates).ToList();
+            return fileSystem.EnumerateFiles(dir, pattern).Take(MaxCandidates).ToList();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or ArgumentException)
         {
@@ -323,11 +704,11 @@ public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, 
         }
     }
 
-    private List<string> SafeDirectories(string dir)
+    private List<string> SafeDirectories(string dir, int limit)
     {
         try
         {
-            return fileSystem.EnumerateDirectories(dir).Take(MaxSubdirectories).ToList();
+            return limit <= 0 ? [] : fileSystem.EnumerateDirectories(dir).Take(limit).ToList();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException or ArgumentException)
         {

@@ -16,7 +16,8 @@ internal sealed class SteamAppInfoBuilder(uint magic = SteamAppInfoBuilder.V29)
     private readonly List<(uint AppId, byte[] Kv)> _entries = [];
     private readonly List<string> _keys = [];
 
-    public SteamAppInfoBuilder Add(uint appId, string? type, string? name)
+    /// <summary>Eintrag; <paramref name="clientIcon"/> und <paramref name="icon"/> wie common/clienticon und common/icon (SHA-1 in Hex, E86).</summary>
+    public SteamAppInfoBuilder Add(uint appId, string? type, string? name, string? clientIcon = null, string? icon = null)
     {
         var kv = new MemoryStream();
         BeginObject(kv, "appinfo");
@@ -30,6 +31,17 @@ internal sealed class SteamAppInfoBuilder(uint magic = SteamAppInfoBuilder.V29)
         if (type is not null)
         {
             String(kv, "type", type);
+        }
+
+        if (clientIcon is not null)
+        {
+            String(kv, "clienticon", clientIcon);
+            String(kv, "clienttga", clientIcon + "tga");
+        }
+
+        if (icon is not null)
+        {
+            String(kv, "icon", icon);
         }
 
         String(kv, "oslist", "windows");

@@ -614,6 +614,37 @@ public sealed class UbisoftScannerTests
         Assert.Equal(0, spy.Writes);
     }
 
+    // ---------- Symbol-Hinweis (E86) ----------
+
+    [Fact]
+    public void Icon_hint_is_DisplayIcon_of_the_uninstall_entry_in_the_32_bit_view()
+    {
+        // Gemessen: Ubisoft Connect schreibt einen Pfad mit Schrägstrichen auf eine 256-px-.ico unter data\games.
+        WithLauncher();
+        AddInstall(4740, "D:/Ubisoft-Spiele/AFOP/");
+        AddAfopFiles();
+        const string Icon = LauncherDir + @"\data\games\2ebcf68313b904d3d6d17989ec7b3b50.ico";
+        _fs.AddFile(Icon, "ico");
+        _registry.Set(RegistryHiveKind.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Uplay Install 4740", "DisplayIcon",
+            "C:/Program Files (x86)/Ubisoft/Ubisoft Game Launcher/data/games/2ebcf68313b904d3d6d17989ec7b3b50.ico", RegistryViewKind.Registry32);
+
+        var game = Assert.Single(Scan().Games);
+
+        Assert.Equal([Icon], game.IconCandidates);
+    }
+
+    [Fact]
+    public void Icon_hint_is_empty_when_DisplayIcon_file_is_missing()
+    {
+        WithLauncher();
+        AddInstall(4740, "D:/Ubisoft-Spiele/AFOP/");
+        AddAfopFiles();
+        _registry.Set(RegistryHiveKind.LocalMachine, @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Uplay Install 4740", "DisplayIcon",
+            @"C:\gibt\es\nicht.ico", RegistryViewKind.Registry32);
+
+        Assert.Empty(Assert.Single(Scan().Games).IconCandidates);
+    }
+
     // ---------- Hilfen ----------
 
     private ScanResult Scan() => CreateScanner().Scan(ScanOptions.Default, Ct);

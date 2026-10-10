@@ -24,6 +24,12 @@ public sealed record MicrosoftGameConfig(
 {
     public const string FileName = "MicrosoftGame.config";
 
+    /// <summary>
+    /// Logos aus <c>ShellVisuals</c>, größtes zuerst (Square480x480Logo, Square150x150Logo, StoreLogo, Square44x44Logo),
+    /// relativ zum Content-Ordner und so, wie sie in der Datei stehen (ohne Zusatz wie <c>.scale-200</c>, E86).
+    /// </summary>
+    public IReadOnlyList<string> Logos { get; init; } = [];
+
     /// <summary>Liest die Datei. Wirft <see cref="InvalidDataException"/> (deutsch) bei kaputtem XML oder fehlender Identity.</summary>
     public static MicrosoftGameConfig Parse(byte[] data)
     {
@@ -45,12 +51,18 @@ public sealed record MicrosoftGameConfig(
             || root.Child("AllowedProducts") is not null
             || root.Child("DesktopRegistration")?.Child("MainPackageDependency") is not null;
 
+        var visuals = root.Child("ShellVisuals");
+        string?[] logos = [visuals.Attr("Square480x480Logo"), visuals.Attr("Square150x150Logo"), visuals.Attr("StoreLogo"), visuals.Attr("Square44x44Logo")];
+
         return new MicrosoftGameConfig(
             name,
             publisher,
             identity.Attr("Version"),
-            root.Child("ShellVisuals").Attr("DefaultDisplayName"),
+            visuals.Attr("DefaultDisplayName"),
             executables,
-            isDlc);
+            isDlc)
+        {
+            Logos = logos.OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+        };
     }
 }

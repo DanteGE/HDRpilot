@@ -132,6 +132,19 @@ public sealed class GameConfig
 
     public DateTimeOffset? LastPlayed { get; set; }
 
+    /// <summary>
+    /// Symbol-Hinweise des Launchers aus dem letzten Einlesen (siehe <see cref="GameEntry.IconCandidates"/>). Gespeichert,
+    /// damit die Bibliothek auch vor dem Ende des Einlesens beim Start das richtige Symbol zeigt; nur vorhandene
+    /// Dateien, meist eine je Spiel (E86).
+    /// </summary>
+    public List<string> IconCandidates { get; set; } = [];
+
+    /// <summary>
+    /// Eigenes Symbol (Rechtsklick „Symbol ändern…“): Dateiname einer PNG im Ordner icons des Datenordners, hat Vorrang
+    /// vor allen automatischen Quellen. Null: automatisch. Fehlt die Datei (etwa auf einem anderen PC), gilt automatisch.
+    /// </summary>
+    public string? CustomIcon { get; set; }
+
     [JsonIgnore]
     public string Key => GameKey.Create(Source, SourceId);
 

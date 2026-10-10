@@ -17,6 +17,9 @@ namespace HdrPilot.Core.Games.Scanners;
 /// gamelaunchhelper.exe und die Spiel-EXEs, und von dort liefen die Prozesse am Zielrechner (MuiCache, Compatibility Assistant).</item>
 /// <item>Start über <c>shell:AppsFolder\&lt;PackageFamilyName&gt;!&lt;App-Id&gt;</c>. Die App-Id stammt aus
 /// <c>appxmanifest.xml</c> (Applications/Application/@Id), sonst aus Executable/@Id.</item>
+/// <item>Symbol-Hinweise (E86): die Logos aus <c>MicrosoftGame.config</c> (größtes zuerst), dann aus dem Paketmanifest,
+/// über <see cref="PackageAssets"/> aufgelöst. Bei Palworld verweigert Windows das Lesen der Spiel-EXE, die Logos sind
+/// lesbar.</item>
 /// </list>
 /// Liest nur; startet und verändert nichts.
 /// </summary>
@@ -263,7 +266,32 @@ public sealed class XboxScanner : IGameScanner
             InstallDir = contentDir,
             Executables = executables,
             LaunchCommand = $@"shell:AppsFolder\{familyName}!{appId}",
+            IconCandidates = FindLogos(contentDir, config.Logos.Concat(manifest?.Logos ?? [])),
         };
+    }
+
+    /// <summary>Vorhandene Logo-Dateien in der Reihenfolge der Namen (höchstens <see cref="IconFiles.MaxCandidates"/>).</summary>
+    private List<string> FindLogos(string contentDir, IEnumerable<string> logos)
+    {
+        var icons = new List<string>();
+        foreach (var logo in logos)
+        {
+            if (icons.Count >= IconFiles.MaxCandidates)
+            {
+                break;
+            }
+
+            try
+            {
+                IconFiles.AddExisting(icons, _fileSystem, PackageAssets.Resolve(_fileSystem, contentDir, logo));
+            }
+            catch (Exception ex) when (IsReadFailure(ex) || ex is ArgumentException)
+            {
+                _logger.LogDebug("Xbox: Logo {Logo} in {Dir} nicht lesbar: {Message}", logo, contentDir, ex.Message);
+            }
+        }
+
+        return icons;
     }
 
     private AppxManifest? ReadManifest(string contentDir, List<ScanError> errors)

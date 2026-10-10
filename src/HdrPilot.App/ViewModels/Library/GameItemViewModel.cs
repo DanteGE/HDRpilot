@@ -132,7 +132,7 @@ public sealed class GameItemViewModel : ObservableObject
         _ => string.Empty,
     };
 
-    /// <summary>Symbol aus der EXE; null bis geladen (dann Ersatzsymbol der Quelle).</summary>
+    /// <summary>Symbol des Spiels (eigenes, vom Launcher oder aus der EXE); null bis geladen (dann Ersatzsymbol der Quelle).</summary>
     public ImageSource? Icon
     {
         get
@@ -147,6 +147,9 @@ public sealed class GameItemViewModel : ObservableObject
         }
     }
 
+    /// <summary>Ein eigenes Symbol ist gesetzt („Symbol zurücksetzen“ möglich).</summary>
+    public bool HasCustomIcon => !string.IsNullOrEmpty(_config.CustomIcon);
+
     internal void SetIcon(ImageSource? icon)
     {
         if (icon is not null && !ReferenceEquals(icon, _icon))
@@ -156,10 +159,34 @@ public sealed class GameItemViewModel : ObservableObject
         }
     }
 
+    /// <summary>Symbol neu anfragen (eigenes Symbol geändert oder zurückgesetzt); bis dahin das Ersatzsymbol.</summary>
+    internal void ReloadIcon()
+    {
+        if (!_iconRequested)
+        {
+            return; // Noch nie sichtbar: wird beim ersten Anzeigen ohnehin geladen.
+        }
+
+        _iconRequested = false;
+        _icon = null;
+        OnPropertyChanged(nameof(Icon));
+    }
+
     /// <summary>Übernimmt einen neuen Stand aus der Konfiguration, ohne Schreibvorgänge auszulösen.</summary>
     internal void Apply(GameConfig config)
     {
+        var previous = _config;
         _config = config;
+        if (!string.Equals(previous.CustomIcon, config.CustomIcon, StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(HasCustomIcon));
+        }
+
+        if (!ReferenceEquals(previous, config) && !SameIconInputs(previous, config))
+        {
+            ReloadIcon(); // etwa neue Symbol-Hinweise nach dem Einlesen oder ein eigenes Symbol
+        }
+
         Name = config.Name;
         InstallDir = config.InstallDir;
         if (_hdrAuto != config.HdrAuto)
@@ -171,6 +198,15 @@ public sealed class GameItemViewModel : ObservableObject
         IsNew = config.IsNew;
         IsInstalled = config.IsInstalled;
     }
+
+    /// <summary>Gleiche Eingaben für das Symbol (eigenes Symbol, Hinweise, Ordner, EXEs): dann nicht neu laden.</summary>
+    private static bool SameIconInputs(GameConfig a, GameConfig b) =>
+        string.Equals(a.CustomIcon, b.CustomIcon, StringComparison.Ordinal)
+        && string.Equals(a.InstallDir, b.InstallDir, StringComparison.OrdinalIgnoreCase)
+        && a.IconCandidates.SequenceEqual(b.IconCandidates, StringComparer.OrdinalIgnoreCase)
+        && a.KnownExecutables.SequenceEqual(b.KnownExecutables, StringComparer.OrdinalIgnoreCase)
+        && a.DetectedExecutables.SequenceEqual(b.DetectedExecutables, StringComparer.OrdinalIgnoreCase)
+        && a.ExcludedExecutables.SequenceEqual(b.ExcludedExecutables, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Ändert den Schalter ohne Rückmeldung an die Liste (Rückfall bei Schreibfehler).</summary>
     internal void SetHdrAutoSilently(bool value)

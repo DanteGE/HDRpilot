@@ -262,3 +262,13 @@ ausdrücklichen Wunsch. Einzige Ausnahme: Das Entfernen stellt einen gemerkten H
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AppVersion" -MinTests 4
   EXPECT: TESTS_OK
   EVIDENCE: pending
+
+- [ ] G8.2: Ersatz-Symbole ohne Netz (Wunsch des Nutzers, E86): Steam-Spiele zeigen zuerst das offizielle Steam-Symbol (`steam\games\<clienticon>.ico` aus appinfo.vdf, sonst `DisplayIcon` des Eintrags „Steam App <id>“ in der 64-Bit-Ansicht, `.url`-Verknüpfung, librarycache), die EXE nur, wenn das Steam-Symbol fehlt, ein Standardsymbol oder deutlich unschärfer ist; GOG `goggame-<id>.ico`/Galaxy-Symbol, Xbox-Logos aus `MicrosoftGame.config`/`AppxManifest` (mit `.scale-*`), Ubisoft `DisplayIcon`, Epic/EA EXE; bessere EXE-Wahl (Ausschlussliste nur für Symbole, Unreal `*-Shipping.exe`, begrenzte tiefere Suche); bekannte Standardsymbole (EasyAntiCheat, Unreal, Epic-Starter, Godot, Unity, Windows) werden erkannt. Nur lesend, keine Netzzugriffe, keine Last im Leerlauf. Per Unit-Tests mit Gegenproben und Messung an der echten Bibliothek belegt (Ziel: 647 von 647 mit eigenem Symbol, davon mindestens 618 mit ≥ 48 px)
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Icon" -MinTests 30
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G8.3: Eigenes Symbol per Rechtsklick in der Bibliothek („Symbol ändern…“ für Bild- oder EXE-Datei, „Symbol zurücksetzen“), verkleinert im Datenordner gespeichert, hat Vorrang vor allen automatischen Quellen; per Unit-Tests und UI-Automation an einer Testinstanz belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~CustomIcon" -MinTests 6
+  EXPECT: TESTS_OK
+  EVIDENCE: pending

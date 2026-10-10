@@ -315,7 +315,7 @@ public sealed class ShellViewTests
             Assert.True(version.ActualHeight > 0, "Versionszeile nicht sichtbar");
 
             // Pfeiltasten: WPF springt nur zu aktiven, fokussierbaren Einträgen (ItemsControl.FindFocusable). Pfeil nach
-            // unten vom Start trifft „HDR jetzt …“, Pfeil nach oben vom Start weiter „HDRpilot beenden“ (phase6-traymenu).
+            // unten vom Start trifft „HDR jetzt …“, Pfeil nach oben von dort „HDRpilot beenden“ (phase6-traymenu).
             // Mit Tastendrücken am geöffneten Menü: TrayMenuKeyboardTests.
             var navigable = menu.Items.OfType<Control>().Where(c => c.IsEnabled && c.Focusable).Select(AutomationProperties.GetAutomationId).ToList();
             Assert.Equal("TrayToggleHdr", navigable[0]);

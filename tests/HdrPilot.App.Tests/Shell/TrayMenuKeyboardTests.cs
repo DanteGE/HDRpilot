@@ -49,24 +49,29 @@ public sealed class TrayMenuKeyboardTests
 
             // Pfeil nach unten vom Start: „HDR jetzt …“, dann alle Einträge der Reihe nach und am Ende wieder nach oben,
             // an der Versionszeile vorbei
-            var down = ArrowThroughOpenMenu(Key.Down, Navigable.Length + 1);
+            var down = ArrowThroughOpenMenu([.. Enumerable.Repeat(Key.Down, Navigable.Length + 1)]);
             Assert.Equal("TrayToggleHdr", down[0]);
             string[] downOrder = [.. Navigable, Navigable[0]];
             Assert.Equal(downOrder, down);
             Assert.DoesNotContain("TrayVersion", down);
 
-            // Pfeil nach oben vom Start: „HDRpilot beenden“ (phase6-traymenu.ps1), dann rückwärts; von „HDR jetzt …“ geht
-            // es nicht auf die Versionszeile, sondern wieder ans Ende
-            var up = ArrowThroughOpenMenu(Key.Up, Navigable.Length + 1);
+            // Pfeil nach oben vom Start: „HDRpilot beenden“, dann rückwärts; von „HDR jetzt …“ geht es nicht auf die
+            // Versionszeile, sondern wieder ans Ende
+            var up = ArrowThroughOpenMenu([.. Enumerable.Repeat(Key.Up, Navigable.Length + 1)]);
             Assert.Equal("TrayExit", up[0]);
             string[] upOrder = [.. Enumerable.Reverse(Navigable), Navigable[^1]];
             Assert.Equal(upOrder, up);
             Assert.DoesNotContain("TrayVersion", up);
+
+            // Die Folge aus phase6-traymenu.ps1, Schritt 7: Pfeil nach unten trifft „HDR jetzt …“, Pfeil nach oben springt
+            // von dort an der Versionszeile vorbei zu „HDRpilot beenden“ (dort beendet Eingabe die Testinstanz)
+            string[] gateOrder = ["TrayToggleHdr", "TrayExit"];
+            Assert.Equal(gateOrder, ArrowThroughOpenMenu(Key.Down, Key.Up));
         });
     }
 
-    /// <summary>Öffnet ein neues Tray-Menü, drückt <paramref name="count"/>-mal die Taste und liefert nach jedem Druck die AutomationId des fokussierten Elements.</summary>
-    private static List<string> ArrowThroughOpenMenu(Key key, int count)
+    /// <summary>Öffnet ein neues Tray-Menü, drückt die Tasten der Reihe nach und liefert nach jedem Druck die AutomationId des fokussierten Elements.</summary>
+    private static List<string> ArrowThroughOpenMenu(params Key[] keys)
     {
         var model = new TrayMenuViewModel(new FakeTrayHost(), TrayState.Initial, ex => throw ex);
 
@@ -81,12 +86,13 @@ public sealed class TrayMenuKeyboardTests
             Assert.True(menu.IsOpen, "Menü nicht geöffnet");
             Assert.Same(menu, Keyboard.FocusedElement);
 
-            for (var i = 0; i < count; i++)
+            for (var i = 0; i < keys.Length; i++)
             {
-                Press(key);
+                Press(keys[i]);
                 focused.Add(Keyboard.FocusedElement is DependencyObject element ? AutomationProperties.GetAutomationId(element) : "(kein Fokus)");
-                Assert.False(version.IsKeyboardFocusWithin, $"Versionszeile hat nach {i + 1}× {key} den Tastaturfokus");
-                Assert.True(menu.IsOpen, $"Menü nach {i + 1}× {key} geschlossen");
+                var pressed = string.Join(", ", keys[..(i + 1)]);
+                Assert.False(version.IsKeyboardFocusWithin, $"Versionszeile hat nach {pressed} den Tastaturfokus");
+                Assert.True(menu.IsOpen, $"Menü nach {pressed} geschlossen");
             }
         }
         finally

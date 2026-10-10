@@ -674,7 +674,8 @@
 
     <!--
         Infozeile im Tray-Menü (Version): grau, nicht anklickbar (IsEnabled aus), nicht fokussierbar. Die Pfeiltasten
-        überspringen sie, Pfeil nach oben vom Start wählt weiter den letzten Eintrag (phase6-traymenu.ps1).
+        überspringen sie: Pfeil nach unten wählt den Eintrag darunter, Pfeil nach oben von dort den letzten
+        (phase6-traymenu.ps1, TrayMenuKeyboardTests).
     -->
     <Style x:Key="Hp.Shell.TrayMenuInfo" TargetType="MenuItem">
         <Setter Property="IsEnabled" Value="False" />

@@ -10,7 +10,8 @@
 #   5. ein Klick in ein anderes Programm (das Hilfsfenster des Skripts) schließt es
 #   6. ein Mausklick auf „Spieleliste öffnen“ öffnet das Hauptfenster
 #   7. Tastatur: Die Versionszeile unter dem Kopf zeigt die Dateiversion der EXE und ist nicht aktiv (G8.1). Pfeil nach
-#      oben wählt „HDRpilot beenden“, nie die Versionszeile; Eingabe beendet die Testinstanz
+#      unten wählt „HDR jetzt …“, Pfeil nach oben springt von dort an der Versionszeile vorbei zu „HDRpilot beenden“;
+#      Eingabe beendet die Testinstanz
 # Liegt das Symbol im Überlauf (Standard für neue Programme unter Windows 11), öffnet das Skript zuerst den Überlauf.
 # Bewegt die Maus und klickt: nur am echten Desktop ausführen. Vor jedem Klick prüft es das Fenster unter dem Zeiger
 # (nur Taskleiste, Überlauf, Testinstanz oder das eigene Hilfsfenster) und bricht sonst ab; Tasten gehen nur raus, wenn
@@ -149,7 +150,7 @@ public static class TrayInput
 [void][TrayInput]::SetThreadDpiAwarenessContext([IntPtr]-4) # pro Thread: PowerShell legt die Prozess-Einstellung selbst fest
 if (-not [TrayInput]::PerMonitorAware()) { Write-Output 'ABBRUCH: Skript läuft nicht DPI-bewusst pro Bildschirm (Koordinaten wären verschoben).'; Write-Output 'PHASE6_TRAYMENU_FAILED'; exit 3 }
 
-$VK_ESCAPE = 0x1B; $VK_UP = 0x26; $VK_RETURN = 0x0D; $WM_CLOSE = 0x0010
+$VK_ESCAPE = 0x1B; $VK_UP = 0x26; $VK_DOWN = 0x28; $VK_RETURN = 0x0D; $WM_CLOSE = 0x0010
 $ShellClasses = @('Shell_TrayWnd', 'TopLevelWindowForOverflowXamlIsland')
 
 function Center($r) { return @([int](($r.Left + $r.Right) / 2), [int](($r.Top + $r.Bottom) / 2)) }
@@ -189,6 +190,17 @@ function Find-MenuWindow([int]$processId) {
 }
 function Menu-Element([IntPtr]$hwnd) {
     try { return [Windows.Automation.AutomationElement]::FromHandle($hwnd) } catch { return $null } # schon geschlossen
+}
+# Tastaturfokus im offenen Menü, wie ihn WPF über UI Automation meldet (HasKeyboardFocus des Eintrags): auf dem Eintrag
+# mit der AutomationId und auf der Versionszeile.
+function Focus-Of([IntPtr]$hwnd, [string]$automationId) {
+    $menuEl = Menu-Element $hwnd
+    $item = if ($menuEl) { Find-Id $menuEl $automationId 2000 } else { $null }
+    $version = if ($menuEl) { Find-Id $menuEl 'TrayVersion' 2000 } else { $null }
+    return [pscustomobject]@{
+        Item    = $null -ne $item -and $item.Current.HasKeyboardFocus
+        Version = $null -ne $version -and $version.Current.HasKeyboardFocus
+    }
 }
 function Wait-Menu([int]$processId, [bool]$open, [int]$timeoutMs) {
     $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -317,15 +329,21 @@ try {
         $versionName = if ($versionItem) { $versionItem.Current.Name } else { '' }
         Check ($versionName -ceq $expectedVersion) "Versionszeile im Menü: '$versionName' (Dateiversion der EXE: '$expectedVersion')"
         Check ($null -ne $versionItem -and -not $versionItem.Current.IsEnabled) 'Versionszeile nicht aktiv'
-        Check ([TrayInput]::KeyTo($app.Id, $VK_UP)) 'Pfeil nach oben an die Testinstanz gesendet'
+        # Erst Pfeil nach unten: Wäre die Versionszeile fokussierbar, landete er auf ihr statt auf „HDR jetzt …“. Pfeil nach
+        # oben vom Start allein sagte nichts, er wählt immer den letzten Eintrag. Von „HDR jetzt …“ aus muss Pfeil nach oben
+        # an der Versionszeile vorbei ans Ende springen (wie der letzte Schritt in TrayMenuKeyboardTests).
+        Check ([TrayInput]::KeyTo($app.Id, $VK_DOWN)) 'Pfeil nach unten an die Testinstanz gesendet'
         Pump 300
-        # Welcher Eintrag den Tastaturfokus hat, meldet WPF über UI Automation (HasKeyboardFocus des Eintrags).
-        $menuEl = Menu-Element $m.Hwnd
-        $exitItem = if ($menuEl) { Find-Id $menuEl 'TrayExit' 2000 } else { $null }
-        $exitFocused = $null -ne $exitItem -and $exitItem.Current.HasKeyboardFocus
-        Check $exitFocused ('Pfeil nach oben wählt „HDRpilot beenden“ (Tastaturfokus: ' + $exitFocused + ')')
-        $versionItem = if ($menuEl) { Find-Id $menuEl 'TrayVersion' 2000 } else { $null }
-        Check ($null -ne $versionItem -and -not $versionItem.Current.HasKeyboardFocus) 'Versionszeile hat nach Pfeil nach oben keinen Tastaturfokus'
+        $f = Focus-Of $m.Hwnd 'TrayToggleHdr'
+        Check ($f.Item -and -not $f.Version) ('Pfeil nach unten wählt „HDR jetzt …“ (Tastaturfokus dort: {0}, auf der Versionszeile: {1})' -f $f.Item, $f.Version)
+        $exitFocused = $false
+        if ($f.Item) {
+            Check ([TrayInput]::KeyTo($app.Id, $VK_UP)) 'Pfeil nach oben an die Testinstanz gesendet'
+            Pump 300
+            $f = Focus-Of $m.Hwnd 'TrayExit'
+            $exitFocused = $f.Item
+            Check ($f.Item -and -not $f.Version) ('Pfeil nach oben springt an der Versionszeile vorbei zu „HDRpilot beenden“ (Tastaturfokus dort: {0}, auf der Versionszeile: {1})' -f $f.Item, $f.Version)
+        }
         if ($exitFocused) {
             Check ([TrayInput]::KeyTo($app.Id, $VK_RETURN)) 'Eingabe an die Testinstanz gesendet'
             Check ($app.WaitForExit(10000)) 'Eingabe beendet die Testinstanz über das Menü'

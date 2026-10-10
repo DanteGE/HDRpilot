@@ -39,6 +39,13 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   durch die Neuinstallation über die laufende App (G7.2) und Unit-Tests. Neue Version: `tools\publish.ps1`, dann Setup.
 - Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben; englische Oberfläche.
 
+## Zurückgestellt (Entscheidung des Nutzers)
+- Auto HDR (Windows) und RTX HDR (NVIDIA) pro Spiel für Spiele ohne natives HDR, recherchiert am 2026-10-10.
+  - Ergebnis: technisch teilweise möglich. Zwei Kernfragen lassen sich nur durch Versuche am PC klären.
+  - Der Nutzer will vorerst nicht weitermachen, aber vielleicht später darauf zurückkommen.
+  - Alles Nötige zum Wiederaufnehmen (Ergebnis, Vorschlag „HDR-Art“, Versuche E0–E12, Quellen, Lesewerkzeuge) steht in
+    `docs/recherche/auto-hdr-rtx-hdr.md`.
+
 ## Arbeitsweise und Fallen
 - git liegt nicht im PATH der Sitzung: `& 'C:\Program Files\Git\cmd\git.exe' …`. Commit-Nachrichten mit Anführungszeichen
   oder Umlauten über eine Datei ohne BOM (`-F`) mit kurzem Pfad (lange Pfade: „Filename too long“).

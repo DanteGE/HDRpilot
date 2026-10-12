@@ -792,6 +792,16 @@
                                     </StackPanel>
                                 </Border>
 
+                                <!-- Ergebnis der angebotenen Steam-Startoption nach dem Einschalten von Auto HDR (G9.7) -->
+                                <Grid Margin="0,0,0,12" Visibility="{Binding HasPictureMessage, Converter={StaticResource Lib.BoolToVisibility}}">
+                                    <Border Style="{StaticResource Lib.StatusTint}" Tag="{Binding MessageKind}" />
+                                    <DockPanel Margin="12,9">
+                                        <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{Binding MessageKind}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                                        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Hp.Brush.Text}"
+                                                   AutomationProperties.AutomationId="DetailAutoHdrMessage" />
+                                    </DockPanel>
+                                </Grid>
+
                                 <!-- EXE-Dateien -->
                                 <Border x:Name="ExecutablesSection" Style="{StaticResource Lib.Section}">
                                     <StackPanel>

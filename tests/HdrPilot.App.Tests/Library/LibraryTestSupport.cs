@@ -180,9 +180,13 @@ public sealed class FakeDialogs : ILibraryDialogs
 
     public string? PickIconFile(string? initialDirectory) => IconFiles.Count > 0 ? IconFiles.Dequeue() : null;
 
+    /// <summary>Läuft, während die Rückfrage „offen“ ist (wie ein modaler Dialog, der Nachrichten pumpt).</summary>
+    public Action? WhileConfirmOpen { get; set; }
+
     public bool Confirm(string title, string message, string confirmText, bool isDanger)
     {
         Confirms.Add((title, message));
+        WhileConfirmOpen?.Invoke();
         return Answers.Count > 0 && Answers.Dequeue();
     }
 
@@ -341,6 +345,27 @@ public sealed class TestLibraryContext : ILibraryContext
 
     /// <summary>Programmpfad von HdrPilot für die Steam-Startoption (Attrappe, mit Leerzeichen wie unter „Program Files“).</summary>
     public string? ExecutablePath { get; set; } = @"C:\Program Files\HdrPilot\HdrPilot.exe";
+
+    /// <summary>AppIDs, bei denen die HDRpilot-Startoption schon in Steam steht (Attrappe; liest nie Steam).</summary>
+    public HashSet<string> SteamLaunchOptionIds { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Abgefragte AppIDs der Steam-Startoption, in der Reihenfolge der Abfragen.</summary>
+    public List<string> SteamLaunchOptionChecks { get; } = [];
+
+    /// <summary>Wenn gesetzt, antwortet die nächste Abfrage erst, wenn der Test sie abschließt (Lesen dauert).</summary>
+    public TaskCompletionSource<bool>? PendingSteamLaunchOptionCheck { get; set; }
+
+    public Task<bool> HasSteamLaunchOptionAsync(string appId)
+    {
+        SteamLaunchOptionChecks.Add(appId);
+        if (PendingSteamLaunchOptionCheck is { } pending)
+        {
+            PendingSteamLaunchOptionCheck = null;
+            return pending.Task;
+        }
+
+        return Task.FromResult(SteamLaunchOptionIds.Contains(appId));
+    }
 
     public List<SessionInfo> SessionList { get; } = [];
 

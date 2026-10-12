@@ -35,6 +35,12 @@ public interface ILibraryContext : IDisposable
     /// <summary>Vollständiger Pfad der laufenden HdrPilot.exe (für die Steam-Startoption); null, wenn unbekannt.</summary>
     string? ExecutablePath { get; }
 
+    /// <summary>
+    /// Steht die HDRpilot-Startoption bei diesem Steam-Spiel (AppID) schon in Steam (<see cref="SteamLaunchOptionStatus"/>)?
+    /// Liest nur, außerhalb des UI-Threads. Nicht lesbar zählt als „fehlt“. Wirft nie.
+    /// </summary>
+    Task<bool> HasSteamLaunchOptionAsync(string appId);
+
     IReadOnlyList<SessionInfo> Sessions { get; }
 
     bool IsPaused { get; }

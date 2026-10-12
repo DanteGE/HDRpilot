@@ -60,7 +60,9 @@ public sealed class AutoHdrSettingsTests
         var keys = ShellStrings.ResourceManager.GetResourceSet(CultureInfo.InvariantCulture, createIfNotExists: true, tryParents: true)!
             .Cast<DictionaryEntry>().Select(e => (string)e.Key).ToList();
 
-        Assert.DoesNotContain(keys, k => k.Contains("AutoHdr", StringComparison.Ordinal));
+        // Einzige Auto-HDR-Texte der Shell: der Tray-Eintrag „Auto HDR“ (G9.9) mit seinen Hinweisen
+        string[] tray = ["TrayMenuAutoHdr", "TrayMenuAutoHdrHint", "TrayMenuAutoHdrUnknown"];
+        Assert.Equal(tray, keys.Where(k => k.Contains("AutoHdr", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
         Assert.Contains("SectionStartup", keys); // Gegenprobe: die Liste ist nicht leer
     }
 

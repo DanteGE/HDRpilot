@@ -37,6 +37,7 @@
     <Compile Include="..\HdrPilot.Tests\TestSupport\FakeActivityProbe.cs" Link="TestSupport\FakeActivityProbe.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\FakeClock.cs" Link="TestSupport\FakeClock.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\FakeEnvironment.cs" Link="TestSupport\FakeEnvironment.cs" />
+    <Compile Include="..\HdrPilot.Tests\TestSupport\FakeGpuPreferenceStore.cs" Link="TestSupport\FakeGpuPreferenceStore.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\FakeRegistry.cs" Link="TestSupport\FakeRegistry.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\InMemoryFileSystem.cs" Link="TestSupport\InMemoryFileSystem.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\ListLogger.cs" Link="TestSupport\ListLogger.cs" />

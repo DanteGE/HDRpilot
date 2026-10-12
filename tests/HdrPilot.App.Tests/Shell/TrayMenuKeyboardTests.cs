@@ -7,6 +7,7 @@ using System.Windows.Interop;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
+using HdrPilot.Core.AutoHdr;
 
 namespace HdrPilot.App.Tests.Shell;
 
@@ -22,30 +23,14 @@ public sealed class TrayMenuKeyboardTests
     private const int WS_EX_TOOLWINDOW = 0x00000080;
 
     /// <summary>Einträge, die die Pfeiltasten erreichen, von oben nach unten (ohne Versionszeile und Trenner).</summary>
-    private static readonly string[] Navigable = ["TrayToggleHdr", "TrayPause", "TrayOpen", "TraySettings", "TrayLogs", "TrayExit"];
+    private static readonly string[] Navigable = ["TrayToggleHdr", "TrayAutoHdr", "TrayPause", "TrayOpen", "TraySettings", "TrayLogs", "TrayExit"];
 
     [Fact]
     public void AppVersion_line_never_gets_the_focus_when_arrowing_through_the_open_tray_menu()
     {
         WpfTestHost.Run(() =>
         {
-            // Unsichtbares Hilfsfenster des Testthreads mit dem Win32-Fokus dieses Threads, wie in der App das Hilfsfenster
-            // des Tray-Dienstes (hier ohne Vordergrund): Ohne Fokus im Thread nimmt das nicht aktivierbare Menü-Popup
-            // keinen Tastaturfokus an.
-            var holder = new Border { Focusable = true };
-            using var owner = new HwndSource(new HwndSourceParameters("HdrPilot.Tests.TrayMenuOwner")
-            {
-                WindowStyle = WS_POPUP,
-                ExtendedWindowStyle = WS_EX_TOOLWINDOW,
-                Width = 0,
-                Height = 0,
-                PositionX = -32000,
-                PositionY = -32000,
-            })
-            {
-                RootVisual = holder,
-            };
-            Assert.True(holder.Focus(), "Hilfsfenster bekommt den Fokus nicht");
+            using var owner = FocusHolder();
 
             // Pfeil nach unten vom Start: „HDR jetzt …“, dann alle Einträge der Reihe nach und am Ende wieder nach oben,
             // an der Versionszeile vorbei
@@ -70,10 +55,62 @@ public sealed class TrayMenuKeyboardTests
         });
     }
 
-    /// <summary>Öffnet ein neues Tray-Menü, drückt die Tasten der Reihe nach und liefert nach jedem Druck die AutomationId des fokussierten Elements.</summary>
-    private static List<string> ArrowThroughOpenMenu(params Key[] keys)
+    [Fact]
+    public void AutoHdrTray_entry_is_reached_by_the_arrow_keys_below_hdr_now_and_skipped_when_unreadable()
     {
-        var model = new TrayMenuViewModel(new FakeTrayHost(), TrayState.Initial, ex => throw ex);
+        WpfTestHost.Run(() =>
+        {
+            using var owner = FocusHolder();
+
+            // Lesbar (an oder aus): Pfeil nach unten zweimal trifft „Auto HDR“ direkt unter „HDR jetzt …“, ohne zu schalten
+            foreach (var state in new[] { AutoHdrSwitchState.Off, AutoHdrSwitchState.On })
+            {
+                var host = new FakeTrayHost { AutoHdr = state };
+                Assert.Equal(["TrayToggleHdr", "TrayAutoHdr", "TrayPause"], ArrowThroughOpenMenu(host, Key.Down, Key.Down, Key.Down));
+                Assert.Empty(host.Calls);
+                Assert.Equal(1, host.AutoHdrReads);
+            }
+
+            // Nicht lesbar: gesperrt, die Pfeiltasten überspringen den Eintrag, nichts wird geschaltet
+            var unknown = new FakeTrayHost { AutoHdr = AutoHdrSwitchState.Unknown };
+            Assert.Equal(["TrayToggleHdr", "TrayPause"], ArrowThroughOpenMenu(unknown, Key.Down, Key.Down));
+            Assert.Empty(unknown.Calls);
+
+            // Pfeil nach oben vom Start bleibt „HDRpilot beenden“ (phase6-traymenu.ps1)
+            Assert.Equal(["TrayExit"], ArrowThroughOpenMenu(new FakeTrayHost { AutoHdr = AutoHdrSwitchState.On }, Key.Up));
+        });
+    }
+
+    /// <summary>
+    /// Unsichtbares Hilfsfenster des Testthreads mit dem Win32-Fokus dieses Threads, wie in der App das Hilfsfenster des
+    /// Tray-Dienstes (hier ohne Vordergrund): Ohne Fokus im Thread nimmt das nicht aktivierbare Menü-Popup keinen
+    /// Tastaturfokus an.
+    /// </summary>
+    private static HwndSource FocusHolder()
+    {
+        var holder = new Border { Focusable = true };
+        var owner = new HwndSource(new HwndSourceParameters("HdrPilot.Tests.TrayMenuOwner")
+        {
+            WindowStyle = WS_POPUP,
+            ExtendedWindowStyle = WS_EX_TOOLWINDOW,
+            Width = 0,
+            Height = 0,
+            PositionX = -32000,
+            PositionY = -32000,
+        })
+        {
+            RootVisual = holder,
+        };
+        Assert.True(holder.Focus(), "Hilfsfenster bekommt den Fokus nicht");
+        return owner;
+    }
+
+    private static List<string> ArrowThroughOpenMenu(params Key[] keys) => ArrowThroughOpenMenu(new FakeTrayHost(), keys);
+
+    /// <summary>Öffnet ein neues Tray-Menü, drückt die Tasten der Reihe nach und liefert nach jedem Druck die AutomationId des fokussierten Elements.</summary>
+    private static List<string> ArrowThroughOpenMenu(FakeTrayHost host, params Key[] keys)
+    {
+        var model = new TrayMenuViewModel(host, TrayState.Initial, ex => throw ex);
 
         // Wie in der App (TrayService): am Mauszeiger. Ohne Treffertest, damit ein bewegter Zeiger keinen Eintrag wählt.
         var menu = new TrayMenu { DataContext = model, Placement = PlacementMode.MousePoint, IsHitTestVisible = false };

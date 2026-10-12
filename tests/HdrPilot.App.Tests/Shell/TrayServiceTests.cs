@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using HdrPilot.App.Services;
+using HdrPilot.Core.AutoHdr;
 using Drawing = System.Drawing;
 
 namespace HdrPilot.App.Tests.Shell;
@@ -356,6 +357,10 @@ public sealed partial class TrayServiceTests
         }
 
         public Task ToggleHdrNowAsync() => Task.CompletedTask;
+
+        public AutoHdrSwitchState ReadAutoHdrSwitch() => AutoHdrSwitchState.Off;
+
+        public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => AutoHdrSwitchState.Off;
 
         public void SetPaused(bool paused)
         {

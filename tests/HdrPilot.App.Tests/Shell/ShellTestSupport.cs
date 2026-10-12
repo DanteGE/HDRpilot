@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.HdrSupport;
@@ -175,6 +176,32 @@ internal sealed class FakeTrayHost : ITrayHost
         return Task.CompletedTask;
     }
 
+    /// <summary>Globaler Auto-HDR-Schalter (Attrappe, nie die Registry).</summary>
+    public AutoHdrSwitchState AutoHdr { get; set; } = AutoHdrSwitchState.Off;
+
+    public int AutoHdrReads { get; private set; }
+
+    /// <summary>Wenn gesetzt, scheitert das Umschalten damit (nichts geändert).</summary>
+    public Exception? AutoHdrSetFailure { get; set; }
+
+    public AutoHdrSwitchState ReadAutoHdrSwitch()
+    {
+        AutoHdrReads++;
+        return AutoHdr;
+    }
+
+    public AutoHdrSwitchState SetAutoHdrSwitch(bool on)
+    {
+        Calls.Add("autohdr:" + on);
+        if (AutoHdrSetFailure is not null)
+        {
+            throw AutoHdrSetFailure;
+        }
+
+        AutoHdr = on ? AutoHdrSwitchState.On : AutoHdrSwitchState.Off;
+        return AutoHdr;
+    }
+
     public void SetPaused(bool paused) => Calls.Add("pause:" + paused);
 
     public void ShowMainWindow() => Calls.Add("open");
@@ -198,6 +225,10 @@ internal sealed class ThrowingTrayHost : ITrayHost
     public TrayState QueryTrayState() => throw new InvalidOperationException("Zustand");
 
     public Task ToggleHdrNowAsync() => Task.FromException(new InvalidOperationException("Umschalten"));
+
+    public AutoHdrSwitchState ReadAutoHdrSwitch() => throw new InvalidOperationException("Auto HDR lesen");
+
+    public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => throw new InvalidOperationException("Auto HDR schalten");
 
     public void SetPaused(bool paused) => throw new InvalidOperationException("Pause");
 

@@ -3,6 +3,7 @@ using System.Windows.Input;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
+using HdrPilot.Core.AutoHdr;
 
 namespace HdrPilot.App.ViewModels.Shell;
 
@@ -12,12 +13,18 @@ public sealed class TrayMenuViewModel : ObservableObject
     private readonly ITrayHost _host;
     private readonly Action<Exception> _onError;
     private TrayState _state;
+    private AutoHdrSwitchState _autoHdr;
 
     public TrayMenuViewModel(ITrayHost host, TrayState state, Action<Exception> onError)
     {
         _host = host;
         _state = state;
         _onError = onError;
+
+        // Das Menü entsteht beim Öffnen: den Windows-Schalter jetzt lesen (ein Registry-Wert, kein Zeitgeber im Hintergrund).
+        _autoHdr = AutoHdrSwitchState.Unknown;
+        Run(() => _autoHdr = _host.ReadAutoHdrSwitch());
+
         ToggleHdrCommand = new RelayCommand(() => RunAsync(_host.ToggleHdrNowAsync));
         OpenCommand = new RelayCommand(() => Run(_host.ShowMainWindow));
         SettingsCommand = new RelayCommand(() => Run(_host.ShowSettingsWindow));
@@ -56,6 +63,35 @@ public sealed class TrayMenuViewModel : ObservableObject
             Run(() => _host.SetPaused(value));
         }
     }
+
+    /// <summary>
+    /// Abhakbarer Eintrag „Auto HDR“ (G9.9): der globale Auto-HDR-Schalter von Windows, wie beim Öffnen des Menüs gelesen.
+    /// Umschalten setzt nur dessen Token und gilt ab dem nächsten Spielstart, auch ohne HDRpilot. Es ist die Wahl des
+    /// Nutzers: Eine Auto-HDR-Sitzung stellt sie danach nicht zurück (E88). Nicht lesbar: Eintrag gesperrt, nichts geschrieben.
+    /// </summary>
+    public bool IsAutoHdrOn
+    {
+        get => _autoHdr == AutoHdrSwitchState.On;
+        set
+        {
+            if (value == IsAutoHdrOn || _autoHdr == AutoHdrSwitchState.Unknown)
+            {
+                return;
+            }
+
+            var after = AutoHdrSwitchState.Unknown;
+            Run(() => after = _host.SetAutoHdrSwitch(value));
+            _autoHdr = after;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanToggleAutoHdr));
+            OnPropertyChanged(nameof(AutoHdrHint));
+        }
+    }
+
+    public bool CanToggleAutoHdr => _autoHdr != AutoHdrSwitchState.Unknown;
+
+    /// <summary>Tooltip des Eintrags: „gilt ab dem nächsten Spielstart“, bei einem nicht lesbaren Wert der Grund für die Sperre.</summary>
+    public string AutoHdrHint => CanToggleAutoHdr ? ShellStrings.TrayMenuAutoHdrHint : ShellStrings.TrayMenuAutoHdrUnknown;
 
     public string StatusTitle => _state.HdrOn ? ShellStrings.TrayStatusHdrOn : ShellStrings.TrayStatusHdrOff;
 

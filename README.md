@@ -122,7 +122,7 @@ Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
 - **Spieleliste öffnen**, **Einstellungen**, **Protokollordner öffnen**
 - **HDRpilot beenden**
 
-Direkt unter dem Kopf des Menüs (Symbol, „HDRpilot“ und Status) steht grau und nicht anklickbar die Version („HDRpilot“
+Direkt unter dem Kopf des Menüs (Symbol, „HDRpilot“ und Status) steht grau und nicht anklickbar die Version („Version“
 mit Versionsnummer), dieselbe Nummer wie im Setup und unter „Installierte Apps“.
 
 Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.

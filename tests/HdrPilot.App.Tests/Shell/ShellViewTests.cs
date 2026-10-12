@@ -300,11 +300,11 @@ public sealed class ShellViewTests
             WpfTestHost.Layout(menu, new Size(double.PositiveInfinity, double.PositiveInfinity));
             WpfTestHost.DoEvents();
 
-            Assert.Equal(AppVersionTests.ExpectedDisplayText(), model.VersionText);
+            Assert.Equal(AppVersionTests.ExpectedLabelText(), model.VersionText);
             var version = Assert.IsType<MenuItem>(menu.Items[0]);
             Assert.Equal("TrayVersion", AutomationProperties.GetAutomationId(version));
-            Assert.Equal(AppVersionTests.ExpectedDisplayText(), version.Header);
-            Assert.Equal(AppVersionTests.ExpectedDisplayText(), AutomationProperties.GetName(version));
+            Assert.Equal(AppVersionTests.ExpectedLabelText(), version.Header);
+            Assert.Equal(AppVersionTests.ExpectedLabelText(), AutomationProperties.GetName(version));
             Assert.IsType<Separator>(menu.Items[1]);
 
             // Nicht anklickbar, nicht fokussierbar, ohne Befehl

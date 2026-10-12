@@ -246,9 +246,10 @@ function Open-Menu([int]$processId) {
 }
 
 $cfg = New-TestConfig 'phase6-traymenu'
-# Versionszeile (G8.1): „HDRpilot <Major.Minor.Build>“, dieselbe Zahl wie die Dateiversion der gebauten EXE
+# Versionszeile (G8.1): „Version <Major.Minor.Build>“ (der Kopf zeigt schon „HDRpilot“), dieselbe Zahl wie die
+# Dateiversion der gebauten EXE
 $exeVersion = (Get-Item $AppExe).VersionInfo
-$expectedVersion = 'HDRpilot {0}.{1}.{2}' -f $exeVersion.FileMajorPart, $exeVersion.FileMinorPart, $exeVersion.FileBuildPart
+$expectedVersion = 'Version {0}.{1}.{2}' -f $exeVersion.FileMajorPart, $exeVersion.FileMinorPart, $exeVersion.FileBuildPart
 # Ohne Hinweise: der Willkommens-Hinweis der leeren Bibliothek läge sonst als Toast über dem Infobereich.
 $cfgFile = Join-Path $cfg 'config.json'
 [IO.File]::WriteAllText($cfgFile, ([IO.File]::ReadAllText($cfgFile).Replace('"settings": {', '"settings": { "notifications": false,')), (New-Object Text.UTF8Encoding $false))

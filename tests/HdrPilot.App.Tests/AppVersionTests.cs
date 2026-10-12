@@ -24,6 +24,9 @@ public sealed class AppVersionTests
     /// <summary>Erwarteter Anzeigetext, etwa „HDRpilot 1.2.0“.</summary>
     internal static string ExpectedDisplayText() => "HDRpilot " + BuiltFileVersion().ToString(3);
 
+    /// <summary>Erwarteter kurzer Text für das Tray-Menü, etwa „Version 1.2.0“.</summary>
+    internal static string ExpectedLabelText() => "Version " + BuiltFileVersion().ToString(3);
+
     [Fact]
     public void AppVersion_is_the_three_part_version_of_the_built_assembly()
     {
@@ -73,6 +76,19 @@ public sealed class AppVersionTests
 
         Assert.Equal(string.Format(CultureInfo.CurrentCulture, CommonStrings.AppVersionFormat, AppVersion.Number), AppVersion.DisplayText);
         Assert.Equal(ExpectedDisplayText(), AppVersion.DisplayText);
+    }
+
+    [Fact]
+    public void AppVersion_label_text_for_the_tray_comes_from_the_resources_without_the_app_name()
+    {
+        // Der Kopf des Tray-Menüs zeigt schon „HDRpilot“; die Versionszeile darunter nur „Version 1.2.0“.
+        Assert.Contains("{0}", CommonStrings.AppVersionLabelFormat, StringComparison.Ordinal);
+        Assert.DoesNotMatch(@"\d", CommonStrings.AppVersionLabelFormat.Replace("{0}", string.Empty, StringComparison.Ordinal));
+        Assert.DoesNotContain(CommonStrings.AppName, CommonStrings.AppVersionLabelFormat, StringComparison.Ordinal);
+
+        Assert.Equal(string.Format(CultureInfo.CurrentCulture, CommonStrings.AppVersionLabelFormat, AppVersion.Number), AppVersion.LabelText);
+        Assert.Equal(ExpectedLabelText(), AppVersion.LabelText);
+        Assert.Equal("Version 9.8.7", AppVersion.FormatLabel(Version.Parse("9.8.7.6")));
     }
 
     [Theory]

@@ -1,40 +1,13 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-10 20:10. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-12 18:50. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
-## Angehalten (2026-10-10 20:05, auf Wunsch des Nutzers: Wochenvolumen knapp, weiter nächste Woche)
-Alle laufenden Arbeiten sind gestoppt. Nichts läuft mehr im Hintergrund, und der Stand ist committet.
-Die Wünsche des Nutzers vom 2026-10-10 bilden Phase 8 (G8.1–G8.3 in `GATES.md`, alle noch
-ohne Nachweis).
-
-| Wunsch | Zweig / Arbeitsordner | Stand | Übergabe |
-|---|---|---|---|
-| Versionsnummer sichtbar (G8.1) | `feature/version-display` / `.worktrees/s9-version` | **Fertig bis auf einen Nachweis.** <ul><li>Umsetzung `67d9136` und Korrekturen `651dd4d`, `2952c72` sind gegengeprüft.</li><li>Laut Agenten liefen Build, Tests und Gates grün. Selbst nachgeprüft ist das noch nicht.</li><li>Offen (Prüfer: HOCH): die Tray-Zeile an einer laufenden Testinstanz per UI-Automation. Das Menü öffnet sich nur per Rechtsklick aufs Tray-Symbol. Entweder einen Weg ohne echte Eingabe finden, oder `phase6-traymenu.ps1` laufen lassen, wenn der Nutzer am Bildschirm ist (bewegt die Maus).</li></ul> | `docs/uebergabe/versionsanzeige.md`, `docs/uebergabe/ablauf-2026-10-10-abend.md` |
-| Ersatz-Symbole, auch statt Anti-Cheat-Symbolen (G8.2), und eigenes Symbol per Rechtsklick (G8.3) | `feature/icons` / `.worktrees/s9-icons` | **Umgesetzt, Korrekturrunde unvollständig.** <ul><li>`9294239`: vollständige Umsetzung mit E86, README und 220 Symbol-Tests. Laut Agenten liefen alle Gates grün.</li><li>Zwei Prüfer fanden je 1 mittleren und 4 kleine Punkte.</li><li>Deren Korrektur ist angefangen, aber nicht fertig: `e7e59bc`, WIP, nicht gebaut.</li><li>Die Messung an der echten Bibliothek fehlt noch.</li></ul> | `docs/uebergabe/ablauf-2026-10-10-abend.md` (Funde), `docs/recherche/symbole/auftrag.md` |
-| Auto HDR / RTX HDR pro Spiel | – | recherchiert, vom Nutzer zurückgestellt (siehe unten) | `docs/recherche/auto-hdr-rtx-hdr.md` |
-
-**Reihenfolge beim Weitermachen** (Volumen schonen: wenige Agenten, Prüfungen selbst laufen lassen):
-1. G8.1: Zweig selbst bauen und testen und den offenen Tray-Nachweis klären.
-2. G8.2 und G8.3:
-   - Den WIP `e7e59bc` gegen die Funde in `ablauf-2026-10-10-abend.md` fertigstellen, bauen und testen.
-   - An einer Kopie der echten Bibliothek messen. Die Kopie liegt im Sitzungs-Scratchpad unter `g81\real-config.json`
-     (650 Spiele, 2026-10-10). Fehlt sie, neu per WMI ziehen.
-   - Statt der großen Messung mit Bildtafeln reicht zur Not eine gezielte Prüfung: Gears of War: E-Day, The Isle und
-     die Spiele mit vorher Anti-Cheat- oder Engine-Symbol (`docs/recherche/symbole/messung-vorher/`).
-3. Beide Zweige nach `phase5/release` zusammenführen. G8.x belegen und alle Gates laufen lassen.
-4. Version auf **1.3.0** setzen, dann `tools\publish.ps1` und den Setup bauen.
-5. Mit Zustimmung des Nutzers per WMI außerhalb des Containers installieren (wie G7.8).
-6. `main` per `merge --ff-only phase5/release` nachziehen.
-
-**Hinweise:**
-- Die Recherche-Unterlagen lagen nur im Sitzungs-Scratchpad. Alles Nötige ist jetzt unter `docs/recherche/` gesichert.
-  - Nicht gesichert: die Bibliothekskopie `g78\after-config.json` (Nutzerdaten, neu zu ziehen) und 1697 Bilder. Ein
-    Agent hatte diese Bilder aus Launcher-Caches in den Repo-Ordner kopiert. Ich hatte sie in den Scratchpad verschoben;
-    es sind entbehrliche Kopien.
-- Die Workflows selbst lassen sich in einer neuen Sitzung nicht fortsetzen. Weitergemacht wird anhand der Übergabe-
-  dokumente und der WIP-Commits.
-
+## Aktuell
+Phase 8 ist fertig, und HDRpilot 1.3.0 ist beim Nutzer installiert. Nichts läuft im Hintergrund.
+- Die Übergabedokumente vom 2026-10-10 sind nur noch Verlauf: `docs/uebergabe/versionsanzeige.md`,
+  `docs/uebergabe/ablauf-2026-10-10-abend.md` und der Abschnitt „Stand“ in `docs/recherche/symbole/auftrag.md`.
+- Zurückgestellt bleibt Auto HDR / RTX HDR pro Spiel (siehe unten).
 ## Erledigt (auf `main`, committet)
 - Phase 1 HDR-Kern und Kommandozeile – alle Gates belegt (G1.5c vom Nutzer gestrichen).
 - Phase 2 Spielbibliothek – 646 Spiele aus 7 Quellen, G2.2 vom Nutzer bestätigt.
@@ -59,6 +32,20 @@ ohne Nachweis).
   privaten Speicher der Claude-App. Setup und Entfernen brechen dort ab (Exit-Code 7), die App warnt im Protokoll.
   Arbeitsregel: echte Aktionen nur per WMI (`Win32_Process.Create`) von außen, Ergebnis über `%TEMP%` lesen.
 - Neustart-Puffer einstellbar (E85, G7.6): Einstellungen, Minuten und Sekunden, Standard 1:00.
+- Phase 8 Wünsche vom 2026-10-10 (G8.1–G8.3 belegt):
+  - **Versionsnummer (E87):** im Kopf der Einstellungen „HDRpilot 1.3.0“, im Tray-Menü „Version 1.3.0“ (Wahl des
+    Nutzers). Der echte Tray-Test lief am Desktop mit Zustimmung des Nutzers.
+  - **Ersatz-Symbole aus lokalen Quellen (E86):** Steam-Symbol zuerst, Ausschlussliste für Anti-Cheat und
+    Fremdbestandteile, Erkennung von Standardsymbolen.
+    - Gemessen an der echten Bibliothek: 651 von 651 mit eigenem Symbol, 626 mit ≥ 48 px.
+    - Gears of War: E-Day und The Isle zeigen ihr Steam-Symbol statt des EasyAntiCheat-Symbols.
+  - **Eigenes Symbol per Rechtsklick (E86):** auch für Verknüpfungen, über eine `.ico` im Datenordner.
+  - **Prüfung:** drei Prüfrunden mit unabhängigen Prüfern und eine Schlussprüfung des zusammengeführten Stands.
+- Beim Nutzer installiert am 2026-10-12, per WMI außerhalb des Containers, mit Zustimmung des Nutzers:
+  - 1.3.0 ersetzt 1.2.0, Setup-Exit-Code 0.
+  - Die App läuft wieder, Autostart und Eintrag unter „Installierte Apps“ (1.3.0) stimmen.
+  - Einstellungen und alle Spiel-Einstellungen sind unverändert: 651 Spiele, 28 mit HDR automatisch.
+  - Das Protokoll zeigt den Start von 1.3.0 mit der echten Konfiguration, 0 Fehler.
 
 ## Offen (nichts blockiert)
 - Kontomodus der HDR-Liste nur mit Attrappe getestet; live erst, wenn der Nutzer ein Bot-Passwort einträgt.
@@ -67,8 +54,8 @@ ohne Nachweis).
   mildern ihn; sicher sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption).
 - Aufräumen beim Nutzer (nur auf Wunsch): `config.json.vor-ruecksetzung.bak` im Roaming-Ordner, die gesicherte alte EXE
   `HdrPilot-vorher.exe.bak` im Programmordner. Die 6 Desktop-Verknüpfungen „(HDR)“ hat der Nutzer am 07.10. selbst gelöscht.
-- Setup: Aktualisieren über eine laufende ältere Version lief beim Nutzer nicht live (die App lief gerade nicht); belegt
-  durch die Neuinstallation über die laufende App (G7.2) und Unit-Tests. Neue Version: `tools\publish.ps1`, dann Setup.
+- Setup: Aktualisieren über eine laufende ältere Version lief am 2026-10-12 beim Nutzer live: 1.2.0 lief, der Setup
+  beendete die App, ersetzte sie durch 1.3.0 und startete sie neu. Neue Version: `tools\publish.ps1`, dann Setup.
 - Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben; englische Oberfläche.
 
 ## Zurückgestellt (Entscheidung des Nutzers)

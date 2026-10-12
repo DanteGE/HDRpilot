@@ -347,12 +347,21 @@ public sealed class ShellViewTests
                     var menu = new TrayMenu { DataContext = model };
                     var bitmap = Render(menu);
 
-                    // Text der Versionszeile in Textfarbe (TextSecondary), nicht nur Platz dafür. Gemessen: 59 von 7975 in
-                    // beiden Themen (dünnere Schrift als in der Pille, Textfeld über die ganze Zeile).
+                    // Text der Versionszeile sichtbar gezeichnet, nicht nur Platz dafür: Vergleich mit derselben Zeile ohne
+                    // Text (Opacity 0). Reine Farbpixel hängen bei der dünnen Schrift zu stark von den Ziffern der Version
+                    // ab (gemessen 29 bei „Version 1.3.0“, 59 bei „HDRpilot 1.2.0“); sie zeigen hier nur noch, dass der
+                    // Text in der Textfarbe (TextSecondary) steht.
                     var version = menu.Items.OfType<MenuItem>().Single(i => AutomationProperties.GetAutomationId(i) == "TrayVersion");
                     var text = WpfTestHost.Visuals(version).OfType<TextBlock>().Single(t => t.Text == model.VersionText);
-                    var (ink, total) = TextInk(bitmap, text.TransformToAncestor(menu).TransformBounds(new Rect(text.RenderSize)), RenderScale, Token("Hp.Brush.TextSecondary"));
-                    Assert.True(ink >= 30 && ink <= total / 2, $"Versionszeile im Tray-Menü ({(dark ? "dunkel" : "hell")}) nicht lesbar: {ink} von {total} Pixeln in Textfarbe");
+                    var area = text.TransformToAncestor(menu).TransformBounds(new Rect(text.RenderSize));
+                    var (ink, total) = TextInk(bitmap, area, RenderScale, Token("Hp.Brush.TextSecondary"));
+                    var opacity = text.Opacity;
+                    text.Opacity = 0;
+                    var blank = Render(menu);
+                    text.Opacity = opacity;
+                    var drawn = ChangedPixels(bitmap, blank, area, RenderScale);
+                    Assert.True(drawn >= 80 && ink >= 10 && ink <= total / 2,
+                        $"Versionszeile im Tray-Menü ({(dark ? "dunkel" : "hell")}) nicht lesbar: {drawn} von {total} Pixeln durch den Text gezeichnet, {ink} davon in Textfarbe");
                     menu.DataContext = null;
                 }
             }
@@ -437,6 +446,32 @@ public sealed class ShellViewTests
             && Math.Abs(((p >> 8) & 0xFF) - color.G) <= tolerance
             && Math.Abs((p & 0xFF) - color.B) <= tolerance);
         return (ink, pixels.Length);
+    }
+
+    /// <summary>Pixel im Bereich, die sich zwischen zwei gleich großen Bildern deutlich unterscheiden (ein Kanal um mehr als 48).</summary>
+    private static int ChangedPixels(BitmapSource a, BitmapSource b, Rect area, double scale)
+    {
+        var x = Math.Max(0, (int)Math.Floor(area.X * scale));
+        var y = Math.Max(0, (int)Math.Floor(area.Y * scale));
+        var width = Math.Min(a.PixelWidth - x, (int)Math.Ceiling(area.Right * scale) - x);
+        var height = Math.Min(a.PixelHeight - y, (int)Math.Ceiling(area.Bottom * scale) - y);
+        var first = new int[width * height];
+        var second = new int[width * height];
+        a.CopyPixels(new Int32Rect(x, y, width, height), first, width * 4, 0);
+        b.CopyPixels(new Int32Rect(x, y, width, height), second, width * 4, 0);
+        var changed = 0;
+        for (var i = 0; i < first.Length; i++)
+        {
+            for (var shift = 0; shift < 32; shift += 8)
+            {
+                if (Math.Abs(((first[i] >> shift) & 0xFF) - ((second[i] >> shift) & 0xFF)) > 48)
+                {
+                    changed++;
+                    break;
+                }
+            }
+        }
+        return changed;
     }
 
     /// <summary>Breite des Textes in einer Zeile, unabhängig vom Platz, den das Layout ihm gerade gibt.</summary>

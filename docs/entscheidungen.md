@@ -719,10 +719,29 @@ sauber, bleibt er stehen („extern geändert“, die Wahl des Nutzers). Schalte
 ein, ist das nicht zu unterscheiden und wird zurückgestellt. Beim Beenden von HDRpilot wird sofort zurückgestellt, nach
 einem Absturz beim nächsten Start (laufende Spiele mit der Option werden übernommen, nie als kurz); das Entfernen über
 den Setup stellt einen verbliebenen Schalter zurück (Schritt „Auto HDR zurückstellen“, Hinweis bei einem Fehler) und
-löscht den Merker auch ohne „Daten löschen“. Für den Tray-Eintrag „Auto HDR“ (G9.9) liest `IAutoHdrService` den
-Schalter und schaltet nur das Token; eine Änderung dort ist die Wahl des Nutzers: Hält HDRpilot den Schalter gerade, gibt
-es ihn ab, stellt danach nichts zurück und setzt ihn bis zum Ende der laufenden Sitzungen nicht neu. Während HDRpilot
-den Schalter hält, gilt Auto HDR für jedes Spiel, das in dieser Zeit startet.
+löscht den Merker auch ohne „Daten löschen“. Während HDRpilot den Schalter hält, gilt Auto HDR für jedes Spiel, das in
+dieser Zeit startet.
+
+Tray-Eintrag „Auto HDR“ (G9.9, Wunsch des Nutzers, `TrayAutoHdr`) direkt unter „HDR jetzt …“: abhakbar, zeigt den
+Windows-Schalter, gelesen beim Öffnen des Menüs (`IAutoHdrService.ReadGlobalSwitch`, ein Registry-Wert, kein Zeitgeber),
+und schaltet nur das Token (`SetGlobalSwitchByUser`, andere Tokens bleiben). Tooltip „gilt ab dem nächsten Spielstart,
+auch ohne HDRpilot“; ist der Wert nicht lesbar oder in fremdem Format, ist der Eintrag gesperrt (die Pfeiltasten
+überspringen ihn) und nennt den Grund. Eine Änderung dort ist die Wahl des Nutzers: Hält HDRpilot den Schalter gerade,
+gibt es ihn ab, stellt danach nichts zurück und setzt ihn bis zum Ende der laufenden Sitzungen nicht neu; schaltet der
+Nutzer ihn vor einem Start ein, schaltet HDRpilot ihn nie aus. Versionszeile und Pfeiltasten bleiben wie in E87 (Pfeil
+nach unten trifft „HDR jetzt …“, Pfeil nach oben vom Start „HDRpilot beenden“).
+
+Steam-Startoption beim Einschalten (G9.7): Schaltet der Nutzer „Windows Auto HDR“ für ein Steam-Spiel ein und ist das
+gespeichert, prüft HDRpilot außerhalb des UI-Threads und nur lesend mit dem Leser der Warnung beim Entfernen
+(`SteamLaunchOptionScanner`: `localconfig.vdf` aller Konten), ob für die AppID eine Startoption mit dem EXE-Namen von
+HDRpilot und `--wrap` eingetragen ist (`SteamLaunchOptionStatus`). Fehlt sie oder ist Steam nicht lesbar, fragt es
+(„Steam-Startoption kopieren?“), ob es sie kopieren soll: dieselbe Funktion wie „Steam-Startoption kopieren“ (E75) mit
+denselben Bedingungen (Programmpfad bekannt, Zwischenablage frei), Rückmeldung unter dem Abschnitt „BILD“
+(`DetailAutoHdrMessage`). Eine Funktion, die die Startoption in Steam einträgt (etwa bei beendetem Steam), gibt es nicht;
+HDRpilot schreibt nie in Steams Dateien, eintragen muss der Nutzer sie selbst. Ablehnen oder ein gescheitertes Kopieren
+ändert nichts, Auto HDR bleibt an. Nicht gefragt wird bei anderen Quellen, beim Ausschalten, bei gesetzter Startoption,
+nach gescheitertem Speichern und wenn der Schalter inzwischen wieder aus oder ein anderes Spiel gewählt ist; nie zwei
+Rückfragen übereinander.
 
 Nur HKCU, nie HKLM, keine Administratorrechte; der Anti-Cheat-Architekturtest bleibt unverändert. Testinstanzen
 erreichen den echten Schlüssel nie: Mit `--config-dir` schreibt HDRpilot unter `HKCU\Software\HDRpilot.Tests\AutoHdr\<Name>`,
@@ -731,5 +750,7 @@ eine Attrappe oder einen eigenen Testschlüssel. Prüfung: G9.1 (`test.ps1 -Filt
 `tools\gates\phase9-autohdr-ui.ps1` an einer Testinstanz: Hinweise, Kennzeichen, Einstellungen ohne Auto HDR, „Mit HDR
 starten“ mit einem Fühler als Testspiel, der beim Prozessstart `AutoHDREnable=1` in der Testwurzel sieht, danach genau
 zurück; HDR wird dabei nie geschaltet), G9.3 (Filter `AutoHdrGlobal`), G9.4 (`phase7-setup.ps1` mit nachgestelltem
-Absturz). RTX HDR gehört nicht zu HDRpilot und bleibt zurückgestellt (`docs/recherche/auto-hdr-rtx-hdr.md`), ebenso die
+Absturz), G9.7 (Filter `AutoHdrSteam`, Steam als Attrappe oder Testordner), G9.9 (Filter `AutoHdrTray`, der echte
+Dienst über einem Schlüssel im Speicher; `phase6-traymenu.ps1` prüft den Eintrag an einer Testinstanz mit Testwurzel,
+läuft aber nur am echten Desktop mit Zustimmung). RTX HDR gehört nicht zu HDRpilot und bleibt zurückgestellt (`docs/recherche/auto-hdr-rtx-hdr.md`), ebenso die
 Intensität (`AutoHDRStrength`) und das Erzwingen für nicht zugelassene Spiele (`D3DBehaviors`).

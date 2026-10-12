@@ -299,6 +299,9 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | PCGamingWiki-Konto (verschlüsselt, nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\pcgw-account.dat` |
 | Eigene Spielsymbole (je Spiel eine PNG mit 96 px, für Verknüpfungen dazu eine ICO) | `%LOCALAPPDATA%\HDRpilot\icons\` |
 | Gemerkte Quelle der Spielsymbole | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
+| Auto-HDR-Einträge von HDRpilot samt Originalwerten zum Zurücknehmen | `%LOCALAPPDATA%\HDRpilot\autohdr-state.json` |
+| Globaler Auto-HDR-Schalter, solange die Notlösung ihn für ein laufendes Spiel gesetzt hat | `%LOCALAPPDATA%\HDRpilot\autohdr-global.json` |
+| Windows Auto HDR je Spiel (Einstellung von Windows) | `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, Wert = voller Pfad der Spiel-EXE |
 | Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
 | Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
 | Entpackte Grafik-Bibliotheken (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot\` |
@@ -342,6 +345,7 @@ Läuft HDRpilot schon, reicht ein zweiter Aufruf seine Befehle an die laufende I
 | `--exit` | Laufende Instanz beenden |
 | `--wrap -- <befehl>` | Steam-Startoption (`--wrap -- %command%`): HDR einschalten lassen, dann den Befehl starten |
 | `--config-dir <ordner>` | Eigene Ablage statt `%APPDATA%`/`%LOCALAPPDATA%` (Tests); eigene Instanz je Ordner |
+| `--autohdr-test-root <name>` | Nur mit `--config-dir` (Tests): Auto-HDR-Einträge unter `HKCU\Software\HDRpilot.Tests\AutoHdr\<name>`. Mit eigener Ablage schreibt HDRpilot nie in die echte Windows-Einstellung, ohne diesen Schalter unter einem aus dem Ordner abgeleiteten Namen |
 
 Den Schlüssel `<Quelle:ID>` zeigt die Oberfläche nicht an. Du findest ihn in der ersten Spalte von
 `cli\hdrpilot.exe games list` oder im Ziel einer „(HDR)“-Verknüpfung hinter `--run`. Meist ist es einfacher, die

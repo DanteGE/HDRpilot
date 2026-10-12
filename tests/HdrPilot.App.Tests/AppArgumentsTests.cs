@@ -102,4 +102,19 @@ public sealed class AppArgumentsTests
             HdrPilot.App.Infrastructure.SingleInstance.IdFor(@"C:\Test\A"),
             HdrPilot.App.Infrastructure.SingleInstance.IdFor(@"C:\Test\B"));
     }
+
+    [Fact]
+    public void AutoHdr_test_root_is_parsed_but_never_forwarded()
+    {
+        // Wie --config-dir eine Angabe für den Start dieser Instanz (E88), kein Befehl an eine laufende.
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--autohdr-test-root", "Phase9Ui", "--show"]);
+        Assert.Equal("Phase9Ui", args.AutoHdrTestRoot);
+        Assert.Equal(@"C:\t", args.ConfigDir);
+        Assert.Empty(args.Unknown);
+        Assert.Equal(["--show"], args.ToForwardedArgs());
+
+        // Gegenprobe: ohne Wert ist es ein unbekannter Schalter, nach "--" gehört es zum Spielbefehl.
+        Assert.Null(AppArguments.Parse(["--autohdr-test-root"]).AutoHdrTestRoot);
+        Assert.Null(AppArguments.Parse(["--", "--autohdr-test-root", "x"]).AutoHdrTestRoot);
+    }
 }

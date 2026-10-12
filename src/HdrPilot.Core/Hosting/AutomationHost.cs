@@ -1,4 +1,5 @@
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
@@ -24,16 +25,23 @@ public sealed class AutomationHost : IAsyncDisposable
     private readonly IContainerDetector _containerDetector;
     private readonly ILogger _logger;
     private readonly LogLevelSwitch _levelSwitch;
+    private readonly AutoHdrService _autoHdr;
     private bool _started;
     private readonly FileSystemWatcher? _configWatcher;
     private Timer? _reloadTimer;
 
-    public AutomationHost(AppPaths paths, IReadOnlyList<ILoggerProvider>? extraLogProviders = null)
-        : this(paths, PhysicalFileSystem.Instance, WindowsRegistry.Instance, SystemEnvironment.Instance, SystemClock.Instance, extraLogProviders)
+    /// <param name="autoHdrLocation">Wohin Auto HDR schreibt (E88); null: siehe <see cref="AutoHdrRegistryLocation.Resolve"/>.</param>
+    public AutomationHost(AppPaths paths, IReadOnlyList<ILoggerProvider>? extraLogProviders = null, AutoHdrRegistryLocation? autoHdrLocation = null)
+        : this(paths, PhysicalFileSystem.Instance, WindowsRegistry.Instance, SystemEnvironment.Instance, SystemClock.Instance, extraLogProviders, autoHdrLocation: autoHdrLocation)
     {
     }
 
     /// <param name="containerDetector">Prüft beim Start, ob HDRpilot im Container einer anderen App läuft (Standard: <see cref="ContainerDetector"/>, E84).</param>
+    /// <param name="autoHdrLocation">
+    /// Wohin Auto HDR schreibt (E88). Null: echter Schlüssel nur mit der Standardablage, mit jeder anderen Ablage deren
+    /// Testwurzel (<see cref="AutoHdrRegistryLocation.Resolve"/>).
+    /// </param>
+    /// <param name="autoHdrStore">Schlüssel UserGpuPreferences (Tests: Attrappe). Null: echte Registry am Ort <paramref name="autoHdrLocation"/>.</param>
     public AutomationHost(
         AppPaths paths,
         IFileSystem fileSystem,
@@ -41,7 +49,9 @@ public sealed class AutomationHost : IAsyncDisposable
         IAppEnvironment environment,
         IClock clock,
         IReadOnlyList<ILoggerProvider>? extraLogProviders = null,
-        IContainerDetector? containerDetector = null)
+        IContainerDetector? containerDetector = null,
+        AutoHdrRegistryLocation? autoHdrLocation = null,
+        IGpuPreferenceStore? autoHdrStore = null)
     {
         Paths = paths;
         _fileSystem = fileSystem;
@@ -74,6 +84,18 @@ public sealed class AutomationHost : IAsyncDisposable
             new Win32HdrHotkeySender(),
             new TypedLogger<DisplayConfigHdrController>(LoggerFactory));
 
+        // Auto HDR je Spiel (E88): Testinstanzen (eigene Ablage) erreichen den echten Schlüssel nie.
+        var location = autoHdrLocation ?? AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(environment));
+        _autoHdr = new AutoHdrService(
+            Config,
+            autoHdrStore ?? new RegistryGpuPreferenceStore(location),
+            location,
+            fileSystem,
+            paths,
+            environment,
+            clock,
+            LoggerFactory.CreateLogger("AutoHdr"));
+
         Watcher = new PollingProcessWatcher(
             new NtProcessSnapshotProvider(LoggerFactory.CreateLogger("Processes")),
             TimeSpan.FromMilliseconds(Config.Current.Settings.PollIntervalMs),
@@ -87,7 +109,8 @@ public sealed class AutomationHost : IAsyncDisposable
             clock,
             (name, patterns) => HelperExecutables.IsHelper(name, patterns),
             ForbiddenRoots(environment),
-            LoggerFactory.CreateLogger("Sessions"));
+            LoggerFactory.CreateLogger("Sessions"),
+            new SessionManagerOptions { AutoHdr = _autoHdr });
 
         // Frühwarnung: Spielstarts aus Epic und Steam an deren Protokollen erkennen, HDR vor dem Spielprozess.
         LauncherSignals = LauncherSignalService.Create(
@@ -128,6 +151,9 @@ public sealed class AutomationHost : IAsyncDisposable
     /// <summary>Frühwarnung aus den Protokollen von Epic Games Launcher und Steam.</summary>
     public LauncherSignalService LauncherSignals { get; }
 
+    /// <summary>Windows Auto HDR je Spiel und globale Notlösung (E88).</summary>
+    public IAutoHdrService AutoHdr => _autoHdr;
+
     public CompositeLoggerFactory LoggerFactory { get; }
 
     public RollingFileLoggerProvider FileLog { get; }
@@ -153,6 +179,7 @@ public sealed class AutomationHost : IAsyncDisposable
         // auch Einstellungen und Protokolle in deren privatem Speicher. Einmal je Start im Hintergrund prüfen, ohne den
         // Start aufzuhalten.
         ContainerCheck = Task.Run(CheckContainer, CancellationToken.None);
+        _autoHdr.Start(); // Werte je Spiel vor dem ersten Zyklus abgleichen
         await Sessions.InitializeAsync(Watcher.Poll(), cancellationToken).ConfigureAwait(false);
         Watcher.Start(OnPollAsync);
         LauncherSignals.Start(); // erst nach dem ersten Zyklus: vorher lehnt die Sitzungslogik Vorbereitungen ab
@@ -185,6 +212,7 @@ public sealed class AutomationHost : IAsyncDisposable
         _reloadTimer?.Dispose();
         LauncherSignals.Dispose();
         await Watcher.StopAsync().ConfigureAwait(false);
+        _autoHdr.Shutdown(); // nach dem letzten Zyklus
         await ContainerCheck.ConfigureAwait(false); // Probe nie liegen lassen (dauert höchstens Sekundenbruchteile)
         _logger.LogInformation("HDRpilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
         LoggerFactory.Dispose();
@@ -247,6 +275,7 @@ public sealed class AutomationHost : IAsyncDisposable
         Watcher.Interval = TimeSpan.FromMilliseconds(s.PollIntervalMs);
         _levelSwitch.Level = s.LogLevel;
         LauncherSignals.ApplySettings();
+        _autoHdr.OnConfigChanged();
     }
 
     /// <summary>Ordner, die nie als Installationsordner gelten dürfen.</summary>

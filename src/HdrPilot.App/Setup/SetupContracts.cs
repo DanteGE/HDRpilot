@@ -73,6 +73,9 @@ public enum UninstallStep
 {
     StopRunningApp,
     RestoreHdr,
+
+    /// <summary>Auto-HDR-Werte, die HDRpilot in die Windows-Einstellung geschrieben hat, zurücknehmen (E88).</summary>
+    RestoreAutoHdr,
     RemoveFiles,
     RemoveShortcuts,
     RemoveAutostart,
@@ -115,6 +118,9 @@ public enum SetupWarning
 
     /// <summary>Setup lief mit Adminrechten: HDRpilot wurde bewusst nicht gestartet (es liefe sonst ebenso erhöht).</summary>
     NotLaunchedElevated,
+
+    /// <summary>Entfernen: nicht alle Auto-HDR-Werte ließen sich zurücknehmen (die Zustandsdateien bleiben, E88).</summary>
+    AutoHdrNotRestored,
 }
 
 /// <summary>Ergebnis von Installation oder Entfernen. Bei Fehlern ist der vorige Zustand wiederhergestellt.</summary>

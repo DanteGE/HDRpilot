@@ -6,6 +6,7 @@ using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
 using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
@@ -61,6 +62,9 @@ public sealed partial class AppServices : IAsyncDisposable
     public SessionManager Sessions => Host.Sessions;
 
     public IHdrController Hdr => Host.Hdr;
+
+    /// <summary>Windows Auto HDR je Spiel: Stand für die Oberfläche und „Auto-HDR-Einträge zurücknehmen“ (E88).</summary>
+    public IAutoHdrService AutoHdr => Host.AutoHdr;
 
     public AppPaths Paths => Host.Paths;
 

@@ -31,6 +31,21 @@ public sealed class SetupLocationsTests
     }
 
     [Fact]
+    public void AutoHdr_location_of_a_test_root_is_the_one_the_test_instance_uses()
+    {
+        // Die installierte App startet im Prüflauf mit --config-dir <Ablage> (ohne --autohdr-test-root): Entfernen und App
+        // müssen dieselbe Testwurzel finden, nie den echten Schlüssel (E88).
+        var test = SetupLocations.ForTestRoot(Root);
+        var appPaths = HdrPilot.Core.Config.AppPaths.InDirectory(System.IO.Path.GetFullPath(Root + @"\Config"));
+        var app = HdrPilot.Core.AutoHdr.AutoHdrRegistryLocation.Resolve(appPaths, SetupLocations.Default(new FakeEnvironment()).DataPaths);
+        Assert.True(test.AutoHdrLocation.IsTest);
+        Assert.Equal(app, test.AutoHdrLocation);
+
+        // Gegenprobe: die normale Installation schreibt in den echten Schlüssel.
+        Assert.Same(HdrPilot.Core.AutoHdr.AutoHdrRegistryLocation.Real, SetupLocations.Default(new FakeEnvironment()).AutoHdrLocation);
+    }
+
+    [Fact]
     public void Same_root_in_other_spelling_gives_the_same_branch_other_root_another()
     {
         var a = SetupLocations.ForTestRoot(Root);

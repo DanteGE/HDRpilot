@@ -81,6 +81,12 @@ public sealed class AppSettings
     /// Die Oberfläche begrenzt ihn beim Öffnen auf die aktuelle Fenstergröße.
     /// </summary>
     public double? LibraryDetailsRatio { get; set; }
+
+    /// <summary>
+    /// Notlösung für „Windows Auto HDR“ (E88, experimentell): Solange ein Spiel mit <see cref="GameConfig.AutoHdr"/> läuft,
+    /// schaltet HDRpilot zusätzlich den globalen Auto-HDR-Schalter von Windows ein und danach wieder zurück. Standard aus.
+    /// </summary>
+    public bool AutoHdrGlobalFallback { get; set; }
 }
 
 /// <summary>Einstellungen je Spiel. Hängt an Quelle und ID, nicht am Namen.</summary>
@@ -114,6 +120,13 @@ public sealed class GameConfig
 
     /// <summary>Schalter „HDR automatisch“. Neue Spiele: aus.</summary>
     public bool HdrAuto { get; set; }
+
+    /// <summary>
+    /// Schalter „Windows Auto HDR“ (E88): Windows rechnet das SDR-Bild des Spiels in HDR um. Unabhängig von
+    /// <see cref="HdrAuto"/>; HDRpilot trägt den Wert je Spiel-EXE in der Windows-Einstellung ein, solange er an ist.
+    /// Neue und ältere Einträge: aus.
+    /// </summary>
+    public bool AutoHdr { get; set; }
 
     /// <summary>monitorDevicePath oder null für die globale Einstellung.</summary>
     public string? Display { get; set; }

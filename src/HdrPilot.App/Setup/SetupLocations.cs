@@ -2,6 +2,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 
 namespace HdrPilot.App.Setup;
@@ -46,6 +47,14 @@ public sealed record SetupLocations(
 
     /// <summary>Kennung der Einzelinstanz, die zu dieser Installation gehört (normale oder Test-Ablage).</summary>
     public string InstanceId => Infrastructure.SingleInstance.IdFor(ConfigDirectoryArgument);
+
+    /// <summary>
+    /// Wo die App dieser Installation Auto HDR schreibt (E88): normal der echte Schlüssel von Windows, im Prüflauf die
+    /// Testwurzel ihrer Ablage (dieselbe, die die App mit <c>--config-dir</c> ohne <c>--autohdr-test-root</c> benutzt).
+    /// </summary>
+    public AutoHdrRegistryLocation AutoHdrLocation => ConfigDirectoryArgument is null
+        ? AutoHdrRegistryLocation.Real
+        : AutoHdrRegistryLocation.ForConfigDirectory(ConfigDirectoryArgument);
 
     /// <summary>Zusätzliche Argumente beim Start der installierten App (nur im Prüflauf: die Test-Ablage).</summary>
     public string ExtraLaunchArguments => ConfigDirectoryArgument is null ? string.Empty : "--config-dir \"" + ConfigDirectoryArgument + "\"";

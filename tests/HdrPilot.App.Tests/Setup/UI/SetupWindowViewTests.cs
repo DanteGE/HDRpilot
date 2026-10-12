@@ -285,7 +285,7 @@ public sealed class SetupWindowViewTests : IDisposable
 
             Assert.False(ids["UninstallCloseButton"].IsEnabled);
             Assert.False(Displayed(ids["UninstallResultText"]));
-            Assert.Equal(6, ((ListBox)ids["UninstallProgress"]).Items.Count); // ohne „Daten löschen“
+            Assert.Equal(7, ((ListBox)ids["UninstallProgress"]).Items.Count); // ohne „Daten löschen“
             SaveForReview(window, "entfernen-laeuft");
 
             engine.Pending.SetResult(new SetupResult(true, null, null, new Version(1, 1, 0), null, false));
@@ -310,7 +310,7 @@ public sealed class SetupWindowViewTests : IDisposable
             var readme = Path.Combine(_folder.Locations.InstallDirectory, "README.md");
             var engine = new FakeUninstallEngine(Uninstall(), _folder.Locations)
             {
-                Report = [UninstallStep.StopRunningApp, UninstallStep.RestoreHdr, UninstallStep.RemoveFiles, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart, UninstallStep.Unregister],
+                Report = [UninstallStep.StopRunningApp, UninstallStep.RestoreHdr, UninstallStep.RestoreAutoHdr, UninstallStep.RemoveFiles, UninstallStep.RemoveShortcuts, UninstallStep.RemoveAutostart, UninstallStep.Unregister],
                 Result = SetupResult.Failed(SetupErrorKind.FilesInUse, "gesperrt") with { FailedUninstallStep = UninstallStep.RemoveFiles, FailedFile = readme },
             };
             var model = new UninstallProgressViewModel(engine, removeData: false, @"C:\Users\Test\AppData\Roaming\HDRpilot", _folder.Log);
@@ -326,7 +326,7 @@ public sealed class SetupWindowViewTests : IDisposable
                 .Select(i => AutomationProperties.GetItemStatus(list.ItemContainerGenerator.ContainerFromIndex(i)))
                 .ToList();
             var done = SetupStrings.SetupStepStateDone;
-            Assert.Equal([done, done, SetupStrings.SetupStepStateFailed, done, done, done], statuses);
+            Assert.Equal([done, done, done, SetupStrings.SetupStepStateFailed, done, done, done], statuses);
             Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, SetupStrings.UninstallErrorFilesInUse, readme), Text(ids["UninstallResultText"]));
             Assert.True(ids["UninstallCloseButton"].IsEnabled);
             SaveForReview(window, "entfernen-fehler");

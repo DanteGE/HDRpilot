@@ -5,6 +5,7 @@ using System.Windows.Interop;
 using System.Windows.Threading;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
+using HdrPilot.Core.AutoHdr;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Forms = System.Windows.Forms;
@@ -20,6 +21,18 @@ public interface ITrayHost
     TrayState QueryTrayState();
 
     Task ToggleHdrNowAsync();
+
+    /// <summary>Globaler Auto-HDR-Schalter von Windows, gelesen beim Öffnen des Menüs (<see cref="IAutoHdrService.ReadGlobalSwitch"/>).</summary>
+    AutoHdrSwitchState ReadAutoHdrSwitch();
+
+    /// <summary>HDRpilot hält den Schalter gerade für einen Spielstart (<see cref="IAutoHdrService.HoldsGlobalSwitch"/>): danach wieder aus.</summary>
+    bool AutoHdrSwitchHeld { get; }
+
+    /// <summary>
+    /// Tray-Eintrag „Auto HDR“ (G9.9): schaltet den Windows-Schalter als Wahl des Nutzers
+    /// (<see cref="IAutoHdrService.SetGlobalSwitchByUser"/>); liefert den Stand danach.
+    /// </summary>
+    AutoHdrSwitchState SetAutoHdrSwitch(bool on);
 
     void SetPaused(bool paused);
 

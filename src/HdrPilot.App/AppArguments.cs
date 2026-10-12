@@ -7,6 +7,9 @@ namespace HdrPilot.App;
 /// <item><c>--show</c> Fenster öffnen; <c>--minimized</c> nur Tray (Autostart).</item>
 /// <item><c>--toggle-hdr</c>, <c>--pause</c>, <c>--resume</c>, <c>--rescan</c>, <c>--exit</c> wie im Tray-Menü.</item>
 /// <item><c>--config-dir &lt;ordner&gt;</c> eigene Ablage (Tests); eigene Instanz je Ordner.</item>
+/// <item><c>--autohdr-test-root &lt;name&gt;</c> nur mit <c>--config-dir</c>: Auto HDR schreibt unter
+/// HKCU\Software\HDRpilot.Tests\AutoHdr\&lt;name&gt;. Ohne den Schalter gilt dort ein aus der Ablage abgeleiteter Name; eine
+/// eigene Ablage erreicht den echten Schlüssel nie (E88). Wird nie weitergereicht.</item>
 /// <item><c>--wrap -- %command%</c> Steam-Startoption: erledigt <c>App</c> vor allem anderen über die rohe Befehlszeile
 /// (siehe <see cref="HdrPilot.Core.Launch.SteamWrapper"/>); wird nie weitergereicht.</item>
 /// <item><c>--prepare &lt;Quelle:ID&gt; --ready-event &lt;name&gt;</c> vom Wrapper an die laufende Instanz: HDR für einen Start
@@ -42,6 +45,9 @@ public sealed record AppArguments
     public bool OpenSettings { get; init; }
 
     public string? ConfigDir { get; init; }
+
+    /// <summary>Name der Auto-HDR-Testwurzel (nur zusammen mit <see cref="ConfigDir"/> beachtet, E88).</summary>
+    public string? AutoHdrTestRoot { get; init; }
 
     /// <summary>Entwicklung: Hauptfenster und Einstellungen hell und dunkel unsichtbar als PNG in diesen Ordner rendern, dann beenden.</summary>
     public string? SnapshotDir { get; init; }
@@ -80,6 +86,9 @@ public sealed record AppArguments
                     break;
                 case "--config-dir" when i + 1 < args.Count:
                     result = result with { ConfigDir = args[++i] };
+                    break;
+                case "--autohdr-test-root" when i + 1 < args.Count:
+                    result = result with { AutoHdrTestRoot = args[++i] };
                     break;
                 case "--snapshot" when i + 1 < args.Count:
                     result = result with { SnapshotDir = args[++i] };
@@ -123,7 +132,7 @@ public sealed record AppArguments
     /// </summary>
     public IReadOnlyList<string> ToRunningInstance() => HasCommand ? ToForwardedArgs() : Minimized ? [] : ["--show"];
 
-    /// <summary>Befehle für die Weitergabe an die laufende Instanz (ohne --config-dir und ohne --wrap).</summary>
+    /// <summary>Befehle für die Weitergabe an die laufende Instanz (ohne --config-dir, --autohdr-test-root und --wrap).</summary>
     public IReadOnlyList<string> ToForwardedArgs()
     {
         var list = new List<string>();

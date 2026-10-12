@@ -222,6 +222,9 @@
   <data name="UninstallStepRestoreHdr" xml:space="preserve">
     <value>HDR-Zustand wiederherstellen</value>
   </data>
+  <data name="UninstallStepRestoreAutoHdr" xml:space="preserve">
+    <value>Auto HDR zurückstellen</value>
+  </data>
   <data name="UninstallStepRemoveFiles" xml:space="preserve">
     <value>Dateien entfernen</value>
   </data>
@@ -250,6 +253,10 @@
   <data name="UninstallHdrNotRestored" xml:space="preserve">
     <value>Der HDR-Zustand ließ sich nicht wiederherstellen; schalte HDR bei Bedarf in den Windows-Anzeigeeinstellungen um.</value>
     <comment>Zusatz zum Ergebnis, wenn der gemerkte HDR-Zustand nicht zurückgestellt werden konnte (Entfernen gilt trotzdem)</comment>
+  </data>
+  <data name="UninstallAutoHdrNotRestored" xml:space="preserve">
+    <value>Der globale Auto-HDR-Schalter ließ sich nicht zurückstellen; prüfe „Auto HDR“ in den Windows-Einstellungen unter Anzeige → HDR.</value>
+    <comment>Zusatz zum Ergebnis, wenn der von HDRpilot gesetzte globale Auto-HDR-Schalter nicht zurückgestellt werden konnte (Entfernen gilt trotzdem, E88)</comment>
   </data>
   <data name="UninstallErrorUnexpected" xml:space="preserve">
     <value>Entfernen nicht vollständig: {0}. Einzelheiten stehen in {1}.</value>

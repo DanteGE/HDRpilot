@@ -73,6 +73,9 @@ public enum UninstallStep
 {
     StopRunningApp,
     RestoreHdr,
+
+    /// <summary>Globalen Auto-HDR-Schalter zurückstellen, falls ein Absturz von HDRpilot ihn gesetzt hinterließ (E88).</summary>
+    RestoreAutoHdr,
     RemoveFiles,
     RemoveShortcuts,
     RemoveAutostart,
@@ -115,6 +118,9 @@ public enum SetupWarning
 
     /// <summary>Setup lief mit Adminrechten: HDRpilot wurde bewusst nicht gestartet (es liefe sonst ebenso erhöht).</summary>
     NotLaunchedElevated,
+
+    /// <summary>Entfernen: der globale Auto-HDR-Schalter ließ sich nicht zurückstellen (der Merker bleibt, E88).</summary>
+    AutoHdrNotRestored,
 }
 
 /// <summary>Ergebnis von Installation oder Entfernen. Bei Fehlern ist der vorige Zustand wiederhergestellt.</summary>

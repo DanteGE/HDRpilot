@@ -337,8 +337,10 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         get => _details;
         private set
         {
+            var previous = _details;
             if (SetProperty(ref _details, value))
             {
+                previous?.Detach(); // hört sonst weiter auf seine Zeile
                 OnPropertyChanged(nameof(HasDetails));
             }
         }
@@ -784,6 +786,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.HdrStateChanged -= OnHdrStateChanged;
         _context.ScanStateChanged -= OnScanStateChanged;
         _context.HdrSupportChanged -= OnHdrSupportChanged;
+        _details?.Detach();
         RevealRequested = null;
         _context.Dispose();
     }

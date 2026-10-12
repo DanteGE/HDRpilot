@@ -26,7 +26,7 @@ public sealed class ShellViewTests
         "HelperPatterns", "ResetHelperPatternsButton", "OpenLogFolderButton", "SaveSettingsButton", "CancelSettingsButton",
     ];
 
-    private static readonly string[] TrayIds = ["TrayVersion", "TrayToggleHdr", "TrayPause", "TrayOpen", "TraySettings", "TrayLogs", "TrayExit"];
+    private static readonly string[] TrayIds = ["TrayVersion", "TrayToggleHdr", "TrayAutoHdr", "TrayPause", "TrayOpen", "TraySettings", "TrayLogs", "TrayExit"];
 
     /// <summary>Maßstab der Bilder von <see cref="Render"/> (1,5 wie ein Bildschirm mit 150 %).</summary>
     private const double RenderScale = 1.5;
@@ -201,13 +201,14 @@ public sealed class ShellViewTests
     {
         var errors = new List<Exception>();
         var model = new TrayMenuViewModel(new ThrowingTrayHost(), TrayState.Initial, errors.Add);
+        Assert.Single(errors); // Auto HDR beim Öffnen nicht lesbar (AutoHdrTrayTests)
 
         model.OpenCommand.Execute(null);
         model.LogsCommand.Execute(null);
         model.ToggleHdrCommand.Execute(null);
         model.IsPaused = true;
 
-        Assert.Equal(4, errors.Count);
+        Assert.Equal(5, errors.Count);
     }
 
     [Fact]

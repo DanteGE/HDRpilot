@@ -15,6 +15,7 @@ public sealed class InMemoryFileSystem : IFileSystem
     private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Exception> _readFailures = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Exception> _writeFailures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Exception> _deleteFailures = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> FixedDriveRoots { get; } = [@"C:\"];
 
@@ -60,6 +61,25 @@ public sealed class InMemoryFileSystem : IFileSystem
         else
         {
             _writeFailures[PathUtil.Normalize(path)] = exception;
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Löschen dieser Datei wirft die angegebene Ausnahme (etwa vom Virenscanner gesperrt, ohne FILE_SHARE_DELETE geöffnet).
+    /// Wie unter NTFS scheitert dann auch das atomare Ersetzen der vorhandenen Datei (MoveFileEx mit REPLACE_EXISTING braucht
+    /// dasselbe Löschrecht); eine neue Datei an diesem Pfad lässt sich anlegen. Null hebt es auf.
+    /// </summary>
+    public InMemoryFileSystem FailDeleting(string path, Exception? exception)
+    {
+        if (exception is null)
+        {
+            _deleteFailures.Remove(PathUtil.Normalize(path));
+        }
+        else
+        {
+            _deleteFailures[PathUtil.Normalize(path)] = exception;
         }
 
         return this;
@@ -123,15 +143,31 @@ public sealed class InMemoryFileSystem : IFileSystem
 
     public void WriteAllTextAtomic(string path, string contents)
     {
-        if (_writeFailures.TryGetValue(PathUtil.Normalize(path), out var failure))
+        var p = PathUtil.Normalize(path);
+        if (_writeFailures.TryGetValue(p, out var failure))
         {
             throw failure;
+        }
+
+        // Gesperrt gegen Löschen: Ersetzen der vorhandenen Datei scheitert genauso (siehe FailDeleting).
+        if (_deleteFailures.TryGetValue(p, out var locked) && _files.ContainsKey(p))
+        {
+            throw locked;
         }
 
         AddFile(path, contents);
     }
 
-    public void DeleteFile(string path) => _files.Remove(PathUtil.Normalize(path));
+    public void DeleteFile(string path)
+    {
+        var p = PathUtil.Normalize(path);
+        if (_deleteFailures.TryGetValue(p, out var failure) && _files.ContainsKey(p))
+        {
+            throw failure;
+        }
+
+        _files.Remove(p);
+    }
 
     public IReadOnlyList<string> GetFixedDriveRoots() => FixedDriveRoots;
 

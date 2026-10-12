@@ -9,9 +9,12 @@
 #   4. Alt+F4 (WM_CLOSE) an das unsichtbare Hilfsfenster zerstört es nicht, das nächste Menü bleibt offen
 #   5. ein Klick in ein anderes Programm (das Hilfsfenster des Skripts) schließt es
 #   6. ein Mausklick auf „Spieleliste öffnen“ öffnet das Hauptfenster
-#   7. Tastatur: Die Versionszeile unter dem Kopf zeigt die Dateiversion der EXE und ist nicht aktiv (G8.1). Pfeil nach
-#      unten wählt „HDR jetzt …“, Pfeil nach oben springt von dort an der Versionszeile vorbei zu „HDRpilot beenden“;
-#      Eingabe beendet die Testinstanz
+#   7. Tastatur: Die Versionszeile unter dem Kopf zeigt die Dateiversion der EXE und ist nicht aktiv (G8.1). Der Eintrag
+#      „Auto HDR“ (G9.9) steht unter „HDR jetzt …“, ist aktiv und zeigt den Auto-HDR-Schalter der Testwurzel an
+#      (vorbelegt: an; das Skript schaltet ihn nie). Pfeil nach unten wählt „HDR jetzt …“, Pfeil nach oben springt von dort
+#      an der Versionszeile vorbei zu „HDRpilot beenden“; Eingabe beendet die Testinstanz
+# Auto HDR nur in der Testwurzel HKCU\Software\HDRpilot.Tests\AutoHdr\Phase6Tray-<PID> (--autohdr-test-root); den echten
+# Schlüssel HKCU\Software\Microsoft\DirectX\UserGpuPreferences liest das Skript nur und prüft am Ende, dass er gleich ist.
 # Liegt das Symbol im Überlauf (Standard für neue Programme unter Windows 11), öffnet das Skript zuerst den Überlauf.
 # Bewegt die Maus und klickt: nur am echten Desktop ausführen. Vor jedem Klick prüft es das Fenster unter dem Zeiger
 # (nur Taskleiste, Überlauf, Testinstanz oder das eigene Hilfsfenster) und bricht sonst ab; Tasten gehen nur raus, wenn
@@ -254,8 +257,23 @@ $expectedVersion = 'Version {0}.{1}.{2}' -f $exeVersion.FileMajorPart, $exeVersi
 $cfgFile = Join-Path $cfg 'config.json'
 [IO.File]::WriteAllText($cfgFile, ([IO.File]::ReadAllText($cfgFile).Replace('"settings": {', '"settings": { "notifications": false,')), (New-Object Text.UTF8Encoding $false))
 $saved = New-Object TrayInput+POINT; [void][TrayInput]::GetCursorPos([ref]$saved)
+
+# Auto HDR (G9.9): Testwurzel vorbelegt mit „an“, damit der Eintrag einen Stand zeigt, der vom Standard abweicht
+$autoHdrName = "Phase6Tray-$PID"
+$autoHdrSub = "Software\HDRpilot.Tests\AutoHdr\$autoHdrName"
+$autoHdrValue = 'DirectXUserGlobalSettings'
+$autoHdrSeed = 'AutoHDREnable=1;SwapEffectUpgradeEnable=1;'
+$realAutoHdrSub = 'Software\Microsoft\DirectX\UserGpuPreferences'
+function Read-RegText([string]$sub, [string]$name) {
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($sub, $false)
+    if (-not $key) { return $null }
+    try { return $key.GetValue($name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) } finally { $key.Close() }
+}
+$realAutoHdrBefore = Read-RegText $realAutoHdrSub $autoHdrValue
+$seedKey = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($autoHdrSub)
+try { $seedKey.SetValue($autoHdrValue, $autoHdrSeed, [Microsoft.Win32.RegistryValueKind]::String) } finally { $seedKey.Close() }
 try {
-    $app = Start-App $cfg @('--minimized')
+    $app = Start-App $cfg @('--minimized', '--autohdr-test-root', $autoHdrName)
     $sw = [Diagnostics.Stopwatch]::StartNew(); $icon = New-Object TrayInput+RECT
     while (-not [TrayInput]::FindIcon($app.Id, 1, [ref]$icon) -and $sw.ElapsedMilliseconds -lt 20000) { Start-Sleep -Milliseconds 200 }
     Check ($sw.ElapsedMilliseconds -lt 20000) "Testinstanz (PID $($app.Id)) mit Tray-Symbol gestartet"
@@ -330,6 +348,17 @@ try {
         $versionName = if ($versionItem) { $versionItem.Current.Name } else { '' }
         Check ($versionName -ceq $expectedVersion) "Versionszeile im Menü: '$versionName' (Dateiversion der EXE: '$expectedVersion')"
         Check ($null -ne $versionItem -and -not $versionItem.Current.IsEnabled) 'Versionszeile nicht aktiv'
+        # Auto HDR (G9.9): nur lesen, nie schalten. Umschalt-Muster mit dem Stand der Testwurzel, Platz unter „HDR jetzt …“
+        $autoItem = if ($menuEl) { Find-Id $menuEl 'TrayAutoHdr' 2000 } else { $null }
+        $toggleItem = if ($menuEl) { Find-Id $menuEl 'TrayToggleHdr' 2000 } else { $null }
+        $pauseItem = if ($menuEl) { Find-Id $menuEl 'TrayPause' 2000 } else { $null }
+        $tp = $null
+        $autoState = if ($autoItem -and $autoItem.TryGetCurrentPattern([Windows.Automation.TogglePattern]::Pattern, [ref]$tp)) { [string]$tp.Current.ToggleState } else { 'kein Umschalt-Muster' }
+        Check ($null -ne $autoItem -and $autoItem.Current.IsEnabled -and $autoState -eq 'On') ('Eintrag „Auto HDR“ vorhanden, aktiv und zeigt den Schalter der Testwurzel (an): {0}' -f $autoState)
+        $between = $autoItem -and $toggleItem -and $pauseItem -and
+            $autoItem.Current.BoundingRectangle.Top -ge ($toggleItem.Current.BoundingRectangle.Bottom - 1) -and
+            $autoItem.Current.BoundingRectangle.Bottom -le ($pauseItem.Current.BoundingRectangle.Top + 1)
+        Check $between 'Eintrag „Auto HDR“ steht zwischen „HDR jetzt …“ und „Automatik pausieren“'
         # Erst Pfeil nach unten: Wäre die Versionszeile fokussierbar, landete er auf ihr statt auf „HDR jetzt …“. Pfeil nach
         # oben vom Start allein sagte nichts, er wählt immer den letzten Eintrag. Von „HDR jetzt …“ aus muss Pfeil nach oben
         # an der Versionszeile vorbei ans Ende springen (wie der letzte Schritt in TrayMenuKeyboardTests).
@@ -352,6 +381,7 @@ try {
             [void][TrayInput]::KeyTo($app.Id, $VK_ESCAPE)
         }
     }
+    Check ((Read-RegText $autoHdrSub $autoHdrValue) -ceq $autoHdrSeed) 'Testwurzel von Auto HDR unverändert (das Menü liest den Schalter nur)'
 }
 catch {
     Note "FEHLER Abbruch: $($_.Exception.Message)" # etwa das Menü schloss sich, während es gelesen wurde
@@ -361,7 +391,11 @@ finally {
     $decoy.Close(); $decoy.Dispose()
     [void][TrayInput]::SetCursorPos($saved.X, $saved.Y)
     Stop-Started
+    try { [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($autoHdrSub, $false) } catch { Note "Testwurzel nicht gelöscht: $($_.Exception.Message)" }
 }
+
+Check ((Read-RegText $realAutoHdrSub $autoHdrValue) -ceq $realAutoHdrBefore) 'Echter Auto-HDR-Wert unverändert (nur gelesen)'
+Check ($null -eq [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($autoHdrSub)) 'Testwurzel von Auto HDR aufgeräumt'
 
 if ($ok) { Write-Output 'PHASE6_TRAYMENU_OK'; exit 0 }
 Write-Output 'PHASE6_TRAYMENU_FAILED'

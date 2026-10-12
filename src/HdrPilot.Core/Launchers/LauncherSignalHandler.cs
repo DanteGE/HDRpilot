@@ -15,6 +15,9 @@ public interface ILauncherSignalSessions
     IReadOnlyList<SessionInfo> Sessions { get; }
 
     Task<PrepareOutcome> PrepareAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default);
+
+    /// <summary>Nur Windows Auto HDR über den angekündigten Start informieren (E88); schaltet kein HDR.</summary>
+    Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default);
 }
 
 /// <summary><see cref="SessionManager"/> als Ziel der Frühwarnung.</summary>
@@ -28,6 +31,9 @@ public sealed class SessionManagerSignalTarget(SessionManager sessions) : ILaunc
 
     public Task<PrepareOutcome> PrepareAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default) =>
         sessions.PrepareAsync(gameKey, trigger, cancellationToken);
+
+    public Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default) =>
+        sessions.AnnounceAutoHdrStartAsync(gameKey, trigger, cancellationToken);
 }
 
 /// <summary>Was aus einem Launcher-Signal wurde.</summary>
@@ -59,6 +65,9 @@ public enum LauncherSignalResult
 
     /// <summary>Fehler bei der Verarbeitung (protokolliert).</summary>
     Failed,
+
+    /// <summary>Spiel ohne „HDR automatisch“, aber mit „Windows Auto HDR“: nur Auto HDR vorbereitet, HDR unverändert (E88).</summary>
+    AutoHdrOnly,
 }
 
 /// <summary>
@@ -67,7 +76,8 @@ public enum LauncherSignalResult
 /// HDR-Änderungen von Hand unangetastet). Dann übernimmt <see cref="SessionManager.PrepareAsync"/> (HDR an und
 /// bestätigt, Sitzung wartet auf den Spielprozess; startet das Spiel doch nicht, stellt die Startfrist zurück). Eine
 /// endende Sitzung (Nachlaufzeit, Neustart-Puffer) oder eine, die noch auf ihr Spiel wartet, wird dabei wieder auf
-/// „wartet auf Spielprozess“ gestellt; ein doppeltes Signal kurz nach einem Start ändert nichts (E71).
+/// „wartet auf Spielprozess“ gestellt; ein doppeltes Signal kurz nach einem Start ändert nichts (E71). Spiele ohne
+/// „HDR automatisch“, aber mit „Windows Auto HDR“ bekommen nur die Vorbereitung von Auto HDR, ohne HDR zu schalten (E88).
 /// </summary>
 public sealed class LauncherSignalHandler(ISessionConfigSource config, ILauncherSignalSessions sessions, ILogger? logger = null)
 {
@@ -93,6 +103,16 @@ public sealed class LauncherSignalHandler(ISessionConfigSource config, ILauncher
 
             if (!game.HdrAuto)
             {
+                if (game.AutoHdr && !sessions.Paused && sessions.IsInitialized)
+                {
+                    // Windows Auto HDR (E88) braucht den globalen Schalter vor dem Spielprozess, auch ohne „HDR automatisch“.
+                    _logger.LogInformation(
+                        "Launcher-Signal von {Launcher}: Start von \"{Game}\" ({Key}) angekündigt; „HDR automatisch“ ist aus, nur Windows Auto HDR wird vorbereitet.",
+                        signal.Launcher, game.Name, game.Key);
+                    await sessions.AnnounceAutoHdrStartAsync(game.Key, SessionTrigger.LauncherSignal, cancellationToken).ConfigureAwait(false);
+                    return LauncherSignalResult.AutoHdrOnly;
+                }
+
                 _logger.LogDebug("Launcher-Signal von {Launcher} für \"{Game}\": „HDR automatisch“ ist aus.", signal.Launcher, game.Name);
                 return LauncherSignalResult.NotAutomatic;
             }

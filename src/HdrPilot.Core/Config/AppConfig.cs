@@ -41,7 +41,8 @@ public sealed class AppSettings
 
     /// <summary>
     /// Frühwarnung: Spielstarts aus Epic Games Launcher und Steam an deren Protokollen erkennen und HDR schon vor dem
-    /// Spielprozess einschalten (nur Spiele mit „HDR automatisch“). Standard an.
+    /// Spielprozess einschalten (nur Spiele mit „HDR automatisch“); für Spiele mit „Windows Auto HDR“ auch den globalen
+    /// Auto-HDR-Schalter (E88). Standard an.
     /// </summary>
     public bool LauncherSignals { get; set; } = true;
 
@@ -114,6 +115,14 @@ public sealed class GameConfig
 
     /// <summary>Schalter „HDR automatisch“. Neue Spiele: aus.</summary>
     public bool HdrAuto { get; set; }
+
+    /// <summary>
+    /// Schalter „Windows Auto HDR“ (E88): Windows rechnet das SDR-Bild des Spiels in HDR um. Unabhängig von
+    /// <see cref="HdrAuto"/>; HDRpilot schaltet dafür den globalen Auto-HDR-Schalter von Windows direkt vor jedem Start
+    /// ein, den es vorher kennt (Starten, Verknüpfung, Steam-Startoption, Frühwarnung), und danach zurück.
+    /// Neue und ältere Einträge: aus.
+    /// </summary>
+    public bool AutoHdr { get; set; }
 
     /// <summary>monitorDevicePath oder null für die globale Einstellung.</summary>
     public string? Display { get; set; }

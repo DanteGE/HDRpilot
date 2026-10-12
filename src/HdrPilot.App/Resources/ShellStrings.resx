@@ -61,6 +61,19 @@
   <data name="TrayMenuToggleHdrOff" xml:space="preserve">
     <value>HDR jetzt ausschalten</value>
   </data>
+  <data name="TrayMenuAutoHdr" xml:space="preserve">
+    <value>Auto HDR</value>
+  </data>
+  <data name="TrayMenuAutoHdrHint" xml:space="preserve">
+    <value>Schalter „Auto HDR“ von Windows: gilt ab dem nächsten Spielstart, auch ohne HDRpilot</value>
+  </data>
+  <data name="TrayMenuAutoHdrUnknown" xml:space="preserve">
+    <value>Schalter „Auto HDR“ von Windows nicht lesbar oder in fremdem Format: HDRpilot ändert ihn nicht</value>
+  </data>
+  <data name="TrayMenuAutoHdrHeld" xml:space="preserve">
+    <value>Gerade von HDRpilot für ein Spiel eingeschaltet, danach wieder aus. Umschalten hier ist deine Wahl: gilt ab dem nächsten Spielstart, auch ohne HDRpilot</value>
+    <comment>Tooltip des Tray-Eintrags „Auto HDR“, solange HDRpilot den Windows-Schalter für einen Spielstart hält (E88)</comment>
+  </data>
   <data name="TrayMenuPause" xml:space="preserve">
     <value>Automatik pausieren</value>
   </data>

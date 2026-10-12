@@ -1,3 +1,4 @@
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Processes;
 
 namespace HdrPilot.Core.Sessions;
@@ -53,4 +54,7 @@ public sealed class SessionManagerOptions
 
     /// <summary>CPU-Zeit und Fenster der Spielprozesse. Null: <see cref="NtProcessActivityProbe"/>.</summary>
     public IProcessActivityProbe? ActivityProbe { get; init; }
+
+    /// <summary>Auto HDR über Spielstarts, Zyklen und den Wiederanlauf informieren (E88). Null: ohne Auto HDR.</summary>
+    public IAutoHdrSessionHooks? AutoHdr { get; init; }
 }

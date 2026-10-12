@@ -6,6 +6,7 @@ using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.HdrSupport;
 using HdrPilot.Core.Util;
 
 namespace HdrPilot.App.ViewModels.Library;
@@ -18,18 +19,23 @@ public enum DetailMessageArea
 
     /// <summary>EXE hinzufügen, entfernen, wieder aufnehmen, neu lernen.</summary>
     Executables,
+
+    /// <summary>Bild: Steam-Startoption, angeboten beim Einschalten von „Windows Auto HDR“ (G9.7).</summary>
+    Picture,
 }
 
 /// <summary>
 /// Detailbereich des gewählten Spiels: Start über HdrPilot, Verknüpfungen, Steam-Startoption (nur Steam), Automatik,
-/// Bildschirm, Zurückstellen, EXE-Dateien (mit Herkunft) und Entfernen (nur manuelle Spiele). Änderungen gehen sofort
-/// in die Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
+/// Bildschirm, Zurückstellen, Bild („Windows Auto HDR“, E88), EXE-Dateien (mit Herkunft) und Entfernen (nur manuelle
+/// Spiele). Änderungen gehen sofort in die Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
 /// </summary>
 public sealed class GameDetailsViewModel : ObservableObject
 {
     private readonly LibraryViewModel _owner;
     private GameConfig _config;
     private bool _restoreAfter;
+    private bool _autoHdr;
+    private bool _detached;
     private DisplayOptionViewModel? _selectedDisplay;
     private ExecutableItemViewModel? _selectedExecutable;
     private string? _message;
@@ -37,6 +43,7 @@ public sealed class GameDetailsViewModel : ObservableObject
     private DetailMessageArea _messageArea;
     private bool _isLaunching;
     private bool _suppressWrites;
+    private bool _steamOfferOpen;
 
     internal GameDetailsViewModel(LibraryViewModel owner, GameItemViewModel item)
     {
@@ -44,6 +51,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         Item = item;
         _config = item.Config;
         _restoreAfter = _config.RestoreAfter;
+        _autoHdr = _config.AutoHdr;
 
         AddExeCommand = new AsyncRelayCommand(AddExecutableAsync);
         RemoveExeCommand = new AsyncRelayCommand(RemoveExecutableAsync, () => _selectedExecutable is { IsExcluded: false });
@@ -57,6 +65,10 @@ public sealed class GameDetailsViewModel : ObservableObject
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
         RefreshDisplays();
+
+        // „HDR automatisch“ (Liste oder Details) und die HDR-Angabe laut PCGamingWiki steuern die Hinweise unter
+        // „Windows Auto HDR“; abgemeldet in Detach, wenn ein anderes Spiel gewählt wird.
+        Item.PropertyChanged += OnItemChanged;
     }
 
     public GameItemViewModel Item { get; }
@@ -94,6 +106,52 @@ public sealed class GameDetailsViewModel : ObservableObject
             }
         }
     }
+
+    /// <summary>
+    /// Schalter „Windows Auto HDR“ (E88, Abschnitt „BILD“): Windows rechnet das SDR-Bild in HDR um. HDRpilot schaltet dafür
+    /// den globalen Auto-HDR-Schalter von Windows direkt vor jedem Start ein, den es kennt (Starten, Verknüpfung,
+    /// Steam-Startoption, Frühwarnung), und danach zurück; beim Schalten selbst ändert sich in Windows nichts. Unabhängig
+    /// von „HDR automatisch“ (das bleibt beim Schalten unberührt). Scheitert das Speichern, setzt der Abgleich der Liste den
+    /// Schalter zurück (<see cref="Apply"/>). Beim Einschalten für ein Steam-Spiel ohne Steam-Startoption bietet HDRpilot
+    /// sie an (<see cref="OfferSteamLaunchOptionAsync"/>).
+    /// </summary>
+    public bool AutoHdr
+    {
+        get => _autoHdr;
+        set
+        {
+            if (SetProperty(ref _autoHdr, value) && !_suppressWrites)
+            {
+                var saved = _owner.WriteGameAsync(Item.Key, g => g.AutoHdr = value);
+                if (value && IsSteam)
+                {
+                    _ = OfferSteamLaunchOptionAsync(saved);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Spiel hat laut PCGamingWiki eigenes (auch eingeschränktes) HDR: Zeile „Windows Auto HDR“ zurückgenommen dargestellt,
+    /// bleibt aber bedienbar (Hinweis darunter).
+    /// </summary>
+    public bool IsAutoHdrSubdued => HdrSupportValues.IsHdrCapable(Item.HdrSupport);
+
+    public bool ShowAutoHdrNativeHint => IsAutoHdrSubdued;
+
+    /// <summary>„… eigenes HDR – besser im Spiel einschalten“ (eingeschränkt: „meist besser“); leer ohne eigenes HDR.</summary>
+    public string AutoHdrNativeHint => Item.HdrSupport switch
+    {
+        HdrSupportStatus.Native => LibraryStrings.Details_AutoHdrNative,
+        HdrSupportStatus.Limited => LibraryStrings.Details_AutoHdrNativeLimited,
+        _ => string.Empty,
+    };
+
+    /// <summary>
+    /// „HDR automatisch“ ist aus: Auto HDR wirkt nur bei eingeschaltetem Windows-HDR (Hinweis unter dem Schalter, auch bei
+    /// ausgeschaltetem Auto HDR, damit die Abhängigkeit vor dem Einschalten klar ist).
+    /// </summary>
+    public bool ShowAutoHdrNeedsHdrHint => !Item.HdrAuto;
 
     public ObservableCollection<DisplayOptionViewModel> Displays { get; } = [];
 
@@ -164,6 +222,8 @@ public sealed class GameDetailsViewModel : ObservableObject
     public bool HasLaunchMessage => HasMessage && _messageArea == DetailMessageArea.Launch;
 
     public bool HasExecutablesMessage => HasMessage && _messageArea == DetailMessageArea.Executables;
+
+    public bool HasPictureMessage => HasMessage && _messageArea == DetailMessageArea.Picture;
 
     public bool IsLaunching
     {
@@ -264,6 +324,8 @@ public sealed class GameDetailsViewModel : ObservableObject
                 OnPropertyChanged(nameof(RestoreAfter));
             }
 
+            AutoHdr = config.AutoHdr; // ohne Schreiben: auch der Rückfall nach einem Speicherfehler
+
             var display = Displays.FirstOrDefault(o => SameDisplay(o.DevicePath, config.Display));
             if (display is null)
             {
@@ -295,6 +357,31 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLastPlayed));
         RelearnExeCommand.RaiseCanExecuteChanged();
         LaunchCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>Ein anderes Spiel ist gewählt oder das Fenster geschlossen: nicht mehr auf die Zeile hören.</summary>
+    internal void Detach()
+    {
+        if (!_detached)
+        {
+            _detached = true;
+            Item.PropertyChanged -= OnItemChanged;
+        }
+    }
+
+    private void OnItemChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(GameItemViewModel.HdrAuto):
+                OnPropertyChanged(nameof(ShowAutoHdrNeedsHdrHint));
+                break;
+            case nameof(GameItemViewModel.HdrSupport):
+                OnPropertyChanged(nameof(IsAutoHdrSubdued));
+                OnPropertyChanged(nameof(ShowAutoHdrNativeHint));
+                OnPropertyChanged(nameof(AutoHdrNativeHint));
+                break;
+        }
     }
 
     /// <summary>Bildschirmliste neu aufbauen (Bildschirme können kommen und gehen).</summary>
@@ -368,9 +455,13 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(MessageArea));
         OnPropertyChanged(nameof(HasLaunchMessage));
         OnPropertyChanged(nameof(HasExecutablesMessage));
+        OnPropertyChanged(nameof(HasPictureMessage));
     }
 
-    private void CopySteamLaunchOption()
+    private void CopySteamLaunchOption() => CopySteamLaunchOption(DetailMessageArea.Launch, LibraryStrings.Steam_LaunchOptionCopied);
+
+    /// <summary>„Steam-Startoption kopieren“; die Rückmeldung steht im Abschnitt, der es ausgelöst hat.</summary>
+    private void CopySteamLaunchOption(DetailMessageArea area, string copiedText)
     {
         if (!IsSteam)
         {
@@ -379,19 +470,59 @@ public sealed class GameDetailsViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(_owner.Context.ExecutablePath))
         {
-            ShowMessage(LibraryText.Format(LibraryStrings.Steam_LaunchOptionFailed, LibraryStrings.Shortcut_NoTarget), StatusKind.Error, DetailMessageArea.Launch);
+            ShowMessage(LibraryText.Format(LibraryStrings.Steam_LaunchOptionFailed, LibraryStrings.Shortcut_NoTarget), StatusKind.Error, area);
             return;
         }
 
         try
         {
             _owner.Context.Clipboard.SetText(SteamLaunchOption.Build(_owner.Context.ExecutablePath));
-            ShowMessage(LibraryStrings.Steam_LaunchOptionCopied, StatusKind.Success, DetailMessageArea.Launch);
+            ShowMessage(copiedText, StatusKind.Success, area);
         }
         catch (Exception ex) when (ex is ExternalException or InvalidOperationException or ArgumentException)
         {
             // Zwischenablage gerade von einem anderen Programm belegt.
-            ShowMessage(LibraryText.Format(LibraryStrings.Steam_LaunchOptionFailed, ex.Message), StatusKind.Error, DetailMessageArea.Launch);
+            ShowMessage(LibraryText.Format(LibraryStrings.Steam_LaunchOptionFailed, ex.Message), StatusKind.Error, area);
+        }
+    }
+
+    /// <summary>
+    /// G9.7: Auto HDR für ein Steam-Spiel eingeschaltet. Startet der Nutzer es direkt in Steam, kennt HDRpilot den Start
+    /// vorher nur über die Steam-Startoption. Fehlt sie, fragt HDRpilot, ob es sie kopieren soll: dieselbe Funktion wie
+    /// „Steam-Startoption kopieren“ mit denselben Bedingungen (Programmpfad bekannt, Zwischenablage frei); eintragen kann
+    /// sie nur der Nutzer in Steam. Ablehnen ändert nichts. Auto HDR bleibt in jedem Fall an. Nicht gefragt wird nach einem
+    /// gescheiterten Speichern, wenn die Startoption schon gesetzt ist, und wenn der Schalter inzwischen wieder aus oder ein
+    /// anderes Spiel gewählt ist.
+    /// </summary>
+    private async Task OfferSteamLaunchOptionAsync(Task<bool> saved)
+    {
+        var appId = _config.SourceId;
+        if (!await saved || string.IsNullOrWhiteSpace(appId) || await _owner.Context.HasSteamLaunchOptionAsync(appId))
+        {
+            return;
+        }
+
+        // Die Rückfrage pumpt Nachrichten: Schnelles Aus- und Einschalten darf keine zweite darüber öffnen.
+        if (_detached || !_autoHdr || _steamOfferOpen)
+        {
+            return;
+        }
+
+        _steamOfferOpen = true;
+        try
+        {
+            if (_owner.Dialogs.Confirm(
+                LibraryStrings.AutoHdrSteam_OfferTitle,
+                LibraryText.Format(LibraryStrings.AutoHdrSteam_OfferText, Item.Name),
+                LibraryStrings.AutoHdrSteam_OfferConfirm,
+                isDanger: false))
+            {
+                CopySteamLaunchOption(DetailMessageArea.Picture, LibraryStrings.AutoHdrSteam_Copied);
+            }
+        }
+        finally
+        {
+            _steamOfferOpen = false;
         }
     }
 

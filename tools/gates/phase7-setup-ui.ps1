@@ -7,6 +7,8 @@
 #   - Entfernen: Rückfrage (Daten löschen standardmäßig aus), Warnung vor der Steam-Startoption eines Spiels (Steam-Ordner
 #     der Testablage), Bestätigen; die Fortsetzung läuft als neuer Prozess aus %TEMP%\HDRpilot-Uninstall-* (laut
 #     Setup-Protokoll dieses Laufs), zeigt Fortschritt und Ergebnis; danach ist alles entfernt, die Ablage bleibt
+#   - G9.4: vor dem Entfernen ein nachgestellter Absturz mit gesetztem Auto-HDR-Schalter (Testwurzel der Ablage, Merker
+#     autohdr-global.json): Der Fortschritt zeigt den Schritt, danach ist der globale Wert genau der alte, der Merker weg
 #   - Aktualisieren einer älteren, nicht eingetragenen EXE (wie beim Nutzer): Titel "aktualisieren", Version alt → neu,
 #     Knopf Aktualisieren, Autostart wie bisher an, danach starten aus (lief nicht), Ergebnis, Exitcode 0
 # Die App läuft in diesem Gate nie; die Ablage (config.json, Kanarien-Datei) muss nach jedem Schritt byte-gleich sein.
@@ -140,6 +142,7 @@ try {
     $canary = Initialize-SetupTestConfig $layout.Config
     $steamGame = 'Gate7 Steam-Spiel'
     Add-SteamLaunchOption '4711' $steamGame
+    $autoHdr = Initialize-AutoHdrTestState $layout # G9.4: Spiel mit „Windows Auto HDR“, globaler Wert der Testwurzel
     $cfgStart = @(Get-TreeHashes $layout.Config)
     Note ("Ablage vorbereitet: Kanarien-Datei {0}, Steam-Spiel 4711 mit HDRpilot-Startoption, {1} Dateien" -f $canary.Substring(0, 8), $cfgStart.Count)
 
@@ -197,6 +200,9 @@ try {
     Assert-ConfigUnchanged 'Nach dem Installieren' $cfgStart
 
     Note '--- Entfernen: Rückfrage'
+    # G9.4: wie nach einem Absturz von HDRpilot mitten in einer Sitzung (Schalter an, Merker in der Ablage)
+    Set-AutoHdrCrashLeftover $autoHdr
+    Check ((Get-RegValue $autoHdr.Key $AutoHdrGlobalName) -ceq $autoHdr.On -and (Test-Path -LiteralPath $autoHdr.GlobalFile)) 'Absturz mit gesetztem Auto-HDR-Schalter nachgestellt (Testwurzel an, autohdr-global.json)'
     $logOffset = Get-FileLength $layout.SetupLog
     $first = Start-Exe $layout.Exe @('--uninstall', '--test-root', $layout.Root)
     $uwin = Find-Window 'UninstallWindow' $first.Id 30000
@@ -240,6 +246,10 @@ try {
     $uprogress = Find-Id $pwin 'UninstallProgress' 2000
     $usteps = if ($uprogress) { (Get-AllNames $uprogress) -join ' | ' } else { '' }
     Check ($uprogress -and (Test-Contains $usteps $s.UninstallStepRemoveFiles) -and (Test-Contains $usteps $s.UninstallStepUnregister)) "Fortschritt zeigt die Schritte: $usteps"
+    Check (Test-Contains $usteps $s.UninstallStepRestoreAutoHdr) ("Fortschritt zeigt den Schritt ""{0}"" (G9.4)" -f $s.UninstallStepRestoreAutoHdr)
+    Check (-not (Test-Contains $uresult $s.UninstallAutoHdrNotRestored)) 'Ergebnis ohne Hinweis auf einen nicht zurückgestellten Auto-HDR-Schalter'
+    $autoHdrValue = Get-RegValue $autoHdr.Key $AutoHdrGlobalName
+    Check ($autoHdrValue -ceq $autoHdr.Off -and -not (Test-Path -LiteralPath $autoHdr.GlobalFile)) ("Auto HDR zurückgestellt: globaler Wert wieder genau ""{0}"" (ist ""{1}""), autohdr-global.json gelöscht" -f $autoHdr.Off, $autoHdrValue)
     if ($uclose) { Invoke-El $uclose }
     $contExited = $cont.WaitForExit(20000)
     Check $contExited ("Fortsetzung nach Fertig beendet (Exitcode {0})" -f $(if ($contExited) { $cont.ExitCode } else { 'läuft noch' }))

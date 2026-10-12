@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.HdrSupport;
@@ -96,6 +97,13 @@ public sealed partial class AppServices
         public IReadOnlyList<DisplayInfo> GetDisplays() => app.Hdr.GetDisplays();
 
         public Task ToggleHdrNowAsync() => app.ToggleHdrNowAsync();
+
+        // Testinstanzen (--config-dir) erreichen hier nur ihre Testwurzel (E88).
+        public AutoHdrSwitchState ReadAutoHdrSwitch() => app.AutoHdr.ReadGlobalSwitch();
+
+        public bool AutoHdrSwitchHeld => app.AutoHdr.HoldsGlobalSwitch;
+
+        public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => app.AutoHdr.SetGlobalSwitchByUser(on);
 
         public void SetPaused(bool paused) => app.SetPaused(paused);
 

@@ -1,5 +1,6 @@
 using System.Windows.Threading;
 using HdrPilot.App.Services;
+using HdrPilot.App.Setup;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -57,6 +58,25 @@ public sealed class AppLibraryContext : ILibraryContext
     public IClipboard Clipboard { get; } = new WpfClipboard();
 
     public string? ExecutablePath => System.Environment.ProcessPath;
+
+    // Auch Testinstanzen (--config-dir) lesen Steam nur, wie beim Einlesen der Bibliothek.
+    public Task<bool> HasSteamLaunchOptionAsync(string appId)
+    {
+        var registry = _services.Registry;
+        var executable = ExecutablePath;
+        return Task.Run(() =>
+        {
+            try
+            {
+                return SteamLaunchOptionStatus.IsSet(() => SteamLaunchOptionScanner.ReadSteamPath(registry), executable, appId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Steam-Startoption von {AppId} ließ sich nicht prüfen.", appId);
+                return false;
+            }
+        });
+    }
 
     public IReadOnlyList<SessionInfo> Sessions => _services.Sessions.Sessions;
 

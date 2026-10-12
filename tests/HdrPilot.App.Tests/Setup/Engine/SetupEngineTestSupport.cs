@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using HdrPilot.App.Services;
 using HdrPilot.App.Setup;
 using HdrPilot.App.Tests.Library;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Tests.TestSupport;
 
@@ -23,6 +24,7 @@ public sealed class SetupHarness : IDisposable
         Directory.CreateDirectory(Root);
         Locations = SetupLocations.ForTestRoot(Root);
         Log = new SetupLog(Path.Combine(Root, "setup.log"));
+        AutoHdr = new SetupGpuPreferenceStore(Locations.AutoHdrLocation.KeyName);
     }
 
     public string Root { get; }
@@ -40,6 +42,9 @@ public sealed class SetupHarness : IDisposable
     public FakeHdrRestorer Hdr { get; } = new();
 
     public FakeSteamScanner Steam { get; } = new();
+
+    /// <summary>Schlüssel UserGpuPreferences der Testablage im Speicher: Entfernen fasst nie die Registry an (E88).</summary>
+    public SetupGpuPreferenceStore AutoHdr { get; }
 
     /// <summary>Läuft der Setup „mit Adminrechten“ (nur für die Engine; der Testlauf selbst ist nie erhöht)?</summary>
     public bool Elevated { get; set; }
@@ -113,7 +118,8 @@ public sealed class SetupHarness : IDisposable
         Hdr,
         Steam,
         files,
-        ReadVersion);
+        ReadVersion,
+        autoHdrStore: AutoHdr);
 
     public Task<SetupResult> UninstallAsync(bool removeData = false, ISetupFileOperations? files = null, IProgress<UninstallStep>? progress = null) =>
         Uninstall(files).UninstallAsync(new UninstallOptions(removeData), progress);
@@ -443,5 +449,56 @@ public static class RawSetupFile
         BitConverter.GetBytes(payloadLength).CopyTo(footer, 24);
         (exeHash ?? SHA256.HashData(exe)).CopyTo(footer, 32);
         file.Write(footer);
+    }
+}
+
+/// <summary>
+/// Schlüssel UserGpuPreferences im Speicher für das Entfernen (E88): nie die Registry. Wertnamen ohne Groß-/Kleinschreibung,
+/// Schreib- und Löschvorgänge mitgeschrieben, Fehler vorgebbar (wie FakeGpuPreferenceStore in HdrPilot.Tests).
+/// </summary>
+public sealed class SetupGpuPreferenceStore(string keyName) : IGpuPreferenceStore
+{
+    private readonly Dictionary<string, GpuPreferenceValue> _values = new(StringComparer.OrdinalIgnoreCase);
+
+    public string KeyName { get; } = keyName;
+
+    public List<string> Operations { get; } = [];
+
+    public int Reads { get; private set; }
+
+    public Exception? FailWrites { get; set; }
+
+    /// <summary>Legt einen REG_SZ an, ohne ihn mitzuschreiben (Ausgangslage eines Tests).</summary>
+    public void SetString(string name, string text) => _values[name] = GpuPreferenceValue.FromString(text);
+
+    public string? GetString(string name) =>
+        _values.TryGetValue(name, out var v) && v.Kind == GpuPreferenceValueKind.String ? v.Text : null;
+
+    public GpuPreferenceValue Read(string valueName)
+    {
+        Reads++;
+        return _values.TryGetValue(valueName, out var v) ? v : GpuPreferenceValue.Missing;
+    }
+
+    public void WriteString(string valueName, string value)
+    {
+        if (FailWrites is { } failure)
+        {
+            throw failure;
+        }
+
+        Operations.Add("set " + valueName + "=" + value);
+        _values[valueName] = GpuPreferenceValue.FromString(value);
+    }
+
+    public void Delete(string valueName)
+    {
+        if (FailWrites is { } failure)
+        {
+            throw failure;
+        }
+
+        Operations.Add("delete " + valueName);
+        _values.Remove(valueName);
     }
 }

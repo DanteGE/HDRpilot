@@ -247,6 +247,12 @@
   <data name="Badge_HdrLimitedTooltip" xml:space="preserve">
     <value>HDR eingeschränkt laut PCGamingWiki</value>
   </data>
+  <data name="Badge_AutoHdr" xml:space="preserve">
+    <value>AUTO HDR</value>
+  </data>
+  <data name="Badge_AutoHdrTooltip" xml:space="preserve">
+    <value>Windows Auto HDR für dieses Spiel an (beim Start über HDRpilot)</value>
+  </data>
   <data name="Status_Dismiss" xml:space="preserve">
     <value>Hinweis schließen</value>
   </data>
@@ -330,6 +336,40 @@
   </data>
   <data name="Details_DisplayHint" xml:space="preserve">
     <value>Standard ist die globale Einstellung.</value>
+  </data>
+  <data name="Details_SectionPicture" xml:space="preserve">
+    <value>BILD</value>
+  </data>
+  <data name="Details_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Details_AutoHdrHint" xml:space="preserve">
+    <value>Windows rechnet das SDR-Bild in HDR um. Nur für Spiele ohne eigenes HDR (DirectX 11/12).</value>
+  </data>
+  <data name="Details_AutoHdrStartHint" xml:space="preserve">
+    <value>Wirkt nur, wenn das Spiel über HDRpilot startet (Starten, Verknüpfung, Steam-Startoption): HDRpilot schaltet Auto HDR in Windows direkt davor ein und nach dem Spiel wieder zurück.</value>
+  </data>
+  <data name="Details_AutoHdrNeedsHdr" xml:space="preserve">
+    <value>„HDR automatisch“ ist für dieses Spiel aus: Auto HDR wirkt nur, wenn Windows-HDR schon vor dem Spielstart an ist. „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten HDR mit ein; sonst HDR vorher selbst einschalten.</value>
+  </data>
+  <data name="Details_AutoHdrNative" xml:space="preserve">
+    <value>Dieses Spiel hat laut PCGamingWiki eigenes HDR – besser im Spiel einschalten.</value>
+  </data>
+  <data name="Details_AutoHdrNativeLimited" xml:space="preserve">
+    <value>Dieses Spiel hat laut PCGamingWiki eingeschränktes eigenes HDR – meist besser im Spiel einschalten.</value>
+  </data>
+  <data name="AutoHdrSteam_OfferTitle" xml:space="preserve">
+    <value>Steam-Startoption kopieren?</value>
+  </data>
+  <data name="AutoHdrSteam_OfferText" xml:space="preserve">
+    <value>Startest du {0} direkt in Steam, erfährt HDRpilot vom Start zuverlässig nur über die Steam-Startoption, und die fehlt bei diesem Spiel noch. Ohne sie wirkt Auto HDR sicher nur beim Start über HDRpilot oder eine „(HDR)“-Verknüpfung. Soll HDRpilot sie kopieren? Eintragen musst du sie in Steam selbst: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen. Auto HDR bleibt so oder so an.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="AutoHdrSteam_OfferConfirm" xml:space="preserve">
+    <value>Startoption kopieren</value>
+  </data>
+  <data name="AutoHdrSteam_Copied" xml:space="preserve">
+    <value>Kopiert. In Steam: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen, dort einfügen. Dann schaltet HDRpilot HDR und Auto HDR auch beim Start aus Steam vor dem Spiel ein (HDRpilot muss dafür laufen).</value>
   </data>
   <data name="Display_Global" xml:space="preserve">
     <value>Globale Einstellung</value>

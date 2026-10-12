@@ -1,18 +1,21 @@
 using System.Globalization;
 using System.IO;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Sessions;
 
 namespace HdrPilot.App.Setup;
 
 /// <summary>
 /// Entfernen (E83). Läuft aus einer Kopie im Temp-Ordner, damit der Programmordner gelöscht werden kann. Ablauf: Sperre,
-/// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, nur die eigenen Dateien löschen
-/// (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene EXE, eigenen Autostart-Wert und Eintrag entfernen;
-/// Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige Ausnahme: der gemerkte HDR-Zustand
-/// (session-state.json) wird nach dem Wiederherstellen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher
-/// ist; das Ergebnis nennt den ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag
-/// für einen neuen Versuch. Ein nicht wiederhergestellter HDR-Zustand ist nur ein Hinweis (<see cref="SetupWarning.HdrNotRestored"/>).
+/// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, globalen Auto-HDR-Schalter
+/// zurückstellen (E88), nur die eigenen Dateien löschen (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene
+/// EXE, eigenen Autostart-Wert und Eintrag entfernen; Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige
+/// Ausnahmen: der gemerkte HDR-Zustand (session-state.json) und der Merker des Auto-HDR-Schalters (autohdr-global.json)
+/// werden nach dem Zurückstellen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher ist; das Ergebnis nennt
+/// den ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag für einen neuen Versuch.
+/// Ein nicht wiederhergestellter HDR-Zustand und ein nicht zurückgestellter Auto-HDR-Schalter sind nur Hinweise
+/// (<see cref="SetupWarning.HdrNotRestored"/>, <see cref="SetupWarning.AutoHdrNotRestored"/>).
 /// </summary>
 public sealed class UninstallEngine : IUninstallEngine
 {
@@ -27,7 +30,13 @@ public sealed class UninstallEngine : IUninstallEngine
     private readonly Func<string, Version?> _versionReader;
     private readonly TimeSpan _stopTimeout;
     private readonly string _mutexName;
+    private readonly IGpuPreferenceStore _autoHdr;
 
+    /// <param name="autoHdrStore">
+    /// Schlüssel UserGpuPreferences für das Zurückstellen des globalen Auto-HDR-Schalters (Tests: Attrappe). Null: echte
+    /// Registry am Ort <see cref="SetupLocations.AutoHdrLocation"/> (im Prüflauf die Testwurzel der Ablage, nie der echte
+    /// Schlüssel).
+    /// </param>
     public UninstallEngine(
         SetupLocations locations,
         SetupLog log,
@@ -40,7 +49,8 @@ public sealed class UninstallEngine : IUninstallEngine
         ISetupFileOperations? files = null,
         Func<string, Version?>? versionReader = null,
         TimeSpan? stopTimeout = null,
-        string? mutexName = null)
+        string? mutexName = null,
+        IGpuPreferenceStore? autoHdrStore = null)
     {
         Locations = locations;
         _log = log;
@@ -54,6 +64,7 @@ public sealed class UninstallEngine : IUninstallEngine
         _versionReader = versionReader ?? SetupSupport.ReadFileVersion;
         _stopTimeout = stopTimeout ?? SetupEngine.DefaultStopTimeout;
         _mutexName = mutexName ?? SetupSupport.MutexNameFor(locations);
+        _autoHdr = autoHdrStore ?? new RegistryGpuPreferenceStore(locations.AutoHdrLocation);
     }
 
     public SetupLocations Locations { get; }
@@ -128,7 +139,19 @@ public sealed class UninstallEngine : IUninstallEngine
         }
 
         var errors = new FirstError();
-        IReadOnlyList<SetupWarning>? warnings = RestoreHdr(progress, cancellationToken) ? null : [SetupWarning.HdrNotRestored];
+        var warningList = new List<SetupWarning>();
+        if (!RestoreHdr(progress, cancellationToken))
+        {
+            warningList.Add(SetupWarning.HdrNotRestored);
+        }
+
+        // Unabhängig von „Daten löschen“ und vor dem Löschen der Ablage: sonst wäre der Originalzustand verloren (E88).
+        if (!RestoreAutoHdr(progress))
+        {
+            warningList.Add(SetupWarning.AutoHdrNotRestored);
+        }
+
+        IReadOnlyList<SetupWarning>? warnings = warningList.Count == 0 ? null : warningList;
 
         Report(progress, UninstallStep.RemoveFiles);
         RemoveFiles(errors);
@@ -179,7 +202,11 @@ public sealed class UninstallEngine : IUninstallEngine
             };
         }
 
-        _log.Info("Entfernen fertig" + (warnings is null ? "." : ", der gemerkte HDR-Zustand ist aber nicht wiederhergestellt."));
+        _log.Info("Entfernen fertig" + (warnings is null
+            ? "."
+            : ", aber " + string.Join(" und ", warnings.Select(w => w == SetupWarning.HdrNotRestored
+                ? "der gemerkte HDR-Zustand ist nicht wiederhergestellt"
+                : "der globale Auto-HDR-Schalter ist nicht zurückgestellt")) + "."));
         return new SetupResult(true, null, null, version, null, false, Warnings: warnings);
     }
 
@@ -269,6 +296,42 @@ public sealed class UninstallEngine : IUninstallEngine
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Globalen Auto-HDR-Schalter in UserGpuPreferences zurückstellen, falls ein Absturz von HDRpilot ihn gesetzt hinterließ
+    /// (E88; die beendete App hat ihn sonst schon zurückgestellt), mit derselben Regel wie die App: Hat der Nutzer ihn
+    /// inzwischen geändert, bleibt seine Wahl. Danach den Merker verwerfen. Gehört er zu einem anderen Schlüssel oder
+    /// scheitert das Zurückstellen, bleibt er (Hinweis im Ergebnis). Fehler verhindern das Entfernen nicht.
+    /// </summary>
+    private bool RestoreAutoHdr(IProgress<UninstallStep>? progress)
+    {
+        var paths = Locations.DataPaths;
+        if (!AutoHdrCleanup.HasState(PhysicalFileSystem.Instance, paths))
+        {
+            return true;
+        }
+
+        Report(progress, UninstallStep.RestoreAutoHdr);
+        _log.Info("Globalen Auto-HDR-Schalter zurückstellen in " + _autoHdr.KeyName + ".");
+        try
+        {
+            var result = AutoHdrCleanup.RestoreAll(_autoHdr, PhysicalFileSystem.Instance, paths, _log.Info);
+            _log.Info(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Auto HDR: {result.Restored} zurückgestellt, {result.LeftAsIs} extern geändert (bleibt), {result.Failed} fehlgeschlagen."));
+            if (!result.Complete)
+            {
+                _log.Warn("Merker des Auto-HDR-Schalters bleibt gespeichert" + (result.Skipped is null ? "." : ": " + result.Skipped));
+            }
+
+            return result.Complete;
+        }
+        catch (Exception ex)
+        {
+            _log.Error("Der globale Auto-HDR-Schalter ließ sich nicht zurückstellen.", ex);
+            return false;
+        }
     }
 
     /// <summary>Nur die installierten Dateien (und ihre „.new“/„.old“-Reste), dann leere eigene Ordner.</summary>
@@ -370,10 +433,60 @@ public sealed class UninstallEngine : IUninstallEngine
 
             Run(errors, UninstallStep.RemoveData, "Ordner " + folder + " löschen", () =>
             {
+                if (LockedAutoHdrMarker(folder) is { } marker)
+                {
+                    // Der Merker des globalen Auto-HDR-Schalters ist gesperrt: alles andere löschen, sein Kennzeichen
+                    // „erledigt“ aber behalten, sonst stellte ein späterer Start die Wahl des Nutzers zurück (E88).
+                    DeleteAllExcept(folder, [marker, Path.GetFullPath(Locations.DataPaths.AutoHdrGlobalDoneFile)]);
+                    throw new IOException("Gesperrt, bleibt mit seinem Kennzeichen „erledigt“: " + marker);
+                }
+
                 Directory.Delete(folder, recursive: true);
                 _log.Info("Gelöscht: " + folder);
             }, folder);
         }
+    }
+
+    /// <summary>
+    /// Merker des globalen Auto-HDR-Schalters in <paramref name="folder"/>, falls er noch da ist und sich nicht löschen
+    /// lässt (das Zurückstellen davor hat ihn sonst schon entfernt); null, wenn er fehlt oder jetzt gelöscht wurde.
+    /// </summary>
+    private string? LockedAutoHdrMarker(string folder)
+    {
+        var marker = Path.GetFullPath(Locations.DataPaths.AutoHdrGlobalFile);
+        if (!string.Equals(Path.GetDirectoryName(marker), Path.TrimEndingDirectorySeparator(folder), StringComparison.OrdinalIgnoreCase) || !File.Exists(marker))
+        {
+            return null;
+        }
+
+        try
+        {
+            File.Delete(marker);
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Info("Auto HDR: " + marker + " ließ sich nicht löschen (" + ex.Message + ").");
+            return marker;
+        }
+    }
+
+    private void DeleteAllExcept(string folder, IReadOnlyCollection<string> keep)
+    {
+        foreach (var directory in Directory.EnumerateDirectories(folder))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+
+        foreach (var file in Directory.EnumerateFiles(folder))
+        {
+            if (!keep.Contains(Path.GetFullPath(file), StringComparer.OrdinalIgnoreCase))
+            {
+                File.Delete(file);
+            }
+        }
+
+        _log.Info("Gelöscht bis auf " + string.Join(", ", keep.Select(Path.GetFileName)) + ": " + folder);
     }
 
     private void DeleteIfEmpty(string folder) => SetupSupport.DeleteIfEmpty(folder, _log);

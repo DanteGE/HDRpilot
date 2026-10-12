@@ -29,6 +29,7 @@ public static class SetupText
     {
         UninstallStep.StopRunningApp => SetupStrings.UninstallStepStopRunningApp,
         UninstallStep.RestoreHdr => SetupStrings.UninstallStepRestoreHdr,
+        UninstallStep.RestoreAutoHdr => SetupStrings.UninstallStepRestoreAutoHdr,
         UninstallStep.RemoveFiles => SetupStrings.UninstallStepRemoveFiles,
         UninstallStep.RemoveShortcuts => SetupStrings.UninstallStepRemoveShortcuts,
         UninstallStep.RemoveAutostart => SetupStrings.UninstallStepRemoveAutostart,

@@ -4,6 +4,7 @@ using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Setup;
 using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hosting;
 using HdrPilot.Core.Launch;
@@ -91,7 +92,9 @@ public partial class App : Application
         };
 
         var paths = args.ConfigDir is { } dir ? AppPaths.InDirectory(System.IO.Path.GetFullPath(dir)) : AppPaths.Default(SystemEnvironment.Instance);
-        _host = new AutomationHost(paths);
+
+        // Auto HDR (E88): mit eigener Ablage immer eine Testwurzel, nie der echte Schlüssel von Windows.
+        _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
         _services = new AppServices(_host, Dispatcher, instance);
         try
         {
@@ -119,7 +122,8 @@ public partial class App : Application
         }
 
         ThemeManager.Initialize(this);
-        _host = new AutomationHost(AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir)));
+        var paths = AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir));
+        _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
         _services = new AppServices(_host, Dispatcher, instance: null);
         try
         {

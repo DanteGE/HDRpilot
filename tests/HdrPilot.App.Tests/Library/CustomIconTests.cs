@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
@@ -199,6 +200,113 @@ public sealed class CustomIconTests : IDisposable
     });
 
     [Fact]
+    public void CustomIcon_reset_never_deletes_the_file_of_another_game() => Sta.Run(async () =>
+    {
+        // Von Hand geänderte config.json: SWAT 4 nennt die PNG von SWAT 3. Zurücksetzen nimmt nur den Eintrag von SWAT 4 weg.
+        var swat4 = Game(GameSource.Gog, "1", "SWAT 4");
+        var swat3 = Game(GameSource.Gog, "2", "SWAT 3");
+        swat3.CustomIcon = CustomIcons.FileNameFor(swat3.Key);
+        swat4.CustomIcon = swat3.CustomIcon;
+        var context = new TestLibraryContext(swat4, swat3);
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        vm.SelectedGame = vm.Games.Single(g => g.Key == swat4.Key);
+
+        vm.ResetIconCommand.Execute(null);
+        await Until(() => !vm.ResetIconCommand.IsRunning);
+
+        Assert.Null(context.Config.FindGame(swat4.Key)!.CustomIcon);
+        Assert.Equal(swat3.CustomIcon, context.Config.FindGame(swat3.Key)!.CustomIcon);
+        Assert.Empty(context.FakeIcons.Deleted);
+        Assert.True(CustomIcons.BelongsTo(swat3.CustomIcon!.ToLowerInvariant(), swat3.Key));
+        Assert.False(CustomIcons.BelongsTo(swat3.CustomIcon, swat4.Key));
+        Assert.False(CustomIcons.BelongsTo(null, swat3.Key));
+    });
+
+    [Fact]
+    public void CustomIcon_of_a_removed_manual_game_is_deleted() => Sta.Run(async () =>
+    {
+        var game = Game(GameSource.Manual, "m1", "Mein Spiel", isNew: false);
+        game.CustomIcon = CustomIcons.FileNameFor(game.Key);
+        var context = new TestLibraryContext(game);
+        var dialogs = new FakeDialogs();
+        dialogs.Answers.Enqueue(true);
+        using var vm = new LibraryViewModel(context, dialogs);
+        vm.SelectedGame = vm.Games.Single();
+
+        vm.Details!.RemoveGameCommand.Execute(null);
+        await Until(() => context.Config.Games.Count == 0 && context.FakeIcons.Deleted.Count > 0);
+
+        Assert.Equal([game.CustomIcon], context.FakeIcons.Deleted); // keine verwaiste PNG im Datenordner
+    });
+
+    [Fact]
+    public void CustomIcon_is_not_replaced_by_an_older_icon_load_that_finishes_later() => Sta.Run(async () =>
+    {
+        // Die erste Anfrage der Zeile steht noch an (schnell gescrollt), da setzt der Nutzer ein eigenes Symbol. Die neue
+        // Anfrage ist zuerst fertig (zuletzt angefragte zuerst); das spätere Ergebnis der alten (automatisch) gilt nicht mehr.
+        var context = new TestLibraryContext(Game(GameSource.Steam, "1", "Spiel"));
+        var pending = new List<TaskCompletionSource<ImageSource?>>();
+        context.FakeIcons.Load = _ =>
+        {
+            var load = new TaskCompletionSource<ImageSource?>();
+            pending.Add(load);
+            return load.Task;
+        };
+        var dialogs = new FakeDialogs();
+        dialogs.IconFiles.Enqueue(@"C:\Bilder\eigen.png");
+        using var vm = new LibraryViewModel(context, dialogs);
+        var item = vm.Games.Single();
+        vm.SelectedGame = item;
+        Assert.Null(item.Icon); // erste Anfrage steht an
+
+        vm.ChangeIconCommand.Execute(null);
+        await Until(() => !vm.ChangeIconCommand.IsRunning);
+        Assert.Null(item.Icon); // neu angefragt, jetzt mit eigenem Symbol
+        Assert.Equal(2, pending.Count);
+
+        var custom = Frozen();
+        var automatic = Frozen();
+        pending[1].SetResult(custom);
+        await Until(() => ReferenceEquals(item.Icon, custom));
+        pending[0].SetResult(automatic);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+        Assert.Same(custom, item.Icon);
+    });
+
+    [Fact]
+    public void CustomIcon_menu_on_a_list_row_works_on_the_library()
+    {
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var game = Game(GameSource.Steam, "1091500", "Cyberpunk 2077");
+            game.CustomIcon = CustomIcons.FileNameFor(game.Key);
+            var model = new LibraryViewModel(new TestLibraryContext(game), new FakeDialogs());
+            model.SelectedGame = model.Games.Single();
+            var window = new MainWindow();
+            window.Attach(model);
+            WpfTestHost.Layout(window, new Size(1280, 800));
+            WpfTestHost.DoEvents();
+
+            // Die echte Zeile: Menü über den Zeilenstil, DataContext des Menüs ist die Bibliothek (über Tag der Zeile).
+            var list = (ListBox)window.FindName("GameList");
+            var row = Assert.IsType<ListBoxItem>(list.ItemContainerGenerator.ContainerFromIndex(0));
+            Assert.Same(model, row.Tag);
+            var menu = Assert.IsType<ContextMenu>(row.ContextMenu);
+            Assert.NotSame(((Button)window.FindName("DetailIconButton")).ContextMenu, menu); // je Verwendung eine Instanz
+            menu.PlacementTarget = row;
+            WpfTestHost.DoEvents();
+            var items = menu.Items.OfType<MenuItem>().ToList();
+            Assert.Equal(["ChangeIconMenuItem", "ResetIconMenuItem"], items.Select(AutomationProperties.GetAutomationId));
+            Assert.Same(model.ChangeIconCommand, items[0].Command);
+            Assert.Same(model.ResetIconCommand, items[1].Command);
+            Assert.True(items[1].IsEnabled); // eigenes Symbol gesetzt: „Symbol zurücksetzen“ frei
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void CustomIcon_menu_is_on_every_row_and_on_the_detail_icon()
     {
         WpfTestHost.Run(() =>
@@ -251,6 +359,13 @@ public sealed class CustomIconTests : IDisposable
     }
 
     private static DependencyProperty ContextMenuProperty() => FrameworkElement.ContextMenuProperty;
+
+    private static ImageSource Frozen()
+    {
+        var image = new DrawingImage();
+        image.Freeze();
+        return image;
+    }
 
     private static async Task Until(Func<bool> condition)
     {

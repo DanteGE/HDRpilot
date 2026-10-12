@@ -625,6 +625,21 @@ public sealed class XboxScannerTests
         Assert.Equal(@"C:\P\Assets\Square44x44Logo.targetsize-256_altform-unplated.png", PackageAssets.Resolve(fs, @"C:\P", @"Assets\Square44x44Logo.png"));
     }
 
+    [Theory]
+    [InlineData(@"SmallLogo", "scale-100", "targetsize-48", "targetsize-48")] // 44 px gegen 48 px
+    [InlineData(@"Square44x44Logo", "scale-400", "targetsize-256", "targetsize-256")] // 176 px gegen 256 px
+    [InlineData(@"Square44x44Logo", "scale-200", "targetsize-48", "scale-200")] // 88 px gegen 48 px
+    [InlineData(@"Square150x150Logo", "scale-100", "targetsize-96", "scale-100")] // Größe im Namen: 150 px gegen 96 px
+    public void Icon_logo_variants_are_compared_in_pixels(string stem, string first, string second, string expected)
+    {
+        // scale- nennt Prozent der Grundgröße, targetsize- Pixel: Es gewinnt die größere Datei, nicht die größere Zahl.
+        var fs = new InMemoryFileSystem()
+            .AddFile($@"C:\P\Assets\{stem}.{first}.png", "png")
+            .AddFile($@"C:\P\Assets\{stem}.{second}.png", "png");
+
+        Assert.Equal($@"C:\P\Assets\{stem}.{expected}.png", PackageAssets.Resolve(fs, @"C:\P", $@"Assets\{stem}.png"));
+    }
+
     private static XboxScanner Scanner(InMemoryFileSystem fs) =>
         new(fs, new FakeRegistry(), new FakeEnvironment(), new FakeResolver(null));
 

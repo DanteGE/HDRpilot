@@ -183,10 +183,13 @@ public sealed class FakeIcons : IGameIconService
 
     public ImageSource? GetCachedIcon(GameConfig game) => null;
 
+    /// <summary>Wenn gesetzt, liefert das die Symbole (etwa erst später fertige Anfragen); sonst sofort keins.</summary>
+    public Func<GameConfig, Task<ImageSource?>>? Load { get; set; }
+
     public Task<ImageSource?> GetIconAsync(GameConfig game, CancellationToken cancellationToken = default)
     {
         Requested.Add(game.Key);
-        return Task.FromResult<ImageSource?>(null);
+        return Load?.Invoke(game) ?? Task.FromResult<ImageSource?>(null);
     }
 
     public int Cleared { get; private set; }
@@ -217,6 +220,8 @@ public sealed class FakeIcons : IGameIconService
     }
 
     public void DeleteCustomIcon(string? fileName) => Deleted.Add(fileName);
+
+    public string? ShortcutIconFile(GameConfig game) => null;
 }
 
 public sealed class FakeShortcuts : IShortcutService

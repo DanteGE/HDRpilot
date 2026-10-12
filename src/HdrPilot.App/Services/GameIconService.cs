@@ -75,6 +75,7 @@ public sealed class GameIconService : IGameIconService
     private readonly ConcurrentDictionary<string, IconImage> _byPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, Task<ImageSource?>> _inflight = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, int> _epochs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _latest = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<WorkItem> _queue = new();
     private readonly object _gate = new();
     private int _workers;
@@ -125,6 +126,7 @@ public sealed class GameIconService : IGameIconService
     public Task<ImageSource?> GetIconAsync(GameConfig game, CancellationToken cancellationToken = default)
     {
         var signature = MemorySignature(game);
+        _latest[game.Key] = signature;
         if (_byGame.TryGetValue(game.Key, out var cached) && cached.Signature == signature)
         {
             return Task.FromResult(cached.Icon);
@@ -149,6 +151,7 @@ public sealed class GameIconService : IGameIconService
         _byGame.Clear();
         _byPath.Clear();
         _inflight.Clear();
+        _latest.Clear();
         _ = Task.Run(_choices.Release);
     }
 
@@ -165,6 +168,30 @@ public sealed class GameIconService : IGameIconService
 
     /// <summary>Löscht die PNG eines eigenen Symbols (fehlt sie, passiert nichts).</summary>
     public void DeleteCustomIcon(string? fileName) => _customIcons?.Delete(fileName);
+
+    /// <summary>
+    /// Symboldatei für eine Verknüpfung „Mit HDR starten“: die gemerkte automatische Wahl der Bibliothek, solange sie gilt
+    /// (gleiche Eingaben, Datei unverändert, Quelle erlaubt) und eine Verknüpfung sie zeigen kann (.ico oder .exe; dafür wird
+    /// kein Symbol gelesen). Sonst, etwa wenn ein eigenes Symbol gilt und nie automatisch gewählt wurde, die EXE wie in der
+    /// Liste, aber ohne tiefere Suche (<see cref="IconExecutableResolver.ResolveWithIcon"/>: Standardsymbole wie das von
+    /// EasyAntiCheat übersprungen, höchstens <see cref="IconExecutableResolver.MaxProbes"/> Symbole). Null ohne EXE (dann
+    /// das Symbol von HDRpilot). Ein eigenes Symbol kann eine Verknüpfung nicht zeigen: Sie verweist dauerhaft auf ihre
+    /// Symboldatei, und die PNG im Datenordner löscht „Symbol zurücksetzen“ später.
+    /// </summary>
+    public string? ShortcutIconFile(GameConfig game)
+    {
+        var patterns = _helperPatterns();
+        if (_choices.Get(game.Key) is { Path: { } path } choice
+            && choice.Signature == IconSignature.Of(game, patterns)
+            && (path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            && IsAllowedSource(game, path, patterns)
+            && string.Equals(_fileStamp(path), choice.Stamp, StringComparison.Ordinal))
+        {
+            return path;
+        }
+
+        return _resolver.ResolveWithIcon(game, patterns, ReadPath, deepSearch: false)?.Path;
+    }
 
     /// <summary>
     /// Wählt das Symbol eines Spiels sofort auf dem aufrufenden Thread, ohne Zwischenspeicher im Fenster (Messung und
@@ -289,15 +316,29 @@ public sealed class GameIconService : IGameIconService
 
     private ImageSource? Load(WorkItem item)
     {
+        if (IsOvertaken(item))
+        {
+            return null; // überholt: nicht mehr suchen (die Zeile verwirft das Ergebnis ohnehin)
+        }
+
         var game = item.Game;
-        var icon = (Custom(game) ?? Automatic(game))?.Icon.Image;
-        if (Volatile.Read(ref _generation) == item.Generation && MemorySignature(game) == item.Signature)
+        var icon = (Custom(game) ?? Automatic(game, () => !IsOvertaken(item)))?.Icon.Image;
+        if (!IsOvertaken(item) && MemorySignature(game) == item.Signature)
         {
             _byGame[game.Key] = new CachedIcon(item.Signature, icon);
         }
 
         return icon;
     }
+
+    /// <summary>
+    /// Überholt ist eine Anfrage, wenn das Fenster inzwischen zu ist oder für das Spiel inzwischen ein anderer Stand angefragt
+    /// ist (etwa mit den Hinweisen aus dem ersten Einlesen nach einem Update): Die neuere Anfrage liefert das Symbol, das
+    /// ältere Ergebnis würde sonst den Speicher und die gemerkte Wahl des neueren überschreiben.
+    /// </summary>
+    private bool IsOvertaken(WorkItem item) =>
+        Volatile.Read(ref _generation) != item.Generation
+        || (_latest.TryGetValue(item.Game.Key, out var latest) && latest != item.Signature);
 
     /// <summary>Eigenes Symbol; null, wenn keins gesetzt ist oder die Datei fehlt bzw. unlesbar ist (dann automatisch).</summary>
     private IconSelection? Custom(GameConfig game)
@@ -319,9 +360,12 @@ public sealed class GameIconService : IGameIconService
 
     /// <summary>
     /// Automatisches Symbol: die gemerkte Wahl, solange Spiel und Datei unverändert sind und die Quelle noch erlaubt ist (eine
-    /// Wahl ohne gutes Symbol nur <see cref="RecheckAfter"/> lang), sonst neu wählen und merken.
+    /// Wahl ohne gutes Symbol nur <see cref="RecheckAfter"/> lang), sonst neu wählen und merken. Nicht gemerkt wird eine Wahl
+    /// ohne gutes Symbol, solange der Spielordner fehlt (nicht installiert, Laufwerk getrennt): Nach der Installation am
+    /// selben Ort sind die Eingaben dieselben, und ohne Ordner kostet das erneute Wählen kaum etwas. Ebenso nicht, wenn
+    /// <paramref name="stillWanted"/> meldet, dass inzwischen ein neuerer Stand angefragt ist.
     /// </summary>
-    private IconSelection? Automatic(GameConfig game)
+    private IconSelection? Automatic(GameConfig game, Func<bool>? stillWanted = null)
     {
         var patterns = _helperPatterns();
         var signature = IconSignature.Of(game, patterns);
@@ -348,6 +392,17 @@ public sealed class GameIconService : IGameIconService
         }
 
         var selection = Choose(game, patterns);
+        if (stillWanted?.Invoke() == false)
+        {
+            return selection;
+        }
+
+        if (selection is not { Icon.IsGood: true } && !_resolver.InstallDirExists(game))
+        {
+            _choices.Remove(game.Key);
+            return selection;
+        }
+
         _choices.Set(game.Key, selection is null
             ? new IconChoice(signature, null, IconOrigin.Executable, null, 0, false, now)
             : new IconChoice(signature, selection.Path, selection.Origin, _fileStamp(selection.Path), selection.Icon.NativeSize, selection.Icon.IsGood, now));
@@ -409,12 +464,14 @@ public sealed class GameIconService : IGameIconService
     }
 
     /// <summary>
-    /// Darf eine gemerkte Quelle (aus icon-cache.json) noch gelesen werden? Nur ein aktueller Hinweis des Launchers oder eine
-    /// EXE, die die EXE-Wahl heute noch zulässt (etwa nach einer erweiterten Ausschlussliste nicht mehr).
+    /// Darf eine gemerkte Quelle (aus icon-cache.json) noch gelesen werden? Nur eine lokale, lesbare Datei
+    /// (<see cref="IconFiles.IsReadableCandidate"/>, nie UNC, auch wenn config.json und icon-cache.json von Hand dorthin
+    /// zeigen), die ein aktueller Hinweis des Launchers ist oder eine EXE, die die EXE-Wahl heute noch zulässt (etwa nach
+    /// einer erweiterten Ausschlussliste nicht mehr).
     /// </summary>
     private bool IsAllowedSource(GameConfig game, string path, IReadOnlyList<string>? patterns) =>
-        game.IconCandidates.Contains(path, StringComparer.OrdinalIgnoreCase)
-        || (IconFiles.IsLocalPath(path) && _resolver.IsAllowed(game, path, patterns));
+        IconFiles.IsReadableCandidate(path)
+        && (game.IconCandidates.Contains(path, StringComparer.OrdinalIgnoreCase) || _resolver.IsAllowed(game, path, patterns));
 
     private IconImage? ReadPath(string path) => _byPath.TryGetValue(path, out var cached) ? cached : _read(path);
 
@@ -433,8 +490,8 @@ public sealed record ResolvedIcon(string Path, IconImage Icon);
 /// <c>[&lt;Projekt&gt;\]Binaries\Win64\*.exe</c> dran, <c>*-Shipping.exe</c> vorn (die Starter im Spielordner tragen oft nur das
 /// Unreal- oder EasyAntiCheat-Symbol), danach die EXEs bis eine Ebene tief. Hilfsprogramme, vom Nutzer ausgeschlossene EXEs
 /// und die Ausschlussliste nur für Symbole (<see cref="IconExcludedExecutables"/>) zählen nie. Mit Symbolprobe
-/// (<see cref="ResolveWithIcon"/>, nur auf dem Arbeits-Thread der Symbole) werden EXEs ohne Symbol oder mit Standardsymbol
-/// übersprungen, solange es eine andere gibt, und als Ersatz wird bis drei Ebenen tief gesucht, begrenzt auf
+/// (<see cref="ResolveWithIcon"/>; mit tieferer Suche nur auf dem Arbeits-Thread der Symbole) werden EXEs ohne Symbol oder
+/// mit Standardsymbol übersprungen, solange es eine andere gibt, und als Ersatz wird bis drei Ebenen tief gesucht, begrenzt auf
 /// <see cref="DeepSearchMaxDirectories"/> Ordner und 1 s (gemessen ohne Grenze: im Mittel 66 ms, schlimmstenfalls 12 s).
 /// </summary>
 public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, long>? fileLength = null, TimeSpan? deepSearchBudget = null)
@@ -522,6 +579,9 @@ public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, 
 
         return fallback;
     }
+
+    /// <summary>True, wenn der Installationsordner vorhanden und durchsuchbar ist (nie eine Laufwerkswurzel).</summary>
+    public bool InstallDirExists(GameConfig game) => SearchableInstallDir(game) is not null;
 
     /// <summary>
     /// True, wenn die EXE heute als Symbolquelle des Spiels zulässig wäre: vorhanden, nicht ausgeschlossen und erkannt, vom

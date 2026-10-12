@@ -12,7 +12,8 @@ public sealed record ShortcutInfo(string TargetPath, string Arguments, string Wo
 
 /// <summary>
 /// Legt Verknüpfungen „HdrPilot.exe --run "&lt;Quelle:ID&gt;"“ an: auf dem Desktop und im Startmenü unter
-/// Programme\HdrPilot. Symbol ist die EXE des Spiels. Über die Windows-Shell (IShellLinkW, COM), ohne Fremdbibliothek.
+/// Programme\HdrPilot. Symbol ist das der Bibliothek, soweit eine Verknüpfung es zeigen kann (.ico oder .exe), sonst die
+/// EXE des Spiels. Über die Windows-Shell (IShellLinkW, COM), ohne Fremdbibliothek.
 /// Die Zielordner lassen sich für Tests umlenken.
 /// </summary>
 public sealed class ShortcutService : IShortcutService
@@ -28,7 +29,7 @@ public sealed class ShortcutService : IShortcutService
     /// <param name="desktopDirectory">Zielordner für Desktop-Verknüpfungen (Standard: Desktop des Benutzers).</param>
     /// <param name="programsDirectory">Startmenü-Ordner „Programme“ (Standard: der des Benutzers); darin entsteht „HdrPilot“.</param>
     /// <param name="targetPath">Ziel der Verknüpfung (Standard: <see cref="Environment.ProcessPath"/>).</param>
-    /// <param name="iconPath">EXE, deren Symbol die Verknüpfung zeigt (null: Symbol von HdrPilot).</param>
+    /// <param name="iconPath">EXE oder .ico, deren Symbol die Verknüpfung zeigt (null: Symbol von HdrPilot).</param>
     /// <param name="extraArguments">Zusätzliche Argumente nach „--run“, etwa „--config-dir“ einer Testablage.</param>
     public ShortcutService(
         string? desktopDirectory = null,

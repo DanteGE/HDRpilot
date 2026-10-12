@@ -100,7 +100,8 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - Details zum gewählten Spiel, von oben nach unten:
   - **Mit HDR starten**: schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel.
   - **Desktop** / **Startmenü**: legt eine Verknüpfung „<Spiel> (HDR)“ an, die das Spiel genauso über HDRpilot startet.
-    Im Startmenü liegt sie im Ordner „HDRpilot“.
+    Im Startmenü liegt sie im Ordner „HDRpilot“. Sie zeigt das Symbol der Liste, sofern es eine ICO- oder EXE-Datei ist
+    (ein eigenes Bild kann eine Verknüpfung nicht zeigen), sonst das der Spiel-EXE.
   - **Steam-Startoption kopieren** (nur bei Steam-Spielen): Notlösung für Spiele, die du lieber direkt aus Steam
     startest. Kopiert `"…\HDRpilot.exe" --wrap -- %command%`; in Steam per Rechtsklick auf das Spiel → Eigenschaften →
     Allgemein → Startoptionen einfügen. Dann ist HDR auch beim Start aus Steam an, bevor das Spiel startet

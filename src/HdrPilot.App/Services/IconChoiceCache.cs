@@ -21,7 +21,8 @@ public sealed record IconChoice(string Signature, string? Path, IconOrigin Origi
 /// <c>&lt;Datenordner&gt;\icon-cache.json</c>, damit das Öffnen der Bibliothek nach einem Neustart keine Spielordner
 /// durchsucht (die EXE-Suche dauerte kalt 12,8 s für alle Spiele). Ungültig, sobald sich das Spiel oder die Wahlregeln
 /// ändern (<see cref="IconSignature"/>), die Datei eine andere Größe oder Änderungszeit hat oder die EXE-Wahl sie nicht mehr
-/// zulässt; eine Wahl ohne gutes Symbol gilt nur <see cref="GameIconService.RecheckAfter"/> lang. Gelesen erst beim ersten
+/// zulässt; eine Wahl ohne gutes Symbol gilt nur <see cref="GameIconService.RecheckAfter"/> lang und wird ohne Spielordner
+/// gar nicht gemerkt. Gelesen erst beim ersten
 /// Symbol, geschrieben gesammelt, wenn keine Symbole mehr anstehen; nach dem Schließen des Fensters nicht im Speicher.
 /// Nur ein Zwischenspeicher: fehlt die Datei oder ist sie kaputt, wird neu gewählt.
 /// </summary>
@@ -55,6 +56,18 @@ public sealed class IconChoiceCache(IFileSystem fileSystem, string? path, ILogge
         {
             Entries()[gameKey] = choice;
             _dirty = true;
+        }
+    }
+
+    /// <summary>Vergisst die Wahl eines Spiels (beim nächsten Mal wird neu gewählt).</summary>
+    public void Remove(string gameKey)
+    {
+        lock (_gate)
+        {
+            if (Entries().Remove(gameKey))
+            {
+                _dirty = true;
+            }
         }
     }
 
@@ -138,9 +151,9 @@ public sealed class IconChoiceCache(IFileSystem fileSystem, string? path, ILogge
 }
 
 /// <summary>
-/// Kennung der Eingaben, aus denen das automatische Symbol eines Spiels folgt: Stand der Regeln, Installationsordner,
-/// Symbol-Hinweise, bekannte, erkannte und ausgeschlossene EXEs sowie die Ausschlussliste für Hilfsprozesse. Ändert sich
-/// eine davon, wird neu gewählt.
+/// Kennung der Eingaben, aus denen das automatische Symbol eines Spiels folgt: Stand der Regeln, Installationsordner und ob
+/// das Spiel installiert ist (eine Wahl von vor einer Neuinstallation gilt danach nicht mehr), Symbol-Hinweise, bekannte,
+/// erkannte und ausgeschlossene EXEs sowie die Ausschlussliste für Hilfsprozesse. Ändert sich eine davon, wird neu gewählt.
 /// </summary>
 public static class IconSignature
 {
@@ -148,13 +161,14 @@ public static class IconSignature
     /// Stand der Wahlregeln (Reihenfolge, Ausschlussliste, Standardsymbole). Erhöhen, wenn sich eine Regel ändert: Dann
     /// gilt keine gemerkte Wahl mehr.
     /// </summary>
-    public const int RulesVersion = 1;
+    public const int RulesVersion = 2;
 
     public static string Of(GameConfig game, IReadOnlyList<string>? helperPatterns)
     {
         var text = new StringBuilder();
         text.Append(RulesVersion).Append('\n');
         text.Append(game.InstallDir).Append('\n');
+        text.Append(game.IsInstalled ? "installiert" : "nicht installiert").Append('\n');
         foreach (var list in new IEnumerable<string>[] { game.IconCandidates, game.KnownExecutables, game.DetectedExecutables, game.ExcludedExecutables, helperPatterns ?? ["<Standard>"] })
         {
             text.AppendJoin('|', list).Append('\n');

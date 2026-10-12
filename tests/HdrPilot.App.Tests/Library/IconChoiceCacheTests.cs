@@ -19,6 +19,7 @@ public sealed class IconChoiceCacheTests
     private readonly Dictionary<string, IconImage?> _icons = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _stamps = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _reads = [];
+    private readonly List<string> _stamped = [];
     private DateTimeOffset _now = new(2026, 10, 10, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
@@ -78,6 +79,7 @@ public sealed class IconChoiceCacheTests
     [Fact]
     public void Icon_choice_without_a_good_icon_is_rechecked_after_a_week()
     {
+        _files.AddDirectory(Dir);
         Add(Hint, IconSelectionTests.Icon(32));
         Service().Select(Game(), remember: true);
         Add(Exe, IconSelectionTests.Icon(256)); // ein Update des Spiels bringt eine scharfe EXE
@@ -89,6 +91,99 @@ public sealed class IconChoiceCacheTests
 
         _now += TimeSpan.FromDays(2);
         Assert.Equal(Exe, Service().Select(Game(), remember: true)!.Path);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Icon_choice_without_a_good_icon_is_not_remembered_while_the_game_folder_is_missing(bool blurryHint)
+    {
+        // Nicht installiert, Laufwerk getrennt: Nach der Installation am selben Ort ändern sich die Eingaben nicht, eine
+        // gemerkte Wahl ohne (gutes) Symbol hielte sich sonst bis zu einer Woche.
+        var game = blurryHint ? Game() : IconSelectionTests.Game();
+        if (blurryHint)
+        {
+            Add(Hint, IconSelectionTests.Icon(32));
+        }
+
+        Assert.Equal(blurryHint ? Hint : null, Service().Select(game, remember: true)?.Path);
+        Add(Exe, IconSelectionTests.Icon(256)); // installiert: Ordner und EXE sind da
+
+        Assert.Equal(Exe, Service().Select(game, remember: true)!.Path);
+    }
+
+    [Fact]
+    public void Icon_choice_is_renewed_when_the_game_is_installed_again()
+    {
+        // Nach der Deinstallation bleibt der Ordner (Spielstände), die EXE fehlt: ohne Symbol gemerkt. Nach der Installation
+        // ist das Spiel wieder „installiert“, und es wird neu gewählt.
+        _files.AddDirectory(Dir);
+        var uninstalled = IconSelectionTests.Game();
+        uninstalled.IsInstalled = false;
+        var installed = IconSelectionTests.Game();
+        Assert.Null(Service().Select(uninstalled, remember: true));
+        Add(Exe, IconSelectionTests.Icon(256));
+        Assert.Null(Service().Select(uninstalled, remember: true)); // gleiche Eingaben: gemerkt
+
+        Assert.Equal(Exe, Service().Select(installed, remember: true)!.Path);
+    }
+
+    [Fact]
+    public void Icon_choice_never_reads_a_network_path_even_when_both_files_name_it()
+    {
+        // Von Hand geänderte config.json (Hinweis) und icon-cache.json (gemerkte Wahl mit passender Kennung): kein Zugriff auf
+        // einen fremden Rechner, weder für Größe und Änderungszeit noch für das Symbol.
+        const string unc = @"\\Server\Freigabe\spiel.ico";
+        _icons[unc] = IconSelectionTests.Icon(256);
+        _stamps[unc] = "1";
+        Add(Exe, IconSelectionTests.Icon(256));
+        _files.AddFile(CacheFile, Remembered(IconSignature.Of(Game(unc), null), unc).Replace("Executable", "Launcher", StringComparison.Ordinal));
+
+        Assert.Equal(Exe, Service().Select(Game(unc), remember: true)!.Path);
+        Assert.DoesNotContain(unc, _reads);
+        Assert.DoesNotContain(unc, _stamped);
+    }
+
+    [Fact]
+    public void Icon_choice_of_the_list_is_used_for_shortcuts_when_a_shortcut_can_show_it()
+    {
+        // „Mit HDR starten“ zeigt dasselbe Symbol wie die Liste (etwa das Steam-Symbol statt eines Starters mit
+        // EasyAntiCheat-Symbol), sofern es eine .ico oder .exe ist; gelesen wird dafür kein Symbol.
+        Add(Hint, IconSelectionTests.Icon(256));
+        var service = Service();
+        Assert.Null(service.ShortcutIconFile(Game())); // noch nichts gewählt
+        service.Select(Game(), remember: true);
+        _reads.Clear();
+
+        Assert.Equal(Hint, service.ShortcutIconFile(Game()));
+        Assert.Empty(_reads);
+        Assert.Null(service.ShortcutIconFile(Game(@"C:\Steam\steam\games\neu.ico"))); // Spiel geändert: Wahl gilt nicht mehr
+        _stamps[Hint] = "anders";
+        Assert.Null(service.ShortcutIconFile(Game())); // Datei ersetzt
+
+        const string logo = @"C:\XboxGames\Spiel\Content\Logo.png";
+        Add(logo, IconSelectionTests.Icon(256));
+        service.Select(Game(logo), remember: true);
+        Assert.Null(service.ShortcutIconFile(Game(logo))); // ein Bild kann eine Verknüpfung nicht zeigen
+    }
+
+    [Fact]
+    public void Icon_for_shortcuts_without_a_remembered_choice_skips_default_icons()
+    {
+        // Nichts gemerkt (etwa weil ein eigenes Symbol gilt) und nur der Starter erkannt: nicht dessen EasyAntiCheat-Symbol,
+        // sondern die EXE wie in der Liste, ohne tiefere Suche.
+        const string starter = Dir + @"\TheIsle.exe";
+        const string shipping = Dir + @"\TheIsle\Binaries\Win64\TheIsleClient-Win64-Shipping.exe";
+        Add(starter, IconSelectionTests.Icon(256, generic: true));
+        Add(shipping, IconSelectionTests.Icon(256));
+        var game = IconSelectionTests.Game();
+        game.DetectedExecutables = [starter];
+
+        Assert.Equal(shipping, Service().ShortcutIconFile(game));
+
+        game.InstallDir = @"D:\Fehlt";
+        game.DetectedExecutables = [];
+        Assert.Null(Service().ShortcutIconFile(game)); // gar keine EXE: Symbol von HDRpilot
     }
 
     [Fact]
@@ -154,7 +249,15 @@ public sealed class IconChoiceCacheTests
             return _icons.GetValueOrDefault(p);
         },
         choiceCacheFile: CacheFile,
-        fileStamp: p => _stamps.GetValueOrDefault(p),
+        fileStamp: p =>
+        {
+            lock (_stamped)
+            {
+                _stamped.Add(p);
+            }
+
+            return _stamps.GetValueOrDefault(p);
+        },
         now: () => _now);
 
     private static GameConfig Game(params string[] hints) => IconSelectionTests.Game(hints.Length == 0 ? [Hint] : hints);

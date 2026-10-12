@@ -48,6 +48,13 @@ public interface IGameIconService
 
     /// <summary>Gespeichertes eigenes Symbol löschen (ungültige oder fehlende Namen: nichts).</summary>
     void DeleteCustomIcon(string? fileName);
+
+    /// <summary>
+    /// Symboldatei für eine Verknüpfung „Mit HDR starten“: die gemerkte automatische Wahl der Bibliothek, wenn sie noch gilt
+    /// und eine .ico oder .exe ist (Bilder und eigene Symbole kann eine Verknüpfung nicht zeigen), sonst die EXE wie in der
+    /// Liste ohne tiefere Suche (Standardsymbole übersprungen); null ohne EXE.
+    /// </summary>
+    string? ShortcutIconFile(GameConfig game);
 }
 
 /// <summary>Text in die Zwischenablage legen (in Tests ersetzbar, damit kein Test die echte Zwischenablage berührt).</summary>

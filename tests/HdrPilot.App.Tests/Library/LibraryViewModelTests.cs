@@ -412,6 +412,24 @@ public sealed class LibraryViewModelTests
     });
 
     [Fact]
+    public void Row_icon_is_requested_again_when_the_game_is_installed_again() => Sta.Run(() =>
+    {
+        // Ohne Spielordner gibt es oft kein Symbol; nach der Installation (Einlesen) fragt die sichtbare Zeile neu an.
+        var context = SampleContext();
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        var item = vm.Games.Single(g => g.Name == "Eigenes Spiel");
+        _ = item.Icon;
+
+        context.ConfigService.Update(c => c.FindGame(item.Key)!.HdrAuto = false);
+        _ = item.Icon;
+        Assert.Equal([item.Key], context.FakeIcons.Requested); // nichts für das Symbol geändert: keine neue Anfrage
+
+        context.ConfigService.Update(c => c.FindGame(item.Key)!.IsInstalled = true);
+        _ = item.Icon;
+        Assert.Equal([item.Key, item.Key], context.FakeIcons.Requested);
+    });
+
+    [Fact]
     public void Candidates_from_search_folders_are_only_added_on_request() => Sta.Run(async () =>
     {
         var context = new TestLibraryContext(Game(GameSource.Steam, "1", "Bekannt", installDir: @"E:\Spiele\Bekannt"));

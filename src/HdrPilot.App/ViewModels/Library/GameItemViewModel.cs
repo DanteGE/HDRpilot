@@ -23,6 +23,7 @@ public sealed class GameItemViewModel : ObservableObject
     private bool _isRunning;
     private HdrSupportStatus _hdrSupport;
     private bool _iconRequested;
+    private int _iconRequest;
     private ImageSource? _icon;
 
     internal GameItemViewModel(LibraryViewModel owner, GameConfig config)
@@ -150,9 +151,16 @@ public sealed class GameItemViewModel : ObservableObject
     /// <summary>Ein eigenes Symbol ist gesetzt („Symbol zurücksetzen“ möglich).</summary>
     public bool HasCustomIcon => !string.IsNullOrEmpty(_config.CustomIcon);
 
-    internal void SetIcon(ImageSource? icon)
+    /// <summary>Nummer der laufenden Symbolanfrage; <see cref="ReloadIcon"/> zählt weiter.</summary>
+    internal int IconRequest => _iconRequest;
+
+    /// <summary>
+    /// Ergebnis einer Symbolanfrage. Eines aus einer älteren Anfrage (vor <see cref="ReloadIcon"/>) wird verworfen: Die neue
+    /// Anfrage ist oft zuerst fertig (zuletzt angefragte zuerst), und das alte Symbol darf das neue nicht überschreiben.
+    /// </summary>
+    internal void SetIcon(ImageSource? icon, int request)
     {
-        if (icon is not null && !ReferenceEquals(icon, _icon))
+        if (request == _iconRequest && icon is not null && !ReferenceEquals(icon, _icon))
         {
             _icon = icon;
             OnPropertyChanged(nameof(Icon));
@@ -164,10 +172,11 @@ public sealed class GameItemViewModel : ObservableObject
     {
         if (!_iconRequested)
         {
-            return; // Noch nie sichtbar: wird beim ersten Anzeigen ohnehin geladen.
+            return; // Noch nie sichtbar oder schon neu angefragt: wird beim nächsten Anzeigen ohnehin geladen.
         }
 
         _iconRequested = false;
+        _iconRequest++;
         _icon = null;
         OnPropertyChanged(nameof(Icon));
     }
@@ -199,10 +208,11 @@ public sealed class GameItemViewModel : ObservableObject
         IsInstalled = config.IsInstalled;
     }
 
-    /// <summary>Gleiche Eingaben für das Symbol (eigenes Symbol, Hinweise, Ordner, EXEs): dann nicht neu laden.</summary>
+    /// <summary>Gleiche Eingaben für das Symbol (eigenes Symbol, Hinweise, Ordner, installiert, EXEs): dann nicht neu laden.</summary>
     private static bool SameIconInputs(GameConfig a, GameConfig b) =>
         string.Equals(a.CustomIcon, b.CustomIcon, StringComparison.Ordinal)
         && string.Equals(a.InstallDir, b.InstallDir, StringComparison.OrdinalIgnoreCase)
+        && a.IsInstalled == b.IsInstalled
         && a.IconCandidates.SequenceEqual(b.IconCandidates, StringComparer.OrdinalIgnoreCase)
         && a.KnownExecutables.SequenceEqual(b.KnownExecutables, StringComparer.OrdinalIgnoreCase)
         && a.DetectedExecutables.SequenceEqual(b.DetectedExecutables, StringComparer.OrdinalIgnoreCase)

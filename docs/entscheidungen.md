@@ -551,8 +551,10 @@ in der 64-Bit-Sicht (gemessen: alle 798 Einträge dort, keiner unter WOW6432Node
 `.url`-Verknüpfung (Startmenü, Desktop eine Ebene tief), sonst `appcache\librarycache\<ID>\<icon>.jpg` (immer 32 px);
 Namen, die keine 40-stelligen SHA-1-Werte sind, werden nie als Pfad benutzt. GOG: `goggame-<ID>.ico`, dann
 `*_glx_square_icon_v2.webp` aus dem Zwischenspeicher von GOG Galaxy. Xbox: Logos aus MicrosoftGame.config
-(Square480x480Logo zuerst) und appxmanifest.xml, auch nur mit Zusatz wie `.scale-200` vorhanden (größter Wert gewinnt,
-Kontrast-Varianten nie, nie außerhalb des Paketordners). Ubisoft: `DisplayIcon` von „Uplay Install <ID>“ (32-Bit-Sicht).
+(Square480x480Logo zuerst) und appxmanifest.xml, auch nur mit Zusatz wie `.scale-200` vorhanden (die größte Variante
+in Pixeln gewinnt: `targetsize-48` sind 48 px, `scale-100` die Grundgröße aus dem Namen wie 150 bei Square150x150Logo,
+sonst 44 wie beim kleinen App-Symbol, das als einziges `targetsize-` kennt; Kontrast-Varianten nie, nie außerhalb des
+Paketordners). Ubisoft: `DisplayIcon` von „Uplay Install <ID>“ (32-Bit-Sicht).
 Epic, EA, Battle.net und eigene Spiele: nur die EXE. Die Hinweise stehen in config.json (`iconCandidates`), damit die
 Bibliothek schon vor dem Ende des Einlesens beim Start das richtige Symbol zeigt; gemessen sind das bei 650 Spielen
 89 KB (18 % der Datei), fast immer ein Pfad je Spiel. Alte Konfigurationen laden unverändert (fehlende Felder: keine
@@ -590,23 +592,34 @@ Bibliothek.
 
 Gemerkte Wahl: `<Datenordner>\icon-cache.json` merkt sich je Spiel Datei, Art der Quelle, Größe und Änderungszeit der
 Datei und ob das Symbol gut war; ein Kaltstart liest dann nur diese eine Datei (die EXE-Suche dauerte kalt 12,8 s für
-alle Spiele). Neu gewählt wird, wenn sich das Spiel (Ordner, Hinweise, EXEs, Liste der Hilfsprozesse) oder der Stand der
-Regeln (`IconSignature.RulesVersion`) ändert, die Datei eine andere Größe oder Änderungszeit hat oder die EXE-Wahl sie
-nicht mehr zulässt (etwa nach einer erweiterten Ausschlussliste oder bei einer Datei außerhalb des Spiels), außerdem bei
-einer Wahl ohne gutes Symbol nach 7 Tagen. Geschrieben wird gesammelt, wenn keine Symbole mehr anstehen; ist die Datei
-kaputt, wird nur neu gewählt.
+alle Spiele). Neu gewählt wird, wenn sich das Spiel (Ordner, installiert oder nicht, Hinweise, EXEs, Liste der
+Hilfsprozesse) oder der Stand der Regeln (`IconSignature.RulesVersion`) ändert, die Datei eine andere Größe oder
+Änderungszeit hat oder die EXE-Wahl sie nicht mehr zulässt (etwa nach einer erweiterten Ausschlussliste oder bei einer
+Datei außerhalb des Spiels), außerdem bei einer Wahl ohne gutes Symbol nach 7 Tagen. Eine Wahl ohne gutes Symbol wird
+nicht gemerkt, solange der Spielordner fehlt (nicht installiert, Laufwerk getrennt): Nach der Installation am selben Ort
+blieben die Eingaben gleich, und ohne Ordner kostet das erneute Wählen kaum etwas. Eine gemerkte Datei wird nur gelesen,
+wenn sie lokal ist (nie UNC, auch wenn config.json und icon-cache.json von Hand dorthin zeigen). Geschrieben wird
+gesammelt, wenn keine Symbole mehr anstehen; ist die Datei kaputt, wird nur neu gewählt. Fragt eine Zeile neu an (neue
+Hinweise aus dem Einlesen, eigenes Symbol), während ihre alte Anfrage noch wartet, wird die alte übersprungen und ihr
+Ergebnis verworfen, damit es das neue Symbol nicht überschreibt. Verknüpfungen „Mit HDR starten“ zeigen die gemerkte
+Wahl, wenn sie eine .ico oder .exe ist (etwa das Steam-Symbol statt eines Starters mit EasyAntiCheat-Symbol), sonst die
+EXE wie in der Liste ohne tiefere Suche (Standardsymbole übersprungen, höchstens 24 Symbole gelesen, beim Anlegen auf
+dem UI-Thread). Bilder kann eine Verknüpfung nicht zeigen; eine .ico-Kopie des eigenen Symbols gibt es bewusst nicht,
+weil die Verknüpfung dauerhaft auf ihre Symboldatei verweist und „Symbol zurücksetzen“ diese löschen würde.
 
 Eigenes Symbol (G8.3): Rechtsklick auf ein Spiel in der Liste oder Klick auf das große Symbol im Detailbereich öffnet ein
 Menü mit „Symbol ändern…“ (`ChangeIconMenuItem`) und „Symbol zurücksetzen“ (`ResetIconMenuItem`, nur mit eigenem Symbol
 frei). Der Dateidialog („Bilder und Programme“) nimmt PNG, JPG, WebP, BMP, GIF, ICO oder EXE; daraus wird außerhalb des
 UI-Threads eine PNG mit 96 px (Seitenverhältnis bleibt, Rest durchsichtig) unter
 `<Datenordner>\icons\<Schlüssel>_<Prüfsumme>.png` (mit `--config-dir` in der Testablage), die gewählte Datei bleibt
-unverändert. In config.json steht nur der Dateiname (`customIcon`); ein Pfad oder ein anderer Name wird beim Laden
-verworfen, damit „Symbol zurücksetzen“ nie fremde Dateien löscht. Das eigene Symbol geht allem vor; fehlt die Datei
-(etwa auf einem anderen PC: config.json liegt im roamenden Profil, der Datenordner nicht) oder ist sie unlesbar, gilt
-das automatische. Die Liste zeigt die Änderung sofort. Der Dateidialog ist austauschbar (`ILibraryDialogs.PickIconFile`);
-weil UI-Automation keinen Dateidialog bedienen kann, nimmt er nur mit `--config-dir` die Datei aus der
-Umgebungsvariable `HDRPILOT_TEST_ICON_FILE`.
+unverändert. In config.json steht nur der Dateiname (`customIcon`); ein Pfad oder ein anderer Name als eine schlichte
+PNG wird beim Laden verworfen. Gelöscht wird nur die PNG, deren Name zum Spiel gehört (`CustomIcons.BelongsTo`), beim
+Zurücksetzen und beim Entfernen eines eigenen Spiels: „Symbol zurücksetzen“ löscht nie fremde Dateien, auch nicht die
+eines anderen Spiels, dessen Namen eine von Hand geänderte config.json nennt. Das eigene Symbol geht allem vor; fehlt
+die Datei (etwa auf einem anderen PC: config.json liegt im roamenden Profil, der Datenordner nicht) oder ist sie
+unlesbar, gilt das automatische. Die Liste zeigt die Änderung sofort. Der Dateidialog ist austauschbar
+(`ILibraryDialogs.PickIconFile`); weil UI-Automation keinen Dateidialog bedienen kann, nimmt er nur mit `--config-dir`
+die Datei aus der Umgebungsvariable `HDRPILOT_TEST_ICON_FILE`.
 
 Robustheit, Messung und Prüfung: Fehlende Decoder (WebP, HEIF auf anderen PCs), kaputte oder gesperrte Dateien gelten
 als „kein Symbol“ und landen nur im Debug-Protokoll; Bilddateien über 32 MB oder mit mehr als 36 Megapixeln werden nicht

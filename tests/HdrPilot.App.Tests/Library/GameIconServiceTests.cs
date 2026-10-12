@@ -187,6 +187,53 @@ public sealed class GameIconServiceTests
     }
 
     [Fact]
+    public async Task Icon_request_overtaken_by_a_newer_state_of_the_game_is_skipped()
+    {
+        // Erstes Öffnen nach dem Update während des ersten Einlesens: Die Zeile fragt mit dem alten Stand (ohne Hinweise) an,
+        // das Einlesen bringt das Steam-Symbol, die Zeile fragt neu an. Die neue Anfrage läuft zuerst (zuletzt angefragte
+        // zuerst); die alte durchsucht danach weder die EXEs noch überschreibt sie den Speicher des neuen Stands.
+        Exe(@"D:\B\B.exe", 10);
+        Exe(@"D:\A\A.exe", 10);
+        const string hint = @"C:\Steam\steam\games\a.ico";
+        _files.AddFile(hint, new byte[10]);
+        var blocker = Game(@"D:\B");
+        blocker.SourceId = "2";
+        var old = Game(@"D:\A");
+        var updated = Game(@"D:\A");
+        updated.IconCandidates = [hint];
+        using var gate = new ManualResetEventSlim(false);
+        using var started = new ManualResetEventSlim(false);
+        var reads = new List<string>();
+        var service = new GameIconService(_files, fileLength: p => _files.ReadAllBytes(p).Length, maxParallel: 1, read: p =>
+        {
+            lock (reads)
+            {
+                reads.Add(p);
+            }
+
+            if (p.EndsWith("B.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                started.Set();
+                gate.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            }
+
+            return IconSelectionTests.Icon(256);
+        });
+
+        var loadingB = service.GetIconAsync(blocker, TestContext.Current.CancellationToken);
+        Assert.True(started.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        var oldLoad = service.GetIconAsync(old, TestContext.Current.CancellationToken);
+        var newLoad = service.GetIconAsync(updated, TestContext.Current.CancellationToken);
+        gate.Set();
+
+        Assert.NotNull(await newLoad.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.Null(await oldLoad.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        await loadingB;
+        Assert.DoesNotContain(@"D:\A\A.exe", reads);
+        Assert.NotNull(service.GetCachedIcon(updated));
+    }
+
+    [Fact]
     public async Task Games_without_any_exe_get_no_icon()
     {
         _files.AddDirectory(@"D:\Leer");

@@ -36,6 +36,15 @@ public static class CustomIcons
         return text + "_" + Convert.ToHexString(hash, 0, 4) + ".png";
     }
 
+    /// <summary>
+    /// True, wenn der Name das eigene Symbol dieses Spiels ist (<see cref="FileNameFor"/>). Nur dann löscht die App die Datei:
+    /// Gibt eine von Hand geänderte config.json einem Spiel den Namen eines anderen, bleibt dessen Symbol erhalten.
+    /// </summary>
+    public static bool BelongsTo(string? fileName, string gameKey) =>
+        !string.IsNullOrWhiteSpace(fileName)
+        && !string.IsNullOrWhiteSpace(gameKey)
+        && string.Equals(fileName, FileNameFor(gameKey), StringComparison.OrdinalIgnoreCase);
+
     /// <summary>True für einen schlichten PNG-Dateinamen ohne Ordner (nie „..“, nie ein Pfad).</summary>
     public static bool IsValidFileName(string? name) =>
         !string.IsNullOrWhiteSpace(name)

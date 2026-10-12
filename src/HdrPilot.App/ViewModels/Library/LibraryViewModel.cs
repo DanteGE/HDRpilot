@@ -854,9 +854,11 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     internal async Task RemoveGameAsync(GameItemViewModel item)
     {
         var key = item.Key;
+        var customIcon = item.Config.CustomIcon;
         var ok = await WriteAsync(c => c.Games.RemoveAll(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase)));
         if (ok)
         {
+            DeleteCustomIconQuietly(key, customIcon); // keine verwaiste PNG im Datenordner
             ShowStatus(LibraryText.Format(LibraryStrings.Game_Removed, item.Name), StatusKind.Info);
         }
     }
@@ -1167,12 +1169,14 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     private async Task LoadIconAsync(GameItemViewModel item)
     {
+        // Nummer der Anfrage: Fragt die Zeile inzwischen neu an (eigenes Symbol, neue Hinweise), gilt dieses Ergebnis nicht mehr.
+        var request = item.IconRequest;
         try
         {
             var icon = await _context.Icons.GetIconAsync(item.Config, _lifetime.Token);
             if (!_disposed)
             {
-                item.SetIcon(icon);
+                item.SetIcon(icon, request);
             }
         }
         catch (OperationCanceledException)
@@ -1323,11 +1327,14 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
         else if (!string.Equals(previous, name, StringComparison.OrdinalIgnoreCase))
         {
-            DeleteCustomIconQuietly(name); // nicht eingetragen (Schreibfehler, Spiel entfernt): keine verwaiste Datei
+            DeleteCustomIconQuietly(item.Key, name); // nicht eingetragen (Schreibfehler, Spiel entfernt): keine verwaiste Datei
         }
     }
 
-    /// <summary>„Symbol zurücksetzen“: Eintrag entfernen, dann die PNG löschen; das automatische Symbol gilt sofort.</summary>
+    /// <summary>
+    /// „Symbol zurücksetzen“: Eintrag entfernen, dann die PNG löschen, aber nur die eigene des Spiels; das automatische
+    /// Symbol gilt sofort.
+    /// </summary>
     private async Task ResetIconAsync()
     {
         if (_selectedGame is not { HasCustomIcon: true } item)
@@ -1341,7 +1348,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             return;
         }
 
-        DeleteCustomIconQuietly(name);
+        DeleteCustomIconQuietly(item.Key, name);
         RefreshIcon(item);
         ShowStatus(LibraryText.Format(LibraryStrings.Icon_ResetDone, item.Name), StatusKind.Success);
     }
@@ -1358,9 +1365,18 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         ResetIconCommand.RaiseCanExecuteChanged();
     }
 
-    /// <summary>Löscht eine PNG im Symbolordner; scheitert das, wirkt sie ohne Eintrag nicht mehr und wird beim nächsten Ändern ersetzt.</summary>
-    private void DeleteCustomIconQuietly(string? name)
+    /// <summary>
+    /// Löscht die PNG eines Spiels im Symbolordner, nur wenn der Name zu diesem Spiel gehört (<see cref="CustomIcons.BelongsTo"/>):
+    /// Nennt eine von Hand geänderte config.json die Datei eines anderen Spiels, fällt nur der Eintrag weg. Scheitert das
+    /// Löschen, wirkt die Datei ohne Eintrag nicht mehr und wird beim nächsten Ändern ersetzt.
+    /// </summary>
+    private void DeleteCustomIconQuietly(string gameKey, string? name)
     {
+        if (!CustomIcons.BelongsTo(name, gameKey))
+        {
+            return;
+        }
+
         try
         {
             _context.Icons.DeleteCustomIcon(name);

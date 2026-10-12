@@ -52,7 +52,7 @@ public sealed class AutoHdrService : IAutoHdrService, IAutoHdrSessionHooks
         Location = location;
         _logger = logger ?? NullLogger.Instance;
         _switch = new AutoHdrGlobalSwitch(
-            store, fileSystem, paths.AutoHdrGlobalFile, environment, clock, _logger, sessionOptions ?? SessionManagerOptions.Default);
+            store, fileSystem, paths.AutoHdrGlobalFile, paths.AutoHdrGlobalDoneFile, environment, clock, _logger, sessionOptions ?? SessionManagerOptions.Default);
     }
 
     public AutoHdrRegistryLocation Location { get; }
@@ -60,8 +60,9 @@ public sealed class AutoHdrService : IAutoHdrService, IAutoHdrSessionHooks
     public bool HoldsGlobalSwitch => _switch.IsHeld;
 
     /// <summary>
-    /// Beim Start der Automatik, vor dem ersten Zyklus: nur prüfen, ob ein Merker eines abgebrochenen Laufs da ist (eine
-    /// Dateiprüfung, kein Registry-Zugriff); zurückgestellt wird im ersten Zyklus (<see cref="OnRecovery"/>). Wirft nie.
+    /// Beim Start der Automatik, vor dem ersten Zyklus: nur prüfen, ob ein Merker eines abgebrochenen Laufs und ein
+    /// Kennzeichen „erledigt“ da sind (Dateiprüfungen, kein Registry-Zugriff); zurückgestellt wird im ersten Zyklus
+    /// (<see cref="OnRecovery"/>). Wirft nie.
     /// </summary>
     public void Start()
     {
@@ -74,7 +75,7 @@ public sealed class AutoHdrService : IAutoHdrService, IAutoHdrSessionHooks
 
             try
             {
-                _switch.Start(_fileSystem.FileExists(_paths.AutoHdrGlobalFile));
+                _switch.Start(_fileSystem.FileExists(_paths.AutoHdrGlobalFile), _fileSystem.FileExists(_paths.AutoHdrGlobalDoneFile));
             }
             catch (Exception ex)
             {

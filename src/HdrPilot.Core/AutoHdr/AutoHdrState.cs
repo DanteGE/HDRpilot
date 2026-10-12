@@ -15,8 +15,9 @@ public enum AutoHdrEntryStatus
     Applied,
 
     /// <summary>
-    /// Erledigt (zurückgestellt, vom Nutzer übernommen oder nie geschrieben), aber die Datei ließ sich nicht löschen: nie
-    /// zurückstellen, nur noch löschen.
+    /// Erledigt, nur die Datei blieb: nie zurückstellen, nur noch löschen. Frühere Form des Kennzeichens (Vorabversionen),
+    /// wird weiter gelesen, aber nicht mehr geschrieben: Eine Sperre, die das Löschen verhindert, verhindert unter NTFS auch
+    /// das Ersetzen der Datei; das Kennzeichen steht deshalb in <see cref="AutoHdrGlobalDone"/>.
     /// </summary>
     Released,
 }
@@ -45,7 +46,8 @@ public sealed class AutoHdrOriginalValue
 /// Inhalt von autohdr-global.json (Datenordner, maschinenbezogen): existiert nur, solange HDRpilot den globalen
 /// Auto-HDR-Schalter für einen Spielstart hält. Wird vor dem Schreiben angelegt und nach dem Zurückstellen gelöscht; findet
 /// ihn der nächste Start (Absturz von HDRpilot) oder das Entfernen über den Setup, stellen sie zurück. Ließ er sich nicht
-/// löschen, steht er auf <see cref="AutoHdrEntryStatus.Released"/> und wird nur noch gelöscht.
+/// löschen, hält autohdr-global.done (<see cref="AutoHdrGlobalDone"/>) fest, dass er erledigt ist: dann wird er nie
+/// zurückgestellt, nur noch gelöscht.
 /// </summary>
 public sealed class AutoHdrGlobalMarker
 {
@@ -59,8 +61,8 @@ public sealed class AutoHdrGlobalMarker
     public string ValueName { get; set; } = AutoHdrRegistryLocation.GlobalValueName;
 
     /// <summary>
-    /// <see cref="AutoHdrEntryStatus.Pending"/>, <see cref="AutoHdrEntryStatus.Applied"/> oder (Datei nicht löschbar)
-    /// <see cref="AutoHdrEntryStatus.Released"/>.
+    /// <see cref="AutoHdrEntryStatus.Pending"/> oder <see cref="AutoHdrEntryStatus.Applied"/>
+    /// (<see cref="AutoHdrEntryStatus.Released"/> nur aus Vorabversionen).
     /// </summary>
     public AutoHdrEntryStatus Status { get; set; }
 
@@ -89,6 +91,35 @@ public sealed class AutoHdrGlobalMarker
         && GpuPreferenceText.TryParse(Written, out _)
         && !string.Equals(Original.Text, Written, StringComparison.Ordinal)
         && Games is not null;
+}
+
+/// <summary>
+/// Inhalt von autohdr-global.done (neben autohdr-global.json): Der Merker mit diesem Zeitpunkt und Text ist erledigt
+/// (zurückgestellt, vom Nutzer übernommen oder nie geschrieben), ließ sich aber nicht löschen, etwa weil ein Virenscanner
+/// ihn sperrt. Eine eigene Datei, weil eine solche Sperre unter NTFS auch das Ersetzen des Merkers verhindert (Löschen und
+/// Ersetzen brauchen beide das Löschrecht an der Datei); diese hier sperrt sie nicht. Der nächste Start und das Entfernen
+/// über den Setup stellen einen passenden Merker nie zurück und löschen beide Dateien. Ein Merker eines späteren Setzens
+/// passt nicht (anderer Zeitpunkt).
+/// </summary>
+public sealed class AutoHdrGlobalDone
+{
+    public const int CurrentVersion = 1;
+
+    public int Version { get; set; } = CurrentVersion;
+
+    /// <summary><see cref="AutoHdrGlobalMarker.SetAt"/> des erledigten Merkers.</summary>
+    public DateTimeOffset SetAt { get; set; }
+
+    /// <summary><see cref="AutoHdrGlobalMarker.Written"/> des erledigten Merkers.</summary>
+    public string Written { get; set; } = string.Empty;
+
+    public static AutoHdrGlobalDone Of(AutoHdrGlobalMarker marker) => new() { SetAt = marker.SetAt, Written = marker.Written };
+
+    /// <summary>Gilt das Kennzeichen genau diesem Merker?</summary>
+    public bool Matches(AutoHdrGlobalMarker marker) =>
+        SetAt == marker.SetAt && string.Equals(Written, marker.Written, StringComparison.Ordinal);
+
+    internal bool IsValid() => Version == CurrentVersion && GpuPreferenceText.TryParse(Written, out _);
 }
 
 /// <summary>Ergebnis beim Lesen einer Zustandsdatei.</summary>

@@ -35,6 +35,12 @@ public sealed record AppPaths(string ConfigDirectory, string DataDirectory)
     /// </summary>
     public string AutoHdrGlobalFile => Path.Combine(DataDirectory, "autohdr-global.json");
 
+    /// <summary>
+    /// Kennzeichen „erledigt“ für einen <see cref="AutoHdrGlobalFile"/>, der sich nicht löschen ließ (E88): eigene Datei, weil
+    /// eine Sperre auf dem Merker unter NTFS auch sein Ersetzen verhindert. Existiert nur bis zum Löschen des Merkers.
+    /// </summary>
+    public string AutoHdrGlobalDoneFile => Path.Combine(DataDirectory, "autohdr-global.done");
+
     public static AppPaths Default(IAppEnvironment environment) => new(
         Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HDRpilot"),
         Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HDRpilot"));

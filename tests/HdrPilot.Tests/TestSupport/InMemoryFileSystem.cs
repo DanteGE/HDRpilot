@@ -66,7 +66,11 @@ public sealed class InMemoryFileSystem : IFileSystem
         return this;
     }
 
-    /// <summary>Löschen dieser Datei wirft die angegebene Ausnahme (etwa vom Virenscanner gesperrt). Null hebt es auf.</summary>
+    /// <summary>
+    /// Löschen dieser Datei wirft die angegebene Ausnahme (etwa vom Virenscanner gesperrt, ohne FILE_SHARE_DELETE geöffnet).
+    /// Wie unter NTFS scheitert dann auch das atomare Ersetzen der vorhandenen Datei (MoveFileEx mit REPLACE_EXISTING braucht
+    /// dasselbe Löschrecht); eine neue Datei an diesem Pfad lässt sich anlegen. Null hebt es auf.
+    /// </summary>
     public InMemoryFileSystem FailDeleting(string path, Exception? exception)
     {
         if (exception is null)
@@ -139,9 +143,16 @@ public sealed class InMemoryFileSystem : IFileSystem
 
     public void WriteAllTextAtomic(string path, string contents)
     {
-        if (_writeFailures.TryGetValue(PathUtil.Normalize(path), out var failure))
+        var p = PathUtil.Normalize(path);
+        if (_writeFailures.TryGetValue(p, out var failure))
         {
             throw failure;
+        }
+
+        // Gesperrt gegen Löschen: Ersetzen der vorhandenen Datei scheitert genauso (siehe FailDeleting).
+        if (_deleteFailures.TryGetValue(p, out var locked) && _files.ContainsKey(p))
+        {
+            throw locked;
         }
 
         AddFile(path, contents);

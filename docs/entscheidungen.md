@@ -709,16 +709,24 @@ Steam-Startoption (`PrepareAsync`) und bei der Frühwarnung von Steam und Epic (
 `PrepareAsync`, sonst nur die Ankündigung, ohne HDR zu schalten). Ein bloß erkanntes Spiel setzt nichts (Windows hat den
 Wert dann schon gelesen); eine Meldung nach einem Start ohne HDRpilot gibt es bewusst nicht. Aus demselben Grund kündigt
 die Sitzungslogik nichts an, solange das Spiel schon läuft (zweiter Klick auf „Mit HDR starten“, die Verknüpfung oder
-ein spätes Launcher-Signal): gesetzt hielte der Schalter bis zum Spielende nur für andere Spiele. HDRpilot setzt nur das
-Token (vorhanden an seiner Stelle, sonst angehängt; alle anderen Paare, ihre Reihenfolge und der Abschluss bleiben; ein
-fehlender Wert wird `AutoHDREnable=1;`) und fasst nur saubere REG_SZ an. Stand es schon auf `1` (Wahl des Nutzers),
+ein spätes Launcher-Signal): gesetzt hielte der Schalter bis zum Spielende nur für andere Spiele. Ebenso setzt der neue
+Versuch nach einem Fehler beim Setzen (Merker nicht gespeichert, Wert nicht lesbar oder nicht schreibbar; nach 30 s)
+nur, solange ein angekündigter Start noch aussteht; läuft das Spiel schon, bleibt der Schalter bis zum nächsten
+angekündigten Start aus. HDRpilot setzt nur das Token (vorhanden an seiner Stelle, sonst angehängt; alle anderen Paare,
+ihre Reihenfolge und der Abschluss bleiben; ein fehlender Wert wird `AutoHDREnable=1;`) und fasst nur saubere REG_SZ
+an. Stand es schon auf `1` (Wahl des Nutzers),
 ändert HDRpilot nichts und stellt nichts zurück. Jeder neue Start liest den Schalter neu, auch während HDRpilot ihn
 hält: Steht das Token dann nicht mehr auf `1` (der Nutzer hat in Windows oder im Tray umgestellt), ist das seine Wahl;
 der Merker entfällt, der neue Start setzt den Schalter für sein Spiel und merkt sich diesen Stand als den, der danach
 zurückkommt. Den Wert von vorher hält `<Datenordner>\autohdr-global.json` (vor dem Schreiben angelegt, nach dem
-Zurückstellen gelöscht; lässt die Datei sich nicht löschen, etwa weil ein Virenscanner sie sperrt, steht sie auf
-`Released`, wird nie mehr zurückgestellt, auch nicht vom Setup, und das Löschen wird alle 30 s und beim Beenden
-wiederholt). Die Ankündigung gilt, solange die HDR-Sitzung auf den Spielprozess wartet (Startfrist samt Verlängerung für
+Zurückstellen gelöscht). Lässt die Datei sich nicht löschen, etwa weil ein Virenscanner sie ohne Freigabe zum Löschen
+offen hält, lässt sie sich unter NTFS auch nicht ersetzen; das Kennzeichen „erledigt“ steht deshalb in einer eigenen
+Datei daneben, `autohdr-global.done` (Zeitpunkt und Text des Setzens). Einen Merker, zu dem es passt, stellen weder der
+nächste Start noch das Entfernen über den Setup je zurück, sie löschen beide Dateien; die App wiederholt das Löschen
+alle 30 s und beim Beenden (zuerst den Merker, nie solange ein neuer Start den Schalter hält). Ein Merker eines
+späteren Setzens passt nicht (anderer Zeitpunkt); ist das Kennzeichen nicht lesbar, bleibt alles, wie es ist (die App
+lässt Auto HDR in diesem Lauf aus, der Setup meldet es). Die Ankündigung gilt, solange die HDR-Sitzung auf den
+Spielprozess wartet (Startfrist samt Verlängerung für
 Launcher-Fenster), ohne Sitzung bis zur Startfrist; scheitert schon der Start-Befehl, nimmt
 `IAutoHdrSessionHooks.OnStartAbandoned` sie sofort zurück. Läuft das Spiel, endet es wie der HDR-Zustand: Nachlaufzeit,
 nach einem Lauf unter 5 Minuten der Neustart-Puffer, ein Neustart in dieser Zeit läuft weiter. Mehrere Spiele teilen

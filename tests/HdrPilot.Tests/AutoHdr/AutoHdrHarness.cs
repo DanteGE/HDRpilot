@@ -105,6 +105,15 @@ internal sealed class AutoHdrHarness
 
     public void WriteMarker(AutoHdrGlobalMarker marker) => Fs.AddFile(Paths.AutoHdrGlobalFile, JsonSerializer.Serialize(marker, ConfigJson.Options));
 
+    /// <summary>Kennzeichen „erledigt“ (autohdr-global.done); null, wenn es fehlt.</summary>
+    public AutoHdrGlobalDone? Done => Fs.FileExists(Paths.AutoHdrGlobalDoneFile)
+        ? JsonSerializer.Deserialize<AutoHdrGlobalDone>(Fs.ReadAllText(Paths.AutoHdrGlobalDoneFile), ConfigJson.Options)
+        : null;
+
+    /// <summary>Sperrt den Merker wie ein Virenscanner (Löschen und Ersetzen scheitern) oder hebt die Sperre auf.</summary>
+    public void LockMarker(bool locked) =>
+        Fs.FailDeleting(Paths.AutoHdrGlobalFile, locked ? new IOException("vom Virenscanner gesperrt") : null);
+
     public bool Logged(string fragment, LogLevel? level = null) =>
         Log.Entries.Any(e => (level is null || e.Level == level) && e.Message.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 

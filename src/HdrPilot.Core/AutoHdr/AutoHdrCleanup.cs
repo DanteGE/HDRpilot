@@ -14,9 +14,10 @@ public sealed record AutoHdrCleanupResult(int Restored, int LeftAsIs, int Failed
 /// <summary>
 /// Globalen Auto-HDR-Schalter ohne laufende App zurückstellen (E88), für das Entfernen über den Setup: Hinterließ ein
 /// Absturz von HDRpilot autohdr-global.json, gilt dieselbe Regel wie in der App (R1/R2/R3, eine Änderung durch den Nutzer
-/// bleibt). Braucht keine Konfiguration. Gehört der Merker zu einem anderen Schlüssel oder ist er nicht lesbar, bleibt
-/// alles, wie es ist; ein erledigter (<see cref="AutoHdrEntryStatus.Released"/>) wird nur gelöscht. Werte je Spiel-EXE
-/// schreibt HDRpilot nicht, also gibt es davon nichts zurückzunehmen.
+/// bleibt). Braucht keine Konfiguration. Gehört der Merker zu einem anderen Schlüssel oder ist er oder sein Kennzeichen
+/// (autohdr-global.done) nicht lesbar, bleibt alles, wie es ist; ein erledigter (passendes Kennzeichen, aus Vorabversionen
+/// <see cref="AutoHdrEntryStatus.Released"/>) wird nur gelöscht. Werte je Spiel-EXE schreibt HDRpilot nicht, also gibt es
+/// davon nichts zurückzunehmen.
 /// </summary>
 public static class AutoHdrCleanup
 {
@@ -44,11 +45,20 @@ public static class AutoHdrCleanup
             return new AutoHdrCleanupResult(0, 0, 0);
         }
 
-        if (marker.Status == AutoHdrEntryStatus.Released)
+        var donePath = paths.AutoHdrGlobalDoneFile;
+        var done = AutoHdrFiles.Load<AutoHdrGlobalDone>(fileSystem, donePath, d => d.IsValid(), clock: null);
+        if (done.State is AutoHdrFileState.Unreadable or AutoHdrFileState.Corrupt)
+        {
+            var doneProblem = Path.GetFileName(donePath) + (done.State == AutoHdrFileState.Unreadable ? " nicht lesbar: " : " defekt: ") + done.Problem;
+            log("Auto HDR global: " + doneProblem + ". Der globale Schalter bleibt unverändert, " + path + " bleibt.");
+            return new AutoHdrCleanupResult(0, 0, 0, doneProblem);
+        }
+
+        if (done.Data?.Matches(marker) == true || marker.Status == AutoHdrEntryStatus.Released)
         {
             // Die App hatte schon nichts mehr zurückzustellen (etwa die Wahl des Nutzers), nur die Datei blieb: nur löschen.
             log("Auto HDR global: " + Path.GetFileName(path) + " ist erledigt, nichts zurückzustellen.");
-            Delete(fileSystem, path, log);
+            Discard(fileSystem, path, donePath, marker, log);
             return new AutoHdrCleanupResult(0, 0, 0);
         }
 
@@ -64,20 +74,50 @@ public static class AutoHdrCleanup
         }
 
         log(AutoHdrRestore.Describe(result, "Auto HDR global: " + marker.ValueName, "Entfernen"));
-        Delete(fileSystem, path, log);
+        Discard(fileSystem, path, donePath, marker, log);
         return result.Outcome == AutoHdrRestoreOutcome.LeftAsIs ? new AutoHdrCleanupResult(0, 1, 0) : new AutoHdrCleanupResult(1, 0, 0);
     }
 
-    private static void Delete(IFileSystem fileSystem, string path, Action<string> log)
+    /// <summary>
+    /// Erledigten Merker löschen, danach sein Kennzeichen (ohne Merker gilt es nichts mehr). Bleibt der Merker gesperrt,
+    /// hält autohdr-global.done fest, dass er erledigt ist, damit ein späterer Start ihn nie zurückstellt (eine eigene
+    /// Datei: die Sperre verhindert unter NTFS auch das Ersetzen des Merkers).
+    /// </summary>
+    private static void Discard(IFileSystem fileSystem, string path, string donePath, AutoHdrGlobalMarker marker, Action<string> log)
+    {
+        if (!Delete(fileSystem, path, log))
+        {
+            try
+            {
+                AutoHdrFiles.Save(fileSystem, donePath, AutoHdrGlobalDone.Of(marker));
+                log("Als erledigt vermerkt: " + donePath);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log(donePath + " ließ sich nicht speichern: " + ex.Message);
+            }
+
+            return;
+        }
+
+        if (fileSystem.FileExists(donePath))
+        {
+            Delete(fileSystem, donePath, log);
+        }
+    }
+
+    private static bool Delete(IFileSystem fileSystem, string path, Action<string> log)
     {
         try
         {
             fileSystem.DeleteFile(path);
             log("Gelöscht: " + path);
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             log(path + " ließ sich nicht löschen: " + ex.Message);
+            return false;
         }
     }
 

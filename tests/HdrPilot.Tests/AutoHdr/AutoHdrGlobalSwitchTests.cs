@@ -52,6 +52,23 @@ public sealed class AutoHdrGlobalSwitchTests
         }
     }
 
+    /// <summary>Fehler beim Setzen ein- oder ausschalten: Merker nicht speicherbar, Wert nicht lesbar oder nicht schreibbar.</summary>
+    private void Fail(string failure, bool on)
+    {
+        switch (failure)
+        {
+            case "Merker":
+                _h.Fs.FailWriting(_h.Paths.AutoHdrGlobalFile, on ? new IOException("Platte voll") : null);
+                break;
+            case "Lesen":
+                _h.Store.FailReads = on ? new UnauthorizedAccessException("verweigert") : null;
+                break;
+            default:
+                _h.Store.FailWrites = on ? new UnauthorizedAccessException("verweigert") : null;
+                break;
+        }
+    }
+
     [Fact]
     public void Game_started_without_hdrpilot_never_touches_the_switch()
     {
@@ -488,6 +505,95 @@ public sealed class AutoHdrGlobalSwitchTests
         }
 
         Assert.Equal(GlobalOn, _h.Value(Global));
+    }
+
+    [Theory]
+    [InlineData("Merker")]
+    [InlineData("Lesen")]
+    [InlineData("Schreiben")]
+    public void Retry_after_a_failure_never_sets_the_switch_once_the_game_runs(string failure)
+    {
+        Setup();
+        Fail(failure, true);
+        _h.Announce(_a); // das Setzen scheitert: das Spiel startet ohne Auto HDR
+        Fail(failure, false);
+
+        Cycles(400, _a); // der neue Versuch wäre nach 30 s fällig, aber Windows hat den Wert schon gelesen
+        Assert.Equal(0, _h.SetOnCount);
+        Assert.Equal(GlobalOff, _h.Value(Global));
+        Assert.Null(_h.Marker);
+        Assert.False(_h.Service.HoldsGlobalSwitch);
+        Cycles(11);
+        Assert.Equal(0, _h.SetOnCount);
+
+        // Gegenprobe: der nächste angekündigte Start setzt wieder.
+        _h.Announce(_a);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+    }
+
+    [Fact]
+    public void Retry_while_one_game_runs_still_sets_for_a_start_that_is_still_announced()
+    {
+        Setup();
+        var b = _h.AddGame("2", ExeB);
+        _h.Store.FailWrites = new UnauthorizedAccessException("verweigert");
+        _h.Announce(_a);
+        Cycles(5, _a); // A läuft ohne Auto HDR
+        _h.Announce(b); // B wartet noch auf seinen Prozess (neuer Versuch erst nach 30 s)
+        _h.Store.FailWrites = null;
+
+        for (var i = 0; i < 30; i++)
+        {
+            CycleWaiting([b], _a);
+        }
+
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.True(_h.Logged("AutoHDREnable=1 gesetzt für „Spiel 2“"));
+    }
+
+    [Fact]
+    public void Leftover_done_mark_without_a_marker_is_deleted_in_the_first_cycle()
+    {
+        Setup(start: false);
+        _h.Fs.AddFile(_h.Paths.AutoHdrGlobalDoneFile, "{}"); // Rest: der Merker ging, das Kennzeichen nicht
+
+        _h.Service.Start();
+        _h.Service.OnRecovery([], _h.Current, Now);
+        Cycle();
+
+        Assert.False(_h.Fs.FileExists(_h.Paths.AutoHdrGlobalDoneFile));
+        Assert.Empty(_h.GlobalOperations);
+        Assert.Equal(0, _h.Store.ReadsOf(Global));
+    }
+
+    [Fact]
+    public void Unreadable_done_mark_next_to_a_marker_keeps_everything_as_is()
+    {
+        Setup(start: false);
+        _h.Store.SetString(Global, GlobalOn);
+        _h.WriteMarker(new AutoHdrGlobalMarker
+        {
+            RegistryKey = _h.Store.KeyName,
+            Status = AutoHdrEntryStatus.Applied,
+            Original = new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.String, Text = GlobalOff },
+            OriginalToken = "0",
+            Written = GlobalOn,
+            Games = [_a],
+            WindowsBuild = 26300,
+        });
+        _h.Fs.AddFile(_h.Paths.AutoHdrGlobalDoneFile, "{}");
+        _h.Fs.FailReading(_h.Paths.AutoHdrGlobalDoneFile, new IOException("gesperrt"));
+
+        _h.Service.Start();
+        _h.Service.OnRecovery([], _h.Current, Now);
+        Cycles(31);
+        _h.Announce(_a);
+
+        Assert.Empty(_h.GlobalOperations);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.NotNull(_h.Marker);
+        Assert.True(_h.Fs.FileExists(_h.Paths.AutoHdrGlobalDoneFile));
+        Assert.True(_h.Logged("Auto HDR bleibt in diesem Lauf aus", LogLevel.Warning));
     }
 
     [Fact]

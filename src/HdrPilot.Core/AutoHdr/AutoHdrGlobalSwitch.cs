@@ -14,13 +14,16 @@ namespace HdrPilot.Core.AutoHdr;
 /// <list type="bullet">
 /// <item>Gesetzt nur bei angekündigten Starts („Mit HDR starten“, Verknüpfung, Steam-Startoption, Frühwarnung), nie beim
 /// bloßen Erkennen eines Spiels und nie, solange kein solches Spiel startet oder läuft. Eine Ankündigung gilt, solange die
-/// HDR-Sitzung auf den Spielprozess wartet, sonst bis zur Startfrist.</item>
+/// HDR-Sitzung auf den Spielprozess wartet, sonst bis zur Startfrist. Auch der neue Versuch nach einem Fehler setzt nur,
+/// solange ein angekündigter Start noch aussteht: Läuft das Spiel schon, hat Windows den Wert gelesen, gesetzt hielte er
+/// nur für andere Spiele.</item>
 /// <item>Ende wie bei der Sitzungslogik: Nachlaufzeit, nach einem kurzen Lauf der Neustart-Puffer; ein Neustart in dieser
 /// Zeit läuft einfach weiter. Mehrere Spiele teilen sich den Schalter: zurückgestellt wird nach dem letzten.</item>
 /// <item>autohdr-global.json existiert nur, solange HDRpilot den Schalter hält (vor dem Schreiben angelegt): Nach einem
 /// Absturz von HDRpilot stellt der nächste Start zurück, sobald kein solches Spiel mehr läuft. Beim Beenden von HDRpilot
-/// wird immer zurückgestellt (das laufende Spiel hat den Wert schon gelesen). Lässt sich die Datei nicht löschen, steht
-/// sie auf <see cref="AutoHdrEntryStatus.Released"/> (nie zurückstellen) und das Löschen wird wiederholt.</item>
+/// wird immer zurückgestellt (das laufende Spiel hat den Wert schon gelesen). Lässt sich die Datei nicht löschen, hält
+/// autohdr-global.done fest, dass sie erledigt ist (<see cref="AutoHdrGlobalDone"/>, nie zurückstellen), und das Löschen
+/// beider Dateien wird wiederholt.</item>
 /// <item>Wahl des Nutzers bleibt: Stand der Schalter schon auf 1, ändert HDRpilot nichts und stellt nichts zurück; hat der
 /// Nutzer ihn in Windows geändert, bleibt seine Einstellung (R3, „extern geändert“); schaltet er im Tray um
 /// (<see cref="SetByUser"/>), gibt HDRpilot den Schalter ab und setzt ihn für die laufenden Sitzungen nicht neu.</item>
@@ -40,6 +43,7 @@ internal sealed class AutoHdrGlobalSwitch
     private readonly IGpuPreferenceStore _store;
     private readonly IFileSystem _fileSystem;
     private readonly string _path;
+    private readonly string _donePath;
     private readonly IAppEnvironment _environment;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -66,16 +70,25 @@ internal sealed class AutoHdrGlobalSwitch
     /// <summary>Der Nutzer hat im Tray umgeschaltet, während Sitzungen liefen: für sie nicht neu setzen (erst ein neuer Start).</summary>
     private bool _userChoice;
 
-    /// <summary>Ein erledigter Merker ließ sich nicht löschen (steht nach Möglichkeit auf „Released“): Löschen wiederholen.</summary>
+    /// <summary>Erledigte Dateien sind noch da (Merker gesperrt oder Kennzeichen nicht gelöscht): Löschen wiederholen.</summary>
     private bool _discardPending;
     private DateTimeOffset _discardRetryAfter;
 
+    /// <summary>Kennzeichen für den erledigten Merker, der noch in der Datei steht; null, wenn keiner mehr darin steht.</summary>
+    private AutoHdrGlobalDone? _abandoned;
+
+    /// <summary><see cref="_abandoned"/> steht in autohdr-global.done.</summary>
+    private bool _abandonedSaved;
+
+    /// <param name="markerFile">autohdr-global.json.</param>
+    /// <param name="doneFile">autohdr-global.done (Kennzeichen „erledigt“ für einen gesperrten Merker).</param>
     public AutoHdrGlobalSwitch(
-        IGpuPreferenceStore store, IFileSystem fileSystem, string markerFile, IAppEnvironment environment, IClock clock, ILogger logger, SessionManagerOptions options)
+        IGpuPreferenceStore store, IFileSystem fileSystem, string markerFile, string doneFile, IAppEnvironment environment, IClock clock, ILogger logger, SessionManagerOptions options)
     {
         _store = store;
         _fileSystem = fileSystem;
         _path = markerFile;
+        _donePath = doneFile;
         _environment = environment;
         _clock = clock;
         _logger = logger;
@@ -95,12 +108,21 @@ internal sealed class AutoHdrGlobalSwitch
     }
 
     /// <param name="markerFileExists">Ergebnis der Prüfung beim Start (der Merker wird erst bei Bedarf gelesen).</param>
-    public void Start(bool markerFileExists)
+    /// <param name="doneFileExists">
+    /// autohdr-global.done gefunden: Mit Merker entscheidet es beim Lesen des Merkers; ohne ist es ein Rest (der Merker ging
+    /// erst nach dem Kennzeichen weg) und wird im ersten Zyklus gelöscht.
+    /// </param>
+    public void Start(bool markerFileExists, bool doneFileExists)
     {
         lock (_gate)
         {
             _markerFileExists = markerFileExists;
             _markerLoaded = false;
+            if (doneFileExists && !markerFileExists)
+            {
+                _discardPending = true;
+                _discardRetryAfter = DateTimeOffset.MinValue;
+            }
         }
     }
 
@@ -192,7 +214,7 @@ internal sealed class AutoHdrGlobalSwitch
         {
             if (_discardPending && now >= _discardRetryAfter)
             {
-                RetryDiscard(now);
+                Tidy(now);
             }
 
             if (_running.Count == 0 && _announced.Count == 0 && _marker is null && (_markerLoaded || !_markerFileExists))
@@ -299,7 +321,7 @@ internal sealed class AutoHdrGlobalSwitch
 
             if (_discardPending)
             {
-                RetryDiscard(now); // letzter Versuch; die Datei steht dann nach Möglichkeit auf „Released“
+                Tidy(now); // letzter Versuch; ein gesperrter Merker bleibt mit seinem Kennzeichen als erledigt
             }
 
             _running.Clear();
@@ -380,7 +402,6 @@ internal sealed class AutoHdrGlobalSwitch
                     "Auto HDR global: Der Nutzer hat den Schalter selbst gestellt, während HDRpilot ihn hielt ({Games}); HDRpilot stellt nach dem Spiel nichts zurück.",
                     string.Join(", ", _marker.Games));
                 DiscardMarker(_marker, _clock.UtcNow);
-                _marker = null;
             }
 
             _userChoice = ActiveKeysUnchecked().Count > 0;
@@ -416,7 +437,16 @@ internal sealed class AutoHdrGlobalSwitch
             return;
         }
 
-        Activate(active, now, trigger, gameName ?? config.FindGame(active[0])?.Name ?? active[0]);
+        // Setzen nur direkt vor einem angekündigten Start, auch beim neuen Versuch nach einem Fehler: Laufen die Spiele
+        // schon (das Setzen davor scheiterte), hat Windows den Wert gelesen, gesetzt hielte er bis zu ihrem Ende nur für
+        // andere Spiele. Laufende Spiele halten nur einen Schalter, den HDRpilot schon hält (oben).
+        var announced = active.FirstOrDefault(_announced.ContainsKey);
+        if (announced is null)
+        {
+            return;
+        }
+
+        Activate(active, now, trigger, gameName ?? config.FindGame(announced)?.Name ?? announced);
     }
 
     /// <summary>Angekündigte und laufende (auch in Nachlaufzeit oder Puffer) Spiele, die die Option noch haben.</summary>
@@ -436,7 +466,7 @@ internal sealed class AutoHdrGlobalSwitch
         catch (Exception ex)
         {
             _retryAfter = now + RetryDelay;
-            _logger.LogWarning("Auto HDR global: {Value} ließ sich nicht lesen ({Error}); neuer Versuch in {Seconds:0} s.", Value, ex.Message, RetryDelay.TotalSeconds);
+            _logger.LogWarning("Auto HDR global: {Value} ließ sich nicht lesen ({Error}); neuer Versuch in {Seconds:0} s, falls der Start dann noch aussteht.", Value, ex.Message, RetryDelay.TotalSeconds);
             return;
         }
 
@@ -471,7 +501,7 @@ internal sealed class AutoHdrGlobalSwitch
         if (!TrySaveMarker(marker))
         {
             _retryAfter = now + RetryDelay;
-            _logger.LogWarning("Auto HDR global: Merker nicht gespeichert, der globale Schalter bleibt unverändert; neuer Versuch in {Seconds:0} s.", RetryDelay.TotalSeconds);
+            _logger.LogWarning("Auto HDR global: Merker nicht gespeichert, der globale Schalter bleibt unverändert; neuer Versuch in {Seconds:0} s, falls der Start dann noch aussteht.", RetryDelay.TotalSeconds);
             return;
         }
 
@@ -483,7 +513,7 @@ internal sealed class AutoHdrGlobalSwitch
         {
             _retryAfter = now + RetryDelay;
             DiscardMarker(marker, now);
-            _logger.LogWarning("Auto HDR global: AutoHDREnable=1 ließ sich nicht setzen ({Error}); neuer Versuch in {Seconds:0} s.", ex.Message, RetryDelay.TotalSeconds);
+            _logger.LogWarning("Auto HDR global: AutoHDREnable=1 ließ sich nicht setzen ({Error}); neuer Versuch in {Seconds:0} s, falls der Start dann noch aussteht.", ex.Message, RetryDelay.TotalSeconds);
             return;
         }
 
@@ -515,7 +545,6 @@ internal sealed class AutoHdrGlobalSwitch
 
         _logger.LogInformation("{Message}", AutoHdrRestore.Describe(result, "Auto HDR global: " + Value, reason));
         DiscardMarker(marker, now);
-        _marker = null;
     }
 
     /// <summary>
@@ -545,38 +574,53 @@ internal sealed class AutoHdrGlobalSwitch
             "Auto HDR global: {Value} extern geändert, während HDRpilot ihn hielt (jetzt „{Current}“); das bleibt die Wahl des Nutzers, der neue Start merkt sich diesen Stand.",
             Value, GpuPreferenceText.Describe(current));
         DiscardMarker(_marker!, now);
-        _marker = null;
     }
 
     /// <summary>
-    /// Merker entfernen, weil nichts mehr zurückzustellen ist (zurückgestellt, vom Nutzer übernommen oder nie geschrieben).
-    /// Lässt sich die Datei nicht löschen (etwa vom Virenscanner gesperrt), wird sie als erledigt gekennzeichnet, damit der
-    /// nächste Start oder das Entfernen sie nie als Absturzrest zurückstellen, und das Löschen später wiederholt.
+    /// Merker entfernen, weil nichts mehr zurückzustellen ist (zurückgestellt, vom Nutzer übernommen oder nie geschrieben);
+    /// HDRpilot hält den Schalter danach nicht mehr. Lässt sich die Datei nicht löschen (etwa vom Virenscanner gesperrt),
+    /// hält autohdr-global.done fest, dass sie erledigt ist, damit der nächste Start oder das Entfernen sie nie als
+    /// Absturzrest zurückstellen; das Löschen wird später wiederholt (<see cref="Tidy"/>).
     /// </summary>
     private void DiscardMarker(AutoHdrGlobalMarker marker, DateTimeOffset now)
     {
-        if (TryDeleteMarker())
-        {
-            _discardPending = false;
-            return;
-        }
-
-        marker.Status = AutoHdrEntryStatus.Released;
-        TrySaveMarker(marker);
-        _discardPending = true;
-        _discardRetryAfter = now + RetryDelay;
+        _marker = null;
+        _abandoned = AutoHdrGlobalDone.Of(marker);
+        _abandonedSaved = false;
+        Tidy(now);
     }
 
-    private void RetryDiscard(DateTimeOffset now)
+    /// <summary>
+    /// Erledigte Dateien wegräumen: zuerst den Merker, dann das Kennzeichen (ohne Merker gilt es nichts mehr). Hält HDRpilot
+    /// den Schalter inzwischen wieder, gehört der Merker zu diesem Setzen: dann nie löschen, nur das alte Kennzeichen. Bleibt
+    /// der Merker gesperrt, wird das Kennzeichen gespeichert (falls noch nicht geschehen); neuer Versuch nach
+    /// <see cref="RetryDelay"/> und beim Beenden. Eine Sperre auf dem Merker verhindert unter NTFS auch sein Ersetzen, deshalb
+    /// steht das Kennzeichen in einer eigenen Datei.
+    /// </summary>
+    private void Tidy(DateTimeOffset now)
     {
-        // Hält HDRpilot den Schalter inzwischen wieder, gehört die Datei zu diesem Setzen: dann nie löschen.
-        if (_marker is not null || TryDeleteMarker())
+        if (_marker is null && !TryDeleteMarker())
         {
-            _discardPending = false;
+            if (_abandoned is not null && !_abandonedSaved)
+            {
+                _abandonedSaved = TrySaveDone(_abandoned);
+            }
+
+            _discardPending = true;
+            _discardRetryAfter = now + RetryDelay;
             return;
         }
 
-        _discardRetryAfter = now + RetryDelay;
+        _abandoned = null; // der erledigte Merker ist weg (gelöscht oder von einem neuen Setzen ersetzt)
+        _abandonedSaved = false;
+        if (!TryDeleteDone())
+        {
+            _discardPending = true;
+            _discardRetryAfter = now + RetryDelay;
+            return;
+        }
+
+        _discardPending = false;
     }
 
     /// <summary>
@@ -651,16 +695,19 @@ internal sealed class AutoHdrGlobalSwitch
             return;
         }
 
-        if (marker.Status == AutoHdrEntryStatus.Released)
+        var done = IsMarkedDone(marker);
+        if (done is null)
+        {
+            return; // Kennzeichen nicht lesbar: nichts anfassen
+        }
+
+        if (done.Value || marker.Status == AutoHdrEntryStatus.Released)
         {
             // Erledigt, nur die Datei blieb (etwa nach einer Wahl des Nutzers im Tray): nie zurückstellen, nur löschen.
             _logger.LogInformation("Auto HDR global: {Path} ist erledigt (nichts zurückzustellen) und wird gelöscht.", _path);
-            if (!TryDeleteMarker())
-            {
-                _discardPending = true;
-                _discardRetryAfter = _clock.UtcNow + RetryDelay;
-            }
-
+            _abandoned = AutoHdrGlobalDone.Of(marker);
+            _abandonedSaved = done.Value;
+            Tidy(_clock.UtcNow);
             return;
         }
 
@@ -700,6 +747,58 @@ internal sealed class AutoHdrGlobalSwitch
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogWarning("Auto HDR global: Merker {Path} ließ sich nicht löschen ({Error}); neuer Versuch später.", _path, ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Steht in autohdr-global.done, dass genau dieser Merker erledigt ist? Null: Kennzeichen nicht lesbar (oder defekt und
+    /// nicht zu sichern); dann bleibt Auto HDR in diesem Lauf aus und nichts wird angefasst, wie bei einem solchen Merker.
+    /// </summary>
+    private bool? IsMarkedDone(AutoHdrGlobalMarker marker)
+    {
+        var load = AutoHdrFiles.Load<AutoHdrGlobalDone>(_fileSystem, _donePath, d => d.IsValid(), _clock);
+        switch (load.State)
+        {
+            case AutoHdrFileState.Loaded:
+                return load.Data!.Matches(marker); // passt es nicht, ist es ein Rest eines früheren Setzens
+            case AutoHdrFileState.Corrupt when load.Backup is not null:
+                _logger.LogWarning("Auto HDR global: {Path} war defekt ({Problem}), gesichert als {Backup}.", _donePath, load.Problem, load.Backup);
+                return false;
+            case AutoHdrFileState.Missing:
+                return false;
+            default:
+                _inertReason = "Kennzeichen des globalen Schalters nicht auswertbar: " + load.Problem;
+                _logger.LogWarning("Auto HDR global: {Path} ließ sich nicht auswerten ({Problem}); Auto HDR bleibt in diesem Lauf aus.", _donePath, load.Problem);
+                return null;
+        }
+    }
+
+    private bool TrySaveDone(AutoHdrGlobalDone done)
+    {
+        try
+        {
+            AutoHdrFiles.Save(_fileSystem, _donePath, done);
+            _logger.LogInformation("Auto HDR global: Merker {Path} gesperrt, in {Done} als erledigt vermerkt (wird nie zurückgestellt).", _path, _donePath);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning("Auto HDR global: {Done} ließ sich nicht speichern ({Error}); neuer Versuch später.", _donePath, ex.Message);
+            return false;
+        }
+    }
+
+    private bool TryDeleteDone()
+    {
+        try
+        {
+            _fileSystem.DeleteFile(_donePath);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning("Auto HDR global: {Done} ließ sich nicht löschen ({Error}); neuer Versuch später.", _donePath, ex.Message);
             return false;
         }
     }

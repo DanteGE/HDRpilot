@@ -390,6 +390,7 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | Eigene Spielsymbole (je Spiel eine PNG mit 96 px, für Verknüpfungen dazu eine ICO) | `%LOCALAPPDATA%\HDRpilot\icons\` |
 | Gemerkte Quelle der Spielsymbole | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
 | Auto-HDR-Schalter von Windows samt altem Wert, solange HDRpilot ihn für einen Spielstart hält | `%LOCALAPPDATA%\HDRpilot\autohdr-global.json` |
+| Vermerk „erledigt“, falls sich `autohdr-global.json` nicht löschen ließ (etwa vom Virenscanner gesperrt); beide werden gelöscht, sobald es geht | `%LOCALAPPDATA%\HDRpilot\autohdr-global.done` |
 | Auto HDR von Windows (globaler Schalter, Einstellung von Windows) | `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, Wert `DirectXUserGlobalSettings` |
 | Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
 | Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
@@ -401,8 +402,8 @@ Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nic
 bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
 ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht. Einzige
 Ausnahmen: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach `session-state.json`, und es
-stellt einen von HDRpilot gehaltenen Auto-HDR-Schalter zurück und löscht danach `autohdr-global.json` (ließ er sich
-nicht zurückstellen, bleibt die Datei stehen).
+stellt einen von HDRpilot gehaltenen Auto-HDR-Schalter zurück und löscht danach `autohdr-global.json` samt einem
+Vermerk `autohdr-global.done` (ließ er sich nicht zurückstellen, bleibt die Datei stehen).
 
 Zu jedem Spiel stehen in `config.json` auch die Symbol-Hinweise der Launcher (`iconCandidates`, meist eine Datei) und
 gegebenenfalls das eigene Symbol (`customIcon`, nur der Dateiname im Ordner `icons`).

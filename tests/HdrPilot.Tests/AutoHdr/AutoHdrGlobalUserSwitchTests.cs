@@ -207,19 +207,24 @@ public sealed class AutoHdrGlobalUserSwitchTests
     }
 
     [Fact]
-    public void Users_choice_with_an_undeletable_marker_is_never_restored_after_a_crash()
+    public void Users_choice_with_a_locked_marker_is_never_restored_after_hdrpilot_ends()
     {
         Setup();
         _h.Announce(_a);
         Cycles(30, _a);
-        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, new IOException("vom Virenscanner gesperrt"));
+        var held = _h.Marker!;
+        _h.LockMarker(true); // ein Virenscanner sperrt die Datei: Löschen und Ersetzen scheitern
 
         Assert.Equal(AutoHdrSwitchState.On, _h.Service.SetGlobalSwitchByUser(on: true)); // soll an bleiben
 
         Assert.False(_h.Service.HoldsGlobalSwitch);
-        Assert.Equal(AutoHdrEntryStatus.Released, _h.Marker!.Status); // Datei blieb, aber als erledigt
+        Assert.Equal(AutoHdrEntryStatus.Applied, _h.Marker!.Status); // der Merker selbst ist unverändert …
+        Assert.Equal(held.SetAt, _h.Done!.SetAt); // … das Kennzeichen „erledigt“ steht daneben
+        Assert.Equal(held.Written, _h.Done.Written);
 
-        // HDRpilot stürzt ab; der nächste Start sieht die Datei, stellt aber nichts zurück.
+        // Die Sperre hält länger als HDRpilot; der nächste Start sieht den Merker, stellt aber nichts zurück.
+        Cycles(10, _a);
+        _h.Service.Shutdown();
         var service = _h.Restart();
         service.Start();
         service.OnRecovery([], _h.Current, _h.Clock.UtcNow);
@@ -227,43 +232,102 @@ public sealed class AutoHdrGlobalUserSwitchTests
         Assert.Equal(GlobalOn, _h.Value(Global));
         Assert.Equal(1, _h.SetOnCount);
         Assert.True(_h.Logged("ist erledigt"));
+        Assert.NotNull(_h.Marker);
 
-        // Gelöscht wird sie, sobald es wieder geht.
-        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, null);
+        // Gelöscht werden beide, sobald es wieder geht.
+        _h.LockMarker(false);
         Cycles(31);
         Assert.Null(_h.Marker);
+        Assert.Null(_h.Done);
+        Assert.Equal(GlobalOn, _h.Value(Global));
     }
 
     [Fact]
-    public void Undeletable_marker_is_deleted_later_but_never_while_a_new_start_holds_the_switch()
+    public void Locked_marker_is_deleted_later_with_its_done_mark()
     {
         Setup();
         _h.Announce(_a);
         Cycles(30, _a);
-        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, new IOException("gesperrt"));
+        _h.LockMarker(true);
         _h.Service.SetGlobalSwitchByUser(on: false);
-        Cycles(30); // Spiel zu Ende, die Datei bleibt (erledigt)
-        Assert.Equal(AutoHdrEntryStatus.Released, _h.Marker!.Status);
+        Assert.NotNull(_h.Done);
+        Cycles(31); // Spiel zu Ende; der Löschversuch nach 30 s scheitert noch
+        Assert.NotNull(_h.Marker);
+        Assert.NotNull(_h.Done);
 
-        _h.Announce(_a); // neuer Start: die Datei gehört jetzt zu diesem Setzen
-        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, null);
-        Cycles(400, _a); // länger als ein kurzer Lauf: danach nur die Nachlaufzeit
+        _h.LockMarker(false);
+        Cycles(31);
 
+        Assert.Null(_h.Marker);
+        Assert.Null(_h.Done);
+        Assert.Equal(GlobalOff, _h.Value(Global));
+    }
+
+    [Fact]
+    public void New_start_while_the_marker_is_locked_sets_nothing_and_a_later_one_holds_with_its_own_marker()
+    {
+        var (first, second) = LockedMarkerThenNewStart();
+
+        // Der neue Merker hat denselben Text, aber einen anderen Zeitpunkt: das alte Kennzeichen gilt ihm nicht.
+        Assert.Equal(first.Written, second.Written);
+        Assert.NotEqual(first.SetAt, second.SetAt);
+        Assert.Equal(first.SetAt, _h.Done!.SetAt);
+
+        // Der fällige Löschversuch löscht nur das alte Kennzeichen, nie den Merker des neuen Setzens.
+        Cycles(5, _a);
         Assert.True(_h.Service.HoldsGlobalSwitch);
-        Assert.Equal(AutoHdrEntryStatus.Applied, _h.Marker!.Status);
+        Assert.Equal(second.SetAt, _h.Marker!.SetAt);
+        Assert.Equal(AutoHdrEntryStatus.Applied, _h.Marker.Status);
+        Assert.Null(_h.Done);
+
+        Cycles(400, _a); // länger als ein kurzer Lauf: danach nur die Nachlaufzeit
         Cycles(15);
         Assert.Equal(GlobalOff, _h.Value(Global));
         Assert.Null(_h.Marker);
+    }
 
-        // Gegenprobe: ohne neuen Start löscht der spätere Versuch die erledigte Datei.
+    [Fact]
+    public void Old_done_mark_does_not_protect_a_new_marker_after_a_crash()
+    {
+        LockedMarkerThenNewStart();
+        Assert.NotNull(_h.Done); // HDRpilot stürzt ab, bevor das alte Kennzeichen gelöscht ist
+
+        var service = _h.Restart();
+        service.Start();
+        service.OnRecovery([], _h.Current, _h.Clock.UtcNow);
+
+        Assert.Equal(GlobalOff, _h.Value(Global)); // der neue Merker wird zurückgestellt
+        Assert.Null(_h.Marker);
+        Assert.Null(_h.Done);
+        Assert.True(_h.Logged("(Wiederanlauf nach Absturz)"));
+    }
+
+    /// <summary>
+    /// Der Nutzer schaltet aus, während der Merker gesperrt ist (Kennzeichen „erledigt“ daneben); ein neuer Start scheitert an
+    /// der Sperre (nie ohne Merker gesetzt); nach der Sperre setzt der nächste Start mit eigenem Merker, bevor der
+    /// Löschversuch fällig ist. Liefert den alten und den neuen Merker.
+    /// </summary>
+    private (AutoHdrGlobalMarker First, AutoHdrGlobalMarker Second) LockedMarkerThenNewStart()
+    {
+        Setup();
         _h.Announce(_a);
         Cycles(30, _a);
-        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, new IOException("gesperrt"));
+        var first = _h.Marker!;
+        _h.LockMarker(true);
         _h.Service.SetGlobalSwitchByUser(on: false);
-        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, null);
-        Assert.NotNull(_h.Marker);
-        Cycles(31);
-        Assert.Null(_h.Marker);
+        Cycles(10); // Spiel zu Ende
+
+        _h.Announce(_a);
+        Assert.Equal(GlobalOff, _h.Value(Global)); // neuer Merker nicht zu speichern: nichts gesetzt
+        Assert.False(_h.Service.HoldsGlobalSwitch);
+        Assert.Equal(first.SetAt, _h.Marker!.SetAt);
+
+        _h.LockMarker(false);
+        _h.Clock.Advance(AutoHdrGlobalSwitch.RetryDelay);
+        _h.Announce(_a);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.True(_h.Service.HoldsGlobalSwitch);
+        return (first, _h.Marker!);
     }
 
     [Fact]

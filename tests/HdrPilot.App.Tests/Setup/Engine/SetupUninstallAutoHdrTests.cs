@@ -19,6 +19,7 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
     private const string Global = AutoHdrRegistryLocation.GlobalValueName;
     private const string GlobalOff = "AutoHDREnable=0;SwapEffectUpgradeEnable=1;";
     private const string GlobalOn = "AutoHDREnable=1;SwapEffectUpgradeEnable=1;";
+    private static readonly DateTimeOffset SetAt = new(2026, 10, 12, 20, 15, 30, 123, TimeSpan.FromHours(2));
 
     private readonly SetupHarness _h = new();
 
@@ -116,6 +117,60 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
     }
 
     [Fact]
+    public async Task Marker_with_a_matching_done_mark_is_only_deleted_and_never_restored()
+    {
+        await InstallAsync();
+        _h.AutoHdr.SetString(Global, GlobalOn); // die Wahl des Nutzers; die App konnte den gesperrten Merker nicht löschen
+        WriteMarker(setAt: SetAt);
+        WriteDone(SetAt, GlobalOn);
+
+        var result = await _h.UninstallAsync(removeData: false);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Null(result.Warnings);
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
+        Assert.Empty(_h.AutoHdr.Operations);
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalDoneFile));
+        Assert.Contains("ist erledigt", _h.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Done_mark_of_an_earlier_marker_does_not_stop_the_restore()
+    {
+        await InstallAsync();
+        _h.AutoHdr.SetString(Global, GlobalOn);
+        WriteMarker(setAt: SetAt);
+        WriteDone(SetAt.AddMinutes(-5), GlobalOn); // Rest eines früheren Setzens mit demselben Text
+
+        var result = await _h.UninstallAsync(removeData: false);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Null(result.Warnings);
+        Assert.Equal(GlobalOff, _h.AutoHdr.GetString(Global));
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalDoneFile));
+    }
+
+    [Fact]
+    public async Task Defective_done_mark_keeps_everything_and_is_only_a_warning()
+    {
+        await InstallAsync();
+        _h.AutoHdr.SetString(Global, GlobalOn);
+        WriteMarker(setAt: SetAt);
+        File.WriteAllText(L.DataPaths.AutoHdrGlobalDoneFile, "{ kaputt");
+
+        var result = await _h.UninstallAsync(removeData: false);
+
+        Assert.True(result.Success, result.Message);
+        Assert.True(result.Has(SetupWarning.AutoHdrNotRestored));
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
+        Assert.Empty(_h.AutoHdr.Operations);
+        Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalDoneFile));
+    }
+
+    [Fact]
     public async Task Registry_failure_keeps_the_marker_and_is_only_a_warning()
     {
         await InstallAsync();
@@ -188,8 +243,20 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
         Assert.True(result.Success, result.Message);
     }
 
+    private void WriteDone(DateTimeOffset setAt, string written)
+    {
+        Directory.CreateDirectory(L.DataPaths.DataDirectory);
+        var done = new AutoHdrGlobalDone { SetAt = setAt, Written = written };
+        File.WriteAllText(L.DataPaths.AutoHdrGlobalDoneFile, JsonSerializer.Serialize(done, ConfigJson.Options));
+    }
+
     private void WriteMarker(
-        string? key = null, string? original = GlobalOff, string? originalToken = "0", string written = GlobalOn, AutoHdrEntryStatus status = AutoHdrEntryStatus.Applied)
+        string? key = null,
+        string? original = GlobalOff,
+        string? originalToken = "0",
+        string written = GlobalOn,
+        AutoHdrEntryStatus status = AutoHdrEntryStatus.Applied,
+        DateTimeOffset setAt = default)
     {
         Directory.CreateDirectory(L.DataPaths.DataDirectory);
         var marker = new AutoHdrGlobalMarker
@@ -203,6 +270,7 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
             Written = written,
             Games = ["Steam:1"],
             WindowsBuild = 26300,
+            SetAt = setAt,
         };
         File.WriteAllText(L.DataPaths.AutoHdrGlobalFile, JsonSerializer.Serialize(marker, ConfigJson.Options));
     }

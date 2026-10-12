@@ -1,13 +1,55 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-12 18:50. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
-fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+Zuletzt aktualisiert: 2026-10-12 (abends). Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit
+nahtlos fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
-## Aktuell
-Phase 8 ist fertig, und HDRpilot 1.3.0 ist beim Nutzer installiert. Nichts läuft im Hintergrund.
+## Angehalten: Phase 9 Windows Auto HDR pro Spiel (auf Wunsch des Nutzers, 2026-10-12)
+HDRpilot 1.3.0 ist beim Nutzer installiert. Phase 9 ist halb fertig. Nichts läuft im Hintergrund, und alles ist
+committet.
+
+**Wünsche und Entscheidungen des Nutzers:** `GATES.md`, Abschnitt „Phase 9“ (G9.1–G9.6). Kurz:
+- **Platz:** eigener Abschnitt „BILD“ im Spiel-Tab mit dem Schalter „Windows Auto HDR“, klar getrennt von „HDR
+  automatisch“. In der Liste nur ein Abzeichen „AUTO HDR“.
+- **Unabhängig:** schaltbar ohne „HDR automatisch“, mit Hinweis.
+- **Natives HDR:** ausgegraut, aber nutzbar, mit Hinweis.
+- **Technik:** beide Wege, pro Spiel (Token `AutoHDREnable=2097` je EXE) und eine Notlösung „global nur während des
+  Spiels“ (Einstellung, Standard aus).
+- **Rückbau:** über Einstellungen, Setup und Entfernen des Spiels.
+- **Versuch am echten System:** später, gemeinsam mit dem Nutzer (G9.6).
+- RTX HDR bleibt zurückgestellt.
+
+| Zweig / Arbeitsordner | Stand |
+|---|---|
+| `feature/autohdr` / `.worktrees/s10-autohdr` | `62dfed3` Entwurf und Gerüst. `20ee7f5` und `ad33347` führen beide Teilzweige zusammen. `4e1c7b6` ist ein WIP der Abstimmung danach: nicht fertig, nicht vollständig gebaut und geprüft |
+| `feature/autohdr-core` / `.worktrees/s10-core` | `34c83cf`: Werte je Spiel, globale Notlösung, Rücknahme (G9.2–G9.4), fertig laut Agent |
+| `feature/autohdr-ui` / `.worktrees/s10-ui` | `96c4962`: Oberfläche, Einstellungen, Setup, README und E88 (G9.1, G9.5), fertig laut Agent |
+
+**Unterlagen:**
+- Entwurf mit Schnittstellen, Formaten, Testplan und Aufteilung: `docs/uebergabe/auto-hdr-entwurf.md`.
+- Berichte der Agenten (Entwurf, beide Teilzweige): `docs/uebergabe/auto-hdr-ablauf-2026-10-12.md`. Der Bericht der
+  Abstimmung fehlt, weil sie unterbrochen wurde.
+- Recherche: `docs/recherche/auto-hdr-rtx-hdr.md`.
+
+**Weitermachen:**
+1. In `.worktrees/s10-autohdr` den WIP `4e1c7b6` bauen und durchsehen, dann die Abstimmung fertigstellen: Schalter →
+   Konfiguration → Werte je Spiel, Notlösung, Rücknahme-Schaltfläche, Setup.
+2. Alle Prüfungen laufen lassen:
+   - `build.ps1`, volles `test.ps1`
+   - `-Filter AutoHdr -MinTests 25`, `-Filter AutoHdrRegistry -MinTests 15`, `-Filter AutoHdrGlobal -MinTests 8`
+   - `phase9-autohdr-ui.ps1`, `phase7-setup.ps1`, `phase7-setup-ui.ps1`
+   - die übrigen Gates ohne echte HDR-Umschaltung
+3. Unabhängige Prüfung (Registry-Sicherheit und Rückbau, Notlösung und Spielstart samt Anti-Cheat, Bedienung), dann
+   Korrektur und Gegenprüfung.
+4. Nach `phase5/release` zusammenführen und G9.1–G9.5 belegen. Danach eine Version (1.4.0) mit Zustimmung des Nutzers
+   installieren und den Versuch G9.6 gemeinsam machen.
+- Tests und Gates dürfen nie die echten Schlüssel `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` beschreiben,
+  sondern nur eine Testwurzel. Der Entwurf beschreibt den Schalter dafür.
+
+## Vorher abgeschlossen
+- Phase 8 ist fertig, HDRpilot 1.3.0 ist beim Nutzer installiert.
 - Die Übergabedokumente vom 2026-10-10 sind nur noch Verlauf: `docs/uebergabe/versionsanzeige.md`,
   `docs/uebergabe/ablauf-2026-10-10-abend.md` und der Abschnitt „Stand“ in `docs/recherche/symbole/auftrag.md`.
-- Zurückgestellt bleibt Auto HDR / RTX HDR pro Spiel (siehe unten).
+
 ## Erledigt (auf `main`, committet)
 - Phase 1 HDR-Kern und Kommandozeile – alle Gates belegt (G1.5c vom Nutzer gestrichen).
 - Phase 2 Spielbibliothek – 646 Spiele aus 7 Quellen, G2.2 vom Nutzer bestätigt.

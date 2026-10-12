@@ -17,6 +17,9 @@ public sealed class FakeGpuPreferenceStore : IGpuPreferenceStore
 
     public int Reads { get; private set; }
 
+    /// <summary>Wertnamen in der Reihenfolge der Lesevorgänge.</summary>
+    public List<string> ReadNames { get; } = [];
+
     /// <summary>Wenn gesetzt, scheitert jeder Schreib- und Löschvorgang damit (nichts wird geändert).</summary>
     public Exception? FailWrites { get; set; }
 
@@ -44,6 +47,9 @@ public sealed class FakeGpuPreferenceStore : IGpuPreferenceStore
         return this;
     }
 
+    /// <summary>Wie oft dieser Wert gelesen wurde (ohne Groß-/Kleinschreibung).</summary>
+    public int ReadsOf(string name) => ReadNames.Count(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Text eines REG_SZ oder null, wenn der Wert fehlt oder kein REG_SZ ist.</summary>
     public string? GetString(string name) =>
         _values.TryGetValue(name, out var v) && v.Kind == GpuPreferenceValueKind.String ? v.Text : null;
@@ -51,6 +57,7 @@ public sealed class FakeGpuPreferenceStore : IGpuPreferenceStore
     public GpuPreferenceValue Read(string valueName)
     {
         Reads++;
+        ReadNames.Add(valueName);
         if (FailReads is { } failure)
         {
             throw failure;

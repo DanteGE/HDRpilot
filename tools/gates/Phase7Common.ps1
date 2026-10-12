@@ -717,6 +717,8 @@ function Stop-TestLeftovers($layout, [string[]]$tempDirs) {
 function Remove-TestLayout($layout, [string[]]$tempDirs) {
     $notes = @()
     if (Test-Path $layout.RegistryBranch) { Remove-Item $layout.RegistryBranch -Recurse -Force; $notes += "Registry-Zweig $($layout.RegistryBranch) gelöscht" }
+    $autoHdr = Get-AutoHdrTestKey $layout
+    if (Test-Path $autoHdr) { Remove-Item $autoHdr -Recurse -Force; $notes += "Auto-HDR-Testwurzel $autoHdr gelöscht" }
     foreach ($dir in @($layout.Root) + @($tempDirs)) {
         if (-not $dir -or -not (Test-Path -LiteralPath $dir)) { continue }
         for ($i = 0; $i -lt 20 -and (Test-Path -LiteralPath $dir); $i++) {
@@ -725,6 +727,59 @@ function Remove-TestLayout($layout, [string[]]$tempDirs) {
         $notes += $(if (Test-Path -LiteralPath $dir) { "FEHLER $dir ließ sich nicht löschen" } else { "$dir gelöscht" })
     }
     return $notes
+}
+
+# --- Auto HDR (E88, G9.4): Testwurzel der Ablage; der echte Schlüssel wird nur gelesen ---
+
+$script:AutoHdrRealKey = 'HKCU:\Software\Microsoft\DirectX\UserGpuPreferences'
+$script:AutoHdrGlobalName = 'DirectXUserGlobalSettings'
+
+# Testwurzel, die die App mit --config-dir (ohne --autohdr-test-root) und das Entfernen dieser Ablage benutzen, wie
+# AutoHdrRegistryLocation.ForConfigDirectory und SetupLocations.AutoHdrLocation. Immer unter HDRpilot.Tests.
+function Get-AutoHdrTestKey($layout) { 'HKCU:\Software\HDRpilot.Tests\AutoHdr\' + [HdrPilotGates.SetupFile]::PathHash($layout.Config) }
+
+# Nur lesend: alle Werte des echten Schlüssels UserGpuPreferences als "Name|Art|Daten" (sortiert), für den Vergleich
+# vorher/nachher. Fehlt der Schlüssel, steht genau das da.
+function Get-AutoHdrRealSnapshot {
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\DirectX\UserGpuPreferences', $false)
+    if ($null -eq $key) { return ,@('(Schlüssel fehlt)') }
+    try {
+        return ,@($key.GetValueNames() | Sort-Object | ForEach-Object {
+            $data = $key.GetValue($_, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+            if ($data -is [byte[]]) { $data = [BitConverter]::ToString($data) } elseif ($data -is [string[]]) { $data = $data -join '|' }
+            '{0}|{1}|{2}' -f $_, $key.GetValueKind($_), $data
+        })
+    } finally { $key.Close() }
+}
+
+# Ein Spiel mit "Windows Auto HDR" in der Ablage (wird nie gestartet, die EXE muss nicht existieren) und Ausgangswerte in
+# der Testwurzel: die EXE mit "GpuPreference=2;" und der globale Wert wie beim Nutzer. Liefert die Angaben dazu.
+function Initialize-AutoHdrTestState($layout) {
+    $exe = Join-Path $layout.Root 'Games\AutoHdr\game.exe'
+    $file = Join-Path $layout.Config 'config.json'
+    $json = [IO.File]::ReadAllText($file) | ConvertFrom-Json
+    $game = [pscustomobject]@{
+        source = 'Manual'; sourceId = 'gate7-autohdr'; name = 'Gate7 AutoHdr'; installDir = (Split-Path $exe)
+        knownExecutables = @($exe); hdrAuto = $false; autoHdr = $true; isNew = $false
+    }
+    $json.games = @(@($json.games) + $game)
+    [IO.File]::WriteAllText($file, ($json | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
+    $hash = [HdrPilotGates.SetupFile]::PathHash($layout.Config)
+    $sub = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\HDRpilot.Tests\AutoHdr\' + $hash)
+    try {
+        $sub.SetValue($exe, 'GpuPreference=2;', [Microsoft.Win32.RegistryValueKind]::String)
+        $sub.SetValue($AutoHdrGlobalName, 'AutoHDREnable=0;SwapEffectUpgradeEnable=1;', [Microsoft.Win32.RegistryValueKind]::String)
+    } finally { $sub.Close() }
+    return [pscustomobject]@{
+        Key = Get-AutoHdrTestKey $layout
+        Exe = $exe
+        GameKey = 'Manual:gate7-autohdr'
+        Original = 'GpuPreference=2;'
+        Written = 'GpuPreference=2;AutoHDREnable=2097;'
+        Global = 'AutoHDREnable=0;SwapEffectUpgradeEnable=1;'
+        StateFile = Join-Path $layout.Config 'autohdr-state.json'
+        GlobalFile = Join-Path $layout.Config 'autohdr-global.json'
+    }
 }
 
 # --- Oberflächentexte ---

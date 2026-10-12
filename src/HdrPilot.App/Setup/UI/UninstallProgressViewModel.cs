@@ -9,8 +9,8 @@ namespace HdrPilot.App.Setup.UI;
 /// <summary>
 /// Entfernen in der Kopie im Temp-Ordner: Schritte live, danach das Ergebnis mit dem Hinweis, wo die Einstellungen
 /// liegen (oder dass sie gelöscht sind). „Fertig“ erst am Ende; vorher ist das Fenster nicht schließbar. Bei einem Fehler
-/// wird genau der Schritt rot, den die Engine nennt; ein nicht wiederhergestellter HDR-Zustand färbt seinen Schritt rot
-/// und steht im Ergebnis, ohne dass das Entfernen als gescheitert gilt.
+/// wird genau der Schritt rot, den die Engine nennt; ein nicht wiederhergestellter HDR-Zustand und nicht zurückgenommene
+/// Auto-HDR-Werte färben ihren Schritt rot und stehen im Ergebnis, ohne dass das Entfernen als gescheitert gilt.
 /// </summary>
 public sealed class UninstallProgressViewModel : ObservableObject
 {
@@ -85,7 +85,18 @@ public sealed class UninstallProgressViewModel : ObservableObject
 
         SetupRunner.LogResult(_log, result);
         var hdrNotRestored = result.Has(SetupWarning.HdrNotRestored);
-        IEnumerable<UninstallStep> alsoFailed = hdrNotRestored ? [UninstallStep.RestoreHdr] : [];
+        var autoHdrNotRestored = result.Has(SetupWarning.AutoHdrNotRestored);
+        var alsoFailed = new List<UninstallStep>();
+        if (hdrNotRestored)
+        {
+            alsoFailed.Add(UninstallStep.RestoreHdr);
+        }
+
+        if (autoHdrNotRestored)
+        {
+            alsoFailed.Add(UninstallStep.RestoreAutoHdr);
+        }
+
         if (result.Success)
         {
             _steps.Complete(alsoFailed);
@@ -99,7 +110,17 @@ public sealed class UninstallProgressViewModel : ObservableObject
         var text = result.Success
             ? SetupStrings.UninstallDone + " " + (_removeData ? SetupStrings.UninstallDoneDataRemoved : SetupText.Format(SetupStrings.UninstallDoneDataKept, _configDirectory))
             : SetupText.UninstallError(result.Error, result.Message, _log.FilePath, LockedFileWithoutEntry(result));
-        ResultText = hdrNotRestored ? text + " " + SetupStrings.UninstallHdrNotRestored : text;
+        if (hdrNotRestored)
+        {
+            text += " " + SetupStrings.UninstallHdrNotRestored;
+        }
+
+        if (autoHdrNotRestored)
+        {
+            text += " " + SetupStrings.UninstallAutoHdrNotRestored;
+        }
+
+        ResultText = text;
         _result = result;
         IsBusy = false;
         OnPropertyChanged(nameof(IsDone));

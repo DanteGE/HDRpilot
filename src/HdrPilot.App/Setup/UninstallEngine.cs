@@ -1,18 +1,21 @@
 using System.Globalization;
 using System.IO;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Sessions;
 
 namespace HdrPilot.App.Setup;
 
 /// <summary>
 /// Entfernen (E83). Läuft aus einer Kopie im Temp-Ordner, damit der Programmordner gelöscht werden kann. Ablauf: Sperre,
-/// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, nur die eigenen Dateien löschen
-/// (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene EXE, eigenen Autostart-Wert und Eintrag entfernen;
-/// Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige Ausnahme: der gemerkte HDR-Zustand
-/// (session-state.json) wird nach dem Wiederherstellen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher
-/// ist; das Ergebnis nennt den ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag
-/// für einen neuen Versuch. Ein nicht wiederhergestellter HDR-Zustand ist nur ein Hinweis (<see cref="SetupWarning.HdrNotRestored"/>).
+/// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, Auto-HDR-Werte zurücknehmen (E88),
+/// nur die eigenen Dateien löschen (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene EXE, eigenen
+/// Autostart-Wert und Eintrag entfernen; Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige Ausnahmen: der
+/// gemerkte HDR-Zustand (session-state.json) und die Auto-HDR-Zustände (autohdr-state.json, autohdr-global.json) werden
+/// nach dem Zurücknehmen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher ist; das Ergebnis nennt den
+/// ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag für einen neuen Versuch.
+/// Ein nicht wiederhergestellter HDR-Zustand und nicht zurückgenommene Auto-HDR-Werte sind nur Hinweise
+/// (<see cref="SetupWarning.HdrNotRestored"/>, <see cref="SetupWarning.AutoHdrNotRestored"/>).
 /// </summary>
 public sealed class UninstallEngine : IUninstallEngine
 {
@@ -27,7 +30,12 @@ public sealed class UninstallEngine : IUninstallEngine
     private readonly Func<string, Version?> _versionReader;
     private readonly TimeSpan _stopTimeout;
     private readonly string _mutexName;
+    private readonly IGpuPreferenceStore _autoHdr;
 
+    /// <param name="autoHdrStore">
+    /// Schlüssel UserGpuPreferences für das Zurücknehmen der Auto-HDR-Werte (Tests: Attrappe). Null: echte Registry am Ort
+    /// <see cref="SetupLocations.AutoHdrLocation"/> (im Prüflauf die Testwurzel der Ablage, nie der echte Schlüssel).
+    /// </param>
     public UninstallEngine(
         SetupLocations locations,
         SetupLog log,
@@ -40,7 +48,8 @@ public sealed class UninstallEngine : IUninstallEngine
         ISetupFileOperations? files = null,
         Func<string, Version?>? versionReader = null,
         TimeSpan? stopTimeout = null,
-        string? mutexName = null)
+        string? mutexName = null,
+        IGpuPreferenceStore? autoHdrStore = null)
     {
         Locations = locations;
         _log = log;
@@ -54,6 +63,7 @@ public sealed class UninstallEngine : IUninstallEngine
         _versionReader = versionReader ?? SetupSupport.ReadFileVersion;
         _stopTimeout = stopTimeout ?? SetupEngine.DefaultStopTimeout;
         _mutexName = mutexName ?? SetupSupport.MutexNameFor(locations);
+        _autoHdr = autoHdrStore ?? new RegistryGpuPreferenceStore(locations.AutoHdrLocation);
     }
 
     public SetupLocations Locations { get; }
@@ -128,7 +138,19 @@ public sealed class UninstallEngine : IUninstallEngine
         }
 
         var errors = new FirstError();
-        IReadOnlyList<SetupWarning>? warnings = RestoreHdr(progress, cancellationToken) ? null : [SetupWarning.HdrNotRestored];
+        var warningList = new List<SetupWarning>();
+        if (!RestoreHdr(progress, cancellationToken))
+        {
+            warningList.Add(SetupWarning.HdrNotRestored);
+        }
+
+        // Unabhängig von „Daten löschen“ und vor dem Löschen der Ablage: sonst wären die Originalzustände verloren (E88).
+        if (!RestoreAutoHdr(progress))
+        {
+            warningList.Add(SetupWarning.AutoHdrNotRestored);
+        }
+
+        IReadOnlyList<SetupWarning>? warnings = warningList.Count == 0 ? null : warningList;
 
         Report(progress, UninstallStep.RemoveFiles);
         RemoveFiles(errors);
@@ -179,7 +201,11 @@ public sealed class UninstallEngine : IUninstallEngine
             };
         }
 
-        _log.Info("Entfernen fertig" + (warnings is null ? "." : ", der gemerkte HDR-Zustand ist aber nicht wiederhergestellt."));
+        _log.Info("Entfernen fertig" + (warnings is null
+            ? "."
+            : ", aber " + string.Join(" und ", warnings.Select(w => w == SetupWarning.HdrNotRestored
+                ? "der gemerkte HDR-Zustand ist nicht wiederhergestellt"
+                : "nicht alle Auto-HDR-Werte sind zurückgenommen")) + "."));
         return new SetupResult(true, null, null, version, null, false, Warnings: warnings);
     }
 
@@ -269,6 +295,42 @@ public sealed class UninstallEngine : IUninstallEngine
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Auto-HDR-Werte, die HDRpilot in UserGpuPreferences geschrieben hat, zurücknehmen (E88, gleiche Regeln wie die App:
+    /// extern geänderte bleiben) und den globalen Schalter der Notlösung zurückstellen, falls ein Absturz ihn hinterließ
+    /// (die beendete App hat ihn sonst schon zurückgestellt). Danach die Zustandsdateien verwerfen. Gehören sie zu einem
+    /// anderen Schlüssel oder scheitert ein Wert, bleiben sie (Hinweis im Ergebnis). Fehler verhindern das Entfernen nicht.
+    /// </summary>
+    private bool RestoreAutoHdr(IProgress<UninstallStep>? progress)
+    {
+        var paths = Locations.DataPaths;
+        if (!AutoHdrCleanup.HasState(PhysicalFileSystem.Instance, paths))
+        {
+            return true;
+        }
+
+        Report(progress, UninstallStep.RestoreAutoHdr);
+        _log.Info("Auto-HDR-Werte zurücknehmen in " + _autoHdr.KeyName + ".");
+        try
+        {
+            var result = AutoHdrCleanup.RestoreAll(_autoHdr, PhysicalFileSystem.Instance, paths, _log.Info);
+            _log.Info(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Auto HDR: {result.Restored} zurückgenommen, {result.LeftAsIs} extern geändert (bleiben), {result.Failed} fehlgeschlagen."));
+            if (!result.Complete)
+            {
+                _log.Warn("Auto-HDR-Zustand bleibt gespeichert" + (result.Skipped is null ? "." : ": " + result.Skipped));
+            }
+
+            return result.Complete;
+        }
+        catch (Exception ex)
+        {
+            _log.Error("Auto-HDR-Werte ließen sich nicht zurücknehmen.", ex);
+            return false;
+        }
     }
 
     /// <summary>Nur die installierten Dateien (und ihre „.new“/„.old“-Reste), dann leere eigene Ordner.</summary>

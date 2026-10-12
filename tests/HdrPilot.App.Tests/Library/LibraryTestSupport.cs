@@ -303,13 +303,8 @@ public sealed class TestLibraryContext : ILibraryContext
                 ConfigChanged?.Invoke(this, EventArgs.Empty);
             }
         };
-        AutoHdr.Changed += (_, _) =>
-        {
-            if (!Disposed)
-            {
-                AutoHdrChanged?.Invoke(this, EventArgs.Empty);
-            }
-        };
+        _autoHdrService = AutoHdr;
+        _autoHdrService.Changed += OnAutoHdrServiceChanged;
         Env.Folders[System.Environment.SpecialFolder.Windows] = @"C:\Windows";
     }
 
@@ -320,9 +315,30 @@ public sealed class TestLibraryContext : ILibraryContext
     /// <summary>Auto HDR (E88) als Attrappe: Stände vorgeben, <see cref="FakeAutoHdrService.Publish"/> meldet sie.</summary>
     public FakeAutoHdrService AutoHdr { get; } = new();
 
+    private HdrPilot.Core.AutoHdr.IAutoHdrService _autoHdrService;
+
     public int AutoHdrChangedSubscribers => AutoHdrChanged?.GetInvocationList().Length ?? 0;
 
-    public HdrPilot.Core.AutoHdr.AutoHdrGameStatus GetAutoHdrStatus(string gameKey) => AutoHdr.GetStatus(gameKey);
+    public HdrPilot.Core.AutoHdr.AutoHdrGameStatus GetAutoHdrStatus(string gameKey) => _autoHdrService.GetStatus(gameKey);
+
+    /// <summary>
+    /// Stand und Meldungen ab jetzt von <paramref name="service"/> statt der Attrappe (Zusammenspiel mit dem echten
+    /// <see cref="HdrPilot.Core.AutoHdr.AutoHdrService"/> über einem Schlüssel im Speicher).
+    /// </summary>
+    public void UseAutoHdr(HdrPilot.Core.AutoHdr.IAutoHdrService service)
+    {
+        _autoHdrService.Changed -= OnAutoHdrServiceChanged;
+        _autoHdrService = service;
+        _autoHdrService.Changed += OnAutoHdrServiceChanged;
+    }
+
+    private void OnAutoHdrServiceChanged(object? sender, EventArgs e)
+    {
+        if (!Disposed)
+        {
+            AutoHdrChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     public event EventHandler? HdrStateChanged;
 
@@ -421,6 +437,9 @@ public sealed class TestLibraryContext : ILibraryContext
         LaunchCommand = "steam://rungameid/" + id,
     };
 
+    /// <summary>Wenn gesetzt, speichert die nächste Änderung erst, wenn der Test diese Aufgabe abschließt (wie ein langsamer Datenträger).</summary>
+    public TaskCompletionSource? HoldNextUpdate { get; set; }
+
     public Task UpdateConfigAsync(Action<AppConfig> mutate)
     {
         if (FailNextUpdate is { } failure)
@@ -429,9 +448,22 @@ public sealed class TestLibraryContext : ILibraryContext
             return Task.FromException(failure);
         }
 
+        if (HoldNextUpdate is { } hold)
+        {
+            HoldNextUpdate = null;
+            return UpdateLaterAsync(hold.Task, mutate);
+        }
+
         Updates++;
         ConfigService.Update(mutate);
         return Task.CompletedTask;
+    }
+
+    private async Task UpdateLaterAsync(Task release, Action<AppConfig> mutate)
+    {
+        await release;
+        Updates++;
+        ConfigService.Update(mutate);
     }
 
     /// <summary>Wenn gesetzt, scheitert das Laden der HDR-Unterstützung damit (Zwischenspeicher gesperrt).</summary>

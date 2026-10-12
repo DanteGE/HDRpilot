@@ -119,7 +119,17 @@ public sealed class GameDetailsViewModel : ObservableObject
         {
             if (SetProperty(ref _autoHdr, value))
             {
-                RefreshAutoHdrStatus();
+                if (_suppressWrites || !value)
+                {
+                    RefreshAutoHdrStatus();
+                }
+                else
+                {
+                    // Eben eingeschaltet: Den Stand kennt der Abgleich erst nach dem Speichern (danach frischen Apply und
+                    // AutoHdrChanged ihn auf). Bis dahin kein Stand statt kurz „Noch keine Spiel-EXE bekannt“.
+                    AutoHdrStatusText = null;
+                }
+
                 if (!_suppressWrites)
                 {
                     _ = _owner.WriteGameAsync(Item.Key, g => g.AutoHdr = value);

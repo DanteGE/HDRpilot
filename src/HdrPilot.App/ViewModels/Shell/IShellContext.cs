@@ -1,5 +1,4 @@
 using HdrPilot.App.Services;
-using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.HdrSupport;
@@ -19,9 +18,6 @@ public interface IShellContext
 
     /// <summary>HDR-Liste von PCGamingWiki: Stand, „Jetzt abgleichen“, Konto.</summary>
     IHdrListService HdrList { get; }
-
-    /// <summary>Windows Auto HDR (E88): „Auto-HDR-Einträge zurücknehmen“.</summary>
-    IAutoHdrService AutoHdr { get; }
 
     /// <summary>Öffnet eine https-Adresse im Standardbrowser (Links zu PCGamingWiki).</summary>
     void OpenWebPage(string url);

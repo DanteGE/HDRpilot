@@ -30,12 +30,9 @@ public sealed record AppPaths(string ConfigDirectory, string DataDirectory)
     public string IconCacheFile => Path.Combine(DataDirectory, "icon-cache.json");
 
     /// <summary>
-    /// Auto-HDR-Werte, die HDRpilot je Spiel-EXE in die Windows-Einstellung geschrieben hat, samt Originalzustand zum
-    /// Zurücknehmen (E88). Maschinenbezogen wie der gemerkte HDR-Zustand.
+    /// Gemerkter globaler Auto-HDR-Schalter samt Originalzustand, solange HDRpilot ihn für einen Spielstart hält (E88).
+    /// Maschinenbezogen wie der gemerkte HDR-Zustand.
     /// </summary>
-    public string AutoHdrStateFile => Path.Combine(DataDirectory, "autohdr-state.json");
-
-    /// <summary>Gemerkter globaler Auto-HDR-Schalter, solange die Notlösung ihn für ein laufendes Spiel gesetzt hat (E88).</summary>
     public string AutoHdrGlobalFile => Path.Combine(DataDirectory, "autohdr-global.json");
 
     public static AppPaths Default(IAppEnvironment environment) => new(

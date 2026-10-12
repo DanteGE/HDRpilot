@@ -10,7 +10,6 @@ using HdrPilot.App.Resources;
 using HdrPilot.App.Tests.Shell;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
-using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.HdrSupport;
@@ -39,11 +38,6 @@ public sealed class AutoHdrLayoutTests
         var context = new TestLibraryContext(plain, native, longName, Game(GameSource.Xbox, "Palworld", "Palworld", isNew: true));
         context.HdrSupport["Steam:3008130"] = HdrSupportStatus.Native;
         context.HdrSupport["Epic:Long"] = HdrSupportStatus.Limited;
-        context.AutoHdr.Statuses["Gog:1207658924"] = new AutoHdrGameStatus(
-        [
-            new AutoHdrTargetStatus(@"D:\GOG-Spiele\SDR\game.exe", AutoHdrTargetState.Applied),
-            new AutoHdrTargetStatus(@"D:\GOG-Spiele\SDR\launcher.exe", AutoHdrTargetState.ExternallyChanged),
-        ]);
 
         if (ratio is not null)
         {
@@ -79,7 +73,7 @@ public sealed class AutoHdrLayoutTests
             Assert.True(automation >= 0 && picture == automation + 1 && executables > picture, $"Reihenfolge {automation}/{picture}/{executables}");
 
             var pictureIds = Ids((DependencyObject)window.FindName("PictureSection"));
-            foreach (var id in new[] { "DetailAutoHdr", "DetailAutoHdrNativeHint", "DetailAutoHdrNeedsHdrHint", "DetailAutoHdrStatus" })
+            foreach (var id in new[] { "DetailAutoHdr", "DetailAutoHdrStartHint", "DetailAutoHdrNativeHint", "DetailAutoHdrNeedsHdrHint" })
             {
                 Assert.True(pictureIds.ContainsKey(id), "fehlt im Abschnitt BILD: " + id);
             }
@@ -97,18 +91,20 @@ public sealed class AutoHdrLayoutTests
                 toggle.TranslatePoint(default, window).Y > hdrAuto.TranslatePoint(default, window).Y,
                 "Windows Auto HDR steht unter HDR automatisch");
 
-            // Sichtbar: Hinweis „HDR automatisch aus“ und Stand; kein Hinweis auf eigenes HDR (laut Wiki unbekannt).
+            // Sichtbar: „wirkt nur beim Start über HDRpilot“ und „HDR automatisch aus“; kein Hinweis auf eigenes HDR (laut
+            // Wiki unbekannt).
+            var start = (TextBlock)pictureIds["DetailAutoHdrStartHint"];
+            Assert.True(Shown(start));
+            Assert.Equal(LibraryStrings.Details_AutoHdrStartHint, start.Text);
+            Assert.True(start.TranslatePoint(default, window).Y > toggle.TranslatePoint(default, window).Y, "Hinweis unter dem Schalter");
             Assert.True(Shown(pictureIds["DetailAutoHdrNeedsHdrHint"]));
             Assert.False(Shown(pictureIds["DetailAutoHdrNativeHint"]));
-            var status = (TextBlock)pictureIds["DetailAutoHdrStatus"];
-            Assert.True(Shown(status));
-            Assert.Equal(model.Details!.AutoHdrStatusText, status.Text);
-            Assert.Contains(LibraryStrings.Count_ExeOne, status.Text, StringComparison.Ordinal);
+            Assert.True(model.Details!.AutoHdr);
 
-            toggle.IsChecked = false; // wie ein Klick: schreibt die Option, der Stand verschwindet
+            toggle.IsChecked = false; // wie ein Klick: schreibt die Option, der Hinweis bleibt (auch vor dem Einschalten klar)
             Arrange(window, new Size(1460, 1400));
             Assert.False(context.Config.FindGame("Gog:1207658924")!.AutoHdr);
-            Assert.False(Shown(status));
+            Assert.True(Shown(start));
             Assert.True(Shown(pictureIds["DetailAutoHdrNeedsHdrHint"]));
             window.Close();
         });
@@ -214,16 +210,15 @@ public sealed class AutoHdrLayoutTests
     {
         WpfTestHost.Run(() =>
         {
-            var (window, context, model) = Open("Steam:3008130", LibraryLayout.MinDetailsRatio);
+            var (window, _, model) = Open("Steam:3008130", LibraryLayout.MinDetailsRatio);
             model.Details!.AutoHdr = true;
-            context.AutoHdr.Publish("Steam:3008130", AutoHdrTargetState.Applied, AutoHdrTargetState.Unsupported, AutoHdrTargetState.Failed, AutoHdrTargetState.ExternallyChanged);
             Arrange(window, new Size(1000, 1600));
             window.FitDetailsColumn();
             Arrange(window, new Size(1000, 1600));
 
             var section = (FrameworkElement)window.FindName("PictureSection");
             var ids = Ids(section);
-            Assert.True(Shown(ids["DetailAutoHdrNativeHint"]) && Shown(ids["DetailAutoHdrNeedsHdrHint"]) && Shown(ids["DetailAutoHdrStatus"]));
+            Assert.True(Shown(ids["DetailAutoHdrNativeHint"]) && Shown(ids["DetailAutoHdrNeedsHdrHint"]) && Shown(ids["DetailAutoHdrStartHint"]));
             foreach (var element in WpfTestHost.Visuals(section).OfType<FrameworkElement>().Where(e => Shown(e)))
             {
                 var bounds = element.TransformToAncestor(section).TransformBounds(new Rect(element.RenderSize));
@@ -328,9 +323,8 @@ public sealed class AutoHdrLayoutTests
         return set.Cast<DictionaryEntry>().Select(e => e.Value as string).OfType<string>().ToHashSet(StringComparer.Ordinal);
     }
 
-    /// <summary>Text mit Buchstaben (keine Symbolzeichen aus Segoe Fluent Icons, keine gebundenen Stände).</summary>
-    private static bool IsWords(string text) => text.Any(char.IsLetter) && !text.Contains(LibraryStrings.Count_ExeOne, StringComparison.Ordinal)
-        && !text.Contains("EXE-Dateien", StringComparison.Ordinal);
+    /// <summary>Text mit Buchstaben (keine Symbolzeichen aus Segoe Fluent Icons).</summary>
+    private static bool IsWords(string text) => text.Any(char.IsLetter);
 
     private static Dictionary<string, FrameworkElement> Ids(DependencyObject root)
     {

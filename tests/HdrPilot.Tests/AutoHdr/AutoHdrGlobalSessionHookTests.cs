@@ -9,7 +9,7 @@ namespace HdrPilot.Tests.AutoHdr;
 /// <summary>
 /// Wie die Sitzungslogik Auto HDR informiert (E88): Ankündigung vor dem Schalten von HDR und vor dem Start-Befehl
 /// (Start über die App, Steam-Startoption, Frühwarnung), Wiederanlauf genau einmal, jeder Zyklus mit allen zugeordneten
-/// laufenden Spielen. Auto HDR als aufzeichnende Attrappe.
+/// laufenden Spielen und den Starts, deren HDR-Sitzung noch wartet. Auto HDR als aufzeichnende Attrappe.
 /// </summary>
 public sealed class AutoHdrGlobalSessionHookTests
 {
@@ -132,7 +132,7 @@ public sealed class AutoHdrGlobalSessionHookTests
     }
 
     [Fact]
-    public async Task Cycles_include_running_games_without_hdr_automation_and_the_paused_flag()
+    public async Task Cycles_include_running_games_without_hdr_automation()
     {
         AutoHdrGame("1", DirA);
         var notInstalled = AutoHdrGame("2", DirB);
@@ -145,15 +145,29 @@ public sealed class AutoHdrGlobalSessionHookTests
         _processes.StartExe(@"E:\Games\Spiel C\SpielC.exe");
 
         await Poll();
-        _manager.Paused = true;
-        await Poll();
 
-        var (keys, paused) = _hooks.Cycles[^2];
+        var (keys, waiting) = _hooks.Cycles[^1];
         Assert.Equal(["Steam:1", "Steam:2"], keys.Order(StringComparer.Ordinal));
-        Assert.False(paused);
-        Assert.True(_hooks.Cycles[^1].Paused);
+        Assert.Empty(waiting);
         Assert.Empty(_manager.Sessions); // keine HDR-Sitzung ohne „HDR automatisch“
         Assert.Empty(_hdr.Calls);
+    }
+
+    [Fact]
+    public async Task Cycles_name_the_starts_whose_hdr_session_still_waits_for_the_game()
+    {
+        AutoHdrGame("1", DirA);
+        await Poll();
+        await _manager.LaunchAsync("Steam:1", Ct);
+
+        await Poll();
+        Assert.Equal(["Steam:1"], _hooks.Cycles[^1].Waiting);
+        Assert.Empty(_hooks.Cycles[^1].Keys);
+
+        _processes.StartExe(ExeA); // Spiel erkannt: wartet nicht mehr, läuft
+        await Poll();
+        Assert.Empty(_hooks.Cycles[^1].Waiting);
+        Assert.Equal(["Steam:1"], _hooks.Cycles[^1].Keys);
     }
 
     [Fact]
@@ -193,7 +207,7 @@ public sealed class AutoHdrGlobalSessionHookTests
     {
         public List<List<string>> Recoveries { get; } = [];
 
-        public List<(List<string> Keys, bool Paused)> Cycles { get; } = [];
+        public List<(List<string> Keys, List<string> Waiting)> Cycles { get; } = [];
 
         public bool Throw { get; set; }
 
@@ -209,10 +223,10 @@ public sealed class AutoHdrGlobalSessionHookTests
             Recoveries.Add([.. runningGameKeys]);
         }
 
-        public void OnCycle(IReadOnlyCollection<string> runningGameKeys, AppConfig config, bool paused, DateTimeOffset now)
+        public void OnCycle(IReadOnlyCollection<string> runningGameKeys, IReadOnlyCollection<string> waitingGameKeys, AppConfig config, DateTimeOffset now)
         {
             ThrowIfWanted();
-            Cycles.Add(([.. runningGameKeys], paused));
+            Cycles.Add(([.. runningGameKeys], [.. waitingGameKeys]));
         }
 
         private void ThrowIfWanted()

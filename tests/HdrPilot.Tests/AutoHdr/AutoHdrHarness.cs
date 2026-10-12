@@ -51,10 +51,7 @@ internal sealed class AutoHdrHarness
 
     public ConfigService Config { get; }
 
-    /// <summary>Zahl der <see cref="AutoHdrService.Changed"/>-Ereignisse.</summary>
-    public int ChangedEvents { get; private set; }
-
-    /// <summary>Optionen der Notlösung (Neustart-Puffer, kurzer Lauf); vor dem ersten Zugriff auf <see cref="Service"/> setzen.</summary>
+    /// <summary>Optionen (Neustart-Puffer, kurzer Lauf); vor dem ersten Zugriff auf <see cref="Service"/> setzen.</summary>
     public SessionManagerOptions Options { get; set; } = SessionManagerOptions.Default;
 
     public AutoHdrService Service => _service ??= Create();
@@ -94,24 +91,17 @@ internal sealed class AutoHdrHarness
 
     public void SetAutoHdr(string key, bool on) => Config.UpdateGame(key, g => g.AutoHdr = on);
 
-    public void SetFallback(bool on) => Config.Update(c => c.Settings.AutoHdrGlobalFallback = on);
-
-    /// <summary>Änderung ohne Einfluss auf Auto HDR (wie „zuletzt gespielt“).</summary>
-    public void TouchUnrelated() => Config.Update(c => c.Settings.LibrarySortOrder = c.Settings.LibrarySortOrder == "LastPlayed" ? null : "LastPlayed");
-
     public void RemoveGame(string key) => Config.Update(c => c.Games.RemoveAll(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase)));
 
-    public string? Value(string name) => Store.GetString(name);
+    /// <summary>Angekündigter Start (wie aus der Sitzungslogik) zur aktuellen Zeit.</summary>
+    public void Announce(string key, SessionTrigger trigger = SessionTrigger.LaunchedViaApp) =>
+        Service.OnStartAnnounced(Current.FindGame(key)!, trigger, Clock.UtcNow);
 
-    public AutoHdrStateData? State => Fs.FileExists(Paths.AutoHdrStateFile)
-        ? JsonSerializer.Deserialize<AutoHdrStateData>(Fs.ReadAllText(Paths.AutoHdrStateFile), ConfigJson.Options)
-        : null;
+    public string? Value(string name) => Store.GetString(name);
 
     public AutoHdrGlobalMarker? Marker => Fs.FileExists(Paths.AutoHdrGlobalFile)
         ? JsonSerializer.Deserialize<AutoHdrGlobalMarker>(Fs.ReadAllText(Paths.AutoHdrGlobalFile), ConfigJson.Options)
         : null;
-
-    public void WriteState(AutoHdrStateData data) => Fs.AddFile(Paths.AutoHdrStateFile, JsonSerializer.Serialize(data, ConfigJson.Options));
 
     public void WriteMarker(AutoHdrGlobalMarker marker) => Fs.AddFile(Paths.AutoHdrGlobalFile, JsonSerializer.Serialize(marker, ConfigJson.Options));
 
@@ -120,11 +110,11 @@ internal sealed class AutoHdrHarness
 
     public int LogCount(string fragment) => Log.Entries.Count(e => e.Message.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 
-    public AutoHdrTargetState? StateOf(string gameKey, string exe) =>
-        Service.GetStatus(gameKey).Targets.FirstOrDefault(t => string.Equals(t.ExePath, exe, StringComparison.OrdinalIgnoreCase))?.State;
-
     /// <summary>Schreibvorgänge am globalen Wert.</summary>
     public List<string> GlobalOperations => Store.Operations.Where(o => o.Contains(Global, StringComparison.Ordinal)).ToList();
+
+    /// <summary>Wie oft HDRpilot den globalen Wert auf <see cref="GlobalOn"/> oder <c>AutoHDREnable=1;</c> gesetzt hat.</summary>
+    public int SetOnCount => GlobalOperations.Count(o => o.Contains("AutoHDREnable=1", StringComparison.Ordinal));
 
     /// <summary>Sitzungslogik über derselben Konfiguration mit diesem Dienst als Auto-HDR-Empfänger.</summary>
     public SessionManager CreateSessions(FakeHdrController hdr, FakeLauncher launcher, IAutoHdrSessionHooks? hooks = null) => new(
@@ -151,7 +141,6 @@ internal sealed class AutoHdrHarness
         var service = new AutoHdrService(Config, Store, AutoHdrRegistryLocation.ForTest("Fake"), Fs, Paths, Env, Clock, Log, Options);
         _forward = (_, _) => service.OnConfigChanged();
         Config.Changed += _forward;
-        service.Changed += (_, _) => ChangedEvents++;
         return service;
     }
 }

@@ -1,7 +1,6 @@
 using System.Windows.Threading;
 using HdrPilot.App.Services;
 using HdrPilot.Core.Abstractions;
-using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
@@ -31,7 +30,6 @@ public sealed class AppLibraryContext : ILibraryContext
         services.HdrStateChanged += OnHdrStateChanged;
         services.ScanStateChanged += OnScanStateChanged;
         services.HdrList.Changed += OnHdrListChanged;
-        services.AutoHdr.Changed += OnAutoHdrChanged;
     }
 
     public event EventHandler? ConfigChanged;
@@ -41,8 +39,6 @@ public sealed class AppLibraryContext : ILibraryContext
     public event EventHandler? ScanStateChanged;
 
     public event EventHandler? HdrSupportChanged;
-
-    public event EventHandler? AutoHdrChanged;
 
     public AppConfig Config => _services.Config.Current;
 
@@ -87,20 +83,6 @@ public sealed class AppLibraryContext : ILibraryContext
     {
         var hdrList = _services.HdrList;
         return Task.Run(hdrList.LoadStatuses);
-    }
-
-    public AutoHdrGameStatus GetAutoHdrStatus(string gameKey)
-    {
-        try
-        {
-            return _services.AutoHdr.GetStatus(gameKey);
-        }
-        catch (Exception ex)
-        {
-            // Laut Absprache wirft GetStatus nie; die Anzeige ist nur Zusatz und darf das Fenster nicht stören.
-            _logger.LogWarning(ex, "Stand von Auto HDR für {Game} ließ sich nicht lesen.", gameKey);
-            return AutoHdrGameStatus.None;
-        }
     }
 
     public IReadOnlyList<DisplayInfo> GetDisplays()
@@ -151,12 +133,10 @@ public sealed class AppLibraryContext : ILibraryContext
         _services.HdrStateChanged -= OnHdrStateChanged;
         _services.ScanStateChanged -= OnScanStateChanged;
         _services.HdrList.Changed -= OnHdrListChanged;
-        _services.AutoHdr.Changed -= OnAutoHdrChanged;
         ConfigChanged = null;
         HdrStateChanged = null;
         ScanStateChanged = null;
         HdrSupportChanged = null;
-        AutoHdrChanged = null;
 
         // Symbole gehören zum Fenster: im Hintergrund kein Bildspeicher.
         _services.Icons.ClearCache();
@@ -200,23 +180,6 @@ public sealed class AppLibraryContext : ILibraryContext
             if (!_disposed)
             {
                 HdrSupportChanged?.Invoke(this, EventArgs.Empty);
-            }
-        });
-    }
-
-    // Kommt vom Thread des Abgleichs (Speichern der Konfiguration, Zyklus der Automatik, Rücknahme).
-    private void OnAutoHdrChanged(object? sender, EventArgs e)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _services.RaiseOnUi(() =>
-        {
-            if (!_disposed)
-            {
-                AutoHdrChanged?.Invoke(this, EventArgs.Empty);
             }
         });
     }

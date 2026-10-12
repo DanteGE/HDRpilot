@@ -104,7 +104,7 @@ public sealed class AutoHdrLocationTests
             await using var host = new AutomationHost(paths, PhysicalFileSystem.Instance, new FakeRegistry(), environment, SystemClock.Instance, autoHdrStore: new FakeGpuPreferenceStore());
             Assert.True(host.AutoHdr.Location.IsTest);
             Assert.Equal(AutoHdrRegistryLocation.ForConfigDirectory(paths.ConfigDirectory), host.AutoHdr.Location);
-            Assert.Equal(AutoHdrGameStatus.None, host.AutoHdr.GetStatus("Steam:1"));
+            Assert.False(host.AutoHdr.HoldsGlobalSwitch);
         }
         finally
         {

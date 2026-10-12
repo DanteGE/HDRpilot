@@ -3,8 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 namespace HdrPilot.Core.AutoHdr;
 
 /// <summary>
-/// Ein sauberer Wert im Schlüssel UserGpuPreferences, zerlegt in seine <c>Schlüssel=Wert</c>-Paare (E88). Unveränderlich;
-/// <see cref="ToString"/> setzt ihn byte-gleich wieder zusammen (Reihenfolge, Schreibweise und Abschluss bleiben).
+/// Ein sauberer Wert im Schlüssel UserGpuPreferences (etwa <c>DirectXUserGlobalSettings</c>), zerlegt in seine
+/// <c>Schlüssel=Wert</c>-Paare (E88). Unveränderlich; <see cref="ToString"/> setzt ihn byte-gleich wieder zusammen
+/// (Reihenfolge, Schreibweise und Abschluss bleiben).
 /// </summary>
 public sealed class GpuPreferenceTokens
 {
@@ -16,7 +17,7 @@ public sealed class GpuPreferenceTokens
         TrailingSeparator = trailingSeparator;
     }
 
-    /// <summary>Kein Paar, mit „;“ am Ende: Ausgangslage für einen fehlenden Wert (wird zu <c>AutoHDREnable=2097;</c>).</summary>
+    /// <summary>Kein Paar, mit „;“ am Ende: Ausgangslage für einen fehlenden Wert (wird zu <c>AutoHDREnable=1;</c>).</summary>
     public static GpuPreferenceTokens Empty { get; } = new([], trailingSeparator: true);
 
     public IReadOnlyList<KeyValuePair<string, string>> Pairs => _pairs;
@@ -68,14 +69,14 @@ public sealed class GpuPreferenceTokens
     internal static GpuPreferenceTokens Create(KeyValuePair<string, string>[] pairs, bool trailingSeparator) => new(pairs, trailingSeparator);
 }
 
-/// <summary>Was das Einschalten mit einem vorhandenen Wert macht.</summary>
+/// <summary>Was das Setzen des Tokens mit einem vorhandenen Wert macht.</summary>
 public enum GpuPreferenceMergeKind
 {
     /// <summary>Kein sauberer REG_SZ: nie angefasst.</summary>
     Unsupported,
 
     /// <summary>Das Token steht schon so da: nichts zu schreiben, nichts zu merken.</summary>
-    AlreadyOn,
+    Unchanged,
 
     /// <summary><see cref="GpuPreferenceMerge.Written"/> schreiben.</summary>
     Write,
@@ -85,15 +86,15 @@ public enum GpuPreferenceMergeKind
 /// <param name="OriginalToken">Bisheriger Wert von <c>AutoHDREnable</c>, null ohne das Token.</param>
 public sealed record GpuPreferenceMerge(GpuPreferenceMergeKind Kind, string? Written = null, string? OriginalToken = null);
 
-/// <summary>Welche Regel beim Zurücknehmen griff (E88).</summary>
+/// <summary>Welche Regel beim Zurückstellen griff (E88).</summary>
 public enum GpuPreferenceRestoreRule
 {
     /// <summary>R1: Der Wert steht noch genau so da, wie HDRpilot ihn schrieb: Original zurück (fehlte er, gelöscht).</summary>
     Exact,
 
     /// <summary>
-    /// R2: Andere Einträge wurden extern geändert (etwa <c>AppStatus=…</c> von Windows), das eigene Token steht aber noch:
-    /// nur das Token zurück, alles andere bleibt, wie es jetzt ist.
+    /// R2: Andere Einträge wurden extern geändert (etwa <c>SwapEffectUpgradeEnable</c> in den Windows-Einstellungen), das
+    /// eigene Token steht aber noch: nur das Token zurück, alles andere bleibt, wie es jetzt ist.
     /// </summary>
     TokenOnly,
 
@@ -101,7 +102,7 @@ public enum GpuPreferenceRestoreRule
     External,
 }
 
-/// <summary>Entscheidung beim Zurücknehmen: löschen, <see cref="Text"/> schreiben oder (R3) stehen lassen.</summary>
+/// <summary>Entscheidung beim Zurückstellen: löschen, <see cref="Text"/> schreiben oder (R3) stehen lassen.</summary>
 public sealed record GpuPreferenceRestore(GpuPreferenceRestoreRule Rule, bool Delete, string? Text)
 {
     public bool LeaveAsIs => !Delete && Text is null;
@@ -109,21 +110,24 @@ public sealed record GpuPreferenceRestore(GpuPreferenceRestoreRule Rule, bool De
 
 /// <summary>
 /// Format der Werte in UserGpuPreferences (E88, undokumentiert): REG_SZ aus <c>Schlüssel=Wert;</c>-Paaren, etwa
-/// <c>GpuPreference=2;AutoHDREnable=2097;</c>. HDRpilot setzt darin nur das Token <c>AutoHDREnable</c> und fasst nur saubere
-/// Werte an: REG_SZ, nicht leer, ohne Steuer- und Leerzeichen (auch kein eingebettetes NUL), jedes Stück genau ein „=“ mit
-/// Schlüssel aus Buchstaben, Ziffern und „_“ und nicht leerem Wert, kein Schlüssel doppelt (ohne Groß-/Kleinschreibung),
-/// mindestens ein Paar. So fallen etwa „0“ (ScopeX.exe), „;;“ und DWORD-Werte heraus.
+/// <c>AutoHDREnable=0;SwapEffectUpgradeEnable=1;</c> im globalen Wert. HDRpilot setzt darin nur das Token
+/// <c>AutoHDREnable</c> und fasst nur saubere Werte an: REG_SZ, nicht leer, ohne Steuer- und Leerzeichen (auch kein
+/// eingebettetes NUL), jedes Stück genau ein „=“ mit Schlüssel aus Buchstaben, Ziffern und „_“ und nicht leerem Wert, kein
+/// Schlüssel doppelt (ohne Groß-/Kleinschreibung), mindestens ein Paar. So fallen etwa „0“, „;;“ und DWORD-Werte heraus.
 /// </summary>
 public static class GpuPreferenceText
 {
     /// <summary>Das einzige Token, das HDRpilot setzt.</summary>
     public const string AutoHdrKey = "AutoHDREnable";
 
-    /// <summary>„An“ je Spiel-EXE (Einstellungen-App: „Auto HDR verwenden“; 2096 heißt aus).</summary>
-    public const string PerGameOn = "2097";
-
-    /// <summary>„An“ im globalen Wert <see cref="AutoHdrRegistryLocation.GlobalValueName"/>.</summary>
+    /// <summary>
+    /// „An“ im globalen Wert <see cref="AutoHdrRegistryLocation.GlobalValueName"/>: derselbe Schalter wie „Auto HDR“ in den
+    /// Windows-Einstellungen (Livetest G9.6).
+    /// </summary>
     public const string GlobalOn = "1";
+
+    /// <summary>„Aus“ im globalen Wert (etwa über den Tray-Eintrag „Auto HDR“).</summary>
+    public const string GlobalOff = "0";
 
     /// <summary>Zerlegt einen Wert; false, wenn er fehlt oder nicht sauber ist (dann nie anfassen).</summary>
     public static bool TryParse(GpuPreferenceValue value, [NotNullWhen(true)] out GpuPreferenceTokens? tokens)
@@ -176,11 +180,10 @@ public static class GpuPreferenceText
     public static bool IsClean(GpuPreferenceValue value) => TryParse(value, out _);
 
     /// <summary>
-    /// Einschalten: setzt <see cref="AutoHdrKey"/> auf <paramref name="onValue"/>, vorhanden an seinem Platz (Schreibweise
-    /// bleibt), sonst am Ende; alle anderen Paare und der Abschluss bleiben. Ein fehlender Wert wird zu
-    /// <c>AutoHDREnable=&lt;onValue&gt;;</c>.
+    /// Setzt <see cref="AutoHdrKey"/> auf <paramref name="value"/>, vorhanden an seinem Platz (Schreibweise bleibt), sonst
+    /// am Ende; alle anderen Paare und der Abschluss bleiben. Ein fehlender Wert wird zu <c>AutoHDREnable=&lt;value&gt;;</c>.
     /// </summary>
-    public static GpuPreferenceMerge MergeOn(GpuPreferenceValue current, string onValue)
+    public static GpuPreferenceMerge SetToken(GpuPreferenceValue current, string value)
     {
         GpuPreferenceTokens? tokens;
         if (current.IsMissing)
@@ -193,14 +196,14 @@ public static class GpuPreferenceText
         }
 
         var originalToken = tokens.Get(AutoHdrKey);
-        var merged = tokens.With(AutoHdrKey, onValue).ToString();
+        var merged = tokens.With(AutoHdrKey, value).ToString();
         return !current.IsMissing && string.Equals(merged, current.Text, StringComparison.Ordinal)
-            ? new GpuPreferenceMerge(GpuPreferenceMergeKind.AlreadyOn, null, originalToken)
+            ? new GpuPreferenceMerge(GpuPreferenceMergeKind.Unchanged, null, originalToken)
             : new GpuPreferenceMerge(GpuPreferenceMergeKind.Write, merged, originalToken);
     }
 
     /// <summary>
-    /// Zurücknehmen eines Werts, den HDRpilot geschrieben hat (<paramref name="written"/>, Token <paramref name="onValue"/>),
+    /// Zurückstellen eines Werts, den HDRpilot geschrieben hat (<paramref name="written"/>, Token <paramref name="onValue"/>),
     /// nach R1/R2/R3 (siehe <see cref="GpuPreferenceRestoreRule"/>). <paramref name="original"/> ist fehlend oder ein
     /// sauberer REG_SZ; <paramref name="originalToken"/> der damalige Wert des Tokens (null: fehlte).
     /// </summary>
@@ -226,11 +229,11 @@ public static class GpuPreferenceText
         return new GpuPreferenceRestore(GpuPreferenceRestoreRule.External, false, null);
     }
 
-    /// <summary>Gleich im Sinne des Zurücknehmens: beide fehlen oder beide sind REG_SZ mit gleichem Text.</summary>
+    /// <summary>Gleich im Sinne des Zurückstellens: beide fehlen oder beide sind REG_SZ mit gleichem Text.</summary>
     public static bool SameValue(GpuPreferenceValue a, GpuPreferenceValue b) =>
         a.Kind == b.Kind && (a.IsMissing || (a.Kind == GpuPreferenceValueKind.String && string.Equals(a.Text, b.Text, StringComparison.Ordinal)));
 
-    /// <summary>Lesbare Beschreibung für das Protokoll, etwa „GpuPreference=2;“, „(fehlt)“ oder „REG_DWORD 1“.</summary>
+    /// <summary>Lesbare Beschreibung für das Protokoll, etwa „AutoHDREnable=0;“, „(fehlt)“ oder „REG_DWORD 1“.</summary>
     public static string Describe(GpuPreferenceValue value) => value.Kind switch
     {
         GpuPreferenceValueKind.Missing => "(fehlt)",

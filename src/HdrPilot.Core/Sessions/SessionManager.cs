@@ -184,8 +184,13 @@ public sealed class SessionManager
 
             Learn(running, cfg, now);
 
-            // Windows Auto HDR (E88): alle zugeordneten laufenden Spiele, auch ohne „HDR automatisch“ (globale Notlösung).
-            AutoHdrHook(() => _autoHdr.OnCycle(running.Keys, cfg, Paused, now));
+            // Windows Auto HDR (E88): alle zugeordneten laufenden Spiele, auch ohne „HDR automatisch“, und die Starts, deren
+            // HDR-Sitzung noch auf den Spielprozess wartet (so lange gilt auch die Ankündigung für Auto HDR).
+            var waiting = _sessions.Values
+                .Where(s => s.Phase == SessionPhase.Launching && !running.ContainsKey(s.Key))
+                .Select(s => s.Key)
+                .ToList();
+            AutoHdrHook(() => _autoHdr.OnCycle(running.Keys, waiting, cfg, now));
 
             var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
             foreach (var (key, processes) in running)
@@ -407,8 +412,8 @@ public sealed class SessionManager
 
     /// <summary>
     /// Frühwarnung für ein Spiel mit „Windows Auto HDR“, aber ohne „HDR automatisch“ (E88): nur Auto HDR über den
-    /// angekündigten Start informieren (Werte je Spiel sicherstellen, globale Notlösung vor dem Spielprozess). Schaltet kein
-    /// HDR und legt keine Sitzung an. Vor dem ersten Zyklus und für unbekannte Spiele: nichts.
+    /// angekündigten Start informieren (globaler Auto-HDR-Schalter vor dem Spielprozess). Schaltet kein HDR und legt keine
+    /// Sitzung an. Vor dem ersten Zyklus und für unbekannte Spiele: nichts.
     /// </summary>
     public async Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default)
     {
@@ -462,7 +467,7 @@ public sealed class SessionManager
     private async Task<(ActiveSession Session, string? Duplicate)> BeginStartAsync(
         GameConfig game, SessionTrigger trigger, AppConfig cfg, CancellationToken cancellationToken)
     {
-        // Windows Auto HDR (E88) liest seine Werte beim Start des Spielprozesses: vor dem Schalten und vor dem Start-Befehl.
+        // Windows Auto HDR (E88) liest den globalen Schalter beim Start des Spielprozesses: vor dem Schalten und vor dem Start-Befehl.
         AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
         var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
         if (!_sessions.TryGetValue(game.Key, out var session))
@@ -1163,7 +1168,7 @@ public sealed class SessionManager
             var patterns = cfg.Settings.HelperExecutablePatterns;
             // Ausgewählte Spiele zählen auch, wenn sie beim letzten Einlesen fehlten (etwa mitten in einem Steam-Update),
             // ebenso Spiele aus dem gemerkten Zustand eines abgebrochenen Laufs (sonst stellte der Wiederanlauf mitten
-            // im Spiel zurück) und Spiele mit „Windows Auto HDR“ (globale Notlösung, E88).
+            // im Spiel zurück) und Spiele mit „Windows Auto HDR“ (Ende ihrer Sitzung für den globalen Schalter, E88).
             _matcher = new GameMatcher(
                 cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || g.AutoHdr || _sessions.ContainsKey(g.Key) || _recoveryKeys.Contains(g.Key)),
                 name => _isHelper(name, patterns),

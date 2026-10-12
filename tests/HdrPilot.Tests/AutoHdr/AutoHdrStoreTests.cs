@@ -8,12 +8,12 @@ namespace HdrPilot.Tests.AutoHdr;
 /// <see cref="RegistryGpuPreferenceStore"/> gegen einen eigenen Testschlüssel HKCU\Software\HDRpilot.Tests\AutoHdr\Unit-…,
 /// der danach gelöscht wird. Der echte Schlüssel UserGpuPreferences wird nie geöffnet, auch nicht lesend.
 /// </summary>
-public sealed class AutoHdrRegistryStoreTests : IDisposable
+public sealed class AutoHdrStoreTests : IDisposable
 {
     private readonly AutoHdrRegistryLocation _location = AutoHdrRegistryLocation.ForTest("Unit-" + Guid.NewGuid().ToString("N"));
     private readonly RegistryGpuPreferenceStore _store;
 
-    public AutoHdrRegistryStoreTests()
+    public AutoHdrStoreTests()
     {
         Assert.True(_location.IsTest);
         Assert.StartsWith(AutoHdrRegistryLocation.TestKeyRoot + @"\Unit-", _location.KeyPath, StringComparison.Ordinal);
@@ -37,19 +37,19 @@ public sealed class AutoHdrRegistryStoreTests : IDisposable
     [Fact]
     public void Strings_round_trip_and_value_names_ignore_case()
     {
-        const string exe = @"D:\Steam-Bibliothek\steamapps\common\Spiel\Spiel.exe";
+        const string name = AutoHdrRegistryLocation.GlobalValueName;
 
-        _store.WriteString(exe, "GpuPreference=2;AutoHDREnable=2097;");
+        _store.WriteString(name, "AutoHDREnable=1;SwapEffectUpgradeEnable=1;");
 
-        Assert.Equal(GpuPreferenceValue.FromString("GpuPreference=2;AutoHDREnable=2097;"), _store.Read(exe));
-        Assert.Equal(GpuPreferenceValue.FromString("GpuPreference=2;AutoHDREnable=2097;"), _store.Read(exe.ToUpperInvariant()));
+        Assert.Equal(GpuPreferenceValue.FromString("AutoHDREnable=1;SwapEffectUpgradeEnable=1;"), _store.Read(name));
+        Assert.Equal(GpuPreferenceValue.FromString("AutoHDREnable=1;SwapEffectUpgradeEnable=1;"), _store.Read(name.ToUpperInvariant()));
         using (var key = Registry.CurrentUser.OpenSubKey(_location.KeyPath)!)
         {
-            Assert.Equal(RegistryValueKind.String, key.GetValueKind(exe));
+            Assert.Equal(RegistryValueKind.String, key.GetValueKind(name));
         }
 
-        _store.Delete(exe);
-        Assert.True(_store.Read(exe).IsMissing);
+        _store.Delete(name);
+        Assert.True(_store.Read(name).IsMissing);
     }
 
     [Fact]

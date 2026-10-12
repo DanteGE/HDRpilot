@@ -12,7 +12,7 @@ public sealed class FakeGpuPreferenceStore : IGpuPreferenceStore
 
     public string KeyName { get; init; } = AutoHdrRegistryLocation.ForTest("Fake").KeyName;
 
-    /// <summary>Jeder Schreib- und Löschvorgang in Reihenfolge, etwa „set C:\G\a.exe=AutoHDREnable=2097;“ oder „delete C:\G\a.exe“.</summary>
+    /// <summary>Jeder Schreib- und Löschvorgang in Reihenfolge, etwa „set DirectXUserGlobalSettings=AutoHDREnable=1;“ oder „delete …“.</summary>
     public List<string> Operations { get; } = [];
 
     public int Reads { get; private set; }

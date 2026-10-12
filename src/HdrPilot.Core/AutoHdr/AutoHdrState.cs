@@ -5,20 +5,17 @@ using HdrPilot.Core.Config;
 
 namespace HdrPilot.Core.AutoHdr;
 
-/// <summary>Stand eines gemerkten Auto-HDR-Werts (E88).</summary>
+/// <summary>Stand des gemerkten globalen Auto-HDR-Schalters (E88).</summary>
 public enum AutoHdrEntryStatus
 {
-    /// <summary>Gemerkt, Schreiben steht aus oder war beim Absturz gerade im Gang (beim nächsten Abgleich geklärt).</summary>
+    /// <summary>Gemerkt, Schreiben steht aus oder war beim Absturz gerade im Gang (beim Zurückstellen geklärt).</summary>
     Pending,
 
     /// <summary>Geschrieben.</summary>
     Applied,
-
-    /// <summary>Seit dem Schreiben außerhalb von HDRpilot geändert: wird nie wieder von selbst geschrieben.</summary>
-    ExternallyChanged,
 }
 
-/// <summary>Zustand vor dem ersten Schreiben: fehlte (<see cref="GpuPreferenceValueKind.Missing"/>) oder sauberer REG_SZ.</summary>
+/// <summary>Zustand vor dem Schreiben: fehlte (<see cref="GpuPreferenceValueKind.Missing"/>) oder sauberer REG_SZ.</summary>
 public sealed class AutoHdrOriginalValue
 {
     public GpuPreferenceValueKind Kind { get; set; }
@@ -38,62 +35,10 @@ public sealed class AutoHdrOriginalValue
         || (Kind == GpuPreferenceValueKind.String && Text is not null && GpuPreferenceText.TryParse(Text, out _));
 }
 
-/// <summary>Ein Wert je Spiel-EXE, den HDRpilot geschrieben hat, mit allem, was zum exakten Zurücknehmen nötig ist.</summary>
-public sealed class AutoHdrStateEntry
-{
-    /// <summary>Wertname = voller Pfad der Spiel-EXE.</summary>
-    public string ValueName { get; set; } = string.Empty;
-
-    /// <summary>Spiele, die diese EXE wollen (für Protokoll und Anzeige).</summary>
-    public List<string> Games { get; set; } = [];
-
-    public AutoHdrEntryStatus Status { get; set; }
-
-    public AutoHdrOriginalValue Original { get; set; } = new();
-
-    /// <summary>Bisheriger Wert von <c>AutoHDREnable</c>, etwa „2096“; null, wenn das Token fehlte.</summary>
-    public string? OriginalToken { get; set; }
-
-    /// <summary>Genau der Text, den HDRpilot geschrieben hat.</summary>
-    public string Written { get; set; } = string.Empty;
-
-    /// <summary>Windows-Build beim Schreiben (das Format ist undokumentiert).</summary>
-    public int WindowsBuild { get; set; }
-
-    public DateTimeOffset WrittenAt { get; set; }
-
-    internal bool IsValid() =>
-        !string.IsNullOrWhiteSpace(ValueName)
-        && Games is not null
-        && Enum.IsDefined(Status)
-        && Original is not null && Original.IsValid()
-        && GpuPreferenceText.TryParse(Written, out _)
-        && !string.Equals(Original.Text, Written, StringComparison.Ordinal);
-}
-
-/// <summary>Inhalt von autohdr-state.json (Datenordner, maschinenbezogen).</summary>
-public sealed class AutoHdrStateData
-{
-    public const int CurrentVersion = 1;
-
-    public int Version { get; set; } = CurrentVersion;
-
-    /// <summary>Schlüssel, für den die Einträge gelten (<see cref="IGpuPreferenceStore.KeyName"/>).</summary>
-    public string RegistryKey { get; set; } = string.Empty;
-
-    public List<AutoHdrStateEntry> Entries { get; set; } = [];
-
-    internal bool IsValid() =>
-        Version == CurrentVersion
-        && !string.IsNullOrWhiteSpace(RegistryKey)
-        && Entries is not null
-        && Entries.All(e => e is not null && e.IsValid())
-        && Entries.Select(e => e.ValueName).Distinct(StringComparer.OrdinalIgnoreCase).Count() == Entries.Count;
-}
-
 /// <summary>
-/// Inhalt von autohdr-global.json: existiert nur, solange die Notlösung den globalen Schalter für ein laufendes Spiel hält.
-/// Wird vor dem Schreiben angelegt und nach dem Zurückstellen gelöscht.
+/// Inhalt von autohdr-global.json (Datenordner, maschinenbezogen): existiert nur, solange HDRpilot den globalen
+/// Auto-HDR-Schalter für einen Spielstart hält. Wird vor dem Schreiben angelegt und nach dem Zurückstellen gelöscht; findet
+/// ihn der nächste Start (Absturz von HDRpilot) oder das Entfernen über den Setup, stellen sie zurück.
 /// </summary>
 public sealed class AutoHdrGlobalMarker
 {
@@ -101,6 +46,7 @@ public sealed class AutoHdrGlobalMarker
 
     public int Version { get; set; } = CurrentVersion;
 
+    /// <summary>Schlüssel, für den der Merker gilt (<see cref="IGpuPreferenceStore.KeyName"/>).</summary>
     public string RegistryKey { get; set; } = string.Empty;
 
     public string ValueName { get; set; } = AutoHdrRegistryLocation.GlobalValueName;
@@ -110,13 +56,16 @@ public sealed class AutoHdrGlobalMarker
 
     public AutoHdrOriginalValue Original { get; set; } = new();
 
+    /// <summary>Bisheriger Wert von <c>AutoHDREnable</c>, etwa „0“; null, wenn das Token fehlte.</summary>
     public string? OriginalToken { get; set; }
 
+    /// <summary>Genau der Text, den HDRpilot geschrieben hat.</summary>
     public string Written { get; set; } = string.Empty;
 
-    /// <summary>Spiele, für die der Schalter gesetzt wurde (für das Protokoll).</summary>
+    /// <summary>Spiele, für deren Start der Schalter gesetzt wurde (für das Protokoll).</summary>
     public List<string> Games { get; set; } = [];
 
+    /// <summary>Windows-Build beim Setzen (das Format ist undokumentiert).</summary>
     public int WindowsBuild { get; set; }
 
     public DateTimeOffset SetAt { get; set; }
@@ -125,7 +74,7 @@ public sealed class AutoHdrGlobalMarker
         Version == CurrentVersion
         && !string.IsNullOrWhiteSpace(RegistryKey)
         && string.Equals(ValueName, AutoHdrRegistryLocation.GlobalValueName, StringComparison.OrdinalIgnoreCase)
-        && Status is AutoHdrEntryStatus.Pending or AutoHdrEntryStatus.Applied
+        && Enum.IsDefined(Status)
         && Original is not null && Original.IsValid()
         && GpuPreferenceText.TryParse(Written, out _)
         && !string.Equals(Original.Text, Written, StringComparison.Ordinal)
@@ -150,7 +99,7 @@ internal enum AutoHdrFileState
 internal sealed record AutoHdrFileLoad<T>(AutoHdrFileState State, T? Data, string? Problem = null, string? Backup = null)
     where T : class;
 
-/// <summary>Lesen, Schreiben (atomar) und Sichern der Zustandsdateien von Auto HDR.</summary>
+/// <summary>Lesen, Schreiben (atomar) und Sichern der Zustandsdatei von Auto HDR.</summary>
 internal static class AutoHdrFiles
 {
     /// <param name="clock">Für den Namen der Sicherung einer defekten Datei; null: nicht sichern, die Datei bleibt (Setup).</param>
@@ -210,65 +159,64 @@ internal static class AutoHdrFiles
     }
 }
 
-/// <summary>Was beim Zurücknehmen eines Werts geschah.</summary>
+/// <summary>Was beim Zurückstellen geschah.</summary>
 internal enum AutoHdrRestoreOutcome
 {
-    /// <summary>Nach R1 oder R2 zurückgenommen.</summary>
+    /// <summary>Nach R1 oder R2 zurückgestellt.</summary>
     Restored,
 
-    /// <summary>Der Wert steht schon auf dem Original (nie geschrieben oder schon zurückgenommen): nichts getan.</summary>
+    /// <summary>Der Wert steht schon auf dem Original (nie geschrieben oder schon zurückgestellt): nichts getan.</summary>
     AlreadyOriginal,
 
-    /// <summary>R3: extern geändert, bleibt stehen.</summary>
+    /// <summary>R3: extern geändert (etwa vom Nutzer in den Windows-Einstellungen), bleibt stehen.</summary>
     LeftAsIs,
 }
 
-/// <param name="Before">Wert vor dem Zurücknehmen.</param>
+/// <param name="Before">Wert vor dem Zurückstellen.</param>
 /// <param name="After">Text danach; null, wenn der Wert gelöscht wurde oder unverändert blieb.</param>
 internal sealed record AutoHdrRestoreResult(AutoHdrRestoreOutcome Outcome, GpuPreferenceRestoreRule? Rule, GpuPreferenceValue Before, string? After);
 
-/// <summary>Gemeinsames Zurücknehmen für Werte je Spiel, den globalen Schalter und das Entfernen über den Setup.</summary>
+/// <summary>Gemeinsames Zurückstellen für die App (nach der Sitzung, nach einem Absturz) und das Entfernen über den Setup.</summary>
 internal static class AutoHdrRestore
 {
     /// <summary>
-    /// Liest den aktuellen Wert und nimmt zurück: steht er schon auf dem Original, nichts; sonst nach R1/R2/R3
-    /// (<see cref="GpuPreferenceText.DecideRestore"/>). Wirft bei Registry-Fehlern (der Aufrufer behält den Eintrag).
+    /// Liest den aktuellen Wert und stellt zurück: steht er schon auf dem Original, nichts; sonst nach R1/R2/R3
+    /// (<see cref="GpuPreferenceText.DecideRestore"/>). Wirft bei Registry-Fehlern (der Aufrufer behält den Merker).
     /// </summary>
-    public static AutoHdrRestoreResult Apply(
-        IGpuPreferenceStore store, string valueName, AutoHdrOriginalValue original, string? originalToken, string written, string onValue)
+    public static AutoHdrRestoreResult Apply(IGpuPreferenceStore store, AutoHdrGlobalMarker marker)
     {
-        var current = store.Read(valueName);
-        var originalValue = original.ToValue();
+        var current = store.Read(marker.ValueName);
+        var originalValue = marker.Original.ToValue();
         if (GpuPreferenceText.SameValue(current, originalValue))
         {
             return new AutoHdrRestoreResult(AutoHdrRestoreOutcome.AlreadyOriginal, null, current, null);
         }
 
-        var decision = GpuPreferenceText.DecideRestore(current, originalValue, originalToken, written, onValue);
+        var decision = GpuPreferenceText.DecideRestore(current, originalValue, marker.OriginalToken, marker.Written, GpuPreferenceText.GlobalOn);
         if (decision.Delete)
         {
-            store.Delete(valueName);
+            store.Delete(marker.ValueName);
             return new AutoHdrRestoreResult(AutoHdrRestoreOutcome.Restored, decision.Rule, current, null);
         }
 
         if (decision.Text is { } text)
         {
-            store.WriteString(valueName, text);
+            store.WriteString(marker.ValueName, text);
             return new AutoHdrRestoreResult(AutoHdrRestoreOutcome.Restored, decision.Rule, current, text);
         }
 
         return new AutoHdrRestoreResult(AutoHdrRestoreOutcome.LeftAsIs, decision.Rule, current, null);
     }
 
-    /// <summary>Protokollzeile zum Ergebnis; <paramref name="subject"/> etwa „Auto HDR: C:\…\Spiel.exe“.</summary>
+    /// <summary>Protokollzeile zum Ergebnis; <paramref name="subject"/> etwa „Auto HDR global: DirectXUserGlobalSettings“.</summary>
     public static string Describe(AutoHdrRestoreResult result, string subject, string reason) => result switch
     {
         { Outcome: AutoHdrRestoreOutcome.AlreadyOriginal } =>
-            $"{subject} steht schon auf dem Originalzustand „{GpuPreferenceText.Describe(result.Before)}“, nichts zurückzunehmen ({reason}).",
+            $"{subject} steht schon auf dem Originalzustand „{GpuPreferenceText.Describe(result.Before)}“, nichts zurückzustellen ({reason}).",
         { Outcome: AutoHdrRestoreOutcome.LeftAsIs } =>
             $"{subject} extern geändert (jetzt „{GpuPreferenceText.Describe(result.Before)}“), HDRpilot lässt den Wert stehen ({reason}).",
         { Rule: GpuPreferenceRestoreRule.TokenOnly } =>
-            $"{subject}: andere Einträge extern geändert, nur AutoHDREnable zurückgenommen (vorher „{GpuPreferenceText.Describe(result.Before)}“, jetzt {(result.After is null ? "gelöscht" : "„" + result.After + "“")}; {reason}).",
-        _ => $"{subject} zurückgenommen ({(result.After is null ? "gelöscht, fehlte vorher" : "wieder „" + result.After + "“")}; {reason}).",
+            $"{subject}: andere Einträge extern geändert, nur AutoHDREnable zurückgestellt (vorher „{GpuPreferenceText.Describe(result.Before)}“, jetzt {(result.After is null ? "gelöscht" : "„" + result.After + "“")}; {reason}).",
+        _ => $"{subject} zurückgestellt auf {(result.After is null ? "„(fehlt)“, gelöscht" : "„" + result.After + "“")} ({reason}).",
     };
 }

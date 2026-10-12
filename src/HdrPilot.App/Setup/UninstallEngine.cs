@@ -8,13 +8,13 @@ namespace HdrPilot.App.Setup;
 
 /// <summary>
 /// Entfernen (E83). Läuft aus einer Kopie im Temp-Ordner, damit der Programmordner gelöscht werden kann. Ablauf: Sperre,
-/// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, Auto-HDR-Werte zurücknehmen (E88),
-/// nur die eigenen Dateien löschen (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene EXE, eigenen
-/// Autostart-Wert und Eintrag entfernen; Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige Ausnahmen: der
-/// gemerkte HDR-Zustand (session-state.json) und die Auto-HDR-Zustände (autohdr-state.json, autohdr-global.json) werden
-/// nach dem Zurücknehmen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher ist; das Ergebnis nennt den
-/// ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag für einen neuen Versuch.
-/// Ein nicht wiederhergestellter HDR-Zustand und nicht zurückgenommene Auto-HDR-Werte sind nur Hinweise
+/// laufende App über den Befehlsweg beenden, gemerkten HDR-Zustand wiederherstellen, globalen Auto-HDR-Schalter
+/// zurückstellen (E88), nur die eigenen Dateien löschen (fremde Dateien und Ordner bleiben), Verknüpfungen auf die eigene
+/// EXE, eigenen Autostart-Wert und Eintrag entfernen; Einstellungen und Daten nur auf ausdrücklichen Wunsch. Einzige
+/// Ausnahmen: der gemerkte HDR-Zustand (session-state.json) und der Merker des Auto-HDR-Schalters (autohdr-global.json)
+/// werden nach dem Zurückstellen verworfen. Jeder Schritt macht nach Fehlern weiter, wo das sicher ist; das Ergebnis nennt
+/// den ersten Fehler samt Schritt und Datei. Lässt sich die EXE nicht löschen, bleibt der Eintrag für einen neuen Versuch.
+/// Ein nicht wiederhergestellter HDR-Zustand und ein nicht zurückgestellter Auto-HDR-Schalter sind nur Hinweise
 /// (<see cref="SetupWarning.HdrNotRestored"/>, <see cref="SetupWarning.AutoHdrNotRestored"/>).
 /// </summary>
 public sealed class UninstallEngine : IUninstallEngine
@@ -33,8 +33,9 @@ public sealed class UninstallEngine : IUninstallEngine
     private readonly IGpuPreferenceStore _autoHdr;
 
     /// <param name="autoHdrStore">
-    /// Schlüssel UserGpuPreferences für das Zurücknehmen der Auto-HDR-Werte (Tests: Attrappe). Null: echte Registry am Ort
-    /// <see cref="SetupLocations.AutoHdrLocation"/> (im Prüflauf die Testwurzel der Ablage, nie der echte Schlüssel).
+    /// Schlüssel UserGpuPreferences für das Zurückstellen des globalen Auto-HDR-Schalters (Tests: Attrappe). Null: echte
+    /// Registry am Ort <see cref="SetupLocations.AutoHdrLocation"/> (im Prüflauf die Testwurzel der Ablage, nie der echte
+    /// Schlüssel).
     /// </param>
     public UninstallEngine(
         SetupLocations locations,
@@ -144,7 +145,7 @@ public sealed class UninstallEngine : IUninstallEngine
             warningList.Add(SetupWarning.HdrNotRestored);
         }
 
-        // Unabhängig von „Daten löschen“ und vor dem Löschen der Ablage: sonst wären die Originalzustände verloren (E88).
+        // Unabhängig von „Daten löschen“ und vor dem Löschen der Ablage: sonst wäre der Originalzustand verloren (E88).
         if (!RestoreAutoHdr(progress))
         {
             warningList.Add(SetupWarning.AutoHdrNotRestored);
@@ -298,10 +299,10 @@ public sealed class UninstallEngine : IUninstallEngine
     }
 
     /// <summary>
-    /// Auto-HDR-Werte, die HDRpilot in UserGpuPreferences geschrieben hat, zurücknehmen (E88, gleiche Regeln wie die App:
-    /// extern geänderte bleiben) und den globalen Schalter der Notlösung zurückstellen, falls ein Absturz ihn hinterließ
-    /// (die beendete App hat ihn sonst schon zurückgestellt). Danach die Zustandsdateien verwerfen. Gehören sie zu einem
-    /// anderen Schlüssel oder scheitert ein Wert, bleiben sie (Hinweis im Ergebnis). Fehler verhindern das Entfernen nicht.
+    /// Globalen Auto-HDR-Schalter in UserGpuPreferences zurückstellen, falls ein Absturz von HDRpilot ihn gesetzt hinterließ
+    /// (E88; die beendete App hat ihn sonst schon zurückgestellt), mit derselben Regel wie die App: Hat der Nutzer ihn
+    /// inzwischen geändert, bleibt seine Wahl. Danach den Merker verwerfen. Gehört er zu einem anderen Schlüssel oder
+    /// scheitert das Zurückstellen, bleibt er (Hinweis im Ergebnis). Fehler verhindern das Entfernen nicht.
     /// </summary>
     private bool RestoreAutoHdr(IProgress<UninstallStep>? progress)
     {
@@ -312,23 +313,23 @@ public sealed class UninstallEngine : IUninstallEngine
         }
 
         Report(progress, UninstallStep.RestoreAutoHdr);
-        _log.Info("Auto-HDR-Werte zurücknehmen in " + _autoHdr.KeyName + ".");
+        _log.Info("Globalen Auto-HDR-Schalter zurückstellen in " + _autoHdr.KeyName + ".");
         try
         {
             var result = AutoHdrCleanup.RestoreAll(_autoHdr, PhysicalFileSystem.Instance, paths, _log.Info);
             _log.Info(string.Create(
                 CultureInfo.InvariantCulture,
-                $"Auto HDR: {result.Restored} zurückgenommen, {result.LeftAsIs} extern geändert (bleiben), {result.Failed} fehlgeschlagen."));
+                $"Auto HDR: {result.Restored} zurückgestellt, {result.LeftAsIs} extern geändert (bleibt), {result.Failed} fehlgeschlagen."));
             if (!result.Complete)
             {
-                _log.Warn("Auto-HDR-Zustand bleibt gespeichert" + (result.Skipped is null ? "." : ": " + result.Skipped));
+                _log.Warn("Merker des Auto-HDR-Schalters bleibt gespeichert" + (result.Skipped is null ? "." : ": " + result.Skipped));
             }
 
             return result.Complete;
         }
         catch (Exception ex)
         {
-            _log.Error("Auto-HDR-Werte ließen sich nicht zurücknehmen.", ex);
+            _log.Error("Der globale Auto-HDR-Schalter ließ sich nicht zurückstellen.", ex);
             return false;
         }
     }

@@ -8,8 +8,8 @@ using HdrPilot.Tests.TestSupport;
 namespace HdrPilot.Tests.AutoHdr;
 
 /// <summary>
-/// Frühwarnung und Auto HDR (E88): Ein Spiel mit „Windows Auto HDR“, aber ohne „HDR automatisch“ wird nur angekündigt (die
-/// Notlösung kann vor dem Spielprozess setzen), HDR bleibt unverändert; Spiele mit „HDR automatisch“ laufen wie bisher über
+/// Frühwarnung und Auto HDR (E88): Ein Spiel mit „Windows Auto HDR“, aber ohne „HDR automatisch“ wird nur angekündigt (der
+/// globale Auto-HDR-Schalter kommt vor dem Spielprozess), HDR bleibt unverändert; Spiele mit „HDR automatisch“ laufen wie bisher über
 /// PrepareAsync. Abgeschaltete Frühwarnung, unbekannte Spiele und pausierte Automatik kündigen nichts an.
 /// </summary>
 public sealed class AutoHdrGlobalLauncherSignalTests
@@ -122,7 +122,7 @@ public sealed class AutoHdrGlobalLauncherSignalTests
         {
         }
 
-        public void OnCycle(IReadOnlyCollection<string> runningGameKeys, AppConfig config, bool paused, DateTimeOffset now)
+        public void OnCycle(IReadOnlyCollection<string> runningGameKeys, IReadOnlyCollection<string> waitingGameKeys, AppConfig config, DateTimeOffset now)
         {
         }
     }

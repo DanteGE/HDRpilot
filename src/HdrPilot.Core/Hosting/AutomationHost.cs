@@ -84,7 +84,7 @@ public sealed class AutomationHost : IAsyncDisposable
             new Win32HdrHotkeySender(),
             new TypedLogger<DisplayConfigHdrController>(LoggerFactory));
 
-        // Auto HDR je Spiel (E88): Testinstanzen (eigene Ablage) erreichen den echten Schlüssel nie.
+        // Windows Auto HDR (E88): Testinstanzen (eigene Ablage) erreichen den echten Schlüssel nie.
         var location = autoHdrLocation ?? AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(environment));
         _autoHdr = new AutoHdrService(
             Config,
@@ -151,7 +151,7 @@ public sealed class AutomationHost : IAsyncDisposable
     /// <summary>Frühwarnung aus den Protokollen von Epic Games Launcher und Steam.</summary>
     public LauncherSignalService LauncherSignals { get; }
 
-    /// <summary>Windows Auto HDR je Spiel und globale Notlösung (E88).</summary>
+    /// <summary>Windows Auto HDR: globaler Schalter um bekannte Spielstarts, Umschalten durch den Nutzer (E88).</summary>
     public IAutoHdrService AutoHdr => _autoHdr;
 
     public CompositeLoggerFactory LoggerFactory { get; }
@@ -179,7 +179,7 @@ public sealed class AutomationHost : IAsyncDisposable
         // auch Einstellungen und Protokolle in deren privatem Speicher. Einmal je Start im Hintergrund prüfen, ohne den
         // Start aufzuhalten.
         ContainerCheck = Task.Run(CheckContainer, CancellationToken.None);
-        _autoHdr.Start(); // Werte je Spiel vor dem ersten Zyklus abgleichen
+        _autoHdr.Start(); // vor dem ersten Zyklus: Merker eines abgebrochenen Laufs suchen
         await Sessions.InitializeAsync(Watcher.Poll(), cancellationToken).ConfigureAwait(false);
         Watcher.Start(OnPollAsync);
         LauncherSignals.Start(); // erst nach dem ersten Zyklus: vorher lehnt die Sitzungslogik Vorbereitungen ab

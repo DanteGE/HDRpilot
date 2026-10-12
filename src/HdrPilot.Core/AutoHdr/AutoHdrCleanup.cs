@@ -4,148 +4,77 @@ using HdrPilot.Core.Config;
 namespace HdrPilot.Core.AutoHdr;
 
 /// <summary>Ergebnis von <see cref="AutoHdrCleanup.RestoreAll"/>.</summary>
-/// <param name="Skipped">Grund, warum gemerkte Werte nicht angefasst wurden (anderer Schlüssel, nicht lesbar); sonst null.</param>
+/// <param name="Skipped">Grund, warum der gemerkte Schalter nicht angefasst wurde (anderer Schlüssel, nicht lesbar); sonst null.</param>
 public sealed record AutoHdrCleanupResult(int Restored, int LeftAsIs, int Failed, string? Skipped = null)
 {
-    /// <summary>Alles zurückgenommen oder bewusst stehen gelassen; die Zustandsdateien sind gelöscht.</summary>
+    /// <summary>Zurückgestellt oder bewusst stehen gelassen; der Merker ist gelöscht.</summary>
     public bool Complete => Skipped is null && Failed == 0;
 }
 
 /// <summary>
-/// Auto-HDR-Werte ohne laufende App zurücknehmen (E88), für das Entfernen über den Setup: alle Werte aus
-/// autohdr-state.json und den globalen Schalter aus autohdr-global.json, mit denselben Regeln wie die App (R1/R2/R3,
-/// extern geänderte bleiben). Braucht keine Konfiguration. Gehören die Dateien zu einem anderen Schlüssel oder sind sie
-/// nicht lesbar, bleibt alles, wie es ist. Danach werden die Dateien gelöscht; nicht Zurückgenommenes bleibt darin gemerkt.
+/// Globalen Auto-HDR-Schalter ohne laufende App zurückstellen (E88), für das Entfernen über den Setup: Hinterließ ein
+/// Absturz von HDRpilot autohdr-global.json, gilt dieselbe Regel wie in der App (R1/R2/R3, eine Änderung durch den Nutzer
+/// bleibt). Braucht keine Konfiguration. Gehört der Merker zu einem anderen Schlüssel oder ist er nicht lesbar, bleibt
+/// alles, wie es ist. Werte je Spiel-EXE schreibt HDRpilot nicht, also gibt es davon nichts zurückzunehmen.
 /// </summary>
 public static class AutoHdrCleanup
 {
-    /// <summary>Gibt es etwas zurückzunehmen (eine der beiden Zustandsdateien)?</summary>
-    public static bool HasState(IFileSystem fileSystem, AppPaths paths) =>
-        fileSystem.FileExists(paths.AutoHdrStateFile) || fileSystem.FileExists(paths.AutoHdrGlobalFile);
+    /// <summary>Gibt es etwas zurückzustellen (Merker vorhanden)?</summary>
+    public static bool HasState(IFileSystem fileSystem, AppPaths paths) => fileSystem.FileExists(paths.AutoHdrGlobalFile);
 
     /// <param name="log">Protokollzeilen (etwa das Setup-Protokoll).</param>
     public static AutoHdrCleanupResult RestoreAll(IGpuPreferenceStore store, IFileSystem fileSystem, AppPaths paths, Action<string> log)
     {
-        var restored = 0;
-        var leftAsIs = 0;
-        var failed = 0;
-        string? skipped = null;
-
-        if (fileSystem.FileExists(paths.AutoHdrStateFile))
+        var path = paths.AutoHdrGlobalFile;
+        if (!fileSystem.FileExists(path))
         {
-            var load = AutoHdrFiles.Load<AutoHdrStateData>(fileSystem, paths.AutoHdrStateFile, d => d.IsValid(), clock: null);
-            if (Problem(load, d => d.RegistryKey, store, paths.AutoHdrStateFile) is { } problem)
-            {
-                skipped = problem;
-                log("Auto HDR: " + problem + ". Werte je Spiel bleiben unverändert, " + paths.AutoHdrStateFile + " bleibt.");
-            }
-            else if (load.Data is { } data)
-            {
-                var remaining = new List<AutoHdrStateEntry>();
-                foreach (var entry in data.Entries)
-                {
-                    if (entry.Status == AutoHdrEntryStatus.ExternallyChanged)
-                    {
-                        leftAsIs++;
-                        log("Auto HDR: " + entry.ValueName + " war extern geändert und bleibt, wie er ist.");
-                        continue;
-                    }
-
-                    switch (TryRestore(store, entry.ValueName, entry.Original, entry.OriginalToken, entry.Written, GpuPreferenceText.PerGameOn, "Auto HDR: " + entry.ValueName, log))
-                    {
-                        case null:
-                            failed++;
-                            remaining.Add(entry);
-                            break;
-                        case AutoHdrRestoreOutcome.LeftAsIs:
-                            leftAsIs++;
-                            break;
-                        default:
-                            restored++;
-                            break;
-                    }
-                }
-
-                Finish(fileSystem, paths.AutoHdrStateFile, remaining.Count == 0 ? null : new AutoHdrStateData { RegistryKey = data.RegistryKey, Entries = remaining }, log);
-            }
+            return new AutoHdrCleanupResult(0, 0, 0);
         }
 
-        if (fileSystem.FileExists(paths.AutoHdrGlobalFile))
+        var load = AutoHdrFiles.Load<AutoHdrGlobalMarker>(fileSystem, path, m => m.IsValid(), clock: null);
+        if (Problem(load, store, path) is { } problem)
         {
-            var load = AutoHdrFiles.Load<AutoHdrGlobalMarker>(fileSystem, paths.AutoHdrGlobalFile, m => m.IsValid(), clock: null);
-            if (Problem(load, m => m.RegistryKey, store, paths.AutoHdrGlobalFile) is { } problem)
-            {
-                skipped ??= problem;
-                log("Auto HDR global: " + problem + ". Der globale Schalter bleibt unverändert, " + paths.AutoHdrGlobalFile + " bleibt.");
-            }
-            else if (load.Data is { } marker)
-            {
-                switch (TryRestore(store, marker.ValueName, marker.Original, marker.OriginalToken, marker.Written, GpuPreferenceText.GlobalOn, "Auto HDR global: " + marker.ValueName, log))
-                {
-                    case null:
-                        failed++;
-                        break;
-                    case AutoHdrRestoreOutcome.LeftAsIs:
-                        leftAsIs++;
-                        Finish(fileSystem, paths.AutoHdrGlobalFile, null, log);
-                        break;
-                    default:
-                        restored++;
-                        Finish(fileSystem, paths.AutoHdrGlobalFile, null, log);
-                        break;
-                }
-            }
+            log("Auto HDR global: " + problem + ". Der globale Schalter bleibt unverändert, " + path + " bleibt.");
+            return new AutoHdrCleanupResult(0, 0, 0, problem);
         }
 
-        return new AutoHdrCleanupResult(restored, leftAsIs, failed, skipped);
-    }
-
-    /// <summary>Grund, die Datei nicht anzufassen (nicht lesbar, defekt, anderer Schlüssel); null, wenn sie fehlt oder passt.</summary>
-    private static string? Problem<T>(AutoHdrFileLoad<T> load, Func<T, string> keyOf, IGpuPreferenceStore store, string path)
-        where T : class => load.State switch
+        if (load.Data is not { } marker)
         {
-            AutoHdrFileState.Unreadable => Path.GetFileName(path) + " nicht lesbar: " + load.Problem,
-            AutoHdrFileState.Corrupt => Path.GetFileName(path) + " defekt: " + load.Problem,
-            AutoHdrFileState.Loaded when !string.Equals(keyOf(load.Data!), store.KeyName, StringComparison.OrdinalIgnoreCase) =>
-                "Zustand gehört zu " + keyOf(load.Data!) + ", nicht zu " + store.KeyName,
-            _ => null,
-        };
+            return new AutoHdrCleanupResult(0, 0, 0);
+        }
 
-    private static AutoHdrRestoreOutcome? TryRestore(
-        IGpuPreferenceStore store, string valueName, AutoHdrOriginalValue original, string? originalToken, string written, string onValue, string subject, Action<string> log)
-    {
+        AutoHdrRestoreResult result;
         try
         {
-            var result = AutoHdrRestore.Apply(store, valueName, original, originalToken, written, onValue);
-            log(AutoHdrRestore.Describe(result, subject, "Entfernen"));
-            return result.Outcome;
+            result = AutoHdrRestore.Apply(store, marker);
         }
         catch (Exception ex)
         {
-            log(subject + " ließ sich nicht zurücknehmen: " + ex.GetType().Name + ": " + ex.Message);
-            return null;
+            log("Auto HDR global: " + marker.ValueName + " ließ sich nicht zurückstellen: " + ex.GetType().Name + ": " + ex.Message);
+            return new AutoHdrCleanupResult(0, 0, 1);
         }
-    }
 
-    /// <summary>Löscht die Datei (<paramref name="remaining"/> null) oder schreibt nur noch das nicht Zurückgenommene hinein.</summary>
-    private static void Finish(IFileSystem fileSystem, string path, AutoHdrStateData? remaining, Action<string> log)
-    {
+        log(AutoHdrRestore.Describe(result, "Auto HDR global: " + marker.ValueName, "Entfernen"));
         try
         {
-            if (remaining is null)
-            {
-                fileSystem.DeleteFile(path);
-                log("Gelöscht: " + path);
-            }
-            else
-            {
-                AutoHdrFiles.Save(fileSystem, path, remaining);
-                log(remaining.Entries.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " Auto-HDR-Werte bleiben gemerkt: " + path);
-            }
+            fileSystem.DeleteFile(path);
+            log("Gelöscht: " + path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            log(path + " ließ sich nicht aktualisieren: " + ex.Message);
+            log(path + " ließ sich nicht löschen: " + ex.Message);
         }
+
+        return result.Outcome == AutoHdrRestoreOutcome.LeftAsIs ? new AutoHdrCleanupResult(0, 1, 0) : new AutoHdrCleanupResult(1, 0, 0);
     }
+
+    /// <summary>Grund, den Merker nicht anzufassen (nicht lesbar, defekt, anderer Schlüssel); null, wenn er fehlt oder passt.</summary>
+    private static string? Problem(AutoHdrFileLoad<AutoHdrGlobalMarker> load, IGpuPreferenceStore store, string path) => load.State switch
+    {
+        AutoHdrFileState.Unreadable => Path.GetFileName(path) + " nicht lesbar: " + load.Problem,
+        AutoHdrFileState.Corrupt => Path.GetFileName(path) + " defekt: " + load.Problem,
+        AutoHdrFileState.Loaded when !string.Equals(load.Data!.RegistryKey, store.KeyName, StringComparison.OrdinalIgnoreCase) =>
+            "Zustand gehört zu " + load.Data.RegistryKey + ", nicht zu " + store.KeyName,
+        _ => null,
+    };
 }

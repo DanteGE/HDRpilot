@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
-using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.HdrSupport;
@@ -33,8 +32,6 @@ public sealed class GameDetailsViewModel : ObservableObject
     private GameConfig _config;
     private bool _restoreAfter;
     private bool _autoHdr;
-    private string? _autoHdrStatusText;
-    private StatusKind _autoHdrStatusKind;
     private bool _detached;
     private DisplayOptionViewModel? _selectedDisplay;
     private ExecutableItemViewModel? _selectedExecutable;
@@ -64,7 +61,6 @@ public sealed class GameDetailsViewModel : ObservableObject
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
         RefreshDisplays();
-        RefreshAutoHdrStatus();
 
         // „HDR automatisch“ (Liste oder Details) und die HDR-Angabe laut PCGamingWiki steuern die Hinweise unter
         // „Windows Auto HDR“; abgemeldet in Detach, wenn ein anderes Spiel gewählt wird.
@@ -108,32 +104,20 @@ public sealed class GameDetailsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Schalter „Windows Auto HDR“ (E88, Abschnitt „BILD“): Windows rechnet das SDR-Bild in HDR um, HDRpilot trägt das je
-    /// Spiel-EXE in die Windows-Einstellung ein. Unabhängig von „HDR automatisch“ (das bleibt beim Schalten unberührt).
-    /// Scheitert das Speichern, setzt der Abgleich der Liste den Schalter zurück (<see cref="Apply"/>).
+    /// Schalter „Windows Auto HDR“ (E88, Abschnitt „BILD“): Windows rechnet das SDR-Bild in HDR um. HDRpilot schaltet dafür
+    /// den globalen Auto-HDR-Schalter von Windows direkt vor jedem Start ein, den es kennt (Starten, Verknüpfung,
+    /// Steam-Startoption, Frühwarnung), und danach zurück; beim Schalten selbst ändert sich in Windows nichts. Unabhängig
+    /// von „HDR automatisch“ (das bleibt beim Schalten unberührt). Scheitert das Speichern, setzt der Abgleich der Liste den
+    /// Schalter zurück (<see cref="Apply"/>).
     /// </summary>
     public bool AutoHdr
     {
         get => _autoHdr;
         set
         {
-            if (SetProperty(ref _autoHdr, value))
+            if (SetProperty(ref _autoHdr, value) && !_suppressWrites)
             {
-                if (_suppressWrites || !value)
-                {
-                    RefreshAutoHdrStatus();
-                }
-                else
-                {
-                    // Eben eingeschaltet: Den Stand kennt der Abgleich erst nach dem Speichern (danach frischen Apply und
-                    // AutoHdrChanged ihn auf). Bis dahin kein Stand statt kurz „Noch keine Spiel-EXE bekannt“.
-                    AutoHdrStatusText = null;
-                }
-
-                if (!_suppressWrites)
-                {
-                    _ = _owner.WriteGameAsync(Item.Key, g => g.AutoHdr = value);
-                }
+                _ = _owner.WriteGameAsync(Item.Key, g => g.AutoHdr = value);
             }
         }
     }
@@ -159,28 +143,6 @@ public sealed class GameDetailsViewModel : ObservableObject
     /// ausgeschaltetem Auto HDR, damit die Abhängigkeit vor dem Einschalten klar ist).
     /// </summary>
     public bool ShowAutoHdrNeedsHdrHint => !Item.HdrAuto;
-
-    /// <summary>Stand der Einträge (eingetragen, extern geändert …); null bei ausgeschalteter Option.</summary>
-    public string? AutoHdrStatusText
-    {
-        get => _autoHdrStatusText;
-        private set
-        {
-            if (SetProperty(ref _autoHdrStatusText, value))
-            {
-                OnPropertyChanged(nameof(HasAutoHdrStatus));
-            }
-        }
-    }
-
-    public bool HasAutoHdrStatus => _autoHdrStatusText is not null;
-
-    /// <summary>Zeichen vor dem Stand: Erfolg (alles eingetragen), Warnung (etwas nicht eingetragen) oder Info (noch keine EXE).</summary>
-    public StatusKind AutoHdrStatusKind
-    {
-        get => _autoHdrStatusKind;
-        private set => SetProperty(ref _autoHdrStatusKind, value);
-    }
 
     public ObservableCollection<DisplayOptionViewModel> Displays { get; } = [];
 
@@ -384,68 +346,6 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLastPlayed));
         RelearnExeCommand.RaiseCanExecuteChanged();
         LaunchCommand.RaiseCanExecuteChanged();
-        RefreshAutoHdrStatus(); // neue EXEs gelernt, Option von außen geändert (etwa „Auto-HDR-Einträge zurücknehmen“)
-    }
-
-    /// <summary>
-    /// Stand von „Windows Auto HDR“ neu lesen (aus dem Speicher des Abgleichs, ohne Registry-Zugriff): nach dem Schalten,
-    /// nach einem Konfigurationsstand und wenn der Abgleich einen neuen Stand meldet.
-    /// </summary>
-    internal void RefreshAutoHdrStatus()
-    {
-        if (_detached)
-        {
-            return;
-        }
-
-        if (!_autoHdr)
-        {
-            AutoHdrStatusText = null;
-            AutoHdrStatusKind = StatusKind.Info;
-            return;
-        }
-
-        var status = _owner.Context.GetAutoHdrStatus(Item.Key);
-        var (text, kind) = AutoHdrStatusOf(status);
-        AutoHdrStatusKind = kind;
-        AutoHdrStatusText = text;
-    }
-
-    /// <summary>Text und Zeichen zum Stand eines Spiels mit eingeschalteter Option (je Zustand ein Satz).</summary>
-    public static (string Text, StatusKind Kind) AutoHdrStatusOf(AutoHdrGameStatus status)
-    {
-        ArgumentNullException.ThrowIfNull(status);
-        if (status.Targets.Count == 0)
-        {
-            return (LibraryStrings.Details_AutoHdrStatusNoExe, StatusKind.Info);
-        }
-
-        var parts = new List<string>();
-        var applied = status.Count(AutoHdrTargetState.Applied) + status.Count(AutoHdrTargetState.AlreadyOn);
-        var external = status.Count(AutoHdrTargetState.ExternallyChanged);
-        var unsupported = status.Count(AutoHdrTargetState.Unsupported);
-        var failed = status.Count(AutoHdrTargetState.Failed);
-        if (applied > 0)
-        {
-            parts.Add(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusApplied, LibraryText.Executables(applied)));
-        }
-
-        if (external > 0)
-        {
-            parts.Add(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusExternal, LibraryText.Executables(external)));
-        }
-
-        if (unsupported > 0)
-        {
-            parts.Add(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusUnsupported, LibraryText.Executables(unsupported)));
-        }
-
-        if (failed > 0)
-        {
-            parts.Add(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusFailed, LibraryText.Executables(failed)));
-        }
-
-        return (string.Join(" ", parts), external + unsupported + failed > 0 ? StatusKind.Warning : StatusKind.Success);
     }
 
     /// <summary>Ein anderes Spiel ist gewählt oder das Fenster geschlossen: nicht mehr auf die Zeile hören.</summary>

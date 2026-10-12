@@ -51,13 +51,6 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
 
     public IHdrListService HdrList => FakeHdrList;
 
-    public HdrPilot.App.Tests.Library.FakeAutoHdrService FakeAutoHdr { get; } = new();
-
-    /// <summary>Wenn gesetzt, statt der Attrappe (etwa der echte AutoHdrService über einem Schlüssel im Speicher).</summary>
-    public HdrPilot.Core.AutoHdr.IAutoHdrService? AutoHdrService { get; set; }
-
-    public HdrPilot.Core.AutoHdr.IAutoHdrService AutoHdr => AutoHdrService ?? FakeAutoHdr;
-
     public List<string> OpenedPages { get; } = [];
 
     /// <summary>Wenn gesetzt, scheitert das Öffnen einer Webseite damit.</summary>

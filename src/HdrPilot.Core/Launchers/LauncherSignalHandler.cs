@@ -105,7 +105,7 @@ public sealed class LauncherSignalHandler(ISessionConfigSource config, ILauncher
             {
                 if (game.AutoHdr && !sessions.Paused && sessions.IsInitialized)
                 {
-                    // Windows Auto HDR (E88) braucht seine Werte vor dem Spielprozess, auch ohne „HDR automatisch“.
+                    // Windows Auto HDR (E88) braucht den globalen Schalter vor dem Spielprozess, auch ohne „HDR automatisch“.
                     _logger.LogInformation(
                         "Launcher-Signal von {Launcher}: Start von \"{Game}\" ({Key}) angekündigt; „HDR automatisch“ ist aus, nur Windows Auto HDR wird vorbereitet.",
                         signal.Launcher, game.Name, game.Key);

@@ -10,14 +10,15 @@ using HdrPilot.Core.Config;
 namespace HdrPilot.App.Tests.Setup.Engine;
 
 /// <summary>
-/// Entfernen nimmt die Auto-HDR-Werte von HDRpilot zurück (E88): je Spiel und den globalen Schalter, mit denselben Regeln
-/// wie die App, vor dem Löschen von Dateien und Daten. Registry nur als Attrappe (<see cref="SetupHarness.AutoHdr"/>).
+/// Entfernen stellt einen globalen Auto-HDR-Schalter zurück, den ein Absturz von HDRpilot gesetzt hinterließ (E88, G9.4):
+/// mit derselben Regel wie die App (eine Änderung durch den Nutzer bleibt), vor dem Löschen von Dateien und Daten. Werte je
+/// Spiel-EXE gibt es nicht. Registry nur als Attrappe (<see cref="SetupHarness.AutoHdr"/>).
 /// </summary>
 public sealed class SetupUninstallAutoHdrTests : IDisposable
 {
-    private const string ExeA = @"D:\Games\Spiel A\SpielA.exe";
-    private const string ExeB = @"D:\Games\Spiel B\SpielB.exe";
     private const string Global = AutoHdrRegistryLocation.GlobalValueName;
+    private const string GlobalOff = "AutoHDREnable=0;SwapEffectUpgradeEnable=1;";
+    private const string GlobalOn = "AutoHDREnable=1;SwapEffectUpgradeEnable=1;";
 
     private readonly SetupHarness _h = new();
 
@@ -26,9 +27,10 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
     private SetupLocations L => _h.Locations;
 
     [Fact]
-    public async Task Without_auto_hdr_state_the_step_is_not_reported_and_nothing_is_read()
+    public async Task Without_a_marker_the_step_is_not_reported_and_nothing_is_read()
     {
         await InstallAsync();
+        _h.AutoHdr.SetString(Global, GlobalOn); // vom Nutzer an: kein Merker, also nicht von HDRpilot
         var progress = new SyncProgress<UninstallStep>();
 
         var result = await _h.UninstallAsync(progress: progress);
@@ -36,19 +38,15 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
         Assert.True(result.Success, result.Message);
         Assert.DoesNotContain(UninstallStep.RestoreAutoHdr, progress.Items);
         Assert.Equal(0, _h.AutoHdr.Reads);
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
         Assert.False(result.Has(SetupWarning.AutoHdrNotRestored));
     }
 
     [Fact]
-    public async Task Values_are_restored_before_files_and_data_are_removed_and_the_state_files_deleted()
+    public async Task Switch_left_on_by_a_crash_is_restored_before_files_and_data_are_removed()
     {
         await InstallAsync();
-        _h.AutoHdr.SetString(ExeA, "GpuPreference=2;AutoHDREnable=2097;");
-        _h.AutoHdr.SetString(ExeB, "AutoHDREnable=2097;AppStatus=4;"); // Windows hat AppStatus ergänzt
-        _h.AutoHdr.SetString(Global, "AutoHDREnable=1;SwapEffectUpgradeEnable=1;"); // Absturz der App mit gesetzter Notlösung
-        WriteState(
-            Entry(ExeA, "GpuPreference=2;", "GpuPreference=2;AutoHDREnable=2097;"),
-            Entry(ExeB, null, "AutoHDREnable=2097;"));
+        _h.AutoHdr.SetString(Global, GlobalOn);
         WriteMarker();
         var progress = new SyncProgress<UninstallStep>();
 
@@ -56,10 +54,8 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
 
         Assert.True(result.Success, result.Message);
         Assert.Null(result.Warnings);
-        Assert.Equal("GpuPreference=2;", _h.AutoHdr.GetString(ExeA));
-        Assert.Equal("AppStatus=4;", _h.AutoHdr.GetString(ExeB));
-        Assert.Equal("AutoHDREnable=0;SwapEffectUpgradeEnable=1;", _h.AutoHdr.GetString(Global));
-        Assert.False(File.Exists(L.DataPaths.AutoHdrStateFile));
+        Assert.Equal(GlobalOff, _h.AutoHdr.GetString(Global));
+        Assert.Equal(["set " + Global + "=" + GlobalOff], _h.AutoHdr.Operations);
         Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
         var steps = progress.Items.ToList();
         Assert.True(steps.IndexOf(UninstallStep.RestoreAutoHdr) >= 0);
@@ -70,52 +66,68 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
     }
 
     [Fact]
-    public async Task Externally_changed_values_stay_and_the_state_files_still_go_without_remove_data()
+    public async Task Missing_original_is_deleted_again_and_the_marker_goes_without_remove_data()
     {
         await InstallAsync();
-        _h.AutoHdr.SetString(ExeA, "AutoHDREnable=2096;"); // Nutzer hat in Windows umgestellt
-        WriteState(Entry(ExeA, null, "AutoHDREnable=2097;"));
+        _h.AutoHdr.SetString(Global, "AutoHDREnable=1;");
+        WriteMarker(original: null, originalToken: null, written: "AutoHDREnable=1;");
+
+        var result = await _h.UninstallAsync(removeData: false);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Null(_h.AutoHdr.GetString(Global));
+        Assert.Equal(["delete " + Global], _h.AutoHdr.Operations);
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.True(Directory.Exists(L.DataPaths.DataDirectory)); // ohne „Daten löschen“ bleibt die Ablage
+    }
+
+    [Fact]
+    public async Task Users_change_stays_and_the_marker_still_goes()
+    {
+        await InstallAsync();
+        _h.AutoHdr.SetString(Global, "AutoHDREnable=0;SwapEffectUpgradeEnable=0;"); // Nutzer hat in Windows umgestellt
+        WriteMarker();
 
         var result = await _h.UninstallAsync(removeData: false);
 
         Assert.True(result.Success, result.Message);
         Assert.False(result.Has(SetupWarning.AutoHdrNotRestored));
-        Assert.Equal("AutoHDREnable=2096;", _h.AutoHdr.GetString(ExeA));
+        Assert.Equal("AutoHDREnable=0;SwapEffectUpgradeEnable=0;", _h.AutoHdr.GetString(Global));
         Assert.Empty(_h.AutoHdr.Operations);
-        Assert.False(File.Exists(L.DataPaths.AutoHdrStateFile));
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
         Assert.Contains("extern geändert", _h.LogText, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Registry_failure_keeps_the_state_and_is_only_a_warning()
+    public async Task Registry_failure_keeps_the_marker_and_is_only_a_warning()
     {
         await InstallAsync();
-        _h.AutoHdr.SetString(ExeA, "AutoHDREnable=2097;");
-        WriteState(Entry(ExeA, null, "AutoHDREnable=2097;"));
+        _h.AutoHdr.SetString(Global, GlobalOn);
+        WriteMarker();
         _h.AutoHdr.FailWrites = new UnauthorizedAccessException("Zugriff verweigert");
 
         var result = await _h.UninstallAsync();
 
         Assert.True(result.Success, result.Message);
         Assert.True(result.Has(SetupWarning.AutoHdrNotRestored));
-        Assert.True(File.Exists(L.DataPaths.AutoHdrStateFile));
-        Assert.Equal("AutoHDREnable=2097;", _h.AutoHdr.GetString(ExeA));
+        Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
         Assert.False(File.Exists(L.ExePath)); // Entfernen lief trotzdem weiter
     }
 
     [Fact]
-    public async Task State_for_another_key_is_skipped_and_kept()
+    public async Task Marker_for_another_key_is_skipped_and_kept()
     {
         await InstallAsync();
-        _h.AutoHdr.SetString(ExeA, "AutoHDREnable=2097;");
-        WriteState(AutoHdrRegistryLocation.Real.KeyName, Entry(ExeA, null, "AutoHDREnable=2097;"));
+        _h.AutoHdr.SetString(Global, GlobalOn);
+        WriteMarker(key: AutoHdrRegistryLocation.Real.KeyName);
 
         var result = await _h.UninstallAsync();
 
         Assert.True(result.Success, result.Message);
         Assert.True(result.Has(SetupWarning.AutoHdrNotRestored));
         Assert.Equal(0, _h.AutoHdr.Reads);
-        Assert.True(File.Exists(L.DataPaths.AutoHdrStateFile));
+        Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalFile));
         Assert.Contains("Zustand gehört zu " + AutoHdrRegistryLocation.Real.KeyName, _h.LogText, StringComparison.Ordinal);
     }
 
@@ -157,38 +169,21 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
         Assert.True(result.Success, result.Message);
     }
 
-    private void WriteState(params AutoHdrStateEntry[] entries) => WriteState(L.AutoHdrLocation.KeyName, entries);
-
-    private void WriteState(string key, params AutoHdrStateEntry[] entries)
-    {
-        Directory.CreateDirectory(L.DataPaths.DataDirectory);
-        File.WriteAllText(L.DataPaths.AutoHdrStateFile, JsonSerializer.Serialize(new AutoHdrStateData { RegistryKey = key, Entries = [.. entries] }, ConfigJson.Options));
-    }
-
-    private void WriteMarker()
+    private void WriteMarker(string? key = null, string? original = GlobalOff, string? originalToken = "0", string written = GlobalOn)
     {
         Directory.CreateDirectory(L.DataPaths.DataDirectory);
         var marker = new AutoHdrGlobalMarker
         {
-            RegistryKey = L.AutoHdrLocation.KeyName,
+            RegistryKey = key ?? L.AutoHdrLocation.KeyName,
             Status = AutoHdrEntryStatus.Applied,
-            Original = new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.String, Text = "AutoHDREnable=0;SwapEffectUpgradeEnable=1;" },
-            OriginalToken = "0",
-            Written = "AutoHDREnable=1;SwapEffectUpgradeEnable=1;",
+            Original = original is null
+                ? new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.Missing }
+                : new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.String, Text = original },
+            OriginalToken = originalToken,
+            Written = written,
             Games = ["Steam:1"],
+            WindowsBuild = 26300,
         };
         File.WriteAllText(L.DataPaths.AutoHdrGlobalFile, JsonSerializer.Serialize(marker, ConfigJson.Options));
     }
-
-    private static AutoHdrStateEntry Entry(string exe, string? original, string written) => new()
-    {
-        ValueName = exe,
-        Games = ["Steam:1"],
-        Status = AutoHdrEntryStatus.Applied,
-        Original = original is null
-            ? new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.Missing }
-            : new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.String, Text = original },
-        Written = written,
-        WindowsBuild = 26300,
-    };
 }

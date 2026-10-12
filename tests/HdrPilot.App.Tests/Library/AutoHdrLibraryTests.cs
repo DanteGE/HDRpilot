@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using HdrPilot.App.Resources;
 using HdrPilot.App.ViewModels.Library;
-using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.HdrSupport;
@@ -11,8 +10,8 @@ namespace HdrPilot.App.Tests.Library;
 
 /// <summary>
 /// „Windows Auto HDR“ in der Spielebibliothek (E88): Schalter im Abschnitt „BILD“ der Details, unabhängig von „HDR
-/// automatisch“, Hinweise (HDR automatisch aus, eigenes HDR laut PCGamingWiki), Stand der Einträge und das Kennzeichen
-/// „AUTO HDR“ in der Liste (nur Anzeige).
+/// automatisch“, Hinweise (HDR automatisch aus, eigenes HDR laut PCGamingWiki) und das Kennzeichen „AUTO HDR“ in der
+/// Liste (nur Anzeige). Der Schalter ändert nur die Konfiguration; in Windows wirkt er erst beim Start über HDRpilot.
 /// </summary>
 public sealed class AutoHdrLibraryTests
 {
@@ -110,7 +109,7 @@ public sealed class AutoHdrLibraryTests
         Assert.Contains(nameof(GameItemViewModel.AutoHdr), changes);
         Assert.False(other.AutoHdr); // Gegenprobe: nur die Zeile dieses Spiels
 
-        // Von außen geändert (etwa „Auto-HDR-Einträge zurücknehmen“ in den Einstellungen): Liste zieht nach.
+        // Von außen geändert (etwa per Kommandozeile): Liste zieht nach.
         context.ConfigService.Update(c => c.FindGame(Plain)!.AutoHdr = false);
         Assert.False(row.AutoHdr);
         context.ConfigService.Update(c => c.FindGame(Native)!.AutoHdr = true);
@@ -193,92 +192,6 @@ public sealed class AutoHdrLibraryTests
     });
 
     [Fact]
-    public void Status_is_hidden_while_off_and_says_no_exe_known_without_targets() => Sta.Run(() =>
-    {
-        var context = SampleContext();
-        using var vm = new LibraryViewModel(context, new FakeDialogs());
-        var details = Select(vm, Plain);
-        Assert.False(details.HasAutoHdrStatus);
-        Assert.Null(details.AutoHdrStatusText);
-        Assert.Empty(context.AutoHdr.StatusReads); // aus: der Stand wird gar nicht erst gelesen
-
-        details.AutoHdr = true;
-
-        Assert.True(details.HasAutoHdrStatus);
-        Assert.Equal(LibraryStrings.Details_AutoHdrStatusNoExe, details.AutoHdrStatusText);
-        Assert.Equal(StatusKind.Info, details.AutoHdrStatusKind);
-        Assert.Contains(Plain, context.AutoHdr.StatusReads);
-
-        details.AutoHdr = false;
-        Assert.False(details.HasAutoHdrStatus);
-    });
-
-    [Fact]
-    public void Status_text_names_every_state_with_its_count() => Sta.Run(() =>
-    {
-        var applied = GameDetailsViewModel.AutoHdrStatusOf(Status(AutoHdrTargetState.Applied, AutoHdrTargetState.AlreadyOn));
-        Assert.Equal(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusApplied, LibraryText.Format(LibraryStrings.Count_ExeMany, 2)), applied.Text);
-        Assert.Equal(StatusKind.Success, applied.Kind);
-
-        var one = GameDetailsViewModel.AutoHdrStatusOf(Status(AutoHdrTargetState.Applied));
-        Assert.Equal(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusApplied, LibraryStrings.Count_ExeOne), one.Text);
-
-        var external = GameDetailsViewModel.AutoHdrStatusOf(Status(AutoHdrTargetState.ExternallyChanged));
-        Assert.Equal(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusExternal, LibraryStrings.Count_ExeOne), external.Text);
-        Assert.Equal(StatusKind.Warning, external.Kind);
-
-        var unsupported = GameDetailsViewModel.AutoHdrStatusOf(Status(AutoHdrTargetState.Unsupported));
-        Assert.Equal(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusUnsupported, LibraryStrings.Count_ExeOne), unsupported.Text);
-        Assert.Equal(StatusKind.Warning, unsupported.Kind);
-
-        var failed = GameDetailsViewModel.AutoHdrStatusOf(Status(AutoHdrTargetState.Failed, AutoHdrTargetState.Failed, AutoHdrTargetState.Failed));
-        Assert.Equal(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusFailed, LibraryText.Format(LibraryStrings.Count_ExeMany, 3)), failed.Text);
-        Assert.Equal(StatusKind.Warning, failed.Kind);
-        Assert.DoesNotContain("Wirkt ab dem nächsten Spielstart", failed.Text, StringComparison.Ordinal); // nichts eingetragen
-    });
-
-    [Fact]
-    public void Status_text_combines_states_in_a_fixed_order() => Sta.Run(() =>
-    {
-        var mixed = GameDetailsViewModel.AutoHdrStatusOf(Status(
-            AutoHdrTargetState.Failed, AutoHdrTargetState.Applied, AutoHdrTargetState.Unsupported, AutoHdrTargetState.ExternallyChanged, AutoHdrTargetState.AlreadyOn));
-
-        var expected = string.Join(" ",
-            LibraryText.Format(LibraryStrings.Details_AutoHdrStatusApplied, LibraryText.Format(LibraryStrings.Count_ExeMany, 2)),
-            LibraryText.Format(LibraryStrings.Details_AutoHdrStatusExternal, LibraryStrings.Count_ExeOne),
-            LibraryText.Format(LibraryStrings.Details_AutoHdrStatusUnsupported, LibraryStrings.Count_ExeOne),
-            LibraryText.Format(LibraryStrings.Details_AutoHdrStatusFailed, LibraryStrings.Count_ExeOne));
-        Assert.Equal(expected, mixed.Text);
-        Assert.Equal(StatusKind.Warning, mixed.Kind); // eine Warnung genügt, auch wenn anderes eingetragen ist
-        Assert.Equal(StatusKind.Info, GameDetailsViewModel.AutoHdrStatusOf(AutoHdrGameStatus.None).Kind);
-    });
-
-    [Fact]
-    public void Status_refreshes_when_the_service_reports_a_change_and_only_for_the_shown_game() => Sta.Run(() =>
-    {
-        var context = SampleContext();
-        context.ConfigService.Update(c => c.FindGame(Plain)!.AutoHdr = true);
-        using var vm = new LibraryViewModel(context, new FakeDialogs());
-        var details = Select(vm, Plain);
-        Assert.Equal(LibraryStrings.Details_AutoHdrStatusNoExe, details.AutoHdrStatusText);
-        Assert.Equal(1, context.AutoHdrChangedSubscribers);
-
-        context.AutoHdr.Publish(Plain, AutoHdrTargetState.Applied);
-        Assert.Equal(LibraryText.Format(LibraryStrings.Details_AutoHdrStatusApplied, LibraryStrings.Count_ExeOne), details.AutoHdrStatusText);
-        Assert.Equal(StatusKind.Success, details.AutoHdrStatusKind);
-
-        context.AutoHdr.Publish(Plain, AutoHdrTargetState.ExternallyChanged);
-        Assert.Equal(StatusKind.Warning, details.AutoHdrStatusKind);
-
-        // Gegenprobe: ein anderes Spiel gewählt, die alten Details lesen nichts mehr.
-        var native = Select(vm, Native);
-        var reads = context.AutoHdr.StatusReads.Count;
-        context.AutoHdr.Publish(Plain, AutoHdrTargetState.Failed);
-        Assert.Equal(reads, context.AutoHdr.StatusReads.Count); // Native ist aus: kein Lesen, auch nicht für Plain
-        Assert.Null(native.AutoHdrStatusText);
-    });
-
-    [Fact]
     public void Failed_save_puts_the_switch_back_and_shows_the_error() => Sta.Run(() =>
     {
         var context = SampleContext();
@@ -289,7 +202,6 @@ public sealed class AutoHdrLibraryTests
         details.AutoHdr = true;
 
         Assert.False(details.AutoHdr);
-        Assert.False(details.HasAutoHdrStatus);
         Assert.False(Saved(context, Plain).AutoHdr);
         Assert.False(vm.Games.Single(g => g.Key == Plain).AutoHdr);
         Assert.Equal(StatusKind.Error, vm.StatusKind);
@@ -300,7 +212,7 @@ public sealed class AutoHdrLibraryTests
     });
 
     [Fact]
-    public void Old_details_stop_listening_and_closing_unsubscribes_from_the_service() => Sta.Run(() =>
+    public void Old_details_stop_listening_to_their_row_and_closing_detaches_the_shown_ones() => Sta.Run(() =>
     {
         var context = SampleContext();
         var vm = new LibraryViewModel(context, new FakeDialogs());
@@ -314,14 +226,12 @@ public sealed class AutoHdrLibraryTests
         var shown = vm.Details!;
         var shownChanges = Track(shown);
         vm.Dispose();
-        Assert.Equal(0, context.AutoHdrChangedSubscribers);
-        context.AutoHdr.Publish(Native, AutoHdrTargetState.Applied);
         vm.Games.Single(g => g.Key == Native).HdrAuto = true;
         Assert.DoesNotContain(nameof(GameDetailsViewModel.ShowAutoHdrNeedsHdrHint), shownChanges);
     });
 
     [Fact]
-    public void Rollback_from_the_settings_switches_the_shown_game_off_without_writing() => Sta.Run(() =>
+    public void Option_changed_elsewhere_updates_the_shown_game_without_writing() => Sta.Run(() =>
     {
         var context = SampleContext();
         context.ConfigService.Update(c => c.FindGame(Plain)!.AutoHdr = true);
@@ -329,14 +239,10 @@ public sealed class AutoHdrLibraryTests
         var details = Select(vm, Plain);
         var updates = context.Updates;
 
-        context.ConfigService.Update(c => c.Games.ForEach(g => g.AutoHdr = false)); // so schaltet die Rücknahme aus
+        context.ConfigService.Update(c => c.Games.ForEach(g => g.AutoHdr = false)); // etwa per Kommandozeile
 
         Assert.False(details.AutoHdr);
-        Assert.False(details.HasAutoHdrStatus);
         Assert.False(details.Item.AutoHdr);
         Assert.Equal(updates, context.Updates); // die Details schreiben den Stand nicht zurück
     });
-
-    private static AutoHdrGameStatus Status(params AutoHdrTargetState[] states) =>
-        new(states.Select((s, i) => new AutoHdrTargetStatus($@"D:\Games\Spiel\game{i}.exe", s)).ToList());
 }

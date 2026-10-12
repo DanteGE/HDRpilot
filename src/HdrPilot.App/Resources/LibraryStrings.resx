@@ -27,6 +27,13 @@
     <value>{0} Spiele</value>
     <comment>{0} = Anzahl</comment>
   </data>
+  <data name="Count_ExeOne" xml:space="preserve">
+    <value>1 EXE-Datei</value>
+  </data>
+  <data name="Count_ExeMany" xml:space="preserve">
+    <value>{0} EXE-Dateien</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
   <data name="Stats_HdrAuto" xml:space="preserve">
     <value>{0} mit HDR automatisch</value>
     <comment>{0} = Anzahl</comment>
@@ -247,6 +254,12 @@
   <data name="Badge_HdrLimitedTooltip" xml:space="preserve">
     <value>HDR eingeschränkt laut PCGamingWiki</value>
   </data>
+  <data name="Badge_AutoHdr" xml:space="preserve">
+    <value>AUTO HDR</value>
+  </data>
+  <data name="Badge_AutoHdrTooltip" xml:space="preserve">
+    <value>Windows Auto HDR für dieses Spiel an</value>
+  </data>
   <data name="Status_Dismiss" xml:space="preserve">
     <value>Hinweis schließen</value>
   </data>
@@ -330,6 +343,43 @@
   </data>
   <data name="Details_DisplayHint" xml:space="preserve">
     <value>Standard ist die globale Einstellung.</value>
+  </data>
+  <data name="Details_SectionPicture" xml:space="preserve">
+    <value>BILD</value>
+  </data>
+  <data name="Details_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Details_AutoHdrHint" xml:space="preserve">
+    <value>Windows rechnet das SDR-Bild in HDR um. Nur für Spiele ohne eigenes HDR (DirectX 11/12). Wirkt beim nächsten Start.</value>
+  </data>
+  <data name="Details_AutoHdrNeedsHdr" xml:space="preserve">
+    <value>Wirkt nur, solange Windows-HDR an ist. „HDR automatisch“ ist für dieses Spiel aus: HDR selbst einschalten oder „Mit HDR starten“ benutzen.</value>
+  </data>
+  <data name="Details_AutoHdrNative" xml:space="preserve">
+    <value>Dieses Spiel hat laut PCGamingWiki eigenes HDR – besser im Spiel einschalten.</value>
+  </data>
+  <data name="Details_AutoHdrNativeLimited" xml:space="preserve">
+    <value>Dieses Spiel hat laut PCGamingWiki eingeschränktes eigenes HDR – meist besser im Spiel einschalten.</value>
+  </data>
+  <data name="Details_AutoHdrStatusApplied" xml:space="preserve">
+    <value>Für {0} eingetragen. Wirkt ab dem nächsten Spielstart.</value>
+    <comment>{0} = Anzahl EXE-Dateien (Count_ExeOne/Count_ExeMany)</comment>
+  </data>
+  <data name="Details_AutoHdrStatusNoExe" xml:space="preserve">
+    <value>Noch keine Spiel-EXE bekannt: HDRpilot trägt Auto HDR ein, sobald es das Spiel einmal laufen gesehen hat.</value>
+  </data>
+  <data name="Details_AutoHdrStatusExternal" xml:space="preserve">
+    <value>{0} außerhalb von HDRpilot geändert: HDRpilot lässt den Eintrag stehen. Zum erneuten Eintragen aus- und wieder einschalten.</value>
+    <comment>{0} = Anzahl EXE-Dateien (Count_ExeOne/Count_ExeMany)</comment>
+  </data>
+  <data name="Details_AutoHdrStatusUnsupported" xml:space="preserve">
+    <value>{0} mit Windows-Eintrag in unbekanntem Format: nicht angefasst.</value>
+    <comment>{0} = Anzahl EXE-Dateien (Count_ExeOne/Count_ExeMany)</comment>
+  </data>
+  <data name="Details_AutoHdrStatusFailed" xml:space="preserve">
+    <value>{0}: Eintragen gescheitert, neuer Versuch beim nächsten Abgleich (Einzelheiten im Protokoll).</value>
+    <comment>{0} = Anzahl EXE-Dateien (Count_ExeOne/Count_ExeMany)</comment>
   </data>
   <data name="Display_Global" xml:space="preserve">
     <value>Globale Einstellung</value>

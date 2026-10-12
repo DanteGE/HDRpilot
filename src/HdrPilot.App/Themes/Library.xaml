@@ -368,6 +368,22 @@
         </Style.Triggers>
     </Style>
 
+    <!--
+        Kennzeichen „AUTO HDR“ hinter dem Namen (E88: „Windows Auto HDR“ für das Spiel an, nur Anzeige). Bewusst anders als
+        „HDR“ laut PCGamingWiki (rosa Umriss) und als der Schalter: violett getönte Fläche mit Sonnen-Symbol. Die Farben
+        (dritte Akzentfarbe, Hp.Color.Accent3) setzt die Zeilenvorlage selbst: Ein Pinsel mit DynamicResource im Stil wäre
+        für alle Zeilen geteilt und folgte dem Wechsel zwischen hell und dunkel nicht sicher.
+    -->
+    <Style x:Key="Lib.AutoHdrBadge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="5,0,6,1" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="TextElement.FontSize" Value="9.5" />
+        <Setter Property="TextElement.FontWeight" Value="Bold" />
+    </Style>
+
     <!-- Auf-/Zuklappen (eingeschaltet = offen): Pfeil dreht sich -->
     <Style x:Key="Lib.CollapseToggle" TargetType="ToggleButton">
         <Setter Property="Width" Value="28" />

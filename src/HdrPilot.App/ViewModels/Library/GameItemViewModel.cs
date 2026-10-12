@@ -18,6 +18,7 @@ public sealed class GameItemViewModel : ObservableObject
     private string _name = string.Empty;
     private string _installDir = string.Empty;
     private bool _hdrAuto;
+    private bool _autoHdr;
     private bool _isNew;
     private bool _isInstalled;
     private bool _isRunning;
@@ -79,6 +80,16 @@ public sealed class GameItemViewModel : ObservableObject
                 _owner.OnHdrAutoChangedByUser(this);
             }
         }
+    }
+
+    /// <summary>
+    /// „Windows Auto HDR“ (E88) ist für dieses Spiel an: nur das Kennzeichen „AUTO HDR“ in der Liste, geschaltet wird im
+    /// Detailbereich (Abschnitt „BILD“). Stand aus der Konfiguration.
+    /// </summary>
+    public bool AutoHdr
+    {
+        get => _autoHdr;
+        private set => SetProperty(ref _autoHdr, value);
     }
 
     public bool IsNew
@@ -204,6 +215,7 @@ public sealed class GameItemViewModel : ObservableObject
             OnPropertyChanged(nameof(HdrAuto));
         }
 
+        AutoHdr = config.AutoHdr;
         IsNew = config.IsNew;
         IsInstalled = config.IsInstalled;
     }

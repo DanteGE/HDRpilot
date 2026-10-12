@@ -252,6 +252,45 @@
     <value>Sendet Win+Alt+B nur, wenn die Windows-Schnittstelle scheitert, und nie, solange ein Spiel läuft (Anti-Cheat-Systeme können künstliche Tastendrücke als Makro werten). Wirkt auf alle HDR-Bildschirme und braucht die Xbox Game Bar.</value>
   </data>
 
+  <!-- Einstellungen: Windows Auto HDR (E88) -->
+  <data name="SectionAutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="AutoHdrIntro" xml:space="preserve">
+    <value>„Windows Auto HDR“ (Windows rechnet das SDR-Bild in HDR um) schaltest du je Spiel in der Spielebibliothek ein, Abschnitt „Bild“. HDRpilot trägt es dann für die EXE-Dateien des Spiels in den Grafikeinstellungen von Windows ein.</value>
+  </data>
+  <data name="AutoHdrGlobalFallbackLabel" xml:space="preserve">
+    <value>Notlösung: Auto HDR global während des Spiels (experimentell)</value>
+  </data>
+  <data name="AutoHdrGlobalFallbackHint" xml:space="preserve">
+    <value>Nur falls der Eintrag je Spiel nicht greift: Solange ein Spiel mit „Windows Auto HDR“ läuft, schaltet HDRpilot Auto HDR in Windows für alle Spiele ein und danach wieder zurück. Standard aus.</value>
+  </data>
+  <data name="AutoHdrRollbackButton" xml:space="preserve">
+    <value>Auto-HDR-Einträge zurücknehmen</value>
+  </data>
+  <data name="AutoHdrRollbackHint" xml:space="preserve">
+    <value>Schaltet „Windows Auto HDR“ bei allen Spielen aus und stellt die Windows-Einträge wieder her, die HDRpilot geschrieben hat. Wirkt sofort.</value>
+  </data>
+  <data name="AutoHdrRollbackDone" xml:space="preserve">
+    <value>Erledigt. Zurückgenommene Einträge: {0}, ausgeschaltete Spiele: {1}.</value>
+    <comment>{0} = wiederhergestellte Werte, {1} = Spiele, bei denen die Option ausgeschaltet wurde</comment>
+  </data>
+  <data name="AutoHdrRollbackNothing" xml:space="preserve">
+    <value>Keine Auto-HDR-Einträge von HDRpilot vorhanden.</value>
+  </data>
+  <data name="AutoHdrRollbackLeftAsIs" xml:space="preserve">
+    <value>Außerhalb von HDRpilot geänderte Einträge bleiben, wie sie sind: {0}.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="AutoHdrRollbackFailed" xml:space="preserve">
+    <value>Ließen sich nicht zurücknehmen (neuer Versuch beim nächsten Abgleich, Einzelheiten im Protokoll): {0}.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="AutoHdrRollbackError" xml:space="preserve">
+    <value>Nicht zurückgenommen: {0}</value>
+    <comment>{0} = Grund (etwa: Konfiguration ließ sich nicht speichern)</comment>
+  </data>
+
   <!-- Einstellungen: Suchordner -->
   <data name="SectionSearchFolders" xml:space="preserve">
     <value>Suchordner</value>

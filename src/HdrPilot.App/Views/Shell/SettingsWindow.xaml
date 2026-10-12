@@ -266,6 +266,60 @@
                             </Border>
                         </StackPanel>
                     </HeaderedContentControl>
+
+                    <!--
+                        Windows Auto HDR (E88): geschaltet wird je Spiel in der Bibliothek (Abschnitt „BILD“). Hier nur die
+                        experimentelle Notlösung (mit „Speichern“) und die Rücknahme aller Einträge (wirkt sofort).
+                    -->
+                    <HeaderedContentControl x:Name="AutoHdrSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionAutoHdr}" Tag="&#xE706;">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,12" Text="{x:Static res:ShellStrings.AutoHdrIntro}" />
+                            <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                              Style="{StaticResource Hp.ToggleSwitch}"
+                                              AutomationProperties.AutomationId="AutoHdrGlobalFallbackToggle"
+                                              AutomationProperties.Name="{x:Static res:ShellStrings.AutoHdrGlobalFallbackLabel}"
+                                              AutomationProperties.HelpText="{x:Static res:ShellStrings.AutoHdrGlobalFallbackHint}"
+                                              IsChecked="{Binding AutoHdrGlobalFallback, Mode=TwoWay}" />
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE7BA;" FontSize="14" Margin="0,1,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.Warning}" />
+                                            <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.AutoHdrGlobalFallbackLabel}" />
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.AutoHdrGlobalFallbackHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Button Style="{StaticResource Hp.GhostButton}" HorizontalAlignment="Left" Margin="0,4,0,0"
+                                    AutomationProperties.AutomationId="AutoHdrRollbackButton"
+                                    AutomationProperties.Name="{x:Static res:ShellStrings.AutoHdrRollbackButton}"
+                                    AutomationProperties.HelpText="{x:Static res:ShellStrings.AutoHdrRollbackHint}"
+                                    Command="{Binding RollbackAutoHdrCommand}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Hp.Shell.ButtonGlyph}" Text="&#xE7A7;" />
+                                    <TextBlock Text="{x:Static res:ShellStrings.AutoHdrRollbackButton}" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,8,0,0" Text="{x:Static res:ShellStrings.AutoHdrRollbackHint}" />
+                            <!-- Ohne eigenen Namen: UI-Automation liest so die Meldung selbst (phase9-autohdr-ui.ps1) -->
+                            <TextBlock Margin="0,8,0,0" TextWrapping="Wrap"
+                                       AutomationProperties.AutomationId="AutoHdrRollbackMessage"
+                                       Text="{Binding AutoHdrRollbackMessage}"
+                                       Visibility="{Binding HasAutoHdrRollbackMessage, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Body}">
+                                        <Setter Property="FontSize" Value="13" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AutoHdrRollbackIsWarning}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Warning}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </HeaderedContentControl>
                 </StackPanel>
 
                 <!-- Rechte Spalte -->

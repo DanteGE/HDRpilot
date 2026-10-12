@@ -13,6 +13,10 @@ public static class LibraryText
     public static string Games(int count) =>
         count == 1 ? LibraryStrings.Count_GamesOne : Format(LibraryStrings.Count_GamesMany, count);
 
+    /// <summary>„1 EXE-Datei“ oder „3 EXE-Dateien“.</summary>
+    public static string Executables(int count) =>
+        count == 1 ? LibraryStrings.Count_ExeOne : Format(LibraryStrings.Count_ExeMany, count);
+
     public static string SourceName(GameSource source) => source switch
     {
         GameSource.Steam => LibraryStrings.Source_Steam,

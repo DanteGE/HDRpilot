@@ -303,10 +303,26 @@ public sealed class TestLibraryContext : ILibraryContext
                 ConfigChanged?.Invoke(this, EventArgs.Empty);
             }
         };
+        AutoHdr.Changed += (_, _) =>
+        {
+            if (!Disposed)
+            {
+                AutoHdrChanged?.Invoke(this, EventArgs.Empty);
+            }
+        };
         Env.Folders[System.Environment.SpecialFolder.Windows] = @"C:\Windows";
     }
 
     public event EventHandler? ConfigChanged;
+
+    public event EventHandler? AutoHdrChanged;
+
+    /// <summary>Auto HDR (E88) als Attrappe: Stände vorgeben, <see cref="FakeAutoHdrService.Publish"/> meldet sie.</summary>
+    public FakeAutoHdrService AutoHdr { get; } = new();
+
+    public int AutoHdrChangedSubscribers => AutoHdrChanged?.GetInvocationList().Length ?? 0;
+
+    public HdrPilot.Core.AutoHdr.AutoHdrGameStatus GetAutoHdrStatus(string gameKey) => AutoHdr.GetStatus(gameKey);
 
     public event EventHandler? HdrStateChanged;
 

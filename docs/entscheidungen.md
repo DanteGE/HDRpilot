@@ -670,3 +670,64 @@ vorbei (Unit-Test mit echter WPF-Tastaturnavigation und `phase6-traymenu.ps1` am
 Nutzers). Die Sichtbarkeit der Tray-Zeile prüft der Render-Test über den Vergleich mit derselben Zeile ohne Text: reine
 Farbpixel hingen bei der dünnen Schrift an den Ziffern der Version (29 bei „Version 1.3.0“ gegen die alte Schwelle 30).
 Das Startprotokoll schreibt die Version weiter vierstellig (Core kennt `AppVersion` nicht); das ist nur ein Format.
+
+**E88 Windows Auto HDR je Spiel (Wunsch des Nutzers, G9):** „Windows Auto HDR“ (Windows rechnet das SDR-Bild eines
+Spiels ohne eigenes HDR in HDR um) ist eine eigene Option je Spiel (`GameConfig.AutoHdr`, JSON `autoHdr`, Standard aus;
+ältere config.json laden unverändert) und klar getrennt von „HDR automatisch“ (HDRpilot schaltet Windows-HDR beim
+Spielstart ein und danach zurück). Platz nach Wahl des Nutzers: im Detailbereich ein eigener Abschnitt „BILD“ unter
+„AUTOMATIK“ mit dem Schalter „Windows Auto HDR“ (`DetailAutoHdr`) und Erklärung; in der Liste nur das Kennzeichen
+„AUTO HDR“ direkt hinter dem Namen (nur Anzeige; violett getönt, damit es sich vom rosa umrandeten „HDR“ laut
+PCGamingWiki und vom Schalter abhebt), kein zweiter Schalter und keine neue Spalte. Die Option ist unabhängig von „HDR
+automatisch“ und wirkt auch mit „Mit HDR starten“, Verknüpfung, Steam-Startoption oder von Hand eingeschaltetem HDR;
+ist „HDR automatisch“ aus, steht unter dem Schalter immer der Hinweis, dass Auto HDR nur bei eingeschaltetem
+Windows-HDR wirkt (auch vor dem Einschalten, damit die Abhängigkeit vorher klar ist). Spiele mit eigenem HDR laut
+PCGamingWiki (`Native` oder `Limited`, dieselbe Regel wie das Kennzeichen „HDR“/„HDR*“) zeigen die Zeile blasser
+(Deckkraft 0,55), aber voll bedienbar, mit dem Hinweis, besser das HDR des Spiels zu nehmen. Unter dem Schalter steht
+der Stand je Spiel-EXE aus dem letzten Abgleich (eingetragen, außerhalb geändert, unbekanntes Format, gescheitert),
+gelesen aus dem Speicher ohne Registry-Zugriff.
+
+Beide technischen Wege sind gebaut; der Versuch am echten System folgt mit dem Nutzer (G9.6). (1) Je Spiel, immer,
+solange die Option an ist: Im Wert `HKCU\Software\Microsoft\DirectX\UserGpuPreferences\<voller EXE-Pfad>` (REG_SZ aus
+`Schlüssel=Wert;`-Paaren) setzt HDRpilot nur `AutoHDREnable=2097`. Ein vorhandenes Token wird an seiner Stelle ersetzt
+(die Schreibweise des Schlüssels bleibt), sonst angehängt; alle anderen Paare, ihre Reihenfolge und das abschließende
+`;` (oder sein Fehlen) bleiben, ein fehlender Wert wird `AutoHDREnable=2097;`. Ziel-EXEs sind die erkannten, vom
+Launcher genannten und hinzugefügten EXEs (voller Pfad, `.exe`) ohne ausgeschlossene, ohne Hilfsprozesse und ohne die
+Ausschlüsse der Symbolwahl (Anti-Cheat-Starter wie `start_protected_game` und `*_BE`, Ordner EasyAntiCheat und
+BattlEye, EOS-Bootstrapper, Werkzeuge, Laufzeitpakete). Eine allgemeine Launcher-Regel gibt es bewusst nicht: Ein Wert
+an einem Launcher ist nur überflüssig, ein fehlender an der EXE, die rendert, vereitelt die Funktion. Werte, die kein
+sauberer REG_SZ sind (DWORD wie `GraphicsFeaturesNotificationConfig`, ein bloßes `0` wie bei ScopeX.exe, eingebettetes
+NUL, doppelte Schlüssel, Leerzeichen), fasst HDRpilot nie an. Zurückgenommen wird nur, was HDRpilot geschrieben hat:
+Ist der Wert noch genau der geschriebene, kommt der Originalzustand zurück (fehlte er, wird er gelöscht). Hat sich
+anderes geändert, steht `AutoHDREnable` aber noch auf dem geschriebenen Wert, nimmt HDRpilot nur dieses Token zurück
+(alter Wert oder entfernt) und lässt alles andere, wie es jetzt ist. Grund: Windows ergänzt bei Spiel-EXEs selbst
+Paare wie `AppStatus=0;`, `AppStatus=4;` oder `AppStatus=4096;` (lokale Auslesung vom 2026-10-10); mit der strengen
+Regel „geänderte Werte bleiben unberührt“ bliebe Auto HDR nach dem Ausschalten bei jedem einmal gestarteten Spiel
+stillschweigend an. Etwas, das HDRpilot nicht geschrieben hat, verwirft es dabei nie. Ist dagegen das Token selbst
+geändert oder entfernt (etwa „Auto HDR nicht verwenden“ in den Windows-Einstellungen, das `2096` schreibt), der Wert
+gelöscht oder kein sauberer REG_SZ mehr, bleibt er stehen, und das Protokoll vermerkt „extern geändert“; erneut
+eingetragen wird erst nach Aus- und Einschalten der Option. Den Zustand hält `<Datenordner>\autohdr-state.json`
+(Schlüssel, Originaltyp und -text oder „fehlte“, ursprüngliches Token, geschriebener Wert, Windows-Build); erst wird
+die Datei gespeichert, dann die Registry geschrieben, sodass ein Absturz dazwischen beim nächsten Abgleich erkannt
+wird. Abgeglichen wird einmal beim Start und wenn sich die Menge der gewünschten Einträge ändert (Option, neu gelernte
+EXE, Ausschluss), sonst ohne jeden Registry-Zugriff. (2) Notlösung „Notlösung: Auto HDR global während des Spiels
+(experimentell)“ (`autoHdrGlobalFallback`), Standard aus, weil erst G9.6 zeigt, ob der Weg je Spiel bei global
+ausgeschaltetem Auto HDR unter 26H2 genügt; danach wird der Standard festgelegt. Solange ein Spiel mit der Option
+läuft, setzt HDRpilot im Wert `DirectXUserGlobalSettings` nach denselben Regeln nur `AutoHDREnable=1` und stellt danach
+den vorherigen Zustand her: vor dem Spielprozess, wenn der Start angekündigt ist („Mit HDR starten“, Verknüpfung,
+Steam-Startoption, Frühwarnung), sonst beim Erkennen; zurück nach dem Spiel mit Nachlaufzeit und Neustart-Puffer wie
+beim HDR-Zustand, beim Beenden von HDRpilot sofort, nach einem Absturz beim nächsten Start (Merker
+`autohdr-global.json`). Nie, solange kein solches Spiel läuft; stand der globale Schalter schon auf `1`, bleibt er
+unberührt.
+
+Rücknahme an drei Stellen: Option aus oder Spiel entfernt (nur dessen Werte); „Auto-HDR-Einträge zurücknehmen“ in
+den Einstellungen (schaltet die Option bei allen Spielen aus und nimmt alle Werte samt globalem Schalter zurück, wirkt
+sofort wie „Jetzt abgleichen“, ohne Rückfrage, weil Knopf und Erklärung eindeutig sind; das Ergebnis steht darunter);
+das Entfernen über den Setup (eigener Schritt nach dem HDR-Zustand; gelingt alles, werden beide Zustandsdateien
+gelöscht, sonst bleiben sie mit einer Warnung). Nur HKCU, nie HKLM, keine Administratorrechte; der
+Anti-Cheat-Architekturtest bleibt unverändert. Testinstanzen erreichen den echten Schlüssel nie: Mit `--config-dir`
+schreibt HDRpilot unter `HKCU\Software\HDRpilot.Tests\AutoHdr\<Name>`, Name aus `--autohdr-test-root` oder aus dem
+Ablageordner abgeleitet (wie die Testwurzel des Setups); Unit-Tests nutzen eine Attrappe oder einen eigenen
+Testschlüssel. Prüfung: G9.1 (`test.ps1 -Filter "FullyQualifiedName~AutoHdr"` und `tools\gates\phase9-autohdr-ui.ps1`
+an einer Testinstanz ohne Spielstart), G9.2 und G9.3 (Filter `AutoHdrRegistry` und `AutoHdrGlobal`), G9.4
+(`phase7-setup.ps1`). RTX HDR bleibt zurückgestellt (`docs/recherche/auto-hdr-rtx-hdr.md`), ebenso die Intensität
+(`AutoHDRStrength`) und das Erzwingen für nicht zugelassene Spiele (`D3DBehaviors`).

@@ -3,6 +3,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
                     xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    xmlns:lib="clr-namespace:HdrPilot.App.Views.Library"
                     xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Library"
                     Title="{x:Static res:LibraryStrings.Window_Title}"
                     AutomationProperties.AutomationId="MainWindow"
@@ -53,8 +54,28 @@
                     <Image Source="{Binding Icon}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
                 </Grid>
                 <StackPanel x:Name="Texts" Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource Hp.Brush.Text}" />
+                    <!-- Name, dahinter „AUTO HDR“ (Windows Auto HDR an, nur Anzeige, geschaltet wird in den Details); der Name kürzt sich -->
+                    <lib:NameWithBadgesPanel>
+                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                   Foreground="{DynamicResource Hp.Brush.Text}" />
+                        <Border Style="{StaticResource Lib.AutoHdrBadge}" Margin="8,0,0,0"
+                                Visibility="{Binding AutoHdr, Converter={StaticResource Lib.BoolToVisibility}}"
+                                ToolTip="{x:Static res:LibraryStrings.Badge_AutoHdrTooltip}">
+                            <Border.Background>
+                                <SolidColorBrush Color="{DynamicResource Hp.Color.Accent3}" Opacity="0.3" />
+                            </Border.Background>
+                            <Border.BorderBrush>
+                                <SolidColorBrush Color="{DynamicResource Hp.Color.Accent3}" Opacity="0.85" />
+                            </Border.BorderBrush>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" FontSize="9" Margin="0,0,4,0" />
+                                <!-- Kennung am Text: ein Border hat keinen Automation-Peer, UI-Automation sähe es sonst nicht -->
+                                <TextBlock Text="{x:Static res:LibraryStrings.Badge_AutoHdr}" VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="AutoHdrBadge"
+                                           AutomationProperties.Name="{x:Static res:LibraryStrings.Badge_AutoHdrTooltip}" />
+                            </StackPanel>
+                        </Border>
+                    </lib:NameWithBadgesPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                         <TextBlock Text="{Binding SourceName}" Style="{StaticResource Lib.SourceText}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <!-- HDR laut PCGamingWiki: „HDR“ oder „HDR*“ (eingeschränkt) -->
@@ -718,6 +739,54 @@
                                         <ComboBox Style="{StaticResource Lib.ComboBox}" ItemsSource="{Binding Displays}" SelectedItem="{Binding SelectedDisplay}"
                                                   ItemTemplate="{StaticResource DisplayOptionTemplate}"
                                                   AutomationProperties.AutomationId="DetailDisplay" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_Display}" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!--
+                                    Bild (E88): „Windows Auto HDR“ ist etwas anderes als „HDR automatisch“ darüber. Windows rechnet
+                                    das SDR-Bild in HDR um; HDRpilot trägt das nur je Spiel-EXE in die Windows-Einstellung ein.
+                                    Bei eigenem HDR laut PCGamingWiki zurückgenommen dargestellt, aber bedienbar.
+                                -->
+                                <Border x:Name="PictureSection" Style="{StaticResource Lib.Section}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionPicture}" />
+                                        <Grid x:Name="AutoHdrRow">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsAutoHdrSubdued}" Value="True">
+                                                            <Setter Property="Opacity" Value="0.55" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
+                                            <StackPanel Margin="0,0,12,0">
+                                                <TextBlock Text="{x:Static res:LibraryStrings.Details_AutoHdr}" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrHint}" Margin="0,2,0,0" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1" Style="{StaticResource Lib.ToggleSwitch}" VerticalAlignment="Center" IsChecked="{Binding AutoHdr}"
+                                                      AutomationProperties.AutomationId="DetailAutoHdr" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_AutoHdr}"
+                                                      AutomationProperties.HelpText="{x:Static res:LibraryStrings.Details_AutoHdrHint}" />
+                                        </Grid>
+                                        <DockPanel Margin="0,10,0,0" Visibility="{Binding ShowAutoHdrNativeHint, Converter={StaticResource Lib.BoolToVisibility}}">
+                                            <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding AutoHdrNativeHint}"
+                                                       AutomationProperties.AutomationId="DetailAutoHdrNativeHint" />
+                                        </DockPanel>
+                                        <DockPanel Margin="0,10,0,0" Visibility="{Binding ShowAutoHdrNeedsHdrHint, Converter={StaticResource Lib.BoolToVisibility}}">
+                                            <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrNeedsHdr}"
+                                                       AutomationProperties.AutomationId="DetailAutoHdrNeedsHdrHint" />
+                                        </DockPanel>
+                                        <DockPanel Margin="0,10,0,0" Visibility="{Binding HasAutoHdrStatus, Converter={StaticResource Lib.BoolToVisibility}}">
+                                            <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{Binding AutoHdrStatusKind}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding AutoHdrStatusText}" Foreground="{DynamicResource Hp.Brush.Text}"
+                                                       AutomationProperties.AutomationId="DetailAutoHdrStatus" />
+                                        </DockPanel>
                                     </StackPanel>
                                 </Border>
 

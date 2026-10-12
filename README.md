@@ -80,6 +80,8 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit den Pfeiltasten verschieben, per
   Doppelklick zurücksetzen); die Breite merkt sich HDRpilot.
 - Ein Kennzeichen „HDR“ zeigt Spiele, die laut PCGamingWiki HDR unterstützen, „HDR*“ solche mit eingeschränktem HDR.
+- Das violette Kennzeichen „AUTO HDR“ direkt hinter dem Namen zeigt Spiele, bei denen **Windows Auto HDR** an ist. Es ist
+  nur eine Anzeige; geschaltet wird in den Details (siehe „Windows Auto HDR“).
 - Die Symbole stammen aus Dateien, die schon auf dem PC liegen, nie aus dem Netz (bei Steam das offizielle
   Steam-Symbol, siehe „So funktioniert es“). Ein eigenes Bild setzt du per Rechtsklick auf das Spiel oder per Klick auf
   das große Symbol in den Details: **Symbol ändern…** nimmt ein Bild (PNG, JPG, WebP, BMP, GIF, ICO) oder eine EXE,
@@ -110,6 +112,11 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     (HDRpilot muss dafür laufen).
   - **HDR automatisch**, **Bildschirm** (welcher Bildschirm geschaltet wird, Standard: die globale Einstellung) und
     **Nach dem Spiel zurückstellen** (danach wieder den HDR-Zustand von vorher herstellen, Standard: an).
+  - Abschnitt „BILD“ mit **Windows Auto HDR**: Windows rechnet das SDR-Bild eines Spiels ohne eigenes HDR in HDR um
+    (DirectX 11/12, wirkt beim nächsten Start). Unabhängig von **HDR automatisch**; ist das aus, steht darunter ein
+    Hinweis, dass Auto HDR nur bei eingeschaltetem Windows-HDR wirkt. Hat das Spiel laut PCGamingWiki eigenes HDR, ist die
+    Zeile blasser und rät, das HDR des Spiels zu nehmen; schalten lässt sie sich trotzdem. Darunter steht, für wie viele
+    EXE-Dateien HDRpilot Auto HDR eingetragen hat (siehe „Windows Auto HDR“).
   - **EXE-Dateien**: Grundsätzlich zählt jedes Programm im Installationsordner als dieses Spiel, außer Hilfsprozessen.
     Die Liste zeigt die bekannten EXEs mit Herkunft („vom Launcher“, „beim Spielen erkannt“, „von dir hinzugefügt“).
     Du kannst EXEs hinzufügen (auch außerhalb des Spielordners), entfernen (dann zählen sie für dieses Spiel nie) und
@@ -150,9 +157,12 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Bei jedem Start abgleichen | HDR-Liste von PCGamingWiki 30 s nach dem Start abgleichen, höchstens einmal pro Stunde (siehe „HDR-Liste“) | an |
 | Protokollstufe (Erweitert) | Wie ausführlich protokolliert wird | Normal |
 | Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert und gerade kein Spiel läuft; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
+| Notlösung: Auto HDR global während des Spiels (experimentell) | Bereich „Windows Auto HDR“: Solange ein Spiel mit „Windows Auto HDR“ läuft, schaltet HDRpilot Auto HDR in Windows global ein und danach wieder zurück; nur falls der Eintrag je Spiel nicht greift (siehe „Windows Auto HDR“) | aus |
 
 Im Bereich „HDR-Liste (PCGamingWiki)“ gibt es außerdem **Jetzt abgleichen**, den Stand der Liste und das optionale
-PCGamingWiki-Konto (siehe unten).
+PCGamingWiki-Konto (siehe unten). Im Bereich „Windows Auto HDR“ steht **Auto-HDR-Einträge zurücknehmen**: Das wirkt
+sofort, ohne „Speichern“, schaltet „Windows Auto HDR“ bei allen Spielen aus und nimmt alle Einträge zurück, die
+HDRpilot in die Windows-Einstellung geschrieben hat; das Ergebnis steht darunter.
 
 Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard
 `true`). Den Neustart-Puffer speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der
@@ -260,6 +270,61 @@ Ohne Netz bleibt der zuletzt geladene Stand erhalten. PCGamingWiki ist ein klein
 sich an dessen Anfragegrenzen und speichert die Ergebnisse zwischen. Die HDR-Angaben stehen unter der Lizenz
 CC BY-NC-SA 3.0.
 
+## Windows Auto HDR
+
+„Windows Auto HDR“ ist eine Funktion von Windows: Sie rechnet das SDR-Bild eines Spiels, das selbst kein HDR kann, in
+HDR um. HDRpilot trägt sie auf Wunsch je Spiel für dich ein. Das ist etwas anderes als „HDR automatisch“:
+
+| | „HDR automatisch“ | „Windows Auto HDR“ |
+|---|---|---|
+| Was passiert | HDRpilot schaltet Windows-HDR beim Spielstart ein und danach zurück | Windows rechnet das SDR-Bild in HDR um; HDRpilot trägt nur die Windows-Einstellung je Spiel ein |
+| Wo | Abschnitt „AUTOMATIK“ in den Details und Schalter in der Liste | Abschnitt „BILD“ in den Details, in der Liste nur das Kennzeichen „AUTO HDR“ |
+| Braucht | einen HDR-fähigen Bildschirm | eingeschaltetes Windows-HDR (über „HDR automatisch“, „Mit HDR starten“ oder von Hand) und ein Spiel mit DirectX 11 oder 12 |
+
+Beide Schalter sind unabhängig voneinander; zusammen mit „HDR automatisch“ ist Windows-HDR beim Spielen sicher an. Ist
+„HDR automatisch“ für das Spiel aus, steht unter dem Schalter ein Hinweis darauf. Hat ein Spiel laut PCGamingWiki eigenes
+HDR (Kennzeichen „HDR“ oder „HDR*“), ist die Zeile blasser und rät, das HDR des Spiels zu nehmen, das meist besser
+aussieht; einschalten lässt sich Auto HDR trotzdem.
+
+**So trägt HDRpilot es ein:** Windows merkt sich Auto HDR je Programm unter
+`HKCU\Software\Microsoft\DirectX\UserGpuPreferences`. Der Wertname ist der volle Pfad der EXE, der Inhalt eine Folge
+`Schlüssel=Wert;`. HDRpilot setzt darin nur `AutoHDREnable=2097` und lässt alle anderen Einträge, ihre Reihenfolge und
+den Abschluss unverändert, auch die, die Windows selbst schreibt (etwa `AppStatus=…`). Eingetragen wird für die
+bekannten EXEs des Spiels (beim Spielen erkannt, vom Launcher genannt, von dir hinzugefügt), ohne ausgeschlossene EXEs,
+Hilfsprozesse, Anti-Cheat-Starter, Absturzmelder, Installer und Werkzeuge. Der Eintrag bleibt stehen, solange die Option
+an ist; Windows liest ihn beim Start des Spiels, er wirkt also ab dem nächsten Start. Kennt HDRpilot noch keine EXE
+eines Spiels, trägt es sie ein, sobald es das Spiel einmal laufen gesehen hat; Auto HDR wirkt dann ab dem zweiten Start.
+Abgeglichen wird beim Start von HDRpilot und bei jeder Änderung (Option, neu gelernte EXE), sonst nie. Unter dem Schalter
+steht der Stand: eingetragen, außerhalb von HDRpilot geändert, unbekanntes Format oder gescheitert. HDRpilot schreibt nur
+unter HKCU, nie unter HKLM, und braucht keine Administratorrechte.
+
+**Zurücknehmen:** HDRpilot nimmt nur zurück, was es selbst geschrieben hat, und merkt sich dafür den Originalwert in
+`autohdr-state.json`. Fehlte der Wert vorher, wird er gelöscht, sonst kommt der alte Text wieder. Hat Windows inzwischen
+eigene Einträge ergänzt, nimmt HDRpilot nur sein `AutoHDREnable` zurück und lässt den Rest stehen. Hast du Auto HDR für
+das Spiel in Windows selbst geändert (etwa „Auto HDR nicht verwenden“), bleibt deine Einstellung, und das Protokoll
+vermerkt „extern geändert“; zum erneuten Eintragen die Option aus- und wieder einschalten. Werte in einem anderen Format
+als reiner Text aus `Schlüssel=Wert;`-Paaren fasst HDRpilot nie an. Zurückgenommen wird
+
+- beim Ausschalten der Option und beim Entfernen eines Spiels aus der Bibliothek (nur dessen Einträge),
+- mit „Auto-HDR-Einträge zurücknehmen“ in den Einstellungen (alle Spiele, auch der globale Schalter der Notlösung),
+- beim Entfernen über den Setup (siehe „Entfernen“).
+
+**Notlösung (experimentell, Standard aus):** Ob Windows den Eintrag je Spiel auch beachtet, wenn Auto HDR in den
+Windows-Einstellungen global aus ist, ist unter Windows 11 26H2 noch nicht geprüft. Falls nicht, hilft die Einstellung
+„Notlösung: Auto HDR global während des Spiels (experimentell)“: Solange ein Spiel mit „Windows Auto HDR“ läuft, setzt
+HDRpilot im globalen Wert `DirectXUserGlobalSettings` (im selben Schlüssel) nur `AutoHDREnable=1` und stellt danach den
+vorherigen Wert wieder her. Startest du über „Mit HDR starten“, eine „(HDR)“-Verknüpfung oder die Steam-Startoption oder
+greift die Frühwarnung von Epic oder Steam, steht der Wert schon vor dem Spielprozess; sonst ab dem Erkennen des Spiels,
+dann wirkt er womöglich erst beim nächsten Start. Zurückgestellt wird nach dem Spiel wie der HDR-Zustand: nach der
+Nachlaufzeit, bei einem Spiel, das kürzer als 5 Minuten lief, nach dem Neustart-Puffer (Standard 1 Minute). Beim Beenden
+stellt HDRpilot den Wert sofort zurück, nach einem Absturz beim nächsten Start (gemerkt in `autohdr-global.json`).
+Solange kein solches Spiel läuft, setzt HDRpilot den globalen Wert nie. War Auto HDR in Windows schon global an, ändert
+HDRpilot daran nichts. Während die Notlösung greift, gilt Auto HDR für jedes Spiel, das in dieser Zeit startet.
+
+**Prüfen:** Wirkt Auto HDR, ist in der Xbox Game Bar (Win+G) der Regler für die Auto-HDR-Intensität aktiv.
+
+RTX HDR von NVIDIA schaltet HDRpilot nicht; das geht in der NVIDIA App.
+
 ## Anti-Cheat
 
 HDRpilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme keinen Anlass zum Eingreifen haben:
@@ -271,6 +336,8 @@ HDRpilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme k
   Spiel und ändert weder Priorität noch Prozessorzuteilung von Spielen. Die Protokolle von Epic und Steam liest es nur.
 - Es lädt keinen Treiber und braucht keine Administratorrechte. Netzwerk nutzt es nur für die HDR-Liste.
 - HDR schaltet es über die Anzeige-Einstellungen von Windows, wie der HDR-Schalter in den Windows-Einstellungen.
+- „Windows Auto HDR“ trägt es nur in die Grafikeinstellungen von Windows unter HKCU ein, wie die Windows-Einstellungen
+  selbst; das Spiel und seine Dateien fasst es dafür nicht an. Eine Aussage der Anti-Cheat-Hersteller dazu gibt es nicht.
 - Künstliche Tastendrücke gibt es nur in der Tastenkürzel-Notlösung. Sie ist ab Werk aus und sendet nie etwas,
   solange ein Spiel läuft oder eine Vollbild-Anwendung im Vordergrund ist, auch nicht beim Umschalten von Hand.
 - Launcher-Spiele startet es über den Launcher-Link, sodass deren Anti-Cheat-Starter wie gewohnt läuft. Die
@@ -311,7 +378,9 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nicht nach Groß- und Kleinschreibung, die
 bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
 ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht. Einzige
-Ausnahme: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach `session-state.json`.
+Ausnahmen: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach `session-state.json`, und es
+nimmt die Auto-HDR-Einträge von HDRpilot zurück und löscht danach `autohdr-state.json` und `autohdr-global.json` (ließ
+sich etwas nicht zurücknehmen, bleiben beide stehen).
 
 Zu jedem Spiel stehen in `config.json` auch die Symbol-Hinweise der Launcher (`iconCandidates`, meist eine Datei) und
 gegebenenfalls das eigene Symbol (`customIcon`, nur der Dateiname im Ordner `icons`).
@@ -448,6 +517,14 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   unscharf (gemessen: 24 von 636). Bilder im WebP-Format (GOG Galaxy) braucht die WebP-Erweiterung von Windows; fehlt
   sie, nimmt HDRpilot die nächste Quelle. Ein eigenes Symbol gilt nur auf diesem PC, weil die PNG im lokalen Datenordner
   liegt; auf einem anderen PC zeigt das Spiel wieder das automatische Symbol.
+- **Windows Auto HDR:** wirkt nur bei Spielen mit DirectX 11 oder 12 (nicht bei DirectX 9, OpenGL und Vulkan), nur bei
+  Spielen, die Windows dafür zulässt (vorab nicht abfragbar), erst ab dem nächsten Spielstart und nur bei eingeschaltetem
+  Windows-HDR. Das Format der Windows-Einstellung ist nicht dokumentiert und kann sich mit einem Windows-Update ändern;
+  einen Wert in fremdem Format lässt HDRpilot dann stehen. Ob der Eintrag je Spiel bei global ausgeschaltetem Auto HDR
+  unter Windows 11 26H2 greift und ob er greift, wenn HDRpilot HDR erst nach dem Spielstart einschaltet, ist noch nicht
+  am echten System geprüft; davon hängt auch ab, ob die Notlösung künftig ab Werk an ist. Ob Auto HDR wirkt, sieht
+  HDRpilot nicht selbst (Prüfen über die Xbox Game Bar). Für Anti-Cheat-Systeme gibt es keine Herstelleraussage.
+  Intensität und Erzwingen für nicht zugelassene Spiele stellt HDRpilot nicht ein, RTX HDR von NVIDIA auch nicht.
 - **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.
 - **Nur auf Deutsch:** Oberfläche, Hinweise, Fehlermeldungen der Launcher-Scanner, Kommandozeile und Protokoll.
 
@@ -475,6 +552,12 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   bleibt HDR bis zum Ende der Startfrist an.
 - **„Mit HDR starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
   HDRpilot keine Start-EXE. Dann das Spiel über seine EXE hinzufügen.
+- **Windows Auto HDR wirkt nicht:** Ist Windows-HDR beim Spielstart an („HDR automatisch“ oder „Mit HDR starten“)? Den
+  Stand zeigen die Details unter dem Schalter: „Noch keine Spiel-EXE bekannt“ heißt, das Spiel einmal starten und danach
+  erneut; „außerhalb von HDRpilot geändert“ heißt, die Einstellung wurde in Windows geändert (Option aus- und wieder
+  einschalten). Das Spiel muss DirectX 11 oder 12 nutzen und von Windows für Auto HDR zugelassen sein; ob es greift,
+  zeigt der Intensitätsregler in der Xbox Game Bar (Win+G). Bleibt der Regler aus, die Notlösung unter Einstellungen →
+  „Windows Auto HDR“ versuchen. Was HDRpilot eingetragen hat, steht mit vorher und nachher im Protokoll.
 - **Keine HDR-Kennzeichen in der Liste:** Der erste Abgleich läuft 30 s nach dem Start; ohne Konto sind je Start nur
   100 Spiele dran. Den Stand und den letzten Fehler zeigt der Bereich „HDR-Liste (PCGamingWiki)“ in den Einstellungen.
 - **HDRpilot war abgestürzt oder beendet:** einfach neu starten, der gemerkte Zustand wird dann wiederhergestellt.
@@ -510,15 +593,17 @@ Mit dem Setup installiert:
    Haken bei **Auch Einstellungen, Spieleliste und Protokolle löschen** (Standard) bleiben `%APPDATA%\HDRpilot` und
    `%LOCALAPPDATA%\HDRpilot` erhalten und werden bei einer neuen Installation wieder benutzt; mit Haken sind sie weg,
    samt HDR-Liste und gespeichertem PCGamingWiki-Konto.
-3. **Entfernen** beendet HDRpilot, stellt einen gemerkten HDR-Zustand wieder her und entfernt das Programm, seine
-   Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die danach ihren Ordner und ihre entpackten
+3. **Entfernen** beendet HDRpilot, stellt einen gemerkten HDR-Zustand wieder her, nimmt die Einträge für „Windows Auto
+   HDR“ zurück, die HDRpilot in die Windows-Einstellung geschrieben hat (Schritt **Auto-HDR-Einträge zurücknehmen**), und
+   entfernt das Programm, seine Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die danach ihren Ordner und ihre entpackten
    Grafik-Bibliotheken (`%TEMP%\.net\HDRpilot-Uninstall`) selbst löscht.
 4. Bleiben „(HDR)“-Verknüpfungen für einzelne Spiele übrig, kannst du sie löschen, ebenso die entpackten
    Grafik-Bibliotheken in `%TEMP%\.net\HDRpilot` und `%TEMP%\.net\HDRpilot-Setup-<Version>` (rund 8 MB je Ordner).
 
 Ohne Installation:
 
-1. In den Einstellungen **Mit Windows starten** ausschalten und gegebenenfalls **Konto entfernen**.
+1. In den Einstellungen **Mit Windows starten** ausschalten, gegebenenfalls **Konto entfernen** und, falls du „Windows
+   Auto HDR“ benutzt hast, **Auto-HDR-Einträge zurücknehmen**.
 2. In Steam die Startoption `--wrap -- %command%` bei den Spielen wieder löschen, bei denen du sie eingetragen hast.
 3. Warten, bis kein Spiel mehr läuft und HDR zurückgestellt ist, dann im Infobereich **HDRpilot beenden**.
 4. `HDRpilot.exe` und den Ordner `cli` löschen, dazu die Ordner `%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`,

@@ -51,6 +51,10 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
 
     public IHdrListService HdrList => FakeHdrList;
 
+    public HdrPilot.App.Tests.Library.FakeAutoHdrService FakeAutoHdr { get; } = new();
+
+    public HdrPilot.Core.AutoHdr.IAutoHdrService AutoHdr => FakeAutoHdr;
+
     public List<string> OpenedPages { get; } = [];
 
     /// <summary>Wenn gesetzt, scheitert das Öffnen einer Webseite damit.</summary>

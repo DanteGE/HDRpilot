@@ -20,7 +20,8 @@ public sealed class CustomIconStore(string directory)
     public string? PathFor(string? fileName) => CustomIcons.IsValidFileName(fileName) ? Path.Combine(directory, fileName!) : null;
 
     /// <summary>
-    /// Erzeugt das Symbol und ersetzt eine frühere PNG des Spiels atomar (eine vorhandene .ico für Verknüpfungen gleich mit).
+    /// Erzeugt das Symbol und ersetzt eine frühere PNG des Spiels atomar (eine vorhandene .ico für Verknüpfungen nach
+    /// Möglichkeit gleich mit; ist sie gesperrt, gilt das Speichern trotzdem).
     /// Liefert den Dateinamen für <c>GameConfig.CustomIcon</c>. Wirft <see cref="InvalidDataException"/>, wenn die Datei
     /// kein Symbol hergibt, und IO-Ausnahmen beim Schreiben.
     /// </summary>
@@ -39,10 +40,18 @@ public sealed class CustomIconStore(string directory)
             WriteAtomic(target, png.ToArray());
         }
 
-        // Gibt es schon Verknüpfungen mit dem eigenen Symbol (.ico vorhanden), zeigen sie gleich das neue.
+        // Gibt es schon Verknüpfungen mit dem eigenen Symbol (.ico vorhanden), bekommen sie das neue. Hält ein anderes
+        // Programm die .ico gerade offen, bleibt sie vorerst alt: Die PNG ist schon ersetzt und gilt, und die nächste
+        // Verknüpfung schreibt die .ico neu (ShortcutIcon vergleicht die Bytes).
         if (File.Exists(Path.ChangeExtension(target, ".ico")))
         {
-            _ = ShortcutIcon(target);
+            try
+            {
+                _ = ShortcutIcon(target);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
         }
 
         return name;

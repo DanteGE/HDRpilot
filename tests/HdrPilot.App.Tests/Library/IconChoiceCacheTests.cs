@@ -188,7 +188,8 @@ public sealed class IconChoiceCacheTests
     [Fact]
     public void Icon_for_shortcuts_never_searches_deeper()
     {
-        // Verknüpfungen entstehen auf dem UI-Thread: Die tiefere EXE-Suche (bis 1 s) läuft dafür nie, die Liste findet die EXE.
+        // Verknüpfungen entstehen per Klick und sollen gleich da sein: Die tiefere EXE-Suche (bis 1 s) läuft dafür nie, die
+        // Liste findet die EXE.
         const string deep = Dir + @"\a\b\c\Tief.exe";
         Add(deep, IconSelectionTests.Icon(256));
 

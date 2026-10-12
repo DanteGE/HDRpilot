@@ -499,8 +499,8 @@ public sealed class GameDetailsViewModel : ObservableObject
     {
         try
         {
-            // Abseits des UI-Threads: Hat die Liste für das Spiel nichts gemerkt, liest die Wahl des Symbols bis zu 24
-            // EXE-Symbole, auf einem kalten Laufwerk mehrere Sekunden lang.
+            // Abseits des UI-Threads: Hat die Liste für das Spiel nichts gemerkt, liest die Wahl des Symbols die Hinweise des
+            // Launchers und bis zu zweimal 24 EXE-Symbole, auf einem kalten Laufwerk mehrere Sekunden lang.
             var shortcuts = _owner.Context.Shortcuts;
             var config = _config;
             var path = await Task.Run(() => desktop ? shortcuts.CreateDesktopShortcut(config) : shortcuts.CreateStartMenuShortcut(config));

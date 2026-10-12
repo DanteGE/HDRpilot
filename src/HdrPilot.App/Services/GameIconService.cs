@@ -185,7 +185,8 @@ public sealed class GameIconService : IGameIconService
     /// Symbole).</item>
     /// </list>
     /// Null ohne Quelle (dann das Symbol von HDRpilot). Nie auf dem UI-Thread aufrufen: Hat die Liste für das Spiel nichts
-    /// gemerkt, lesen die Schritte 3 und 4 bis zu 1 + <see cref="IconExecutableResolver.MaxProbes"/> Symbole.
+    /// gemerkt, lesen die Schritte 3 und 4 die Symbol-Hinweise des Launchers und bis zu zweimal
+    /// <see cref="IconExecutableResolver.MaxProbes"/> EXE-Symbole (Schritt 4 liest dieselben EXEs noch einmal).
     /// </summary>
     public string? ShortcutIconFile(GameConfig game)
     {
@@ -437,7 +438,7 @@ public sealed class GameIconService : IGameIconService
 
     /// <summary>
     /// Die eigentliche Wahl (siehe Klassenbeschreibung); ohne <paramref name="allowDeepSearch"/> nie die tiefere EXE-Suche
-    /// (Verknüpfungen, UI-Thread). Das gewählte Bild bleibt nach Pfad im Speicher.
+    /// (Verknüpfungen: Sie entstehen per Klick und sollen gleich da sein). Das gewählte Bild bleibt nach Pfad im Speicher.
     /// </summary>
     private IconSelection? Choose(GameConfig game, IReadOnlyList<string>? patterns, bool allowDeepSearch = true)
     {

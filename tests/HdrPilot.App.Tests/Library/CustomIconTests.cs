@@ -169,6 +169,32 @@ public sealed class CustomIconTests : IDisposable
     }
 
     [Fact]
+    public void CustomIcon_change_succeeds_while_another_program_holds_the_shortcut_ico_open()
+    {
+        var service = new GameIconService(new HdrPilot.Tests.TestSupport.InMemoryFileSystem(), iconDirectory: IconDir);
+        var game = IconSelectionTests.Game();
+        game.CustomIcon = service.SaveCustomIcon(game, _files.Png("rot.png", IconFixtures.Image(4, 4, Solid(4, 4, 0, 0, 255))));
+        var ico = service.ShortcutIconFile(game)!;
+        var before = File.ReadAllBytes(ico);
+
+        // Gesperrt wie von einem anderen Programm, das kein Löschen und Ersetzen erlaubt
+        string name;
+        using (new FileStream(ico, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            name = service.SaveCustomIcon(game, _files.Png("blau.png", IconFixtures.Image(4, 4, Solid(4, 4, 255, 0, 0))));
+        }
+
+        Assert.Equal(game.CustomIcon, name);
+        var png = File.ReadAllBytes(Path.Combine(IconDir, name));
+        Assert.NotEqual(CustomIconStore.IcoWithPng(png), before); // die neue PNG gilt
+        Assert.Equal(before, File.ReadAllBytes(ico)); // die .ico blieb vorerst alt
+        Assert.Empty(Directory.GetFiles(IconDir, "*.tmp"));
+
+        Assert.Equal(ico, service.ShortcutIconFile(game)); // die nächste Verknüpfung holt sie nach
+        Assert.Equal(CustomIconStore.IcoWithPng(png), File.ReadAllBytes(ico));
+    }
+
+    [Fact]
     public void CustomIcon_ico_for_shortcuts_wraps_the_png_unchanged()
     {
         var png = File.ReadAllBytes(_files.Png("gross.png", IconFixtures.Colorful(300, 300)));

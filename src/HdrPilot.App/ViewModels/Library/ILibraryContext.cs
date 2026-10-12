@@ -1,5 +1,6 @@
 using HdrPilot.App.Services;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
@@ -53,6 +54,12 @@ public interface ILibraryContext : IDisposable
     /// </summary>
     Task<IReadOnlyDictionary<string, HdrSupportStatus>> LoadHdrSupportAsync();
 
+    /// <summary>
+    /// Stand von „Windows Auto HDR“ eines Spiels aus dem letzten Abgleich (je Spiel-EXE eingetragen, extern geändert …).
+    /// Aus dem Speicher, ohne Registry-Zugriff; wirft nie.
+    /// </summary>
+    AutoHdrGameStatus GetAutoHdrStatus(string gameKey);
+
     IReadOnlyList<DisplayInfo> GetDisplays();
 
     /// <summary>Bildschirme, die HdrPilot ohne Spiel-Einstellung schaltet (globale Einstellung).</summary>
@@ -79,6 +86,9 @@ public interface ILibraryContext : IDisposable
 
     /// <summary>Ein Abgleich der HDR-Liste ist fertig (neue Ergebnisse im Zwischenspeicher).</summary>
     event EventHandler? HdrSupportChanged;
+
+    /// <summary>Der Stand von „Windows Auto HDR“ hat sich geändert (Abgleich der Einträge, Rücknahme).</summary>
+    event EventHandler? AutoHdrChanged;
 }
 
 /// <summary>Arbeit später auf dem UI-Thread ausführen (in Tests sofort).</summary>

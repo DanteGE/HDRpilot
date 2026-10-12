@@ -120,6 +120,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.HdrStateChanged += OnHdrStateChanged;
         _context.ScanStateChanged += OnScanStateChanged;
         _context.HdrSupportChanged += OnHdrSupportChanged;
+        _context.AutoHdrChanged += OnAutoHdrChanged;
 
         _isScanning = _context.IsScanning;
         SyncFromConfig(); // startet auch die Suche nach Vorschlägen
@@ -337,8 +338,10 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         get => _details;
         private set
         {
+            var previous = _details;
             if (SetProperty(ref _details, value))
             {
+                previous?.Detach(); // hört sonst weiter auf seine Zeile
                 OnPropertyChanged(nameof(HasDetails));
             }
         }
@@ -784,6 +787,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.HdrStateChanged -= OnHdrStateChanged;
         _context.ScanStateChanged -= OnScanStateChanged;
         _context.HdrSupportChanged -= OnHdrSupportChanged;
+        _context.AutoHdrChanged -= OnAutoHdrChanged;
+        _details?.Detach();
         RevealRequested = null;
         _context.Dispose();
     }
@@ -1220,6 +1225,15 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         if (!_disposed)
         {
             _ = RefreshHdrSupportAsync();
+        }
+    }
+
+    // Stand von „Windows Auto HDR“ (E88) zeigt nur der Detailbereich; die Liste zeigt das Kennzeichen aus der Konfiguration.
+    private void OnAutoHdrChanged(object? sender, EventArgs e)
+    {
+        if (!_disposed)
+        {
+            _details?.RefreshAutoHdrStatus();
         }
     }
 

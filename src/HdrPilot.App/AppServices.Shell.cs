@@ -3,6 +3,7 @@ using System.Windows.Threading;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.HdrSupport;
@@ -75,6 +76,8 @@ public sealed partial class AppServices
         public IAutostartService Autostart => app.Autostart;
 
         public IHdrListService HdrList => app.HdrList;
+
+        public IAutoHdrService AutoHdr => app.AutoHdr;
 
         public void OpenWebPage(string url) => AppServices.OpenWebPage(url);
 

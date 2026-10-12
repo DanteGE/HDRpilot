@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows.Input;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Sessions;
@@ -31,6 +32,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private readonly IShellContext _context;
     private readonly IFolderPicker _folderPicker;
     private readonly RelayCommand _removeSearchFolderCommand;
+    private readonly AsyncRelayCommand _rollbackAutoHdrCommand;
 
     /// <summary>restartBufferSeconds fehlt in config.json: Der Standard bleibt ungeschrieben, solange er nicht geändert wird.</summary>
     private readonly bool _restartBufferUnset;
@@ -43,6 +45,10 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private bool _notifications;
     private bool _hotkeyFallback;
     private bool _hdrListSync;
+    private bool _autoHdrGlobalFallback;
+    private bool _isRollingBackAutoHdr;
+    private string? _autoHdrRollbackMessage;
+    private bool _autoHdrRollbackIsWarning;
     private string? _selectedSearchFolder;
     private LogLevel _logLevel;
     private string _helperPatternsText = string.Empty;
@@ -62,6 +68,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         AddSearchFolderCommand = new RelayCommand(AddSearchFolder);
         ResetHelperPatternsCommand = new RelayCommand(ResetHelperPatterns);
         OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
+        _rollbackAutoHdrCommand = new AsyncRelayCommand(RollbackAutoHdrAsync, () => !_isRollingBackAutoHdr);
 
         var s = context.Config.Current.Settings;
         _pollIntervalMs = Math.Clamp(s.PollIntervalMs, PollIntervalMin, PollIntervalMax);
@@ -73,6 +80,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _notifications = s.Notifications;
         _hotkeyFallback = s.HotkeyFallback;
         _hdrListSync = s.HdrListSync;
+        _autoHdrGlobalFallback = s.AutoHdrGlobalFallback;
         _logLevel = LogLevelOption.Clamp(s.LogLevel);
         foreach (var folder in s.SearchFolders.Where(f => !string.IsNullOrWhiteSpace(f)))
         {
@@ -103,6 +111,9 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public ICommand ResetHelperPatternsCommand { get; }
 
     public ICommand OpenLogFolderCommand { get; }
+
+    /// <summary>„Auto-HDR-Einträge zurücknehmen“: wirkt sofort (wie „Jetzt abgleichen“), gesperrt, solange es läuft.</summary>
+    public ICommand RollbackAutoHdrCommand => _rollbackAutoHdrCommand;
 
     public ObservableCollection<DisplayOptionViewModel> Displays { get; } = [];
 
@@ -248,6 +259,56 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     /// <summary>Abschnitt „HDR-Liste (PCGamingWiki)“: Stand, „Jetzt abgleichen“, Konto (wirkt sofort).</summary>
     public HdrListViewModel HdrList { get; }
 
+    /// <summary>
+    /// Notlösung „Auto HDR global während des Spiels“ (AppSettings.AutoHdrGlobalFallback, E88, experimentell, Standard
+    /// aus), wird mit „Speichern“ übernommen.
+    /// </summary>
+    public bool AutoHdrGlobalFallback
+    {
+        get => _autoHdrGlobalFallback;
+        set
+        {
+            if (SetProperty(ref _autoHdrGlobalFallback, value))
+            {
+                UpdateChanges();
+            }
+        }
+    }
+
+    public bool IsRollingBackAutoHdr
+    {
+        get => _isRollingBackAutoHdr;
+        private set
+        {
+            if (SetProperty(ref _isRollingBackAutoHdr, value))
+            {
+                _rollbackAutoHdrCommand.RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>Ergebnis von „Auto-HDR-Einträge zurücknehmen“; null, solange nichts zurückgenommen wurde.</summary>
+    public string? AutoHdrRollbackMessage
+    {
+        get => _autoHdrRollbackMessage;
+        private set
+        {
+            if (SetProperty(ref _autoHdrRollbackMessage, value))
+            {
+                OnPropertyChanged(nameof(HasAutoHdrRollbackMessage));
+            }
+        }
+    }
+
+    public bool HasAutoHdrRollbackMessage => _autoHdrRollbackMessage is not null;
+
+    /// <summary>Nicht alles zurückgenommen (Fehler oder Konfiguration nicht gespeichert): Meldung als Warnung.</summary>
+    public bool AutoHdrRollbackIsWarning
+    {
+        get => _autoHdrRollbackIsWarning;
+        private set => SetProperty(ref _autoHdrRollbackIsWarning, value);
+    }
+
     public ObservableCollection<string> SearchFolders { get; } = [];
 
     public bool HasSearchFolders => SearchFolders.Count > 0;
@@ -385,6 +446,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 s.Notifications = _notifications;
                 s.HotkeyFallback = _hotkeyFallback;
                 s.HdrListSync = _hdrListSync;
+                s.AutoHdrGlobalFallback = _autoHdrGlobalFallback;
                 s.SearchFolders = folders;
                 s.LogLevel = _logLevel;
                 s.HelperExecutablePatterns = patterns;
@@ -408,6 +470,65 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
 
     /// <summary>Verwirft alle Änderungen.</summary>
     public void Cancel() => CloseRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// „Auto-HDR-Einträge zurücknehmen“ (E88): schaltet „Windows Auto HDR“ bei allen Spielen aus und nimmt alle Werte
+    /// zurück, die HDRpilot geschrieben hat. Wirkt sofort, unabhängig von „Speichern“; das Ergebnis steht darunter.
+    /// </summary>
+    public async Task RollbackAutoHdrAsync()
+    {
+        IsRollingBackAutoHdr = true;
+        try
+        {
+            var result = await _context.AutoHdr.RollbackAllAsync();
+            if (!_disposed)
+            {
+                AutoHdrRollbackIsWarning = !result.Success;
+                AutoHdrRollbackMessage = AutoHdrRollbackText(result);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Laut Absprache wirft die Rücknahme nie (Fehler stehen im Ergebnis); trotzdem nie das Fenster abstürzen lassen.
+            if (!_disposed)
+            {
+                AutoHdrRollbackIsWarning = true;
+                AutoHdrRollbackMessage = string.Format(CultureInfo.CurrentCulture, ShellStrings.AutoHdrRollbackError, ex.Message);
+            }
+        }
+        finally
+        {
+            IsRollingBackAutoHdr = false;
+        }
+    }
+
+    /// <summary>Meldung zum Ergebnis: nichts zu tun, erledigt (mit Zahlen), dazu je ein Satz für Stehengelassenes und Fehler.</summary>
+    public static string AutoHdrRollbackText(AutoHdrRollbackResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        if (result.Error is { } error)
+        {
+            return string.Format(CultureInfo.CurrentCulture, ShellStrings.AutoHdrRollbackError, error);
+        }
+
+        if (result is { GamesSwitchedOff: 0, Restored: 0, LeftAsIs: 0, Failed: 0 })
+        {
+            return ShellStrings.AutoHdrRollbackNothing;
+        }
+
+        var parts = new List<string> { string.Format(CultureInfo.CurrentCulture, ShellStrings.AutoHdrRollbackDone, result.Restored, result.GamesSwitchedOff) };
+        if (result.LeftAsIs > 0)
+        {
+            parts.Add(string.Format(CultureInfo.CurrentCulture, ShellStrings.AutoHdrRollbackLeftAsIs, result.LeftAsIs));
+        }
+
+        if (result.Failed > 0)
+        {
+            parts.Add(string.Format(CultureInfo.CurrentCulture, ShellStrings.AutoHdrRollbackFailed, result.Failed));
+        }
+
+        return string.Join(" ", parts);
+    }
 
     /// <summary>Fügt einen Ordner hinzu (vereinheitlicht, ohne Doppelte). False, wenn er ungültig oder schon da ist.</summary>
     public bool TryAddSearchFolder(string? folder)
@@ -623,6 +744,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _notifications,
         _hotkeyFallback,
         _hdrListSync,
+        _autoHdrGlobalFallback,
         JoinFolders(SearchFolders),
         _logLevel,
         _helperPatterns.IsValid ? string.Join("\n", _helperPatterns.Patterns) : "\u0000" + _helperPatternsText);
@@ -637,6 +759,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         bool Notifications,
         bool HotkeyFallback,
         bool HdrListSync,
+        bool AutoHdrGlobalFallback,
         string Folders,
         LogLevel LogLevel,
         string Patterns);

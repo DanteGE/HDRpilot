@@ -724,8 +724,9 @@ offen hält, lässt sie sich unter NTFS auch nicht ersetzen; das Kennzeichen „
 Datei daneben, `autohdr-global.done` (Zeitpunkt und Text des Setzens). Einen Merker, zu dem es passt, stellen weder der
 nächste Start noch das Entfernen über den Setup je zurück, sie löschen beide Dateien; die App wiederholt das Löschen
 alle 30 s und beim Beenden (zuerst den Merker, nie solange ein neuer Start den Schalter hält). Ein Merker eines
-späteren Setzens passt nicht (anderer Zeitpunkt); ist das Kennzeichen nicht lesbar, bleibt alles, wie es ist (die App
-lässt Auto HDR in diesem Lauf aus, der Setup meldet es). Die Ankündigung gilt, solange die HDR-Sitzung auf den
+späteren Setzens passt nicht (anderer Zeitpunkt); ist das Kennzeichen nicht lesbar oder defekt, bleibt alles, wie es ist (die App
+lässt Auto HDR in diesem Lauf aus, der Setup meldet es; „Daten löschen“ lässt einen gesperrten Merker samt Kennzeichen liegen).
+Die Ankündigung gilt, solange die HDR-Sitzung auf den
 Spielprozess wartet (Startfrist samt Verlängerung für
 Launcher-Fenster), ohne Sitzung bis zur Startfrist; scheitert schon der Start-Befehl, nimmt
 `IAutoHdrSessionHooks.OnStartAbandoned` sie sofort zurück. Läuft das Spiel, endet es wie der HDR-Zustand: Nachlaufzeit,

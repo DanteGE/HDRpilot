@@ -752,19 +752,17 @@ internal sealed class AutoHdrGlobalSwitch
     }
 
     /// <summary>
-    /// Steht in autohdr-global.done, dass genau dieser Merker erledigt ist? Null: Kennzeichen nicht lesbar (oder defekt und
-    /// nicht zu sichern); dann bleibt Auto HDR in diesem Lauf aus und nichts wird angefasst, wie bei einem solchen Merker.
+    /// Steht in autohdr-global.done, dass genau dieser Merker erledigt ist? Null: Kennzeichen nicht lesbar oder defekt; dann
+    /// bleibt Auto HDR in diesem Lauf aus und nichts wird angefasst, wie beim Entfernen über den Setup (ein defektes
+    /// Kennzeichen könnte zu genau diesem Merker gehören, ein Zurückstellen nähme dann die Wahl des Nutzers zurück).
     /// </summary>
     private bool? IsMarkedDone(AutoHdrGlobalMarker marker)
     {
-        var load = AutoHdrFiles.Load<AutoHdrGlobalDone>(_fileSystem, _donePath, d => d.IsValid(), _clock);
+        var load = AutoHdrFiles.Load<AutoHdrGlobalDone>(_fileSystem, _donePath, d => d.IsValid(), clock: null);
         switch (load.State)
         {
             case AutoHdrFileState.Loaded:
                 return load.Data!.Matches(marker); // passt es nicht, ist es ein Rest eines früheren Setzens
-            case AutoHdrFileState.Corrupt when load.Backup is not null:
-                _logger.LogWarning("Auto HDR global: {Path} war defekt ({Problem}), gesichert als {Backup}.", _donePath, load.Problem, load.Backup);
-                return false;
             case AutoHdrFileState.Missing:
                 return false;
             default:

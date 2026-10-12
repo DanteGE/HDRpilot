@@ -597,6 +597,37 @@ public sealed class AutoHdrGlobalSwitchTests
     }
 
     [Fact]
+    public void Defective_done_mark_next_to_a_marker_keeps_everything_as_is_like_the_setup()
+    {
+        // Ein defektes Kennzeichen kann zu genau diesem Merker gehören (Wahl des Nutzers „an“): nicht zurückstellen, nichts
+        // sichern oder löschen, Auto HDR bleibt in diesem Lauf aus – wie beim Entfernen über den Setup.
+        Setup(start: false);
+        _h.Store.SetString(Global, GlobalOn);
+        _h.WriteMarker(new AutoHdrGlobalMarker
+        {
+            RegistryKey = _h.Store.KeyName,
+            Status = AutoHdrEntryStatus.Applied,
+            Original = new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.String, Text = GlobalOff },
+            OriginalToken = "0",
+            Written = GlobalOn,
+            Games = [_a],
+            WindowsBuild = 26300,
+        });
+        _h.Fs.AddFile(_h.Paths.AutoHdrGlobalDoneFile, "{ kaputt");
+
+        _h.Service.Start();
+        _h.Service.OnRecovery([], _h.Current, Now);
+        Cycles(31);
+        _h.Announce(_a);
+
+        Assert.Empty(_h.GlobalOperations);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.NotNull(_h.Marker);
+        Assert.True(_h.Fs.FileExists(_h.Paths.AutoHdrGlobalDoneFile));
+        Assert.True(_h.Logged("Auto HDR bleibt in diesem Lauf aus", LogLevel.Warning));
+    }
+
+    [Fact]
     public void Failed_restore_keeps_the_marker_for_the_next_try()
     {
         Setup();

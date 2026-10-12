@@ -136,6 +136,33 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
     }
 
     [Fact]
+    public async Task Locked_marker_keeps_its_done_mark_when_data_is_deleted_and_is_never_restored_later()
+    {
+        await InstallAsync();
+        _h.AutoHdr.SetString(Global, GlobalOn); // die Wahl des Nutzers; der Merker ist gesperrt und schon als erledigt vermerkt
+        WriteMarker(setAt: SetAt);
+        WriteDone(SetAt, GlobalOn);
+        var other = Path.Combine(L.DataPaths.DataDirectory, "andere.json");
+        File.WriteAllText(other, "{}");
+
+        using (new FileStream(L.DataPaths.AutoHdrGlobalFile, FileMode.Open, FileAccess.Read, FileShare.Read)) // ohne Löschen
+        {
+            await _h.UninstallAsync(removeData: true);
+        }
+
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
+        Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalDoneFile)); // ohne Kennzeichen stellte ein späterer Start zurück
+        Assert.False(File.Exists(other)); // die übrigen Daten sind trotzdem gelöscht
+
+        // Später ohne Sperre (neue Installation oder zweites Entfernen): erledigt, nichts zurückzustellen
+        AutoHdrCleanup.RestoreAll(_h.AutoHdr, HdrPilot.Core.Abstractions.PhysicalFileSystem.Instance, L.DataPaths, _ => { });
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalDoneFile));
+    }
+
+    [Fact]
     public async Task Done_mark_of_an_earlier_marker_does_not_stop_the_restore()
     {
         await InstallAsync();

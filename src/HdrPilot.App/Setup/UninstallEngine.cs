@@ -433,10 +433,60 @@ public sealed class UninstallEngine : IUninstallEngine
 
             Run(errors, UninstallStep.RemoveData, "Ordner " + folder + " löschen", () =>
             {
+                if (LockedAutoHdrMarker(folder) is { } marker)
+                {
+                    // Der Merker des globalen Auto-HDR-Schalters ist gesperrt: alles andere löschen, sein Kennzeichen
+                    // „erledigt“ aber behalten, sonst stellte ein späterer Start die Wahl des Nutzers zurück (E88).
+                    DeleteAllExcept(folder, [marker, Path.GetFullPath(Locations.DataPaths.AutoHdrGlobalDoneFile)]);
+                    throw new IOException("Gesperrt, bleibt mit seinem Kennzeichen „erledigt“: " + marker);
+                }
+
                 Directory.Delete(folder, recursive: true);
                 _log.Info("Gelöscht: " + folder);
             }, folder);
         }
+    }
+
+    /// <summary>
+    /// Merker des globalen Auto-HDR-Schalters in <paramref name="folder"/>, falls er noch da ist und sich nicht löschen
+    /// lässt (das Zurückstellen davor hat ihn sonst schon entfernt); null, wenn er fehlt oder jetzt gelöscht wurde.
+    /// </summary>
+    private string? LockedAutoHdrMarker(string folder)
+    {
+        var marker = Path.GetFullPath(Locations.DataPaths.AutoHdrGlobalFile);
+        if (!string.Equals(Path.GetDirectoryName(marker), Path.TrimEndingDirectorySeparator(folder), StringComparison.OrdinalIgnoreCase) || !File.Exists(marker))
+        {
+            return null;
+        }
+
+        try
+        {
+            File.Delete(marker);
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Info("Auto HDR: " + marker + " ließ sich nicht löschen (" + ex.Message + ").");
+            return marker;
+        }
+    }
+
+    private void DeleteAllExcept(string folder, IReadOnlyCollection<string> keep)
+    {
+        foreach (var directory in Directory.EnumerateDirectories(folder))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+
+        foreach (var file in Directory.EnumerateFiles(folder))
+        {
+            if (!keep.Contains(Path.GetFullPath(file), StringComparer.OrdinalIgnoreCase))
+            {
+                File.Delete(file);
+            }
+        }
+
+        _log.Info("Gelöscht bis auf " + string.Join(", ", keep.Select(Path.GetFileName)) + ": " + folder);
     }
 
     private void DeleteIfEmpty(string folder) => SetupSupport.DeleteIfEmpty(folder, _log);

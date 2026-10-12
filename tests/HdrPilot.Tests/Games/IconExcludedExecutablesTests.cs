@@ -44,7 +44,14 @@ public sealed class IconExcludedExecutablesTests
     [InlineData(@"GameGuard.exe")]
     [InlineData(@"GameGuard\GameGuardUpdater.exe")]
     [InlineData(@"nProtectSetup.exe")]
+    [InlineData(@"tools\GGSetup.exe")]
+    [InlineData(@"tools\gguninst.exe")]
     public void Icon_exclusion_covers_GameGuard(string name) => Assert.True(IconExcludedExecutables.IsExcluded(Game + @"\" + name, Game));
+
+    [Theory]
+    [InlineData(@"install\Punkbuster\pbsvc_moh.exe")]
+    [InlineData(@"PnkBstrA.exe")]
+    public void Icon_exclusion_covers_PunkBuster(string name) => Assert.True(IconExcludedExecutables.IsExcluded(Game + @"\" + name, Game));
 
     [Theory]
     [InlineData("EOSBootstrapper.exe")]
@@ -66,6 +73,42 @@ public sealed class IconExcludedExecutablesTests
     [InlineData(@"_CommonRedist\vcredist\2019\Spielhilfe.exe")]
     public void Icon_exclusion_covers_crash_reporters_redistributables_and_installers(string name) =>
         Assert.True(IconExcludedExecutables.IsExcluded(Game + @"\" + name, Game));
+
+    [Theory]
+    [InlineData(@"BsSndRpt64.exe")]
+    [InlineData(@"system64\CrashSender.exe")]
+    [InlineData(@"BugReportClient.exe")]
+    [InlineData(@"bin\x64\REDEngineErrorReporter.exe")]
+    [InlineData(@"newRoot\UnrailedCrashDumper.exe")]
+    [InlineData(@"client_pc\root\bin\pc\crash_reporter.exe")]
+    [InlineData(@"CrashReport.exe")]
+    [InlineData(@"install\PhysX\PhysX_9.09.0408_SystemSoftware.exe")]
+    [InlineData(@"oalinst.exe")]
+    [InlineData(@"UbisoftConnectInstaller.exe")]
+    [InlineData(@"Tools\Uplay\UplayInstaller.exe")]
+    [InlineData(@"Redistributables\Social-Club-Setup.exe")]
+    [InlineData(@"Redistributables\Rockstar-Games-Launcher.exe")]
+    [InlineData(@"Redistributables\VulkanRT-1.1.108.0-Installer.exe")]
+    public void Icon_exclusion_covers_third_party_parts_also_named_by_the_helper_list(string name)
+    {
+        // Eine in den Einstellungen geänderte Liste der Hilfsprozesse ersetzt die Standardliste ganz; für Symbole gelten
+        // diese Fremdbestandteile trotzdem nie (gemessen an der Bibliothek des Nutzers).
+        Assert.True(IconExcludedExecutables.IsExcluded(Game + @"\" + name, Game));
+        Assert.True(HelperExecutables.IsHelper(name));
+    }
+
+    [Theory]
+    [InlineData("hlfaceposer.exe")]
+    [InlineData("hlmv.exe")]
+    [InlineData("studiomdl.exe")]
+    [InlineData("hammer.exe")]
+    [InlineData("vbsp.exe")]
+    [InlineData("vvis.exe")]
+    [InlineData("vrad.exe")]
+    [InlineData("captioncompiler.exe")]
+    [InlineData("shadercompile.exe")]
+    public void Icon_exclusion_covers_source_sdk_tools(string name) =>
+        Assert.True(IconExcludedExecutables.IsExcluded(Game + @"\bin\" + name, Game));
 
     [Theory]
     [InlineData("LaunchGame.exe")]
@@ -97,6 +140,8 @@ public sealed class IconExcludedExecutablesTests
     [InlineData(@"Peacekeeper.exe")]
     [InlineData(@"Agent 64 Spies Never Die.exe")]
     [InlineData(@"bin64\CrimsonDesert.exe")]
+    [InlineData(@"Hammerwatch.exe")]
+    [InlineData(@"hl2.exe")]
     public void Icon_exclusion_keeps_game_executables(string name) => Assert.False(IconExcludedExecutables.IsExcluded(Game + @"\" + name, Game));
 
     [Fact]

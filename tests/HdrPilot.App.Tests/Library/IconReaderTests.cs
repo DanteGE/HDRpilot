@@ -56,6 +56,19 @@ public sealed class IconReaderTests : IDisposable
     }
 
     [Fact]
+    public void Icon_size_of_godot_exes_with_packed_data_counts_sections_by_virtual_size()
+    {
+        // Godot 4 legt die Spieldaten in eine Sektion „pck“ (VirtualSize 8) vor .rsrc, ihre Rohdaten reichen über .rsrc hinaus.
+        using var godot = new MemoryStream(IconFixtures.PeWithIconGroups(PeLayout.PackedDataBefore, (null, [16, 32, 256])));
+
+        // Ohne VirtualSize gilt SizeOfRawData.
+        using var noVirtualSize = new MemoryStream(IconFixtures.PeWithIconGroups(PeLayout.NoVirtualSize, (null, [16, 32, 256])));
+
+        Assert.Equal(256, IconFileSizes.LargestInPe(godot));
+        Assert.Equal(256, IconFileSizes.LargestInPe(noVirtualSize));
+    }
+
+    [Fact]
     public void Icon_size_of_a_truncated_exe_is_unknown()
     {
         var data = IconFixtures.PeWithIconGroups((null, [256]));

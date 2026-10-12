@@ -161,7 +161,7 @@ public static class IconSignature
     /// Stand der Wahlregeln (Reihenfolge, Ausschlussliste, Standardsymbole). Erhöhen, wenn sich eine Regel ändert: Dann
     /// gilt keine gemerkte Wahl mehr.
     /// </summary>
-    public const int RulesVersion = 2;
+    public const int RulesVersion = 3;
 
     public static string Of(GameConfig game, IReadOnlyList<string>? helperPatterns)
     {

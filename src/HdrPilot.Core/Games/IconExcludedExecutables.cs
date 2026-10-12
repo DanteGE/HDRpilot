@@ -10,14 +10,17 @@ namespace HdrPilot.Core.Games;
 /// <list type="bullet">
 /// <item>Anti-Cheat: EasyAntiCheat (start_protected_game, *EasyAntiCheat*, EAC als eigenes Wortteil wie in GZWClientEAC
 /// oder EACLaunch, nicht in „BeachInvasion“), BattlEye (*_BE, BEService*, BELauncher, *BattlEye*), EA Anti-Cheat
-/// (EAAntiCheat.*), GameGuard/nProtect (GameMon*, GameGuard*, *nProtect*), alles mit „AntiCheat“ im Namen.</item>
+/// (EAAntiCheat.*), GameGuard/nProtect (GameMon*, GameGuard*, *nProtect*, GGSetup, gguninst), PunkBuster (pbsvc*,
+/// PnkBstr*), alles mit „AntiCheat“ im Namen.</item>
 /// <item>Epic Online Services (EOSBootstrapper, EpicOnlineServices*, EOSOverlayRenderer*) und Starter mit fremdem Symbol
 /// (LaunchGame, GodotWorkshopUtility).</item>
-/// <item>Absturzmelder, Redistributables, Installer und Deinstaller (CrashReportClient, UnityCrashHandler*,
-/// UE*PrereqSetup*, vc_redist*, dxsetup, unins* …) und Browser-Unterprozesse.</item>
-/// <item>Werkzeuge: P4PopulateDepot, elementviewer, *editor*, java/javaw, vconsole2, qc_eyes und die Werkzeuge von Unreal,
+/// <item>Absturzmelder, Redistributables, Installer und Deinstaller (CrashReportClient, UnityCrashHandler*, BsSndRpt*,
+/// UE*PrereqSetup*, vc_redist*, PhysX, dxsetup, Installer von Ubisoft Connect und Rockstar, unins* …) und
+/// Browser-Unterprozesse; auch die aus der Standardliste der Hilfsprozesse, weil eine geänderte Liste sie ganz ersetzt.</item>
+/// <item>Werkzeuge: P4PopulateDepot, elementviewer, *editor*, java/javaw, vconsole2, qc_eyes, die Werkzeuge von Unreal,
 /// die UDK-Spiele in Binaries mitbringen (UnrealFrontend, ShaderKeyTool, StatsViewer …; gemessen: sonst bekamen Homesick
-/// und Viscera Cleanup Detail: Shadow Warrior deren Symbol statt des Steam-Symbols).</item>
+/// und Viscera Cleanup Detail: Shadow Warrior deren Symbol statt des Steam-Symbols), und die des Source SDK in bin
+/// (hlfaceposer, hlmv, studiomdl, hammer …; gemessen an Portal).</item>
 /// <item>Alles in Ordnern des Anti-Cheats oder der Redistributables unter dem Spielordner (BattlEye, GameGuard,
 /// EasyAntiCheat, _CommonRedist, __Installer, Redist).</item>
 /// </list>
@@ -41,10 +44,16 @@ public static class IconExcludedExecutables
         "EAAntiCheat*",
         "*AntiCheat*",
 
-        // GameGuard / nProtect
+        // GameGuard / nProtect (samt Installer GGSetup und Deinstaller gguninst)
         "GameMon*",
         "GameGuard*",
         "*nProtect*",
+        "GGSetup*",
+
+        // PunkBuster
+        "pbsvc*",
+        "PnkBstr*",
+        "*PunkBuster*",
 
         // Epic Online Services und Starter mit fremdem Symbol
         "EOSBootstrapper*",
@@ -53,12 +62,23 @@ public static class IconExcludedExecutables
         "LaunchGame",
         "GodotWorkshopUtility",
 
-        // Absturzmelder, Redistributables, Installer, Browser-Unterprozesse
-        "CrashReportClient*",
+        // Absturzmelder, Redistributables, Installer, Browser-Unterprozesse. Doppelt zu HelperExecutables, weil eine in den
+        // Einstellungen geänderte Liste der Hilfsprozesse die Standardliste ganz ersetzt.
+        "CrashReport*",
         "UnityCrashHandler*",
         "*CrashHandler*",
         "*CrashReporter*",
+        "crash_reporter*",
+        "*CrashDumper*",
+        "CrashSender*",
+        "CrashUploader*",
         "crashpad_handler",
+        "BsSndRpt*",
+        "BugReportClient*",
+        "*ErrorReporter*",
+        "createdump",
+        "*minidump*",
+        "sentry-cli",
         "UE*PrereqSetup*",
         "*prereq*",
         "vc_redist*",
@@ -67,8 +87,19 @@ public static class IconExcludedExecutables
         "dxsetup",
         "dxwebsetup",
         "dotnetfx*",
+        "NDP4*",
+        "PhysX*SystemSoftware*",
+        "oalinst",
+        "VulkanRT*",
+        "*WebView2Setup*",
+        "QuickTimeInstall*",
+        "UplayInstaller*",
+        "UbisoftConnectInstaller*",
+        "Social-Club-Setup*",
+        "Rockstar-Games-Launcher*",
+        "Elytra-Setup*",
         "unins*",
-        "*uninstall*",
+        "*uninst*",
         "UnrealCEFSubProcess",
         "EpicWebHelper",
         "CefSharp.BrowserSubprocess",
@@ -107,6 +138,33 @@ public static class IconExcludedExecutables
         "StatsThreshold",
         "SwarmAgent",
         "SwarmCoordinator",
+
+        // Werkzeuge des Source SDK in bin von Source-Spielen (gemessen: Portal; sonst gewann die größte EXE hlfaceposer)
+        "bspzip",
+        "captioncompiler",
+        "demoinfo",
+        "dmxconvert",
+        "dmxedit",
+        "glview",
+        "hammer",
+        "height2normal",
+        "height2ssbump",
+        "hlfaceposer",
+        "hlmv",
+        "mksheet",
+        "motionmapper",
+        "normal2ssbump",
+        "pfm2tgas",
+        "shadercompile",
+        "splitskybox",
+        "studiomdl",
+        "vbsp",
+        "vbspinfo",
+        "vpk",
+        "vrad",
+        "vtex",
+        "vtf2tga",
+        "vvis",
     ];
 
     /// <summary>Ordner unter dem Spielordner, deren EXEs nie das Spielsymbol tragen.</summary>

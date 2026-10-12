@@ -72,6 +72,85 @@ public sealed class IconResolverTests
     }
 
     [Fact]
+    public void Icon_resolver_prefers_a_sharp_exe_over_an_earlier_small_one_of_the_same_group()
+    {
+        // Godot: „Spiel.exe“ (größer, 32 px) vor „Spiel.console.exe“ (256 px), beide nur im Spielordner gefunden. Die erste EXE
+        // mit gutem Symbol gewinnt, die kleine bleibt nur Ersatz.
+        Exe(Dir + @"\Spiel.exe", 9_000);
+        Exe(Dir + @"\Spiel.console.exe", 100);
+        var icons = new Dictionary<string, IconImage?>(StringComparer.OrdinalIgnoreCase)
+        {
+            [Dir + @"\Spiel.exe"] = IconSelectionTests.Icon(32),
+            [Dir + @"\Spiel.console.exe"] = IconSelectionTests.Icon(256),
+        };
+
+        Assert.Equal(Dir + @"\Spiel.console.exe", Resolver().ResolveWithIcon(Game(), null, p => icons.GetValueOrDefault(p))!.Path);
+
+        icons[Dir + @"\Spiel.console.exe"] = IconSelectionTests.Icon(32);
+        Assert.Equal(Dir + @"\Spiel.exe", Resolver().ResolveWithIcon(Game(), null, p => icons.GetValueOrDefault(p))!.Path);
+    }
+
+    [Fact]
+    public void Icon_resolver_keeps_the_small_icon_of_a_known_exe_over_a_sharper_one_from_the_folder()
+    {
+        // SWAT 3 ohne Hinweis: Der Launcher nennt swat.exe (32 px); Last_Resort.exe im Ordner (256 px) ist ein Mod-Starter.
+        // Erkannte und genannte EXEs sind das Spiel; ein schärferes Symbol aus dem Ordner verdrängt sie nicht.
+        Exe(Dir + @"\swat.exe", 100);
+        Exe(Dir + @"\Last_Resort.exe", 9_000);
+        var icons = new Dictionary<string, IconImage?>(StringComparer.OrdinalIgnoreCase)
+        {
+            [Dir + @"\swat.exe"] = IconSelectionTests.Icon(32),
+            [Dir + @"\Last_Resort.exe"] = IconSelectionTests.Icon(256),
+        };
+        var game = Game();
+        game.KnownExecutables = [Dir + @"\swat.exe"];
+
+        Assert.Equal(Dir + @"\swat.exe", Resolver().ResolveWithIcon(game, null, p => icons.GetValueOrDefault(p))!.Path);
+
+        icons[Dir + @"\swat.exe"] = IconSelectionTests.Icon(256, generic: true); // nur ein Standardsymbol: dann der Ordner
+        Assert.Equal(Dir + @"\Last_Resort.exe", Resolver().ResolveWithIcon(game, null, p => icons.GetValueOrDefault(p))!.Path);
+    }
+
+    [Fact]
+    public void Icon_resolver_searches_deeper_only_without_any_real_exe_icon()
+    {
+        // Ein echtes kleines Symbol wird nie gegen eine fremde EXE aus der Tiefe getauscht; ein Standardsymbol schon.
+        Exe(Dir + @"\Spiel.exe", 100);
+        Exe(Dir + @"\a\b\c\Fremd.exe", 9_000);
+        var icons = new Dictionary<string, IconImage?>(StringComparer.OrdinalIgnoreCase)
+        {
+            [Dir + @"\Spiel.exe"] = IconSelectionTests.Icon(32),
+            [Dir + @"\a\b\c\Fremd.exe"] = IconSelectionTests.Icon(256),
+        };
+        var seen = new List<string>();
+        IconImage? Probe(string path)
+        {
+            seen.Add(path);
+            return icons.GetValueOrDefault(path);
+        }
+
+        Assert.Equal(Dir + @"\Spiel.exe", Resolver().ResolveWithIcon(Game(), null, Probe)!.Path);
+        Assert.DoesNotContain(Dir + @"\a\b\c\Fremd.exe", seen);
+
+        icons[Dir + @"\Spiel.exe"] = IconSelectionTests.Icon(256, generic: true);
+        Assert.Equal(Dir + @"\a\b\c\Fremd.exe", Resolver().ResolveWithIcon(Game(), null, Probe)!.Path);
+    }
+
+    [Fact]
+    public void Icon_resolver_excludes_third_party_parts_even_with_an_edited_helper_list()
+    {
+        // Eine in den Einstellungen geänderte Liste der Hilfsprozesse ersetzt die Standardliste ganz; Installer von GameGuard,
+        // Absturzmelder und die Werkzeuge des Source SDK (gemessen: Portal) liefern trotzdem nie das Symbol.
+        Exe(Dir + @"\tools\GGSetup.exe", 9_000);
+        Exe(Dir + @"\tools\gguninst.exe", 9_000);
+        Exe(Dir + @"\BsSndRpt64.exe", 9_000);
+        Exe(Dir + @"\bin\hlfaceposer.exe", 9_000);
+        Exe(Dir + @"\Spiel.exe", 100);
+
+        Assert.Equal(Dir + @"\Spiel.exe", Resolver().Resolve(Game(), ["MeinHelfer"]));
+    }
+
+    [Fact]
     public void Icon_resolver_deep_search_reaches_three_levels_but_not_four()
     {
         Exe(Dir + @"\a\b\c\Drei.exe", 100);

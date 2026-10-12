@@ -123,6 +123,7 @@ public sealed class SteamLaunchOptionTests
 
         changed.Clear();
         details.CreateDesktopShortcutCommand.Execute(null);
+        await Sta.Finished(details.CreateDesktopShortcutCommand);
         Assert.Equal(DetailMessageArea.Launch, details.MessageArea);
         Assert.True(details.HasLaunchMessage);
         Assert.False(details.HasExecutablesMessage);

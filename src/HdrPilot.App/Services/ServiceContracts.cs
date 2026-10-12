@@ -50,9 +50,11 @@ public interface IGameIconService
     void DeleteCustomIcon(string? fileName);
 
     /// <summary>
-    /// Symboldatei für eine Verknüpfung „Mit HDR starten“: die gemerkte automatische Wahl der Bibliothek, wenn sie noch gilt
-    /// und eine .ico oder .exe ist (Bilder und eigene Symbole kann eine Verknüpfung nicht zeigen), sonst die EXE wie in der
-    /// Liste ohne tiefere Suche (Standardsymbole übersprungen); null ohne EXE.
+    /// Symboldatei für eine Verknüpfung „Mit HDR starten“ in der Reihenfolge der Liste, soweit eine Verknüpfung sie zeigen
+    /// kann: ein eigenes Symbol als .ico neben seiner PNG, sonst die gemerkte automatische Wahl, wenn sie noch gilt, sonst
+    /// dieselbe Wahl ohne tiefere Suche; ist die Wahl ein Bild, die EXE wie in der Liste (Standardsymbole übersprungen); null
+    /// ohne Quelle. Schreibt höchstens die .ico im Datenordner. Nicht auf dem UI-Thread aufrufen (liest ohne gemerkte Wahl
+    /// Symbole).
     /// </summary>
     string? ShortcutIconFile(GameConfig game);
 }

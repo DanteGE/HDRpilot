@@ -252,20 +252,26 @@ public sealed class GameDetailsViewModelTests
     });
 
     [Fact]
-    public void Shortcuts_report_path_or_error() => Sta.Run(() =>
+    public void Shortcuts_report_path_or_error() => Sta.Run(async () =>
     {
         var (context, library, details) = Open(Cyberpunk());
         using var _l = library;
 
         details.CreateDesktopShortcutCommand.Execute(null);
+        await Sta.Finished(details.CreateDesktopShortcutCommand);
         Assert.Equal(StatusKind.Success, details.MessageKind);
         Assert.Contains(@"C:\Links\Desktop\Cyberpunk 2077 (HDR).lnk", details.Message, StringComparison.Ordinal);
 
         details.CreateStartMenuShortcutCommand.Execute(null);
+        await Sta.Finished(details.CreateStartMenuShortcutCommand);
         Assert.Equal([("Desktop", "Gog:1423049311"), ("Startmenü", "Gog:1423049311")], context.FakeShortcuts.Created);
+
+        // Abseits des UI-Threads: Ohne gemerkte Wahl liest die Symbolwahl bis zu 24 EXE-Symbole.
+        Assert.DoesNotContain(Environment.CurrentManagedThreadId, context.FakeShortcuts.Threads);
 
         context.FakeShortcuts.Failure = new UnauthorizedAccessException("Zugriff verweigert");
         details.CreateDesktopShortcutCommand.Execute(null);
+        await Sta.Finished(details.CreateDesktopShortcutCommand);
         Assert.Equal(StatusKind.Error, details.MessageKind);
         Assert.Equal(LibraryText.Format(LibraryStrings.Shortcut_Failed, "Zugriff verweigert"), details.Message);
     });

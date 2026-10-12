@@ -127,6 +127,63 @@ public sealed class CustomIconTests : IDisposable
     }
 
     [Fact]
+    public void CustomIcon_is_used_for_shortcuts_as_an_ico_that_survives_the_reset()
+    {
+        // „Das eigene Symbol geht allem vor“ gilt auch für Verknüpfungen; eine PNG kann eine Verknüpfung nicht zeigen.
+        var hint = _files.Ico("steam.ico", IconFixtures.Colorful(256, 256));
+        var game = IconSelectionTests.Game(hint);
+        var service = new GameIconService(new HdrPilot.Tests.TestSupport.InMemoryFileSystem(), iconDirectory: IconDir);
+        game.CustomIcon = service.SaveCustomIcon(game, _files.Png("eigen.png", IconFixtures.Colorful(128, 128)));
+        var png = Path.Combine(IconDir, game.CustomIcon);
+
+        var ico = service.ShortcutIconFile(game);
+
+        Assert.Equal(Path.ChangeExtension(png, ".ico"), ico);
+        Assert.Equal(96, IconFileSizes.LargestInIco(ico!));
+        Assert.Equal(CustomIconStore.IcoWithPng(File.ReadAllBytes(png)), File.ReadAllBytes(ico!));
+        Assert.NotNull(GameIconService.ExtractIcon(ico!, 48)); // Windows liest sie wie die Shell
+
+        // Zurücksetzen löscht nur die PNG: Vorhandene Verknüpfungen behalten ihr Symbol, neue zeigen wieder das automatische.
+        service.DeleteCustomIcon(game.CustomIcon);
+        game.CustomIcon = null;
+        Assert.False(File.Exists(png));
+        Assert.True(File.Exists(ico));
+        Assert.Equal(hint, service.ShortcutIconFile(game));
+    }
+
+    [Fact]
+    public void CustomIcon_change_also_updates_the_ico_of_existing_shortcuts()
+    {
+        var service = new GameIconService(new HdrPilot.Tests.TestSupport.InMemoryFileSystem(), iconDirectory: IconDir);
+        var game = IconSelectionTests.Game();
+        game.CustomIcon = service.SaveCustomIcon(game, _files.Png("rot.png", IconFixtures.Image(4, 4, Solid(4, 4, 0, 0, 255))));
+        Assert.False(File.Exists(Path.ChangeExtension(Path.Combine(IconDir, game.CustomIcon), ".ico"))); // erst mit einer Verknüpfung
+        var ico = service.ShortcutIconFile(game)!;
+        var before = File.ReadAllBytes(ico);
+
+        service.SaveCustomIcon(game, _files.Png("blau.png", IconFixtures.Image(4, 4, Solid(4, 4, 255, 0, 0))));
+
+        var after = File.ReadAllBytes(ico);
+        Assert.NotEqual(before, after);
+        Assert.Equal(CustomIconStore.IcoWithPng(File.ReadAllBytes(Path.Combine(IconDir, game.CustomIcon))), after);
+    }
+
+    [Fact]
+    public void CustomIcon_ico_for_shortcuts_wraps_the_png_unchanged()
+    {
+        var png = File.ReadAllBytes(_files.Png("gross.png", IconFixtures.Colorful(300, 300)));
+
+        var ico = CustomIconStore.IcoWithPng(png)!;
+
+        Assert.Equal(new byte[] { 0, 0, 1, 0, 1, 0, 0, 0 }, ico[..8]); // Symbol, ein Bild, 300 px als 0 (256 und mehr)
+        Assert.Equal(32, BitConverter.ToUInt16(ico, 12));
+        Assert.Equal(png.Length, BitConverter.ToInt32(ico, 14));
+        Assert.Equal(22, BitConverter.ToInt32(ico, 18));
+        Assert.Equal(png, ico[22..]);
+        Assert.Null(CustomIconStore.IcoWithPng(Encoding.ASCII.GetBytes("keine PNG, nur Text mit 24 Byte")));
+    }
+
+    [Fact]
     public void CustomIcon_change_command_saves_writes_config_and_reloads_the_icon() => Sta.Run(async () =>
     {
         var context = new TestLibraryContext(Game(GameSource.Steam, "1091500", "Cyberpunk 2077"));
@@ -359,6 +416,10 @@ public sealed class CustomIconTests : IDisposable
     }
 
     private static DependencyProperty ContextMenuProperty() => FrameworkElement.ContextMenuProperty;
+
+    /// <summary>Einfarbige BGRA-Pixel.</summary>
+    private static byte[] Solid(int width, int height, byte blue, byte green, byte red) =>
+        [.. Enumerable.Range(0, width * height).SelectMany(_ => new[] { blue, green, red, (byte)255 })];
 
     private static ImageSource Frozen()
     {

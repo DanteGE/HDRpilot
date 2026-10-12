@@ -100,8 +100,9 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - Details zum gewählten Spiel, von oben nach unten:
   - **Mit HDR starten**: schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel.
   - **Desktop** / **Startmenü**: legt eine Verknüpfung „<Spiel> (HDR)“ an, die das Spiel genauso über HDRpilot startet.
-    Im Startmenü liegt sie im Ordner „HDRpilot“. Sie zeigt das Symbol der Liste, sofern es eine ICO- oder EXE-Datei ist
-    (ein eigenes Bild kann eine Verknüpfung nicht zeigen), sonst das der Spiel-EXE.
+    Im Startmenü liegt sie im Ordner „HDRpilot“. Sie zeigt das Symbol der Liste, auch dein eigenes (dafür legt HDRpilot
+    neben dessen PNG eine ICO-Datei ab, die beim Zurücksetzen bleibt, damit die Verknüpfung ihr Symbol behält). Ist das
+    Symbol der Liste ein Bild wie ein Xbox-Logo, zeigt sie das der Spiel-EXE.
   - **Steam-Startoption kopieren** (nur bei Steam-Spielen): Notlösung für Spiele, die du lieber direkt aus Steam
     startest. Kopiert `"…\HDRpilot.exe" --wrap -- %command%`; in Steam per Rechtsklick auf das Spiel → Eigenschaften →
     Allgemein → Startoptionen einfügen. Dann ist HDR auch beim Start aus Steam an, bevor das Spiel startet
@@ -221,8 +222,9 @@ GOG Galaxy; bei Xbox-Spielen ihre Logos; bei Ubisoft das Symbol des Deinstallati
 Battle.net die Spiel-EXE. Brauchbar heißt: kein bekanntes Standardsymbol (EasyAntiCheat, Unreal, Epic Online Services,
 Godot, Unity, Windows-Programmsymbol) und in der Datei mindestens 48 px groß. Die Spiel-EXE kommt bei Steam deshalb nur
 zum Zug, wenn das Steam-Symbol fehlt, ein Standardsymbol ist oder kleiner als 48 px ist, während die EXE mindestens
-48 px hat. Anti-Cheat-Starter (EasyAntiCheat, BattlEye, EA Anti-Cheat, GameGuard, Epic Online Services), Absturzmelder,
-Installer und Werkzeuge liefern nie das Symbol; bei Unreal-Spielen zählt zuerst `<Projekt>\Binaries\Win64\*-Shipping.exe`.
+48 px hat. Anti-Cheat-Starter (EasyAntiCheat, BattlEye, EA Anti-Cheat, GameGuard, PunkBuster, Epic Online Services),
+Absturzmelder, Installer und Werkzeuge liefern nie das Symbol, auch wenn du die Liste der Hilfsprozesse änderst; bei
+Unreal-Spielen zählt zuerst `<Projekt>\Binaries\Win64\*-Shipping.exe`.
 Findet sich gar kein echtes Symbol, sucht HDRpilot bis drei Ordnerebenen tief (höchstens 300 Ordner und 1 s). Die
 gewählte Quelle merkt es sich in `icon-cache.json`, damit die Liste nach einem Neustart keine Spielordner durchsucht.
 Symbole lädt HDRpilot nur für sichtbare Zeilen und nur, solange die Bibliothek offen ist.
@@ -289,7 +291,7 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | HDR-Angaben je Spiel | `%LOCALAPPDATA%\HDRpilot\hdr-support.json` |
 | Vollständige HDR-Liste (nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\hdr-catalog.json` |
 | PCGamingWiki-Konto (verschlüsselt, nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\pcgw-account.dat` |
-| Eigene Spielsymbole (je Spiel eine PNG mit 96 px) | `%LOCALAPPDATA%\HDRpilot\icons\` |
+| Eigene Spielsymbole (je Spiel eine PNG mit 96 px, für Verknüpfungen dazu eine ICO) | `%LOCALAPPDATA%\HDRpilot\icons\` |
 | Gemerkte Quelle der Spielsymbole | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
 | Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
 | Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
@@ -433,7 +435,7 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   um und wirkt auf alle HDR-fähigen Bildschirme; HDRpilot bestätigt aber nur den Zielbildschirm. Auf echter Hardware
   ist die Notlösung nicht getestet.
 - **Spielsymbole:** Für manche Steam-Spiele liegt auf dem PC nur ein 32-px-Symbol; in der Liste wirkt es etwas
-  unscharf (gemessen: 28 von 635). Bilder im WebP-Format (GOG Galaxy) braucht die WebP-Erweiterung von Windows; fehlt
+  unscharf (gemessen: 24 von 636). Bilder im WebP-Format (GOG Galaxy) braucht die WebP-Erweiterung von Windows; fehlt
   sie, nimmt HDRpilot die nächste Quelle. Ein eigenes Symbol gilt nur auf diesem PC, weil die PNG im lokalen Datenordner
   liegt; auf einem anderen PC zeigt das Spiel wieder das automatische Symbol.
 - **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.

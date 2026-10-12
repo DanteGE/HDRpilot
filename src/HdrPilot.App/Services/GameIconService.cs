@@ -170,22 +170,48 @@ public sealed class GameIconService : IGameIconService
     public void DeleteCustomIcon(string? fileName) => _customIcons?.Delete(fileName);
 
     /// <summary>
-    /// Symboldatei für eine Verknüpfung „Mit HDR starten“: die gemerkte automatische Wahl der Bibliothek, solange sie gilt
-    /// (gleiche Eingaben, Datei unverändert, Quelle erlaubt) und eine Verknüpfung sie zeigen kann (.ico oder .exe; dafür wird
-    /// kein Symbol gelesen). Sonst, etwa wenn ein eigenes Symbol gilt und nie automatisch gewählt wurde, die EXE wie in der
-    /// Liste, aber ohne tiefere Suche (<see cref="IconExecutableResolver.ResolveWithIcon"/>: Standardsymbole wie das von
-    /// EasyAntiCheat übersprungen, höchstens <see cref="IconExecutableResolver.MaxProbes"/> Symbole). Null ohne EXE (dann
-    /// das Symbol von HDRpilot). Ein eigenes Symbol kann eine Verknüpfung nicht zeigen: Sie verweist dauerhaft auf ihre
-    /// Symboldatei, und die PNG im Datenordner löscht „Symbol zurücksetzen“ später.
+    /// Symboldatei für eine Verknüpfung „Mit HDR starten“, in derselben Reihenfolge wie die Liste, soweit eine Verknüpfung
+    /// die Datei zeigen kann (.ico oder .exe):
+    /// <list type="number">
+    /// <item>ein eigenes Symbol als .ico neben seiner PNG (<see cref="CustomIconStore.ShortcutIcon"/>; die PNG selbst kann eine
+    /// Verknüpfung nicht zeigen). „Symbol zurücksetzen“ löscht die .ico nicht, damit vorhandene Verknüpfungen ihr Symbol
+    /// behalten;</item>
+    /// <item>die gemerkte automatische Wahl der Bibliothek, solange sie gilt (gleiche Eingaben, Datei unverändert, Quelle
+    /// erlaubt; dafür wird kein Symbol gelesen);</item>
+    /// <item>sonst (etwa ohne icon-cache.json oder nach geänderten Eingaben, während ein eigenes Symbol galt) dieselbe Wahl wie
+    /// in der Liste ohne tiefere Suche, also etwa das offizielle Steam-Symbol;</item>
+    /// <item>ist die Wahl ein Bild (Xbox-Logo, WebP von GOG Galaxy, librarycache), die EXE wie in der Liste ohne tiefere
+    /// Suche (<see cref="IconExecutableResolver.ResolveWithIcon"/>, höchstens <see cref="IconExecutableResolver.MaxProbes"/>
+    /// Symbole).</item>
+    /// </list>
+    /// Null ohne Quelle (dann das Symbol von HDRpilot). Nie auf dem UI-Thread aufrufen: Hat die Liste für das Spiel nichts
+    /// gemerkt, lesen die Schritte 3 und 4 bis zu 1 + <see cref="IconExecutableResolver.MaxProbes"/> Symbole.
     /// </summary>
     public string? ShortcutIconFile(GameConfig game)
     {
+        if (Custom(game) is { } custom)
+        {
+            try
+            {
+                if (_customIcons!.ShortcutIcon(custom.Path) is { } ico)
+                {
+                    return ico;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogDebug("Symbol für die Verknüpfung von {Game} nicht geschrieben, es gilt das automatische: {Message}", game.Key, ex.Message);
+            }
+        }
+
         var patterns = _helperPatterns();
-        if (_choices.Get(game.Key) is { Path: { } path } choice
+        var path = _choices.Get(game.Key) is { Path: { } remembered } choice
             && choice.Signature == IconSignature.Of(game, patterns)
-            && (path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-            && IsAllowedSource(game, path, patterns)
-            && string.Equals(_fileStamp(path), choice.Stamp, StringComparison.Ordinal))
+            && IsAllowedSource(game, remembered, patterns)
+            && string.Equals(_fileStamp(remembered), choice.Stamp, StringComparison.Ordinal)
+                ? remembered
+                : Choose(game, patterns, allowDeepSearch: false)?.Path;
+        if (path is not null && (path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)))
         {
             return path;
         }
@@ -409,8 +435,11 @@ public sealed class GameIconService : IGameIconService
         return selection;
     }
 
-    /// <summary>Die eigentliche Wahl (siehe Klassenbeschreibung). Das gewählte Bild bleibt nach Pfad im Speicher.</summary>
-    private IconSelection? Choose(GameConfig game, IReadOnlyList<string>? patterns)
+    /// <summary>
+    /// Die eigentliche Wahl (siehe Klassenbeschreibung); ohne <paramref name="allowDeepSearch"/> nie die tiefere EXE-Suche
+    /// (Verknüpfungen, UI-Thread). Das gewählte Bild bleibt nach Pfad im Speicher.
+    /// </summary>
+    private IconSelection? Choose(GameConfig game, IReadOnlyList<string>? patterns, bool allowDeepSearch = true)
     {
         IconSelection? fallback = null;
         void Consider(IconSelection selection)
@@ -448,7 +477,7 @@ public sealed class GameIconService : IGameIconService
         }
 
         // Die tiefere Suche nur, wenn noch kein echtes Symbol da ist.
-        var deepSearch = fallback is null || fallback.Icon.IsGeneric;
+        var deepSearch = allowDeepSearch && (fallback is null || fallback.Icon.IsGeneric);
         if (_resolver.ResolveWithIcon(game, patterns, ReadPath, deepSearch) is { } exe)
         {
             var selection = new IconSelection(exe.Path, IconOrigin.Executable, exe.Icon);
@@ -490,8 +519,11 @@ public sealed record ResolvedIcon(string Path, IconImage Icon);
 /// <c>[&lt;Projekt&gt;\]Binaries\Win64\*.exe</c> dran, <c>*-Shipping.exe</c> vorn (die Starter im Spielordner tragen oft nur das
 /// Unreal- oder EasyAntiCheat-Symbol), danach die EXEs bis eine Ebene tief. Hilfsprogramme, vom Nutzer ausgeschlossene EXEs
 /// und die Ausschlussliste nur für Symbole (<see cref="IconExcludedExecutables"/>) zählen nie. Mit Symbolprobe
-/// (<see cref="ResolveWithIcon"/>; mit tieferer Suche nur auf dem Arbeits-Thread der Symbole) werden EXEs ohne Symbol oder
-/// mit Standardsymbol übersprungen, solange es eine andere gibt, und als Ersatz wird bis drei Ebenen tief gesucht, begrenzt auf
+/// (<see cref="ResolveWithIcon"/>; mit tieferer Suche nur auf dem Arbeits-Thread der Symbole) gilt die erste Gruppe mit einem
+/// echten Symbol, darin die erste EXE mit gutem Symbol (ab 48 px, kein Standardsymbol; etwa eine 256-px-<c>*.console.exe</c>
+/// von Godot hinter einer größeren EXE mit 32 px), sonst die erste ohne Standardsymbol; EXEs ohne Symbol oder mit
+/// Standardsymbol werden übersprungen, solange es eine andere gibt. Hat keine EXE ein echtes Symbol, wird als Ersatz bis drei
+/// Ebenen tief gesucht, begrenzt auf
 /// <see cref="DeepSearchMaxDirectories"/> Ordner und 1 s (gemessen ohne Grenze: im Mittel 66 ms, schlimmstenfalls 12 s).
 /// </summary>
 public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, long>? fileLength = null, TimeSpan? deepSearchBudget = null)
@@ -535,49 +567,69 @@ public sealed class IconExecutableResolver(IFileSystem fileSystem, Func<string, 
     }
 
     /// <summary>
-    /// Erste EXE in Gruppenreihenfolge, deren Symbol vorhanden und kein Standardsymbol ist; ohne Treffer mit
-    /// <paramref name="deepSearch"/> die Ersatzsuche. Sonst die erste mit Standardsymbol, sonst null.
+    /// EXE mit Symbol in Gruppenreihenfolge: in der ersten Gruppe, in der eine EXE ein Symbol ohne Standardsymbol hat, die
+    /// erste mit gutem Symbol (<see cref="IconImage.IsGood"/>), sonst die erste ohne Standardsymbol; gibt es keine, die erste
+    /// mit Standardsymbol, sonst null. Eine spätere Gruppe kommt nur zum Zug, wenn die früheren kein echtes Symbol haben:
+    /// Erkannte und vom Launcher genannte EXEs sind das Spiel, eine schärfere aus dem Ordner kann ein Werkzeug sein (gemessen:
+    /// SWAT 3 bekäme sonst statt seines 32-px-Symbols das des Mod-Starters Last_Resort.exe). Ebenso läuft die Ersatzsuche
+    /// (<paramref name="deepSearch"/>) nur ohne echtes Symbol.
     /// </summary>
     public ResolvedIcon? ResolveWithIcon(GameConfig game, IReadOnlyList<string>? helperPatterns, Func<string, IconImage?> probe, bool deepSearch = true)
     {
         ResolvedIcon? fallback = null;
         var tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var probes = 0;
-        var groups = Groups(game, helperPatterns);
-        if (deepSearch)
-        {
-            groups = groups.Concat(DeepSearch(game, helperPatterns));
-        }
 
-        foreach (var group in groups)
+        // True, sobald die Suche endet: gutes Symbol gefunden, eine Gruppe mit echtem Symbol fertig oder alle Proben verbraucht.
+        bool Probe(IEnumerable<List<string>> groups, out ResolvedIcon? good)
         {
-            foreach (var exe in group)
+            good = null;
+            foreach (var group in groups)
             {
-                if (!tried.Add(exe))
+                foreach (var exe in group)
                 {
-                    continue;
+                    if (!tried.Add(exe))
+                    {
+                        continue;
+                    }
+
+                    if (probes++ >= MaxProbes)
+                    {
+                        return true;
+                    }
+
+                    if (probe(exe) is not { } icon)
+                    {
+                        continue;
+                    }
+
+                    if (icon.IsGood)
+                    {
+                        good = new ResolvedIcon(exe, icon);
+                        return true;
+                    }
+
+                    if (fallback is null || (fallback.Icon.IsGeneric && !icon.IsGeneric))
+                    {
+                        fallback = new ResolvedIcon(exe, icon);
+                    }
                 }
 
-                if (probes++ >= MaxProbes)
+                if (fallback is { Icon.IsGeneric: false })
                 {
-                    return fallback;
+                    return true;
                 }
-
-                if (probe(exe) is not { } icon)
-                {
-                    continue;
-                }
-
-                if (!icon.IsGeneric)
-                {
-                    return new ResolvedIcon(exe, icon);
-                }
-
-                fallback ??= new ResolvedIcon(exe, icon);
             }
+
+            return false;
         }
 
-        return fallback;
+        if (!Probe(Groups(game, helperPatterns), out var found) && deepSearch)
+        {
+            _ = Probe(DeepSearch(game, helperPatterns), out found);
+        }
+
+        return found ?? fallback;
     }
 
     /// <summary>True, wenn der Installationsordner vorhanden und durchsuchbar ist (nie eine Laufwerkswurzel).</summary>

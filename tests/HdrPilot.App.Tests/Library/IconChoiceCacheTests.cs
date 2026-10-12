@@ -151,20 +151,49 @@ public sealed class IconChoiceCacheTests
         // EasyAntiCheat-Symbol), sofern es eine .ico oder .exe ist; gelesen wird dafür kein Symbol.
         Add(Hint, IconSelectionTests.Icon(256));
         var service = Service();
-        Assert.Null(service.ShortcutIconFile(Game())); // noch nichts gewählt
+        Assert.Equal(Hint, service.ShortcutIconFile(Game())); // noch nichts gewählt: dieselbe Wahl wie in der Liste
         service.Select(Game(), remember: true);
         _reads.Clear();
 
         Assert.Equal(Hint, service.ShortcutIconFile(Game()));
         Assert.Empty(_reads);
-        Assert.Null(service.ShortcutIconFile(Game(@"C:\Steam\steam\games\neu.ico"))); // Spiel geändert: Wahl gilt nicht mehr
-        _stamps[Hint] = "anders";
-        Assert.Null(service.ShortcutIconFile(Game())); // Datei ersetzt
 
+        const string neu = @"C:\Steam\steam\games\neu.ico";
+        Add(neu, IconSelectionTests.Icon(256));
+        Assert.Equal(neu, service.ShortcutIconFile(Game(neu))); // Spiel geändert: gemerkte Wahl gilt nicht mehr
         const string logo = @"C:\XboxGames\Spiel\Content\Logo.png";
         Add(logo, IconSelectionTests.Icon(256));
         service.Select(Game(logo), remember: true);
-        Assert.Null(service.ShortcutIconFile(Game(logo))); // ein Bild kann eine Verknüpfung nicht zeigen
+        Assert.Null(service.ShortcutIconFile(Game(logo))); // ein Bild kann eine Verknüpfung nicht zeigen, und eine EXE gibt es nicht
+        Add(Exe, IconSelectionTests.Icon(32));
+        Assert.Equal(Exe, service.ShortcutIconFile(Game(logo))); // dann die EXE wie in der Liste
+    }
+
+    [Fact]
+    public void Icon_for_shortcuts_without_a_remembered_choice_takes_the_official_steam_icon()
+    {
+        // Nichts gemerkt (etwa weil ein eigenes Symbol galt, als die Liste das Spiel zuletzt zeigte) und die EXE trägt nur das
+        // Unity-Symbol: Die Verknüpfung zeigt wie die Liste das offizielle Steam-Symbol, nicht das Standardsymbol der EXE.
+        Add(Hint, IconSelectionTests.Icon(256));
+        Add(Exe, IconSelectionTests.Icon(256, generic: true));
+
+        Assert.Equal(Hint, Service().ShortcutIconFile(Game()));
+
+        // Ist das Steam-Symbol unscharf und die EXE scharf, nimmt die Liste die EXE, die Verknüpfung ebenso.
+        _icons[Hint] = IconSelectionTests.Icon(32);
+        _icons[Exe] = IconSelectionTests.Icon(256);
+        Assert.Equal(Exe, Service().ShortcutIconFile(Game()));
+    }
+
+    [Fact]
+    public void Icon_for_shortcuts_never_searches_deeper()
+    {
+        // Verknüpfungen entstehen auf dem UI-Thread: Die tiefere EXE-Suche (bis 1 s) läuft dafür nie, die Liste findet die EXE.
+        const string deep = Dir + @"\a\b\c\Tief.exe";
+        Add(deep, IconSelectionTests.Icon(256));
+
+        Assert.Null(Service().ShortcutIconFile(Game(@"C:\fehlt.ico")));
+        Assert.Equal(deep, Service().Select(Game(@"C:\fehlt.ico"))!.Path);
     }
 
     [Fact]

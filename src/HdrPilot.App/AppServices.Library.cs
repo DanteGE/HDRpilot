@@ -25,9 +25,9 @@ public sealed partial class AppServices
         logger: LoggerFactory.CreateLogger("Symbole"));
 
     /// <summary>
-    /// Verknüpfungen zeigen das Symbol der Bibliothek, soweit sie es können (gemerkte Wahl als .ico oder .exe, etwa das
-    /// Steam-Symbol statt eines Starters mit EasyAntiCheat-Symbol); sonst die EXE wie in der Liste ohne tiefere Suche
-    /// (<see cref="IGameIconService.ShortcutIconFile"/>).
+    /// Verknüpfungen zeigen das Symbol der Bibliothek, soweit sie es können (eigenes Symbol als .ico, gemerkte Wahl als .ico
+    /// oder .exe, etwa das Steam-Symbol statt eines Starters mit EasyAntiCheat-Symbol); sonst die EXE wie in der Liste ohne
+    /// tiefere Suche (<see cref="IGameIconService.ShortcutIconFile"/>).
     /// </summary>
     private partial IShortcutService CreateShortcutService() => new ShortcutService(
         iconPath: Icons.ShortcutIconFile,

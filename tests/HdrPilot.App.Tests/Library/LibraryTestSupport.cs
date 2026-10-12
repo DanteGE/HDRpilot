@@ -1,6 +1,7 @@
 using System.Runtime.ExceptionServices;
 using System.Windows.Media;
 using System.Windows.Threading;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Abstractions;
@@ -61,6 +62,17 @@ public static class Sta
         body();
         return Task.CompletedTask;
     });
+
+    /// <summary>Wartet, bis ein asynchroner Befehl fertig ist (seine Fortsetzungen laufen über den Dispatcher des Tests).</summary>
+    public static async Task Finished(AsyncRelayCommand command)
+    {
+        for (var i = 0; i < 500 && command.IsRunning; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.False(command.IsRunning, "Befehl läuft noch");
+    }
 }
 
 /// <summary>UI-Dispatcher für Tests: Post sofort, Verzögerungen erst auf <see cref="RunDelayed"/>.</summary>
@@ -228,6 +240,9 @@ public sealed class FakeShortcuts : IShortcutService
 {
     public List<(string Kind, string Key)> Created { get; } = [];
 
+    /// <summary>Threads, auf denen die Verknüpfungen entstanden (nie der UI-Thread).</summary>
+    public List<int> Threads { get; } = [];
+
     public Exception? Failure { get; set; }
 
     public string CreateDesktopShortcut(GameConfig game) => Create("Desktop", game);
@@ -241,6 +256,7 @@ public sealed class FakeShortcuts : IShortcutService
             throw Failure;
         }
 
+        Threads.Add(Environment.CurrentManagedThreadId);
         Created.Add((kind, game.Key));
         return $@"C:\Links\{kind}\{game.Name} (HDR).lnk";
     }

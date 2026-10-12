@@ -246,6 +246,9 @@ public static class IconFileSizes
             return -1;
         }
 
+        // Wie der Loader von Windows: Eine Sektion umfasst VirtualSize Byte, nur ohne VirtualSize (manche Linker) SizeOfRawData.
+        // Nie die größere von beiden: Godot 4 packt die Spieldaten in eine Sektion „pck“ mit VirtualSize 8, deren SizeOfRawData
+        // weit über .rsrc hinausreicht (gemessen: Buckshot Roulette, Overlooting, s.p.l.i.t, Spin Hero).
         long ToOffset(uint rva)
         {
             for (var i = 0; i < sectionCount; i++)
@@ -253,7 +256,7 @@ public static class IconFileSizes
                 var s = sections.AsSpan(i * 40);
                 uint virtualSize = BinaryPrimitives.ReadUInt32LittleEndian(s[8..]), address = BinaryPrimitives.ReadUInt32LittleEndian(s[12..]);
                 uint rawSize = BinaryPrimitives.ReadUInt32LittleEndian(s[16..]), raw = BinaryPrimitives.ReadUInt32LittleEndian(s[20..]);
-                if (rva >= address && rva < address + Math.Max(virtualSize, rawSize))
+                if (rva >= address && rva < (long)address + (virtualSize != 0 ? virtualSize : rawSize))
                 {
                     return raw + (long)(rva - address);
                 }

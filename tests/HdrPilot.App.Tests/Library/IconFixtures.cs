@@ -134,10 +134,14 @@ public sealed class IconFixtures : IDisposable
     /// Kleines PE-Abbild (PE32+) nur mit Ressourcen: je Gruppe ein RT_GROUP_ICON mit den angegebenen Kantenlängen. Benannte
     /// Gruppen stehen wie bei Windows vor nummerierten. Reicht für <see cref="IconFileSizes.LargestInPe"/>, lädt nicht.
     /// </summary>
-    public static byte[] PeWithIconGroups(params (string? Name, int[] Sizes)[] groups)
+    public static byte[] PeWithIconGroups(params (string? Name, int[] Sizes)[] groups) => PeWithIconGroups(PeLayout.Plain, groups);
+
+    /// <summary>Wie oben, mit dem Aufbau der Sektionen aus <paramref name="layout"/>.</summary>
+    public static byte[] PeWithIconGroups(PeLayout layout, params (string? Name, int[] Sizes)[] groups)
     {
-        const uint SectionRva = 0x1000;
-        const int SectionOffset = 0x200;
+        var packed = layout == PeLayout.PackedDataBefore;
+        var sectionRva = packed ? 0x2000u : 0x1000u;
+        var sectionOffset = packed ? 0x400 : 0x200;
         var named = groups.Where(g => g.Name is not null).OrderBy(g => g.Name, StringComparer.Ordinal).ToList();
         var numbered = groups.Where(g => g.Name is null).ToList();
         var ordered = named.Concat(numbered).ToList();
@@ -202,7 +206,7 @@ public sealed class IconFixtures : IDisposable
         var dataOffset = groupStart;
         foreach (var data in groupData)
         {
-            U32(SectionRva + (uint)dataOffset);
+            U32(sectionRva + (uint)dataOffset);
             U32((uint)data.Length);
             U32(0);
             U32(0);
@@ -220,30 +224,54 @@ public sealed class IconFixtures : IDisposable
             rsrc.AddRange(data);
         }
 
-        // Kopf: DOS (0x40), "PE\0\0", COFF (20), Optional Header PE32+ (240), eine Sektion (40)
-        var image = new byte[SectionOffset + rsrc.Count];
+        // Kopf: DOS (0x40), "PE\0\0", COFF (20), Optional Header PE32+ (240), eine oder zwei Sektionen (je 40)
+        var image = new byte[sectionOffset + rsrc.Count];
         image[0] = (byte)'M';
         image[1] = (byte)'Z';
         BinaryPrimitives.WriteInt32LittleEndian(image.AsSpan(0x3C), 0x40);
         var pe = 0x40;
         "PE\0\0"u8.CopyTo(image.AsSpan(pe));
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(pe + 4), 0x8664);
-        BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(pe + 6), 1);
+        BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(pe + 6), (ushort)(packed ? 2 : 1));
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(pe + 20), 240);
         var optional = pe + 24;
         BinaryPrimitives.WriteUInt16LittleEndian(image.AsSpan(optional), 0x20B);
         BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(optional + 108), 16);
-        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(optional + 112 + 16), SectionRva);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(optional + 112 + 16), sectionRva);
         BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(optional + 112 + 20), (uint)rsrc.Count);
         var section = optional + 240;
+        if (packed)
+        {
+            // Wie „pck“ in Godot-4-EXEs: VirtualSize 8, die Rohdaten (16 MB, hinter dem Dateiende) reichen über .rsrc hinaus.
+            "pck"u8.CopyTo(image.AsSpan(section));
+            BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 8), 8);
+            BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 12), 0x1000);
+            BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 16), 0x0100_0000);
+            BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 20), 0x200);
+            section += 40;
+        }
+
         ".rsrc"u8.CopyTo(image.AsSpan(section));
-        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 8), (uint)rsrc.Count);
-        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 12), SectionRva);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 8), layout == PeLayout.NoVirtualSize ? 0 : (uint)rsrc.Count);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 12), sectionRva);
         BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 16), (uint)rsrc.Count);
-        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 20), SectionOffset);
-        rsrc.CopyTo(image, SectionOffset);
+        BinaryPrimitives.WriteUInt32LittleEndian(image.AsSpan(section + 20), (uint)sectionOffset);
+        rsrc.CopyTo(image, sectionOffset);
         return image;
     }
+}
+
+/// <summary>Aufbau der Sektionen im PE-Abbild von <see cref="IconFixtures.PeWithIconGroups(PeLayout, (string?, int[])[])"/>.</summary>
+public enum PeLayout
+{
+    /// <summary>Nur .rsrc.</summary>
+    Plain,
+
+    /// <summary>Vor .rsrc eine Sektion wie „pck“ in Godot-4-EXEs: VirtualSize 8, SizeOfRawData reicht weit über .rsrc hinaus.</summary>
+    PackedDataBefore,
+
+    /// <summary>.rsrc ohne VirtualSize (manche Linker): Dann gilt SizeOfRawData.</summary>
+    NoVirtualSize,
 }
 
 /// <summary>

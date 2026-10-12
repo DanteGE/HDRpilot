@@ -361,5 +361,10 @@ Entscheidungen des Nutzers (2026-10-12):
   EXPECT: TESTS_OK
   EVIDENCE: pending
 
-- [ ] G9.8: Abschlusstest am echten System mit dem Nutzer (nach Installation mit Zustimmung): Start über HDRpilot und über die Steam-Startoption → Auto HDR aktiv (Regler bedienbar); nach dem Spiel ist der globale Schalter wieder aus
+- [ ] G9.8: Abschlusstest am echten System mit dem Nutzer (nach Installation mit Zustimmung): Start über HDRpilot und über die Steam-Startoption → Auto HDR aktiv (Regler bedienbar); nach dem Spiel ist der globale Schalter wieder aus; der Tray-Eintrag „Auto HDR“ schaltet den Windows-Schalter sichtbar um (Windows-Einstellungen → HDR)
+  EVIDENCE: pending
+
+- [ ] G9.9: Tray-Eintrag „Auto HDR“ (Wunsch des Nutzers 2026-10-12): im Tray-Menü unter „HDR jetzt …“ ein Eintrag mit Häkchen, der den globalen Auto-HDR-Schalter von Windows anzeigt und umschaltet (nur das Token `AutoHDREnable`, andere Tokens bleiben); gilt für die nächsten Spielstarts, auch ohne HDRpilot; eine Änderung dort ist die Wahl des Nutzers und wird nach einer Auto-HDR-Sitzung nicht zurückgestellt; Pfeiltasten und die übrigen Einträge funktionieren weiter; Text und Hinweis in resx; per Unit-Tests (mit Gegenproben, Testwurzel statt echter Registry) belegt, `phase6-traymenu.ps1` kennt den Eintrag (läuft nur am echten Desktop mit Zustimmung)
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrTray" -MinTests 5
+  EXPECT: TESTS_OK
   EVIDENCE: pending

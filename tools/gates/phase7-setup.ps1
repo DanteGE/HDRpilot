@@ -15,8 +15,14 @@
 #   (f) erneut installieren mit Start (lief vorher nicht: mit Fenster), dann mit --remove-data entfernen (beendet die
 #       laufende App, entfernt den vorhandenen Autostart-Wert): Ablage weg
 #   (g) ohne Adminrechte: Skript nicht erhöht, Manifest asInvoker
+#   G9.4 Auto HDR (E88): Die Ablage enthält ein Spiel mit "Windows Auto HDR" (nie gestartet), die Testwurzel der Ablage
+#       (HKCU\Software\HDRpilot.Tests\AutoHdr\<Hash>) dessen Wert "GpuPreference=2;" und den globalen Wert. Die gestartete
+#       App trägt AutoHDREnable=2097 ein und merkt es in autohdr-state.json, der globale Wert bleibt (Notlösung aus);
+#       Entfernen (d) und (f) stellt genau "GpuPreference=2;" wieder her und löscht die Zustandsdateien. Der echte
+#       Schlüssel UserGpuPreferences wird nur gelesen und muss danach byte-gleich sein.
 # "Ablage byte-gleich": SHA-256 aller Dateien unter der Test-Ablage (config.json, Kanarien-Datei, Spiel, Protokolle) vor
-# und nach dem Setup, jeweils ohne laufende Instanz (E83: Einstellungen fasst der Setup nie an). Der echte Stand (Eintrag,
+# und nach dem Setup, jeweils ohne laufende Instanz (E83: Einstellungen fasst der Setup nie an). Einzige Ausnahme: Das
+# Entfernen (d) löscht autohdr-state.json nach dem Zurücknehmen (wie session-state.json, E88). Der echte Stand (Eintrag,
 # Autostart, Startmenü, installierte EXE, config.json, laufende Instanz) wird vorher und nachher verglichen. Keine Maus-
 # oder Tastatureingaben, kein Spielstart, kein Netz.
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
@@ -30,17 +36,39 @@ $layout = $null
 $tempSeen = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
 $realBefore = Get-RealState
 Note ("Echter Stand vorher erfasst ({0} Angaben)" -f $realBefore.Count)
+$autoHdrRealBefore = Get-AutoHdrRealSnapshot
+Note ("Echter Schlüssel UserGpuPreferences nur gelesen ({0} Werte)" -f $autoHdrRealBefore.Count)
+$autoHdr = $null
 
 function Invoke-Setup([string[]]$switches) { Invoke-Exe $setup (@($switches) + @('--test-root', $layout.Root)) 180000 }
 
 function Get-Entry($values, [string]$name) { if ($values -and $values.ContainsKey($name)) { $values[$name].Value } else { $null } }
 
-# Ablage byte-gleich mit dem Stand $before (aus Get-TreeHashes, ohne laufende Instanz erfasst).
-function Assert-ConfigUnchanged([string]$step, [string[]]$before) {
+# Ablage byte-gleich mit dem Stand $before (aus Get-TreeHashes, ohne laufende Instanz erfasst). $gone: Dateien, die genau
+# dieser Schritt löschen darf (Entfernen: autohdr-state.json nach dem Zurücknehmen, E88); jede andere Abweichung zählt.
+function Assert-ConfigUnchanged([string]$step, [string[]]$before, [string[]]$gone = @()) {
     $diff = @(Compare-TreeHashes $before @(Get-TreeHashes $layout.Config))
-    foreach ($line in $diff) { Note "     $line" }
+    $allowed = @($gone | ForEach-Object { "fehlt: $_" })
+    $rest = @($diff | Where-Object { $_ -notin $allowed })
+    foreach ($line in $diff) { Note ("     {0}{1}" -f $line, $(if ($line -in $allowed) { ' (erwartet: nach dem Zurücknehmen gelöscht)' } else { '' })) }
     $hasConfig = @($before | Where-Object { $_ -like 'config.json|*' }).Count -eq 1
-    Check ($hasConfig -and $diff.Count -eq 0) ("{0} Ablage byte-gleich: alle {1} Dateien unter Config (mit config.json) haben dieselbe SHA-256" -f $step, @($before).Count)
+    Check ($hasConfig -and $rest.Count -eq 0) ("{0} Ablage byte-gleich: alle {1} Dateien unter Config (mit config.json) haben dieselbe SHA-256{2}" -f $step, @($before).Count, $(if ($gone) { ', bis auf ' + ($gone -join ', ') } else { '' }))
+}
+
+# Auto HDR nach dem Entfernen (E88): Wert genau wie vor der App, Zustandsdateien weg, Schritt im Setup-Protokoll.
+function Assert-AutoHdrRestored([string]$step, [string]$uninstallLog) {
+    $value = Get-RegValue $autoHdr.Key $autoHdr.Exe
+    Check ($value -ceq $autoHdr.Original) ("{0} Auto HDR zurückgenommen: Wert der Spiel-EXE wieder genau ""{1}"" (ist ""{2}"")" -f $step, $autoHdr.Original, $value)
+    Check ((Get-RegValue $autoHdr.Key $AutoHdrGlobalName) -ceq $autoHdr.Global) "$step globaler Wert unverändert ""$($autoHdr.Global)"""
+    Check (-not (Test-Path -LiteralPath $autoHdr.StateFile) -and -not (Test-Path -LiteralPath $autoHdr.GlobalFile)) "$step autohdr-state.json und autohdr-global.json gelöscht"
+    Check ($uninstallLog -match 'Schritt: RestoreAutoHdr' -and (Test-Contains $uninstallLog ([HdrPilotGates.SetupFile]::PathHash($layout.Config)))) "$step Setup-Protokoll: Schritt RestoreAutoHdr in der Testwurzel der Ablage"
+}
+
+# Auto HDR bei laufender App (E88): eingetragen und gemerkt, globaler Wert unverändert (Notlösung aus, kein Spiel läuft).
+function Assert-AutoHdrApplied([string]$step) {
+    $applied = Wait-Until { (Get-RegValue $autoHdr.Key $autoHdr.Exe) -ceq $autoHdr.Written -and (Test-Path -LiteralPath $autoHdr.StateFile) } 30000
+    Check $applied ("{0} App trägt Auto HDR ein: ""{1}"" (ist ""{2}""), autohdr-state.json angelegt" -f $step, $autoHdr.Written, (Get-RegValue $autoHdr.Key $autoHdr.Exe))
+    Check ((Get-RegValue $autoHdr.Key $AutoHdrGlobalName) -ceq $autoHdr.Global -and -not (Test-Path -LiteralPath $autoHdr.GlobalFile)) "$step globaler Wert unverändert, kein autohdr-global.json (Notlösung aus, kein Spiel läuft)"
 }
 
 # Entfernen still starten und auf das Ergebnis der Kopie im Temp-Ordner warten (Zeile "ERGEBNIS: <Exit-Code>" im
@@ -119,6 +147,9 @@ try {
     $canary = Initialize-SetupTestConfig $layout.Config
     $game = New-StandInGame $layout.Config 'Gate7 StandIn' $false
     Check ($game.Key -and $null -ne (Find-GameConfig (Read-Config $layout.Config) $game.Key)) "Ablage vorbereitet: Kanarien-Datei, Hinweise aus, Stellvertreter-Spiel $($game.Key)"
+    $autoHdr = Initialize-AutoHdrTestState $layout
+    $autoGame = Find-GameConfig (Read-Config $layout.Config) $autoHdr.GameKey
+    Check ($autoGame -and $autoGame.autoHdr -and (Get-RegValue $autoHdr.Key $autoHdr.Exe) -ceq $autoHdr.Original -and $autoHdr.Key -like 'HKCU:\Software\HDRpilot.Tests\AutoHdr\*') ("Auto HDR vorbereitet: Spiel {0} mit autoHdr, Testwurzel {1} mit ""{2}"" und globalem Wert" -f $autoHdr.GameKey, $autoHdr.Key, $autoHdr.Original)
 
     Note '--- (a) Erstinstallation still, ohne Start'
     $cfgBefore = @(Get-TreeHashes $layout.Config)
@@ -154,6 +185,7 @@ try {
     $app = Start-Exe $layout.Exe @('--config-dir', $layout.Config, '--minimized')
     $up = Wait-Until { (Get-StartCount $layout.Config) -gt $starts -and [HdrPilotGates.SetupFile]::CommandWindowExists($layout.InstanceId) } 90000
     Check $up ("(b) installierte App gestartet (PID {0}, Protokoll: startet, Befehlsfenster bereit)" -f $app.Id)
+    Assert-AutoHdrApplied '(b)'
     $starts = Get-StartCount $layout.Config
     $b = Invoke-Setup @('--quiet')
     Check ($b.Exited -and $b.ExitCode -eq 0) ("(b) Setup --quiet bei laufender App (gleiche Version): Exitcode {0} nach {1:N1} s" -f $b.ExitCode, $b.Seconds)
@@ -191,9 +223,12 @@ try {
         -not (Test-InstanceRunning $layout.InstanceId)
     }
     $cfgBefore = @(Get-TreeHashes $layout.Config)
+    Check (@($cfgBefore | Where-Object { $_ -like 'autohdr-state.json|*' }).Count -eq 1) '(d) vorher: autohdr-state.json in der Ablage (von der App in (b) angelegt)'
+    $logOffset = Get-FileLength $layout.SetupLog
     $d = Invoke-QuietUninstall @() $removed
     Assert-Uninstalled '(d)' $d 'ohne --remove-data'
-    Assert-ConfigUnchanged '(d)' $cfgBefore
+    Assert-ConfigUnchanged '(d)' $cfgBefore @('autohdr-state.json')
+    Assert-AutoHdrRestored '(d)' (Get-LogSince $layout.SetupLog $logOffset)
     Check ((Get-Sha $canaryFile) -eq $canary -and $null -ne (Find-GameConfig (Read-Config $layout.Config) $game.Key)) '(d) Ablage bleibt: Kanarien-Datei unverändert, Stellvertreter-Spiel noch in der Spieleliste'
 
     Note '--- (e) Aktualisieren einer älteren, nicht eingetragenen EXE (wie beim Nutzer), ohne Start'
@@ -229,11 +264,14 @@ try {
     $cmd = if ($procs.Count -eq 1) { [string](Get-CimInstance Win32_Process -Filter "ProcessId = $($procs[0].Id)").CommandLine } else { '' }
     Check ($launched -and $cmd -match '--show' -and (Test-Contains $cmd $layout.Config)) "(f) App startet danach mit Fenster (lief vorher nicht) und mit der Test-Ablage: $cmd"
     Check ((Get-Sha $canaryFile) -eq $canary) '(f) erhaltene Ablage weiter benutzt (Kanarien-Datei unverändert)'
+    Assert-AutoHdrApplied '(f)'
     $run = Get-RegValue $layout.RunKey $RunValueName
     Check ((Test-Contains $run $layout.Exe) -and $run -match '--minimized') "(f) vor dem Entfernen: Autostart-Wert im Test-Zweig vorhanden: $run"
+    $logOffset = Get-FileLength $layout.SetupLog
     $f2 = Invoke-QuietUninstall @('--remove-data') { (& $removed) -and -not (Test-Path -LiteralPath $layout.Config) }
     Assert-Uninstalled '(f)' $f2 'mit --remove-data'
     Check (-not (Test-Path -LiteralPath $layout.Config)) '(f) --remove-data: Ablage (Einstellungen, Spieleliste, Protokolle) gelöscht'
+    Assert-AutoHdrRestored '(f)' (Get-LogSince $layout.SetupLog $logOffset)
 }
 catch {
     Note "FEHLER Abbruch: $($_.Exception.Message)"
@@ -248,6 +286,9 @@ finally {
     $diff = @(Compare-RealState $realBefore (Get-RealState))
     foreach ($line in $diff) { Note "  - $line" }
     Check ($diff.Count -eq 0) ("Echter Stand unverändert (Installierte Apps, Autostart, Startmenü, Desktop, installierte EXE, config.json, laufende Instanz: {0} Angaben)" -f $realBefore.Count)
+    $autoHdrDiff = @(Compare-RealState $autoHdrRealBefore (Get-AutoHdrRealSnapshot))
+    foreach ($line in $autoHdrDiff) { Note "  - $line" }
+    Check ($autoHdrDiff.Count -eq 0) ("Echter Schlüssel UserGpuPreferences byte-gleich (alle {0} Werte mit Art und Daten, nur gelesen)" -f $autoHdrRealBefore.Count)
 }
 if ($ok) { Write-Output 'PHASE7_SETUP_OK'; exit 0 }
 Write-Output 'PHASE7_SETUP_FAILED'

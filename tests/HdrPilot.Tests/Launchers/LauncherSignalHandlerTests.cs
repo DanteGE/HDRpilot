@@ -311,6 +311,7 @@ public sealed class LauncherSignalHandlerTests
     private void AssertNothingPrepared()
     {
         Assert.Equal(0, _sessions.PrepareCalls);
+        Assert.Equal(0, _sessions.AnnounceCalls); // ohne „Windows Auto HDR“ auch keine Vorbereitung von Auto HDR
         Assert.Empty(_hdr.Calls);
         Assert.Empty(_manager.Sessions);
         Assert.False(PrimaryOn);
@@ -332,6 +333,14 @@ public sealed class LauncherSignalHandlerTests
             PrepareCalls++;
             return inner.PrepareAsync(gameKey, trigger, cancellationToken);
         }
+
+        public int AnnounceCalls { get; private set; }
+
+        public Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default)
+        {
+            AnnounceCalls++;
+            return inner.AnnounceAutoHdrStartAsync(gameKey, trigger, cancellationToken);
+        }
     }
 
     private sealed class ThrowingSessions : ILauncherSignalSessions
@@ -343,6 +352,9 @@ public sealed class LauncherSignalHandlerTests
         public IReadOnlyList<SessionInfo> Sessions => [];
 
         public Task<PrepareOutcome> PrepareAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Sitzungslogik kaputt");
+
+        public Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("Sitzungslogik kaputt");
     }
 }

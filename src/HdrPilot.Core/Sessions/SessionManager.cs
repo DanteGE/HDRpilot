@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Native;
@@ -32,6 +33,7 @@ public sealed class SessionManager
     private readonly Func<bool> _fullscreenAppRunning;
     private readonly Func<bool> _notificationsSuppressed;
     private readonly IProcessActivityProbe _activity;
+    private readonly IAutoHdrSessionHooks _autoHdr;
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     /// <summary>So lange wartet ein Start über die App höchstens, solange ein Launcher-Fenster aus dem Spielordner offen ist.</summary>
@@ -89,6 +91,7 @@ public sealed class SessionManager
         _fullscreenAppRunning = _options.FullscreenAppRunning ?? ShellNative.IsFullscreenAppRunning;
         _notificationsSuppressed = _options.NotificationsSuppressed ?? ShellNative.IsNotificationSuppressed;
         _activity = _options.ActivityProbe ?? new NtProcessActivityProbe(_logger);
+        _autoHdr = _options.AutoHdr ?? NoAutoHdrSessionHooks.Instance;
     }
 
     /// <summary>Meldung für einen Tray-Hinweis.</summary>
@@ -141,7 +144,9 @@ public sealed class SessionManager
             PrepareRecovery();
             RefreshMatches(snapshot, cfg, revision);
             _recovered = true;
-            await RecoverCoreAsync(RunningGames(), cfg, cancellationToken).ConfigureAwait(false);
+            var running = RunningGames();
+            await RecoverCoreAsync(running, cfg, cancellationToken).ConfigureAwait(false);
+            AutoHdrHook(() => _autoHdr.OnRecovery(running.Keys, cfg, _clock.UtcNow));
             FinishRecovery();
         }
         finally
@@ -173,10 +178,14 @@ public sealed class SessionManager
             {
                 _recovered = true;
                 await RecoverCoreAsync(running, cfg, cancellationToken).ConfigureAwait(false);
+                AutoHdrHook(() => _autoHdr.OnRecovery(running.Keys, cfg, now));
                 FinishRecovery();
             }
 
             Learn(running, cfg, now);
+
+            // Windows Auto HDR (E88): alle zugeordneten laufenden Spiele, auch ohne „HDR automatisch“ (globale Notlösung).
+            AutoHdrHook(() => _autoHdr.OnCycle(running.Keys, cfg, Paused, now));
 
             var grace = TimeSpan.FromSeconds(cfg.Settings.GracePeriodSeconds);
             foreach (var (key, processes) in running)
@@ -396,6 +405,27 @@ public sealed class SessionManager
         }
     }
 
+    /// <summary>
+    /// Frühwarnung für ein Spiel mit „Windows Auto HDR“, aber ohne „HDR automatisch“ (E88): nur Auto HDR über den
+    /// angekündigten Start informieren (Werte je Spiel sicherstellen, globale Notlösung vor dem Spielprozess). Schaltet kein
+    /// HDR und legt keine Sitzung an. Vor dem ersten Zyklus und für unbekannte Spiele: nichts.
+    /// </summary>
+    public async Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default)
+    {
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_recovered && _config.Current.FindGame(gameKey) is { } game)
+            {
+                AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
+            }
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     /// <summary>Windows meldet geänderte Bildschirme (WM_DISPLAYCHANGE): ausstehende Schritte nachholen.</summary>
     public async Task OnDisplaysChangedAsync(CancellationToken cancellationToken = default)
     {
@@ -432,6 +462,8 @@ public sealed class SessionManager
     private async Task<(ActiveSession Session, string? Duplicate)> BeginStartAsync(
         GameConfig game, SessionTrigger trigger, AppConfig cfg, CancellationToken cancellationToken)
     {
+        // Windows Auto HDR (E88) liest seine Werte beim Start des Spielprozesses: vor dem Schalten und vor dem Start-Befehl.
+        AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
         var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
         if (!_sessions.TryGetValue(game.Key, out var session))
         {
@@ -1131,9 +1163,9 @@ public sealed class SessionManager
             var patterns = cfg.Settings.HelperExecutablePatterns;
             // Ausgewählte Spiele zählen auch, wenn sie beim letzten Einlesen fehlten (etwa mitten in einem Steam-Update),
             // ebenso Spiele aus dem gemerkten Zustand eines abgebrochenen Laufs (sonst stellte der Wiederanlauf mitten
-            // im Spiel zurück).
+            // im Spiel zurück) und Spiele mit „Windows Auto HDR“ (globale Notlösung, E88).
             _matcher = new GameMatcher(
-                cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || _sessions.ContainsKey(g.Key) || _recoveryKeys.Contains(g.Key)),
+                cfg.Games.Where(g => g.IsInstalled || g.HdrAuto || g.AutoHdr || _sessions.ContainsKey(g.Key) || _recoveryKeys.Contains(g.Key)),
                 name => _isHelper(name, patterns),
                 _forbiddenRoots);
             _anyGameMatcher = new GameMatcher(cfg.Games, name => _isHelper(name, patterns), _forbiddenRoots);
@@ -1388,6 +1420,19 @@ public sealed class SessionManager
         if (!session.Displays.Contains(devicePath, StringComparer.OrdinalIgnoreCase))
         {
             session.Displays.Add(devicePath);
+        }
+    }
+
+    /// <summary>Aufruf an Auto HDR (E88): darf laut Vertrag nicht werfen; falls doch, nur protokollieren (HDR geht vor).</summary>
+    private void AutoHdrHook(Action call)
+    {
+        try
+        {
+            call();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Auto HDR: Aufruf aus der Sitzungslogik fehlgeschlagen.");
         }
     }
 

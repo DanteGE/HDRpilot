@@ -752,8 +752,9 @@ function Get-AutoHdrRealSnapshot {
     } finally { $key.Close() }
 }
 
-# Ein Spiel mit "Windows Auto HDR" in der Ablage (wird nie gestartet, die EXE muss nicht existieren) und Ausgangswerte in
-# der Testwurzel: die EXE mit "GpuPreference=2;" und der globale Wert wie beim Nutzer. Liefert die Angaben dazu.
+# Ein Spiel mit "Windows Auto HDR" in der Ablage (wird nie gestartet, die EXE muss nicht existieren) und der globale Wert
+# wie beim Nutzer in der Testwurzel. HDRpilot schreibt keine Werte je EXE; den globalen Schalter setzt es nur direkt vor
+# einem Start über HDRpilot. Liefert die Angaben dazu.
 function Initialize-AutoHdrTestState($layout) {
     $exe = Join-Path $layout.Root 'Games\AutoHdr\game.exe'
     $file = Join-Path $layout.Config 'config.json'
@@ -766,20 +767,30 @@ function Initialize-AutoHdrTestState($layout) {
     [IO.File]::WriteAllText($file, ($json | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
     $hash = [HdrPilotGates.SetupFile]::PathHash($layout.Config)
     $sub = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Software\HDRpilot.Tests\AutoHdr\' + $hash)
-    try {
-        $sub.SetValue($exe, 'GpuPreference=2;', [Microsoft.Win32.RegistryValueKind]::String)
-        $sub.SetValue($AutoHdrGlobalName, 'AutoHDREnable=0;SwapEffectUpgradeEnable=1;', [Microsoft.Win32.RegistryValueKind]::String)
-    } finally { $sub.Close() }
+    try { $sub.SetValue($AutoHdrGlobalName, 'AutoHDREnable=0;SwapEffectUpgradeEnable=1;', [Microsoft.Win32.RegistryValueKind]::String) } finally { $sub.Close() }
     return [pscustomobject]@{
         Key = Get-AutoHdrTestKey $layout
+        KeyName = 'HKEY_CURRENT_USER\Software\HDRpilot.Tests\AutoHdr\' + $hash
         Exe = $exe
         GameKey = 'Manual:gate7-autohdr'
-        Original = 'GpuPreference=2;'
-        Written = 'GpuPreference=2;AutoHDREnable=2097;'
-        Global = 'AutoHDREnable=0;SwapEffectUpgradeEnable=1;'
-        StateFile = Join-Path $layout.Config 'autohdr-state.json'
+        Off = 'AutoHDREnable=0;SwapEffectUpgradeEnable=1;'
+        On = 'AutoHDREnable=1;SwapEffectUpgradeEnable=1;'
         GlobalFile = Join-Path $layout.Config 'autohdr-global.json'
     }
+}
+
+# Wie nach einem Absturz von HDRpilot mitten in einer Sitzung: globaler Schalter der Testwurzel an und der Merker
+# autohdr-global.json mit dem Originalzustand (Format wie AutoHdrGlobalMarker). Nur Testwurzel und Testablage.
+function Set-AutoHdrCrashLeftover($autoHdr) {
+    if ($autoHdr.Key -notlike 'HKCU:\Software\HDRpilot.Tests\AutoHdr\*') { throw "Keine Testwurzel: $($autoHdr.Key)" }
+    $marker = [ordered]@{
+        version = 1; registryKey = $autoHdr.KeyName; valueName = $AutoHdrGlobalName; status = 'Applied'
+        original = [ordered]@{ kind = 'String'; text = $autoHdr.Off }; originalToken = '0'; written = $autoHdr.On
+        games = @($autoHdr.GameKey); windowsBuild = 26300; setAt = (Get-Date).ToUniversalTime().ToString('o')
+    }
+    [IO.File]::WriteAllText($autoHdr.GlobalFile, (ConvertTo-Json $marker -Depth 5), (New-Object Text.UTF8Encoding $false))
+    $sub = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($autoHdr.Key.Substring('HKCU:\'.Length))
+    try { $sub.SetValue($AutoHdrGlobalName, $autoHdr.On, [Microsoft.Win32.RegistryValueKind]::String) } finally { $sub.Close() }
 }
 
 # --- Oberflächentexte ---

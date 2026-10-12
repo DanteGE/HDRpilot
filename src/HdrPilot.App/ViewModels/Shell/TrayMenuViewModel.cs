@@ -84,6 +84,9 @@ public sealed class TrayMenuViewModel : ObservableObject
 
     public string ToggleHdrText => _state.HdrOn ? ShellStrings.TrayMenuToggleHdrOff : ShellStrings.TrayMenuToggleHdrOn;
 
+    /// <summary>Graue Zeile unter dem Menükopf: „Version 1.2.0“ (<see cref="AppVersion"/>; der Kopf zeigt schon den Namen).</summary>
+    public string VersionText => AppVersion.LabelText;
+
     public void Update(TrayState state)
     {
         if (state == _state)

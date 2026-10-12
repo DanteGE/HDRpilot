@@ -258,10 +258,17 @@ ausdrücklichen Wunsch. Einzige Ausnahme: Das Entfernen stellt einen gemerkten H
 
 ## Phase 8: Nachträge nach Version 1.2.0
 
-- [ ] G8.1: Versionsnummer sichtbar (Wunsch des Nutzers): im Kopf der Einstellungen und als graue, nicht anklickbare oberste Zeile im Tray-Menü, jeweils „HDRpilot <Major.Minor.Build>“ aus der Assembly (nie fest im Text; gleiche Zahl wie Setup und „Installierte Apps“); per Unit-Tests (mit Gegenprobe) und UI-Automation an einer Testinstanz belegt
+- [x] G8.1: Versionsnummer sichtbar (Wunsch des Nutzers): im Kopf der Einstellungen „HDRpilot <Major.Minor.Build>“ und als graue, nicht anklickbare erste Zeile im Tray-Menü unter dem Kopf „Version <Major.Minor.Build>“ (Wunsch des Nutzers 2026-10-12: der Kopf zeigt den Namen schon), aus der Assembly (nie fest im Text; gleiche Zahl wie Setup und „Installierte Apps“); per Unit-Tests (mit Gegenprobe) und UI-Automation an einer Testinstanz belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AppVersion" -MinTests 4
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-12 auf phase5/release nach dem Zusammenführen von feature/version-display: exit 0, TESTS_OK 13.
+    - Auf dem Zweig (686e18d): build.ps1 BUILD_OK_0_WARNINGS, test.ps1 TESTS_OK 1950, PHASE4_RESOURCES_OK,
+      PHASE6_NAME_OK, PHASE5_README_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK („HDRpilot 1.2.0“ im Kopf der Einstellungen =
+      Dateiversion der EXE, frei von den Titelzeilen-Schaltflächen).
+    - UI-Automation an der Testinstanz, am echten Desktop mit Zustimmung des Nutzers: phase6-traymenu.ps1 exit 0,
+      PHASE6_TRAYMENU_OK. Versionszeile „Version 1.2.0“ = Dateiversion, nicht aktiv; Pfeil nach unten wählt
+      „HDR jetzt …“, Pfeil nach oben springt an der Versionszeile vorbei zu „HDRpilot beenden“.
+    - Gegenproben: 9 bei der Umsetzung, 2 für den Tastatur-Test, alter Tray-Text im Format → 2 Tests rot.
 
 - [ ] G8.2: Ersatz-Symbole ohne Netz (Wunsch des Nutzers, E86): Steam-Spiele zeigen zuerst das offizielle Steam-Symbol (`steam\games\<clienticon>.ico` aus appinfo.vdf, sonst `DisplayIcon` des Eintrags „Steam App <id>“ in der 64-Bit-Ansicht, `.url`-Verknüpfung, librarycache), die EXE nur, wenn das Steam-Symbol fehlt, ein Standardsymbol oder deutlich unschärfer ist; GOG `goggame-<id>.ico`/Galaxy-Symbol, Xbox-Logos aus `MicrosoftGame.config`/`AppxManifest` (mit `.scale-*`), Ubisoft `DisplayIcon`, Epic/EA EXE; bessere EXE-Wahl (Ausschlussliste nur für Symbole, Unreal `*-Shipping.exe`, begrenzte tiefere Suche); bekannte Standardsymbole (EasyAntiCheat, Unreal, Epic-Starter, Godot, Unity, Windows) werden erkannt. Nur lesend, keine Netzzugriffe, keine Last im Leerlauf. Per Unit-Tests mit Gegenproben und Messung an der echten Bibliothek belegt (Ziel: 647 von 647 mit eigenem Symbol, davon mindestens 618 mit ≥ 48 px)
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Icon" -MinTests 30

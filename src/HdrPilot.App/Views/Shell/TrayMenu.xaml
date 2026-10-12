@@ -17,6 +17,16 @@
         </Style>
     </ContextMenu.Resources>
 
+    <!-- Erste Zeile unter dem Kopf: Version (grau, nicht anklickbar, von den Pfeiltasten übersprungen) -->
+    <MenuItem Style="{StaticResource Hp.Shell.TrayMenuInfo}"
+              AutomationProperties.AutomationId="TrayVersion"
+              AutomationProperties.Name="{Binding VersionText}"
+              Header="{Binding VersionText}">
+        <MenuItem.Icon>
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE946;" FontSize="14" />
+        </MenuItem.Icon>
+    </MenuItem>
+    <Separator Style="{StaticResource Hp.Shell.TrayMenuSeparator}" />
     <MenuItem AutomationProperties.AutomationId="TrayToggleHdr"
               AutomationProperties.Name="{Binding ToggleHdrText}"
               Header="{Binding ToggleHdrText}"

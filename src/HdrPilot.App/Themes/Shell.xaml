@@ -44,6 +44,23 @@
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
     </Style>
 
+    <!--
+        Versions-Pille rechts im Kopf der Einstellungen: wie die Wert-Anzeige, Info-Symbol und Text zurückgenommen. Kein
+        farbiger Punkt: Der steht in HDRpilot für einen Status (unten in den Einstellungen ungespeicherte Änderungen, Legende
+        im Hauptfenster).
+    -->
+    <Style x:Key="Hp.Shell.VersionPill" TargetType="Border" BasedOn="{StaticResource Hp.Shell.ValuePill}">
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="Padding" Value="10,4,12,5" />
+    </Style>
+    <Style x:Key="Hp.Shell.VersionText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Display}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <!-- Abzeichen mit Akzent-Rahmen (z. B. „HDR-fähig“) -->
     <Style x:Key="Hp.Shell.Badge.Accent" TargetType="Border" BasedOn="{StaticResource Hp.Badge}">
         <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
@@ -650,6 +667,35 @@
                             <Setter Property="Opacity" Value="0.45" />
                         </Trigger>
                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Infozeile im Tray-Menü (Version): grau, nicht anklickbar (IsEnabled aus), nicht fokussierbar. Die Pfeiltasten
+        überspringen sie: Pfeil nach unten wählt den Eintrag darunter, Pfeil nach oben von dort den letzten
+        (phase6-traymenu.ps1, TrayMenuKeyboardTests).
+    -->
+    <Style x:Key="Hp.Shell.TrayMenuInfo" TargetType="MenuItem">
+        <Setter Property="IsEnabled" Value="False" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Padding" Value="10,5,10,4" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid Margin="{TemplateBinding Padding}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="30" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ContentPresenter ContentSource="Icon" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                          TextElement.Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="False" VerticalAlignment="Center"
+                                          TextElement.Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                    </Grid>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

@@ -15,6 +15,14 @@
   <data name="AppName" xml:space="preserve">
     <value>HDRpilot</value>
   </data>
+  <data name="AppVersionFormat" xml:space="preserve">
+    <value>HDRpilot {0}</value>
+    <comment>{0} = Versionsnummer Major.Minor.Build aus der Assembly (wie im Setup und unter „Installierte Apps“), nie fest eintragen</comment>
+  </data>
+  <data name="AppVersionLabelFormat" xml:space="preserve">
+    <value>Version {0}</value>
+    <comment>Versionszeile im Tray-Menü unter dem Kopf, der schon „HDRpilot“ zeigt (Wunsch des Nutzers 2026-10-12); {0} wie bei AppVersionFormat</comment>
+  </data>
   <data name="FirstRunTitle" xml:space="preserve">
     <value>HDRpilot läuft im Infobereich</value>
   </data>

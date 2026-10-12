@@ -106,7 +106,6 @@ public sealed class AutoHdrTextTests
     [Theory]
     [InlineData(null, "AutoHDREnable=1;", "AutoHDREnable=1;VRROptimizeEnable=1;", "VRROptimizeEnable=1;")]
     [InlineData("AutoHDREnable=0;SwapEffectUpgradeEnable=1;", "AutoHDREnable=1;SwapEffectUpgradeEnable=1;", "AutoHDREnable=1;SwapEffectUpgradeEnable=0;", "AutoHDREnable=0;SwapEffectUpgradeEnable=0;")]
-    [InlineData("SwapEffectUpgradeEnable=1;", "SwapEffectUpgradeEnable=1;AutoHDREnable=1;", "AutoHDREnable=1;", "SwapEffectUpgradeEnable=1;")] // nichts mehr übrig: Original
     public void Other_changes_stay_and_only_the_token_is_taken_back(string? before, string written, string now, string expected)
     {
         var original = before is null ? GpuPreferenceValue.Missing : GpuPreferenceValue.FromString(before);
@@ -119,14 +118,21 @@ public sealed class AutoHdrTextTests
         Assert.Equal(expected, restore.Text);
     }
 
-    [Fact]
-    public void Token_only_restore_deletes_when_nothing_is_left_and_the_value_was_missing()
+    [Theory]
+    [InlineData(null, "AutoHDREnable=1;", "AutoHDREnable=1")] // Windows schrieb den eigenen Text neu (nur Abschluss weg)
+    [InlineData("SwapEffectUpgradeEnable=1;", "SwapEffectUpgradeEnable=1;AutoHDREnable=1;", "AutoHDREnable=1;")] // anderer Eintrag extern entfernt
+    public void Token_only_restore_deletes_when_nothing_is_left(string? before, string written, string now)
     {
-        // Windows hat den eigenen Text neu geschrieben (nur Abschluss weg): Token zurück, nichts übrig, Wert fehlte.
-        var restore = GpuPreferenceText.DecideRestore(
-            GpuPreferenceValue.FromString("AutoHDREnable=1"), GpuPreferenceValue.Missing, null, "AutoHDREnable=1;", On);
+        // R2: nur das Token zurück, alles andere wie jetzt. Bleibt nichts, wird gelöscht, auch wenn der Wert vorher da war:
+        // ein extern entfernter Eintrag kommt nicht über das Original zurück.
+        var original = before is null ? GpuPreferenceValue.Missing : GpuPreferenceValue.FromString(before);
+        var token = GpuPreferenceText.SetToken(original, On).OriginalToken;
+
+        var restore = GpuPreferenceText.DecideRestore(GpuPreferenceValue.FromString(now), original, token, written, On);
+
         Assert.Equal(GpuPreferenceRestoreRule.TokenOnly, restore.Rule);
         Assert.True(restore.Delete);
+        Assert.Null(restore.Text);
     }
 
     [Theory]

@@ -94,7 +94,8 @@ public enum GpuPreferenceRestoreRule
 
     /// <summary>
     /// R2: Andere Einträge wurden extern geändert (etwa <c>SwapEffectUpgradeEnable</c> in den Windows-Einstellungen), das
-    /// eigene Token steht aber noch: nur das Token zurück, alles andere bleibt, wie es jetzt ist.
+    /// eigene Token steht aber noch: nur das Token zurück, alles andere bleibt, wie es jetzt ist (bleibt nichts, wird der
+    /// Wert gelöscht).
     /// </summary>
     TokenOnly,
 
@@ -219,9 +220,10 @@ public static class GpuPreferenceText
 
             if (string.Equals(tokens.Get(AutoHdrKey), onValue, StringComparison.Ordinal))
             {
+                // Nichts mehr übrig (die anderen Einträge sind extern entfernt): löschen, nicht das Original zurückholen.
                 var rest = originalToken is null ? tokens.Without(AutoHdrKey) : tokens.With(AutoHdrKey, originalToken);
                 return rest.IsEmpty
-                    ? BackToOriginal(GpuPreferenceRestoreRule.TokenOnly, original)
+                    ? new GpuPreferenceRestore(GpuPreferenceRestoreRule.TokenOnly, true, null)
                     : new GpuPreferenceRestore(GpuPreferenceRestoreRule.TokenOnly, false, rest.ToString());
             }
         }

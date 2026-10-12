@@ -341,6 +341,9 @@ public sealed class SessionManager
             {
                 _logger.LogWarning("Start fehlgeschlagen um {Time}: {Message}", Stamp(launchedAt), result.Message);
                 Notify(NotificationKind.LaunchFailed, CoreStrings.NotifyLaunchFailedTitle, result.Message);
+
+                // Windows Auto HDR (E88): es kommt kein Spielprozess, den Schalter nicht bis zur Startfrist halten.
+                AutoHdrHook(() => _autoHdr.OnStartAbandoned(game.Key, cfg, _clock.UtcNow));
                 if (session.Phase == SessionPhase.Launching)
                 {
                     await EndSessionAsync(session, "Start fehlgeschlagen", cancellationToken).ConfigureAwait(false);
@@ -413,7 +416,8 @@ public sealed class SessionManager
     /// <summary>
     /// Frühwarnung für ein Spiel mit „Windows Auto HDR“, aber ohne „HDR automatisch“ (E88): nur Auto HDR über den
     /// angekündigten Start informieren (globaler Auto-HDR-Schalter vor dem Spielprozess). Schaltet kein HDR und legt keine
-    /// Sitzung an. Vor dem ersten Zyklus und für unbekannte Spiele: nichts.
+    /// Sitzung an. Vor dem ersten Zyklus, für unbekannte Spiele und für ein schon laufendes Spiel (es hat den Schalter schon
+    /// gelesen; gesetzt hielte er nur für andere Spiele): nichts.
     /// </summary>
     public async Task AnnounceAutoHdrStartAsync(string gameKey, SessionTrigger trigger, CancellationToken cancellationToken = default)
     {
@@ -422,7 +426,14 @@ public sealed class SessionManager
         {
             if (_recovered && _config.Current.FindGame(gameKey) is { } game)
             {
-                AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
+                if (RunningGames().ContainsKey(game.Key))
+                {
+                    _logger.LogDebug("{Trigger} für \"{Game}\": das Spiel läuft schon, Windows Auto HDR bleibt unverändert.", TriggerText(trigger), game.Name);
+                }
+                else
+                {
+                    AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
+                }
             }
         }
         finally
@@ -467,9 +478,14 @@ public sealed class SessionManager
     private async Task<(ActiveSession Session, string? Duplicate)> BeginStartAsync(
         GameConfig game, SessionTrigger trigger, AppConfig cfg, CancellationToken cancellationToken)
     {
-        // Windows Auto HDR (E88) liest den globalen Schalter beim Start des Spielprozesses: vor dem Schalten und vor dem Start-Befehl.
-        AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
+        // Windows Auto HDR (E88) liest den globalen Schalter beim Start des Spielprozesses: vor dem Schalten und vor dem
+        // Start-Befehl. Läuft das Spiel schon, hat es ihn gelesen; gesetzt hielte er nur für andere Spiele, also nicht.
         var processes = RunningGames().GetValueOrDefault(game.Key) ?? [];
+        if (processes.Count == 0)
+        {
+            AutoHdrHook(() => _autoHdr.OnStartAnnounced(game, trigger, _clock.UtcNow));
+        }
+
         if (!_sessions.TryGetValue(game.Key, out var session))
         {
             session = await StartSessionAsync(game, trigger, processes, cfg, startRequested: true, cancellationToken).ConfigureAwait(false);

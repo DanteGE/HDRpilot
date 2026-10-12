@@ -15,6 +15,9 @@ public sealed class TrayMenuViewModel : ObservableObject
     private TrayState _state;
     private AutoHdrSwitchState _autoHdr;
 
+    /// <summary>An, aber nur, weil HDRpilot den Schalter gerade für einen Spielstart hält (danach wieder aus).</summary>
+    private bool _autoHdrHeld;
+
     public TrayMenuViewModel(ITrayHost host, TrayState state, Action<Exception> onError)
     {
         _host = host;
@@ -23,7 +26,11 @@ public sealed class TrayMenuViewModel : ObservableObject
 
         // Das Menü entsteht beim Öffnen: den Windows-Schalter jetzt lesen (ein Registry-Wert, kein Zeitgeber im Hintergrund).
         _autoHdr = AutoHdrSwitchState.Unknown;
-        Run(() => _autoHdr = _host.ReadAutoHdrSwitch());
+        Run(() =>
+        {
+            _autoHdr = _host.ReadAutoHdrSwitch();
+            _autoHdrHeld = _autoHdr == AutoHdrSwitchState.On && _host.AutoHdrSwitchHeld;
+        });
 
         ToggleHdrCommand = new RelayCommand(() => RunAsync(_host.ToggleHdrNowAsync));
         OpenCommand = new RelayCommand(() => Run(_host.ShowMainWindow));
@@ -82,6 +89,7 @@ public sealed class TrayMenuViewModel : ObservableObject
             var after = AutoHdrSwitchState.Unknown;
             Run(() => after = _host.SetAutoHdrSwitch(value));
             _autoHdr = after;
+            _autoHdrHeld = false; // umgeschaltet ist es die Wahl des Nutzers, HDRpilot hält den Schalter nicht mehr
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanToggleAutoHdr));
             OnPropertyChanged(nameof(AutoHdrHint));
@@ -90,8 +98,14 @@ public sealed class TrayMenuViewModel : ObservableObject
 
     public bool CanToggleAutoHdr => _autoHdr != AutoHdrSwitchState.Unknown;
 
-    /// <summary>Tooltip des Eintrags: „gilt ab dem nächsten Spielstart“, bei einem nicht lesbaren Wert der Grund für die Sperre.</summary>
-    public string AutoHdrHint => CanToggleAutoHdr ? ShellStrings.TrayMenuAutoHdrHint : ShellStrings.TrayMenuAutoHdrUnknown;
+    /// <summary>
+    /// Tooltip des Eintrags: „gilt ab dem nächsten Spielstart“; hält HDRpilot den Schalter gerade für ein Spiel, dass er
+    /// danach wieder aus ist (sonst sähe das Häkchen wie eine dauerhafte Einstellung aus); bei einem nicht lesbaren Wert
+    /// der Grund für die Sperre.
+    /// </summary>
+    public string AutoHdrHint => !CanToggleAutoHdr
+        ? ShellStrings.TrayMenuAutoHdrUnknown
+        : _autoHdrHeld ? ShellStrings.TrayMenuAutoHdrHeld : ShellStrings.TrayMenuAutoHdrHint;
 
     public string StatusTitle => _state.HdrOn ? ShellStrings.TrayStatusHdrOn : ShellStrings.TrayStatusHdrOff;
 

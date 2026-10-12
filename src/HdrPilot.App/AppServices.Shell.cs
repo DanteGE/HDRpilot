@@ -101,6 +101,8 @@ public sealed partial class AppServices
         // Testinstanzen (--config-dir) erreichen hier nur ihre Testwurzel (E88).
         public AutoHdrSwitchState ReadAutoHdrSwitch() => app.AutoHdr.ReadGlobalSwitch();
 
+        public bool AutoHdrSwitchHeld => app.AutoHdr.HoldsGlobalSwitch;
+
         public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => app.AutoHdr.SetGlobalSwitchByUser(on);
 
         public void SetPaused(bool paused) => app.SetPaused(paused);

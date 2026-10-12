@@ -13,6 +13,12 @@ public enum AutoHdrEntryStatus
 
     /// <summary>Geschrieben.</summary>
     Applied,
+
+    /// <summary>
+    /// Erledigt (zurückgestellt, vom Nutzer übernommen oder nie geschrieben), aber die Datei ließ sich nicht löschen: nie
+    /// zurückstellen, nur noch löschen.
+    /// </summary>
+    Released,
 }
 
 /// <summary>Zustand vor dem Schreiben: fehlte (<see cref="GpuPreferenceValueKind.Missing"/>) oder sauberer REG_SZ.</summary>
@@ -38,7 +44,8 @@ public sealed class AutoHdrOriginalValue
 /// <summary>
 /// Inhalt von autohdr-global.json (Datenordner, maschinenbezogen): existiert nur, solange HDRpilot den globalen
 /// Auto-HDR-Schalter für einen Spielstart hält. Wird vor dem Schreiben angelegt und nach dem Zurückstellen gelöscht; findet
-/// ihn der nächste Start (Absturz von HDRpilot) oder das Entfernen über den Setup, stellen sie zurück.
+/// ihn der nächste Start (Absturz von HDRpilot) oder das Entfernen über den Setup, stellen sie zurück. Ließ er sich nicht
+/// löschen, steht er auf <see cref="AutoHdrEntryStatus.Released"/> und wird nur noch gelöscht.
 /// </summary>
 public sealed class AutoHdrGlobalMarker
 {
@@ -51,7 +58,10 @@ public sealed class AutoHdrGlobalMarker
 
     public string ValueName { get; set; } = AutoHdrRegistryLocation.GlobalValueName;
 
-    /// <summary><see cref="AutoHdrEntryStatus.Pending"/> oder <see cref="AutoHdrEntryStatus.Applied"/>.</summary>
+    /// <summary>
+    /// <see cref="AutoHdrEntryStatus.Pending"/>, <see cref="AutoHdrEntryStatus.Applied"/> oder (Datei nicht löschbar)
+    /// <see cref="AutoHdrEntryStatus.Released"/>.
+    /// </summary>
     public AutoHdrEntryStatus Status { get; set; }
 
     public AutoHdrOriginalValue Original { get; set; } = new();

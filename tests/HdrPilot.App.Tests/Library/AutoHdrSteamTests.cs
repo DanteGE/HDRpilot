@@ -69,6 +69,10 @@ public sealed class AutoHdrSteamTests : IDisposable
         Assert.Equal(LibraryText.Format(LibraryStrings.AutoHdrSteam_OfferText, "Cyberpunk 2077"), message);
         Assert.Contains("Startoptionen", message, StringComparison.Ordinal);
 
+        // Die Frühwarnung aus Steams Protokoll kann den Start auch melden, nur nicht sicher vor dem Spielprozess.
+        Assert.Contains("zuverlässig nur über die Steam-Startoption", message, StringComparison.Ordinal);
+        Assert.Contains("sicher nur beim Start über HDRpilot", message, StringComparison.Ordinal);
+
         // Dieselbe Startoption wie „Steam-Startoption kopieren“, Rückmeldung im Abschnitt „BILD“
         Assert.Equal([SteamLaunchOption.Build(@"E:\Apps\Hdr Pilot\HDRpilot.exe")], context.FakeClipboard.Texts);
         Assert.Equal(StatusKind.Success, details.MessageKind);

@@ -15,7 +15,8 @@ public sealed record AutoHdrCleanupResult(int Restored, int LeftAsIs, int Failed
 /// Globalen Auto-HDR-Schalter ohne laufende App zurückstellen (E88), für das Entfernen über den Setup: Hinterließ ein
 /// Absturz von HDRpilot autohdr-global.json, gilt dieselbe Regel wie in der App (R1/R2/R3, eine Änderung durch den Nutzer
 /// bleibt). Braucht keine Konfiguration. Gehört der Merker zu einem anderen Schlüssel oder ist er nicht lesbar, bleibt
-/// alles, wie es ist. Werte je Spiel-EXE schreibt HDRpilot nicht, also gibt es davon nichts zurückzunehmen.
+/// alles, wie es ist; ein erledigter (<see cref="AutoHdrEntryStatus.Released"/>) wird nur gelöscht. Werte je Spiel-EXE
+/// schreibt HDRpilot nicht, also gibt es davon nichts zurückzunehmen.
 /// </summary>
 public static class AutoHdrCleanup
 {
@@ -43,6 +44,14 @@ public static class AutoHdrCleanup
             return new AutoHdrCleanupResult(0, 0, 0);
         }
 
+        if (marker.Status == AutoHdrEntryStatus.Released)
+        {
+            // Die App hatte schon nichts mehr zurückzustellen (etwa die Wahl des Nutzers), nur die Datei blieb: nur löschen.
+            log("Auto HDR global: " + Path.GetFileName(path) + " ist erledigt, nichts zurückzustellen.");
+            Delete(fileSystem, path, log);
+            return new AutoHdrCleanupResult(0, 0, 0);
+        }
+
         AutoHdrRestoreResult result;
         try
         {
@@ -55,6 +64,12 @@ public static class AutoHdrCleanup
         }
 
         log(AutoHdrRestore.Describe(result, "Auto HDR global: " + marker.ValueName, "Entfernen"));
+        Delete(fileSystem, path, log);
+        return result.Outcome == AutoHdrRestoreOutcome.LeftAsIs ? new AutoHdrCleanupResult(0, 1, 0) : new AutoHdrCleanupResult(1, 0, 0);
+    }
+
+    private static void Delete(IFileSystem fileSystem, string path, Action<string> log)
+    {
         try
         {
             fileSystem.DeleteFile(path);
@@ -64,8 +79,6 @@ public static class AutoHdrCleanup
         {
             log(path + " ließ sich nicht löschen: " + ex.Message);
         }
-
-        return result.Outcome == AutoHdrRestoreOutcome.LeftAsIs ? new AutoHdrCleanupResult(0, 1, 0) : new AutoHdrCleanupResult(1, 0, 0);
     }
 
     /// <summary>Grund, den Merker nicht anzufassen (nicht lesbar, defekt, anderer Schlüssel); null, wenn er fehlt oder passt.</summary>

@@ -6,7 +6,8 @@ namespace HdrPilot.Tests.AutoHdr;
 /// <summary>
 /// Lesen und Umschalten des globalen Auto-HDR-Schalters durch den Nutzer (Grundlage für den Tray-Eintrag „Auto HDR“,
 /// G9.9): nur das Token, andere Tokens bleiben; eine Änderung des Nutzers ist seine Wahl und wird nach einer Sitzung nicht
-/// zurückgestellt und während ihr nicht überschrieben. Registry nur als Attrappe.
+/// zurückgestellt und während ihr nicht überschrieben; erst ein neuer Start über HDRpilot liest den Schalter neu und stellt
+/// danach diese Wahl wieder her. Registry und Dateisystem nur als Attrappe.
 /// </summary>
 public sealed class AutoHdrGlobalUserSwitchTests
 {
@@ -138,6 +139,131 @@ public sealed class AutoHdrGlobalUserSwitchTests
         _h.Announce(_a);
         Assert.Equal(GlobalOn, _h.Value(Global));
         Assert.Equal(GlobalOff, _h.Marker!.Original.Text);
+    }
+
+    [Fact]
+    public void Switched_off_by_the_user_while_held_a_new_start_sets_it_for_its_game_and_restores_the_choice()
+    {
+        Setup();
+        var b = _h.AddGame("2", ExeB);
+        _h.Announce(_a);
+        Cycles(30, _a);
+        Assert.Equal(AutoHdrSwitchState.Off, _h.Service.SetGlobalSwitchByUser(on: false));
+        Cycles(10, _a);
+        Assert.Equal(GlobalOff, _h.Value(Global)); // für die laufende Sitzung nicht wieder an
+
+        // Ein neuer Start über HDRpilot liest den Schalter neu und setzt ihn für sein Spiel (die Option ist an) …
+        _h.Announce(b);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.Equal(GlobalOff, _h.Marker!.Original.Text);
+        Cycles(400, _a, b);
+
+        // … und stellt danach die Wahl des Nutzers wieder her.
+        Cycles(15);
+        Assert.Equal(GlobalOff, _h.Value(Global));
+        Assert.Null(_h.Marker);
+    }
+
+    [Fact]
+    public void Changed_in_windows_while_held_is_the_users_choice_and_a_new_start_keeps_it_afterwards()
+    {
+        const string Users = "AutoHDREnable=0;SwapEffectUpgradeEnable=0;";
+        Setup();
+        var b = _h.AddGame("2", ExeB);
+        _h.Announce(_a);
+        Cycles(30, _a);
+        _h.Store.SetString(Global, Users); // der Nutzer schaltet in Windows Auto HDR und die Fensteroptimierung aus
+
+        _h.Announce(b);
+
+        // Neu gelesen: B bekommt Auto HDR, gemerkt wird der Stand des Nutzers, nicht mehr der von vor A.
+        Assert.Equal("AutoHDREnable=1;SwapEffectUpgradeEnable=0;", _h.Value(Global));
+        Assert.True(_h.Service.HoldsGlobalSwitch);
+        Assert.Equal(Users, _h.Marker!.Original.Text);
+        Assert.True(_h.Logged("extern geändert, während HDRpilot ihn hielt"));
+        Cycles(400, _a, b);
+        Cycles(15);
+        Assert.Equal(Users, _h.Value(Global));
+        Assert.Null(_h.Marker);
+    }
+
+    [Fact]
+    public void Other_tokens_changed_while_held_keep_the_hold_at_a_new_start()
+    {
+        Setup();
+        var b = _h.AddGame("2", ExeB);
+        _h.Announce(_a);
+        Cycles(30, _a);
+        _h.Store.SetString(Global, "AutoHDREnable=1;SwapEffectUpgradeEnable=0;"); // Auto HDR noch an, anderes geändert (R2)
+        var writes = _h.GlobalOperations.Count;
+
+        _h.Announce(b);
+
+        Assert.Equal(writes, _h.GlobalOperations.Count); // nichts geschrieben, weiter gehalten
+        Assert.Equal(GlobalOff, _h.Marker!.Original.Text);
+        Cycles(400, _a, b);
+        Cycles(15);
+        Assert.Equal("AutoHDREnable=0;SwapEffectUpgradeEnable=0;", _h.Value(Global)); // nur das Token zurück
+    }
+
+    [Fact]
+    public void Users_choice_with_an_undeletable_marker_is_never_restored_after_a_crash()
+    {
+        Setup();
+        _h.Announce(_a);
+        Cycles(30, _a);
+        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, new IOException("vom Virenscanner gesperrt"));
+
+        Assert.Equal(AutoHdrSwitchState.On, _h.Service.SetGlobalSwitchByUser(on: true)); // soll an bleiben
+
+        Assert.False(_h.Service.HoldsGlobalSwitch);
+        Assert.Equal(AutoHdrEntryStatus.Released, _h.Marker!.Status); // Datei blieb, aber als erledigt
+
+        // HDRpilot stürzt ab; der nächste Start sieht die Datei, stellt aber nichts zurück.
+        var service = _h.Restart();
+        service.Start();
+        service.OnRecovery([], _h.Current, _h.Clock.UtcNow);
+        Cycles(31);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.Equal(1, _h.SetOnCount);
+        Assert.True(_h.Logged("ist erledigt"));
+
+        // Gelöscht wird sie, sobald es wieder geht.
+        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, null);
+        Cycles(31);
+        Assert.Null(_h.Marker);
+    }
+
+    [Fact]
+    public void Undeletable_marker_is_deleted_later_but_never_while_a_new_start_holds_the_switch()
+    {
+        Setup();
+        _h.Announce(_a);
+        Cycles(30, _a);
+        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, new IOException("gesperrt"));
+        _h.Service.SetGlobalSwitchByUser(on: false);
+        Cycles(30); // Spiel zu Ende, die Datei bleibt (erledigt)
+        Assert.Equal(AutoHdrEntryStatus.Released, _h.Marker!.Status);
+
+        _h.Announce(_a); // neuer Start: die Datei gehört jetzt zu diesem Setzen
+        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, null);
+        Cycles(400, _a); // länger als ein kurzer Lauf: danach nur die Nachlaufzeit
+
+        Assert.True(_h.Service.HoldsGlobalSwitch);
+        Assert.Equal(AutoHdrEntryStatus.Applied, _h.Marker!.Status);
+        Cycles(15);
+        Assert.Equal(GlobalOff, _h.Value(Global));
+        Assert.Null(_h.Marker);
+
+        // Gegenprobe: ohne neuen Start löscht der spätere Versuch die erledigte Datei.
+        _h.Announce(_a);
+        Cycles(30, _a);
+        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, new IOException("gesperrt"));
+        _h.Service.SetGlobalSwitchByUser(on: false);
+        _h.Fs.FailDeleting(_h.Paths.AutoHdrGlobalFile, null);
+        Assert.NotNull(_h.Marker);
+        Cycles(31);
+        Assert.Null(_h.Marker);
     }
 
     [Fact]

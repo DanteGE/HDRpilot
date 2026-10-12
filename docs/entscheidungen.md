@@ -679,11 +679,14 @@ Detailbereich ein eigener Abschnitt „BILD“ unter „AUTOMATIK“ mit dem Sch
 Erklärung und dem immer sichtbaren Hinweis, dass es nur beim Start über HDRpilot wirkt (Starten, Verknüpfung,
 Steam-Startoption; `DetailAutoHdrStartHint`); in der Liste nur das Kennzeichen „AUTO HDR“ direkt hinter dem Namen (nur
 Anzeige; violett getönt, damit es sich vom rosa umrandeten „HDR“ laut PCGamingWiki und vom Schalter abhebt), kein
-zweiter Schalter und keine neue Spalte. Die Option ist unabhängig von „HDR automatisch“; ist das aus, steht unter dem
+zweiter Schalter und keine neue Spalte. Kennzeichen und Tray-Eintrag teilen ein eigenes Symbol (Funkeln,
+`AppGlyphs.AutoHdr`), das sonst nirgends vorkommt: nicht die Sonne von „HDR automatisch“/„HDR jetzt“, nicht die Palette
+von „HDR-fähig“. Die Option ist unabhängig von „HDR automatisch“; ist das aus, steht unter dem
 Schalter immer der Hinweis, dass Windows-HDR schon vor dem Spielstart an sein muss (die Starts über HDRpilot schalten es
 mit ein). Spiele mit eigenem HDR laut PCGamingWiki (`Native` oder `Limited`, dieselbe Regel wie das Kennzeichen
-„HDR“/„HDR*“) zeigen die Zeile blasser (Deckkraft 0,55), aber voll bedienbar, mit dem Hinweis, besser das HDR des
-Spiels zu nehmen. Das Schalten selbst ändert in Windows nichts.
+„HDR“/„HDR*“) zeigen Titel und Schalter blasser (Deckkraft 0,7, deutlich heller als ein gesperrter Schalter mit 0,4),
+aber voll bedienbar, mit dem Hinweis, besser das HDR des Spiels zu nehmen; Erklärung und Hinweise bleiben voll lesbar.
+Das Schalten selbst ändert in Windows nichts.
 
 Livetest am 2026-10-12 mit dem Nutzer (G9.6, Windows 11 26H2, Build 26300; Werte per WMI außerhalb des Containers
 gesetzt, danach byte-gleich zurückgestellt): Auto HDR wirkt nur, wenn Windows-HDR und der globale Schalter (Token
@@ -704,17 +707,26 @@ Sitzungslogik kündigt jeden solchen Start als Erstes an (`IAutoHdrSessionHooks.
 HDR und vor dem Start-Befehl, bei „Mit HDR starten“ und „(HDR)“-Verknüpfungen (`LaunchAsync`), bei der
 Steam-Startoption (`PrepareAsync`) und bei der Frühwarnung von Steam und Epic (für Spiele mit „HDR automatisch“ über
 `PrepareAsync`, sonst nur die Ankündigung, ohne HDR zu schalten). Ein bloß erkanntes Spiel setzt nichts (Windows hat den
-Wert dann schon gelesen); eine Meldung nach einem Start ohne HDRpilot gibt es bewusst nicht. HDRpilot setzt nur das
+Wert dann schon gelesen); eine Meldung nach einem Start ohne HDRpilot gibt es bewusst nicht. Aus demselben Grund kündigt
+die Sitzungslogik nichts an, solange das Spiel schon läuft (zweiter Klick auf „Mit HDR starten“, die Verknüpfung oder
+ein spätes Launcher-Signal): gesetzt hielte der Schalter bis zum Spielende nur für andere Spiele. HDRpilot setzt nur das
 Token (vorhanden an seiner Stelle, sonst angehängt; alle anderen Paare, ihre Reihenfolge und der Abschluss bleiben; ein
 fehlender Wert wird `AutoHDREnable=1;`) und fasst nur saubere REG_SZ an. Stand es schon auf `1` (Wahl des Nutzers),
-ändert HDRpilot nichts und stellt nichts zurück; jeder neue Start liest den Schalter neu. Den Wert von vorher hält
-`<Datenordner>\autohdr-global.json` (vor dem Schreiben angelegt, nach dem Zurückstellen gelöscht). Die Ankündigung gilt,
-solange die HDR-Sitzung auf den Spielprozess wartet (Startfrist samt Verlängerung für Launcher-Fenster), ohne Sitzung
-bis zur Startfrist; läuft das Spiel, endet es wie der HDR-Zustand: Nachlaufzeit, nach einem Lauf unter 5 Minuten der
-Neustart-Puffer, ein Neustart in dieser Zeit läuft weiter. Mehrere Spiele teilen sich den Schalter, zurückgestellt wird
-nach dem letzten; Option aus oder Spiel entfernt stellt sofort zurück. Zurückgestellt wird nach denselben Regeln wie
-zuvor: Steht noch genau der geschriebene Text da, kommt der Originalzustand zurück (fehlte der Wert, wird er gelöscht);
-ist anderes geändert, das Token aber noch `1`, nur das Token; ist das Token geändert oder der Wert weg oder nicht mehr
+ändert HDRpilot nichts und stellt nichts zurück. Jeder neue Start liest den Schalter neu, auch während HDRpilot ihn
+hält: Steht das Token dann nicht mehr auf `1` (der Nutzer hat in Windows oder im Tray umgestellt), ist das seine Wahl;
+der Merker entfällt, der neue Start setzt den Schalter für sein Spiel und merkt sich diesen Stand als den, der danach
+zurückkommt. Den Wert von vorher hält `<Datenordner>\autohdr-global.json` (vor dem Schreiben angelegt, nach dem
+Zurückstellen gelöscht; lässt die Datei sich nicht löschen, etwa weil ein Virenscanner sie sperrt, steht sie auf
+`Released`, wird nie mehr zurückgestellt, auch nicht vom Setup, und das Löschen wird alle 30 s und beim Beenden
+wiederholt). Die Ankündigung gilt, solange die HDR-Sitzung auf den Spielprozess wartet (Startfrist samt Verlängerung für
+Launcher-Fenster), ohne Sitzung bis zur Startfrist; scheitert schon der Start-Befehl, nimmt
+`IAutoHdrSessionHooks.OnStartAbandoned` sie sofort zurück. Läuft das Spiel, endet es wie der HDR-Zustand: Nachlaufzeit,
+nach einem Lauf unter 5 Minuten der Neustart-Puffer, ein Neustart in dieser Zeit läuft weiter. Mehrere Spiele teilen
+sich den Schalter, zurückgestellt wird nach dem letzten; Option aus oder Spiel entfernt stellt sofort zurück.
+Zurückgestellt wird nach denselben Regeln wie zuvor: Steht noch genau der geschriebene Text da, kommt der
+Originalzustand zurück (fehlte der Wert, wird er gelöscht); ist anderes geändert, das Token aber noch `1`, nur das Token
+(alles andere bleibt, wie es jetzt ist; bleibt nichts übrig, wird der Wert gelöscht statt das Original zurückzuholen);
+ist das Token geändert oder der Wert weg oder nicht mehr
 sauber, bleibt er stehen („extern geändert“, die Wahl des Nutzers). Schaltet der Nutzer in Windows aus und gleich wieder
 ein, ist das nicht zu unterscheiden und wird zurückgestellt. Beim Beenden von HDRpilot wird sofort zurückgestellt, nach
 einem Absturz beim nächsten Start (laufende Spiele mit der Option werden übernommen, nie als kurz); das Entfernen über
@@ -726,10 +738,13 @@ Tray-Eintrag „Auto HDR“ (G9.9, Wunsch des Nutzers, `TrayAutoHdr`) direkt unt
 Windows-Schalter, gelesen beim Öffnen des Menüs (`IAutoHdrService.ReadGlobalSwitch`, ein Registry-Wert, kein Zeitgeber),
 und schaltet nur das Token (`SetGlobalSwitchByUser`, andere Tokens bleiben). Tooltip „gilt ab dem nächsten Spielstart,
 auch ohne HDRpilot“; ist der Wert nicht lesbar oder in fremdem Format, ist der Eintrag gesperrt (die Pfeiltasten
-überspringen ihn) und nennt den Grund. Eine Änderung dort ist die Wahl des Nutzers: Hält HDRpilot den Schalter gerade,
-gibt es ihn ab, stellt danach nichts zurück und setzt ihn bis zum Ende der laufenden Sitzungen nicht neu; schaltet der
-Nutzer ihn vor einem Start ein, schaltet HDRpilot ihn nie aus. Versionszeile und Pfeiltasten bleiben wie in E87 (Pfeil
-nach unten trifft „HDR jetzt …“, Pfeil nach oben vom Start „HDRpilot beenden“).
+überspringen ihn) und nennt den Grund. Hält HDRpilot den Schalter gerade für einen Spielstart
+(`ITrayHost.AutoHdrSwitchHeld`), sagt der Tooltip, dass er danach wieder aus ist, damit das Häkchen nicht wie eine
+dauerhafte Einstellung aussieht. Eine Änderung dort ist die Wahl des Nutzers: Hält HDRpilot den Schalter gerade, gibt es
+ihn ab, stellt danach nichts zurück und setzt ihn für die laufenden Sitzungen nicht neu; erst ein neuer Start über
+HDRpilot liest ihn wieder (siehe oben) und stellt nach seinem Spiel diese Wahl wieder her. Schaltet der Nutzer ihn vor
+einem Start ein, schaltet HDRpilot ihn nie aus. Versionszeile und Pfeiltasten bleiben wie in E87 (Pfeil nach unten
+trifft „HDR jetzt …“, Pfeil nach oben vom Start „HDRpilot beenden“).
 
 Steam-Startoption beim Einschalten (G9.7): Schaltet der Nutzer „Windows Auto HDR“ für ein Steam-Spiel ein und ist das
 gespeichert, prüft HDRpilot außerhalb des UI-Threads und nur lesend mit dem Leser der Warnung beim Entfernen

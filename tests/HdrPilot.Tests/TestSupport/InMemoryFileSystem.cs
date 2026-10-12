@@ -15,6 +15,7 @@ public sealed class InMemoryFileSystem : IFileSystem
     private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Exception> _readFailures = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Exception> _writeFailures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Exception> _deleteFailures = new(StringComparer.OrdinalIgnoreCase);
 
     public List<string> FixedDriveRoots { get; } = [@"C:\"];
 
@@ -60,6 +61,21 @@ public sealed class InMemoryFileSystem : IFileSystem
         else
         {
             _writeFailures[PathUtil.Normalize(path)] = exception;
+        }
+
+        return this;
+    }
+
+    /// <summary>Löschen dieser Datei wirft die angegebene Ausnahme (etwa vom Virenscanner gesperrt). Null hebt es auf.</summary>
+    public InMemoryFileSystem FailDeleting(string path, Exception? exception)
+    {
+        if (exception is null)
+        {
+            _deleteFailures.Remove(PathUtil.Normalize(path));
+        }
+        else
+        {
+            _deleteFailures[PathUtil.Normalize(path)] = exception;
         }
 
         return this;
@@ -131,7 +147,16 @@ public sealed class InMemoryFileSystem : IFileSystem
         AddFile(path, contents);
     }
 
-    public void DeleteFile(string path) => _files.Remove(PathUtil.Normalize(path));
+    public void DeleteFile(string path)
+    {
+        var p = PathUtil.Normalize(path);
+        if (_deleteFailures.TryGetValue(p, out var failure) && _files.ContainsKey(p))
+        {
+            throw failure;
+        }
+
+        _files.Remove(p);
+    }
 
     public IReadOnlyList<string> GetFixedDriveRoots() => FixedDriveRoots;
 

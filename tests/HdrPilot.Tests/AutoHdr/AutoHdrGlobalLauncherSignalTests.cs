@@ -104,6 +104,29 @@ public sealed class AutoHdrGlobalLauncherSignalTests
         Assert.Empty(_hdr.Calls);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Signal_for_a_game_already_running_announces_nothing(bool hdrAuto)
+    {
+        Game(hdrAuto, autoHdr: true);
+        _manager.Paused = hdrAuto; // mit „HDR automatisch“: ohne Sitzung (pausiert gestartet), sonst prüfte die Frühwarnung selbst
+        await Poll();
+        var pid = _processes.StartExe(Dir + @"\Spiel.exe"); // ohne HDRpilot gestartet: hat den Schalter schon gelesen
+        await Poll();
+        _manager.Paused = false;
+
+        await _handler.HandleAsync(Signal, Ct);
+
+        Assert.Empty(_announced);
+
+        // Gegenprobe: nach dem Spielende kündigt dasselbe Signal den Start an.
+        _processes.Stop(pid);
+        await Poll();
+        await _handler.HandleAsync(Signal, Ct);
+        Assert.Equal(["Steam:1 LauncherSignal"], _announced);
+    }
+
     [Fact]
     public async Task Game_without_either_option_stays_not_automatic()
     {
@@ -117,6 +140,8 @@ public sealed class AutoHdrGlobalLauncherSignalTests
     private sealed class AnnounceRecorder(List<string> announced) : IAutoHdrSessionHooks
     {
         public void OnStartAnnounced(GameConfig game, SessionTrigger trigger, DateTimeOffset now) => announced.Add(game.Key + " " + trigger);
+
+        public void OnStartAbandoned(string gameKey, AppConfig config, DateTimeOffset now) => announced.Add(gameKey + " gescheitert");
 
         public void OnRecovery(IReadOnlyCollection<string> runningGameKeys, AppConfig config, DateTimeOffset now)
         {

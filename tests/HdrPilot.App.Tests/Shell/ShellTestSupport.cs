@@ -181,6 +181,9 @@ internal sealed class FakeTrayHost : ITrayHost
 
     public int AutoHdrReads { get; private set; }
 
+    /// <summary>HDRpilot hält den Schalter gerade für einen Spielstart (Attrappe).</summary>
+    public bool AutoHdrSwitchHeld { get; set; }
+
     /// <summary>Wenn gesetzt, scheitert das Umschalten damit (nichts geändert).</summary>
     public Exception? AutoHdrSetFailure { get; set; }
 
@@ -227,6 +230,8 @@ internal sealed class ThrowingTrayHost : ITrayHost
     public Task ToggleHdrNowAsync() => Task.FromException(new InvalidOperationException("Umschalten"));
 
     public AutoHdrSwitchState ReadAutoHdrSwitch() => throw new InvalidOperationException("Auto HDR lesen");
+
+    public bool AutoHdrSwitchHeld => throw new InvalidOperationException("Auto HDR gehalten");
 
     public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => throw new InvalidOperationException("Auto HDR schalten");
 

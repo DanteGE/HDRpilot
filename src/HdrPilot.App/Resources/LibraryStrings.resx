@@ -362,7 +362,7 @@
     <value>Steam-Startoption kopieren?</value>
   </data>
   <data name="AutoHdrSteam_OfferText" xml:space="preserve">
-    <value>Startest du {0} direkt in Steam, erfährt HDRpilot vom Start nur über die Steam-Startoption, und die fehlt bei diesem Spiel noch. Ohne sie wirkt Auto HDR nur beim Start über HDRpilot oder eine „(HDR)“-Verknüpfung. Soll HDRpilot sie kopieren? Eintragen musst du sie in Steam selbst: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen. Auto HDR bleibt so oder so an.</value>
+    <value>Startest du {0} direkt in Steam, erfährt HDRpilot vom Start zuverlässig nur über die Steam-Startoption, und die fehlt bei diesem Spiel noch. Ohne sie wirkt Auto HDR sicher nur beim Start über HDRpilot oder eine „(HDR)“-Verknüpfung. Soll HDRpilot sie kopieren? Eintragen musst du sie in Steam selbst: Rechtsklick auf das Spiel &gt; Eigenschaften &gt; Allgemein &gt; Startoptionen. Auto HDR bleibt so oder so an.</value>
     <comment>{0} = Spielname</comment>
   </data>
   <data name="AutoHdrSteam_OfferConfirm" xml:space="preserve">

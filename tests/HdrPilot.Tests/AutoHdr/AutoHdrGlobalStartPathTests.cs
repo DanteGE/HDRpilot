@@ -91,6 +91,51 @@ public sealed class AutoHdrGlobalStartPathTests
         Assert.Equal(GlobalOff, _h.Value(Global));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Start_request_for_a_game_already_running_without_hdrpilot_sets_nothing(bool hdrAuto)
+    {
+        _h.Config.UpdateGame(_a, g => g.HdrAuto = hdrAuto);
+        await Poll();
+        _processes.StartExe(ExeA); // ohne HDRpilot gestartet: Windows hat den Schalter schon gelesen
+        await Poll(3);
+        var handler = new LauncherSignalHandler(_h.Config, new SessionManagerSignalTarget(_sessions));
+
+        await _sessions.LaunchAsync(_a, Ct); // „Mit HDR starten“ oder die „(HDR)“-Verknüpfung
+        await _sessions.PrepareAsync(_a, SessionTrigger.SteamLaunchOption, Ct);
+        await handler.HandleAsync(new LauncherSignal(LauncherKind.Steam, _a, 5), Ct);
+        await Poll(60);
+
+        // Gesetzt hielte der Schalter bis zum Spielende nur für andere Spiele, die in der Zeit starten.
+        Assert.Empty(_h.GlobalOperations);
+        Assert.Equal(GlobalOff, _h.Value(Global));
+        Assert.False(_h.Service.HoldsGlobalSwitch);
+    }
+
+    [Fact]
+    public async Task Failed_start_command_restores_the_switch_at_once()
+    {
+        await Poll();
+        _launcher.Succeeds = false;
+
+        var outcome = await _sessions.LaunchAsync(_a, Ct);
+
+        Assert.False(outcome.Started);
+        Assert.Equal(GlobalOff, _h.Value(Global)); // nicht erst mit der Startfrist
+        Assert.Equal(["set " + Global + "=" + GlobalOn, "set " + Global + "=" + GlobalOff], _h.GlobalOperations);
+        Assert.True(_h.Logged("(Start fehlgeschlagen)"));
+
+        // Gegenprobe: wartet noch ein anderes Spiel auf seinen Start, bleibt der Schalter für dieses an.
+        var b = _h.AddGame("2", ExeB);
+        _launcher.Succeeds = true;
+        await _sessions.LaunchAsync(b, Ct);
+        _launcher.Succeeds = false;
+        await _sessions.LaunchAsync(_a, Ct);
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Assert.True(_h.Service.HoldsGlobalSwitch);
+    }
+
     [Fact]
     public async Task Whole_session_restores_the_switch_and_hdr_after_the_game()
     {

@@ -9,8 +9,9 @@ namespace HdrPilot.App.Setup.UI;
 /// <summary>
 /// Entfernen in der Kopie im Temp-Ordner: Schritte live, danach das Ergebnis mit dem Hinweis, wo die Einstellungen
 /// liegen (oder dass sie gelöscht sind). „Fertig“ erst am Ende; vorher ist das Fenster nicht schließbar. Bei einem Fehler
-/// wird genau der Schritt rot, den die Engine nennt; ein nicht wiederhergestellter HDR-Zustand und nicht zurückgenommene
-/// Auto-HDR-Werte färben ihren Schritt rot und stehen im Ergebnis, ohne dass das Entfernen als gescheitert gilt.
+/// wird genau der Schritt rot, den die Engine nennt; ein nicht wiederhergestellter HDR-Zustand und ein nicht
+/// zurückgestellter globaler Auto-HDR-Schalter färben ihren Schritt rot und stehen im Ergebnis, ohne dass das Entfernen
+/// als gescheitert gilt.
 /// </summary>
 public sealed class UninstallProgressViewModel : ObservableObject
 {

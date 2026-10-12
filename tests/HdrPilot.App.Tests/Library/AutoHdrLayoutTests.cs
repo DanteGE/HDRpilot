@@ -6,6 +6,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Tests.Shell;
 using HdrPilot.App.ViewModels.Library;
@@ -117,13 +118,18 @@ public sealed class AutoHdrLayoutTests
         {
             var (native, nativeContext, _) = Open("Steam:3008130");
             Arrange(native, new Size(1460, 1400));
-            var row = (FrameworkElement)native.FindName("AutoHdrRow");
             var ids = Ids((DependencyObject)native.FindName("PictureSection"));
-            Assert.InRange(row.Opacity, 0.3, 0.8);
             var toggle = (CheckBox)ids["DetailAutoHdr"];
+
+            // Titel und Schalter blasser, aber deutlich heller als ein gesperrter Schalter (0,4) …
+            Assert.InRange(EffectiveOpacity((FrameworkElement)native.FindName("AutoHdrTitle")), 0.6, 0.8);
+            Assert.InRange(EffectiveOpacity(toggle), 0.6, 0.8);
+
+            // … die Erklärung und der Hinweis bleiben voll lesbar.
+            Assert.Equal(1.0, EffectiveOpacity((FrameworkElement)native.FindName("AutoHdrExplanation")));
             Assert.True(toggle.IsEnabled);
             Assert.True(Shown(ids["DetailAutoHdrNativeHint"]));
-            Assert.Equal(1.0, ids["DetailAutoHdrNativeHint"].Opacity); // der Hinweis selbst ist gut lesbar
+            Assert.Equal(1.0, EffectiveOpacity(ids["DetailAutoHdrNativeHint"]));
             Assert.Equal(LibraryStrings.Details_AutoHdrNative, ((TextBlock)ids["DetailAutoHdrNativeHint"]).Text);
             toggle.IsChecked = true;
             Assert.True(nativeContext.Config.FindGame("Steam:3008130")!.AutoHdr);
@@ -131,7 +137,9 @@ public sealed class AutoHdrLayoutTests
 
             var (plain, _, _) = Open("Gog:1207658924"); // Gegenprobe: ohne eigenes HDR volle Deckkraft
             Arrange(plain, new Size(1460, 1400));
-            Assert.Equal(1.0, ((FrameworkElement)plain.FindName("AutoHdrRow")).Opacity);
+            var plainIds = Ids((DependencyObject)plain.FindName("PictureSection"));
+            Assert.Equal(1.0, EffectiveOpacity((FrameworkElement)plain.FindName("AutoHdrTitle")));
+            Assert.Equal(1.0, EffectiveOpacity(plainIds["DetailAutoHdr"]));
             plain.Close();
         });
     }
@@ -174,6 +182,41 @@ public sealed class AutoHdrLayoutTests
             Assert.DoesNotContain(listIds.Keys, id => id.Contains("AutoHdr", StringComparison.Ordinal));
             window.Close();
         });
+    }
+
+    [Fact]
+    public void Badge_icon_is_the_auto_hdr_icon_and_used_nowhere_else_in_the_window()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _) = Open("Gog:1207658924");
+            Arrange(window, new Size(1460, 1400));
+            var badgeStyle = window.FindResource("Lib.AutoHdrBadge");
+            // Symbole sind einzelne Zeichen aus dem privaten Bereich (Segoe Fluent Icons).
+            var glyphs = WpfTestHost.Visuals(window).OfType<TextBlock>().Where(t => t.Text.Length == 1 && t.Text[0] is >= '' and <= '').ToList();
+
+            var badgeGlyphs = glyphs.Where(t => InBadge(t, badgeStyle)).Select(t => t.Text).Distinct().ToList();
+            Assert.Equal([AppGlyphs.AutoHdr], badgeGlyphs); // dasselbe Symbol wie der Tray-Eintrag „Auto HDR“
+            Assert.DoesNotContain(glyphs, t => t.Text == AppGlyphs.AutoHdr && !InBadge(t, badgeStyle));
+
+            // Gegenprobe der Suche: die Sonne von „HDR automatisch“ (Filter) ist dabei, aber nicht im Kennzeichen.
+            Assert.Contains(glyphs, t => t.Text == "");
+            Assert.DoesNotContain("", badgeGlyphs);
+            window.Close();
+        });
+
+        static bool InBadge(DependencyObject element, object badgeStyle)
+        {
+            for (var current = VisualTreeHelper.GetParent(element); current is not null; current = VisualTreeHelper.GetParent(current))
+            {
+                if (current is Border border && ReferenceEquals(border.Style, badgeStyle))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 
     [Fact]
@@ -267,6 +310,10 @@ public sealed class AutoHdrLayoutTests
                     var (window, _, _) = Open(dark ? "Gog:1207658924" : "Steam:3008130");
                     Arrange(window, new Size(1460, 1300));
                     var root = (FrameworkElement)VisualTreeHelper.GetChild(window, 0);
+
+                    // Eingeschaltete Schalter gleiten erst in ihre Endlage: vorher abgebildet, sähen sie aus wie aus.
+                    WaitForSwitches(root);
+                    Assert.Empty(UnsettledSwitches(root));
                     var bitmap = new RenderTargetBitmap((int)Math.Ceiling(root.RenderSize.Width), (int)Math.Ceiling(root.RenderSize.Height), 96, 96, PixelFormats.Pbgra32);
                     bitmap.Render(root);
                     Assert.True(bitmap.PixelWidth >= 1460 && bitmap.PixelHeight >= 620, $"Bild {bitmap.PixelWidth}x{bitmap.PixelHeight}");
@@ -308,6 +355,41 @@ public sealed class AutoHdrLayoutTests
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Eingeschaltete große Schalter (Lib.ToggleSwitch), deren Leuchtspur noch nicht ganz sichtbar ist: Sie gleiten mit
+    /// Animationen 160 bis 200 ms; ohne Animationen stehen sie sofort richtig.
+    /// </summary>
+    private static List<CheckBox> UnsettledSwitches(FrameworkElement root) =>
+        WpfTestHost.Visuals(root).OfType<CheckBox>()
+            .Where(c => c.IsChecked == true && c.Template?.FindName("TrackOn", c) is UIElement { Opacity: < 0.999 })
+            .ToList();
+
+    /// <summary>Pumpt die Nachrichten, bis alle Schalter angekommen sind (höchstens 3 s).</summary>
+    private static void WaitForSwitches(FrameworkElement root)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(3);
+        while (UnsettledSwitches(root).Count > 0 && DateTime.UtcNow < deadline)
+        {
+            WpfTestHost.DoEvents();
+            Thread.Sleep(15);
+        }
+    }
+
+    /// <summary>Deckkraft, wie sie auf dem Bildschirm ankommt: das Produkt mit allen Vorfahren bis zum Fenster.</summary>
+    private static double EffectiveOpacity(FrameworkElement element)
+    {
+        var opacity = 1.0;
+        for (DependencyObject? current = element; current is not null and not Window; current = VisualTreeHelper.GetParent(current))
+        {
+            if (current is UIElement ui)
+            {
+                opacity *= ui.Opacity;
+            }
+        }
+
+        return opacity;
     }
 
     private static uint Pixel(BitmapSource bitmap, Point point)

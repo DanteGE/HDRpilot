@@ -86,8 +86,13 @@ public sealed partial class TrayServiceTests
         }
 
         Assert.True(surface.IconSets > 40, $"Symbol nur {surface.IconSets}-mal gesetzt");
-        Assert.True(GetGuiResources(process.Handle, 0) - gdi < 20, "GDI-Objekte wachsen");
-        Assert.True(GetGuiResources(process.Handle, 1) - user < 20, "USER-Objekte wachsen");
+
+        // Mit Vorzeichen rechnen wie in TrayIconRendererTests: räumt ein früherer Test währenddessen auf, sinkt die Zahl
+        // (uint liefe sonst über und meldete fälschlich ein Leck).
+        var gdiAfter = GetGuiResources(process.Handle, 0);
+        var userAfter = GetGuiResources(process.Handle, 1);
+        Assert.True((int)gdiAfter - (int)gdi < 20, $"GDI-Objekte wachsen: {gdi} -> {gdiAfter}");
+        Assert.True((int)userAfter - (int)user < 20, $"USER-Objekte wachsen: {user} -> {userAfter}");
         WpfTestHost.Run(service.Dispose);
     }
 
@@ -359,6 +364,8 @@ public sealed partial class TrayServiceTests
         public Task ToggleHdrNowAsync() => Task.CompletedTask;
 
         public AutoHdrSwitchState ReadAutoHdrSwitch() => AutoHdrSwitchState.Off;
+
+        public bool AutoHdrSwitchHeld => false;
 
         public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => AutoHdrSwitchState.Off;
 

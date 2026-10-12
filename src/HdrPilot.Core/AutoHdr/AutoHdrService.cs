@@ -173,6 +173,23 @@ public sealed class AutoHdrService : IAutoHdrService, IAutoHdrSessionHooks
         }
     }
 
+    public void OnStartAbandoned(string gameKey, AppConfig config, DateTimeOffset now)
+    {
+        if (!_started)
+        {
+            return;
+        }
+
+        try
+        {
+            _switch.OnStartAbandoned(gameKey, config, now);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Auto HDR: Gescheiterter Start von {Key} ließ sich nicht verarbeiten.", gameKey);
+        }
+    }
+
     public void OnRecovery(IReadOnlyCollection<string> runningGameKeys, AppConfig config, DateTimeOffset now)
     {
         if (!_started)

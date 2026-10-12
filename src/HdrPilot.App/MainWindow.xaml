@@ -68,7 +68,7 @@
                                 <SolidColorBrush Color="{DynamicResource Hp.Color.Accent3}" Opacity="0.85" />
                             </Border.BorderBrush>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" FontSize="9" Margin="0,0,4,0" />
+                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="{x:Static infra:AppGlyphs.AutoHdr}" FontSize="9" Margin="0,0,4,0" />
                                 <!-- Kennung am Text: ein Border hat keinen Automation-Peer, UI-Automation sähe es sonst nicht -->
                                 <TextBlock Text="{x:Static res:LibraryStrings.Badge_AutoHdr}" VerticalAlignment="Center"
                                            AutomationProperties.AutomationId="AutoHdrBadge"
@@ -751,27 +751,39 @@
                                 <Border x:Name="PictureSection" Style="{StaticResource Lib.Section}">
                                     <StackPanel>
                                         <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Details_SectionPicture}" />
+                                        <!-- Eigenes HDR: Titel und Schalter blasser (deutlich heller als gesperrt), die Erklärung bleibt gut lesbar -->
                                         <Grid x:Name="AutoHdrRow">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Grid.Style>
-                                                <Style TargetType="Grid">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsAutoHdrSubdued}" Value="True">
-                                                            <Setter Property="Opacity" Value="0.55" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Grid.Style>
                                             <StackPanel Margin="0,0,12,0">
-                                                <TextBlock Text="{x:Static res:LibraryStrings.Details_AutoHdr}" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.Text}" />
-                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrHint}" Margin="0,2,0,0" />
+                                                <TextBlock x:Name="AutoHdrTitle" Text="{x:Static res:LibraryStrings.Details_AutoHdr}" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.Text}">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsAutoHdrSubdued}" Value="True">
+                                                                    <Setter Property="Opacity" Value="0.7" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock x:Name="AutoHdrExplanation" Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrHint}" Margin="0,2,0,0" />
                                             </StackPanel>
-                                            <CheckBox Grid.Column="1" Style="{StaticResource Lib.ToggleSwitch}" VerticalAlignment="Center" IsChecked="{Binding AutoHdr}"
+                                            <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding AutoHdr}"
                                                       AutomationProperties.AutomationId="DetailAutoHdr" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_AutoHdr}"
-                                                      AutomationProperties.HelpText="{x:Static res:LibraryStrings.Details_AutoHdrHint}" />
+                                                      AutomationProperties.HelpText="{x:Static res:LibraryStrings.Details_AutoHdrHint}">
+                                                <CheckBox.Style>
+                                                    <Style TargetType="CheckBox" BasedOn="{StaticResource Lib.ToggleSwitch}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsAutoHdrSubdued}" Value="True">
+                                                                <Setter Property="Opacity" Value="0.7" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </CheckBox.Style>
+                                            </CheckBox>
                                         </Grid>
                                         <!-- Wirkt nur bei Starts, die HDRpilot vorher kennt (E88): immer sichtbar, auch vor dem Einschalten -->
                                         <DockPanel Margin="0,10,0,0">

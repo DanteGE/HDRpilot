@@ -3,6 +3,7 @@ using System.Windows.Automation.Peers;
 using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
@@ -128,6 +129,54 @@ public sealed class AutoHdrTrayTests
     }
 
     [Fact]
+    public void AutoHdrTray_held_by_hdrpilot_for_a_game_says_it_goes_off_again_afterwards()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var host = new FakeTrayHost { AutoHdr = AutoHdrSwitchState.On, AutoHdrSwitchHeld = true };
+            var model = new TrayMenuViewModel(host, TrayState.Initial, ex => throw ex);
+            var menu = new TrayMenu { DataContext = model };
+            WpfTestHost.DoEvents();
+            var entry = Entry(menu);
+
+            // Das Häkchen zeigt, was Windows hat; der Hinweis sagt, dass es nur für das Spiel gilt.
+            Assert.True(entry.IsChecked);
+            Assert.Equal(ShellStrings.TrayMenuAutoHdrHeld, entry.ToolTip);
+            Assert.Equal(ShellStrings.TrayMenuAutoHdrHeld, AutomationProperties.GetHelpText(entry));
+
+            // Umgeschaltet ist es die Wahl des Nutzers: wieder der normale Hinweis.
+            model.IsAutoHdrOn = false;
+            Assert.Equal(ShellStrings.TrayMenuAutoHdrHint, model.AutoHdrHint);
+            menu.DataContext = null;
+
+            // Gegenproben: an ohne Halten (Wahl des Nutzers) und aus (gehalten wird nur ein eingeschalteter Schalter).
+            Assert.Equal(ShellStrings.TrayMenuAutoHdrHint, new TrayMenuViewModel(new FakeTrayHost { AutoHdr = AutoHdrSwitchState.On }, TrayState.Initial, ex => throw ex).AutoHdrHint);
+            Assert.Equal(
+                ShellStrings.TrayMenuAutoHdrHint,
+                new TrayMenuViewModel(new FakeTrayHost { AutoHdr = AutoHdrSwitchState.Off, AutoHdrSwitchHeld = true }, TrayState.Initial, ex => throw ex).AutoHdrHint);
+        });
+
+        Assert.Contains("danach wieder aus", ShellStrings.TrayMenuAutoHdrHeld, StringComparison.Ordinal);
+        Assert.Contains("ab dem nächsten Spielstart", ShellStrings.TrayMenuAutoHdrHeld, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AutoHdrTray_icon_is_the_one_of_the_list_badge_and_no_other_entry_uses_it()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var menu = new TrayMenu { DataContext = new TrayMenuViewModel(new FakeTrayHost(), TrayState.Initial, ex => throw ex) };
+            WpfTestHost.DoEvents();
+            var icons = menu.Items.OfType<MenuItem>().ToDictionary(AutomationProperties.GetAutomationId, i => ((TextBlock)i.Icon).Text);
+
+            Assert.Equal(AppGlyphs.AutoHdr, icons["TrayAutoHdr"]);
+            Assert.Single(icons.Values, v => v == AppGlyphs.AutoHdr);
+            Assert.NotEqual(icons["TrayToggleHdr"], icons["TrayAutoHdr"]); // nicht die Sonne von „HDR jetzt …“
+            menu.DataContext = null;
+        });
+    }
+
+    [Fact]
     public void AutoHdrTray_hint_says_it_applies_from_the_next_game_start_also_without_hdrpilot()
     {
         Assert.Contains("ab dem nächsten Spielstart", ShellStrings.TrayMenuAutoHdrHint, StringComparison.Ordinal);
@@ -167,6 +216,7 @@ public sealed class AutoHdrTrayTests
 
         var model = rig.OpenMenu();
         Assert.True(model.IsAutoHdrOn); // zeigt, was Windows gerade hat: HDRpilot hält den Schalter für das Spiel
+        Assert.Equal(ShellStrings.TrayMenuAutoHdrHeld, model.AutoHdrHint); // … und sagt, dass er danach wieder aus ist
         model.IsAutoHdrOn = false;
 
         Assert.Equal(GlobalOff, rig.Value); // nur das Token, SwapEffectUpgradeEnable bleibt
@@ -196,6 +246,7 @@ public sealed class AutoHdrTrayTests
         rig.Cycles(180, running: false);
         Assert.Equal(GlobalOn, rig.Value);
         Assert.True(rig.OpenMenu().IsAutoHdrOn);
+        Assert.Equal(ShellStrings.TrayMenuAutoHdrHint, rig.OpenMenu().AutoHdrHint); // die Wahl des Nutzers, nicht gehalten
 
         // Gegenprobe ohne Tray: dieselbe Sitzung stellt am Ende zurück
         var plain = new ServiceRig(GlobalOff);
@@ -305,6 +356,8 @@ public sealed class AutoHdrTrayTests
         public Task ToggleHdrNowAsync() => Task.CompletedTask;
 
         public AutoHdrSwitchState ReadAutoHdrSwitch() => autoHdr.ReadGlobalSwitch();
+
+        public bool AutoHdrSwitchHeld => autoHdr.HoldsGlobalSwitch;
 
         public AutoHdrSwitchState SetAutoHdrSwitch(bool on) => autoHdr.SetGlobalSwitchByUser(on);
 

@@ -25,6 +25,9 @@ public interface ITrayHost
     /// <summary>Globaler Auto-HDR-Schalter von Windows, gelesen beim Öffnen des Menüs (<see cref="IAutoHdrService.ReadGlobalSwitch"/>).</summary>
     AutoHdrSwitchState ReadAutoHdrSwitch();
 
+    /// <summary>HDRpilot hält den Schalter gerade für einen Spielstart (<see cref="IAutoHdrService.HoldsGlobalSwitch"/>): danach wieder aus.</summary>
+    bool AutoHdrSwitchHeld { get; }
+
     /// <summary>
     /// Tray-Eintrag „Auto HDR“ (G9.9): schaltet den Windows-Schalter als Wahl des Nutzers
     /// (<see cref="IAutoHdrService.SetGlobalSwitchByUser"/>); liefert den Stand danach.

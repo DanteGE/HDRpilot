@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
              xmlns:res="clr-namespace:HdrPilot.App.Resources"
              xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Shell"
              mc:Ignorable="d"
@@ -35,7 +36,8 @@
             <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE706;" />
         </MenuItem.Icon>
     </MenuItem>
-    <!-- Globaler Auto-HDR-Schalter von Windows (G9.9): beim Öffnen gelesen, gilt ab dem nächsten Spielstart; nicht lesbar: gesperrt -->
+    <!-- Globaler Auto-HDR-Schalter von Windows (G9.9): beim Öffnen gelesen, gilt ab dem nächsten Spielstart; nicht lesbar: gesperrt.
+         Symbol wie das Kennzeichen „AUTO HDR“ der Liste, sonst nirgends -->
     <MenuItem AutomationProperties.AutomationId="TrayAutoHdr"
               AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuAutoHdr}"
               AutomationProperties.HelpText="{Binding AutoHdrHint}"
@@ -46,7 +48,7 @@
               IsEnabled="{Binding CanToggleAutoHdr}"
               IsChecked="{Binding IsAutoHdrOn, Mode=TwoWay}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE790;" />
+            <TextBlock Style="{StaticResource MenuGlyph}" Text="{x:Static infra:AppGlyphs.AutoHdr}" />
         </MenuItem.Icon>
     </MenuItem>
     <MenuItem AutomationProperties.AutomationId="TrayPause"

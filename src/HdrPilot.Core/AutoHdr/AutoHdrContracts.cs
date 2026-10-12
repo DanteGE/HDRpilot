@@ -51,9 +51,13 @@ public interface IAutoHdrSessionHooks
 {
     /// <summary>
     /// Ein Start ist angekündigt, der Spielprozess folgt gleich: Start über HDRpilot („Mit HDR starten“, Verknüpfung),
-    /// Steam-Startoption oder Frühwarnung eines Launchers. Kommt vor dem Schalten von HDR und vor dem Start-Befehl.
+    /// Steam-Startoption oder Frühwarnung eines Launchers. Kommt vor dem Schalten von HDR und vor dem Start-Befehl, nur
+    /// wenn das Spiel noch nicht läuft (ein laufendes hat den Schalter schon gelesen).
     /// </summary>
     void OnStartAnnounced(GameConfig game, SessionTrigger trigger, DateTimeOffset now);
+
+    /// <summary>Der angekündigte Start ist gescheitert (Start-Befehl fehlgeschlagen): kein Spielprozess kommt.</summary>
+    void OnStartAbandoned(string gameKey, AppConfig config, DateTimeOffset now);
 
     /// <summary>Erster Zyklus nach dem Start von HDRpilot (Wiederanlauf): zugeordnete laufende Spiele der Bibliothek.</summary>
     void OnRecovery(IReadOnlyCollection<string> runningGameKeys, AppConfig config, DateTimeOffset now);
@@ -71,6 +75,10 @@ public sealed class NoAutoHdrSessionHooks : IAutoHdrSessionHooks
     public static NoAutoHdrSessionHooks Instance { get; } = new();
 
     public void OnStartAnnounced(GameConfig game, SessionTrigger trigger, DateTimeOffset now)
+    {
+    }
+
+    public void OnStartAbandoned(string gameKey, AppConfig config, DateTimeOffset now)
     {
     }
 

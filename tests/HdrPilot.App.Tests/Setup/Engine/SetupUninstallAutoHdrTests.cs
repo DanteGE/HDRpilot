@@ -99,6 +99,23 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
     }
 
     [Fact]
+    public async Task Released_marker_is_only_deleted_and_never_restored()
+    {
+        await InstallAsync();
+        _h.AutoHdr.SetString(Global, GlobalOn); // die Wahl des Nutzers; die App konnte den erledigten Merker nicht löschen
+        WriteMarker(status: AutoHdrEntryStatus.Released);
+
+        var result = await _h.UninstallAsync(removeData: false);
+
+        Assert.True(result.Success, result.Message);
+        Assert.Null(result.Warnings);
+        Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
+        Assert.Empty(_h.AutoHdr.Operations);
+        Assert.False(File.Exists(L.DataPaths.AutoHdrGlobalFile));
+        Assert.Contains("ist erledigt", _h.LogText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Registry_failure_keeps_the_marker_and_is_only_a_warning()
     {
         await InstallAsync();
@@ -113,6 +130,8 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
         Assert.True(File.Exists(L.DataPaths.AutoHdrGlobalFile));
         Assert.Equal(GlobalOn, _h.AutoHdr.GetString(Global));
         Assert.False(File.Exists(L.ExePath)); // Entfernen lief trotzdem weiter
+        Assert.Contains("der globale Auto-HDR-Schalter ist nicht zurückgestellt", _h.LogText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Auto-HDR-Werte", _h.LogText, StringComparison.Ordinal); // es gibt nur den einen Schalter
     }
 
     [Fact]
@@ -169,13 +188,14 @@ public sealed class SetupUninstallAutoHdrTests : IDisposable
         Assert.True(result.Success, result.Message);
     }
 
-    private void WriteMarker(string? key = null, string? original = GlobalOff, string? originalToken = "0", string written = GlobalOn)
+    private void WriteMarker(
+        string? key = null, string? original = GlobalOff, string? originalToken = "0", string written = GlobalOn, AutoHdrEntryStatus status = AutoHdrEntryStatus.Applied)
     {
         Directory.CreateDirectory(L.DataPaths.DataDirectory);
         var marker = new AutoHdrGlobalMarker
         {
             RegistryKey = key ?? L.AutoHdrLocation.KeyName,
-            Status = AutoHdrEntryStatus.Applied,
+            Status = status,
             Original = original is null
                 ? new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.Missing }
                 : new AutoHdrOriginalValue { Kind = GpuPreferenceValueKind.String, Text = original },

@@ -206,7 +206,7 @@ public sealed class UninstallEngine : IUninstallEngine
             ? "."
             : ", aber " + string.Join(" und ", warnings.Select(w => w == SetupWarning.HdrNotRestored
                 ? "der gemerkte HDR-Zustand ist nicht wiederhergestellt"
-                : "nicht alle Auto-HDR-Werte sind zurückgenommen")) + "."));
+                : "der globale Auto-HDR-Schalter ist nicht zurückgestellt")) + "."));
         return new SetupResult(true, null, null, version, null, false, Warnings: warnings);
     }
 

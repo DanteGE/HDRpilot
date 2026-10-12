@@ -93,6 +93,51 @@ public sealed class AutoHdrGlobalSessionHookTests
         Assert.Empty(_launcher.Launched);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Start_request_for_a_game_already_running_announces_nothing(bool hdrAuto)
+    {
+        AutoHdrGame("1", DirA, hdrAuto);
+        await Poll();
+        var pid = _processes.StartExe(ExeA); // ohne HDRpilot gestartet: hat den Schalter schon gelesen
+        await Poll();
+        _events.Clear();
+
+        await _manager.LaunchAsync("Steam:1", Ct); // „Mit HDR starten“ oder Doppelklick auf die Verknüpfung
+        await _manager.PrepareAsync("Steam:1", SessionTrigger.SteamLaunchOption, Ct);
+        await _manager.AnnounceAutoHdrStartAsync("Steam:1", SessionTrigger.LauncherSignal, Ct);
+
+        Assert.DoesNotContain(_events, e => e.StartsWith("announce", StringComparison.Ordinal));
+
+        // Gegenprobe: nach dem Spielende (Nachlaufzeit) kündigt ein Start wieder an.
+        _processes.Stop(pid);
+        await Poll(15);
+        _events.Clear();
+        await _manager.LaunchAsync("Steam:1", Ct);
+        Assert.Equal("announce Steam:1 LaunchedViaApp", _events[0]);
+    }
+
+    [Fact]
+    public async Task Failed_start_command_takes_the_announcement_back()
+    {
+        AutoHdrGame("1", DirA);
+        await Poll();
+        _events.Clear();
+        _launcher.Succeeds = false;
+
+        var outcome = await _manager.LaunchAsync("Steam:1", Ct);
+
+        Assert.False(outcome.Started);
+        Assert.Equal(["announce Steam:1 LaunchedViaApp", "hdr an", "start Steam:1", "abandon Steam:1"], _events.Take(4));
+
+        // Gegenprobe: ein gelungener Start nimmt nichts zurück.
+        _launcher.Succeeds = true;
+        _events.Clear();
+        Assert.True((await _manager.LaunchAsync("Steam:1", Ct)).Started);
+        Assert.DoesNotContain("abandon Steam:1", _events);
+    }
+
     [Fact]
     public async Task Unknown_game_or_missing_launch_command_announces_nothing()
     {
@@ -215,6 +260,12 @@ public sealed class AutoHdrGlobalSessionHookTests
         {
             ThrowIfWanted();
             events.Add("announce " + game.Key + " " + trigger);
+        }
+
+        public void OnStartAbandoned(string gameKey, AppConfig config, DateTimeOffset now)
+        {
+            ThrowIfWanted();
+            events.Add("abandon " + gameKey);
         }
 
         public void OnRecovery(IReadOnlyCollection<string> runningGameKeys, AppConfig config, DateTimeOffset now)

@@ -4,12 +4,16 @@ using System.Text;
 
 namespace HdrPilot.Core.Games.Scanners.Steam;
 
-/// <summary>Angaben aus dem Steam-App-Cache für eine AppID: App-Typ (etwa "Game", "Tool", "Application") und Name.</summary>
-internal sealed record SteamAppInfo(string? Type, string? Name);
+/// <summary>
+/// Angaben aus dem Steam-App-Cache für eine AppID: App-Typ (etwa "Game", "Tool", "Application"), Name und die Namen der
+/// Symbole: <see cref="ClientIcon"/> ist die Datei <c>steam\games\&lt;clienticon&gt;.ico</c>, <see cref="Icon"/> das
+/// 32-px-JPEG <c>appcache\librarycache\&lt;AppID&gt;\&lt;icon&gt;.jpg</c> (beides SHA-1 in Hex, E86).
+/// </summary>
+internal sealed record SteamAppInfo(string? Type, string? Name, string? ClientIcon = null, string? Icon = null);
 
 /// <summary>
-/// Liest aus <c>&lt;Steam&gt;\appcache\appinfo.vdf</c> (Binärformat) nur <c>appinfo/common/type</c> und
-/// <c>appinfo/common/name</c> der gewünschten AppIDs. Eigene Umsetzung nach der öffentlichen Formatbeschreibung
+/// Liest aus <c>&lt;Steam&gt;\appcache\appinfo.vdf</c> (Binärformat) nur <c>appinfo/common/type</c>, <c>name</c>,
+/// <c>clienticon</c> und <c>icon</c> der gewünschten AppIDs. Eigene Umsetzung nach der öffentlichen Formatbeschreibung
 /// (SteamDB „SteamAppInfo“). Aufbau:
 /// <list type="bullet">
 /// <item>Kopf: UInt32 Kennung (0x07564427/28/29), UInt32 Universum; ab Version 29 zusätzlich Int64 Offset der Schlüsseltabelle.</item>
@@ -114,10 +118,9 @@ internal static class SteamAppInfoReader
 
     private static SteamAppInfo ReadEntry(ByteReader reader, string[]? keyTable)
     {
-        string? type = null;
-        string? name = null;
-        ReadObject(reader, keyTable, Section.Root, 0, ref type, ref name);
-        return new SteamAppInfo(type, name);
+        var common = new CommonValues();
+        ReadObject(reader, keyTable, Section.Root, 0, common);
+        return new SteamAppInfo(common.Type, common.Name, common.ClientIcon, common.Icon);
     }
 
     private enum Section
@@ -128,7 +131,7 @@ internal static class SteamAppInfoReader
         Other,
     }
 
-    private static void ReadObject(ByteReader reader, string[]? keyTable, Section section, int depth, ref string? type, ref string? name)
+    private static void ReadObject(ByteReader reader, string[]? keyTable, Section section, int depth, CommonValues common)
     {
         if (depth > MaxDepth)
         {
@@ -153,20 +156,13 @@ internal static class SteamAppInfoReader
                         (Section.AppInfo, "common") => Section.Common,
                         _ => Section.Other,
                     };
-                    ReadObject(reader, keyTable, child, depth + 1, ref type, ref name);
+                    ReadObject(reader, keyTable, child, depth + 1, common);
                     break;
                 case 0x01:
                     var value = reader.ReadCString();
                     if (section == Section.Common)
                     {
-                        if (string.Equals(key, "type", StringComparison.OrdinalIgnoreCase))
-                        {
-                            type = value;
-                        }
-                        else if (string.Equals(key, "name", StringComparison.OrdinalIgnoreCase))
-                        {
-                            name = value;
-                        }
+                        common.Set(key, value);
                     }
 
                     break;
@@ -200,6 +196,38 @@ internal static class SteamAppInfoReader
         }
 
         return keyTable[index];
+    }
+
+    /// <summary>Gesuchte Zeichenketten aus appinfo/common.</summary>
+    private sealed class CommonValues
+    {
+        public string? Type { get; private set; }
+
+        public string? Name { get; private set; }
+
+        public string? ClientIcon { get; private set; }
+
+        public string? Icon { get; private set; }
+
+        public void Set(string key, string value)
+        {
+            if (string.Equals(key, "type", StringComparison.OrdinalIgnoreCase))
+            {
+                Type = value;
+            }
+            else if (string.Equals(key, "name", StringComparison.OrdinalIgnoreCase))
+            {
+                Name = value;
+            }
+            else if (string.Equals(key, "clienticon", StringComparison.OrdinalIgnoreCase))
+            {
+                ClientIcon = value;
+            }
+            else if (string.Equals(key, "icon", StringComparison.OrdinalIgnoreCase))
+            {
+                Icon = value;
+            }
+        }
     }
 
     /// <summary>Liest mit Grenzprüfung; jede Überschreitung gilt als abgeschnittene Datei.</summary>

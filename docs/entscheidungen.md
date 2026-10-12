@@ -534,3 +534,127 @@ Namen, auch Einstellungen und Sitzungslogik über einen gemeinsamen ConfigServic
 Testinstanz 30:05 ein, prüft die Begrenzung auf 30:00, speichert 0:45 und prüft `restartBufferSeconds` = 45, auch nach
 einem Neustart); `phase5-readme.ps1` gleicht den Standard in der Einstellungstabelle der README und in jedem Absatz von
 „So funktioniert es“, „Bekannte Grenzen“ und „Fehlersuche“, der den Puffer nennt, mit dem Quelltext ab.
+
+**E86 Spielsymbole aus lokalen Quellen und eigenes Symbol (Wunsch des Nutzers, G8.2/G8.3):** Die Messung an der
+Bibliothek des Nutzers (647 Spiele, 2026-10-10, `docs/recherche/symbole`) ergab 53 Spiele ohne gutes Symbol: 19 ohne
+Symbol (9 ohne gefundene EXE, 5 EXEs ohne Symbol, 4 falsche EXEs wie `P4PopulateDepot.exe` und `elementviewer.exe`,
+Palworld mit gesperrter EXE) und 34 mit einem Standardsymbol (EasyAntiCheat 12, Unreal-„U“ 14, Epic/EOS-Starter 4,
+Godot 3, Unity 1), dazu 17 unscharfe mit höchstens 32 px. Beanstandet hatte der Nutzer, dass manche Spiele das Symbol
+des Anti-Cheats statt des Spiels zeigten (Gears of War: E-Day, The Isle). Er entschied: nur lokale Quellen, nichts aus
+dem Netz; bei Steam zuerst das offizielle Steam-Symbol, die EXE nur, wenn es fehlt, ein Standardsymbol ist oder deutlich
+unschärfer (Steam unter 48 px, EXE ab 48 px); ein eigenes Symbol per Rechtsklick, das allem vorgeht.
+
+Quellen: Die Scanner liefern Symbol-Hinweise (`GameEntry.IconCandidates`, beste zuerst, höchstens 4, nur vorhandene
+Dateien mit Laufwerksbuchstaben, nie UNC-Pfade). Steam (`SteamIconLocator`): `steam\games\<clienticon>.ico` laut
+appinfo.vdf `common/clienticon` (Leser für v27 bis v29 erweitert), sonst `DisplayIcon` von „Steam App <ID>“ unter HKLM
+in der 64-Bit-Sicht (gemessen: alle 798 Einträge dort, keiner unter WOW6432Node), sonst `IconFile` einer
+`.url`-Verknüpfung (Startmenü, Desktop eine Ebene tief), sonst `appcache\librarycache\<ID>\<icon>.jpg` (immer 32 px);
+Namen, die keine 40-stelligen SHA-1-Werte sind, werden nie als Pfad benutzt. GOG: `goggame-<ID>.ico`, dann
+`*_glx_square_icon_v2.webp` aus dem Zwischenspeicher von GOG Galaxy. Xbox: Logos aus MicrosoftGame.config
+(Square480x480Logo zuerst) und appxmanifest.xml, auch nur mit Zusatz wie `.scale-200` vorhanden (die größte Variante
+in Pixeln gewinnt: `targetsize-48` sind 48 px, `scale-100` die Grundgröße aus dem Namen wie 150 bei Square150x150Logo,
+sonst 44 wie beim kleinen App-Symbol, das als einziges `targetsize-` kennt; Kontrast-Varianten nie, nie außerhalb des
+Paketordners). Ubisoft: `DisplayIcon` von „Uplay Install <ID>“ (32-Bit-Sicht).
+Epic, EA, Battle.net und eigene Spiele: nur die EXE. Die Hinweise stehen in config.json (`iconCandidates`), damit die
+Bibliothek schon vor dem Ende des Einlesens beim Start das richtige Symbol zeigt; gemessen sind das bei 650 Spielen
+89 KB (18 % der Datei), fast immer ein Pfad je Spiel. Alte Konfigurationen laden unverändert (fehlende Felder: keine
+Hinweise, kein eigenes Symbol).
+
+Wahl (`GameIconService`): eigenes Symbol, dann die Hinweise in ihrer Reihenfolge, dann die EXE, die nur gesucht wird,
+wenn kein Hinweis gut ist. Gut ist ein Symbol, das kein Standardsymbol ist und in der Datei mindestens 48 px groß ist;
+die echte Größe kommt aus dem Verzeichnis der .ico bzw. der ersten Symbolgruppe der EXE (die Windows für Index 0
+nimmt), gelesen mit wenigen Dateizugriffen statt der ganzen EXE. Das erste gute gewinnt; gibt es keins, das erste ohne
+Standardsymbol, notfalls ein Standardsymbol. Die Standardsymbole erkennt eine feste Liste von zehn Fingerabdrücken: die
+acht gemessenen (EasyAntiCheat, Unreal schwarz und umrandet, Epic/EOS, Godot 3 zweimal, Godot 4, Unity), dazu Unreal 3
+(UDK.exe) und das Windows-Programmsymbol. Fingerabdruck: SHA-256 über die 48-px-Pixel (BGRA, durchsichtige Pixel auf 0)
+und ein Wahrnehmungsabdruck (Helligkeitsverlauf 9×8, Helligkeit 8×8, Deckkraft 8×8, mittlere Farbe / 15); Standardsymbol
+bei gleichem Hash oder Abstand bis 8. Gemessen: Aus den Spieldateien neu gelesen ergaben alle acht denselben Hash wie in
+der Recherche; von den 598 verschiedenen EXE-Symbolen der Bibliothek hat das ähnlichste echte den Abstand 29
+(Necrosmith und Space Marine 2 zu Godot 4), keins wird fälschlich erkannt, Boltgun (drei Einträge mit einem gemeinsamen
+echten Symbol) hat 68. Eine Regel „mehrere Spiele teilen ein Symbol“ gibt es deshalb nicht. Beim Lesen der Symbolgröße
+umfasst eine Sektion der EXE wie beim Loader von Windows ihre VirtualSize (nur ohne sie SizeOfRawData): Godot 4 legt die
+Spieldaten in eine Sektion `pck` mit VirtualSize 8, deren Rohdaten über `.rsrc` hinausreichen; mit der größeren von
+beiden galt das 256-px-Symbol von Buckshot Roulette, Overlooting, s.p.l.i.t und Spin Hero als unbekannt groß, und die
+Liste zeigte ihr 32-px-Steam-Symbol.
+
+EXE-Wahl (`IconExecutableResolver`): eine Ausschlussliste nur für Symbole (`IconExcludedExecutables`, nicht in
+`HelperExecutables`, wo `start_protected_game.exe` und `*EAC.exe` bewusst als früher Start-Hinweis für HDR fehlen):
+EasyAntiCheat (`start_protected_game`, `*EasyAntiCheat*`, „EAC“ als eigenes Wortteil wie in `GZWClientEAC`, nicht in
+`BeachInvasion`), BattlEye (`*_BE`, `BEService*`, `BELauncher`, `*BattlEye*`), EA Anti-Cheat (`EAAntiCheat.*`, alles mit
+„AntiCheat“ im Namen), GameGuard/nProtect (`GameMon*`, `GameGuard*`, `*nProtect*`, Installer `GGSetup`, Deinstaller
+`gguninst`), PunkBuster (`pbsvc*`, `PnkBstr*`), Epic Online Services (`EOSBootstrapper`, `EpicOnlineServices*`,
+`EOSOverlayRenderer*`), `LaunchGame`, `GodotWorkshopUtility`, Absturzmelder, Redistributables, Installer und
+Deinstaller (`CrashReport*`, `UnityCrashHandler*`, `BsSndRpt*`, `*ErrorReporter*`, `UE*PrereqSetup*`, `vc_redist*`,
+`PhysX*SystemSoftware*`, `oalinst`, `VulkanRT*`, die Installer von Ubisoft Connect, Social Club und Rockstar,
+`dxsetup`, `unins*`, `*uninst*` …; auch alle Fremdbestandteile aus der Standardliste der Hilfsprozesse, weil eine in
+den Einstellungen geänderte Liste sie ganz ersetzt), Werkzeuge (`P4PopulateDepot`, `elementviewer`, `*editor*`,
+`java`, `vconsole2`, `qc_eyes`, die Unreal-3-Werkzeuge in `Binaries` wie `UnrealFrontend`, `ShaderKeyTool`,
+`StatsViewer` und die des Source SDK in `bin` wie `hlfaceposer`, `hlmv`, `studiomdl`, `hammer`; ohne Steam-Symbol bekam
+Portal sonst das von `hlfaceposer.exe`) sowie alles in den Ordnern `BattlEye`, `GameGuard`, `EasyAntiCheat`,
+`_CommonRedist`, `__Installer` und `Redist` unter dem Spielordner. Gegen alle EXEs der Bibliothek geprüft (2026-10-12):
+Die Erweiterung um GameGuard-Installer, PunkBuster, Absturzmelder, Installer und Source-SDK-Werkzeuge schließt 57
+weitere EXEs aus, alle Fremdbestandteile oder Werkzeuge, keine Spiel-EXE. Im Spielordner kommen Unreal-Projekte zuerst
+(`[<Projekt>\]Binaries\Win64\*.exe`, `*-Shipping.exe` vorn, `Engine` nie).
+Mit Symbolprobe (höchstens 24 EXEs) werden EXEs ohne Symbol oder mit Standardsymbol übersprungen; es gilt die erste
+Gruppe (erkannt, vom Launcher genannt, Spielordner) mit einem echten Symbol, darin die erste EXE mit gutem Symbol, sonst
+die erste ohne Standardsymbol. Eine schärfere EXE aus einer späteren Gruppe verdrängt eine erkannte oder genannte nie:
+Gemessen bekäme SWAT 3 ohne sein GOG-Symbol sonst statt des 32-px-Symbols von `swat.exe` das des Mod-Starters
+`Last_Resort.exe`. Die tiefere Suche
+(bis drei Ebenen, höchstens 300 Ordner, 300 EXEs und 1 s; gemessen ohne Grenze im Mittel 66 ms, schlimmstenfalls 12 s)
+läuft nur, wenn es sonst gar kein echtes Symbol gibt: Ein richtiges 32-px-Steam-Symbol wird nie gegen eine fremde EXE
+aus der Tiefe getauscht. Alles läuft auf dem Arbeits-Thread der Symbole, nur für sichtbare Zeilen und nur bei offener
+Bibliothek.
+
+Gemerkte Wahl: `<Datenordner>\icon-cache.json` merkt sich je Spiel Datei, Art der Quelle, Größe und Änderungszeit der
+Datei und ob das Symbol gut war; ein Kaltstart liest dann nur diese eine Datei (die EXE-Suche dauerte kalt 12,8 s für
+alle Spiele). Neu gewählt wird, wenn sich das Spiel (Ordner, installiert oder nicht, Hinweise, EXEs, Liste der
+Hilfsprozesse) oder der Stand der Regeln (`IconSignature.RulesVersion`) ändert, die Datei eine andere Größe oder
+Änderungszeit hat oder die EXE-Wahl sie nicht mehr zulässt (etwa nach einer erweiterten Ausschlussliste oder bei einer
+Datei außerhalb des Spiels), außerdem bei einer Wahl ohne gutes Symbol nach 7 Tagen. Eine Wahl ohne gutes Symbol wird
+nicht gemerkt, solange der Spielordner fehlt (nicht installiert, Laufwerk getrennt): Nach der Installation am selben Ort
+blieben die Eingaben gleich, und ohne Ordner kostet das erneute Wählen kaum etwas. Eine gemerkte Datei wird nur gelesen,
+wenn sie lokal ist (nie UNC, auch wenn config.json und icon-cache.json von Hand dorthin zeigen). Geschrieben wird
+gesammelt, wenn keine Symbole mehr anstehen; ist die Datei kaputt, wird nur neu gewählt. Fragt eine Zeile neu an (neue
+Hinweise aus dem Einlesen, eigenes Symbol), während ihre alte Anfrage noch wartet, wird die alte übersprungen und ihr
+Ergebnis verworfen, damit es das neue Symbol nicht überschreibt. Verknüpfungen „Mit HDR starten“ zeigen dasselbe Symbol
+wie die Liste, soweit es eine .ico oder .exe ist: ein eigenes Symbol als .ico (siehe unten), sonst die gemerkte Wahl
+(etwa das Steam-Symbol statt eines Starters mit EasyAntiCheat-Symbol), ohne gemerkte Wahl dieselbe Wahl wie in der
+Liste, aber ohne tiefere Suche; ist sie ein Bild (Xbox-Logo, WebP, librarycache), die EXE wie in der Liste. Gemessen an
+allen 651 Spielen ohne gemerkte Wahl (2026-10-12): 649 Verknüpfungen zeigen dieselbe Datei wie die Liste, die zwei
+übrigen sind Xbox-Spiele mit einem Logo als Bild und ohne lesbare EXE (Symbol von HDRpilot); vorher bekamen 17
+Steam-Spiele dabei das Unreal-, UDK-, Godot- oder Unity-Symbol ihrer EXE statt des Steam-Symbols. Angelegt wird die
+Verknüpfung abseits des UI-Threads, weil die Wahl ohne gemerkte Wahl bis zu 24 EXE-Symbole liest.
+
+Eigenes Symbol (G8.3): Rechtsklick auf ein Spiel in der Liste oder Klick auf das große Symbol im Detailbereich öffnet ein
+Menü mit „Symbol ändern…“ (`ChangeIconMenuItem`) und „Symbol zurücksetzen“ (`ResetIconMenuItem`, nur mit eigenem Symbol
+frei). Der Dateidialog („Bilder und Programme“) nimmt PNG, JPG, WebP, BMP, GIF, ICO oder EXE; daraus wird außerhalb des
+UI-Threads eine PNG mit 96 px (Seitenverhältnis bleibt, Rest durchsichtig) unter
+`<Datenordner>\icons\<Schlüssel>_<Prüfsumme>.png` (mit `--config-dir` in der Testablage), die gewählte Datei bleibt
+unverändert. In config.json steht nur der Dateiname (`customIcon`); ein Pfad oder ein anderer Name als eine schlichte
+PNG wird beim Laden verworfen. Gelöscht wird nur die PNG, deren Name zum Spiel gehört (`CustomIcons.BelongsTo`), beim
+Zurücksetzen und beim Entfernen eines eigenen Spiels: „Symbol zurücksetzen“ löscht nie fremde Dateien, auch nicht die
+eines anderen Spiels, dessen Namen eine von Hand geänderte config.json nennt. Das eigene Symbol geht allem vor; fehlt
+die Datei (etwa auf einem anderen PC: config.json liegt im roamenden Profil, der Datenordner nicht) oder ist sie
+unlesbar, gilt das automatische. Die Liste zeigt die Änderung sofort. Der Dateidialog ist austauschbar
+(`ILibraryDialogs.PickIconFile`); weil UI-Automation keinen Dateidialog bedienen kann, nimmt er nur mit `--config-dir`
+die Datei aus der Umgebungsvariable `HDRPILOT_TEST_ICON_FILE`. Für Verknüpfungen entsteht beim ersten Anlegen neben der
+PNG eine .ico gleichen Namens, die die PNG unverändert enthält (PNG in ICO, seit Windows Vista): Eine Verknüpfung kann
+keine PNG zeigen, und „das eigene Symbol geht allem vor“ gilt auch für sie. Die .ico wird nur geschrieben, wenn sie fehlt
+oder nicht mehr zur PNG passt, bei „Symbol ändern…“ gleich mit erneuert und nie gelöscht, auch nicht von „Symbol
+zurücksetzen“: Verknüpfungen verweisen dauerhaft auf ihre Symboldatei und behalten so ihr Symbol, neue zeigen danach
+wieder das automatische. Die .ico bleibt bis zum Entfernen samt Datenordner liegen (höchstens eine je Spiel).
+
+Robustheit, Messung und Prüfung: Fehlende Decoder (WebP, HEIF auf anderen PCs), kaputte oder gesperrte Dateien gelten
+als „kein Symbol“ und landen nur im Debug-Protokoll; Bilddateien über 32 MB oder mit mehr als 36 Megapixeln werden nicht
+dekodiert. Messung danach (2026-10-12, Bibliothek nur lesend eingelesen, 651 Spiele): alle 651 mit Symbol, 626 gut
+(mindestens 48 px, kein Standardsymbol), kein Standardsymbol mehr; 25 bleiben unter 48 px (24 Steam-Spiele, deren
+einziges Symbol 32 px hat, und Dead Island 2 mit 44 px). Quelle: 418-mal ein Hinweis des Launchers (alle 636
+Steam-Spiele haben ein Symbol unter `steam\games`), 233-mal die EXE (Steam-Symbol 32 px und EXE ab 48 px, oder Spiele
+ohne Hinweise). Gears of War: E-Day und The Isle zeigen ihr 256-px-Steam-Symbol, Palworld das Square480x480Logo,
+SWAT 3 und 4 die 256-px-goggame-.ico. Die Wahl aller 651 Spiele nacheinander ohne gemerkte Wahl dauerte im ersten Lauf
+des Tages (Datenträger kalt, Stand vor der Korrektur der Sektionsgrenzen) 29,4 s, Median 6 ms, ein Spiel 10,5 s (Aliens:
+Dark Descent); warm rund 1 s. Das läuft auf dem Arbeits-Thread der Symbole, nie auf dem UI-Thread. Prüfung: G8.2
+(`test.ps1 -Filter "FullyQualifiedName~Icon"`),
+G8.3 (`-Filter "FullyQualifiedName~CustomIcon"` und `tools\gates\phase8-icons.ps1` an einer Testinstanz: Menü über das
+große Symbol, „Symbol zurücksetzen“ gesperrt, „Symbol ändern…“ mit vorgegebener Datei legt eine 96-px-PNG an und setzt
+`customIcon`, Zurücksetzen entfernt beides; die Liste hat ihre Wahl in `icon-cache.json` gemerkt).

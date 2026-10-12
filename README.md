@@ -80,6 +80,11 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit den Pfeiltasten verschieben, per
   Doppelklick zurücksetzen); die Breite merkt sich HDRpilot.
 - Ein Kennzeichen „HDR“ zeigt Spiele, die laut PCGamingWiki HDR unterstützen, „HDR*“ solche mit eingeschränktem HDR.
+- Die Symbole stammen aus Dateien, die schon auf dem PC liegen, nie aus dem Netz (bei Steam das offizielle
+  Steam-Symbol, siehe „So funktioniert es“). Ein eigenes Bild setzt du per Rechtsklick auf das Spiel oder per Klick auf
+  das große Symbol in den Details: **Symbol ändern…** nimmt ein Bild (PNG, JPG, WebP, BMP, GIF, ICO) oder eine EXE,
+  **Symbol zurücksetzen** zeigt wieder das automatische Symbol. Das eigene Symbol hat Vorrang vor allen anderen
+  Quellen; die gewählte Datei bleibt unverändert, HDRpilot legt eine verkleinerte Kopie (96 px) in seinem Datenordner ab.
 - Suche (Strg+F), Filter nach Quelle sowie die Filter **HDR automatisch**, **Neu** und **HDR-fähig**.
 - Sortierung nach **Name**, **Zuletzt gespielt** oder **HDR-Unterstützung**; die Wahl bleibt gespeichert. „Zuletzt
   gespielt“ kennt Steam-Spiele aus Steams eigenen Daten und alle Spiele, die HDRpilot laufen sieht.
@@ -96,7 +101,9 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - Details zum gewählten Spiel, von oben nach unten:
   - **Mit HDR starten**: schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel.
   - **Desktop** / **Startmenü**: legt eine Verknüpfung „<Spiel> (HDR)“ an, die das Spiel genauso über HDRpilot startet.
-    Im Startmenü liegt sie im Ordner „HDRpilot“.
+    Im Startmenü liegt sie im Ordner „HDRpilot“. Sie zeigt das Symbol der Liste, auch dein eigenes (dafür legt HDRpilot
+    neben dessen PNG eine ICO-Datei ab, die beim Zurücksetzen bleibt, damit die Verknüpfung ihr Symbol behält). Ist das
+    Symbol der Liste ein Bild wie ein Xbox-Logo, zeigt sie das der Spiel-EXE.
   - **Steam-Startoption kopieren** (nur bei Steam-Spielen): Notlösung für Spiele, die du lieber direkt aus Steam
     startest. Kopiert `"…\HDRpilot.exe" --wrap -- %command%`; in Steam per Rechtsklick auf das Spiel → Eigenschaften →
     Allgemein → Startoptionen einfügen. Dann ist HDR auch beim Start aus Steam an, bevor das Spiel startet
@@ -213,6 +220,21 @@ Protokoll) und lässt das Spiel normal laufen; es blockiert nie einen Spielstart
 (anschließen, Auflösung, Aufwachen aus dem Ruhezustand) holt HDRpilot Ausstehendes nach: Ein Bildschirm, der beim
 Spielstart fehlte oder kein HDR konnte, wird dann eingeschaltet, und ein gescheitertes Zurückstellen wird wiederholt.
 
+**Spielsymbole:** Je Spiel gilt die erste brauchbare Quelle, nur aus Dateien auf dem PC (nur lesend): ein eigenes
+Symbol; bei Steam das offizielle Steam-Symbol (`steam\games\<Name>.ico` laut Steams App-Daten, sonst das Symbol des
+Eintrags „Steam App <ID>“ unter „Installierte Apps“, einer Steam-Verknüpfung oder das 32-px-Bild aus Steams
+Bibliothekszwischenspeicher); bei GOG `goggame-<ID>.ico` im Spielordner oder das Symbol aus dem Zwischenspeicher von
+GOG Galaxy; bei Xbox-Spielen ihre Logos; bei Ubisoft das Symbol des Deinstallationseintrags; bei Epic, EA und
+Battle.net die Spiel-EXE. Brauchbar heißt: kein bekanntes Standardsymbol (EasyAntiCheat, Unreal, Epic Online Services,
+Godot, Unity, Windows-Programmsymbol) und in der Datei mindestens 48 px groß. Die Spiel-EXE kommt bei Steam deshalb nur
+zum Zug, wenn das Steam-Symbol fehlt, ein Standardsymbol ist oder kleiner als 48 px ist, während die EXE mindestens
+48 px hat. Anti-Cheat-Starter (EasyAntiCheat, BattlEye, EA Anti-Cheat, GameGuard, PunkBuster, Epic Online Services),
+Absturzmelder, Installer und Werkzeuge liefern nie das Symbol, auch wenn du die Liste der Hilfsprozesse änderst; bei
+Unreal-Spielen zählt zuerst `<Projekt>\Binaries\Win64\*-Shipping.exe`.
+Findet sich gar kein echtes Symbol, sucht HDRpilot bis drei Ordnerebenen tief (höchstens 300 Ordner und 1 s). Die
+gewählte Quelle merkt es sich in `icon-cache.json`, damit die Liste nach einem Neustart keine Spielordner durchsucht.
+Symbole lädt HDRpilot nur für sichtbare Zeilen und nur, solange die Bibliothek offen ist.
+
 **Schalten:** über die Windows-Anzeige-Schnittstelle (DisplayConfig), danach wird der Zustand jedes Mal erneut gelesen
 und so bestätigt. Ab Windows 11 24H2 (Build 26100) nutzt HDRpilot die neue HDR-Schnittstelle, sonst die ältere
 „Advanced Color“-Schnittstelle. Meldet die neue Schnittstelle einen Fehler, weicht HDRpilot automatisch auf die ältere
@@ -275,6 +297,8 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | HDR-Angaben je Spiel | `%LOCALAPPDATA%\HDRpilot\hdr-support.json` |
 | Vollständige HDR-Liste (nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\hdr-catalog.json` |
 | PCGamingWiki-Konto (verschlüsselt, nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\pcgw-account.dat` |
+| Eigene Spielsymbole (je Spiel eine PNG mit 96 px, für Verknüpfungen dazu eine ICO) | `%LOCALAPPDATA%\HDRpilot\icons\` |
+| Gemerkte Quelle der Spielsymbole | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
 | Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
 | Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
 | Entpackte Grafik-Bibliotheken (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot\` |
@@ -285,6 +309,9 @@ Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nic
 bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
 ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht. Einzige
 Ausnahme: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach `session-state.json`.
+
+Zu jedem Spiel stehen in `config.json` auch die Symbol-Hinweise der Launcher (`iconCandidates`, meist eine Datei) und
+gegebenenfalls das eigene Symbol (`customIcon`, nur der Dateiname im Ordner `icons`).
 
 Einstellungen gelten je Spiel über Quelle und ID (etwa `Steam:1091500`), nicht über den Namen. `config.json` wird
 atomar geschrieben. Von Hand bearbeitest du sie am besten bei beendetem HDRpilot. Ist sie danach kein gültiges JSON,
@@ -413,6 +440,10 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   gescheitert ist und gerade kein Spiel läuft (siehe „Anti-Cheat“). Das Kürzel braucht die Xbox Game Bar, schaltet nur
   um und wirkt auf alle HDR-fähigen Bildschirme; HDRpilot bestätigt aber nur den Zielbildschirm. Auf echter Hardware
   ist die Notlösung nicht getestet.
+- **Spielsymbole:** Für manche Steam-Spiele liegt auf dem PC nur ein 32-px-Symbol; in der Liste wirkt es etwas
+  unscharf (gemessen: 24 von 636). Bilder im WebP-Format (GOG Galaxy) braucht die WebP-Erweiterung von Windows; fehlt
+  sie, nimmt HDRpilot die nächste Quelle. Ein eigenes Symbol gilt nur auf diesem PC, weil die PNG im lokalen Datenordner
+  liegt; auf einem anderen PC zeigt das Spiel wieder das automatische Symbol.
 - **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.
 - **Nur auf Deutsch:** Oberfläche, Hinweise, Fehlermeldungen der Launcher-Scanner, Kommandozeile und Protokoll.
 

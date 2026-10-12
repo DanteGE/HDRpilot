@@ -23,6 +23,7 @@ public sealed class GameItemViewModel : ObservableObject
     private bool _isRunning;
     private HdrSupportStatus _hdrSupport;
     private bool _iconRequested;
+    private int _iconRequest;
     private ImageSource? _icon;
 
     internal GameItemViewModel(LibraryViewModel owner, GameConfig config)
@@ -132,7 +133,7 @@ public sealed class GameItemViewModel : ObservableObject
         _ => string.Empty,
     };
 
-    /// <summary>Symbol aus der EXE; null bis geladen (dann Ersatzsymbol der Quelle).</summary>
+    /// <summary>Symbol des Spiels (eigenes, vom Launcher oder aus der EXE); null bis geladen (dann Ersatzsymbol der Quelle).</summary>
     public ImageSource? Icon
     {
         get
@@ -147,19 +148,54 @@ public sealed class GameItemViewModel : ObservableObject
         }
     }
 
-    internal void SetIcon(ImageSource? icon)
+    /// <summary>Ein eigenes Symbol ist gesetzt („Symbol zurücksetzen“ möglich).</summary>
+    public bool HasCustomIcon => !string.IsNullOrEmpty(_config.CustomIcon);
+
+    /// <summary>Nummer der laufenden Symbolanfrage; <see cref="ReloadIcon"/> zählt weiter.</summary>
+    internal int IconRequest => _iconRequest;
+
+    /// <summary>
+    /// Ergebnis einer Symbolanfrage. Eines aus einer älteren Anfrage (vor <see cref="ReloadIcon"/>) wird verworfen: Die neue
+    /// Anfrage ist oft zuerst fertig (zuletzt angefragte zuerst), und das alte Symbol darf das neue nicht überschreiben.
+    /// </summary>
+    internal void SetIcon(ImageSource? icon, int request)
     {
-        if (icon is not null && !ReferenceEquals(icon, _icon))
+        if (request == _iconRequest && icon is not null && !ReferenceEquals(icon, _icon))
         {
             _icon = icon;
             OnPropertyChanged(nameof(Icon));
         }
     }
 
+    /// <summary>Symbol neu anfragen (eigenes Symbol geändert oder zurückgesetzt); bis dahin das Ersatzsymbol.</summary>
+    internal void ReloadIcon()
+    {
+        if (!_iconRequested)
+        {
+            return; // Noch nie sichtbar oder schon neu angefragt: wird beim nächsten Anzeigen ohnehin geladen.
+        }
+
+        _iconRequested = false;
+        _iconRequest++;
+        _icon = null;
+        OnPropertyChanged(nameof(Icon));
+    }
+
     /// <summary>Übernimmt einen neuen Stand aus der Konfiguration, ohne Schreibvorgänge auszulösen.</summary>
     internal void Apply(GameConfig config)
     {
+        var previous = _config;
         _config = config;
+        if (!string.Equals(previous.CustomIcon, config.CustomIcon, StringComparison.Ordinal))
+        {
+            OnPropertyChanged(nameof(HasCustomIcon));
+        }
+
+        if (!ReferenceEquals(previous, config) && !SameIconInputs(previous, config))
+        {
+            ReloadIcon(); // etwa neue Symbol-Hinweise nach dem Einlesen oder ein eigenes Symbol
+        }
+
         Name = config.Name;
         InstallDir = config.InstallDir;
         if (_hdrAuto != config.HdrAuto)
@@ -171,6 +207,16 @@ public sealed class GameItemViewModel : ObservableObject
         IsNew = config.IsNew;
         IsInstalled = config.IsInstalled;
     }
+
+    /// <summary>Gleiche Eingaben für das Symbol (eigenes Symbol, Hinweise, Ordner, installiert, EXEs): dann nicht neu laden.</summary>
+    private static bool SameIconInputs(GameConfig a, GameConfig b) =>
+        string.Equals(a.CustomIcon, b.CustomIcon, StringComparison.Ordinal)
+        && string.Equals(a.InstallDir, b.InstallDir, StringComparison.OrdinalIgnoreCase)
+        && a.IsInstalled == b.IsInstalled
+        && a.IconCandidates.SequenceEqual(b.IconCandidates, StringComparer.OrdinalIgnoreCase)
+        && a.KnownExecutables.SequenceEqual(b.KnownExecutables, StringComparer.OrdinalIgnoreCase)
+        && a.DetectedExecutables.SequenceEqual(b.DetectedExecutables, StringComparer.OrdinalIgnoreCase)
+        && a.ExcludedExecutables.SequenceEqual(b.ExcludedExecutables, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Ändert den Schalter ohne Rückmeldung an die Liste (Rückfall bei Schreibfehler).</summary>
     internal void SetHdrAutoSilently(bool value)

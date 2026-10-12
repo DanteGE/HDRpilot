@@ -582,4 +582,38 @@
   <data name="WideFolder_Confirm" xml:space="preserve">
     <value>Trotzdem hinzufügen</value>
   </data>
+  <data name="Icon_Change" xml:space="preserve">
+    <value>Symbol ändern…</value>
+  </data>
+  <data name="Icon_Reset" xml:space="preserve">
+    <value>Symbol zurücksetzen</value>
+  </data>
+  <data name="Icon_MenuName" xml:space="preserve">
+    <value>Symbol des Spiels</value>
+  </data>
+  <data name="Icon_ButtonName" xml:space="preserve">
+    <value>Symbol ändern oder zurücksetzen</value>
+  </data>
+  <data name="Icon_PickerTitle" xml:space="preserve">
+    <value>Bild oder Programm für das Symbol wählen</value>
+  </data>
+  <data name="Icon_PickerFilter" xml:space="preserve">
+    <value>Bilder und Programme|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif;*.ico;*.exe|Alle Dateien|*.*</value>
+    <comment>Filter des Dateidialogs: Beschreibung|Muster</comment>
+  </data>
+  <data name="Icon_Changed" xml:space="preserve">
+    <value>„{0}“ zeigt jetzt dein Symbol.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Icon_ResetDone" xml:space="preserve">
+    <value>„{0}“ zeigt wieder das automatische Symbol.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Icon_NotAnImage" xml:space="preserve">
+    <value>Aus dieser Datei lässt sich kein Symbol lesen. Wähle ein Bild (PNG, JPG, WebP, ICO) oder eine EXE mit Symbol.</value>
+  </data>
+  <data name="Icon_SaveFailed" xml:space="preserve">
+    <value>Das Symbol konnte nicht gespeichert werden: {0}</value>
+    <comment>{0} = Fehlermeldung</comment>
+  </data>
 </root>

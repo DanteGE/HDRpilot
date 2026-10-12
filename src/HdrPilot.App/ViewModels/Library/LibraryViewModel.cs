@@ -113,6 +113,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
         AddCandidateCommand = new AsyncRelayCommand(p => AddCandidateAsync(p as CandidateItemViewModel));
         DismissStatusCommand = new RelayCommand(() => StatusMessage = null);
+        ChangeIconCommand = new AsyncRelayCommand(ChangeIconAsync, () => _selectedGame is not null);
+        ResetIconCommand = new AsyncRelayCommand(ResetIconAsync, () => _selectedGame is { HasCustomIcon: true });
 
         _context.ConfigChanged += OnConfigChanged;
         _context.HdrStateChanged += OnHdrStateChanged;
@@ -157,6 +159,12 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     public AsyncRelayCommand AddCandidateCommand { get; }
 
     public RelayCommand DismissStatusCommand { get; }
+
+    /// <summary>„Symbol ändern…“ für das gewählte Spiel (Rechtsklick in der Liste oder Klick auf das Symbol im Detailbereich).</summary>
+    public AsyncRelayCommand ChangeIconCommand { get; }
+
+    /// <summary>„Symbol zurücksetzen“: eigenes Symbol des gewählten Spiels löschen, wieder automatisch.</summary>
+    public AsyncRelayCommand ResetIconCommand { get; }
 
     internal ILibraryContext Context => _context;
 
@@ -314,6 +322,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
             _selectedGame = value;
             OnPropertyChanged();
+            ChangeIconCommand.RaiseCanExecuteChanged();
+            ResetIconCommand.RaiseCanExecuteChanged();
             Details = value is null ? null : new GameDetailsViewModel(this, value);
             if (value is { IsNew: true })
             {
@@ -660,6 +670,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _details?.Apply(_selectedGame.Config);
         }
 
+        ChangeIconCommand.RaiseCanExecuteChanged();
+        ResetIconCommand.RaiseCanExecuteChanged();
+
         if (targetsChanged)
         {
             RefreshHdrState(); // Zielbildschirme in den Einstellungen geändert: Status und „Globale Einstellung (…)“ nachziehen
@@ -841,9 +854,11 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     internal async Task RemoveGameAsync(GameItemViewModel item)
     {
         var key = item.Key;
+        var customIcon = item.Config.CustomIcon;
         var ok = await WriteAsync(c => c.Games.RemoveAll(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase)));
         if (ok)
         {
+            DeleteCustomIconQuietly(key, customIcon); // keine verwaiste PNG im Datenordner
             ShowStatus(LibraryText.Format(LibraryStrings.Game_Removed, item.Name), StatusKind.Info);
         }
     }
@@ -1154,12 +1169,14 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     private async Task LoadIconAsync(GameItemViewModel item)
     {
+        // Nummer der Anfrage: Fragt die Zeile inzwischen neu an (eigenes Symbol, neue Hinweise), gilt dieses Ergebnis nicht mehr.
+        var request = item.IconRequest;
         try
         {
             var icon = await _context.Icons.GetIconAsync(item.Config, _lifetime.Token);
             if (!_disposed)
             {
-                item.SetIcon(icon);
+                item.SetIcon(icon, request);
             }
         }
         catch (OperationCanceledException)
@@ -1261,6 +1278,124 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         if (_dialogs.ShowAddGame(dialog) && dialog.Result is { } entry)
         {
             await AddManualGameAsync(entry);
+        }
+    }
+
+    /// <summary>
+    /// „Symbol ändern…“ (E86): Bild oder EXE wählen, als PNG mit 96 px im Datenordner speichern (außerhalb des
+    /// UI-Threads), in der Konfiguration eintragen und sofort zeigen. Eine nicht lesbare Datei ändert nichts.
+    /// </summary>
+    private async Task ChangeIconAsync()
+    {
+        if (_selectedGame is not { } item)
+        {
+            return;
+        }
+
+        var file = _dialogs.PickIconFile(SafeDirectory(item.InstallDir));
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            return;
+        }
+
+        var icons = _context.Icons;
+        var config = item.Config;
+        var previous = config.CustomIcon;
+        string name;
+        try
+        {
+            name = await Task.Run(() => icons.SaveCustomIcon(config, file));
+        }
+        catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or FormatException or ArgumentException or System.Runtime.InteropServices.ExternalException)
+        {
+            ShowStatus(LibraryStrings.Icon_NotAnImage, StatusKind.Error);
+            return;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.Icon_SaveFailed, ex.Message), StatusKind.Error);
+            return;
+        }
+
+        // Vor dem Eintragen vergessen: Beim erneuten Ändern bleibt der Dateiname gleich, nur das Bild ist neu.
+        icons.Forget(item.Key);
+        var written = await WriteGameAsync(item.Key, g => g.CustomIcon = name);
+        if (written && string.Equals(_context.Config.FindGame(item.Key)?.CustomIcon, name, StringComparison.Ordinal))
+        {
+            RefreshIcon(item);
+            ShowStatus(LibraryText.Format(LibraryStrings.Icon_Changed, item.Name), StatusKind.Success);
+        }
+        else if (!string.Equals(previous, name, StringComparison.OrdinalIgnoreCase))
+        {
+            DeleteCustomIconQuietly(item.Key, name); // nicht eingetragen (Schreibfehler, Spiel entfernt): keine verwaiste Datei
+        }
+    }
+
+    /// <summary>
+    /// „Symbol zurücksetzen“: Eintrag entfernen, dann die PNG löschen, aber nur die eigene des Spiels; das automatische
+    /// Symbol gilt sofort.
+    /// </summary>
+    private async Task ResetIconAsync()
+    {
+        if (_selectedGame is not { HasCustomIcon: true } item)
+        {
+            return;
+        }
+
+        var name = item.Config.CustomIcon;
+        if (!await WriteGameAsync(item.Key, g => g.CustomIcon = null))
+        {
+            return;
+        }
+
+        DeleteCustomIconQuietly(item.Key, name);
+        RefreshIcon(item);
+        ShowStatus(LibraryText.Format(LibraryStrings.Icon_ResetDone, item.Name), StatusKind.Success);
+    }
+
+    /// <summary>Symbol eines Spiels sofort neu laden (aktuellen Stand übernehmen, falls der Abgleich noch aussteht).</summary>
+    private void RefreshIcon(GameItemViewModel item)
+    {
+        if (_context.Config.FindGame(item.Key) is { } current)
+        {
+            item.Apply(current);
+        }
+
+        item.ReloadIcon();
+        ResetIconCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Löscht die PNG eines Spiels im Symbolordner, nur wenn der Name zu diesem Spiel gehört (<see cref="CustomIcons.BelongsTo"/>):
+    /// Nennt eine von Hand geänderte config.json die Datei eines anderen Spiels, fällt nur der Eintrag weg. Scheitert das
+    /// Löschen, wirkt die Datei ohne Eintrag nicht mehr und wird beim nächsten Ändern ersetzt.
+    /// </summary>
+    private void DeleteCustomIconQuietly(string gameKey, string? name)
+    {
+        if (!CustomIcons.BelongsTo(name, gameKey))
+        {
+            return;
+        }
+
+        try
+        {
+            _context.Icons.DeleteCustomIcon(name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Siehe oben: ohne Eintrag ohne Wirkung.
+        }
+    }
+
+    private string? SafeDirectory(string path)
+    {
+        try
+        {
+            return !string.IsNullOrWhiteSpace(path) && _context.FileSystem.DirectoryExists(path) ? path : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
         }
     }
 

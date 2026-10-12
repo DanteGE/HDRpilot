@@ -98,6 +98,9 @@ public interface ILibraryDialogs
 
     string? PickFolder(string? initialDirectory);
 
+    /// <summary>Bild oder EXE für „Symbol ändern…“ wählen; null bei Abbruch.</summary>
+    string? PickIconFile(string? initialDirectory);
+
     bool Confirm(string title, string message, string confirmText, bool isDanger);
 
     /// <summary>Zeigt den Dialog „Spiel hinzufügen“. True, wenn bestätigt (Ergebnis in <see cref="AddGameViewModel.Result"/>).</summary>

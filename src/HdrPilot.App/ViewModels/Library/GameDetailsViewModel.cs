@@ -50,8 +50,8 @@ public sealed class GameDetailsViewModel : ObservableObject
         IncludeExeCommand = new AsyncRelayCommand(IncludeExecutableAsync, () => _selectedExecutable is { IsExcluded: true });
         RelearnExeCommand = new AsyncRelayCommand(RelearnAsync, () => _config.DetectedExecutables.Count > 0);
         LaunchCommand = new AsyncRelayCommand(LaunchAsync, () => !_isLaunching && Item.IsInstalled && CanLaunchGame);
-        CreateDesktopShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: true), () => CanLaunchGame);
-        CreateStartMenuShortcutCommand = new RelayCommand(() => CreateShortcut(desktop: false), () => CanLaunchGame);
+        CreateDesktopShortcutCommand = new AsyncRelayCommand(() => CreateShortcutAsync(desktop: true), () => CanLaunchGame);
+        CreateStartMenuShortcutCommand = new AsyncRelayCommand(() => CreateShortcutAsync(desktop: false), () => CanLaunchGame);
         CopySteamLaunchOptionCommand = new RelayCommand(CopySteamLaunchOption, () => IsSteam);
         RemoveGameCommand = new AsyncRelayCommand(RemoveGameAsync, () => Item.IsManual);
 
@@ -187,9 +187,9 @@ public sealed class GameDetailsViewModel : ObservableObject
 
     public AsyncRelayCommand LaunchCommand { get; }
 
-    public RelayCommand CreateDesktopShortcutCommand { get; }
+    public AsyncRelayCommand CreateDesktopShortcutCommand { get; }
 
-    public RelayCommand CreateStartMenuShortcutCommand { get; }
+    public AsyncRelayCommand CreateStartMenuShortcutCommand { get; }
 
     /// <summary>Legt die Steam-Startoption in die Zwischenablage (nur Steam-Spiele).</summary>
     public RelayCommand CopySteamLaunchOptionCommand { get; }
@@ -495,13 +495,15 @@ public sealed class GameDetailsViewModel : ObservableObject
         }
     }
 
-    private void CreateShortcut(bool desktop)
+    private async Task CreateShortcutAsync(bool desktop)
     {
         try
         {
-            var path = desktop
-                ? _owner.Context.Shortcuts.CreateDesktopShortcut(_config)
-                : _owner.Context.Shortcuts.CreateStartMenuShortcut(_config);
+            // Abseits des UI-Threads: Hat die Liste für das Spiel nichts gemerkt, liest die Wahl des Symbols bis zu 24
+            // EXE-Symbole, auf einem kalten Laufwerk mehrere Sekunden lang.
+            var shortcuts = _owner.Context.Shortcuts;
+            var config = _config;
+            var path = await Task.Run(() => desktop ? shortcuts.CreateDesktopShortcut(config) : shortcuts.CreateStartMenuShortcut(config));
             ShowMessage(LibraryText.Format(LibraryStrings.Shortcut_Created, path), StatusKind.Success, DetailMessageArea.Launch);
         }
         catch (Exception ex)

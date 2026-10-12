@@ -23,7 +23,10 @@ public interface IShortcutService
     string CreateStartMenuShortcut(GameConfig game);
 }
 
-/// <summary>Symbol aus der EXE eines Spiels (zwischengespeichert, im Hintergrund geladen).</summary>
+/// <summary>
+/// Symbol eines Spiels (zwischengespeichert, im Hintergrund geladen): eigenes Symbol, Symbol des Launchers oder der EXE
+/// (E86).
+/// </summary>
 public interface IGameIconService
 {
     ImageSource? GetCachedIcon(GameConfig game);
@@ -32,6 +35,28 @@ public interface IGameIconService
 
     /// <summary>Zwischenspeicher leeren (beim Schließen des Fensters), wartende Anfragen freigeben.</summary>
     void ClearCache();
+
+    /// <summary>Symbol eines Spiels vergessen, damit die nächste Anfrage neu lädt (eigenes Symbol geändert).</summary>
+    void Forget(string gameKey);
+
+    /// <summary>
+    /// Eigenes Symbol aus einer Bild- oder EXE-Datei erzeugen und im Datenordner speichern (verkleinert auf 96 px).
+    /// Liefert den Dateinamen für <see cref="GameConfig.CustomIcon"/>. Wirft InvalidDataException, wenn die Datei
+    /// kein Symbol hergibt, und IO-Ausnahmen beim Schreiben. Läuft nicht auf dem UI-Thread.
+    /// </summary>
+    string SaveCustomIcon(GameConfig game, string sourcePath);
+
+    /// <summary>Gespeichertes eigenes Symbol löschen (ungültige oder fehlende Namen: nichts).</summary>
+    void DeleteCustomIcon(string? fileName);
+
+    /// <summary>
+    /// Symboldatei für eine Verknüpfung „Mit HDR starten“ in der Reihenfolge der Liste, soweit eine Verknüpfung sie zeigen
+    /// kann: ein eigenes Symbol als .ico neben seiner PNG, sonst die gemerkte automatische Wahl, wenn sie noch gilt, sonst
+    /// dieselbe Wahl ohne tiefere Suche; ist die Wahl ein Bild, die EXE wie in der Liste (Standardsymbole übersprungen); null
+    /// ohne Quelle. Schreibt höchstens die .ico im Datenordner. Nicht auf dem UI-Thread aufrufen (liest ohne gemerkte Wahl
+    /// Symbole).
+    /// </summary>
+    string? ShortcutIconFile(GameConfig game);
 }
 
 /// <summary>Text in die Zwischenablage legen (in Tests ersetzbar, damit kein Test die echte Zwischenablage berührt).</summary>

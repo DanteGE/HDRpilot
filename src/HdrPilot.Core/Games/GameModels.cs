@@ -49,6 +49,13 @@ public sealed record GameEntry
     /// <summary>Zuletzt gespielt laut Launcher (etwa Steam "LastPlayed"), sonst null. Für „zuletzt verwendet“.</summary>
     public DateTimeOffset? LastPlayed { get; init; }
 
+    /// <summary>
+    /// Symbol-Hinweise des Launchers, beste Quelle zuerst (E86): absolute Pfade auf .ico, .exe oder Bilder, die beim
+    /// Einlesen existierten (Steam-Symbol, goggame-ID.ico, Xbox-Logos …), höchstens <see cref="IconFiles.MaxCandidates"/>.
+    /// Leer, wenn der Launcher nichts Besseres als die Spiel-EXE kennt.
+    /// </summary>
+    public IReadOnlyList<string> IconCandidates { get; init; } = [];
+
     [JsonIgnore]
     public string Key => GameKey.Create(Source, SourceId);
 }

@@ -572,6 +572,74 @@ public sealed class XboxScannerTests
         Assert.Empty(scanner.Scan(ScanOptions.Default, Ct).Games);
     }
 
+    // ---------- Symbol-Hinweise (E86) ----------
+
+    [Fact]
+    public void Icon_hints_are_logos_from_MicrosoftGame_config_largest_first_with_scale_variants()
+    {
+        // Wolkenhof: die Spiel-EXE ist nicht lesbar, die Logos schon. Logo.png gibt es nur mit Zusatz (gemessen bei 61 von 77 Paketen).
+        var fs = WithWolkenhof(new InMemoryFileSystem())
+            .AddFile(WolkenhofContent + @"\Resources\Square480x480Logo.png", "png")
+            .AddFile(WolkenhofContent + @"\Resources\Logo.scale-100.png", "png")
+            .AddFile(WolkenhofContent + @"\Resources\Logo.scale-200.png", "png")
+            .AddFile(WolkenhofContent + @"\Resources\Logo.contrast-black_scale-400.png", "png")
+            .AddFile(WolkenhofContent + @"\Resources\StoreLogo.png", "png");
+
+        var game = Assert.Single(Scanner(fs).Scan(ScanOptions.Default, Ct).Games);
+
+        Assert.Equal(
+            [WolkenhofContent + @"\Resources\Square480x480Logo.png", WolkenhofContent + @"\Resources\Logo.scale-200.png", WolkenhofContent + @"\Resources\StoreLogo.png"],
+            game.IconCandidates);
+    }
+
+    [Fact]
+    public void Icon_hints_read_logos_in_config_and_manifest_order()
+    {
+        var config = MicrosoftGameConfig.Parse(File.ReadAllBytes(Path.Combine(InMemoryFileSystem.FixturesRoot, @"Xbox\Wolkenhof\MicrosoftGame.config")));
+        var manifest = AppxManifest.Parse(File.ReadAllBytes(Path.Combine(InMemoryFileSystem.FixturesRoot, @"Xbox\Wolkenhof\appxmanifest.xml")));
+
+        Assert.Equal([@"Resources\Square480x480Logo.png", @"Resources\Logo.png", @"Resources\StoreLogo.png", @"Resources\SmallLogo.png"], config.Logos);
+        Assert.Equal([@"Resources\Logo.png", @"Resources\SmallLogo.png", @"Resources\StoreLogo.png"], manifest.Logos);
+    }
+
+    [Theory]
+    [InlineData(@"..\..\Windows\evil.png")]
+    [InlineData(@"C:\Windows\evil.png")]
+    [InlineData(@"Resources\*.png")]
+    [InlineData(@"")]
+    public void Icon_logo_names_never_leave_the_package(string relative)
+    {
+        var fs = new InMemoryFileSystem().AddFile(@"C:\Windows\evil.png", "png").AddFile(@"C:\XboxGames\X\Content\Resources\a.png", "png");
+
+        Assert.Null(PackageAssets.Resolve(fs, @"C:\XboxGames\X\Content", relative));
+    }
+
+    [Fact]
+    public void Icon_logo_variant_with_the_largest_target_size_wins()
+    {
+        var fs = new InMemoryFileSystem()
+            .AddFile(@"C:\P\Assets\Square44x44Logo.targetsize-48.png", "png")
+            .AddFile(@"C:\P\Assets\Square44x44Logo.targetsize-256_altform-unplated.png", "png")
+            .AddFile(@"C:\P\Assets\Square44x44Logo.targetsize-256_contrast-white.png", "png");
+
+        Assert.Equal(@"C:\P\Assets\Square44x44Logo.targetsize-256_altform-unplated.png", PackageAssets.Resolve(fs, @"C:\P", @"Assets\Square44x44Logo.png"));
+    }
+
+    [Theory]
+    [InlineData(@"SmallLogo", "scale-100", "targetsize-48", "targetsize-48")] // 44 px gegen 48 px
+    [InlineData(@"Square44x44Logo", "scale-400", "targetsize-256", "targetsize-256")] // 176 px gegen 256 px
+    [InlineData(@"Square44x44Logo", "scale-200", "targetsize-48", "scale-200")] // 88 px gegen 48 px
+    [InlineData(@"Square150x150Logo", "scale-100", "targetsize-96", "scale-100")] // Größe im Namen: 150 px gegen 96 px
+    public void Icon_logo_variants_are_compared_in_pixels(string stem, string first, string second, string expected)
+    {
+        // scale- nennt Prozent der Grundgröße, targetsize- Pixel: Es gewinnt die größere Datei, nicht die größere Zahl.
+        var fs = new InMemoryFileSystem()
+            .AddFile($@"C:\P\Assets\{stem}.{first}.png", "png")
+            .AddFile($@"C:\P\Assets\{stem}.{second}.png", "png");
+
+        Assert.Equal($@"C:\P\Assets\{stem}.{expected}.png", PackageAssets.Resolve(fs, @"C:\P", $@"Assets\{stem}.png"));
+    }
+
     private static XboxScanner Scanner(InMemoryFileSystem fs) =>
         new(fs, new FakeRegistry(), new FakeEnvironment(), new FakeResolver(null));
 

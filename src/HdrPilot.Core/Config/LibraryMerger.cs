@@ -32,6 +32,7 @@ public static class LibraryMerger
                     Name = entry.Name,
                     InstallDir = entry.InstallDir,
                     KnownExecutables = [.. entry.Executables],
+                    IconCandidates = [.. entry.IconCandidates],
                     LaunchCommand = entry.LaunchCommand,
                     LaunchArguments = entry.LaunchArguments,
                     LaunchWorkingDirectory = entry.LaunchWorkingDirectory,
@@ -54,6 +55,7 @@ public static class LibraryMerger
             game.Name = entry.Name;
             game.InstallDir = entry.InstallDir;
             game.KnownExecutables = [.. entry.Executables];
+            game.IconCandidates = [.. entry.IconCandidates];
             game.LaunchCommand = entry.LaunchCommand;
             game.LaunchArguments = entry.LaunchArguments;
             game.LaunchWorkingDirectory = entry.LaunchWorkingDirectory;

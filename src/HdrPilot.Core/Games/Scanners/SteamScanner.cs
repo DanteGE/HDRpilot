@@ -22,6 +22,7 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <item>Werkzeuge und Anwendungen filtert <see cref="SteamAppFilter"/> (feste Liste, App-Typ aus appcache\appinfo.vdf, Namensregeln).</item>
 /// </list>
 /// Steam nennt keine Spiel-EXE; <see cref="GameEntry.Executables"/> bleibt leer. Start: <c>steam://rungameid/&lt;AppID&gt;</c>.
+/// Symbol-Hinweis: das offizielle Steam-Symbol (<see cref="SteamIconLocator"/>, E86).
 /// </summary>
 public sealed class SteamScanner : IGameScanner
 {
@@ -78,6 +79,7 @@ public sealed class SteamScanner : IGameScanner
         var appInfo = installed.Count == 0 ? null : LoadAppInfo(steamPath, installed, errors, cancellationToken);
 
         var games = new List<GameEntry>(installed.Count);
+        var icons = new SteamIconLocator(steamPath, _fileSystem, _registry, _environment, _logger);
         foreach (var manifest in installed)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -100,6 +102,7 @@ public sealed class SteamScanner : IGameScanner
                 Executables = [],
                 LaunchCommand = LaunchCommandFor(manifest.AppId),
                 LastPlayed = manifest.LastPlayed,
+                IconCandidates = icons.Find(manifest.AppId, info),
             });
         }
 

@@ -18,6 +18,12 @@ public sealed record AppxManifest(
 {
     public const string FileName = "appxmanifest.xml";
 
+    /// <summary>
+    /// Logos der ersten App (<c>VisualElements</c>: Square150x150Logo, Square44x44Logo) und des Pakets
+    /// (<c>Properties/Logo</c>), relativ zum Paketordner wie in der Datei, ohne Zusatz wie <c>.scale-200</c> (E86).
+    /// </summary>
+    public IReadOnlyList<string> Logos { get; init; } = [];
+
     /// <summary>Liest die Datei. Wirft <see cref="InvalidDataException"/> (deutsch) bei kaputtem XML.</summary>
     public static AppxManifest Parse(byte[] data)
     {
@@ -30,12 +36,17 @@ public sealed record AppxManifest(
             .ToList() ?? [];
 
         var mainPackage = root.Child("Dependencies")?.Child("MainPackageDependency");
+        var visuals = root.Child("Applications")?.Child("Application")?.Child("VisualElements");
+        string?[] logos = [visuals.Attr("Square150x150Logo"), visuals.Attr("Square44x44Logo"), root.Child("Properties")?.Child("Logo").Text()];
 
         return new AppxManifest(
             identity.Attr("Name"),
             identity.Attr("Publisher"),
             root.Child("Properties")?.Child("DisplayName").Text(),
             applications,
-            mainPackage is null ? null : mainPackage.Attr("Name") ?? string.Empty);
+            mainPackage is null ? null : mainPackage.Attr("Name") ?? string.Empty)
+        {
+            Logos = logos.OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+        };
     }
 }

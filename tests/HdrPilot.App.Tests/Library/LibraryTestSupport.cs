@@ -1,6 +1,7 @@
 using System.Runtime.ExceptionServices;
 using System.Windows.Media;
 using System.Windows.Threading;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Abstractions;
@@ -61,6 +62,17 @@ public static class Sta
         body();
         return Task.CompletedTask;
     });
+
+    /// <summary>Wartet, bis ein asynchroner Befehl fertig ist (seine Fortsetzungen laufen über den Dispatcher des Tests).</summary>
+    public static async Task Finished(AsyncRelayCommand command)
+    {
+        for (var i = 0; i < 500 && command.IsRunning; i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.False(command.IsRunning, "Befehl läuft noch");
+    }
 }
 
 /// <summary>UI-Dispatcher für Tests: Post sofort, Verzögerungen erst auf <see cref="RunDelayed"/>.</summary>
@@ -163,6 +175,11 @@ public sealed class FakeDialogs : ILibraryDialogs
 
     public string? PickFolder(string? initialDirectory) => Folders.Count > 0 ? Folders.Dequeue() : null;
 
+    /// <summary>Antworten für „Symbol ändern…“ (null: abgebrochen).</summary>
+    public Queue<string?> IconFiles { get; } = new();
+
+    public string? PickIconFile(string? initialDirectory) => IconFiles.Count > 0 ? IconFiles.Dequeue() : null;
+
     public bool Confirm(string title, string message, string confirmText, bool isDanger)
     {
         Confirms.Add((title, message));
@@ -178,20 +195,53 @@ public sealed class FakeIcons : IGameIconService
 
     public ImageSource? GetCachedIcon(GameConfig game) => null;
 
+    /// <summary>Wenn gesetzt, liefert das die Symbole (etwa erst später fertige Anfragen); sonst sofort keins.</summary>
+    public Func<GameConfig, Task<ImageSource?>>? Load { get; set; }
+
     public Task<ImageSource?> GetIconAsync(GameConfig game, CancellationToken cancellationToken = default)
     {
         Requested.Add(game.Key);
-        return Task.FromResult<ImageSource?>(null);
+        return Load?.Invoke(game) ?? Task.FromResult<ImageSource?>(null);
     }
 
     public int Cleared { get; private set; }
 
     public void ClearCache() => Cleared++;
+
+    public List<string> Forgotten { get; } = [];
+
+    /// <summary>Gespeicherte eigene Symbole: Spielschlüssel und gewählte Datei.</summary>
+    public List<(string Key, string Source)> Saved { get; } = [];
+
+    public List<string?> Deleted { get; } = [];
+
+    /// <summary>Wenn gesetzt, scheitert „Symbol ändern…“ damit (etwa kein Bild in der Datei).</summary>
+    public Exception? SaveFailure { get; set; }
+
+    public void Forget(string gameKey) => Forgotten.Add(gameKey);
+
+    public string SaveCustomIcon(GameConfig game, string sourcePath)
+    {
+        if (SaveFailure is not null)
+        {
+            throw SaveFailure;
+        }
+
+        Saved.Add((game.Key, sourcePath));
+        return CustomIcons.FileNameFor(game.Key);
+    }
+
+    public void DeleteCustomIcon(string? fileName) => Deleted.Add(fileName);
+
+    public string? ShortcutIconFile(GameConfig game) => null;
 }
 
 public sealed class FakeShortcuts : IShortcutService
 {
     public List<(string Kind, string Key)> Created { get; } = [];
+
+    /// <summary>Threads, auf denen die Verknüpfungen entstanden (nie der UI-Thread).</summary>
+    public List<int> Threads { get; } = [];
 
     public Exception? Failure { get; set; }
 
@@ -206,6 +256,7 @@ public sealed class FakeShortcuts : IShortcutService
             throw Failure;
         }
 
+        Threads.Add(Environment.CurrentManagedThreadId);
         Created.Add((kind, game.Key));
         return $@"C:\Links\{kind}\{game.Name} (HDR).lnk";
     }

@@ -196,6 +196,17 @@ public partial class MainWindow : ChromeWindow
         e.Handled = true;
     }
 
+    /// <summary>Klick auf das große Symbol im Detailbereich: öffnet das Menü „Symbol ändern…“ darunter (E86).</summary>
+    private void OnDetailIconClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { ContextMenu: { } menu } target)
+        {
+            menu.PlacementTarget = target;
+            menu.Placement = PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
+    }
+
     private void StaggerFirstRows()
     {
         if (!LibraryMotion.Enabled)

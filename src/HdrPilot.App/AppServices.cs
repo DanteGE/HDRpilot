@@ -63,7 +63,7 @@ public sealed partial class AppServices : IAsyncDisposable
 
     public IHdrController Hdr => Host.Hdr;
 
-    /// <summary>Windows Auto HDR je Spiel: Stand für die Oberfläche und „Auto-HDR-Einträge zurücknehmen“ (E88).</summary>
+    /// <summary>Windows Auto HDR (E88): globalen Schalter lesen und durch den Nutzer schalten (Tray-Eintrag „Auto HDR“, G9.9).</summary>
     public IAutoHdrService AutoHdr => Host.AutoHdr;
 
     public AppPaths Paths => Host.Paths;

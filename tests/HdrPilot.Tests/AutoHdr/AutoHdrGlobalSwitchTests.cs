@@ -69,6 +69,22 @@ public sealed class AutoHdrGlobalSwitchTests
     }
 
     [Fact]
+    public void Game_started_without_hdrpilot_does_not_hold_the_switch_of_an_announced_one()
+    {
+        Setup();
+        var b = _h.AddGame("2", ExeB); // auch mit „Windows Auto HDR“, aber direkt im Launcher gestartet
+
+        _h.Announce(_a);
+        Cycles(400, _a, b);
+        Cycles(9, b); // A endet, B läuft weiter
+        Assert.Equal(GlobalOn, _h.Value(Global));
+        Cycles(2, b);
+
+        Assert.Equal(GlobalOff, _h.Value(Global)); // B hielt den Schalter nicht: Windows las ihn bei seinem Start schon
+        Assert.Equal(1, _h.SetOnCount);
+    }
+
+    [Fact]
     public void Announced_start_sets_the_token_at_once_and_the_end_restores_after_the_grace_period()
     {
         Setup();

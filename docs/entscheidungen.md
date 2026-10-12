@@ -658,3 +658,15 @@ Dark Descent); warm rund 1 s. Das läuft auf dem Arbeits-Thread der Symbole, nie
 G8.3 (`-Filter "FullyQualifiedName~CustomIcon"` und `tools\gates\phase8-icons.ps1` an einer Testinstanz: Menü über das
 große Symbol, „Symbol zurücksetzen“ gesperrt, „Symbol ändern…“ mit vorgegebener Datei legt eine 96-px-PNG an und setzt
 `customIcon`, Zurücksetzen entfernt beides; die Liste hat ihre Wahl in `icon-cache.json` gemerkt).
+
+**E87 Versionsnummer sichtbar (Wunsch des Nutzers, G8.1):** Die Version steht an genau einer Stelle (`AppVersion`):
+Major.Minor.Build der HDRpilot-Assembly aus `Directory.Build.props`, nach derselben Regel wie Setup und Eintrag unter
+„Installierte Apps“ (`SetupSupport.Normalize`); der Setup übernimmt sie als eigene Version, die Zahl steht nie fest im
+Text. Angezeigt wird sie rechts im Kopf der Einstellungen als „HDRpilot 1.3.0“ (zurückgenommenes Info-Symbol statt eines
+farbigen Punkts, der in HDRpilot für einen Status steht) und im Tray-Menü als graue, nicht anklickbare erste Zeile unter
+dem Kopf. Dort zeigte die erste Fassung „HDRpilot 1.2.0“ direkt unter dem Kopf „HDRpilot“; der Nutzer wählte am
+2026-10-12 „Version 1.2.0“ (`AppVersionLabelFormat`). Die Zeile ist nicht fokussierbar, die Pfeiltasten springen an ihr
+vorbei (Unit-Test mit echter WPF-Tastaturnavigation und `phase6-traymenu.ps1` am echten Desktop mit Zustimmung des
+Nutzers). Die Sichtbarkeit der Tray-Zeile prüft der Render-Test über den Vergleich mit derselben Zeile ohne Text: reine
+Farbpixel hingen bei der dünnen Schrift an den Ziffern der Version (29 bei „Version 1.3.0“ gegen die alte Schwelle 30).
+Das Startprotokoll schreibt die Version weiter vierstellig (Core kennt `AppVersion` nicht); das ist nur ein Format.

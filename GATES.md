@@ -270,12 +270,32 @@ ausdrücklichen Wunsch. Einzige Ausnahme: Das Entfernen stellt einen gemerkten H
       „HDR jetzt …“, Pfeil nach oben springt an der Versionszeile vorbei zu „HDRpilot beenden“.
     - Gegenproben: 9 bei der Umsetzung, 2 für den Tastatur-Test, alter Tray-Text im Format → 2 Tests rot.
 
-- [ ] G8.2: Ersatz-Symbole ohne Netz (Wunsch des Nutzers, E86): Steam-Spiele zeigen zuerst das offizielle Steam-Symbol (`steam\games\<clienticon>.ico` aus appinfo.vdf, sonst `DisplayIcon` des Eintrags „Steam App <id>“ in der 64-Bit-Ansicht, `.url`-Verknüpfung, librarycache), die EXE nur, wenn das Steam-Symbol fehlt, ein Standardsymbol oder deutlich unschärfer ist; GOG `goggame-<id>.ico`/Galaxy-Symbol, Xbox-Logos aus `MicrosoftGame.config`/`AppxManifest` (mit `.scale-*`), Ubisoft `DisplayIcon`, Epic/EA EXE; bessere EXE-Wahl (Ausschlussliste nur für Symbole, Unreal `*-Shipping.exe`, begrenzte tiefere Suche); bekannte Standardsymbole (EasyAntiCheat, Unreal, Epic-Starter, Godot, Unity, Windows) werden erkannt. Nur lesend, keine Netzzugriffe, keine Last im Leerlauf. Per Unit-Tests mit Gegenproben und Messung an der echten Bibliothek belegt (Ziel: 647 von 647 mit eigenem Symbol, davon mindestens 618 mit ≥ 48 px)
+- [x] G8.2: Ersatz-Symbole ohne Netz (Wunsch des Nutzers, E86): Steam-Spiele zeigen zuerst das offizielle Steam-Symbol (`steam\games\<clienticon>.ico` aus appinfo.vdf, sonst `DisplayIcon` des Eintrags „Steam App <id>“ in der 64-Bit-Ansicht, `.url`-Verknüpfung, librarycache), die EXE nur, wenn das Steam-Symbol fehlt, ein Standardsymbol oder deutlich unschärfer ist; GOG `goggame-<id>.ico`/Galaxy-Symbol, Xbox-Logos aus `MicrosoftGame.config`/`AppxManifest` (mit `.scale-*`), Ubisoft `DisplayIcon`, Epic/EA EXE; bessere EXE-Wahl (Ausschlussliste nur für Symbole, Unreal `*-Shipping.exe`, begrenzte tiefere Suche); bekannte Standardsymbole (EasyAntiCheat, Unreal, Epic-Starter, Godot, Unity, Windows) werden erkannt. Nur lesend, keine Netzzugriffe, keine Last im Leerlauf. Per Unit-Tests mit Gegenproben und Messung an der echten Bibliothek belegt (Ziel: 647 von 647 mit eigenem Symbol, davon mindestens 618 mit ≥ 48 px; die Bibliothek hat inzwischen 651 Spiele, Ziel damit alle mit eigenem Symbol und mindestens 95 % mit ≥ 48 px)
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Icon" -MinTests 30
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-12 auf phase5/release nach dem Zusammenführen von feature/icons (07e4f29): exit 0, TESTS_OK 275.
+    - Messung an einer Kopie der echten Bibliothek (per WMI außerhalb des Containers kopiert, nur lesend eingelesen mit
+      `hdrpilot games import --config-dir`, Wahl über den Code der App), Stand 2c61c18:
+      - 651 von 651 Spielen mit eigenem Symbol, 0 Standardsymbole, 626 mit ≥ 48 px (96,2 %). Die übrigen 25 haben
+        lokal kein schärferes eigenes Symbol: 24 Steam-Spiele mit nur 32 px und Dead Island 2 mit 44 px.
+      - Alle 53 Spiele ohne gutes Symbol vorher haben jetzt ein eigenes, 40 davon mit ≥ 48 px.
+      - Gears of War: E-Day und The Isle zeigen ihr 256-px-Steam-Symbol statt des EasyAntiCheat-Symbols. Die EXE-Rückfälle
+        sind `GoWEDay-Steam.exe` und `TheIsleClient-Win64-Shipping.exe`.
+      - Alle Bildtafeln wurden angesehen: kein Anti-Cheat-, Engine- oder Standardsymbol; keine Rückschritte.
+      - Wahl kalt im Median 1 ms; warm über `icon-cache.json` ohne jede Ordnersuche.
+    - Gesamtlauf auf phase5/release: build.ps1 BUILD_OK_0_WARNINGS, test.ps1 TESTS_OK 2192, PHASE2_SCANNER_TESTS_OK,
+      PHASE2_SCAN_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE5_README_OK,
+      PHASE6_NAME_OK, PHASE6_UI_OK, PHASE7_SETUP_OK, PHASE7_SETUP_UI_OK, PHASE5_PUBLISH_OK (Setup 1.3.0).
+    - Drei Prüfrunden mit unabhängigen Prüfern, alle Funde behoben oder begründet abgelehnt (E86).
 
-- [ ] G8.3: Eigenes Symbol per Rechtsklick in der Bibliothek („Symbol ändern…“ für Bild- oder EXE-Datei, „Symbol zurücksetzen“), verkleinert im Datenordner gespeichert, hat Vorrang vor allen automatischen Quellen; per Unit-Tests und UI-Automation an einer Testinstanz belegt
+- [x] G8.3: Eigenes Symbol per Rechtsklick in der Bibliothek („Symbol ändern…“ für Bild- oder EXE-Datei, „Symbol zurücksetzen“), verkleinert im Datenordner gespeichert, hat Vorrang vor allen automatischen Quellen; per Unit-Tests und UI-Automation an einer Testinstanz belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~CustomIcon" -MinTests 6
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-12 auf phase5/release (07e4f29): exit 0, TESTS_OK 29.
+    - UI-Automation an einer Testinstanz: `tools\gates\phase8-icons.ps1` exit 0, PHASE8_ICONS_OK. „Symbol zurücksetzen“
+      ist zuerst gesperrt. „Symbol ändern…“ mit vorgegebener Datei legt eine 96-px-PNG an und setzt `customIcon`;
+      Zurücksetzen entfernt beides.
+    - Das Kontextmenü einer Listenzeile ist per Unit-Test an einer echten Zeile belegt. UI-Automation kann ohne echte
+      Eingabe nicht rechtsklicken.
+    - Verknüpfungen zeigen das eigene Symbol über eine `.ico` neben der PNG im Datenordner.
+    - Gegenproben bei jeder Korrekturrunde (insgesamt über 30, alle rot).

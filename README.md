@@ -20,10 +20,10 @@ Infobereich.
 
 ## Einrichtung
 
-Empfohlen ist der Setup `HDRpilot-Setup-1.2.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
+Empfohlen ist der Setup `HDRpilot-Setup-1.3.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
 Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HDRpilot` (siehe „Ohne Installation“).
 
-1. `HDRpilot-Setup-1.2.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
+1. `HDRpilot-Setup-1.3.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
    Start nach („Weitere Informationen“ → „Trotzdem ausführen“).
 2. Der Setup zeigt den Programmordner `%LOCALAPPDATA%\Programs\HDRpilot` und drei Optionen: **Mit Windows starten**
    (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
@@ -326,7 +326,7 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 
 | Aufruf | Wirkung |
 |---|---|
-| `HDRpilot-Setup-1.2.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
+| `HDRpilot-Setup-1.3.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
 | `--autostart on\|off` | Mit Windows starten, danach mit der installierten EXE (ohne Angabe: wie bisher, also an, wenn schon eine HDRpilot.exe mit Windows startet, auch aus einem anderen Ordner; bei einer neuen Installation an) |
 | `--desktop-shortcut on\|off` | Desktop-Verknüpfung (ohne Angabe: wie bisher, bei einer neuen Installation aus) |
 | `--no-launch` | HDRpilot danach nicht starten. Für Skripte, die auf das Ende warten (etwa `Start-Process -Wait`, das auch auf gestartete Programme wartet) oder die Ausgabe lesen |
@@ -505,7 +505,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
 `tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab und daneben den Setup
-`artifacts\publish\HDRpilot-Setup-1.2.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenzhinweisen und
+`artifacts\publish\HDRpilot-Setup-1.3.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenzhinweisen und
 Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
 `HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
 `GATES.md`.

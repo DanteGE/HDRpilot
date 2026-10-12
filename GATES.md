@@ -299,3 +299,42 @@ ausdrücklichen Wunsch. Einzige Ausnahme: Das Entfernen stellt einen gemerkten H
       Eingabe nicht rechtsklicken.
     - Verknüpfungen zeigen das eigene Symbol über eine `.ico` neben der PNG im Datenordner.
     - Gegenproben bei jeder Korrekturrunde (insgesamt über 30, alle rot).
+
+## Phase 9: Windows Auto HDR pro Spiel (Wunsch des Nutzers 2026-10-12, E88)
+
+Entscheidungen des Nutzers:
+- **Platz:** eigener Abschnitt „BILD“ im Spiel-Tab, klar getrennt von „HDR automatisch“. In der Liste nur ein Abzeichen
+  „AUTO HDR“.
+- **Unabhängig:** schaltbar ohne „HDR automatisch“, mit Hinweis, wenn „HDR automatisch“ aus ist.
+- **Natives HDR laut PCGamingWiki:** ausgegraut, aber nutzbar, mit Hinweis.
+- **Technik:** beide Wege einbauen, pro Spiel und notfalls global nur während das Spiel läuft. Der Versuch am echten
+  System folgt später.
+- RTX HDR bleibt zurückgestellt.
+
+- [ ] G9.1: Option und Oberfläche: `GameConfig` speichert Auto HDR pro Spiel (alte Konfigurationen laden unverändert); Spiel-Tab mit Abschnitt „BILD“ und Schalter „Windows Auto HDR“ (AutomationId `DetailAutoHdr`) samt Erklärung; Hinweis, wenn „HDR automatisch“ aus ist; bei nativem HDR ausgegraut, aber bedienbar, mit Hinweis; Abzeichen „AUTO HDR“ in der Liste (nur Anzeige); alle Texte in resx; per Unit-Tests (mit Gegenproben) und UI-Automation an einer Testinstanz belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdr" -MinTests 25
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G9.2: Pro-Spiel-Weg: Für jede bekannte Spiel-EXE (ohne Hilfs- und Fremdprogramme) setzt HDRpilot in `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` (Wertname = voller EXE-Pfad) nur das Token `AutoHDREnable=2097` und lässt alle anderen Tokens, ihre Reihenfolge und den Abschluss unverändert; Ausschalten stellt den Originalzustand exakt wieder her (fehlte der Wert, wird er gelöscht); seit dem Schreiben extern geänderte Werte und Werte, die kein sauberer REG_SZ sind, bleiben unangetastet (protokolliert); Zustand in einer Datei im Datenordner; Abgleich beim Start und wenn neue EXEs gelernt werden; nie HKLM, keine Adminrechte; per Unit-Tests gegen eine Test-Registry (nie die echten Schlüssel) mit Gegenproben belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrRegistry" -MinTests 15
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G9.3: Notlösung „global nur während des Spiels“ (Einstellung, Standard aus): Läuft ein Spiel mit Auto HDR, setzt HDRpilot im globalen Wert `DirectXUserGlobalSettings` das Token `AutoHDREnable=1` (bei Starts über HDRpilot, Verknüpfung und Steam-Startoption sowie bei der Frühwarnung schon vor dem Spielprozess) und stellt danach den vorherigen Zustand her, nach einem Absturz von HDRpilot beim nächsten Start; nie, solange kein solches Spiel läuft; per Unit-Tests mit Gegenproben belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrGlobal" -MinTests 8
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G9.4: Rückbau: Die Schaltfläche „Auto-HDR-Einträge zurücknehmen“ in den Einstellungen nimmt alle von HDRpilot geschriebenen Werte zurück, das Entfernen über den Setup ebenso (Testwurzel, nie die echte Registry), das Entfernen eines Spiels seine eigenen; per Unit-Tests und Setup-Gate belegt
+  CHECK: ps tools\gates\phase7-setup.ps1
+  EXPECT: PHASE7_SETUP_OK
+  EVIDENCE: pending
+
+- [ ] G9.5: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün, Anti-Cheat-Architekturtest unverändert grün; README (Abschnitt Auto HDR, Abgrenzung zu „HDR automatisch“) und E88 passen zu den resx-Texten; unabhängige Prüfung mit Gegenprüfung
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: pending
+
+- [ ] G9.6: Versuch am echten System mit dem Nutzer (später; Einzelspieler-Spiel ohne Anti-Cheat, DirectX 11/12, ohne eigenes HDR): Greift der Pro-Spiel-Weg bei global ausgeschaltetem Auto HDR unter 26H2 (Win+G-Regler aktiv)? Greift er, wenn HDRpilot HDR erst nach dem Spielstart einschaltet? Danach den Standard der Notlösung festlegen
+  EVIDENCE: pending (Nutzer: „Erst bauen, später testen“)

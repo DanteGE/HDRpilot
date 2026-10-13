@@ -10,7 +10,7 @@
     <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
     <Company>HDRpilot</Company>
     <Product>HDRpilot</Product>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <NeutralLanguage>de</NeutralLanguage>
     <!-- Symbole in der Assembly: keine losen .pdb-Dateien neben der EXE, Stapelverfolgungen behalten Datei und Zeile. -->
     <DebugType>embedded</DebugType>

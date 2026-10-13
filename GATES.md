@@ -316,10 +316,10 @@ Entscheidungen des Nutzers (2026-10-12):
     HDRpilot.
 - RTX HDR bleibt zurückgestellt.
 
-- [ ] G9.1: Option und Oberfläche: `GameConfig` speichert Auto HDR pro Spiel (alte Konfigurationen laden unverändert); Spiel-Tab mit Abschnitt „BILD“ und Schalter „Windows Auto HDR“ (AutomationId `DetailAutoHdr`) samt Erklärung und dem Hinweis „wirkt nur, wenn das Spiel über HDRpilot startet (Starten, Verknüpfung, Steam-Startoption)“; Hinweis, wenn „HDR automatisch“ aus ist; bei nativem HDR ausgegraut, aber bedienbar, mit Hinweis; Abzeichen „AUTO HDR“ in der Liste (nur Anzeige); alle Texte in resx; per Unit-Tests (mit Gegenproben) und UI-Automation an einer Testinstanz belegt
+- [x] G9.1: Option und Oberfläche: `GameConfig` speichert Auto HDR pro Spiel (alte Konfigurationen laden unverändert); Spiel-Tab mit Abschnitt „BILD“ und Schalter „Windows Auto HDR“ (AutomationId `DetailAutoHdr`) samt Erklärung und dem Hinweis „wirkt nur, wenn das Spiel über HDRpilot startet (Starten, Verknüpfung, Steam-Startoption)“; Hinweis, wenn „HDR automatisch“ aus ist; bei nativem HDR ausgegraut, aber bedienbar, mit Hinweis; Abzeichen „AUTO HDR“ in der Liste (nur Anzeige); alle Texte in resx; per Unit-Tests (mit Gegenproben) und UI-Automation an einer Testinstanz belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdr" -MinTests 25
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-13 auf phase5/release nach dem Zusammenführen (1.4.0): exit 0, TESTS_OK 217 (alle AutoHdr-Tests). UI-Automation an der Testinstanz: phase9-autohdr-ui.ps1 exit 0, PHASE9_AUTOHDR_UI_OK (Abschnitt BILD, Schalter, Hinweise, Abzeichen, Konfiguration). Drei unabhängige Prüfer, Korrektur, Gegenprüfung, zwei Nachkorrekturen; Gegenproben bei jeder Runde rot.
 
 - [ ] G9.2: Pro-Spiel-Weg (`AutoHDREnable=2097` je EXE)
   EVIDENCE: Livetest 2026-10-12 (G9.6): wirkt unter 26H2 bei global ausgeschaltetem Auto HDR nicht.
@@ -327,20 +327,20 @@ Entscheidungen des Nutzers (2026-10-12):
     HDRpilot schreibt keine Werte pro EXE. Falls ein späteres Windows-Update den Weg wieder beachtet: Entwurf und Code
     stehen in `feature/autohdr-core` (34c83cf).
 
-- [ ] G9.3: Globaler Schalter vor dem Start (Standard, keine Einstellung): Startet ein Spiel mit Auto HDR über einen Weg, den HDRpilot vorher kennt (Starten/„Mit HDR starten“, Verknüpfung, Steam-Startoption, Frühwarnung von Steam/Epic), setzt HDRpilot vor dem Spielprozess Windows-HDR und im Wert `DirectXUserGlobalSettings` das Token `AutoHDREnable=1` (andere Tokens, Reihenfolge und Abschluss bleiben) und stellt nach der Sitzung (Neustart-Puffer beachtet) den vorherigen Zustand her, nach einem Absturz von HDRpilot beim nächsten Start; hat der Nutzer den Schalter inzwischen selbst geändert, bleibt seine Wahl; nie, solange kein solches Spiel startet oder läuft; per Unit-Tests gegen eine Testwurzel (nie die echten Schlüssel) mit Gegenproben belegt
+- [x] G9.3: Globaler Schalter vor dem Start (Standard, keine Einstellung): Startet ein Spiel mit Auto HDR über einen Weg, den HDRpilot vorher kennt (Starten/„Mit HDR starten“, Verknüpfung, Steam-Startoption, Frühwarnung von Steam/Epic), setzt HDRpilot vor dem Spielprozess Windows-HDR und im Wert `DirectXUserGlobalSettings` das Token `AutoHDREnable=1` (andere Tokens, Reihenfolge und Abschluss bleiben) und stellt nach der Sitzung (Neustart-Puffer beachtet) den vorherigen Zustand her, nach einem Absturz von HDRpilot beim nächsten Start; hat der Nutzer den Schalter inzwischen selbst geändert, bleibt seine Wahl; nie, solange kein solches Spiel startet oder läuft; per Unit-Tests gegen eine Testwurzel (nie die echten Schlüssel) mit Gegenproben belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrGlobal" -MinTests 10
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-13: exit 0, TESTS_OK 83. phase9-autohdr-ui.ps1: „Mit HDR starten“ startet ein harmloses Prüfprogramm, das beim eigenen Start AutoHDREnable=1 in der Testwurzel sah; danach exakt zurückgestellt, der echte Schlüssel blieb byteweise unverändert. Wiederholversuch nach Fehlern nur noch, solange der Start aussteht (Gegenprobe rot).
 
-- [ ] G9.4: Rückbau: Das Entfernen über den Setup stellt einen von HDRpilot eingeschalteten globalen Schalter zurück (Testwurzel, nie die echte Registry); keine Werte pro EXE; per Unit-Tests und Setup-Gate belegt
+- [x] G9.4: Rückbau: Das Entfernen über den Setup stellt einen von HDRpilot eingeschalteten globalen Schalter zurück (Testwurzel, nie die echte Registry); keine Werte pro EXE; per Unit-Tests und Setup-Gate belegt
   CHECK: ps tools\gates\phase7-setup.ps1
   EXPECT: PHASE7_SETUP_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-13: exit 0, PHASE7_SETUP_OK und PHASE7_SETUP_UI_OK (Schritt „Auto HDR zurückstellen“). Ein gesperrter, schon erledigter Merker bleibt beim Löschen der Daten samt Kennzeichen liegen (Test mit Gegenprobe).
 
-- [ ] G9.5: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün, Anti-Cheat-Architekturtest unverändert grün; README (Abschnitt Auto HDR, Abgrenzung zu „HDR automatisch“, Ergebnis des Livetests, Tipp: Einstellungsfenster der Game Bar neu öffnen) und E88 passen zu den resx-Texten; unabhängige Prüfung mit Gegenprüfung
+- [x] G9.5: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün, Anti-Cheat-Architekturtest unverändert grün; README (Abschnitt Auto HDR, Abgrenzung zu „HDR automatisch“, Ergebnis des Livetests, Tipp: Einstellungsfenster der Game Bar neu öffnen) und E88 passen zu den resx-Texten; unabhängige Prüfung mit Gegenprüfung
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-13 auf phase5/release, Version 1.4.0, alle exit 0: BUILD_OK_0_WARNINGS, TESTS_OK 2410, PHASE9_AUTOHDR_UI_OK, PHASE2_SCANNER_TESTS_OK, PHASE2_SCAN_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE7_SETUP_OK, PHASE7_SETUP_UI_OK; AntiCheat-Tests im Gesamtlauf. phase5-publish.ps1: 24 Prüfungen ok, nur „hdr status“ exit 3 (Monitor aus, keine aktiven Bildschirme; umgebungsbedingt, bei 1.3.0 mit Monitor grün).
 
 - [x] G9.6: Versuch am echten System mit dem Nutzer (Einzelspieler-Spiel ohne Anti-Cheat, DirectX 11/12, ohne eigenes HDR)
   EVIDENCE: 2026-10-12, gemeinsam mit dem Nutzer, Werte per WMI außerhalb des Containers gesetzt, Sicherung
@@ -356,15 +356,15 @@ Entscheidungen des Nutzers (2026-10-12):
       schließen und neu öffnen muss.
     - Sekiro hat eigenes HDR (PCGamingWiki-Status „Native“ stimmte).
 
-- [ ] G9.7: Steam-Startoption anbieten: Schaltet der Nutzer Auto HDR für ein Steam-Spiel ein, ohne dass die HDRpilot-Startoption gesetzt ist, bietet HDRpilot an, sie zu setzen (vorhandene Funktion, gleiche Rückfragen und Bedingungen wie dort, z. B. Steam beendet); Ablehnen ändert nichts; per Unit-Tests belegt
+- [x] G9.7: Steam-Startoption anbieten: Schaltet der Nutzer Auto HDR für ein Steam-Spiel ein, ohne dass die HDRpilot-Startoption gesetzt ist, bietet HDRpilot an, sie zu setzen (vorhandene Funktion, gleiche Rückfragen und Bedingungen wie dort, z. B. Steam beendet); Ablehnen ändert nichts; per Unit-Tests belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrSteam" -MinTests 4
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-13: exit 0, TESTS_OK 12. Umsetzung: Angebot „Steam-Startoption kopieren“ mit der vorhandenen Funktion (Zwischenablage und Anleitung). HDRpilot schreibt nie in Steams Dateien; eine Funktion zum Setzen gibt es nicht (Abweichung von der ursprünglichen Beschreibung „setzen“, im Abschlussbericht genannt).
 
 - [ ] G9.8: Abschlusstest am echten System mit dem Nutzer (nach Installation mit Zustimmung): Start über HDRpilot und über die Steam-Startoption → Auto HDR aktiv (Regler bedienbar); nach dem Spiel ist der globale Schalter wieder aus; der Tray-Eintrag „Auto HDR“ schaltet den Windows-Schalter sichtbar um (Windows-Einstellungen → HDR)
   EVIDENCE: pending
 
-- [ ] G9.9: Tray-Eintrag „Auto HDR“ (Wunsch des Nutzers 2026-10-12): im Tray-Menü unter „HDR jetzt …“ ein Eintrag mit Häkchen, der den globalen Auto-HDR-Schalter von Windows anzeigt und umschaltet (nur das Token `AutoHDREnable`, andere Tokens bleiben); gilt für die nächsten Spielstarts, auch ohne HDRpilot; eine Änderung dort ist die Wahl des Nutzers und wird nach einer Auto-HDR-Sitzung nicht zurückgestellt; Pfeiltasten und die übrigen Einträge funktionieren weiter; Text und Hinweis in resx; per Unit-Tests (mit Gegenproben, Testwurzel statt echter Registry) belegt, `phase6-traymenu.ps1` kennt den Eintrag (läuft nur am echten Desktop mit Zustimmung)
+- [x] G9.9: Tray-Eintrag „Auto HDR“ (Wunsch des Nutzers 2026-10-12): im Tray-Menü unter „HDR jetzt …“ ein Eintrag mit Häkchen, der den globalen Auto-HDR-Schalter von Windows anzeigt und umschaltet (nur das Token `AutoHDREnable`, andere Tokens bleiben); gilt für die nächsten Spielstarts, auch ohne HDRpilot; eine Änderung dort ist die Wahl des Nutzers und wird nach einer Auto-HDR-Sitzung nicht zurückgestellt; Pfeiltasten und die übrigen Einträge funktionieren weiter; Text und Hinweis in resx; per Unit-Tests (mit Gegenproben, Testwurzel statt echter Registry) belegt, `phase6-traymenu.ps1` kennt den Eintrag (läuft nur am echten Desktop mit Zustimmung)
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrTray" -MinTests 5
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-13: exit 0, TESTS_OK 11. phase6-traymenu.ps1 kennt den Eintrag (nur bearbeitet; der Lauf mit echter Maus folgt mit dem Nutzer, G9.8).

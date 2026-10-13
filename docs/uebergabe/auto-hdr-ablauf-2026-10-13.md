@@ -570,3 +570,126 @@ Gate outputs, the probe and mutation logs are in `<Notizordner>\autohdr\rc\`:
 - `build.out`, `test-full.out`, `test-autohdr.out`, `test-global.out`, `test-steam.out`, `test-tray.out`, `phase9.out`, `phase7.out`, `probe.out`
 - `mutate-rc.ps1`, `mutations-rc.log`
 
+
+## Letzte Korrekturen (Wiederholversuch, Kennzeichen erledigt)
+
+Both findings were real. Both are fixed, and every requested gate passed after the last code change. The work is committed as **0b597d5** on feature/autohdr, on top of 726e846, and the worktree is clean.
+
+**Finding 2 (retry turned the switch on for a game already running): confirmed and fixed.**
+- **Bug:** `Evaluate` called `Activate` for any active key once the 30 s retry wait had passed, including games that were only running.
+- **Fix:** `Activate` is now only reached if at least one active key is still announced (not yet running). A game that is only running can keep a switch HDRpilot already holds, but never causes a new set. The three "neuer Versuch in 30 s" warnings now add "falls der Start dann noch aussteht".
+
+**Finding 3 (the "Released" mark could not be saved while a lock blocked deleting the marker): confirmed and fixed.**
+- **Bug:** the same lock that blocks the delete also blocks the atomic replace, so the "Released" status was never written. The marker stayed "Applied", and the next start or the uninstaller would turn off a tray "on" choice.
+- **Fix:** the "done" mark now goes into a separate file, `autohdr-global.done`, holding `SetAt` and `Written` of the abandoned marker.
+- **App start and setup cleanup:** both treat a marker that matches the done file as finished. They never restore it and try to delete both files.
+- **New behaviour to know about:**
+  - A done file from an earlier set doesn't match a newer marker (different time).
+  - The marker file is never deleted while a new start holds the switch.
+  - A leftover done file with no marker is removed in the first cycle.
+  - If the done file can't be read, nothing is touched: the app leaves Auto HDR off for that run, and the setup reports the AutoHdrNotRestored warning.
+  - The "Released" status is still read from older files, but no longer written.
+- **Fake file system:** when deleting is blocked, replacing the existing file now fails too, as on NTFS.
+- **Docs:** E88 is corrected (CRLF kept), and the code comments are updated.
+- **README:** I also changed it, which you didn't ask for. `phase5-readme` requires every file in `AppPaths` to be listed, so it now has a table row for `autohdr-global.done` and a mention in the uninstall paragraph.
+
+**Changed files:**
+- `src/HdrPilot.Core/AutoHdr/AutoHdrGlobalSwitch.cs`
+- `src/HdrPilot.Core/AutoHdr/AutoHdrState.cs`
+- `src/HdrPilot.Core/AutoHdr/AutoHdrCleanup.cs`
+- `src/HdrPilot.Core/AutoHdr/AutoHdrService.cs`
+- `src/HdrPilot.Core/Config/AppPaths.cs`
+- `tests/HdrPilot.Tests/TestSupport/InMemoryFileSystem.cs`
+- `tests/HdrPilot.Tests/AutoHdr/AutoHdrHarness.cs`
+- `tests/HdrPilot.Tests/AutoHdr/AutoHdrGlobalSwitchTests.cs`
+- `tests/HdrPilot.Tests/AutoHdr/AutoHdrGlobalUserSwitchTests.cs`
+- `tests/HdrPilot.App.Tests/Setup/Engine/SetupUninstallAutoHdrTests.cs`
+- `docs/entscheidungen.md`
+- `README.md`
+
+**Mutation checks:** every mutation turned its filtered tests red, and every file was restored with a matching hash.
+
+| # | Mutation | Red tests |
+|---|---|---|
+| M1 | The old retry behaviour (any active key may trigger a set) | `Retry_after_a_failure_never_sets_the_switch_once_the_game_runs`: 3 of 3 (marker, read and write failures) |
+| M2a | The done file is never written | `Users_choice_with_a_locked_marker_is_never_restored_after_hdrpilot_ends`: 1 of 1 |
+| M2b | App start ignores the done file | same test, 1 of 1 |
+| M2c | The old approach (save "Released" into the marker) | same test, 1 of 1 |
+| M3 | Matching ignores `SetAt` | `Old_done_mark_does_not_protect_a_new_marker_after_a_crash` and `Done_mark_of_an_earlier_marker_does_not_stop_the_restore`: 2 of 2 |
+| M4 | Setup cleanup ignores the done file | `Marker_with_a_matching_done_mark_is_only_deleted_and_never_restored`: 1 of 1 |
+| M5 | Tidy deletes the marker even while the switch is held | `New_start_while_the_marker_is_locked_sets_nothing_and_a_later_one_holds_with_its_own_marker`: 1 of 1 |
+| M6 | Fake file system no longer blocks replace when delete is locked | same test, 1 of 1 |
+| M7 | A leftover done file at start is ignored | `Leftover_done_mark_without_a_marker_is_deleted_in_the_first_cycle`: 1 of 1 |
+| M8 | Over-broad fix (no retry while any game runs) | `Retry_while_one_game_runs_still_sets_for_a_start_that_is_still_announced`: 1 of 1 |
+
+**Gate markers** (all exit 0):
+- build.ps1: `BUILD_OK_0_WARNINGS`
+- full test.ps1: `TESTS_OK 2408`
+- `-Filter AutoHdr -MinTests 25`: `TESTS_OK 215`
+- `-Filter AutoHdrGlobal -MinTests 10`: `TESTS_OK 82`
+- `-Filter AutoHdrTray -MinTests 5`: `TESTS_OK 11`
+- `-Filter AutoHdrSteam -MinTests 4`: `TESTS_OK 12`
+- phase9-autohdr-ui.ps1: `PHASE9_AUTOHDR_UI_OK`
+- phase7-setup.ps1: `PHASE7_SETUP_OK`
+- phase7-setup-ui.ps1: `PHASE7_SETUP_UI_OK`
+- phase5-readme.ps1: `PHASE5_README_OK`
+- phase4-resources.ps1: `PHASE4_RESOURCES_OK`, plus an informational "PRÜFEN" line about `src\HdrPilot.App\Setup\UI\SetupRunner.cs:38`, a file this change doesn't touch.
+- phase3-idle.ps1: `PHASE3_IDLE_OK`
+
+The commit message file is `%TEMP%\hp-msg.txt` (UTF-8 without BOM, ends with the Co-Authored-By line).
+
+## Gegenprüfung der letzten Korrekturen
+
+Both findings are fixed in the code paths they named. Two smaller problems remain, both in finding 3's area. HEAD of feature/autohdr is **0b597d5** (the fix commit on top of 726e846), and that is what I checked. All requested gates passed and both mutation checks I re-ran turned red as reported.
+
+**Finding 2 (retry turned the switch on for a running game): fixed.**
+- `AutoHdrGlobalSwitch.cs:440-449` now calls `Activate` only if an active key is still announced. A game that is only running can keep a switch HDRpilot already holds, but never causes a new set.
+- I checked every path that calls `Evaluate`: OnCycle (a game moves from announced to running in the same cycle, before `Evaluate`), OnStartAbandoned, OnConfigChanged, OnRecovery (switch already held, so no new set), the restart buffer (a new announcement sets, a restart without one does not), and the reset of the "user choice" and "already on" flags on each new start. No regression found.
+
+**Finding 3 (the "done" mark blocked by a lock): fixed for the app and for uninstall without "delete data".**
+- Confirmed on real NTFS with .NET 10.0.12: while a handle without FILE_SHARE_DELETE is open, deleting the marker fails with IOException and replacing it fails with UnauthorizedAccessException. Both are caught, and the fake file system's new behaviour matches this.
+- The rest of the new logic holds up: marker deleted before the done file, the marker never deleted while a new start holds the switch, matching on SetAt plus Written, a leftover done file removed in the first cycle, and an unreadable done file making the app leave Auto HDR off for that run.
+
+**Remaining problems**
+
+1. **LOW: uninstalling with "delete data" deletes the done file but leaves the locked marker.**
+   - **Where:** `src/HdrPilot.App/Setup/UninstallEngine.cs:185-189` and `:436` (`Directory.Delete(folder, recursive: true)`), together with `AutoHdrCleanup.cs:86-101`.
+   - **Scenario:**
+     1. While HDRpilot holds the switch, the user turns Auto HDR on in the tray.
+     2. The marker is locked, so the app writes `autohdr-global.done`.
+     3. The lock is still there at uninstall. With "delete data", `RestoreAll` matches the done file correctly, but deleting the marker fails, so it saves the done file again.
+     4. `RemoveData` then deletes the folder. `Directory.Delete` keeps going after a failed file, so it removes `autohdr-global.done` and everything else and leaves `autohdr-global.json` alone. I confirmed this on .NET 10.
+     5. After a reinstall, the app start (or a second cleanup) finds the marker with no done file and turns the user's "on" off.
+   - **Probe:** a temporary test with a real `FileStream(FileShare.Read)` lock gave `marker=True done=False value=AutoHDREnable=0;…`.
+   - **Context:** this is not a regression against 726e846, which also left an "Applied" marker here. It is a gap in finding 3's fix.
+   - **Fix:** in `RemoveData`, if `autohdr-global.json` still exists after `RestoreAutoHdr`, delete the data folder's contents but keep `autohdr-global.done`. Alternatively, have `AutoHdrCleanup` report that its done file must stay.
+   - **Test:** add a SetupUninstallAutoHdrTests case with a real lock and `removeData: true`. After unlocking, `RestoreAll` must leave GlobalOn. Mutation check: a plain `Directory.Delete` turns it red.
+
+2. **VERY LOW: a corrupt done file is handled differently by the app and the setup.**
+   - **Where:** `AutoHdrGlobalSwitch.cs:765-767` vs `AutoHdrCleanup.cs:50-55`; `docs/entscheidungen.md:727`.
+   - **Scenario:** a matching marker sits next to a corrupt `autohdr-global.done` (for example `{ kaputt`).
+     - The app backs the done file up (which deletes it), treats the marker as not done and restores it. That can turn off a tray "on" choice.
+     - The setup leaves both files alone and shows a warning.
+     - E88:727 says that if the done file can't be read, everything stays as it is.
+   - **Probe:** expected `AutoHDREnable=1`, got `AutoHDREnable=0`.
+   - **Likelihood:** low, because the save uses WriteThrough, a flush and an atomic move. It needs outside damage to the file.
+   - **Fix:** in `IsMarkedDone`, load the done file without a backup (`clock: null`) and treat Corrupt like Unreadable: return null, leave Auto HDR off for that run and touch nothing. That matches the setup and E88. Add a test with a mutation check.
+
+**Gates** (all exit 0):
+- build.ps1: `BUILD_OK_0_WARNINGS`
+- full test.ps1: `TESTS_OK 2408`
+- `-Filter AutoHdr -MinTests 25`: `TESTS_OK 215`
+- `-Filter AutoHdrGlobal -MinTests 10`: `TESTS_OK 82`
+- phase9-autohdr-ui.ps1: `PHASE9_AUTOHDR_UI_OK`
+- phase7-setup.ps1: `PHASE7_SETUP_OK` (it reports the real UserGpuPreferences key byte-identical, all 36 values)
+
+**Mutation checks re-run:**
+
+| # | Mutation | Red tests | Restore |
+|---|---|---|---|
+| M1 | `?? active[0]` in `Evaluate` (old retry behaviour) | `Retry_after_a_failure_never_sets_the_switch_once_the_game_runs`: 3 of 3 (Lesen, Schreiben, Merker) | SHA-256 1E5081542EA88D72041218372BB433E9F25D21A23CB09DD758A63FFCC821D482 matches |
+| M3 | `Matches` ignores SetAt | `Old_done_mark_does_not_protect_a_new_marker_after_a_crash` and `Done_mark_of_an_earlier_marker_does_not_stop_the_restore`: 2 of 2 | SHA-256 0F7279F3CBAAF65B8D19CE5DC33011F814988B579186CEE146E438229CBBD3B5 matches |
+
+**Cleanup:** I deleted the probe tests, `git status` was clean, and I removed the review worktree with `worktree remove --force`. feature/autohdr is unchanged at 0b597d5dcf7e8d6f4fce6680570832e3219ecd1b. The NTFS lock experiment is in `<Notizordner>\autohdr\deltest`.
+
+Die beiden danach gemeldeten Randfaelle (defektes Kennzeichen in der App, gesperrter Merker beim Entfernen mit Daten loeschen) wurden mit Commit f8e1d7b behoben, Tests mit Gegenprobe.

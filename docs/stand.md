@@ -40,8 +40,14 @@ abgenommen und will die Umsetzung später.
   - `README.md`: Spezifikation, Entscheidungen, Bildquellen, Effekte mit WPF-Primitiven, offene Punkte.
   - `prototyp/`: lauffähig mit `make-data.ps1` und `start.cmd`.
   - `entwurf-runde2/` und `berichte.md`.
-- **Nächster Schritt bei Wiederaufnahme:** Abnahmekriterien als Phase 10 in `GATES.md`, inklusive Messgate für
-  Grafikkarten- und Prozessorlast. Danach die Umsetzung in WPF mit Agenten.
+- **Anmerkungen des Nutzers zum Prototyp (2026-10-14), beim nächsten Mal zuerst umsetzen;** Details im README,
+  Abschnitt „Anmerkungen des Nutzers“:
+  1. Raster bricht im Vollbild.
+  2. Reihenfolge der Ansichten: Liste, Raster, Regal.
+  3. Das „Maximum“ jeder Nit-Skala ist die höchste Nit-Zahl des Bildschirms bei aktivem HDR (456), nie 1000.
+  4. In „Darstellung“ werden die Bereiche im Vollbild zu lang gezogen; Anordnung und Skalierung überarbeiten.
+- **Nächster Schritt bei Wiederaufnahme:** die Anmerkungen einarbeiten, dann Abnahmekriterien als Phase 10 in
+  `GATES.md`, inklusive Messgate für Grafikkarten- und Prozessorlast. Danach die Umsetzung in WPF mit Agenten.
 
 ## Aktuell: HDRpilot 1.4.0 mit Windows Auto HDR ist beim Nutzer installiert
 Phase 9 ist fertig bis auf den gemeinsamen Abschlusstest (G9.8). Nichts läuft im Hintergrund, alles ist committet.

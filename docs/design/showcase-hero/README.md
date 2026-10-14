@@ -94,6 +94,19 @@ Begründungen in `berichte.md`. Die wichtigsten Punkte:
 - **Anhalten:** bei Minimieren, Deaktivieren, geschlossenem Fenster und laufendem Spiel. Beim Schließen werden die
   Storyboards entfernt und die Bitmaps freigegeben.
 
+## Anmerkungen des Nutzers zum Prototyp v4 (2026-10-14, beim nächsten Mal zuerst erledigen)
+
+1. **Raster im Vollbild:** Die Skalierung der Rasteransicht bricht im Vollbild. Das Raster muss sich bei jeder
+   Fenstergröße sauber anpassen: Spaltenzahl und Kachelgröße folgen der Breite, nichts wird gestreckt oder abgeschnitten.
+2. **Reihenfolge der Ansichten:** „Liste“, „Raster“, „Regal“ (statt Liste, Regal, Raster). Das gilt überall:
+   Umschalter, Tastenkürzel und Menüs.
+3. **Nit-Skala:** Das „Maximum“ jeder Helligkeitsanzeige ist immer die höchste Nit-Zahl, die der Bildschirm bei
+   eingeschaltetem HDR meldet (DXGI `MaxLuminance`, beim MAG 341C 456 Nits). Nie ein fester Wert wie 1000 Nits. Das
+   gilt für alle Skalen, Balken und Pegel im Design.
+4. **Einstellungen („Darstellung“):** Anordnung und Skalierung der Bereiche gefallen noch nicht. Besonders im Vollbild
+   werden die Bereiche sehr lang gezogen. Nötig sind ein Raster mit sinnvoller Höchstbreite je Bereich, mehrere
+   Spalten bei breiten Fenstern und eine bessere Gruppierung.
+
 ## Offene Punkte für die Umsetzung
 
 - Bilder vorab berechnen und zwischenspeichern (`%LocalAppData%\HDRpilot\art\`): erzeugte Bilder, helle HDR-Fassung,

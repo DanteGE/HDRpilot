@@ -22,8 +22,21 @@ Quellen der Entwürfe lagen nur lokal; beides ist nicht Teil des Repositorys.
   - Gemessen am 2026-10-14 am MAG 341C OLED: Peak 456, Vollbild 254, Minimum 0,0000 Nits, 10 Bit. Das passt zu
     „True Black 400“. Es sind die Werte, die der Monitor meldet (EDID oder HDR-Kalibrierung), keine Messung.
 
-**Stand:** Designrunde 2 mit drei Richtungen (Aurora Glass Pro, Neon HUD Pro, Showcase Hero), je mit Bibliothek dunkel
-und „Darstellung“ hell; nach Kritik in Überarbeitung. Danach entscheidet der Nutzer, dann folgen Abnahmekriterien
+**Entscheidungen 2026-10-14:**
+- **Richtung:** „Showcase Hero“, eine Startseite im Konsolenstil.
+- **Ansichten:** Liste (Standard, Pflicht), Regal und Raster; die gewählte Ansicht wird gemerkt.
+- **Titelbilder:** Echte Bilder aus den lokalen Launcher-Caches, nur lesend. Steam liefert die Dateien in
+  `appcache\librarycache\<appid>\`: `library_hero.jpg` hat 631 von 636 Spielen, `logo.png` 625, `library_600x900.jpg` 453.
+  - Fehlt das Bild, erzeugt HDRpilot ein Ersatzbild aus dem Spielsymbol.
+  - Per Rechtsklick lässt sich ein eigenes Bild wählen.
+  - **SteamGridDB** gibt es optional, zuschaltbar mit eigenem API-Schlüssel und standardmäßig aus. Es füllt nur
+    fehlende Bilder. Das ist die einzige Ausnahme von „nur lokal“ und gilt nur, wenn der Nutzer es einschaltet.
+- **Bewegung:** nur allgemeine Ebenen, die mit jedem Bild funktionieren: Tiefenwirkung von Logo zu Bild, langsame
+  Kamerafahrt, Farbschein aus den Bildfarben, Überblendung, HDR-Aufblühen. Keine handgemachten Animationen pro Spiel.
+
+**Stand:** Der Nutzer will vor dem Bauen noch einen nachgebesserten Entwurf sehen. Er entsteht als lokaler Prototyp
+mit den echten Steam-Bildern und der echten Bibliothek (Sitzungs-Scratchpad `proto\`, lokaler, nur lesender Server
+auf 127.0.0.1:8765). Hochgeladen wird nichts, die Spielbilder bleiben lokal. Danach folgen die Abnahmekriterien
 (Phase 10) und die Umsetzung in WPF.
 
 ## Aktuell: HDRpilot 1.4.0 mit Windows Auto HDR ist beim Nutzer installiert

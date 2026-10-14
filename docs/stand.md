@@ -1,7 +1,30 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-13 02:10. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-14. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## In Arbeit: Neugestaltung der Oberfläche (Wunsch des Nutzers 2026-10-14)
+Noch kein Code, erst die Designrichtung. Die Vorschauseite war privat, die
+Quellen der Entwürfe lagen nur lokal; beides ist nicht Teil des Repositorys.
+
+**Vorgaben des Nutzers:**
+- **Stil:** deutlich cooler und moderner. Die erste Runde schlichter Entwürfe war ihm „nicht professionell und
+  detailliert genug, Effekte viel zu dezent“. Gewünscht sind kräftige, gut sichtbare Animationen.
+- **Farben:** Duoton und Tritonus (zwei oder drei Farben) plus Vorgaben. Sie färben das ganze UI, das Tray-Symbol und
+  das Fenstersymbol.
+- **Hell und dunkel:** beide im neuen Stil, weiter automatisch nach Windows.
+- **Leistung:** Bei geschlossenem oder minimiertem Fenster keine Kosten. Bei offenem Fenster darf die Grafikkarte nie
+  an 100 % kommen. Dafür ist ein Messgate für Grafikkarte und Prozessor geplant.
+- **Echte Nit-Werte des Monitors** statt Platzhaltern (Wunsch 2026-10-14):
+  - Quelle: DXGI `IDXGIOutput6::GetDesc1`, nur im eigenen Prozess. Gelesen werden Spitzen-, Vollbild- und
+    Minimalhelligkeit, Farbtiefe und ob HDR aktiv ist.
+  - Gelesen wird nur bei HDR-Wechsel oder Bildschirmwechsel.
+  - Gemessen am 2026-10-14 am MAG 341C OLED: Peak 456, Vollbild 254, Minimum 0,0000 Nits, 10 Bit. Das passt zu
+    „True Black 400“. Es sind die Werte, die der Monitor meldet (EDID oder HDR-Kalibrierung), keine Messung.
+
+**Stand:** Designrunde 2 mit drei Richtungen (Aurora Glass Pro, Neon HUD Pro, Showcase Hero), je mit Bibliothek dunkel
+und „Darstellung“ hell; nach Kritik in Überarbeitung. Danach entscheidet der Nutzer, dann folgen Abnahmekriterien
+(Phase 10) und die Umsetzung in WPF.
 
 ## Aktuell: HDRpilot 1.4.0 mit Windows Auto HDR ist beim Nutzer installiert
 Phase 9 ist fertig bis auf den gemeinsamen Abschlusstest (G9.8). Nichts läuft im Hintergrund, alles ist committet.

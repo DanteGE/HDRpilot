@@ -1,0 +1,8 @@
+# Vom Prototyp erzeugt, nicht ins Repository (enthält Daten der Bibliothek und Bilder)
+data.json
+art/
+shots/
+_shots/prof/
+_test/
+_review/
+_old/

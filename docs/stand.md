@@ -34,10 +34,14 @@ Quellen der Entwürfe lagen nur lokal; beides ist nicht Teil des Repositorys.
 - **Bewegung:** nur allgemeine Ebenen, die mit jedem Bild funktionieren: Tiefenwirkung von Logo zu Bild, langsame
   Kamerafahrt, Farbschein aus den Bildfarben, Überblendung, HDR-Aufblühen. Keine handgemachten Animationen pro Spiel.
 
-**Stand:** Der Nutzer will vor dem Bauen noch einen nachgebesserten Entwurf sehen. Er entsteht als lokaler Prototyp
-mit den echten Steam-Bildern und der echten Bibliothek (Sitzungs-Scratchpad `proto\`, lokaler, nur lesender Server
-auf 127.0.0.1:8765). Hochgeladen wird nichts, die Spielbilder bleiben lokal. Danach folgen die Abnahmekriterien
-(Phase 10) und die Umsetzung in WPF.
+**Stand (gesichert 2026-10-14):** Der Nutzer hat den lokalen Prototyp „Showcase Hero v4“ mit „Sieht gut aus“
+abgenommen und will die Umsetzung später.
+- Alles für die Umsetzung liegt unter `docs/design/showcase-hero/`:
+  - `README.md`: Spezifikation, Entscheidungen, Bildquellen, Effekte mit WPF-Primitiven, offene Punkte.
+  - `prototyp/`: lauffähig mit `make-data.ps1` und `start.cmd`.
+  - `entwurf-runde2/` und `berichte.md`.
+- **Nächster Schritt bei Wiederaufnahme:** Abnahmekriterien als Phase 10 in `GATES.md`, inklusive Messgate für
+  Grafikkarten- und Prozessorlast. Danach die Umsetzung in WPF mit Agenten.
 
 ## Aktuell: HDRpilot 1.4.0 mit Windows Auto HDR ist beim Nutzer installiert
 Phase 9 ist fertig bis auf den gemeinsamen Abschlusstest (G9.8). Nichts läuft im Hintergrund, alles ist committet.

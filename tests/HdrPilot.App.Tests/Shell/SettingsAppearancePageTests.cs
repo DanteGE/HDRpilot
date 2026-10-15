@@ -1,0 +1,346 @@
+using System.Globalization;
+using System.Windows.Media;
+using HdrPilot.App.Resources;
+using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
+using HdrPilot.App.ViewModels.Shell;
+using HdrPilot.Core.Artwork;
+using HdrPilot.Core.Config;
+using HdrPilot.Core.Games;
+using HdrPilot.Tests.TestSupport;
+
+namespace HdrPilot.App.Tests.Shell;
+
+/// <summary>
+/// Seite „Darstellung“ (E89, G10.8): jede Wahl wirkt und speichert sofort (unabhängig von „Speichern“/„Abbrechen“),
+/// Kontrast-Kennzeichen, echte Nit-Werte statt eines festen Maximums, SteamGridDB nur auf ausdrücklichen Wunsch.
+/// </summary>
+public sealed class SettingsAppearancePageTests
+{
+    [Fact]
+    public void Appearance_page_writes_every_choice_immediately()
+    {
+        var (page, config, _) = Create();
+
+        page.Presets.Single(p => p.Id == "cyber").IsSelected = true;
+        Assert.Equal("cyber", config.Current.Settings.Appearance.Preset);
+        Assert.True(page.IsTritone); // Cyber ist eine Tritonus-Vorlage
+
+        page.IsDuotone = true;
+        Assert.Equal("Duotone", config.Current.Settings.Appearance.PaletteMode);
+        Assert.Equal("cyber", config.Current.Settings.Appearance.Preset); // Vorlage bleibt, nur die Anzahl ändert sich
+
+        page.IsThemeLight = true;
+        Assert.Equal("Light", config.Current.Settings.Appearance.Theme);
+        page.IsEffectReduced = true;
+        Assert.Equal("Reduced", config.Current.Settings.Appearance.EffectLevel);
+        page.PauseInBackground = false;
+        page.MinimizeToTrayAfterLaunch = true;
+        page.BackgroundFollowsGame = false;
+        Assert.False(config.Current.Settings.Appearance.PauseInBackground);
+        Assert.True(config.Current.Settings.Appearance.MinimizeToTrayAfterLaunch);
+        Assert.False(config.Current.Settings.Appearance.BackgroundFollowsGame);
+
+        page.ResetCommand.Execute(null);
+        var reset = config.Current.Settings.Appearance;
+        Assert.Null(reset.Preset);
+        Assert.Null(reset.Theme);
+        Assert.True(reset.PauseInBackground);
+        Assert.Equal(PalettePresets.DefaultId, page.State.PresetId);
+        page.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_custom_colors_and_swap_turn_the_preset_into_custom()
+    {
+        var (page, config, _) = Create();
+
+        page.ApplyColor(0, ColorMath.FromHex("#12AB34"));
+        var s = config.Current.Settings.Appearance;
+        Assert.Equal(PalettePresets.CustomId, s.Preset);
+        Assert.Equal("#12AB34", s.Accent);
+        Assert.Equal("#FF3D7F", s.Atmosphere); // die andere Farbe bleibt
+        Assert.Equal(ShellStrings.PresetCustom, page.PresetCaption.Split(" · ")[0]);
+        Assert.DoesNotContain(page.Presets, p => p.IsSelected);
+
+        page.SwapCommand.Execute(null);
+        Assert.Equal("#FF3D7F", config.Current.Settings.Appearance.Accent);
+        Assert.Equal("#12AB34", config.Current.Settings.Appearance.Atmosphere);
+
+        // Glanz ist im Duoton automatisch: nicht wählbar, der Farbwähler öffnet nicht.
+        Assert.True(page.Wells[2].IsAutomatic);
+        Assert.False(page.EditColorCommand.CanExecute(page.Wells[2]));
+        page.EditColorCommand.Execute(page.Wells[2]);
+        Assert.False(page.IsPickerOpen);
+
+        // Farbwähler: öffnen, Farbe setzen, übernehmen.
+        page.EditColorCommand.Execute(page.Wells[1]);
+        Assert.True(page.IsPickerOpen);
+        page.PickerColor = ColorMath.FromHex("#3366FF");
+        page.ApplyPickerCommand.Execute(null);
+        Assert.False(page.IsPickerOpen);
+        Assert.Equal("#3366FF", config.Current.Settings.Appearance.Atmosphere);
+        page.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_shows_contrast_with_german_decimal_and_grade()
+    {
+        var (page, _, _) = Create();
+        var previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            // Abendrot: dunkle Schrift auf Orange/Pink etwa 5,7:1 (Prototyp „5,8:1 · AA“, hier abgerundet).
+            Assert.Matches(@"^\d,\d:1 · AA$", page.OnAccentContrast);
+            Assert.True(page.ThemeColors.OnAccentContrast >= 4.5);
+            Assert.Equal("Hp.Brush.Success", page.OnAccentGradeBrush);
+            Assert.EndsWith("Soft", page.OnAccentGradeSoftBrush, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+
+        page.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_shows_the_real_peak_and_never_a_fixed_maximum()
+    {
+        var (page, _, context) = Create();
+        Assert.Equal(ShellStrings.PreviewNitsUnknown, page.PreviewNitsText); // unbekannt: kein Wert
+        Assert.Null(page.TrayMenuNits);
+        page.Dispose();
+
+        context.Luminance = new FixedLuminance(new DisplayNits(@"\\?\DISPLAY#MSI", "MAG 341C OLED", 456, 254, 0, 10, HdrActive: false, PeakMeasuredWithHdr: true));
+        var withNits = new AppearancePageViewModel(context);
+        Assert.Contains("456", withNits.PreviewNitsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("1000", withNits.PreviewNitsText, StringComparison.Ordinal);
+        Assert.Contains("456", withNits.TrayMenuNits!, StringComparison.Ordinal);
+        Assert.Contains("254", withNits.TrayMenuNits!, StringComparison.Ordinal);
+        Assert.Contains("MAG 341C OLED", withNits.TrayMenuStatus, StringComparison.Ordinal);
+        withNits.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_turns_steamgriddb_on_only_when_asked_and_checks_only_on_click()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb();
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.False(vm.SteamGridDbEnabled);
+        Assert.Equal(ShellStrings.SteamGridDbStatusOff, vm.SteamGridDbStatusText);
+        Assert.Empty(grid.Calls); // Öffnen der Seite: kein Netz, kein Schalten
+
+        vm.SetSteamGridDbKey("  geheim  ");
+        Assert.Empty(grid.Calls); // Eintippen speichert und prüft nichts
+
+        vm.SteamGridDbEnabled = true;
+        Assert.Equal(["enabled:True"], grid.Calls);
+
+        vm.CheckSteamGridDbCommand.Execute(null);
+        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 3, TimeSpan.FromSeconds(5)));
+        Assert.Equal(["enabled:True", "check:geheim", "save:geheim"], grid.Calls);
+        Assert.Equal(ShellStrings.SteamGridDbCheckValid, vm.SteamGridDbStatusText);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_releases_its_leases_and_handlers_when_disposed()
+    {
+        var (page, _, context) = Create();
+        var art = new LeaseCountingArtwork();
+        context.Artwork = art;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+        Assert.Equal(1, art.OpenLeases);
+
+        vm.Dispose();
+        Assert.Equal(0, art.OpenLeases);
+        Assert.Equal(0, art.Subscribers);
+    }
+
+    [Fact]
+    public void Appearance_page_previews_the_most_recently_played_games()
+    {
+        var games = Enumerable.Range(1, 6).Select(i => new GameConfig
+        {
+            Source = GameSource.Steam,
+            SourceId = i.ToString(CultureInfo.InvariantCulture),
+            Name = "Spiel " + i,
+            LastPlayed = i == 6 ? null : DateTimeOffset.Now.AddDays(-i),
+        }).ToList();
+
+        Assert.Equal(["Spiel 1", "Spiel 2", "Spiel 3", "Spiel 4"], AppearancePageViewModel.PickPreviewGames(games).Select(g => g.Name));
+        Assert.Equal(["Spiel 6"], AppearancePageViewModel.PickPreviewGames([games[5]]).Select(g => g.Name));
+    }
+
+    private static (AppearancePageViewModel Page, ConfigService Config, FakeShellContext Context) Create()
+    {
+        var config = ShellTestFactory.NewConfig(new InMemoryFileSystem());
+        var context = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new ConfigOnlyAutostartService(config))
+        {
+            Appearance = new ConfigAppearance(config),
+        };
+        return (new AppearancePageViewModel(context, windowsAnimations: () => true), config, context);
+    }
+
+    /// <summary>Darstellung auf der echten Konfiguration im Speicher (schreibt wie AppearanceService, ohne Ressourcen).</summary>
+    private sealed class ConfigAppearance(ConfigService config) : IAppearanceService
+    {
+        public event EventHandler? Changed;
+
+        public AppearanceState Current => AppearanceService.Compute(config.Current.Settings.Appearance, true, true, true, false);
+
+        public void Update(Action<AppearanceSettings> change)
+        {
+            config.Update(c => change(c.Settings.Appearance ??= new AppearanceSettings()));
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void ResetToDefaults()
+        {
+            config.Update(c => c.Settings.Appearance = new AppearanceSettings());
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class FixedLuminance(DisplayNits nits) : IDisplayLuminanceService
+    {
+        public event EventHandler? Changed
+        {
+            add { }
+            remove { }
+        }
+
+        public DisplayNits? Primary => nits;
+
+        public IReadOnlyList<DisplayNits> Displays => [nits];
+
+        public void Invalidate()
+        {
+        }
+
+        public IDisposable Acquire() => NoLease.Instance;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class RecordingSteamGridDb : ISteamGridDbService
+    {
+        private bool _enabled;
+
+        public event EventHandler? Changed;
+
+        public List<string> Calls { get; } = [];
+
+        public SteamGridDbStatus Status => SteamGridDbStatus.Off with { Enabled = _enabled };
+
+        public void SetEnabled(bool enabled)
+        {
+            Calls.Add("enabled:" + enabled);
+            _enabled = enabled;
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        public Task<SteamGridDbCheckResult> CheckKeyAsync(string key, CancellationToken cancellationToken = default)
+        {
+            Calls.Add("check:" + key);
+            return Task.FromResult(SteamGridDbCheckResult.Valid);
+        }
+
+        public void SaveKey(string key) => Calls.Add("save:" + key);
+
+        public void RemoveKey() => Calls.Add("remove");
+
+        public Task RunNowAsync(CancellationToken cancellationToken = default)
+        {
+            Calls.Add("run");
+            return Task.CompletedTask;
+        }
+
+        public void ScheduleStartup(bool allowed) => Calls.Add("schedule");
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class LeaseCountingArtwork : IArtworkService
+    {
+        private EventHandler<ArtworkChangedEventArgs>? _changed;
+
+        public event EventHandler<ArtworkChangedEventArgs>? Changed
+        {
+            add => _changed += value;
+            remove => _changed -= value;
+        }
+
+        public int OpenLeases { get; private set; }
+
+        public int Subscribers => _changed?.GetInvocationList().Length ?? 0;
+
+        public ImageSource? GetCachedImage(GameConfig game, ArtworkKind kind, int decodeWidth) => null;
+
+        public Task<ImageSource?> GetImageAsync(GameConfig game, ArtworkKind kind, int decodeWidth, CancellationToken cancellationToken = default) => Task.FromResult<ImageSource?>(null);
+
+        public GameArtwork? GetCachedArtwork(GameConfig game) => null;
+
+        public Task<GameArtwork> GetArtworkAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
+            NullArtworkService.Instance.GetArtworkAsync(game, heroDecodeWidth, cancellationToken);
+
+        public Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ArtworkCandidate>>([]);
+
+        public string SaveCustomImage(GameConfig game, ArtworkKind kind, string sourcePath) => throw new NotSupportedException();
+
+        public void DeleteCustomImage(string? token)
+        {
+        }
+
+        public Task<ArtworkCoverage> GetCoverageAsync(IReadOnlyList<GameConfig> games, CancellationToken cancellationToken = default) => Task.FromResult(ArtworkCoverage.Empty);
+
+        public Task<IReadOnlyList<FallbackExample>> GetFallbackExamplesAsync(IReadOnlyList<GameConfig> games, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FallbackExample>>([]);
+
+        public IDisposable Acquire()
+        {
+            OpenLeases++;
+            return new Lease(this);
+        }
+
+        public void ClearCache()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class Lease(LeaseCountingArtwork owner) : IDisposable
+        {
+            private bool _done;
+
+            public void Dispose()
+            {
+                if (!_done)
+                {
+                    _done = true;
+                    owner.OpenLeases--;
+                }
+            }
+        }
+    }
+}

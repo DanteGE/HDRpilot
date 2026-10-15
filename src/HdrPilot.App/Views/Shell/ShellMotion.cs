@@ -4,7 +4,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 
 namespace HdrPilot.App.Views.Shell;
 
@@ -22,6 +21,9 @@ public static class ShellMotion
     private static readonly Duration EnterDuration = new(TimeSpan.FromMilliseconds(170));
     private static readonly Duration LeaveDuration = new(TimeSpan.FromMilliseconds(240));
     private static readonly IEasingFunction EaseOut = Freeze(new CubicEase { EasingMode = EasingMode.EaseOut });
+
+    /// <summary>Deckkraft des Leuchtens hinter einer überfahrenen Karte.</summary>
+    public const double HoverGlowOpacity = 0.22;
 
     private static bool? _override;
 
@@ -118,7 +120,10 @@ public static class ShellMotion
 
     private static void OnMouseLeave(object sender, MouseEventArgs e) => SetHover((Control)sender, hover: false);
 
-    /// <summary>Karte anheben (2 px), Verlaufsrahmen und Leuchten einblenden. Unschärfe nur, solange überfahren.</summary>
+    /// <summary>
+    /// Karte anheben (2 px), Verlaufsrahmen und Leuchten einblenden. Das Leuchten ist ein vorab gezeichneter radialer
+    /// Verlauf (E89: kein BlurEffect); ohne Animationseffekte erscheint nur der Rahmen, sofort und ohne Anheben.
+    /// </summary>
     private static void SetHover(Control control, bool hover)
     {
         if (control.Template is null)
@@ -135,15 +140,7 @@ public static class ShellMotion
 
         if (control.Template.FindName("PART_Glow", control) is UIElement glow)
         {
-            if (hover && animate)
-            {
-                glow.Effect ??= new BlurEffect { Radius = 20, RenderingBias = RenderingBias.Performance };
-                To(glow, UIElement.OpacityProperty, 0.4, duration, animate: true);
-            }
-            else
-            {
-                To(glow, UIElement.OpacityProperty, 0, duration, animate, onCompleted: () => glow.Effect = null);
-            }
+            To(glow, UIElement.OpacityProperty, hover && animate ? HoverGlowOpacity : 0, duration, animate);
         }
 
         if (control.Template.FindName("Root", control) is UIElement root)

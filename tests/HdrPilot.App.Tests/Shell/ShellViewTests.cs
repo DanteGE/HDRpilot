@@ -252,7 +252,7 @@ public sealed class ShellViewTests
     }
 
     [Fact]
-    public void AppVersion_badge_sits_in_the_settings_header_and_fits_at_minimum_width()
+    public void AppVersion_sits_in_the_navigation_header_and_fits_at_minimum_size()
     {
         WpfTestHost.Run(() =>
         {
@@ -265,28 +265,27 @@ public sealed class ShellViewTests
             Assert.Equal(AppVersionTests.ExpectedDisplayText(), text.Text);
             Assert.Equal(text.Text, AutomationProperties.GetName(text));
 
+            // Unter „Einstellungen“ im Kopf der Navigation (Showcase-Stil, E89), vollständig sichtbar
             var header = (FrameworkElement)window.FindName("Header");
-            var pill = (FrameworkElement)window.FindName("VersionPill");
-            Assert.True(pill.IsDescendantOf(header), "Version gehört in den Kopf");
-            var pillBounds = Bounds(pill);
+            var nav = (FrameworkElement)window.FindName("Nav");
+            Assert.True(text.IsDescendantOf(header) && header.IsDescendantOf(nav), "Version gehört in den Kopf der Navigation");
+            var textBounds = Bounds(text);
             var headerBounds = Bounds(header);
-            Assert.True(pillBounds.Width > 0 && pillBounds.Height > 0, "Version nicht sichtbar");
-            Assert.True(pillBounds.Left >= headerBounds.Left && pillBounds.Right <= headerBounds.Right + 0.5, $"Version ragt aus dem Kopf: {pillBounds} in {headerBounds}");
-            Assert.True(pillBounds.Bottom <= Bounds((FrameworkElement)window.FindName("AccentLine")).Top, "Version reicht in die Akzentlinie");
+            Assert.True(textBounds.Width > 0 && textBounds.Height > 0, "Version nicht sichtbar");
+            Assert.True(textBounds.Left >= headerBounds.Left && textBounds.Right <= headerBounds.Right + 0.5 && textBounds.Bottom <= headerBounds.Bottom + 0.5,
+                $"Version ragt aus dem Kopf: {textBounds} in {headerBounds}");
             Assert.True(text.ActualWidth >= NaturalWidth(text) - 0.5, "Versionstext abgeschnitten");
+            var title = (TextBlock)window.FindName("NavTitle");
+            Assert.Equal(ShellStrings.SettingsHeading, title.Text);
+            Assert.True(title.ActualWidth >= NaturalWidth(title) - 0.5, "„Einstellungen“ abgeschnitten");
+            Assert.True(Bounds(title).Bottom <= textBounds.Top + 0.5, "Version überdeckt den Titel");
 
-            // Rechts neben Titel und Unterzeile, ohne dass diese umbrechen müssen
-            foreach (var title in Logical(window).OfType<TextBlock>().Where(t => t.Text == ShellStrings.SettingsHeading || t.Text == ShellStrings.SettingsSubheading))
-            {
-                Assert.True(Bounds(title).Left + NaturalWidth(title) <= pillBounds.Left, $"„{title.Text}“ stößt bei {window.MinWidth} px an die Version");
-            }
-
-            // Fensterrahmen: Minimieren, Maximieren, Schließen liegen in der Titelzeile darüber
+            // Fensterrahmen: Minimieren, Maximieren, Schließen liegen in der Titelzeile darüber, rechts
             var captions = (FrameworkElement)VisualTreeHelper.GetParent((DependencyObject)window.Template.FindName("PART_Minimize", window));
             var captionBounds = Bounds(captions);
             Assert.True(captionBounds.Width > 0, "Titelzeilen-Schaltflächen nicht gefunden");
-            Assert.False(pillBounds.IntersectsWith(captionBounds), $"Version überdeckt die Titelzeilen-Schaltflächen: {pillBounds} / {captionBounds}");
-            Assert.True(pillBounds.Top >= captionBounds.Bottom, "Version liegt in der Titelzeile");
+            Assert.False(textBounds.IntersectsWith(captionBounds), $"Version überdeckt die Titelzeilen-Schaltflächen: {textBounds} / {captionBounds}");
+            Assert.True(textBounds.Top >= captionBounds.Bottom, "Version liegt in der Titelzeile");
             window.Close();
         });
     }
@@ -374,7 +373,7 @@ public sealed class ShellViewTests
     }
 
     [Fact]
-    public void AppVersion_in_settings_header_renders_in_both_themes_for_review()
+    public void AppVersion_in_the_navigation_header_renders_in_both_themes_for_review()
     {
         WpfTestHost.Run(() =>
         {
@@ -386,19 +385,19 @@ public sealed class ShellViewTests
                     var window = CreateSettingsWindow(out _);
                     WpfTestHost.Layout(window, new Size(window.MinWidth, window.MinHeight));
                     var root = (FrameworkElement)VisualTreeHelper.GetChild(window, 0);
-                    var accent = (FrameworkElement)window.FindName("AccentLine");
-                    var bottom = accent.TransformToAncestor(root).TransformBounds(new Rect(accent.RenderSize)).Bottom + 16;
+                    var header = (FrameworkElement)window.FindName("Header");
+                    var bottom = header.TransformToAncestor(root).TransformBounds(new Rect(header.RenderSize)).Bottom + 16;
 
                     const double scale = RenderScale;
                     var full = new RenderTargetBitmap((int)Math.Ceiling(root.ActualWidth * scale), (int)Math.Ceiling(root.ActualHeight * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
                     full.Render(root);
                     var head = new CroppedBitmap(full, new Int32Rect(0, 0, full.PixelWidth, (int)Math.Ceiling(bottom * scale)));
 
-                    // Der Versionstext ist zu lesen: genug Pixel in Textfarbe, aber nicht die ganze Fläche (sonst hätte die
-                    // Pille selbst die Textfarbe). Gemessen: 214 von 2875 in beiden Themen.
+                    // Der Versionstext ist zu lesen: genug Pixel in Textfarbe, aber nicht die ganze Fläche (sonst hätte der
+                    // Hintergrund selbst die Textfarbe).
                     var text = Logical(window).OfType<TextBlock>().Single(t => AutomationProperties.GetAutomationId(t) == "SettingsVersion");
                     var (ink, total) = TextInk(full, text.TransformToAncestor(root).TransformBounds(new Rect(text.RenderSize)), scale, Token("Hp.Brush.TextSecondary"));
-                    Assert.True(ink >= 100 && ink <= total / 2, $"Versions-Pille ({(dark ? "dunkel" : "hell")}) nicht lesbar: {ink} von {total} Pixeln in Textfarbe");
+                    Assert.True(ink >= 100 && ink <= total / 2, $"Version im Kopf der Navigation ({(dark ? "dunkel" : "hell")}) nicht lesbar: {ink} von {total} Pixeln in Textfarbe");
 
                     SaveForReview(head, $"einstellungen-kopf-{(dark ? "dunkel" : "hell")}.png");
                     window.Close();

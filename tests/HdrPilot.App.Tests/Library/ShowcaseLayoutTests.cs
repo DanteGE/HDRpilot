@@ -64,6 +64,20 @@ public sealed class ShowcaseLayoutTests
     }
 
     [Theory]
+    [InlineData(460)]
+    [InlineData(470)]
+    [InlineData(481)]
+    public void Raster_layout_never_stretches_tiles_beyond_the_maximum_on_narrow_widths(double width)
+    {
+        // Zwei Spalten wären hier über 220 px breit: lieber eine dritte, etwas schmalere Spalte.
+        var m = RasterLayout.Compute(width);
+
+        Assert.Equal(3, m.Columns);
+        Assert.True(m.TileWidth <= RasterLayout.DefaultMaxTile, "Kachel " + m.TileWidth);
+        Assert.True(m.UsedWidth <= width);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-5)]
     [InlineData(double.NaN)]

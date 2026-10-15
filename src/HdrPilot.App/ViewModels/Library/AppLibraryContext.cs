@@ -156,6 +156,18 @@ public sealed class AppLibraryContext : ILibraryContext
 
     public void ShowSettings() => _services.ShowSettingsWindow();
 
+    /// <summary>„Installationsordner öffnen“: der Explorer zeigt den Ordner (nur ein bestehender Ordner, geprüft vom Aufrufer).</summary>
+    public void OpenFolder(string path)
+    {
+        if (!FileSystem.DirectoryExists(path))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Installationsordner wird geöffnet: {Path}", path);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + path + "\"") { UseShellExecute = true })?.Dispose();
+    }
+
     public void Dispose()
     {
         if (_disposed)

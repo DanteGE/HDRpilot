@@ -120,6 +120,32 @@ public sealed class ExecutableItemViewModel
 
     public string Folder { get; }
 
+    /// <summary>Ordner kurz: innerhalb des Installationsordners „…\FunkTag\Binaries\Win64“, sonst der volle Ordner.</summary>
+    public string ShortFolder { get; init; } = string.Empty;
+
+    /// <summary>Ordner für die Anzeige (kurz, wenn bekannt).</summary>
+    public string DisplayFolder => string.IsNullOrEmpty(ShortFolder) ? Folder : ShortFolder;
+
+    /// <summary>
+    /// Kurzform eines EXE-Ordners relativ zum Installationsordner (Prototyp exeDir): „…\&lt;letzter Teil des Spielordners&gt;\Rest“.
+    /// </summary>
+    public static string Shorten(string folder, string? installDir)
+    {
+        if (string.IsNullOrWhiteSpace(installDir) || string.IsNullOrEmpty(folder))
+        {
+            return folder;
+        }
+
+        var dir = installDir.TrimEnd('\\', '/');
+        if (!folder.StartsWith(dir, StringComparison.OrdinalIgnoreCase) || (folder.Length > dir.Length && folder[dir.Length] is not ('\\' or '/')))
+        {
+            return folder;
+        }
+
+        var last = System.IO.Path.GetFileName(dir);
+        return string.IsNullOrEmpty(last) ? folder : "…\\" + last + folder[dir.Length..];
+    }
+
     public ExecutableOrigin Origin { get; }
 
     public bool IsExcluded { get; }

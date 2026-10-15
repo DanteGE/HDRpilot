@@ -656,4 +656,554 @@
     <value>Das Symbol konnte nicht gespeichert werden: {0}</value>
     <comment>{0} = Fehlermeldung</comment>
   </data>
+  <data name="View_Name" xml:space="preserve">
+    <value>Ansicht</value>
+  </data>
+  <data name="View_List" xml:space="preserve">
+    <value>Liste</value>
+  </data>
+  <data name="View_Grid" xml:space="preserve">
+    <value>Raster</value>
+  </data>
+  <data name="View_Shelf" xml:space="preserve">
+    <value>Regal</value>
+  </data>
+  <data name="View_ListTooltip" xml:space="preserve">
+    <value>Liste (Strg+1)</value>
+  </data>
+  <data name="View_GridTooltip" xml:space="preserve">
+    <value>Raster (Strg+2)</value>
+  </data>
+  <data name="View_ShelfTooltip" xml:space="preserve">
+    <value>Regal (Strg+3)</value>
+  </data>
+  <data name="When_Never" xml:space="preserve">
+    <value>nie gespielt</value>
+  </data>
+  <data name="When_Today" xml:space="preserve">
+    <value>heute, {0:HH:mm}</value>
+    <comment>{0} = Zeitpunkt (Ortszeit)</comment>
+  </data>
+  <data name="When_Yesterday" xml:space="preserve">
+    <value>gestern, {0:HH:mm}</value>
+    <comment>{0} = Zeitpunkt (Ortszeit)</comment>
+  </data>
+  <data name="When_Days" xml:space="preserve">
+    <value>vor {0} Tagen</value>
+    <comment>{0} = Anzahl Tage (2–6)</comment>
+  </data>
+  <data name="When_OneWeek" xml:space="preserve">
+    <value>vor 1 Woche</value>
+  </data>
+  <data name="When_Weeks" xml:space="preserve">
+    <value>vor {0} Wochen</value>
+    <comment>{0} = Anzahl Wochen (2–5)</comment>
+  </data>
+  <data name="When_Date" xml:space="preserve">
+    <value>{0:d. MMM yyyy}</value>
+    <comment>{0} = Datum (Ortszeit), ab 35 Tagen</comment>
+  </data>
+  <data name="Hero_Name" xml:space="preserve">
+    <value>Ausgewähltes Spiel</value>
+  </data>
+  <data name="Hero_OverlineNew" xml:space="preserve">
+    <value>Neu in der Bibliothek · {0}</value>
+    <comment>{0} = wann gefunden (When_*)</comment>
+  </data>
+  <data name="Hero_OverlineNeverPlayed" xml:space="preserve">
+    <value>Noch nicht gespielt</value>
+  </data>
+  <data name="Hero_OverlineLastPlayed" xml:space="preserve">
+    <value>Zuletzt gespielt · {0}</value>
+    <comment>{0} = wann zuletzt gespielt (When_*)</comment>
+  </data>
+  <data name="Hero_ChipLabel" xml:space="preserve">
+    <value>BEIM START</value>
+  </data>
+  <data name="Hero_ChipRestore" xml:space="preserve">
+    <value>HDR ein · danach zurück</value>
+  </data>
+  <data name="Hero_ChipStay" xml:space="preserve">
+    <value>HDR ein · bleibt danach an</value>
+  </data>
+  <data name="Hero_ChipUnchanged" xml:space="preserve">
+    <value>HDR bleibt unverändert</value>
+  </data>
+  <data name="Hero_ChipPaused" xml:space="preserve">
+    <value>Automatik pausiert</value>
+  </data>
+  <data name="HdrKind_Native" xml:space="preserve">
+    <value>Natives HDR</value>
+  </data>
+  <data name="HdrKind_Limited" xml:space="preserve">
+    <value>HDR teilweise</value>
+  </data>
+  <data name="HdrKind_ModOnly" xml:space="preserve">
+    <value>HDR per Mod</value>
+  </data>
+  <data name="HdrKind_None" xml:space="preserve">
+    <value>Kein eigenes HDR</value>
+  </data>
+  <data name="HdrKind_Unknown" xml:space="preserve">
+    <value>HDR unbekannt</value>
+  </data>
+  <data name="HdrPill_Native" xml:space="preserve">
+    <value>NATIV</value>
+  </data>
+  <data name="HdrPill_Limited" xml:space="preserve">
+    <value>TEILWEISE</value>
+  </data>
+  <data name="HdrPill_ModOnly" xml:space="preserve">
+    <value>MOD</value>
+  </data>
+  <data name="List_SwitchOn" xml:space="preserve">
+    <value>Ein</value>
+  </data>
+  <data name="List_SwitchOff" xml:space="preserve">
+    <value>Aus</value>
+  </data>
+  <data name="List_ColumnGame" xml:space="preserve">
+    <value>Spiel · {0}</value>
+    <comment>{0} = Anzahl gezeigter Spiele</comment>
+  </data>
+  <data name="List_ColumnSource" xml:space="preserve">
+    <value>QUELLE</value>
+  </data>
+  <data name="List_ColumnLastPlayed" xml:space="preserve">
+    <value>ZULETZT GESPIELT</value>
+  </data>
+  <data name="List_ColumnHdr" xml:space="preserve">
+    <value>HDR</value>
+  </data>
+  <data name="List_SortByColumn" xml:space="preserve">
+    <value>Nach dieser Spalte sortieren</value>
+  </data>
+  <data name="List_HdrUnknown" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Thumbnail_Name" xml:space="preserve">
+    <value>Vorschau in der Liste</value>
+  </data>
+  <data name="Thumbnail_Image" xml:space="preserve">
+    <value>16:9-Vorschaubild</value>
+  </data>
+  <data name="Thumbnail_Icon" xml:space="preserve">
+    <value>Symbol</value>
+  </data>
+  <data name="Status_ViewSummary" xml:space="preserve">
+    <value>{0} · {1} von {2} · sortiert nach {3}</value>
+    <comment>{0} = Ansicht, {1} = gezeigte Spiele, {2} = alle Spiele, {3} = Sortierung</comment>
+  </data>
+  <data name="Status_ActiveWaiting" xml:space="preserve">
+    <value>Automatik aktiv · wartet auf Spielstart</value>
+  </data>
+  <data name="Status_ActiveHdrOn" xml:space="preserve">
+    <value>Automatik aktiv · HDR ein</value>
+  </data>
+  <data name="Status_Paused" xml:space="preserve">
+    <value>Automatik pausiert · HDR wird nicht geschaltet</value>
+  </data>
+  <data name="Status_Running" xml:space="preserve">
+    <value>Spiel läuft · {0}</value>
+    <comment>{0} = Spielname(n)</comment>
+  </data>
+  <data name="Status_RunningPaused" xml:space="preserve">
+    <value>Spiel läuft · {0} · Effekte pausiert</value>
+    <comment>{0} = Spielname(n)</comment>
+  </data>
+  <data name="Status_HdrOn" xml:space="preserve">
+    <value>HDR ist eingeschaltet · {0}</value>
+    <comment>{0} = Bildschirmname</comment>
+  </data>
+  <data name="Status_HdrOnWithNits" xml:space="preserve">
+    <value>HDR ist eingeschaltet · {0} · Spitze {1} nits · Vollbild {2} nits</value>
+    <comment>{0} = Bildschirmname, {1} = Spitze, {2} = Vollbild (Nits laut DXGI)</comment>
+  </data>
+  <data name="Status_Name" xml:space="preserve">
+    <value>Statuszeile</value>
+  </data>
+  <data name="Keys_Selection" xml:space="preserve">
+    <value>Auswahl</value>
+  </data>
+  <data name="Keys_Launch" xml:space="preserve">
+    <value>Starten</value>
+  </data>
+  <data name="Keys_HdrAuto" xml:space="preserve">
+    <value>HDR automatisch</value>
+  </data>
+  <data name="Keys_Menu" xml:space="preserve">
+    <value>Menü</value>
+  </data>
+  <data name="Key_Up" xml:space="preserve">
+    <value>↑</value>
+  </data>
+  <data name="Key_Down" xml:space="preserve">
+    <value>↓</value>
+  </data>
+  <data name="Key_Enter" xml:space="preserve">
+    <value>Enter</value>
+  </data>
+  <data name="Key_Space" xml:space="preserve">
+    <value>Leertaste</value>
+  </data>
+  <data name="Key_ShiftF10" xml:space="preserve">
+    <value>Umschalt+F10</value>
+  </data>
+  <data name="Key_CtrlF" xml:space="preserve">
+    <value>Strg+F</value>
+  </data>
+  <data name="Key_I" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="Effects_Full" xml:space="preserve">
+    <value>Effekte Voll</value>
+  </data>
+  <data name="Effects_FullPauseBoth" xml:space="preserve">
+    <value>Effekte Voll · pausieren im Hintergrund und beim Spielen</value>
+  </data>
+  <data name="Effects_FullPauseBackground" xml:space="preserve">
+    <value>Effekte Voll · pausieren im Hintergrund</value>
+  </data>
+  <data name="Effects_FullPausePlaying" xml:space="preserve">
+    <value>Effekte Voll · pausieren beim Spielen</value>
+  </data>
+  <data name="Effects_Reduced" xml:space="preserve">
+    <value>Effekte Reduziert</value>
+  </data>
+  <data name="Effects_ReducedByWindows" xml:space="preserve">
+    <value>Effekte Reduziert (Windows-Einstellung)</value>
+  </data>
+  <data name="Effects_Off" xml:space="preserve">
+    <value>Effekte aus</value>
+  </data>
+  <data name="Effects_PausedGame" xml:space="preserve">
+    <value>Effekte pausiert, solange das Spiel läuft</value>
+  </data>
+  <data name="Effects_PausedBackground" xml:space="preserve">
+    <value>Effekte pausiert · Fenster im Hintergrund</value>
+  </data>
+  <data name="Effects_PausedMinimized" xml:space="preserve">
+    <value>Effekte pausiert · Fenster minimiert</value>
+  </data>
+  <data name="Nits_CapsuleName" xml:space="preserve">
+    <value>Bildschirm und HDR-Status</value>
+  </data>
+  <data name="Nits_UnknownDisplay" xml:space="preserve">
+    <value>Bildschirm</value>
+  </data>
+  <data name="Nits_DisplayWithBits" xml:space="preserve">
+    <value>{0} · {1} Bit</value>
+    <comment>{0} = Bildschirmname, {1} = Bit je Farbe</comment>
+  </data>
+  <data name="Nits_HdrOn" xml:space="preserve">
+    <value>HDR EIN</value>
+  </data>
+  <data name="Nits_HdrOff" xml:space="preserve">
+    <value>HDR AUS</value>
+  </data>
+  <data name="Nits_Peak" xml:space="preserve">
+    <value>SPITZE</value>
+  </data>
+  <data name="Nits_FullFrame" xml:space="preserve">
+    <value>VOLLBILD</value>
+  </data>
+  <data name="Nits_Minimum" xml:space="preserve">
+    <value>MINIMUM</value>
+  </data>
+  <data name="Nits_Unit" xml:space="preserve">
+    <value>nits</value>
+  </data>
+  <data name="Nits_Unknown" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Nits_ScaleEnd" xml:space="preserve">
+    <value>{0} nits</value>
+    <comment>{0} = Spitze bei eingeschaltetem HDR</comment>
+  </data>
+  <data name="Nits_ScaleName" xml:space="preserve">
+    <value>Helligkeitsskala bis zur Spitze bei eingeschaltetem HDR</value>
+  </data>
+  <data name="Nits_PeakName" xml:space="preserve">
+    <value>Spitze in Nits</value>
+  </data>
+  <data name="Nits_FullFrameName" xml:space="preserve">
+    <value>Vollbild in Nits</value>
+  </data>
+  <data name="Nits_MinimumName" xml:space="preserve">
+    <value>Minimum in Nits</value>
+  </data>
+  <data name="Nits_Tooltip" xml:space="preserve">
+    <value>Werte des Bildschirms laut Windows (DXGI): Spitze {0} nits · Vollbild {1} nits · Minimum {2} nits · {3} Bit pro Farbe. Die Skala reicht bis zur Spitze bei eingeschaltetem HDR (Fähigkeit des Bildschirms, keine Messung).</value>
+    <comment>{0} = Spitze, {1} = Vollbild, {2} = Minimum, {3} = Bit je Farbe</comment>
+  </data>
+  <data name="Nits_TooltipUnknown" xml:space="preserve">
+    <value>Die Helligkeitswerte des Bildschirms sind noch nicht bekannt. HDRpilot liest sie bei einem HDR- oder Bildschirmwechsel.</value>
+  </data>
+  <data name="Toolbar_Filter" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="Toolbar_FilterName" xml:space="preserve">
+    <value>Filter (Automatik, Neu, HDR-fähig)</value>
+  </data>
+  <data name="Chip_HdrAuto" xml:space="preserve">
+    <value>Automatik</value>
+  </data>
+  <data name="Search_Short" xml:space="preserve">
+    <value>Suchen …</value>
+  </data>
+  <data name="Context_MenuName" xml:space="preserve">
+    <value>Spielmenü</value>
+  </data>
+  <data name="Context_Subtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} = Quelle, {1} = zuletzt gespielt</comment>
+  </data>
+  <data name="Context_Launch" xml:space="preserve">
+    <value>Starten</value>
+  </data>
+  <data name="Context_HdrAuto" xml:space="preserve">
+    <value>HDR automatisch</value>
+  </data>
+  <data name="Context_Restore" xml:space="preserve">
+    <value>Nach dem Spiel zurückstellen</value>
+  </data>
+  <data name="Context_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Context_ChooseArtwork" xml:space="preserve">
+    <value>Bild wählen…</value>
+  </data>
+  <data name="Context_Desktop" xml:space="preserve">
+    <value>Desktop-Verknüpfung erstellen</value>
+  </data>
+  <data name="Context_StartMenu" xml:space="preserve">
+    <value>Zum Startmenü hinzufügen</value>
+  </data>
+  <data name="Context_OpenFolder" xml:space="preserve">
+    <value>Installationsordner öffnen</value>
+  </data>
+  <data name="Folder_NotFound" xml:space="preserve">
+    <value>Der Installationsordner von „{0}“ wurde nicht gefunden.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Launch_ButtonShort" xml:space="preserve">
+    <value>Starten</value>
+  </data>
+  <data name="Launch_IsRunning" xml:space="preserve">
+    <value>Läuft</value>
+  </data>
+  <data name="Profile_Overline" xml:space="preserve">
+    <value>SPIELPROFIL</value>
+  </data>
+  <data name="Profile_Subtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} = Quelle, {1} = Haupt-EXE</comment>
+  </data>
+  <data name="Profile_SubtitleNoExe" xml:space="preserve">
+    <value>{0} · keine EXE erkannt</value>
+    <comment>{0} = Quelle</comment>
+  </data>
+  <data name="Profile_More" xml:space="preserve">
+    <value>Weitere Optionen</value>
+  </data>
+  <data name="Details_ExecutablesCount" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} = „EXE-DATEIEN“, {1} = Anzahl</comment>
+  </data>
+  <data name="Artwork_Section" xml:space="preserve">
+    <value>BILDER</value>
+  </data>
+  <data name="Artwork_Choose" xml:space="preserve">
+    <value>Bild wählen…</value>
+  </data>
+  <data name="Artwork_Change" xml:space="preserve">
+    <value>Ändern…</value>
+  </data>
+  <data name="Artwork_TileHero" xml:space="preserve">
+    <value>Titelbild</value>
+  </data>
+  <data name="Artwork_TileLogo" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="Artwork_TileCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Artwork_TileIcon" xml:space="preserve">
+    <value>Symbol</value>
+  </data>
+  <data name="Artwork_TileTooltip" xml:space="preserve">
+    <value>{0}: {1}</value>
+    <comment>{0} = Bildart, {1} = Herkunft</comment>
+  </data>
+  <data name="Artwork_LogoPlaceholder" xml:space="preserve">
+    <value>Aa</value>
+  </data>
+  <data name="Artwork_HeroGenerated" xml:space="preserve">
+    <value>Titelbild erzeugt</value>
+  </data>
+  <data name="Artwork_NameInsteadOfLogo" xml:space="preserve">
+    <value>Name statt Logo</value>
+  </data>
+  <data name="Artwork_CoverGenerated" xml:space="preserve">
+    <value>Cover erzeugt</value>
+  </data>
+  <data name="Artwork_CoverFromSmear" xml:space="preserve">
+    <value>Cover aus Titelbild (Steam-Kapsel verschmiert)</value>
+  </data>
+  <data name="Artwork_Monogram" xml:space="preserve">
+    <value>Monogramm statt Symbol</value>
+  </data>
+  <data name="Separator" xml:space="preserve">
+    <value> · </value>
+  </data>
+  <data name="Shelf_Name" xml:space="preserve">
+    <value>Regal</value>
+  </data>
+  <data name="Shelf_Position" xml:space="preserve">
+    <value>{0}–{1} von {2}</value>
+    <comment>{0} = erste, {1} = letzte sichtbare Kachel, {2} = alle</comment>
+  </data>
+  <data name="Shelf_Previous" xml:space="preserve">
+    <value>Vorherige Spiele</value>
+  </data>
+  <data name="Shelf_Next" xml:space="preserve">
+    <value>Nächste Spiele</value>
+  </data>
+  <data name="Grid_Name" xml:space="preserve">
+    <value>Raster</value>
+  </data>
+  <data name="Card_Name" xml:space="preserve">
+    <value>Automatik des gewählten Spiels</value>
+  </data>
+  <data name="Card_Title" xml:space="preserve">
+    <value>AUTOMATIK</value>
+  </data>
+  <data name="Card_HdrAuto" xml:space="preserve">
+    <value>HDR automatisch</value>
+  </data>
+  <data name="Card_HdrAutoHint" xml:space="preserve">
+    <value>beim Start einschalten</value>
+  </data>
+  <data name="Card_Restore" xml:space="preserve">
+    <value>Zurückstellen</value>
+  </data>
+  <data name="Card_RestoreHint" xml:space="preserve">
+    <value>nach dem Spiel</value>
+  </data>
+  <data name="Card_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Card_Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Card_DetailsName" xml:space="preserve">
+    <value>Alle Details des Spiels zeigen (Taste I)</value>
+  </data>
+  <data name="Drawer_Close" xml:space="preserve">
+    <value>Details schließen (Esc)</value>
+  </data>
+  <data name="Picker_Title" xml:space="preserve">
+    <value>Bild wählen</value>
+  </data>
+  <data name="Picker_Subtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} = Spielname, {1} = Quelle</comment>
+  </data>
+  <data name="Picker_Tabs" xml:space="preserve">
+    <value>Bildart</value>
+  </data>
+  <data name="Picker_TabHero" xml:space="preserve">
+    <value>Titelbild</value>
+  </data>
+  <data name="Picker_TabLogo" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="Picker_TabCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Picker_ListName" xml:space="preserve">
+    <value>Möglichkeiten</value>
+  </data>
+  <data name="Picker_Automatic" xml:space="preserve">
+    <value>Automatisch</value>
+  </data>
+  <data name="Picker_AutomaticNote" xml:space="preserve">
+    <value>Bild aus dem Launcher-Cache oder erzeugt</value>
+  </data>
+  <data name="Picker_Current" xml:space="preserve">
+    <value>AKTUELL</value>
+  </data>
+  <data name="Picker_PickFile" xml:space="preserve">
+    <value>Eigene Datei…</value>
+  </data>
+  <data name="Picker_PickFileHint" xml:space="preserve">
+    <value>PNG, JPG oder WebP von diesem PC</value>
+  </data>
+  <data name="Picker_OwnFile" xml:space="preserve">
+    <value>Eigene Datei: {0}</value>
+    <comment>{0} = Dateiname</comment>
+  </data>
+  <data name="Picker_OwnFileNote" xml:space="preserve">
+    <value>Wird beim Übernehmen verkleinert im Datenordner gespeichert, die Datei selbst bleibt unverändert.</value>
+  </data>
+  <data name="Picker_SourceNote" xml:space="preserve">
+    <value>HDRpilot liest Bilder nur aus den lokalen Caches der Launcher (Steam, GOG Galaxy, Ubisoft, Xbox-Paket). Fehlt eines, wird es aus Symbol und Name erzeugt. SteamGridDB (online) füllt nur fehlende Bilder und nur, wenn du es in den Einstellungen einschaltest.</value>
+  </data>
+  <data name="Picker_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+    <comment>{0} = Breite, {1} = Höhe in Pixeln</comment>
+  </data>
+  <data name="Picker_Reset" xml:space="preserve">
+    <value>Zurücksetzen</value>
+  </data>
+  <data name="Picker_Apply" xml:space="preserve">
+    <value>Übernehmen</value>
+  </data>
+  <data name="Picker_Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="Picker_Applied" xml:space="preserve">
+    <value>Bilder für „{0}“ übernommen.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Picker_NotAnImage" xml:space="preserve">
+    <value>Aus dieser Datei lässt sich kein Bild lesen. Wähle ein PNG, JPG, WebP oder BMP.</value>
+  </data>
+  <data name="Picker_SaveFailed" xml:space="preserve">
+    <value>Das Bild konnte nicht gespeichert werden: {0}</value>
+    <comment>{0} = Fehlermeldung</comment>
+  </data>
+  <data name="Picker_FileTitle" xml:space="preserve">
+    <value>Bild wählen</value>
+  </data>
+  <data name="Picker_FileFilter" xml:space="preserve">
+    <value>Bilder (*.png;*.jpg;*.jpeg;*.webp;*.bmp)|*.png;*.jpg;*.jpeg;*.webp;*.bmp</value>
+  </data>
+  <data name="HdrTag_Native" xml:space="preserve">
+    <value>NATIVES HDR</value>
+  </data>
+  <data name="HdrTag_Limited" xml:space="preserve">
+    <value>HDR TEILWEISE</value>
+  </data>
+  <data name="HdrTag_ModOnly" xml:space="preserve">
+    <value>HDR PER MOD</value>
+  </data>
+  <data name="HdrTag_None" xml:space="preserve">
+    <value>KEIN EIGENES HDR</value>
+  </data>
+  <data name="HdrTag_Unknown" xml:space="preserve">
+    <value>HDR UNBEKANNT</value>
+  </data>
+  <data name="Details_AutoHdrWhere" xml:space="preserve">
+    <value>Wirkt beim Start über HDRpilot</value>
+  </data>
+  <data name="Stats_Name" xml:space="preserve">
+    <value>Kennzahlen der Bibliothek</value>
+  </data>
+  <data name="List_ThumbnailsName" xml:space="preserve">
+    <value>Vorschaubild oder Symbol in der Liste</value>
+  </data>
+  <data name="Toast_Name" xml:space="preserve">
+    <value>Hinweis</value>
+  </data>
 </root>

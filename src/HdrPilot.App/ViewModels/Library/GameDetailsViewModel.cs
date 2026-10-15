@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.Core.Artwork;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.HdrSupport;
@@ -44,6 +46,8 @@ public sealed class GameDetailsViewModel : ObservableObject
     private bool _isLaunching;
     private bool _suppressWrites;
     private bool _steamOfferOpen;
+    private GameArtwork? _artwork;
+    private IReadOnlyList<ArtworkTileViewModel> _artworkTiles;
 
     internal GameDetailsViewModel(LibraryViewModel owner, GameItemViewModel item)
     {
@@ -64,6 +68,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         RemoveGameCommand = new AsyncRelayCommand(RemoveGameAsync, () => Item.IsManual);
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
+        _artworkTiles = ArtworkTileViewModel.For(item, null);
         RefreshDisplays();
 
         // „HDR automatisch“ (Liste oder Details) und die HDR-Angabe laut PCGamingWiki steuern die Hinweise unter
@@ -72,6 +77,102 @@ public sealed class GameDetailsViewModel : ObservableObject
     }
 
     public GameItemViewModel Item { get; }
+
+    // ---------- Spielprofil und Bilder (E89) ----------
+
+    /// <summary>„Steam · GoWEDay-Steam.exe“ (Haupt-EXE: Hilfs- und Startprogramme nach hinten) bzw. „Steam · keine EXE erkannt“.</summary>
+    public string ProfileSubtitle => MainExecutable is { } exe
+        ? LibraryText.Format(LibraryStrings.Profile_Subtitle, Item.SourceName, exe)
+        : LibraryText.Format(LibraryStrings.Profile_SubtitleNoExe, Item.SourceName);
+
+    /// <summary>Dateiname der Haupt-EXE (null ohne bekannte EXE).</summary>
+    public string? MainExecutable => Executables
+        .Where(e => !e.IsExcluded)
+        .OrderBy(e => e.IsHelper || LauncherName(e.FileName) ? 1 : 0)
+        .ThenByDescending(e => GameBinary(e.Path) ? 1 : 0)
+        .Select(e => e.FileName)
+        .FirstOrDefault();
+
+    /// <summary>Startbefehl, wie HDRpilot ihn ausführt (Adresse oder Pfad mit Argumenten); leer ohne Befehl.</summary>
+    public string LaunchCommandText => string.IsNullOrWhiteSpace(_config.LaunchCommand)
+        ? string.Empty
+        : string.IsNullOrWhiteSpace(_config.LaunchArguments) ? _config.LaunchCommand! : _config.LaunchCommand + " " + _config.LaunchArguments;
+
+    public bool HasLaunchCommandText => LaunchCommandText.Length > 0;
+
+    /// <summary>„EXE-DATEIEN · 2“.</summary>
+    public string ExecutablesHeader => LibraryText.Format(LibraryStrings.Details_ExecutablesCount, LibraryStrings.Details_SectionExecutables, Executables.Count);
+
+    /// <summary>Vorschau-Kacheln Titelbild, Logo, Cover und Symbol (Abschnitt „BILDER“).</summary>
+    public IReadOnlyList<ArtworkTileViewModel> ArtworkTiles => _artworkTiles;
+
+    /// <summary>Cover klein im Kopf des Detailbereichs (null: Ersatzfläche aus dem Namen).</summary>
+    public System.Windows.Media.ImageSource? CoverPreview => _artwork?.Cover?.Image;
+
+    /// <summary>„Lokal aus dem Steam-Cache · nichts heruntergeladen“ (vom Bilddienst); leer, solange die Bilder laden.</summary>
+    public string ArtworkSummary => _artwork?.Summary.Description ?? string.Empty;
+
+    public bool HasArtworkSummary => ArtworkSummary.Length > 0;
+
+    /// <summary>„Titelbild erzeugt · Name statt Logo · Cover erzeugt“; leer, wenn alles aus einer Quelle kommt.</summary>
+    public string GeneratedSummary
+    {
+        get
+        {
+            if (_artwork is not { } art)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            if (art.Summary.Hero is ArtworkOrigin.Generated or ArtworkOrigin.None)
+            {
+                parts.Add(LibraryStrings.Artwork_HeroGenerated);
+            }
+
+            if (art.Summary.LogoIsName)
+            {
+                parts.Add(LibraryStrings.Artwork_NameInsteadOfLogo);
+            }
+
+            if (art.Summary.CoverFromSmear)
+            {
+                parts.Add(LibraryStrings.Artwork_CoverFromSmear);
+            }
+            else if (art.Summary.Cover is ArtworkOrigin.Generated or ArtworkOrigin.None)
+            {
+                parts.Add(LibraryStrings.Artwork_CoverGenerated);
+            }
+
+            if (art.Summary.Icon == ArtworkOrigin.Generated)
+            {
+                parts.Add(LibraryStrings.Artwork_Monogram);
+            }
+
+            return string.Join(LibraryStrings.Separator, parts);
+        }
+    }
+
+    public bool HasGeneratedSummary => GeneratedSummary.Length > 0;
+
+    /// <summary>Bildsatz des Spiels ist geladen (aus dem Titelbereich übernommen).</summary>
+    internal void SetArtwork(GameArtwork artwork)
+    {
+        _artwork = artwork;
+        _artworkTiles = ArtworkTileViewModel.For(Item, artwork);
+        OnPropertyChanged(nameof(ArtworkTiles));
+        OnPropertyChanged(nameof(CoverPreview));
+        OnPropertyChanged(nameof(ArtworkSummary));
+        OnPropertyChanged(nameof(HasArtworkSummary));
+        OnPropertyChanged(nameof(GeneratedSummary));
+        OnPropertyChanged(nameof(HasGeneratedSummary));
+    }
+
+    private static bool LauncherName(string file) =>
+        System.Text.RegularExpressions.Regex.IsMatch(file, @"(start_protected_game|launcher|prelauncher|anticheat|helper|crash|unins|setup|redist|battleye|easyanti|gamelaunchhelper|^play[a-z0-9]+\.exe$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static bool GameBinary(string path) =>
+        System.Text.RegularExpressions.Regex.IsMatch(path, @"shipping|win64|x64|\\bin\\", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     public string InstallDir => _config.InstallDir;
 
@@ -278,7 +379,10 @@ public sealed class GameDetailsViewModel : ObservableObject
                         path,
                         origin,
                         game.ExcludedExecutables.Any(x => ExcludeMatches(x, path)),
-                        HelperExecutables.IsHelper(path, helperPatterns)));
+                        HelperExecutables.IsHelper(path, helperPatterns))
+                    {
+                        ShortFolder = ExecutableItemViewModel.Shorten(System.IO.Path.GetDirectoryName(path) ?? string.Empty, game.InstallDir),
+                    });
                 }
             }
         }
@@ -355,6 +459,11 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasInstallDir));
         OnPropertyChanged(nameof(LastPlayedText));
         OnPropertyChanged(nameof(HasLastPlayed));
+        OnPropertyChanged(nameof(ProfileSubtitle));
+        OnPropertyChanged(nameof(MainExecutable));
+        OnPropertyChanged(nameof(ExecutablesHeader));
+        OnPropertyChanged(nameof(LaunchCommandText));
+        OnPropertyChanged(nameof(HasLaunchCommandText));
         RelearnExeCommand.RaiseCanExecuteChanged();
         LaunchCommand.RaiseCanExecuteChanged();
     }
@@ -610,6 +719,7 @@ public sealed class GameDetailsViewModel : ObservableObject
                         : LibraryStrings.Launch_StartedPlain,
                     StatusKind.Success,
                     DetailMessageArea.Launch);
+                _owner.OnLaunchSucceeded(); // auf Wunsch schließt das Fenster („Nach dem Start in den Infobereich“)
             }
             else
             {

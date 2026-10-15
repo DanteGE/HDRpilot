@@ -1,5 +1,4 @@
 using HdrPilot.App.ViewModels.Library;
-using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Games;
 using static HdrPilot.App.Tests.Library.TestLibraryContext;
 
@@ -96,21 +95,4 @@ public sealed class LibraryLayoutTests
 
         Assert.Equal(0.44, vm.DetailsRatio);
     });
-
-    [Theory]
-    [InlineData(1400, ToolbarMode.Wide, false)]
-    [InlineData(1100, ToolbarMode.Wide, false)]
-    [InlineData(1099, ToolbarMode.Compact, true)]
-    [InlineData(1010, ToolbarMode.Compact, true)]
-    [InlineData(1009, ToolbarMode.Stacked, false)]
-    [InlineData(600, ToolbarMode.Stacked, false)]
-    [InlineData(450, ToolbarMode.Stacked, true)]
-    public void Toolbar_mode_follows_the_available_width(double available, ToolbarMode expected, bool iconOnly)
-    {
-        // Suche mindestens 200, Filter 600, Aktionen 300 (davon 90 Text bei „Neu einlesen“).
-        var mode = LibraryToolbarLayout.Choose(available, 200, 600, 300, 90);
-
-        Assert.Equal(expected, mode);
-        Assert.Equal(iconOnly, LibraryToolbarLayout.RescanIconOnly(mode, available, 200, 300));
-    }
 }

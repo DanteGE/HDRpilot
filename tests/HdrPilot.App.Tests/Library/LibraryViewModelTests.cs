@@ -135,7 +135,9 @@ public sealed class LibraryViewModelTests
         vm.SelectedGame = vm.Games.Single(g => g.Key == "Epic:Crow");
         Assert.Equal(updates, context.Updates);
         Assert.Equal(0, vm.NewCount);
-        Assert.Equal(1, context.Dispatcher.PendingDelays);
+
+        // Gesammelt: das Speichern der Markierungen und (schnelles Blättern) das Laden des Titelbilds, je einmal.
+        Assert.Equal(2, context.Dispatcher.PendingDelays);
 
         // Ein Abgleich mit einer Änderung von außen (etwa Einlesen oder Automatik) holt die Markierung nicht zurück.
         context.ConfigService.Update(c => c.FindGame("Steam:1091500")!.LastPlayed = DateTimeOffset.UnixEpoch);
@@ -191,12 +193,17 @@ public sealed class LibraryViewModelTests
     public void Main_window_list_does_not_follow_the_current_item_of_the_view()
     {
         // Eine ListCollectionView, die nicht die Standardsicht ist, würde die ListBox sonst mit dem aktuellen Element
-        // verbinden: Jede Suche wählte dann den ersten Treffer aus und markierte ihn als angesehen.
+        // verbinden: Jede Suche wählte dann den ersten Treffer aus und markierte ihn als angesehen. Showcase Hero: drei
+        // Ansichten (Liste, Raster, Regal); GamesView bekommt nur die aktive, im Code (MainWindow.Activate, geprüft in
+        // ShowcaseViewsTests), damit eine ausgeblendete Ansicht die Auswahl nie auf null schreibt.
         var xaml = System.Xml.Linq.XDocument.Load(SourceFiles.MainWindowXaml);
-        var list = xaml.Descendants().Single(e => (string?)e.Attribute(System.Xml.Linq.XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml")) == "GameList");
-
-        Assert.Equal("{Binding GamesView}", (string?)list.Attribute("ItemsSource"));
-        Assert.Equal("False", (string?)list.Attribute("IsSynchronizedWithCurrentItem"));
+        foreach (var name in new[] { "GameList", "GameGrid", "GameShelf" })
+        {
+            var list = xaml.Descendants().Single(e => (string?)e.Attribute(System.Xml.Linq.XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml")) == name);
+            Assert.Equal("False", (string?)list.Attribute("IsSynchronizedWithCurrentItem"));
+            Assert.Null(list.Attribute("ItemsSource"));
+            Assert.Null(list.Attribute("SelectedItem"));
+        }
     }
 
     [Fact]

@@ -12,6 +12,13 @@ namespace HdrPilot.App.Infrastructure;
 /// </summary>
 public class ChromeWindow : Window
 {
+    /// <summary>
+    /// Inhalt reicht unter die Titelleiste (E89, Bibliothek: das Titelbild beginnt am oberen Fensterrand). Titel und
+    /// Fensterknöpfe liegen dann hell über dem Bild. Gerüst: noch ohne Wirkung, die Vorlage folgt mit der Darstellung.
+    /// </summary>
+    public static readonly DependencyProperty ContentUnderTitleBarProperty = DependencyProperty.Register(
+        nameof(ContentUnderTitleBar), typeof(bool), typeof(ChromeWindow), new PropertyMetadata(false));
+
     private static readonly BitmapFrame AppIcon = BitmapFrame.Create(new Uri("pack://application:,,,/HDRpilot;component/Assets/HdrPilot.ico", UriKind.Absolute));
 
     public ChromeWindow()
@@ -24,6 +31,13 @@ public class ChromeWindow : Window
         CommandBindings.Add(new CommandBinding(SystemCommands.RestoreWindowCommand, (_, _) => SystemCommands.RestoreWindow(this)));
         ThemeManager.ThemeChanged += OnThemeChanged;
         Closed += (_, _) => ThemeManager.ThemeChanged -= OnThemeChanged;
+    }
+
+    /// <inheritdoc cref="ContentUnderTitleBarProperty"/>
+    public bool ContentUnderTitleBar
+    {
+        get => (bool)GetValue(ContentUnderTitleBarProperty);
+        set => SetValue(ContentUnderTitleBarProperty, value);
     }
 
     protected override void OnSourceInitialized(EventArgs e)

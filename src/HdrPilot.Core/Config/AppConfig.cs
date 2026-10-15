@@ -82,6 +82,21 @@ public sealed class AppSettings
     /// Die Oberfläche begrenzt ihn beim Öffnen auf die aktuelle Fenstergröße.
     /// </summary>
     public double? LibraryDetailsRatio { get; set; }
+
+    /// <summary>
+    /// Gemerkte Ansicht der Spielebibliothek (E89): "List" (Standard), "Grid" (Raster) oder "Shelf" (Regal). Text statt
+    /// Aufzählung wie bei <see cref="LibrarySortOrder"/>; Unbekanntes gilt als Liste.
+    /// </summary>
+    public string? LibraryView { get; set; }
+
+    /// <summary>Vorschau in den Zeilen der Liste: "Image" (Standard, Bild) oder "Icon" (Symbol).</summary>
+    public string? LibraryThumbnail { get; set; }
+
+    /// <summary>Darstellung: Farbschema, Thema, Effekte (E89). Ältere Konfigurationen: Standardwerte.</summary>
+    public AppearanceSettings Appearance { get; set; } = new();
+
+    /// <summary>Spielbilder: SteamGridDB (Standard aus) (E89).</summary>
+    public ArtworkSettings Artwork { get; set; } = new();
 }
 
 /// <summary>Einstellungen je Spiel. Hängt an Quelle und ID, nicht am Namen.</summary>
@@ -153,6 +168,11 @@ public sealed class GameConfig
     /// vor allen automatischen Quellen. Null: automatisch. Fehlt die Datei (etwa auf einem anderen PC), gilt automatisch.
     /// </summary>
     public string? CustomIcon { get; set; }
+
+    /// <summary>
+    /// Eigene Bildwahl („Bild wählen…“, E89) je Bildart; null: alles automatisch (lokale Launcher-Bilder, sonst erzeugt).
+    /// </summary>
+    public GameArtworkChoice? Artwork { get; set; }
 
     [JsonIgnore]
     public string Key => GameKey.Create(Source, SourceId);

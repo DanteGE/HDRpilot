@@ -14,6 +14,9 @@ namespace HdrPilot.App;
 /// (siehe <see cref="HdrPilot.Core.Launch.SteamWrapper"/>); wird nie weitergereicht.</item>
 /// <item><c>--prepare &lt;Quelle:ID&gt; --ready-event &lt;name&gt;</c> vom Wrapper an die laufende Instanz: HDR für einen Start
 /// vorbereiten, den der Wrapper selbst ausführt, und danach das Ereignis setzen.</item>
+/// <item>Nur für Entwicklung und Prüfskripte, nur mit <c>--config-dir</c> (E54, E89): <c>--snapshot &lt;ordner&gt;</c> mit
+/// <c>--snapshot-sizes</c>, <c>--snapshot-scenes</c> und <c>--snapshot-themes</c> (siehe <see cref="Infrastructure.SnapshotPlan"/>),
+/// <c>--artwork-report &lt;datei&gt;</c> und <c>--test-hdr-moment</c> (wird weitergereicht).</item>
 /// <item><c>--</c> beendet die Befehle: alles danach (der Spielbefehl) wird nie als Befehl von HdrPilot gelesen.</item>
 /// </list>
 /// </summary>
@@ -52,11 +55,32 @@ public sealed record AppArguments
     /// <summary>Entwicklung: Hauptfenster und Einstellungen hell und dunkel unsichtbar als PNG in diesen Ordner rendern, dann beenden.</summary>
     public string? SnapshotDir { get; init; }
 
+    /// <summary>Entwicklung (E89): Größen der Bildschirmfotos, etwa „1280x800,1920x1080,3440x1440“ oder „review“.</summary>
+    public string? SnapshotSizes { get; init; }
+
+    /// <summary>Entwicklung (E89): Auswahl der Zustände, etwa „hauptfenster-raster,einstellungen“.</summary>
+    public string? SnapshotScenes { get; init; }
+
+    /// <summary>Entwicklung (E89): Themen der Bildschirmfotos, „dunkel“, „hell“ oder beide.</summary>
+    public string? SnapshotThemes { get; init; }
+
+    /// <summary>
+    /// Entwicklung (E89, G10.3): Abdeckung der Bibliothek mit lokalen Bildern als JSON in diese Datei schreiben, dann beenden.
+    /// Nur mit eigener Ablage (--config-dir); liest die Launcher-Caches nur.
+    /// </summary>
+    public string? ArtworkReport { get; init; }
+
+    /// <summary>
+    /// Prüfung (E89, G10.9): den HDR-Moment in der Bibliothek abspielen, ohne HDR zu schalten. Wirkt nur in einer Instanz
+    /// mit eigener Ablage (--config-dir) und wird an sie weitergereicht.
+    /// </summary>
+    public bool TestHdrMoment { get; init; }
+
     public IReadOnlyList<string> Unknown { get; init; } = [];
 
     /// <summary>True, wenn der Aufruf etwas tun soll außer die App zu starten.</summary>
     public bool HasCommand => RunGameKey is not null || PrepareGameKey is not null || ReadyEvent is not null
-        || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings;
+        || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings || TestHdrMoment;
 
     public static AppArguments Parse(IReadOnlyList<string> args)
     {
@@ -92,6 +116,21 @@ public sealed record AppArguments
                     break;
                 case "--snapshot" when i + 1 < args.Count:
                     result = result with { SnapshotDir = args[++i] };
+                    break;
+                case "--snapshot-sizes" when i + 1 < args.Count:
+                    result = result with { SnapshotSizes = args[++i] };
+                    break;
+                case "--snapshot-scenes" when i + 1 < args.Count:
+                    result = result with { SnapshotScenes = args[++i] };
+                    break;
+                case "--snapshot-themes" when i + 1 < args.Count:
+                    result = result with { SnapshotThemes = args[++i] };
+                    break;
+                case "--artwork-report" when i + 1 < args.Count:
+                    result = result with { ArtworkReport = args[++i] };
+                    break;
+                case "--test-hdr-moment":
+                    result = result with { TestHdrMoment = true };
                     break;
                 case "--show":
                     result = result with { Show = true };
@@ -182,6 +221,11 @@ public sealed record AppArguments
         if (Exit)
         {
             list.Add("--exit");
+        }
+
+        if (TestHdrMoment)
+        {
+            list.Add("--test-hdr-moment");
         }
 
         return list;

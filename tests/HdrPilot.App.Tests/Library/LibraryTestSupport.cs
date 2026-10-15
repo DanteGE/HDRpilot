@@ -3,6 +3,9 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
@@ -402,6 +405,15 @@ public sealed class TestLibraryContext : ILibraryContext
     public IClock Clock => FakeClock;
 
     public IGameIconService Icons => FakeIcons;
+
+    /// <summary>Spielbilder (E89); Standard: keine Bilder.</summary>
+    public IArtworkService Artwork { get; set; } = NullArtworkService.Instance;
+
+    /// <summary>Helligkeit der Bildschirme (E89); Standard: unbekannt.</summary>
+    public IDisplayLuminanceService Luminance { get; set; } = NullDisplayLuminanceService.Instance;
+
+    /// <summary>Darstellung (E89); Standard: Auslieferungszustand, dunkel, Animationen erlaubt.</summary>
+    public IAppearanceService Appearance { get; set; } = new StaticAppearanceService();
 
     public IShortcutService Shortcuts => FakeShortcuts;
 

@@ -66,6 +66,12 @@ public partial class App : Application
             return;
         }
 
+        if (args.ArtworkReport is { } artworkReport)
+        {
+            await RunArtworkReportModeAsync(args, artworkReport);
+            return;
+        }
+
         var instanceId = SingleInstance.IdFor(args.ConfigDir);
         var instance = SingleInstance.TryAcquire(instanceId);
         if (instance is null)
@@ -112,8 +118,54 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    /// <summary>Entwicklung: Bildschirmfotos der Fenster rendern (eigene Ablage nötig), dann beenden.</summary>
+    /// <summary>
+    /// Entwicklung: Bildschirmfotos der Fenster rendern (eigene Ablage nötig), dann beenden. Mit --snapshot-sizes,
+    /// --snapshot-scenes und --snapshot-themes in festen Größen und Zuständen (E89); ungültige Angaben: Exit-Code 2.
+    /// </summary>
     private async Task RunSnapshotModeAsync(AppArguments args, string snapshotDir)
+    {
+        if (args.ConfigDir is null)
+        {
+            Shutdown(2); // nie gegen die echte Konfiguration
+            return;
+        }
+
+        SnapshotPlan plan;
+        try
+        {
+            plan = SnapshotPlan.Parse(args.SnapshotSizes, args.SnapshotScenes, args.SnapshotThemes);
+        }
+        catch (FormatException)
+        {
+            Shutdown(2);
+            return;
+        }
+
+        ThemeManager.Initialize(this);
+        var paths = AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir));
+        _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
+        _services = new AppServices(_host, Dispatcher, instance: null);
+        try
+        {
+            await _services.RenderSnapshotsAsync(System.IO.Path.GetFullPath(snapshotDir), plan);
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+            await _services.DisposeAsync();
+            Shutdown(1);
+            return;
+        }
+
+        await _services.DisposeAsync();
+        Shutdown(0);
+    }
+
+    /// <summary>
+    /// Entwicklung (G10.3): Abdeckung der Bibliothek mit lokalen Bildern als JSON schreiben (eigene Ablage nötig, Launcher-Caches
+    /// nur lesend), dann beenden.
+    /// </summary>
+    private async Task RunArtworkReportModeAsync(AppArguments args, string reportFile)
     {
         if (args.ConfigDir is null)
         {
@@ -127,7 +179,7 @@ public partial class App : Application
         _services = new AppServices(_host, Dispatcher, instance: null);
         try
         {
-            await _services.RenderSnapshotsAsync(System.IO.Path.GetFullPath(snapshotDir));
+            await _services.WriteArtworkReportAsync(System.IO.Path.GetFullPath(reportFile));
         }
         catch (Exception ex)
         {

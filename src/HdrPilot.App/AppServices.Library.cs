@@ -1,4 +1,5 @@
 using System.Windows;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
@@ -41,6 +42,13 @@ public sealed partial class AppServices
         window.Attach(new LibraryViewModel(new AppLibraryContext(this), new LibraryDialogs(window, string.IsNullOrWhiteSpace(testIconFile) ? null : testIconFile)));
         return window;
     }
+
+    /// <summary>Zustände der Bibliothek für Bildschirmfotos (E89). Gerüst: das Fenster, wie es öffnet.</summary>
+    partial void AddLibrarySnapshotScenes(List<SnapshotScene> scenes) =>
+        scenes.Add(new SnapshotScene("hauptfenster", "liste", CreateMainWindow));
+
+    /// <summary>Prüfung (G10.9): HDR-Moment ohne HDR-Schaltung. Gerüst: nur protokolliert, die Bibliothek spielt ihn noch nicht.</summary>
+    partial void PlayTestHdrMoment() => _logger.LogInformation("Prüfung: HDR-Moment angefordert (Fenster offen: {Open}).", _mainWindow is not null);
 
     /// <summary>Mit eigener Ablage (--config-dir) gestartet: Verknüpfungen sollen dieselbe Ablage benutzen.</summary>
     private string? ConfigDirArgument()

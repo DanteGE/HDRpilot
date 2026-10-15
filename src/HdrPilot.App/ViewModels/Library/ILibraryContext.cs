@@ -1,4 +1,7 @@
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -24,6 +27,15 @@ public interface ILibraryContext : IDisposable
     IClock Clock { get; }
 
     IGameIconService Icons { get; }
+
+    /// <summary>Spielbilder (E89): Titelbild, Logo, Cover, Farbfeld, Umgebungsfarben, eigene Bilder.</summary>
+    IArtworkService Artwork { get; }
+
+    /// <summary>Echte Helligkeitswerte der Bildschirme (E89) für die Anzeige im Kopf.</summary>
+    IDisplayLuminanceService Luminance { get; }
+
+    /// <summary>Darstellung (E89): Palette, Thema, Effektstufe, Pausenregeln.</summary>
+    IAppearanceService Appearance { get; }
 
     IShortcutService Shortcuts { get; }
 

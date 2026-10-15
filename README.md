@@ -389,6 +389,9 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 | PCGamingWiki-Konto (verschlüsselt, nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\pcgw-account.dat` |
 | Eigene Spielsymbole (je Spiel eine PNG mit 96 px, für Verknüpfungen dazu eine ICO) | `%LOCALAPPDATA%\HDRpilot\icons\` |
 | Gemerkte Quelle der Spielsymbole | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
+| Spielbilder: Verzeichnis `index.json` (Herkunft und Farben je Spiel), erzeugte Ersatzbilder, zugeschnittene Logos, helle HDR-Fassungen, eigene Bilder und Bilder von SteamGridDB | `%LOCALAPPDATA%\HDRpilot\art\` |
+| SteamGridDB-Schlüssel (verschlüsselt, nur wenn eingetragen) | `%LOCALAPPDATA%\HDRpilot\steamgriddb-key.dat` |
+| Zuletzt bei eingeschaltetem HDR gemessene Helligkeit je Bildschirm (Maximum der Nit-Anzeigen) | `%LOCALAPPDATA%\HDRpilot\display-luminance.json` |
 | Auto-HDR-Schalter von Windows samt altem Wert, solange HDRpilot ihn für einen Spielstart hält | `%LOCALAPPDATA%\HDRpilot\autohdr-global.json` |
 | Vermerk „erledigt“, falls sich `autohdr-global.json` nicht löschen ließ (etwa vom Virenscanner gesperrt); beide werden gelöscht, sobald es geht | `%LOCALAPPDATA%\HDRpilot\autohdr-global.done` |
 | Auto HDR von Windows (globaler Schalter, Einstellung von Windows) | `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, Wert `DirectXUserGlobalSettings` |

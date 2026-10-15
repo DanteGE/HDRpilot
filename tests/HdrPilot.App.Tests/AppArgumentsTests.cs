@@ -117,4 +117,46 @@ public sealed class AppArgumentsTests
         Assert.Null(AppArguments.Parse(["--autohdr-test-root"]).AutoHdrTestRoot);
         Assert.Null(AppArguments.Parse(["--", "--autohdr-test-root", "x"]).AutoHdrTestRoot);
     }
+
+    [Fact]
+    public void Snapshot_options_are_parsed_but_never_forwarded()
+    {
+        // E89: Größen, Zustände und Themen der Bildschirmfotos gehören zum Bildschirmfoto-Lauf, nie zu einer laufenden Instanz.
+        var args = AppArguments.Parse(["--snapshot", @"C:\shots", "--config-dir", @"C:\t", "--snapshot-sizes", "1280x800,3440x1440", "--snapshot-scenes", "hauptfenster", "--snapshot-themes", "hell"]);
+        Assert.Equal(@"C:\shots", args.SnapshotDir);
+        Assert.Equal("1280x800,3440x1440", args.SnapshotSizes);
+        Assert.Equal("hauptfenster", args.SnapshotScenes);
+        Assert.Equal("hell", args.SnapshotThemes);
+        Assert.Empty(args.Unknown);
+        Assert.False(args.HasCommand);
+        Assert.Empty(args.ToForwardedArgs());
+
+        // Gegenprobe: ohne Wert unbekannt, nach "--" Spielbefehl.
+        Assert.Null(AppArguments.Parse(["--snapshot-sizes"]).SnapshotSizes);
+        Assert.Null(AppArguments.Parse(["--", "--snapshot-sizes", "1280x800"]).SnapshotSizes);
+    }
+
+    [Fact]
+    public void Artwork_report_is_parsed_but_never_forwarded()
+    {
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--artwork-report", @"C:\out\bilder.json"]);
+        Assert.Equal(@"C:\out\bilder.json", args.ArtworkReport);
+        Assert.False(args.HasCommand);
+        Assert.Empty(args.ToForwardedArgs());
+        Assert.Null(AppArguments.Parse(["--artwork-report"]).ArtworkReport);
+    }
+
+    [Fact]
+    public void Test_hdr_moment_is_a_command_and_forwarded_to_the_test_instance()
+    {
+        // G10.9: das Messskript lässt die laufende Testinstanz den HDR-Moment spielen, ohne HDR zu schalten.
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--test-hdr-moment"]);
+        Assert.True(args.TestHdrMoment);
+        Assert.True(args.HasCommand);
+        Assert.Equal(["--test-hdr-moment"], args.ToForwardedArgs());
+        Assert.True(AppArguments.Parse(args.ToForwardedArgs()).TestHdrMoment);
+
+        // Gegenprobe: nach "--" gehört es zum Spielbefehl.
+        Assert.False(AppArguments.Parse(["--", "--test-hdr-moment"]).TestHdrMoment);
+    }
 }

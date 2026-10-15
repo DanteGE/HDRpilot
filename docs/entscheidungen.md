@@ -778,3 +778,56 @@ Absturz), G9.7 (Filter `AutoHdrSteam`, Steam als Attrappe oder Testordner), G9.9
 Dienst über einem Schlüssel im Speicher; `phase6-traymenu.ps1` prüft den Eintrag an einer Testinstanz mit Testwurzel,
 läuft aber nur am echten Desktop mit Zustimmung). RTX HDR gehört nicht zu HDRpilot und bleibt zurückgestellt (`docs/recherche/auto-hdr-rtx-hdr.md`), ebenso die
 Intensität (`AutoHDRStrength`) und das Erzwingen für nicht zugelassene Spiele (`D3DBehaviors`).
+
+**E89 Neugestaltung „Showcase Hero“ (Wunsch des Nutzers 2026-10-14/15, G10):** Der Nutzer hat die Richtung „Showcase
+Hero“ gewählt und den Prototyp v4 abgenommen (`docs/design/showcase-hero/`); seine vier Anmerkungen (Raster im Vollbild,
+Reihenfolge Liste/Raster/Regal, Nit-Skala bis zur echten HDR-Spitze, Anordnung der Seite „Darstellung“) gehören zu den
+Kriterien. Umgesetzt wird in drei parallelen Teilen auf einem gemeinsamen Gerüst (Verträge, Konfigurationsfelder,
+Verdrahtung, Bildschirmfotos): Bilder und Bildschirmwerte, Darstellung und Einstellungen, Bibliothek und Effekte.
+
+Bilder (G10.3) kommen nur lesend aus den lokalen Launcher-Caches: Steam `appcache\librarycache` (deutsche Varianten
+zuerst), GOG Galaxy `webcache`, Ubisoft `cache\assets`, Xbox-Paketbilder und für Epic und EA das Symbol aus der EXE. Fehlt
+ein Bild, erzeugt HDRpilot ein Ersatzbild (Farbfeld aus dem Symbol mit dem Namen als Umriss-Muster, Cover, Monogramm);
+verschmierte Steam-Kapseln ersetzt ein Ausschnitt aus dem Titelbild, Logos werden auf ihren sichtbaren Teil zugeschnitten.
+Umgebungsfarben und die helle „HDR“-Fassung werden je Bild einmal berechnet und unter `%LOCALAPPDATA%\HDRpilot\art\`
+gespeichert (Verzeichnis `index.json`). Neue Bilder erscheinen von selbst; die Cache-Ordner werden nur beobachtet,
+solange ein Fenster offen ist. Eigene Bilder („Bild wählen…“) stehen je Bildart als Kennzeichen in `games[].artwork`
+(`gen`, `alt:<Datei>`, `custom:<Datei>`, nur schlichte Dateinamen, sonst automatisch) und liegen in `art\custom\`.
+
+SteamGridDB (G10.4) ist die einzige Ausnahme von „nur lokal“: standardmäßig aus (`settings.artwork.steamGridDb`), nur mit
+eigenem API-Schlüssel (mit DPAPI verschlüsselt in `steamgriddb-key.dat`, wie das PCGamingWiki-Bot-Passwort), füllt nur
+lokal fehlende Bilder und zeigt den Netzwerkzugriff in den Einstellungen an. Ist es aus oder fehlt der Schlüssel, gibt es
+keinen Netzwerkzugriff dafür; mit `--config-dir` läuft es nie von selbst.
+
+Bildschirmwerte (G10.7) kommen über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv),
+gelesen nur nach einem HDR- oder Bildschirmwechsel und nur, solange ein Fenster sie zeigt. Das Maximum jeder Nit-Skala ist
+die höchste Nit-Zahl des Bildschirms bei eingeschaltetem HDR (beim MAG 341C 456), zuletzt mit HDR gemessen und in
+`display-luminance.json` gemerkt, nie ein fester Wert wie 1000.
+
+Darstellung (G10.1, G10.2, G10.8): Duoton und Tritonus mit acht Vorlagen (Standard „Abendrot“) und eigenen Farben, Thema
+Automatisch, Hell oder Dunkel, gespeichert in `settings.appearance` (Werte als Text, Unbekanntes gilt als Standard). Alle
+Farb-Ressourcen werden aus der Palette abgeleitet und vorab gemischt (Schlüssel in `Theming/ThemeKeys.cs`, Rechnung in
+OKLab); Text auf Akzentflächen hält mindestens 4,5:1, Bedienelemente 3:1. Tray- und Fenstersymbol tragen die
+Palettenfarben und werden nur bei Farb-, Zustands- oder Taskleisten-Themawechsel neu gezeichnet. Die Seite „Darstellung“
+ordnet ihre Bereiche in einem Raster mit Höchstbreite je Bereich und mehreren Spalten bei breiten Fenstern an; ihre
+Änderungen gelten sofort.
+
+Bibliothek (G10.5): Ansichten Liste (Standard), Raster und Regal, überall in dieser Reihenfolge (Umschalter, Strg+1/2/3,
+Menüs), gemerkt in `settings.libraryView`. Das Raster berechnet Spaltenzahl und Kachelgröße aus der verfügbaren Breite
+(nichts gestreckt oder abgeschnitten, auch bei 3440×1440). Alle bisherigen Funktionen, AutomationIds und Tastenkürzel
+bleiben.
+
+Effekte (G10.6, G10.9) sind allgemeine Ebenen, die mit jedem Bild funktionieren, keine Animation je Spiel. Stufen Voll,
+Reduziert (Übergänge bis 0,3 s, keine Dauer-Animation) und Aus; ist die Windows-Option „Animationseffekte“ aus, gilt
+mindestens „Reduziert“. Dauer-Effekte laufen mit höchstens 30 fps und stehen bei minimiertem oder inaktivem Fenster und
+während eines Spiels still; bei geschlossenem Fenster läuft nichts. Der HDR-Moment dauert höchstens 2,5 s (höchstens 160
+Partikel), danach ist keine Bildschleife mehr angemeldet. Kein BlurEffect, kein DropShadowEffect, keine Mischmodi:
+Leuchten und weiche Flächen sind vorab berechnete Bilder oder Verläufe. Schriften sind Windows-Schriften (Bahnschrift,
+Segoe UI Variable, Cascadia Mono); eine eingebettete OFL-Schrift nur mit Zustimmung des Nutzers und Eintrag in den
+Lizenzhinweisen.
+
+Prüfung: Bildschirmfotos über `--snapshot` mit `--snapshot-sizes` (`review` = 1280×800, 1920×1080, 3440×1440),
+`--snapshot-scenes` und `--snapshot-themes` (Dateien `<fenster>-<zustand>-<B>x<H>-<thema>.png`, auch größer als der
+Bildschirm); Abdeckungsmessung über `--artwork-report`; `--test-hdr-moment` lässt eine Testinstanz den HDR-Moment ohne
+HDR-Schaltung spielen. Neue Gates `phase10-ui.ps1`, `phase10-settings-ui.ps1` und `phase10-gpu.ps1` (misst die
+Grafikkartenlast der Testinstanz; ohne aktiven Bildschirm meldet es UMGEBUNG und gilt nicht als bestanden).

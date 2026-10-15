@@ -20,8 +20,14 @@ public static class ThemeManager
 
     public static bool IsDark { get; private set; } = true;
 
-    /// <summary>Erzwingt hell oder dunkel (Tests, Bildschirmfotos). Null: Windows-Einstellung.</summary>
+    /// <summary>Erzwingt hell oder dunkel (Tests, Bildschirmfotos). Null: <see cref="Preference"/>. Hat immer Vorrang.</summary>
     public static bool? Override { get; set; }
+
+    /// <summary>
+    /// Wahl des Nutzers in „Darstellung → Thema“ (E89): true dunkel, false hell, null automatisch (Windows-Einstellung).
+    /// Gesetzt von der Darstellung; <see cref="Override"/> geht vor.
+    /// </summary>
+    public static bool? Preference { get; set; }
 
     public static void Initialize(Application app, IRegistry? registry = null)
     {
@@ -44,7 +50,7 @@ public static class ThemeManager
 
     public static void Apply(Application app)
     {
-        var dark = Override ?? ReadSystemPrefersDark();
+        var dark = Override ?? Preference ?? ReadSystemPrefersDark();
         if (_current is not null && dark == IsDark)
         {
             return;

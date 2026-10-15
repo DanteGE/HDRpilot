@@ -1,6 +1,10 @@
 using System.Windows;
 using System.Windows.Threading;
+using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
 using HdrPilot.Core.AutoHdr;
@@ -60,6 +64,10 @@ public sealed partial class AppServices
         return window;
     }
 
+    /// <summary>Zustände der Einstellungen für Bildschirmfotos (E89). Gerüst: das Fenster, wie es öffnet.</summary>
+    partial void AddSettingsSnapshotScenes(List<SnapshotScene> scenes) =>
+        scenes.Add(new SnapshotScene("einstellungen", "allgemein", CreateSettingsWindow));
+
     /// <summary>Adapter: was Tray und Einstellungen von AppServices brauchen. Hält keine Fenster.</summary>
     private sealed class ShellHost(AppServices app) : ITrayHost, IShellContext
     {
@@ -76,6 +84,14 @@ public sealed partial class AppServices
         public IAutostartService Autostart => app.Autostart;
 
         public IHdrListService HdrList => app.HdrList;
+
+        public IAppearanceService Appearance => app.Appearance;
+
+        public IArtworkService Artwork => app.Artwork;
+
+        public ISteamGridDbService SteamGridDb => app.SteamGridDb;
+
+        public IDisplayLuminanceService Luminance => app.Luminance;
 
         public void OpenWebPage(string url) => AppServices.OpenWebPage(url);
 

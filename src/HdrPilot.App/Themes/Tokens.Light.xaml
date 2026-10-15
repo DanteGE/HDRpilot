@@ -53,4 +53,47 @@
     <SolidColorBrush x:Key="Hp.Brush.Source.EA" Color="#FFD63636" />
     <SolidColorBrush x:Key="Hp.Brush.Source.BattleNet" Color="#FF0088CC" />
     <SolidColorBrush x:Key="Hp.Brush.Source.Manual" Color="#FF6B7189" />
+
+    <!-- Showcase Hero (E89): dieselben Schlüssel wie Tokens.Dark.xaml, helle Werte der Vorlage „Abendrot“. -->
+    <Color x:Key="Hp.Color.C1">#FFFF8A3D</Color>
+    <Color x:Key="Hp.Color.C2">#FFFF3D7F</Color>
+    <Color x:Key="Hp.Color.C3">#FFFF94B9</Color>
+    <Color x:Key="Hp.Color.OnAccent">#FF0B0C12</Color>
+    <Color x:Key="Hp.Color.AccentText">#FF995325</Color>
+    <Color x:Key="Hp.Color.Background">#FFF0E5EC</Color>
+    <Color x:Key="Hp.Color.Ambient1">#FF32101F</Color>
+    <Color x:Key="Hp.Color.Ambient2">#FFFF3D7F</Color>
+    <Color x:Key="Hp.Color.Ambient3">#FFFF94B9</Color>
+
+    <SolidColorBrush x:Key="Hp.Brush.Surface1" Color="#B8FFFFFF" />
+    <SolidColorBrush x:Key="Hp.Brush.Surface2" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Hp.Brush.Surface3" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Hp.Brush.Line" Color="#1A111320" />
+    <SolidColorBrush x:Key="Hp.Brush.LineStrong" Color="#2E111320" />
+    <SolidColorBrush x:Key="Hp.Brush.TextOnArt" Color="#FFF5F6FA" />
+    <SolidColorBrush x:Key="Hp.Brush.TextOnArtSecondary" Color="#FFC9CDDB" />
+    <LinearGradientBrush x:Key="Hp.Brush.AccentShine" StartPoint="0,0.4" EndPoint="1,0.6">
+        <GradientStop Color="#FFFF8A3D" Offset="0" />
+        <GradientStop Color="#FFFF94B9" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Hp.Brush.AccentText" Color="#FF995325" />
+    <SolidColorBrush x:Key="Hp.Brush.AccentSoft" Color="#38FF8A3D" />
+    <SolidColorBrush x:Key="Hp.Brush.AccentStrong" Color="#9EFF8A3D" />
+    <SolidColorBrush x:Key="Hp.Brush.AtmosphereSoft" Color="#8CFF3D7F" />
+    <SolidColorBrush x:Key="Hp.Brush.Shine" Color="#FFFFBFD5" />
+    <SolidColorBrush x:Key="Hp.Brush.SelectionFill" Color="#24FF8A3D" />
+    <SolidColorBrush x:Key="Hp.Brush.SelectionRing" Color="#73FF8A3D" />
+    <SolidColorBrush x:Key="Hp.Brush.FocusRing" Color="#FFC9631F" />
+    <LinearGradientBrush x:Key="Hp.Brush.Panel" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#F2FFFFFF" Offset="0" />
+        <GradientStop Color="#F7F7F8FB" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Hp.Brush.PanelHighlight" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Hp.Brush.Menu" Color="#FCFFFFFF" />
+    <SolidColorBrush x:Key="Hp.Brush.Glass" Color="#CCFFFFFF" />
+    <SolidColorBrush x:Key="Hp.Brush.ToggleOff" Color="#FFFFFFFF" />
+
+    <FontFamily x:Key="Hp.Font.Display">Bahnschrift, Segoe UI</FontFamily>
+    <FontFamily x:Key="Hp.Font.Text">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="Hp.Font.Mono">Cascadia Mono, Consolas</FontFamily>
 </ResourceDictionary>

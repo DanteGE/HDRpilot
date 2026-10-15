@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Threading;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.AutoHdr;
@@ -51,6 +54,18 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
     public FakeHdrListService FakeHdrList { get; } = new();
 
     public IHdrListService HdrList => FakeHdrList;
+
+    /// <summary>Darstellung (E89); Standard: Auslieferungszustand, dunkel.</summary>
+    public IAppearanceService Appearance { get; set; } = new StaticAppearanceService();
+
+    /// <summary>Spielbilder (E89); Standard: keine Bilder.</summary>
+    public IArtworkService Artwork { get; set; } = NullArtworkService.Instance;
+
+    /// <summary>SteamGridDB (E89); Standard: aus, nie ein Netzwerkzugriff.</summary>
+    public ISteamGridDbService SteamGridDb { get; set; } = NullSteamGridDbService.Instance;
+
+    /// <summary>Helligkeit der Bildschirme (E89); Standard: unbekannt.</summary>
+    public IDisplayLuminanceService Luminance { get; set; } = NullDisplayLuminanceService.Instance;
 
     public List<string> OpenedPages { get; } = [];
 

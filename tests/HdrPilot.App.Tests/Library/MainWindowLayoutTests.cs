@@ -155,13 +155,17 @@ public sealed class MainWindowLayoutTests
                 .Where(b => AutomationProperties.GetAutomationId(b) == "HdrSupportBadge")
                 .ToDictionary(b => ((GameItemViewModel)b.DataContext).Key);
             Assert.Equal(4, badges.Count); // jede Zeile hat den Platz, sichtbar nur bei HDR
+            static string Text(Border badge) => WpfTestHost.Visuals(badge).OfType<TextBlock>().Single().Text;
+
+            // Spalte „HDR“ (Showcase Hero): „TEILWEISE“ bzw. „NATIV“ mit Punkt, Tooltip und Name wie bisher.
             var limited = badges["Steam:1091500"];
             Assert.Equal(Visibility.Visible, limited.Visibility);
-            Assert.Equal("HDR*", ((TextBlock)limited.Child).Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.HdrPill_Limited, Text(limited));
             Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrLimitedTooltip, limited.ToolTip);
             Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrLimitedTooltip, AutomationProperties.GetName(limited));
             Assert.Equal(Visibility.Visible, badges["Epic:Crow"].Visibility);
-            Assert.Equal("HDR", ((TextBlock)badges["Epic:Crow"].Child).Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.HdrPill_Native, Text(badges["Epic:Crow"]));
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrTooltip, AutomationProperties.GetName(badges["Epic:Crow"]));
             Assert.Equal(Visibility.Collapsed, badges["Gog:1"].Visibility); // laut Wiki kein HDR
             Assert.Equal(Visibility.Collapsed, badges["Manual:m1"].Visibility); // unbekannt
             window.Close();
@@ -197,19 +201,25 @@ public sealed class MainWindowLayoutTests
     {
         WpfTestHost.Run(() =>
         {
-            var (window, _, _) = Open(SteamGame(), ratio: 0.45);
+            var (window, _, _) = Open(SteamGame(), ratio: 0.3);
             var list = (ColumnDefinition)window.FindName("ListColumn");
             var details = (ColumnDefinition)window.FindName("DetailsColumn");
             Assert.True(list.Width.IsStar && details.Width.IsStar);
-            Assert.Equal(0.45, details.Width.Value / (list.Width.Value + details.Width.Value), 3);
+            Assert.Equal(0.3, details.Width.Value / (list.Width.Value + details.Width.Value), 3);
             Assert.Equal(LibraryLayout.ListMinWidth, list.MinWidth);
             Assert.Equal(LibraryLayout.DetailsMinWidth, details.MinWidth);
+            Assert.Equal(ShowcaseLayout.MaxPaneWidth, details.MaxWidth);
 
             WpfTestHost.Layout(window, new Size(1280, 800));
             var (list1, details1) = (list.ActualWidth, details.ActualWidth);
             WpfTestHost.Layout(window, new Size(1700, 800));
             Assert.True(list.ActualWidth > list1 && details.ActualWidth > details1, "beide Spalten wachsen mit");
-            Assert.Equal(0.45, details.ActualWidth / (list.ActualWidth + details.ActualWidth), 2);
+            Assert.Equal(0.3, details.ActualWidth / (list.ActualWidth + details.ActualWidth), 2);
+
+            // Showcase Hero: Der Detailbereich wächst höchstens bis 560 px (Prototyp 340–396), den Rest bekommt die Liste.
+            WpfTestHost.Layout(window, new Size(3440, 1440));
+            Assert.Equal(ShowcaseLayout.MaxPaneWidth, details.ActualWidth, 1);
+            Assert.True(list.ActualWidth > 2000, "Liste bei 3440 px: " + list.ActualWidth);
             window.Close();
         });
     }
@@ -274,39 +284,47 @@ public sealed class MainWindowLayoutTests
     }
 
     [Fact]
-    public void Toolbar_never_overflows_and_moves_filters_to_a_second_row_when_narrow()
+    public void Toolbar_never_overflows_and_folds_in_stages_when_narrow()
     {
         WpfTestHost.Run(() =>
         {
             var (window, _, _) = Open(SteamGame());
-            var root = (FrameworkElement)window.FindName("Root");
-            var groups = new[] { "SearchBox", "FilterGroup", "ActionGroup" }.Select(n => (FrameworkElement)window.FindName(n)).ToList();
-            var modes = new Dictionary<double, ToolbarMode>();
+            var toolbar = (FrameworkElement)window.FindName("ToolbarArea");
+            var filters = (FrameworkElement)window.FindName("FilterGroup");
+            var actions = (FrameworkElement)window.FindName("ActionGroup");
+            var stages = new Dictionary<double, int>();
+            var standard = window.Width;
 
-            var searchMin = ((Grid)window.FindName("ToolbarArea")).ColumnDefinitions[0].MinWidth;
-            foreach (var width in new[] { 1700.0, 1460, 1320, 1250, 1150, 1000, 1700 })
+            foreach (var width in new[] { 2560.0, 1920, standard, 1366, 1280, 1150, 1000, 2560 })
             {
-                WpfTestHost.Layout(window, new Size(width, 800));
-                var slot = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutSlot(root);
-                var available = slot.Width - root.Margin.Left - root.Margin.Right;
-                window.UpdateToolbarLayout(available);
-                WpfTestHost.Layout(window, new Size(width, 800));
-                modes[width] = window.ToolbarMode;
+                var size = new Size(width, 900);
+                WpfTestHost.Layout(window, size);
+                window.FitDetailsColumn();
+                WpfTestHost.Layout(window, size);
+                window.UpdateToolbarLayout();
+                WpfTestHost.Layout(window, size);
+                stages[width] = window.ToolbarStage;
 
-                foreach (var group in groups)
+                var f = filters.TransformToAncestor(toolbar).TransformBounds(new Rect(filters.RenderSize));
+                var a = actions.TransformToAncestor(toolbar).TransformBounds(new Rect(actions.RenderSize));
+                foreach (var (name, bounds) in new[] { ("Filter", f), ("Aktionen", a) })
                 {
-                    var right = group.TransformToAncestor(root).Transform(new Point(group.ActualWidth, 0)).X;
-                    Assert.True(right <= available + 0.5, $"{group.Name} ragt bei {width} px hinaus: {right:0} > {available:0} ({window.ToolbarMode})");
+                    Assert.True(bounds.Left >= -0.5 && bounds.Right <= toolbar.ActualWidth + 0.5, $"{name} ragt bei {width} px hinaus: {bounds} in {toolbar.ActualWidth:0} (Stufe {window.ToolbarStage})");
                 }
 
-                Assert.True(((FrameworkElement)window.FindName("SearchBox")).ActualWidth >= searchMin - 0.5, $"Suche behält bei {width} px ihre Mindestbreite");
+                Assert.False(f.IntersectsWith(a) && f.Width > 0 && a.Width > 0 && Rect.Intersect(f, a).Width > 0.5, $"Filter und Aktionen überlappen bei {width} px (Stufe {window.ToolbarStage})");
+                Assert.True(((FrameworkElement)window.FindName("SearchBox")).ActualWidth >= 140, $"Suche bleibt bei {width} px benutzbar");
             }
 
-            Assert.Equal(ToolbarMode.Wide, modes[1700]);
-            Assert.Equal(ToolbarMode.Wide, modes[window.Width]); // Standardgröße: alles in einer Zeile
-            Assert.Equal(ToolbarMode.Stacked, modes[1000]);
-            var filters = (FrameworkElement)window.FindName("FilterGroup");
-            Assert.Equal(0, Grid.GetRow(filters)); // wieder breit: eine Zeile
+            // Je schmaler, desto mehr gefaltet; breit wieder alles ausgeschrieben.
+            Assert.Equal(0, stages[2560]);
+            Assert.True(stages[2560] <= stages[1920] && stages[1920] <= stages[standard] && stages[standard] <= stages[1366]
+                && stages[1366] <= stages[1280] && stages[1280] <= stages[1150] && stages[1150] <= stages[1000], string.Join(", ", stages.Select(s => $"{s.Key}: {s.Value}")));
+
+            // Standardgröße: die Filter-Chips bleiben sichtbar (phase4-ui.ps1 schaltet sie direkt).
+            Assert.True(stages[standard] < 6, "Stufe bei Standardgröße: " + stages[standard]);
+            Assert.Equal(Visibility.Visible, ((FrameworkElement)window.FindName("ChipGroup")).Visibility);
+            Assert.Equal(Dock.Right, DockPanel.GetDock(actions)); // wieder breit: eine Zeile
             window.Close();
         });
     }
@@ -356,10 +374,9 @@ public sealed class MainWindowLayoutTests
                         model.SortOrder = GameSortOrder.LastPlayed;
                         model.Details!.CopySteamLaunchOptionCommand.Execute(null);
                         WpfTestHost.Layout(window, new Size(width, height));
-                        var root = (FrameworkElement)window.FindName("Root");
-                        var slot = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutSlot(root);
-                        window.UpdateToolbarLayout(slot.Width - root.Margin.Left - root.Margin.Right);
                         window.FitDetailsColumn();
+                        WpfTestHost.Layout(window, new Size(width, height));
+                        window.UpdateToolbarLayout();
                         WpfTestHost.Layout(window, new Size(width, height));
 
                         var bitmap = Render(window);

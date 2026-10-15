@@ -7,11 +7,36 @@ namespace HdrPilot.App.Views.Library;
 
 /// <summary>
 /// Dialoge der Spielebibliothek. Sie öffnen sich nur auf einen Klick im Hauptfenster hin und gehören zu dem gerade
-/// offenen Fenster der Bibliothek (nie ungefragt, nie über einem Spiel). <paramref name="testIconFile"/> ersetzt nur in
-/// Prüfläufen mit eigener Ablage die Dateiauswahl für „Symbol ändern…“.
+/// offenen Fenster der Bibliothek (nie ungefragt, nie über einem Spiel). <paramref name="testIconFile"/> und
+/// <paramref name="testArtFile"/> ersetzen nur in Prüfläufen mit eigener Ablage die Dateiauswahl für „Symbol ändern…“
+/// bzw. „Bild wählen…“ → „Eigene Datei…“.
 /// </summary>
-public sealed class LibraryDialogs(Window mainWindow, string? testIconFile = null) : ILibraryDialogs
+public sealed class LibraryDialogs(Window mainWindow, string? testIconFile = null, string? testArtFile = null) : ILibraryDialogs
 {
+    public string? PickArtworkFile(string? initialDirectory)
+    {
+        if (testArtFile is not null)
+        {
+            return testArtFile;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = LibraryStrings.Picker_FileTitle,
+            Filter = LibraryStrings.Picker_FileFilter,
+            CheckFileExists = true,
+            Multiselect = false,
+            InitialDirectory = initialDirectory ?? string.Empty,
+        };
+        return dialog.ShowDialog(Owner()) == true ? dialog.FileName : null;
+    }
+
+    public bool ShowArtworkPicker(ArtworkPickerViewModel viewModel)
+    {
+        var dialog = new ArtworkPickerDialog(viewModel) { Owner = Owner() };
+        return dialog.ShowDialog() == true;
+    }
+
     public string? PickIconFile(string? initialDirectory)
     {
         if (testIconFile is not null)
@@ -70,7 +95,7 @@ public sealed class LibraryDialogs(Window mainWindow, string? testIconFile = nul
     private Window Owner()
     {
         Window owner = mainWindow;
-        while (owner.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible && w is AddGameDialog or ConfirmDialog) is { } child)
+        while (owner.OwnedWindows.Cast<Window>().LastOrDefault(w => w.IsVisible && w is AddGameDialog or ConfirmDialog or ArtworkPickerDialog) is { } child)
         {
             owner = child;
         }

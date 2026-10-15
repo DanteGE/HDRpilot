@@ -24,7 +24,7 @@ namespace HdrPilot.App.ViewModels.Library;
 /// Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
 /// </para>
 /// </summary>
-public sealed class LibraryViewModel : ObservableObject, IDisposable
+public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 {
     public static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(150);
     public static readonly TimeSpan StatusDuration = TimeSpan.FromSeconds(5);
@@ -122,6 +122,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.HdrSupportChanged += OnHdrSupportChanged;
 
         _isScanning = _context.IsScanning;
+        InitializeShowcase(settings);
         SyncFromConfig(); // startet auch die Suche nach Vorschlägen
         RefreshHdrState();
         RefreshScanErrors();
@@ -216,6 +217,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _onlySelected, value))
             {
                 OnPropertyChanged(nameof(IsFiltered));
+                OnPropertyChanged(nameof(ActiveFilterCount));
                 RefreshView();
             }
         }
@@ -229,6 +231,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _onlyNew, value))
             {
                 OnPropertyChanged(nameof(IsFiltered));
+                OnPropertyChanged(nameof(ActiveFilterCount));
                 RefreshView();
             }
         }
@@ -243,6 +246,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _onlyHdrCapable, value))
             {
                 OnPropertyChanged(nameof(IsFiltered));
+                OnPropertyChanged(nameof(ActiveFilterCount));
                 RefreshView();
             }
         }
@@ -268,6 +272,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _selectedSort = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SortOrder));
+            OnSortChanged();
             ApplySortToView();
 
             // Immer schreiben: Ein Vergleich mit der gespeicherten Konfiguration könnte während eines noch laufenden
@@ -325,6 +330,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             ChangeIconCommand.RaiseCanExecuteChanged();
             ResetIconCommand.RaiseCanExecuteChanged();
             Details = value is null ? null : new GameDetailsViewModel(this, value);
+            OnSelectionChanged(value);
             if (value is { IsNew: true })
             {
                 MarkSeen(value);
@@ -547,6 +553,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OnlyNew));
         OnPropertyChanged(nameof(OnlyHdrCapable));
         OnPropertyChanged(nameof(IsFiltered));
+        OnPropertyChanged(nameof(ActiveFilterCount));
         RefreshView();
     }
 
@@ -666,10 +673,12 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _selectedGame = null;
             OnPropertyChanged(nameof(SelectedGame));
             Details = null;
+            OnSelectionChanged(null);
         }
         else if (_selectedGame is not null)
         {
             _details?.Apply(_selectedGame.Config);
+            _hero?.Refresh(IsPaused);
         }
 
         ChangeIconCommand.RaiseCanExecuteChanged();
@@ -763,6 +772,12 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             }
         }
 
+        if (changed)
+        {
+            HdrCapableCount = _byKey.Values.Count(i => HdrSupportValues.IsHdrCapable(i.HdrSupport));
+            _hero?.Refresh(IsPaused);
+        }
+
         if (changed && (_onlyHdrCapable || SortOrder == GameSortOrder.HdrSupport))
         {
             RefreshView();
@@ -787,6 +802,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.ScanStateChanged -= OnScanStateChanged;
         _context.HdrSupportChanged -= OnHdrSupportChanged;
         _details?.Detach();
+        DisposeShowcase();
         RevealRequested = null;
         _context.Dispose();
     }
@@ -966,6 +982,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(IsFilterEmpty));
         OnPropertyChanged(nameof(IsLibraryEmpty));
+        OnPropertyChanged(nameof(ViewSummaryText));
+        OnPropertyChanged(nameof(ListHeaderText));
     }
 
     private int InsertIndex(GameItemViewModel item)
@@ -1001,9 +1019,11 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         TotalCount = Games.Count;
         HdrAutoCount = auto;
         NewCount = fresh;
+        HdrCapableCount = Games.Count(g => HdrSupportValues.IsHdrCapable(g.HdrSupport));
         OnPropertyChanged(nameof(TotalText));
         OnPropertyChanged(nameof(HdrAutoText));
         OnPropertyChanged(nameof(NewText));
+        OnPropertyChanged(nameof(ViewSummaryText));
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(IsLibraryEmpty));
         OnPropertyChanged(nameof(IsFilterEmpty));
@@ -1052,12 +1072,15 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         ActiveSessionText = running.Count == 0
             ? null
             : LibraryText.Format(LibraryStrings.Hdr_ActiveSessions, string.Join(", ", _context.Sessions.Select(s => s.GameName)));
+        IsGameRunning = running.Count > 0;
+        UpdateAutomationState();
     }
 
     private void RefreshHdrState()
     {
         Displays = _context.GetDisplays();
         Targets = _context.TargetDisplays();
+        var wasOn = _isHdrOn;
         IsHdrOn = Targets.Any(d => d.HdrEnabled);
         CanToggleHdr = Targets.Any(d => d.HdrSupported);
         var names = string.Join(", ", Targets.Select(d => d.FriendlyName));
@@ -1072,6 +1095,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPaused));
         ApplyRunningFlags();
         _details?.RefreshDisplays();
+        _hero?.Refresh(IsPaused);
+        RefreshNits();
+        OnHdrStateRefreshed(wasOn);
     }
 
     private void RefreshScanErrors()
@@ -1390,7 +1416,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
-    private string? SafeDirectory(string path)
+    internal string? SafeDirectory(string path)
     {
         try
         {

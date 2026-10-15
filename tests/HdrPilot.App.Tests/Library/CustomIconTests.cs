@@ -380,11 +380,15 @@ public sealed class CustomIconTests : IDisposable
             Assert.NotSame(((Button)window.FindName("DetailIconButton")).ContextMenu, menu); // je Verwendung eine Instanz
             menu.PlacementTarget = row;
             WpfTestHost.DoEvents();
-            var items = menu.Items.OfType<MenuItem>().ToList();
-            Assert.Equal(["ChangeIconMenuItem", "ResetIconMenuItem"], items.Select(AutomationProperties.GetAutomationId));
-            Assert.Same(model.ChangeIconCommand, items[0].Command);
-            Assert.Same(model.ResetIconCommand, items[1].Command);
-            Assert.True(items[1].IsEnabled); // eigenes Symbol gesetzt: „Symbol zurücksetzen“ frei
+            // Showcase Hero: das ganze Kontextmenü des Spiels (Prototyp), darin „Symbol ändern…“ und „Symbol zurücksetzen“.
+            var items = menu.Items.OfType<MenuItem>().ToDictionary(i => AutomationProperties.GetAutomationId(i));
+            Assert.Equal(
+                ["ContextLaunch", "ContextHdrAuto", "ContextRestore", "ContextAutoHdr", "ChooseArtworkMenuItem", "ChangeIconMenuItem", "ResetIconMenuItem", "ContextDesktopShortcut", "ContextStartMenuShortcut", "ContextOpenFolder"],
+                items.Keys);
+            Assert.Same(model.ChangeIconCommand, items["ChangeIconMenuItem"].Command);
+            Assert.Same(model.ResetIconCommand, items["ResetIconMenuItem"].Command);
+            Assert.True(items["ResetIconMenuItem"].IsEnabled); // eigenes Symbol gesetzt: „Symbol zurücksetzen“ frei
+            Assert.Equal(LibraryStrings.Icon_Change, items["ChangeIconMenuItem"].Header);
             window.Close();
         });
     }

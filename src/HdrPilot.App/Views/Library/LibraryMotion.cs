@@ -2,23 +2,28 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using HdrPilot.App.Theming;
 
 namespace HdrPilot.App.Views.Library;
 
 /// <summary>
-/// Ob Animationen laufen dürfen: Windows-Einstellung „Animationseffekte“ (SystemParameters.ClientAreaAnimation) und
-/// Hardware-Darstellung (über Remotedesktop oder ohne Grafikbeschleunigung keine Animationen). XAML-Trigger binden an
-/// <see cref="IsEnabled"/>; Code fragt <see cref="Enabled"/>.
+/// Ob Animationen laufen dürfen: Windows-Einstellung „Animationseffekte“ (SystemParameters.ClientAreaAnimation),
+/// Hardware-Darstellung (über Remotedesktop oder ohne Grafikbeschleunigung keine Animationen) und die Effektstufe der
+/// Darstellung (E89, vom Bibliotheksfenster gesetzt). XAML-Trigger binden an <see cref="IsEnabled"/> (kurze Übergänge:
+/// Stufe „Voll“ oder „Reduziert“) bzw. <see cref="IsFull"/> (Anheben der Kacheln, Glanz: nur „Voll“); Code fragt
+/// <see cref="Enabled"/>.
 /// </summary>
 public sealed class LibraryMotion : INotifyPropertyChanged
 {
+    private EffectLevel _level = EffectLevel.Full;
+
     private LibraryMotion()
     {
         SystemParameters.StaticPropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation))
             {
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEnabled)));
+                Raise();
             }
         };
     }
@@ -27,9 +32,28 @@ public sealed class LibraryMotion : INotifyPropertyChanged
 
     public static LibraryMotion Instance { get; } = new();
 
-    public static bool Enabled => SystemParameters.ClientAreaAnimation && (RenderCapability.Tier >> 16) > 0;
+    /// <summary>Kurze Übergänge erlaubt (Windows und Effektstufe).</summary>
+    public static bool Enabled => SystemEnabled && Instance._level != EffectLevel.Off;
+
+    /// <summary>Windows-Animationseffekte an und Hardware-Darstellung.</summary>
+    public static bool SystemEnabled => SystemParameters.ClientAreaAnimation && (RenderCapability.Tier >> 16) > 0;
 
     public bool IsEnabled => Enabled;
+
+    /// <summary>Stufe „Voll“: Anheben und Glanz der Kacheln, gestaffeltes Einblenden.</summary>
+    public bool IsFull => Enabled && _level == EffectLevel.Full;
+
+    public EffectLevel Level => _level;
+
+    /// <summary>Wirksame Effektstufe der Darstellung übernehmen (Bibliotheksfenster).</summary>
+    public void SetLevel(EffectLevel level)
+    {
+        if (_level != level)
+        {
+            _level = level;
+            Raise();
+        }
+    }
 
     /// <summary>Einblenden: Deckkraft 0→1 und Verschieben, mit Verzögerung. Startwert gilt sofort (kein Aufblitzen).</summary>
     public static void FadeIn(UIElement element, TimeSpan delay, double offsetX = 0, double offsetY = 14, double durationMs = 260)
@@ -40,16 +64,24 @@ public sealed class LibraryMotion : INotifyPropertyChanged
         }
 
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var duration = TimeSpan.FromMilliseconds(durationMs);
+        var duration = TimeSpan.FromMilliseconds(Instance._level == EffectLevel.Full ? durationMs : Math.Min(durationMs, 300));
         var opacity = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
         opacity.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
         opacity.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(delay)));
         opacity.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(delay + duration), ease));
         opacity.Freeze();
 
-        // Grundwert 0: Nach dem Ende (FillBehavior.Stop) steht das Element ohne Sprung an seinem Platz.
-        var shift = new TranslateTransform();
-        element.RenderTransform = shift;
+        // Grundwert 0: Nach dem Ende (FillBehavior.Stop) steht das Element ohne Sprung an seinem Platz. Eine eigene
+        // Verschiebung des Elements (Schublade, Titelbereich) wird mitbenutzt und bleibt; sonst kommt eine vorübergehende.
+        var own = element.RenderTransform as TranslateTransform;
+        var borrowed = own is { IsFrozen: false };
+        var shift = borrowed ? own! : new TranslateTransform();
+        var previous = element.ReadLocalValue(UIElement.RenderTransformProperty);
+        if (!borrowed)
+        {
+            element.RenderTransform = shift;
+        }
+
         var move = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
         var property = offsetX != 0 ? TranslateTransform.XProperty : TranslateTransform.YProperty;
         var start = offsetX != 0 ? offsetX : offsetY;
@@ -59,13 +91,26 @@ public sealed class LibraryMotion : INotifyPropertyChanged
         move.Completed += (_, _) =>
         {
             // Aufräumen (Listen-Container werden wiederverwendet); eine neuere Einblendung behält ihre Verschiebung.
-            if (ReferenceEquals(element.RenderTransform, shift))
+            if (!borrowed && ReferenceEquals(element.RenderTransform, shift))
             {
-                element.ClearValue(UIElement.RenderTransformProperty);
+                if (previous == DependencyProperty.UnsetValue)
+                {
+                    element.ClearValue(UIElement.RenderTransformProperty);
+                }
+                else
+                {
+                    element.SetValue(UIElement.RenderTransformProperty, previous);
+                }
             }
         };
 
         element.BeginAnimation(UIElement.OpacityProperty, opacity);
         shift.BeginAnimation(property, move);
+    }
+
+    private void Raise()
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEnabled)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFull)));
     }
 }

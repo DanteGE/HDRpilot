@@ -86,6 +86,14 @@ public interface ILibraryContext : IDisposable
 
     void ShowSettings();
 
+    /// <summary>
+    /// Ordner im Explorer öffnen („Installationsordner öffnen“, E89). Der Aufrufer prüft vorher, dass es ihn gibt.
+    /// Standard: nichts (Attrappen).
+    /// </summary>
+    void OpenFolder(string path)
+    {
+    }
+
     /// <summary>Konfiguration wurde geändert (von der Oberfläche, der Automatik oder dem Einlesen).</summary>
     event EventHandler? ConfigChanged;
 
@@ -123,4 +131,10 @@ public interface ILibraryDialogs
 
     /// <summary>Zeigt den Dialog „Spiel hinzufügen“. True, wenn bestätigt (Ergebnis in <see cref="AddGameViewModel.Result"/>).</summary>
     bool ShowAddGame(AddGameViewModel viewModel);
+
+    /// <summary>Bilddatei für „Bild wählen…“ → „Eigene Datei…“ wählen; null bei Abbruch. Standard: keine Auswahl.</summary>
+    string? PickArtworkFile(string? initialDirectory) => null;
+
+    /// <summary>Zeigt den Dialog „Bild wählen…“. True, wenn „Übernehmen“ gewählt wurde. Standard: nicht gezeigt.</summary>
+    bool ShowArtworkPicker(ArtworkPickerViewModel viewModel) => false;
 }

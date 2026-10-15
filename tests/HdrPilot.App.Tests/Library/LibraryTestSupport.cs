@@ -119,6 +119,9 @@ public static class SourceFiles
 {
     public static string MainWindowXaml => Path.Combine(RepositoryRoot(), "src", "HdrPilot.App", "MainWindow.xaml");
 
+    /// <summary>Datei im Projektordner, Teile relativ zur Wurzel (für Prüfungen am Quelltext).</summary>
+    public static string InRepository(params string[] parts) => Path.Combine([RepositoryRoot(), .. parts]);
+
     private static string RepositoryRoot([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "") =>
         FindUp(Path.GetDirectoryName(thisFile)) ?? FindUp(AppContext.BaseDirectory)
         ?? throw new DirectoryNotFoundException("Projektordner (HdrPilot.slnx) nicht gefunden.");
@@ -194,6 +197,23 @@ public sealed class FakeDialogs : ILibraryDialogs
     }
 
     public bool ShowAddGame(AddGameViewModel viewModel) => OnAddGame?.Invoke(viewModel) ?? false;
+
+    /// <summary>Antworten für „Bild wählen…“ → „Eigene Datei…“ (null: abgebrochen).</summary>
+    public Queue<string?> ArtworkFiles { get; } = new();
+
+    public string? PickArtworkFile(string? initialDirectory) => ArtworkFiles.Count > 0 ? ArtworkFiles.Dequeue() : null;
+
+    /// <summary>Geöffnete Dialoge „Bild wählen…“.</summary>
+    public List<ArtworkPickerViewModel> Pickers { get; } = [];
+
+    /// <summary>Was der Dialog tut (Standard: abbrechen).</summary>
+    public Func<ArtworkPickerViewModel, bool>? OnArtworkPicker { get; set; }
+
+    public bool ShowArtworkPicker(ArtworkPickerViewModel viewModel)
+    {
+        Pickers.Add(viewModel);
+        return OnArtworkPicker?.Invoke(viewModel) ?? false;
+    }
 }
 
 public sealed class FakeIcons : IGameIconService
@@ -527,6 +547,11 @@ public sealed class TestLibraryContext : ILibraryContext
     }
 
     public void ShowSettings() => SettingsShown++;
+
+    /// <summary>Geöffnete Installationsordner („Installationsordner öffnen“; die Attrappe startet nichts).</summary>
+    public List<string> OpenedFolders { get; } = [];
+
+    public void OpenFolder(string path) => OpenedFolders.Add(path);
 
     public void RaiseHdrStateChanged() => HdrStateChanged?.Invoke(this, EventArgs.Empty);
 

@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
+using HdrPilot.Core.Artwork;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.HdrSupport;
@@ -26,6 +27,12 @@ public sealed class GameItemViewModel : ObservableObject
     private bool _iconRequested;
     private int _iconRequest;
     private ImageSource? _icon;
+    private bool _thumbnailRequested;
+    private ImageSource? _thumbnail;
+    private bool _coverRequested;
+    private ImageSource? _cover;
+    private int _artworkRequest;
+    private Brush? _nameField;
 
     internal GameItemViewModel(LibraryViewModel owner, GameConfig config)
     {
@@ -77,6 +84,7 @@ public sealed class GameItemViewModel : ObservableObject
         {
             if (SetProperty(ref _hdrAuto, value))
             {
+                OnPropertyChanged(nameof(HdrAutoStateText));
                 _owner.OnHdrAutoChangedByUser(this);
             }
         }
@@ -122,9 +130,139 @@ public sealed class GameItemViewModel : ObservableObject
                 OnPropertyChanged(nameof(HasHdrBadge));
                 OnPropertyChanged(nameof(HdrBadgeText));
                 OnPropertyChanged(nameof(HdrBadgeTooltip));
+                OnPropertyChanged(nameof(ShowHdrPill));
+                OnPropertyChanged(nameof(HdrPillText));
+                OnPropertyChanged(nameof(HdrKindLabel));
+                OnPropertyChanged(nameof(HdrTagText));
             }
         }
     }
+
+    /// <summary>HDR-Angabe als Kennzeichen: „NATIVES HDR“, „HDR TEILWEISE“, „HDR UNBEKANNT“ …</summary>
+    public string HdrTagText => LibraryText.HdrTag(_hdrSupport);
+
+    /// <summary>Spalte „HDR“ und Kachel: Kennzeichen „Nativ“, „Teilweise“ oder „Mod“ (sonst ein Strich).</summary>
+    public bool ShowHdrPill => _hdrSupport is HdrSupportStatus.Native or HdrSupportStatus.Limited or HdrSupportStatus.ModOnly;
+
+    /// <summary>Text des Kennzeichens in der Spalte „HDR“; leer ohne Kennzeichen.</summary>
+    public string HdrPillText => LibraryText.HdrPill(_hdrSupport);
+
+    /// <summary>HDR-Angabe in Worten für Titelbereich, Karte und Detailbereich: „Natives HDR“, „HDR teilweise“ … (nie „SDR“).</summary>
+    public string HdrKindLabel => LibraryText.HdrKindLabel(_hdrSupport);
+
+    /// <summary>„Ein“/„Aus“ neben dem Schalter in der Liste.</summary>
+    public string HdrAutoStateText => _hdrAuto ? LibraryStrings.List_SwitchOn : LibraryStrings.List_SwitchOff;
+
+    /// <summary>„vor 2 Tagen“, „gestern, 21:15“, „nie gespielt“ (Spalte „Zuletzt gespielt“).</summary>
+    public string LastPlayedText => RelativeTime.Format(_config.LastPlayed, _owner.Now);
+
+    public bool HasLastPlayed => _config.LastPlayed is not null;
+
+    /// <summary>Zwei Buchstaben für Ersatzbilder ohne Symbol („Baldur's Gate 3“ → „BG“).</summary>
+    public string Monogram => LibraryText.Monogram(_name);
+
+    /// <summary>Farbfeld aus dem Namen (fester Farbton je Spiel) für erzeugte Cover und Vorschaubilder, solange kein Bild da ist.</summary>
+    public Brush NameField => _nameField ??= LibraryArt.NameField(_name);
+
+    /// <summary>
+    /// Querformat-Vorschau der Listenzeile (Steam header bzw. Ersatzbild), klein dekodiert (128 px); null bis geladen. Wird
+    /// erst angefragt, wenn eine sichtbare Zeile es zeigt.
+    /// </summary>
+    public ImageSource? Thumbnail
+    {
+        get
+        {
+            if (!_thumbnailRequested)
+            {
+                _thumbnailRequested = true;
+                _thumbnail = _owner.RequestArtwork(this, ArtworkKind.Header, LibraryArt.ThumbnailWidth, _artworkRequest);
+            }
+
+            return _thumbnail;
+        }
+    }
+
+    public bool HasThumbnail => _thumbnail is not null;
+
+    /// <summary>Hochformat-Cover der Kacheln (Raster, Regal), dekodiert in doppelter Kachelbreite; null bis geladen.</summary>
+    public ImageSource? Cover
+    {
+        get
+        {
+            if (!_coverRequested)
+            {
+                _coverRequested = true;
+                _cover = _owner.RequestArtwork(this, ArtworkKind.Cover, LibraryArt.CoverWidth, _artworkRequest);
+                if (_cover is not null)
+                {
+                    _owner.TouchCover(this);
+                }
+            }
+
+            return _cover;
+        }
+    }
+
+    public bool HasCover => _coverRequested && _cover is not null;
+
+    /// <summary>Ergebnis einer Bildanfrage; eines aus einer älteren Anfrage (vor <see cref="ReloadArtwork"/>) zählt nicht mehr.</summary>
+    internal void SetArtwork(ArtworkKind kind, ImageSource? image, int request)
+    {
+        if (request != _artworkRequest || image is null)
+        {
+            return;
+        }
+
+        if (kind == ArtworkKind.Header && !ReferenceEquals(image, _thumbnail))
+        {
+            _thumbnail = image;
+            OnPropertyChanged(nameof(Thumbnail));
+            OnPropertyChanged(nameof(HasThumbnail));
+        }
+        else if (kind == ArtworkKind.Cover && !ReferenceEquals(image, _cover))
+        {
+            _cover = image;
+            _owner.TouchCover(this);
+            OnPropertyChanged(nameof(Cover));
+            OnPropertyChanged(nameof(HasCover));
+        }
+    }
+
+    /// <summary>Bilder neu anfragen (neue Datei im Cache, eigene Wahl); bis dahin das Ersatzbild.</summary>
+    internal void ReloadArtwork()
+    {
+        _artworkRequest++;
+        var hadThumbnail = _thumbnailRequested;
+        var hadCover = _coverRequested;
+        _thumbnailRequested = false;
+        _coverRequested = false;
+        _thumbnail = null;
+        _cover = null;
+        if (hadThumbnail)
+        {
+            OnPropertyChanged(nameof(Thumbnail));
+            OnPropertyChanged(nameof(HasThumbnail));
+        }
+
+        if (hadCover)
+        {
+            OnPropertyChanged(nameof(Cover));
+            OnPropertyChanged(nameof(HasCover));
+        }
+    }
+
+    /// <summary>Cover aus dem Speicher geben (zu viele geladen); eine sichtbare Kachel fragt es beim nächsten Zeigen neu an.</summary>
+    internal void ReleaseCover()
+    {
+        if (_coverRequested)
+        {
+            _coverRequested = false;
+            _cover = null;
+        }
+    }
+
+    /// <summary>Zeit hat sich weitergedreht (Fenster neu geöffnet, Mitternacht): „Zuletzt gespielt“ neu formulieren.</summary>
+    internal void RefreshTimeTexts() => OnPropertyChanged(nameof(LastPlayedText));
 
     /// <summary>Kennzeichen „HDR“ (eigenes HDR) oder „HDR*“ (eingeschränkt); sonst keines.</summary>
     public bool HasHdrBadge => HdrSupportValues.IsHdrCapable(_hdrSupport);
@@ -207,12 +345,31 @@ public sealed class GameItemViewModel : ObservableObject
             ReloadIcon(); // etwa neue Symbol-Hinweise nach dem Einlesen oder ein eigenes Symbol
         }
 
-        Name = config.Name;
+        if (!ReferenceEquals(previous, config) && !SameArtworkChoice(previous.Artwork, config.Artwork))
+        {
+            ReloadArtwork(); // „Bild wählen…“: eigenes Bild, erzeugtes oder wieder automatisch
+        }
+
+        if (!string.Equals(_name, config.Name, StringComparison.Ordinal))
+        {
+            _nameField = null;
+            Name = config.Name;
+            OnPropertyChanged(nameof(Monogram));
+            OnPropertyChanged(nameof(NameField));
+        }
+
+        if (previous.LastPlayed != config.LastPlayed)
+        {
+            OnPropertyChanged(nameof(LastPlayedText));
+            OnPropertyChanged(nameof(HasLastPlayed));
+        }
+
         InstallDir = config.InstallDir;
         if (_hdrAuto != config.HdrAuto)
         {
             _hdrAuto = config.HdrAuto;
             OnPropertyChanged(nameof(HdrAuto));
+            OnPropertyChanged(nameof(HdrAutoStateText));
         }
 
         AutoHdr = config.AutoHdr;
@@ -237,8 +394,15 @@ public sealed class GameItemViewModel : ObservableObject
         {
             _hdrAuto = value;
             OnPropertyChanged(nameof(HdrAuto));
+            OnPropertyChanged(nameof(HdrAutoStateText));
         }
     }
+
+    /// <summary>Gleiche eigene Bildwahl (Titelbild, Logo, Cover): dann die Bilder nicht neu laden.</summary>
+    private static bool SameArtworkChoice(GameArtworkChoice? a, GameArtworkChoice? b) =>
+        string.Equals(a?.Hero, b?.Hero, StringComparison.Ordinal)
+        && string.Equals(a?.Logo, b?.Logo, StringComparison.Ordinal)
+        && string.Equals(a?.Cover, b?.Cover, StringComparison.Ordinal);
 
     public override string ToString() => Name;
 }

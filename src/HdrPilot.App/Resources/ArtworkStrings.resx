@@ -16,12 +16,216 @@
     <value>Steam-Cache</value>
     <comment>Herkunft eines Bildes (E89): lokaler Bildcache von Steam, nur gelesen</comment>
   </data>
+  <data name="Source_GogCache" xml:space="preserve">
+    <value>GOG-Galaxy-Cache</value>
+    <comment>Herkunft eines Bildes: Bildcache von GOG Galaxy unter ProgramData, nur gelesen</comment>
+  </data>
+  <data name="Source_UbisoftCache" xml:space="preserve">
+    <value>Ubisoft-Cache</value>
+    <comment>Herkunft eines Bildes: cache\assets von Ubisoft Connect, nur gelesen</comment>
+  </data>
+  <data name="Source_XboxPackage" xml:space="preserve">
+    <value>Xbox-Paket</value>
+    <comment>Herkunft eines Bildes: Ordner Resources im Paket eines Xbox-Spiels</comment>
+  </data>
+  <data name="Source_Custom" xml:space="preserve">
+    <value>Eigene Datei</value>
+    <comment>Herkunft eines Bildes: vom Nutzer über „Bild wählen…“ gewählt</comment>
+  </data>
+  <data name="Source_Generated" xml:space="preserve">
+    <value>Erzeugt</value>
+    <comment>Herkunft eines Bildes: von HDRpilot erzeugtes Ersatzbild</comment>
+  </data>
+  <data name="Source_SteamGridDb" xml:space="preserve">
+    <value>SteamGridDB</value>
+    <comment>Herkunft eines Bildes: mit eigenem Schlüssel von SteamGridDB geladen (nur für fehlende Bilder)</comment>
+  </data>
+  <data name="Source_Name" xml:space="preserve">
+    <value>Name als Schrift</value>
+    <comment>Kein Logo: der Spielname steht in der Titelschrift</comment>
+  </data>
+  <data name="Source_Monogram" xml:space="preserve">
+    <value>Monogramm</value>
+    <comment>Kein Symbol: zwei Buchstaben des Namens auf einer Farbkachel</comment>
+  </data>
+  <data name="Source_CustomIcon" xml:space="preserve">
+    <value>Eigenes Symbol</value>
+    <comment>Symbol über „Symbol ändern…“ gewählt (E86)</comment>
+  </data>
+  <data name="Source_IconFile" xml:space="preserve">
+    <value>.ico-Datei · {0} px</value>
+    <comment>Herkunft des Symbols; {0} = größte Kantenlänge in der Datei</comment>
+  </data>
+  <data name="Source_Executable" xml:space="preserve">
+    <value>aus {0} · {1} px</value>
+    <comment>Symbol aus der EXE; {0} = Dateiname, {1} = Kantenlänge</comment>
+  </data>
+  <data name="Source_XboxTile" xml:space="preserve">
+    <value>Xbox-Kachelbild · {0} px</value>
+    <comment>Deckendes Kachelbild (Square480x480Logo) als Symbol; {0} = Kantenlänge</comment>
+  </data>
+  <data name="Source_CacheIcon" xml:space="preserve">
+    <value>Launcher-Cache · {0} px</value>
+    <comment>Symbol aus einem Bildcache (GOG Galaxy, Steam-Gemeinschaftssymbol); {0} = Kantenlänge</comment>
+  </data>
+  <data name="Source_ImageFile" xml:space="preserve">
+    <value>Bilddatei · {0} px</value>
+    <comment>Symbol aus einer Bilddatei des Launchers; {0} = Kantenlänge</comment>
+  </data>
   <data name="Summary_LocalSteam" xml:space="preserve">
     <value>Lokal aus dem Steam-Cache · nichts heruntergeladen</value>
     <comment>Zeile unter den Bildern im Detailbereich</comment>
   </data>
+  <data name="Summary_LocalCache" xml:space="preserve">
+    <value>Lokal aus dem {0} · nichts heruntergeladen</value>
+    <comment>Zeile unter den Bildern im Detailbereich; {0} = Herkunft, etwa „Steam-Cache“, „GOG-Galaxy-Cache“</comment>
+  </data>
   <data name="Summary_NoLocalImages" xml:space="preserve">
     <value>Keine lokalen Bilder gefunden · Ersatzbilder</value>
     <comment>Zeile unter den Bildern im Detailbereich, wenn kein Launcher-Bild vorhanden ist</comment>
+  </data>
+  <data name="Summary_Custom" xml:space="preserve">
+    <value>Eigene Datei · nur auf diesem PC</value>
+    <comment>Zeile im Detailbereich: Titelbild über „Bild wählen…“ gewählt</comment>
+  </data>
+  <data name="Summary_SteamGridDb" xml:space="preserve">
+    <value>Titelbild von SteamGridDB · mit eigenem Schlüssel geladen</value>
+    <comment>Zeile im Detailbereich: Titelbild fehlte lokal und kam von SteamGridDB</comment>
+  </data>
+  <data name="Summary_GeneratedChoice" xml:space="preserve">
+    <value>Titelbild erzeugt · eigene Wahl</value>
+    <comment>Zeile im Detailbereich: über „Bild wählen…“ das erzeugte Titelbild gewählt</comment>
+  </data>
+  <data name="Summary_XboxTile" xml:space="preserve">
+    <value>Xbox-Paket: Kachelbild {0} px · Titelbild und Cover daraus erzeugt</value>
+    <comment>Zeile im Detailbereich eines Xbox-Spiels; {0} = Kantenlänge des Kachelbilds</comment>
+  </data>
+  <data name="Summary_ExeIcon" xml:space="preserve">
+    <value>{0}: kein Bildcache · Symbol aus {1} ({2} px), Titelbild und Cover erzeugt</value>
+    <comment>Zeile im Detailbereich (Epic, EA …); {0} = Launcher, {1} = EXE, {2} = Kantenlänge</comment>
+  </data>
+  <data name="Summary_SteamNoHero" xml:space="preserve">
+    <value>Steam hat für dieses Spiel kein Titelbild – erzeugt aus dem Symbol</value>
+    <comment>Zeile im Detailbereich eines Steam-Spiels ohne library_hero</comment>
+  </data>
+  <data name="Summary_NoHeroFromIcon" xml:space="preserve">
+    <value>{0}: kein lokales Titelbild – erzeugt aus dem Symbol</value>
+    <comment>Zeile im Detailbereich; {0} = Launcher</comment>
+  </data>
+  <data name="Summary_NoHeroFromName" xml:space="preserve">
+    <value>{0}: kein lokales Titelbild – erzeugt aus Monogramm und Name</value>
+    <comment>Zeile im Detailbereich ohne Bild und ohne Symbol; {0} = Launcher</comment>
+  </data>
+  <data name="Candidate_Automatic" xml:space="preserve">
+    <value>Automatisch</value>
+    <comment>„Bild wählen…“: Launcher-Bild, sonst erzeugt</comment>
+  </data>
+  <data name="Candidate_Generated" xml:space="preserve">
+    <value>Erzeugtes Bild</value>
+    <comment>„Bild wählen…“: immer das von HDRpilot erzeugte Bild</comment>
+  </data>
+  <data name="Candidate_NameInsteadOfLogo" xml:space="preserve">
+    <value>Name statt Logo</value>
+    <comment>„Bild wählen…“, Reiter Logo: kein Logo, der Name steht in der Titelschrift</comment>
+  </data>
+  <data name="Candidate_CustomFile" xml:space="preserve">
+    <value>Eigene Datei</value>
+    <comment>„Bild wählen…“: die zuletzt gewählte eigene Datei</comment>
+  </data>
+  <data name="Candidate_Alternative" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>„Bild wählen…“: anderes lokales Bild; {0} = Dateiname, {1} = Herkunft, etwa „SplashScreen.png (Xbox-Paket)“</comment>
+  </data>
+  <data name="Note_Grayscale" xml:space="preserve">
+    <value>Schwarzweiß – vermutlich Engine-Logo</value>
+    <comment>Hinweis zu SplashScreen.png eines Xbox-Pakets mit kaum Farbe</comment>
+  </data>
+  <data name="Note_TitleCard" xml:space="preserve">
+    <value>Titelkarte mit Schriftzug in der Mitte</value>
+    <comment>Hinweis zu SplashScreen.png eines Xbox-Pakets</comment>
+  </data>
+  <data name="Note_SmearedCapsule" xml:space="preserve">
+    <value>Steam-Kapsel verschmiert – Ausschnitt aus dem Titelbild</value>
+    <comment>Hinweis beim automatischen Cover, wenn die Steam-Kapsel oben und unten verschmiert ist</comment>
+  </data>
+  <data name="Error_NotAnImage" xml:space="preserve">
+    <value>Die Datei ist kein lesbares Bild.</value>
+    <comment>„Bild wählen…“ → „Eigene Datei…“ mit einer Datei, die Windows nicht als Bild lesen kann</comment>
+  </data>
+  <data name="Fallback_FromFile" xml:space="preserve">
+    <value>{0} · aus {1} · {2} px</value>
+    <comment>Beispiel „Titelbild aus Symbol“ in den Einstellungen; {0} = Launcher, {1} = Datei, {2} = Kantenlänge</comment>
+  </data>
+  <data name="Fallback_FromIconFile" xml:space="preserve">
+    <value>{0} · .ico-Datei · {1} px</value>
+    <comment>Beispiel „Titelbild aus Symbol“ mit Symbol aus einer .ico-Datei (Name oft nur eine Prüfsumme); {0} = Launcher, {1} = Kantenlänge</comment>
+  </data>
+  <data name="Fallback_FromTile" xml:space="preserve">
+    <value>{0} · Kachelbild {1} px</value>
+    <comment>Beispiel „Titelbild aus Symbol“ mit Xbox-Kachelbild; {0} = Launcher, {1} = Kantenlänge</comment>
+  </data>
+  <data name="Fallback_NoLogo" xml:space="preserve">
+    <value>{0} · kein Logo im Cache</value>
+    <comment>Beispiel „Name statt Logo“; {0} = Launcher</comment>
+  </data>
+  <data name="Fallback_CoverFromTile" xml:space="preserve">
+    <value>{0} · aus dem Kachelbild erzeugt</value>
+    <comment>Beispiel „Cover erzeugt“; {0} = Launcher</comment>
+  </data>
+  <data name="Fallback_CoverFromIcon" xml:space="preserve">
+    <value>{0} · aus dem Symbol erzeugt</value>
+    <comment>Beispiel „Cover erzeugt“; {0} = Launcher</comment>
+  </data>
+  <data name="Fallback_CoverFromHero" xml:space="preserve">
+    <value>{0} · aus dem Titelbild erzeugt</value>
+    <comment>Beispiel „Cover erzeugt“; {0} = Launcher</comment>
+  </data>
+  <data name="Fallback_Smeared" xml:space="preserve">
+    <value>{0} · Kapsel verschmiert → Ausschnitt</value>
+    <comment>Beispiel „Kapsel verschmiert“; {0} = Launcher</comment>
+  </data>
+  <data name="Fallback_Monogram" xml:space="preserve">
+    <value>{0} · kein Symbol gefunden</value>
+    <comment>Beispiel „Monogramm“; {0} = Launcher</comment>
+  </data>
+  <data name="SteamGridDb_Error_Network" xml:space="preserve">
+    <value>SteamGridDB nicht erreichbar</value>
+    <comment>Letzter Netzwerkzugriff in den Einstellungen: keine Verbindung oder Zeitüberschreitung</comment>
+  </data>
+  <data name="SteamGridDb_Error_Unauthorized" xml:space="preserve">
+    <value>Schlüssel abgelehnt – bitte prüfen</value>
+    <comment>SteamGridDB meldet HTTP 401/403</comment>
+  </data>
+  <data name="SteamGridDb_Error_RateLimited" xml:space="preserve">
+    <value>Zu viele Anfragen – der nächste Lauf holt den Rest</value>
+    <comment>SteamGridDB meldet HTTP 429</comment>
+  </data>
+  <data name="SteamGridDb_Error_Http" xml:space="preserve">
+    <value>Fehler bei SteamGridDB</value>
+    <comment>Anderer HTTP-Status von SteamGridDB</comment>
+  </data>
+  <data name="SteamGridDb_Error_InvalidResponse" xml:space="preserve">
+    <value>Antwort von SteamGridDB nicht lesbar</value>
+    <comment>Antwort ist kein gültiges JSON oder kein Bild</comment>
+  </data>
+  <data name="SteamGridDb_Error_Blocked" xml:space="preserve">
+    <value>Bild nicht geladen: Adresse oder Größe unzulässig</value>
+    <comment>Bildadresse nicht unter steamgriddb.com oder Bild über 15 MB</comment>
+  </data>
+  <data name="SteamGridDb_Error_RequestLimit" xml:space="preserve">
+    <value>Höchstzahl an Anfragen erreicht – der nächste Lauf holt den Rest</value>
+    <comment>Ein Lauf stellt höchstens 200 Anfragen</comment>
+  </data>
+  <data name="SteamGridDb_Error_KeyUnreadable" xml:space="preserve">
+    <value>Gespeicherter Schlüssel nicht lesbar – bitte neu eintragen</value>
+    <comment>DPAPI kann steamgriddb-key.dat nicht entschlüsseln (anderer Windows-Benutzer, Profil kopiert)</comment>
+  </data>
+  <data name="SteamGridDb_Error_KeyNotSaved" xml:space="preserve">
+    <value>Schlüssel nicht gespeichert</value>
+    <comment>steamgriddb-key.dat ließ sich nicht schreiben</comment>
+  </data>
+  <data name="SteamGridDb_Error_GameRunning" xml:space="preserve">
+    <value>Übersprungen: Ein Spiel läuft</value>
+    <comment>Der tägliche Lauf nach dem Start wartet, solange ein Spiel läuft</comment>
   </data>
 </root>

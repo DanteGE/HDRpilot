@@ -141,7 +141,7 @@
                     </StackPanel>
                 </Grid>
 
-                <StackPanel x:Name="NavItems" Grid.Row="1" ClipToBounds="True"
+                <views:GroupStackPanel x:Name="NavItems" Grid.Row="1" ClipToBounds="True"
                             AutomationProperties.AutomationId="SettingsNav" AutomationProperties.Name="{x:Static res:ShellStrings.SettingsNavName}">
                     <Button x:Name="NavGeneral" Style="{StaticResource Hp.Shell.NavButton}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Settings}"
                             AutomationProperties.AutomationId="NavGeneral" Content="{x:Static res:ShellStrings.NavGeneral}" Click="OnNavigate" />
@@ -165,7 +165,7 @@
                             AutomationProperties.AutomationId="NavAdvanced" Content="{x:Static res:ShellStrings.NavAdvanced}" Click="OnNavigate" />
                     <Button x:Name="NavLogs" Style="{StaticResource Hp.Shell.NavButton}" views:SettingsSection.Icon="{StaticResource Hp.Icon.File}"
                             AutomationProperties.AutomationId="NavLogs" Content="{x:Static res:ShellStrings.NavLogs}" Click="OnNavigate" />
-                </StackPanel>
+                </views:GroupStackPanel>
 
                 <!-- Bibliothek (.sidef) -->
                 <Border x:Name="LibraryCard" Grid.Row="2" Padding="14" CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}"
@@ -206,7 +206,7 @@
                     </Grid>
                     <views:SettingsGridPanel x:Name="GeneralGrid">
                         <!-- Start und Hinweise -->
-                        <HeaderedContentControl x:Name="StartupSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionStartup}"
+                        <views:SettingsCard x:Name="StartupSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionStartup}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionStartupHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Power}">
                             <StackPanel>
                                 <Border Style="{StaticResource Hp.Shell.SettingRow}">
@@ -238,10 +238,10 @@
                                     </DockPanel>
                                 </Border>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- Bildschirme -->
-                        <HeaderedContentControl x:Name="DisplaysSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionDisplays}"
+                        <views:SettingsCard x:Name="DisplaysSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionDisplays}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionDisplaysHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Monitor}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,14" Text="{x:Static res:ShellStrings.DisplaysHint}" />
@@ -300,10 +300,10 @@
                                     <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding DisplaysSummary}" />
                                 </DockPanel>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- Automatik -->
-                        <HeaderedContentControl x:Name="AutomationSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionAutomation}"
+                        <views:SettingsCard x:Name="AutomationSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionAutomation}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionAutomationHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Clock}">
                             <StackPanel>
                                 <DockPanel>
@@ -389,10 +389,10 @@
                                         Value="{Binding LaunchTimeoutSeconds, Mode=TwoWay}" />
                                 <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:ShellStrings.LaunchTimeoutHint}" />
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- Suchordner -->
-                        <HeaderedContentControl x:Name="SearchSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionSearchFolders}"
+                        <views:SettingsCard x:Name="SearchSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionSearchFolders}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionSearchFoldersHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Folder}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,12" Text="{x:Static res:ShellStrings.SearchFoldersHint}" />
@@ -440,10 +440,10 @@
                                     </Button>
                                 </WrapPanel>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- Hilfsprozesse -->
-                        <HeaderedContentControl x:Name="HelpersSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionHelpers}"
+                        <views:SettingsCard x:Name="HelpersSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionHelpers}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionHelpersHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Filter}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,0,0,12" Text="{x:Static res:ShellStrings.HelpersHint}" />
@@ -476,7 +476,7 @@
                                     </StackPanel>
                                 </DockPanel>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
                     </views:SettingsGridPanel>
 
                     <!-- ===== Gruppe: Darstellung (wirkt sofort) ===== -->
@@ -491,7 +491,7 @@
                             <TextBlock Margin="0,6,0,0" Style="{StaticResource Hp.Text.Caption}" FontSize="13.5" Text="{x:Static res:ShellStrings.GroupAppearanceHint}" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="16,0,0,2">
-                            <Border x:Name="AppliedChip" Height="34" Padding="12,0" CornerRadius="17" Margin="0,0,8,0" Background="{DynamicResource Hp.Brush.SelectionFill}"
+                            <views:GroupBorder x:Name="AppliedChip" Height="34" Padding="12,0" CornerRadius="17" Margin="0,0,8,0" Background="{DynamicResource Hp.Brush.SelectionFill}"
                                     BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" BorderThickness="1"
                                     AutomationProperties.AutomationId="AppearanceAppliedHint" AutomationProperties.Name="{x:Static res:ShellStrings.AppearanceAppliedHint}">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -508,7 +508,7 @@
                                     </Grid>
                                     <TextBlock FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.AccentText}" Text="{x:Static res:ShellStrings.AppearanceAppliedHint}" />
                                 </StackPanel>
-                            </Border>
+                            </views:GroupBorder>
                             <Button Style="{StaticResource Hp.GhostButton}" DataContext="{Binding Appearance}"
                                     AutomationProperties.AutomationId="AppearanceResetButton" AutomationProperties.Name="{x:Static res:ShellStrings.AppearanceResetName}"
                                     Command="{Binding ResetCommand}">
@@ -522,7 +522,7 @@
                     <views:SettingsGridPanel x:Name="AppearanceGrid" DataContext="{Binding Appearance}">
 
                         <!-- ===== Farbschema ===== -->
-                        <HeaderedContentControl x:Name="SectionPalette" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionPalette}"
+                        <views:SettingsCard x:Name="SectionPalette" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionPalette}"
                                                 AutomationProperties.AutomationId="SectionPalette" AutomationProperties.Name="{x:Static res:ShellStrings.SectionPalette}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionPaletteHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Palette}">
                             <HeaderedContentControl.Tag>
@@ -608,7 +608,7 @@
                                                   AutomationProperties.AutomationId="AutoTextOnAccentToggle" AutomationProperties.Name="{x:Static res:ShellStrings.AutoTextOnAccentLabel}"
                                                   IsChecked="{Binding AutoTextOnAccent, Mode=TwoWay}" />
                                         <Border DockPanel.Dock="Left" Width="46" Height="36" CornerRadius="10" Margin="0,0,14,0" Background="{DynamicResource Hp.Brush.Accent}">
-                                            <TextBlock Text="Aa" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <TextBlock Text="{x:Static res:ShellStrings.ContrastSample}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Border>
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.AutoTextOnAccentLabel}" />
@@ -649,10 +649,10 @@
                                 <TextBlock Margin="2,10,0,0" Style="{StaticResource Hp.Text.Caption}" Foreground="{DynamicResource Hp.Brush.Danger}" Text="{Binding ErrorMessage}"
                                            Visibility="{Binding HasError, Converter={StaticResource Hp.Shell.BoolToVisibility}}" />
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- ===== Live-Vorschau ===== -->
-                        <HeaderedContentControl x:Name="SectionPreview" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionPreview}"
+                        <views:SettingsCard x:Name="SectionPreview" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionPreview}"
                                                 AutomationProperties.AutomationId="SectionPreview" AutomationProperties.Name="{x:Static res:ShellStrings.SectionPreview}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionPreviewHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Eye}">
                             <HeaderedContentControl.Tag>
@@ -772,10 +772,10 @@
                                                TextTrimming="CharacterEllipsis" Text="{Binding PreviewName}" />
                                 </DockPanel>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- ===== Thema ===== -->
-                        <HeaderedContentControl x:Name="SectionTheme" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionTheme}"
+                        <views:SettingsCard x:Name="SectionTheme" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionTheme}"
                                                 AutomationProperties.AutomationId="SectionTheme" AutomationProperties.Name="{x:Static res:ShellStrings.SectionTheme}"
                                                 views:SettingsSection.Description="{Binding ThemeCaption}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Theme}">
                             <views:AdaptiveGrid Columns="3,1" MinItemWidth="140" Gap="10">
@@ -811,10 +811,10 @@
                                     </StackPanel>
                                 </RadioButton>
                             </views:AdaptiveGrid>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- ===== Effekte ===== -->
-                        <HeaderedContentControl x:Name="SectionEffects" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionEffects}"
+                        <views:SettingsCard x:Name="SectionEffects" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionEffects}"
                                                 AutomationProperties.AutomationId="SectionEffects" AutomationProperties.Name="{x:Static res:ShellStrings.SectionEffects}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionEffectsHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Spark}">
                             <StackPanel>
@@ -929,10 +929,10 @@
                                     </DockPanel>
                                 </Border>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- ===== Bilder ===== -->
-                        <HeaderedContentControl x:Name="SectionArtwork" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionArtwork}"
+                        <views:SettingsCard x:Name="SectionArtwork" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionArtwork}"
                                                 AutomationProperties.AutomationId="SectionArtwork" AutomationProperties.Name="{x:Static res:ShellStrings.SectionArtwork}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionArtworkHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Image}">
                             <StackPanel>
@@ -961,7 +961,7 @@
                                                 <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.ArtworkLocalHint}" />
                                             </StackPanel>
                                         </DockPanel>
-                                        <Grid x:Name="CoverageTable" Margin="0,10,0,0" AutomationProperties.AutomationId="ArtworkCoverageTable" AutomationProperties.Name="{x:Static res:ShellStrings.CoverageTableName}">
+                                        <views:GroupGrid x:Name="CoverageTable" Margin="0,10,0,0" AutomationProperties.AutomationId="ArtworkCoverageTable" AutomationProperties.Name="{x:Static res:ShellStrings.CoverageTableName}">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />
@@ -1005,7 +1005,7 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                        </Grid>
+                                        </views:GroupGrid>
                                         <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,6,0,0" Text="{Binding CoverageStatus}"
                                                    Visibility="{Binding CoverageStatus, Converter={StaticResource Hp.Shell.NullToVisibility}}" />
                                         <DockPanel Margin="0,8,0,0">
@@ -1156,10 +1156,10 @@
                                     <TextBlock Style="{StaticResource Hp.Shell.Note}" Text="{x:Static res:ShellStrings.ArtworkPerGameHint}" />
                                 </DockPanel>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- ===== Symbole und Tray ===== -->
-                        <HeaderedContentControl x:Name="SectionTray" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionTray}"
+                        <views:SettingsCard x:Name="SectionTray" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionTray}"
                                                 AutomationProperties.AutomationId="SectionTray" AutomationProperties.Name="{x:Static res:ShellStrings.SectionTray}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionTrayHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Tray}">
                             <HeaderedContentControl.Tag>
@@ -1176,9 +1176,9 @@
                                 </StackPanel>
                             </HeaderedContentControl.Tag>
                             <StackPanel>
-                                <Border x:Name="TrayScene" CornerRadius="16" Padding="12,12,12,0" views:RoundedClip.Radius="16"
+                                <views:GroupBorder x:Name="TrayScene" CornerRadius="16" Padding="12,12,12,0" views:RoundedClip.Radius="16"
                                         AutomationProperties.AutomationId="TrayPreview" AutomationProperties.Name="{x:Static res:ShellStrings.TrayPreviewName}">
-                                    <Border.Style>
+                                    <views:GroupBorder.Style>
                                         <Style TargetType="Border">
                                             <Setter Property="Background">
                                                 <Setter.Value>
@@ -1203,7 +1203,7 @@
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </Border.Style>
+                                    </views:GroupBorder.Style>
                                     <StackPanel>
                                         <views:AdaptiveGrid Columns="2,1" MinItemWidth="252" Gap="12">
                                             <StackPanel>
@@ -1262,9 +1262,9 @@
                                             </StackPanel>
 
                                             <!-- Tray-Menü als Vorschau (nicht bedienbar) -->
-                                            <Border x:Name="TrayMenuPreview" Padding="6" CornerRadius="12" VerticalAlignment="Top" IsHitTestVisible="False"
+                                            <views:GroupBorder x:Name="TrayMenuPreview" Padding="6" CornerRadius="12" VerticalAlignment="Top" IsHitTestVisible="False"
                                                     AutomationProperties.AutomationId="TrayMenuPreview" AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuPreviewName}">
-                                                <Border.Style>
+                                                <views:GroupBorder.Style>
                                                     <Style TargetType="Border">
                                                         <Setter Property="Background" Value="#F7202128" />
                                                         <Setter Property="BorderBrush" Value="#1AFFFFFF" />
@@ -1278,7 +1278,7 @@
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Border.Style>
+                                                </views:GroupBorder.Style>
                                                 <StackPanel TextElement.FontSize="12.5">
                                                     <DockPanel Margin="8,8,8,6">
                                                         <Grid Width="30" Height="30" Margin="0,0,10,0">
@@ -1342,7 +1342,7 @@
                                                         </StackPanel>
                                                     </Border>
                                                 </StackPanel>
-                                            </Border>
+                                            </views:GroupBorder>
                                         </views:AdaptiveGrid>
 
                                         <!-- Taskleiste mit Fenster- und Tray-Symbol -->
@@ -1402,13 +1402,13 @@
                                             </Grid>
                                         </Border>
                                     </StackPanel>
-                                </Border>
+                                </views:GroupBorder>
                                 <DockPanel Margin="2,10,0,0">
                                     <views:LineIcon Width="13" Height="13" Margin="0,2,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.TextMuted}" Data="{StaticResource Hp.Icon.Info}" />
                                     <TextBlock Style="{StaticResource Hp.Shell.Note}" Text="{x:Static res:ShellStrings.TrayPreviewNote}" />
                                 </DockPanel>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
                     </views:SettingsGridPanel>
 
                     <!-- ===== Gruppe: Erweitert ===== -->
@@ -1421,7 +1421,7 @@
                     </Grid>
                     <views:SettingsGridPanel x:Name="AdvancedGrid">
                         <!-- Notlösung -->
-                        <HeaderedContentControl x:Name="AdvancedSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionFallback}"
+                        <views:SettingsCard x:Name="AdvancedSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionFallback}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionFallbackHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Bolt}">
                             <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
                                 <DockPanel>
@@ -1440,10 +1440,10 @@
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!-- Protokolle -->
-                        <HeaderedContentControl x:Name="LogsSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionLogs}"
+                        <views:SettingsCard x:Name="LogsSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionLogs}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionLogsHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Logs}">
                             <StackPanel>
                                 <Border Style="{StaticResource Hp.Shell.SettingRow}">
@@ -1473,13 +1473,13 @@
                                     </StackPanel>
                                 </Button>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
 
                         <!--
                             HDR-Liste (PCGamingWiki): oben Abgleich und Stand, darunter das optionale Konto. Die Knöpfe hier wirken
                             sofort; „Bei jedem Start abgleichen“ wird mit „Speichern“ übernommen.
                         -->
-                        <HeaderedContentControl x:Name="HdrListSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionHdrList}"
+                        <views:SettingsCard x:Name="HdrListSection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionHdrList}"
                                                 views:SettingsSection.Description="{x:Static res:ShellStrings.SectionHdrListHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Pulse}"
                                                 DataContext="{Binding HdrList}">
                             <StackPanel>
@@ -1629,7 +1629,7 @@
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                        </HeaderedContentControl>
+                        </views:SettingsCard>
                     </views:SettingsGridPanel>
                 </StackPanel>
             </ScrollViewer>

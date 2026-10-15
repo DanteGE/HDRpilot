@@ -699,6 +699,9 @@
   <data name="AutoTextOnAccentLabel" xml:space="preserve">
     <value>Textfarbe auf Akzentflächen automatisch</value>
   </data>
+  <data name="ContrastSample" xml:space="preserve">
+    <value>Aa</value>
+  </data>
   <data name="ContrastOnAccent" xml:space="preserve">
     <value>Auf Akzent</value>
   </data>

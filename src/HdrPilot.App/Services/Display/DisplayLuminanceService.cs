@@ -29,9 +29,10 @@ public sealed class DisplayLuminanceServiceOptions
 /// <summary>
 /// Echte Helligkeitswerte der Bildschirme (E89, G10.7) über DXGI <c>IDXGIOutput6::GetDesc1</c>, zugeordnet über den GDI-Namen.
 /// Gelesen wird im Hintergrund und nur, solange ein Fenster die Werte zeigt (<see cref="Acquire"/>), und dann nur beim ersten
-/// Zeigen und nach <see cref="Invalidate"/> (HDR- oder Bildschirmwechsel); ohne Fenster nie. Jede Messung mit aktivem HDR
-/// wird gemerkt (display-luminance.json): <see cref="DisplayNits.PeakNits"/> ist die HDR-Spitze, auch wenn HDR gerade aus ist
-/// (beim MAG 341C 456 Nits), und damit das Maximum jeder Nit-Skala. Ereignisse kommen auf dem UI-Thread.
+/// Zeigen und nach <see cref="Invalidate"/>, wenn sich die Bildschirme oder ihr HDR-Zustand wirklich geändert haben; ohne
+/// Fenster nie. Jede Messung mit aktivem HDR wird gemerkt (display-luminance.json): <see cref="DisplayNits.PeakNits"/> ist
+/// die HDR-Spitze, auch wenn HDR gerade aus ist (beim MAG 341C 456 Nits), und damit das Maximum jeder Nit-Skala. Ereignisse
+/// kommen auf dem UI-Thread.
 /// </summary>
 public sealed class DisplayLuminanceService : IDisplayLuminanceService
 {
@@ -46,6 +47,7 @@ public sealed class DisplayLuminanceService : IDisplayLuminanceService
     private bool _readAgain;
     private bool _disposed;
     private int _readCount;
+    private string? _signature;
 
     public DisplayLuminanceService(DisplayLuminanceServiceOptions options)
     {
@@ -77,7 +79,7 @@ public sealed class DisplayLuminanceService : IDisplayLuminanceService
         }
     }
 
-    /// <summary>Anzahl der DXGI-Abfragen (Prüfung: nur nach Invalidate und nur mit Freigabe).</summary>
+    /// <summary>Anzahl der DXGI-Abfragen (Prüfung: nur nach einem echten Wechsel und nur mit Freigabe).</summary>
     public int ReadCount => Volatile.Read(ref _readCount);
 
     /// <summary>Läuft gerade eine Abfrage (Tests warten darauf).</summary>
@@ -212,15 +214,35 @@ public sealed class DisplayLuminanceService : IDisplayLuminanceService
         }
     }
 
+    /// <summary>Kennung der Bildschirme samt HDR-Zustand: ändert sie sich nicht, bleibt DXGI unberührt.</summary>
+    public static string DisplaySignature(IReadOnlyList<DisplayInfo> displays) => string.Join(
+        '|',
+        displays.Select(d => d.MonitorDevicePath + "@" + d.GdiDeviceName + ":" + d.HdrEnabled + ":" + d.IsPrimary + ":" + d.BitsPerColorChannel));
+
     private void Read()
     {
         IReadOnlyList<DisplayNits> nits;
         DisplayNits? primary;
         try
         {
+            // Die Liste der Bildschirme kostet kaum etwas (QueryDisplayConfig); DXGI nur, wenn sich daran etwas geändert hat.
+            var displays = _options.Displays();
+            var signature = DisplaySignature(displays) + "#" + string.Join(';', _options.TargetDisplays());
+            lock (_gate)
+            {
+                if (signature == _signature)
+                {
+                    return;
+                }
+            }
+
             Interlocked.Increment(ref _readCount);
             var readings = _options.Reader.ReadAll();
-            var displays = _options.Displays();
+            lock (_gate)
+            {
+                _signature = signature;
+            }
+
             nits = Combine(readings, displays, _options.Store, _options.Now());
             primary = ChoosePrimary(nits, displays, _options.TargetDisplays());
             _logger.LogDebug(

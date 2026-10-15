@@ -255,10 +255,13 @@ public sealed partial class ArtworkService
         Add(
             FallbackKind.HeroFromIcon,
             ordered.Where(s => s.Hero.Generate == Generator.Hero && s.Game.Artwork?.Hero is null && s.Icon.Path is not null)
-                .OrderBy(s => s.Icon.Kind == "tile").ThenByDescending(s => s.Icon.Px),
-            s => s.Icon.Kind == "tile"
-                ? Format(ArtworkStrings.Fallback_FromTile, Source(s), s.Icon.Px)
-                : Format(ArtworkStrings.Fallback_FromFile, Source(s), Path.GetFileName(s.Icon.Path), s.Icon.Px));
+                .OrderByDescending(s => s.Icon.Kind == "exe").ThenBy(s => s.Icon.Kind == "tile").ThenByDescending(s => s.Icon.Px),
+            s => s.Icon.Kind switch
+            {
+                "tile" => Format(ArtworkStrings.Fallback_FromTile, Source(s), s.Icon.Px),
+                "ico" => Format(ArtworkStrings.Fallback_FromIconFile, Source(s), s.Icon.Px),
+                _ => Format(ArtworkStrings.Fallback_FromFile, Source(s), Path.GetFileName(s.Icon.Path), s.Icon.Px),
+            });
         Add(
             FallbackKind.NameInsteadOfLogo,
             ordered.Where(s => s.Logo.File is null && s.Hero.File is not null && s.Game.Artwork?.Logo is null),

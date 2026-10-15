@@ -37,12 +37,20 @@ public sealed class DisplayLuminanceServiceTests
         await service.Idle;
         Assert.Equal(1, service.ReadCount); // zweites Fenster: kein neues Lesen ohne Wechsel
 
+        // Melden ohne echten Wechsel (gleiche Bildschirme, gleicher HDR-Zustand): DXGI bleibt unberührt.
+        service.Invalidate();
+        await service.Idle;
+        Assert.Equal(1, service.ReadCount);
+
+        // HDR eingeschaltet: neu lesen.
+        _displays[0] = _displays[0] with { HdrEnabled = true };
         service.Invalidate();
         await service.Idle;
         Assert.Equal(2, service.ReadCount);
 
         second.Dispose();
         lease.Dispose();
+        _displays.RemoveAt(1);
         service.Invalidate();
         await service.Idle;
         Assert.Equal(2, service.ReadCount);
@@ -51,6 +59,7 @@ public sealed class DisplayLuminanceServiceTests
         using var again = service.Acquire();
         await service.Idle;
         Assert.Equal(3, service.ReadCount);
+        Assert.Single(service.Displays);
     }
 
     [Fact]

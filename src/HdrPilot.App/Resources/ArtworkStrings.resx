@@ -156,6 +156,10 @@
     <value>{0} · aus {1} · {2} px</value>
     <comment>Beispiel „Titelbild aus Symbol“ in den Einstellungen; {0} = Launcher, {1} = Datei, {2} = Kantenlänge</comment>
   </data>
+  <data name="Fallback_FromIconFile" xml:space="preserve">
+    <value>{0} · .ico-Datei · {1} px</value>
+    <comment>Beispiel „Titelbild aus Symbol“ mit Symbol aus einer .ico-Datei (Name oft nur eine Prüfsumme); {0} = Launcher, {1} = Kantenlänge</comment>
+  </data>
   <data name="Fallback_FromTile" xml:space="preserve">
     <value>{0} · Kachelbild {1} px</value>
     <comment>Beispiel „Titelbild aus Symbol“ mit Xbox-Kachelbild; {0} = Launcher, {1} = Kantenlänge</comment>

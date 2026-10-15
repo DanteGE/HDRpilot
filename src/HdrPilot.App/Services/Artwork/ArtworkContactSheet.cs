@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -52,17 +53,18 @@ public static class ArtworkContactSheet
             rows.Add((game, art, header));
         }
 
-        var sheet = ArtworkService.Sta.Run(() => Draw(rows));
-        ArtworkImaging.Save(sheet, path);
+        // Dunkel und hell: Ersatzbilder müssen auf beiden Hintergründen wirken (Thema Automatisch/Hell/Dunkel).
+        ArtworkImaging.Save(ArtworkService.Sta.Run(() => Draw(rows, dark: true)), path);
+        ArtworkImaging.Save(ArtworkService.Sta.Run(() => Draw(rows, dark: false)), Path.Combine(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path) + "-hell" + Path.GetExtension(path)));
     }
 
-    private static BitmapSource Draw(IReadOnlyList<(GameConfig Game, GameArtwork Art, ImageSource? Header)> rows)
+    private static BitmapSource Draw(IReadOnlyList<(GameConfig Game, GameArtwork Art, ImageSource? Header)> rows, bool dark)
     {
         var height = Math.Max(1, rows.Count) * RowHeight;
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
         {
-            dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(12, 13, 18)), null, new Rect(0, 0, Width, height));
+            dc.DrawRectangle(new SolidColorBrush(dark ? Color.FromRgb(12, 13, 18) : Color.FromRgb(237, 239, 244)), null, new Rect(0, 0, Width, height));
             var typeface = new Typeface(new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
             for (var i = 0; i < rows.Count; i++)
             {
@@ -105,7 +107,7 @@ public static class ArtworkContactSheet
                     FlowDirection.LeftToRight,
                     typeface,
                     13,
-                    Brushes.White,
+                    dark ? Brushes.White : new SolidColorBrush(Color.FromRgb(26, 28, 36)),
                     1.0)
                 { MaxTextWidth = 460 };
                 dc.DrawText(text, new Point(1137, y + 55));

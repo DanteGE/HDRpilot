@@ -47,6 +47,11 @@ public interface IShellContext
 
     /// <summary>Nach dem Speichern: Tray auffrischen; bei geänderten Suchordnern im Hintergrund neu einlesen.</summary>
     void OnSettingsSaved(bool searchFoldersChanged);
+
+    /// <summary>„Spielebibliothek öffnen“ in der Navigation der Einstellungen (E89). Standard: nichts (Tests).</summary>
+    void OpenLibrary()
+    {
+    }
 }
 
 /// <summary>Ordnerauswahl (Dialog). In Tests eine Attrappe.</summary>

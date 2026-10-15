@@ -10,6 +10,7 @@ using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Sessions;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HdrPilot.App.ViewModels.Shell;
 
@@ -30,6 +31,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
 
     private readonly IShellContext _context;
     private readonly IFolderPicker _folderPicker;
+    private readonly ILogger _logger;
     private readonly RelayCommand _removeSearchFolderCommand;
 
     /// <summary>restartBufferSeconds fehlt in config.json: Der Standard bleibt ungeschrieben, solange er nicht geändert wird.</summary>
@@ -52,16 +54,19 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private bool _hasChanges;
     private bool _disposed;
 
-    public SettingsViewModel(IShellContext context, IFolderPicker folderPicker)
+    /// <param name="logger">Protokoll für Fehler beim Laden der Bilder und beim sofortigen Speichern der Darstellung.</param>
+    public SettingsViewModel(IShellContext context, IFolderPicker folderPicker, ILogger? logger = null)
     {
         _context = context;
         _folderPicker = folderPicker;
+        _logger = logger ?? NullLogger.Instance;
         _removeSearchFolderCommand = new RelayCommand(RemoveSearchFolder, () => SelectedSearchFolder is not null);
         SaveCommand = new RelayCommand(() => Save());
         CancelCommand = new RelayCommand(Cancel);
         AddSearchFolderCommand = new RelayCommand(AddSearchFolder);
         ResetHelperPatternsCommand = new RelayCommand(ResetHelperPatterns);
         OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
+        OpenLibraryCommand = new RelayCommand(OpenLibrary);
 
         var s = context.Config.Current.Settings;
         _pollIntervalMs = Math.Clamp(s.PollIntervalMs, PollIntervalMin, PollIntervalMax);
@@ -87,6 +92,9 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _original = Capture();
         context.HdrStateChanged += OnHdrStateChanged;
         HdrList = new HdrListViewModel(context.HdrList, context.OpenWebPage);
+        Appearance = new AppearancePageViewModel(context, _logger);
+        var games = context.Config.Current.Games;
+        LibrarySummary = string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummary, games.Count, games.Count(g => g.HdrAuto));
     }
 
     /// <summary>Speichern oder Abbrechen: Fenster soll sich schließen.</summary>
@@ -103,6 +111,15 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public ICommand ResetHelperPatternsCommand { get; }
 
     public ICommand OpenLogFolderCommand { get; }
+
+    /// <summary>„Spielebibliothek öffnen“ unten in der Navigation.</summary>
+    public ICommand OpenLibraryCommand { get; }
+
+    /// <summary>Seite „Darstellung“: wirkt und speichert sofort, unabhängig von „Speichern“ und „Abbrechen“.</summary>
+    public AppearancePageViewModel Appearance { get; }
+
+    /// <summary>„651 Spiele · 28 mit HDR automatisch“ in der Karte unten in der Navigation.</summary>
+    public string LibrarySummary { get; }
 
     public ObservableCollection<DisplayOptionViewModel> Displays { get; } = [];
 
@@ -445,6 +462,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _disposed = true;
         _context.HdrStateChanged -= OnHdrStateChanged;
         HdrList.Dispose();
+        Appearance.Dispose();
         foreach (var d in Displays)
         {
             d.PropertyChanged -= OnDisplayChanged;
@@ -486,6 +504,18 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     }
 
     private void ResetHelperPatterns() => HelperPatternsText = HelperPatternList.DefaultText;
+
+    private void OpenLibrary()
+    {
+        try
+        {
+            _context.OpenLibrary();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
+        {
+            _logger.LogWarning(ex, "Spielebibliothek ließ sich nicht öffnen.");
+        }
+    }
 
     private void OpenLogFolder()
     {

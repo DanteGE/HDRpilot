@@ -3,15 +3,60 @@
                     xmlns:views="clr-namespace:HdrPilot.App.Views.Shell"
                     xmlns:res="clr-namespace:HdrPilot.App.Resources">
     <!--
-        Shell: Stile für Tray-Menü und Einstellungen. Farben nur über DynamicResource aus Tokens.Dark/Light.xaml.
-        Bewegung: Zustandswechsel sind sofort sichtbar (Setter); kurze Zier-Animationen laufen nur, wenn Windows
-        „Animationseffekte“ erlaubt (SystemParameters.ClientAreaAnimation). Effekte (Schatten, Unschärfe) sitzen nur
-        auf einzelnen Elementen, nie auf Listenzeilen.
+        Shell im Showcase-Stil (E89): Einstellungen mit Navigation und Bereichskarten, Seite „Darstellung“, Tray-Menü.
+        Farben nur über DynamicResource aus den Farb-Ressourcen der Darstellung (Theming/ThemeKeys.cs). Leuchten und Schatten
+        sind vorab gezeichnete Verläufe hinter den Elementen, nie BlurEffect oder DropShadowEffect. Bewegung: Zustandswechsel
+        sind sofort sichtbar (Setter); kurze Zier-Animationen laufen nur, wenn Windows „Animationseffekte“ erlaubt.
     -->
 
     <BooleanToVisibilityConverter x:Key="Hp.Shell.BoolToVisibility" />
     <views:InverseBooleanToVisibilityConverter x:Key="Hp.Shell.InverseBoolToVisibility" />
     <views:NoHdrBadgeVisibilityConverter x:Key="Hp.Shell.NoHdrBadgeVisibility" />
+    <views:NullToVisibilityConverter x:Key="Hp.Shell.NullToVisibility" />
+    <views:ResourceKeyToBrushConverter x:Key="Hp.Shell.ResourceBrush" />
+    <views:FractionToWidthConverter x:Key="Hp.Shell.FractionWidth" />
+    <views:UpperCaseConverter x:Key="Hp.Shell.Upper" />
+    <views:WidthAtLeastToVisibilityConverter x:Key="Hp.Shell.WidthAtLeast" />
+
+    <!-- Linien-Symbole aus dem Prototyp (24er-Raster, Strich 1,8) -->
+    <Geometry x:Key="Hp.Icon.Settings">M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4</Geometry>
+    <Geometry x:Key="Hp.Icon.Monitor">M3 5h18v11H3zM8 20h8M12 16v4</Geometry>
+    <Geometry x:Key="Hp.Icon.Clock">M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2 2M9 2h6</Geometry>
+    <Geometry x:Key="Hp.Icon.Folder">M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z</Geometry>
+    <Geometry x:Key="Hp.Icon.Filter">M3 5h18l-7 8v6l-4-2v-4z</Geometry>
+    <Geometry x:Key="Hp.Icon.Palette">M12 3a9 9 0 1 0 0 18c1 0 1.5-0.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-0.9 0.7-1.5 1.6-1.5H16a5 5 0 0 0 5-5c0-4.1-4-7.5-9-7.5zM7.5 11.5h0.01M10.5 7.5h0.01M15 8h0.01</Geometry>
+    <Geometry x:Key="Hp.Icon.Wrench">M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-0.6-0.6-2.4z</Geometry>
+    <Geometry x:Key="Hp.Icon.File">M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5</Geometry>
+    <Geometry x:Key="Hp.Icon.Logs">M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4</Geometry>
+    <Geometry x:Key="Hp.Icon.Eye">M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z</Geometry>
+    <Geometry x:Key="Hp.Icon.Theme">M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z</Geometry>
+    <Geometry x:Key="Hp.Icon.Spark">M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l0.8 2.2L22 19l-2.2 0.8L19 22l-0.8-2.2L16 19l2.2-0.8z</Geometry>
+    <Geometry x:Key="Hp.Icon.Image">M3 5h18v14H3zM3 15l5-5 4 4 3-3 6 6M15 9h0.01</Geometry>
+    <Geometry x:Key="Hp.Icon.Tray">M4 5h16v10H4zM2 19h20</Geometry>
+    <Geometry x:Key="Hp.Icon.Swap">M7 7h12l-3-3M17 17H5l3 3</Geometry>
+    <Geometry x:Key="Hp.Icon.Reset">M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5</Geometry>
+    <Geometry x:Key="Hp.Icon.Disk">M4 5h16v6H4zM4 13h16v6H4zM7.5 8h0.01M7.5 16h0.01</Geometry>
+    <Geometry x:Key="Hp.Icon.Generate">M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z</Geometry>
+    <Geometry x:Key="Hp.Icon.Cloud">M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 19.5 10 4 4 0 0 1 18 18z</Geometry>
+    <Geometry x:Key="Hp.Icon.Lock">M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3</Geometry>
+    <Geometry x:Key="Hp.Icon.Key">M14.5 4a5.5 5.5 0 1 1-4.9 8l-6.1 6.1V21H6v-2h2v-2h2l1.1-1.1M16 8h0.01</Geometry>
+    <Geometry x:Key="Hp.Icon.Info">M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h0.01</Geometry>
+    <Geometry x:Key="Hp.Icon.Bolt">M13 2L4 14h7l-1 8 9-12h-7z</Geometry>
+    <Geometry x:Key="Hp.Icon.Check">M5 12.5l4.5 4.5L19 7.5</Geometry>
+    <Geometry x:Key="Hp.Icon.Arrow">M5 12h14M13 6l6 6-6 6</Geometry>
+    <Geometry x:Key="Hp.Icon.Play">M8 5v14l11-7z</Geometry>
+    <Geometry x:Key="Hp.Icon.Desktop">M3 4h18v12H3zM8 20h8M12 16v4</Geometry>
+    <Geometry x:Key="Hp.Icon.Pulse">M3 12h4l3-7 4 14 3-7h4</Geometry>
+    <Geometry x:Key="Hp.Icon.Sun">M16 12a4 4 0 1 1-8 0 4 4 0 1 1 8 0zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4</Geometry>
+    <Geometry x:Key="Hp.Icon.Pause">M9 5v14M15 5v14</Geometry>
+    <Geometry x:Key="Hp.Icon.Library">M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z</Geometry>
+    <Geometry x:Key="Hp.Icon.Power">M12 3v8M6.3 6.8a8 8 0 1 0 11.4 0</Geometry>
+    <Geometry x:Key="Hp.Icon.Bell">M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4</Geometry>
+    <Geometry x:Key="Hp.Icon.List">M9 6h11M9 12h11M9 18h11M4.5 6h0.01M4.5 12h0.01M4.5 18h0.01</Geometry>
+    <Geometry x:Key="Hp.Icon.Plus">M12 5v14M5 12h14</Geometry>
+    <Geometry x:Key="Hp.Icon.Minus">M5 12h14</Geometry>
+    <Geometry x:Key="Hp.Icon.Logo">M4 17h16M7 17a5 5 0 0 1 10 0M12 6.5v2.2M6.4 9.4l1.5 1.5M17.6 9.4l-1.5 1.5</Geometry>
+    <Geometry x:Key="Hp.Icon.LogoSun">M7 17a5 5 0 0 1 10 0z</Geometry>
 
     <!-- Symbol (Segoe Fluent Icons) -->
     <Style x:Key="Hp.Shell.Glyph" TargetType="TextBlock">
@@ -23,62 +68,87 @@
 
     <!-- Feldbeschriftung -->
     <Style x:Key="Hp.Shell.Label" TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Body}">
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="TextWrapping" Value="NoWrap" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
+    <!-- Kleine Großbuchstaben-Zeile (.cap2) -->
+    <Style x:Key="Hp.Shell.Overline" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextMuted}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <!-- Wert-Anzeige neben Reglern -->
     <Style x:Key="Hp.Shell.ValuePill" TargetType="Border">
-        <Setter Property="CornerRadius" Value="8" />
-        <Setter Property="Padding" Value="9,2,9,3" />
-        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="Padding" Value="10,3,10,4" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style x:Key="Hp.Shell.ValueText" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Display}" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontFamily" Value="{DynamicResource Hp.Font.Mono}" />
+        <Setter Property="FontSize" Value="12.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
     </Style>
 
-    <!--
-        Versions-Pille rechts im Kopf der Einstellungen: wie die Wert-Anzeige, Info-Symbol und Text zurückgenommen. Kein
-        farbiger Punkt: Der steht in HDRpilot für einen Status (unten in den Einstellungen ungespeicherte Änderungen, Legende
-        im Hauptfenster).
-    -->
-    <Style x:Key="Hp.Shell.VersionPill" TargetType="Border" BasedOn="{StaticResource Hp.Shell.ValuePill}">
-        <Setter Property="CornerRadius" Value="11" />
-        <Setter Property="Padding" Value="10,4,12,5" />
-    </Style>
-    <Style x:Key="Hp.Shell.VersionText" TargetType="TextBlock">
-        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Display}" />
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-
     <!-- Abzeichen mit Akzent-Rahmen (z. B. „HDR-fähig“) -->
     <Style x:Key="Hp.Shell.Badge.Accent" TargetType="Border" BasedOn="{StaticResource Hp.Badge}">
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SelectionFill}" />
     </Style>
     <Style x:Key="Hp.Shell.BadgeText" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
     </Style>
 
+    <!-- Kennzeichen (.tg2): Großbuchstaben auf leichter Fläche; .nat mit Glanz-Ring -->
+    <Style x:Key="Hp.Shell.Tag" TargetType="Border">
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="6,3,6,3" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="Hp.Shell.TagShine" TargetType="Border" BasedOn="{StaticResource Hp.Shell.Tag}">
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.AccentSoft}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style x:Key="Hp.Shell.TagText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+    </Style>
+
+    <!-- Symbol-Kachel im Kopf einer Karte (.cib): Akzent 14 %, Ring Akzent, Symbol in Akzenttext -->
+    <Style x:Key="Hp.Shell.IconBox" TargetType="Border">
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Height" Value="38" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SelectionFill}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+    </Style>
+
     <!--
-        Abschnitt als Karte: Symbol-Kachel, Titel, Inhalt. Beim Überfahren hebt sich die Karte leicht an und bekommt
-        einen Verlaufsrahmen mit weichem Leuchten (ShellMotion.HoverLift, Effekt nur auf der gerade überfahrenen Karte).
+        Bereich als Karte (.card): Kartenfläche mit feinem Rand, Innenlicht oben und leichtem Leuchten der Atmosphäre links
+        oben; Kopf mit Symbol-Kachel, Titel in der Titelschrift, Unterzeile und Bedienelementen rechts (Tag). Beim Überfahren hebt
+        sich die Karte leicht an (ShellMotion.HoverLift), Ring und Leuchten sind vorab gezeichnete Verläufe.
     -->
     <Style x:Key="Hp.Shell.Section" TargetType="HeaderedContentControl">
         <Setter Property="Focusable" Value="False" />
-        <Setter Property="Margin" Value="0,0,0,16" />
+        <Setter Property="Margin" Value="0" />
         <Setter Property="views:ShellMotion.HoverLift" Value="True" />
         <Setter Property="Template">
             <Setter.Value>
@@ -87,39 +157,107 @@
                         <Grid.RenderTransform>
                             <TranslateTransform />
                         </Grid.RenderTransform>
-                        <Border x:Name="PART_Glow" CornerRadius="16" Margin="4" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" IsHitTestVisible="False" />
-                        <Border Background="{DynamicResource Hp.Brush.Surface}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="1" CornerRadius="16" Padding="22,16,22,18">
-                            <DockPanel>
-                                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12" LastChildFill="True">
-                                    <Grid Width="34" Height="34" Margin="0,0,14,0" VerticalAlignment="Center">
-                                        <Border CornerRadius="11" Background="{DynamicResource Hp.Brush.SurfaceSelected}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" BorderThickness="1" />
-                                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="{TemplateBinding Tag}" FontSize="17"
-                                                   Foreground="{DynamicResource Hp.Brush.Accent}" HorizontalAlignment="Center" />
-                                    </Grid>
-                                    <TextBlock Style="{StaticResource Hp.Text.Subtitle}" VerticalAlignment="Center"
-                                               Text="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}" />
-                                </DockPanel>
-                                <ContentPresenter />
-                            </DockPanel>
+                        <!-- Schatten unter der Karte als weicher radialer Verlauf -->
+                        <Border Margin="18,30,18,-16" CornerRadius="40" IsHitTestVisible="False" Opacity="0.55">
+                            <Border.Background>
+                                <RadialGradientBrush Center="0.5,0.62" GradientOrigin="0.5,0.62" RadiusX="0.56" RadiusY="0.5">
+                                    <GradientStop Color="{DynamicResource Hp.Color.Shadow}" Offset="0" />
+                                    <GradientStop Color="Transparent" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
                         </Border>
-                        <Border x:Name="PART_Ring" CornerRadius="16" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" IsHitTestVisible="False" />
+                        <Border x:Name="PART_Glow" Margin="-10" CornerRadius="30" Opacity="0" IsHitTestVisible="False">
+                            <Border.Background>
+                                <RadialGradientBrush RadiusX="0.62" RadiusY="0.62">
+                                    <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0" />
+                                    <GradientStop Color="Transparent" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border CornerRadius="22" Background="{DynamicResource Hp.Brush.Panel}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <Border CornerRadius="22" IsHitTestVisible="False" Opacity="0.12">
+                            <Border.Background>
+                                <RadialGradientBrush Center="0,0" GradientOrigin="0,0" RadiusX="1" RadiusY="0.5">
+                                    <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0" />
+                                    <GradientStop Color="Transparent" Offset="0.6" />
+                                </RadialGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border Margin="1" CornerRadius="21" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Hp.Brush.PanelHighlight}" IsHitTestVisible="False" />
+                        <DockPanel Margin="20,18,20,20">
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,14">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Style="{StaticResource Hp.Shell.IconBox}" Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <views:LineIcon Width="18" Height="18" Data="{Binding (views:SettingsSection.Icon), RelativeSource={RelativeSource TemplatedParent}}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock FontFamily="{DynamicResource Hp.Font.Display}" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}"
+                                               TextTrimming="CharacterEllipsis" Text="{Binding Header, RelativeSource={RelativeSource TemplatedParent}}" />
+                                    <TextBlock x:Name="Description" Style="{StaticResource Hp.Text.Caption}" FontSize="12.5" Margin="0,3,0,0"
+                                               Text="{Binding (views:SettingsSection.Description), RelativeSource={RelativeSource TemplatedParent}}" />
+                                </StackPanel>
+                                <ContentPresenter Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Content="{TemplateBinding Tag}" />
+                            </Grid>
+                            <ContentPresenter />
+                        </DockPanel>
+                        <Border x:Name="PART_Ring" CornerRadius="22" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" IsHitTestVisible="False" />
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger SourceName="Description" Property="Text" Value="{x:Null}">
+                            <Setter TargetName="Description" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger SourceName="Description" Property="Text" Value="">
+                            <Setter TargetName="Description" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- Zeile mit Text links und Schalter rechts -->
+    <!-- Zeile mit Text links und Schalter rechts (.cr) -->
     <Style x:Key="Hp.Shell.SettingRow" TargetType="Border">
         <Setter Property="Padding" Value="14,12" />
-        <Setter Property="Margin" Value="0,0,0,8" />
-        <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceInput}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Border}" />
+        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
-    <!-- Regler: Spur mit HDR-Verlauf bis zum Knopf, Knopf mit Halo bei Hover/Ziehen -->
+    <!-- Schlichte Schalterzeile mit Trennlinie oben (.prow) -->
+    <Style x:Key="Hp.Shell.PlainRow" TargetType="Border">
+        <Setter Property="Padding" Value="2,8" />
+        <Setter Property="MinHeight" Value="48" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+
+    <!-- Unterkarte innerhalb einer Karte (.so) -->
+    <Style x:Key="Hp.Shell.SubCard" TargetType="Border">
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style x:Key="Hp.Shell.SubCard.Primary" TargetType="Border" BasedOn="{StaticResource Hp.Shell.SubCard}">
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+
+    <!-- Hinweis mit Info-Symbol (.src-l) -->
+    <Style x:Key="Hp.Shell.Note" TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Caption}">
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="LineHeight" Value="17" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextMuted}" />
+    </Style>
+
+    <!-- Regler: Spur 6 px, gefüllt im Verlauf der Bedienelemente bis zum Knopf, Knopf weiß mit Akzentring -->
     <Style x:Key="Hp.Shell.SliderFill" TargetType="RepeatButton">
         <Setter Property="Focusable" Value="False" />
         <Setter Property="IsTabStop" Value="False" />
@@ -128,7 +266,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="RepeatButton">
                     <Grid Background="Transparent">
-                        <Border Height="6" CornerRadius="3" Margin="0,0,-4,0" VerticalAlignment="Center" Background="{DynamicResource Hp.Brush.HdrOn}" />
+                        <Border Height="6" CornerRadius="3" Margin="0,0,-4,0" VerticalAlignment="Center" Background="{DynamicResource Hp.Brush.ToggleOn}" />
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>
@@ -155,15 +293,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
                     <Grid>
-                        <Ellipse x:Name="Halo" Margin="-6" Fill="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
-                        <Ellipse Fill="{DynamicResource Hp.Brush.ToggleThumb}" Stroke="{DynamicResource Hp.Brush.AccentSolid}" StrokeThickness="3" />
+                        <Ellipse x:Name="Halo" Margin="-6" Fill="{DynamicResource Hp.Brush.AccentSoft}" Opacity="0" />
+                        <Ellipse Fill="{DynamicResource Hp.Brush.ToggleThumb}" Stroke="{DynamicResource Hp.Brush.FocusRing}" StrokeThickness="3" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Halo" Property="Opacity" Value="0.22" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsDragging" Value="True">
-                            <Setter TargetName="Halo" Property="Opacity" Value="0.34" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="1" />
+                            <Setter TargetName="Halo" Property="Margin" Value="-8" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -178,7 +317,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
                     <Grid Height="30" Background="Transparent">
-                        <Border x:Name="Focus" Margin="-6,0" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
+                        <Border x:Name="Focus" Margin="-6,0" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                         <Border Height="6" CornerRadius="3" Margin="2,0" VerticalAlignment="Center" Background="{DynamicResource Hp.Brush.HdrOff}" />
                         <Track x:Name="PART_Track" Margin="2,0">
                             <Track.DecreaseRepeatButton>
@@ -194,7 +333,7 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Focus" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -205,11 +344,11 @@
         </Setter>
     </Style>
 
-    <!-- Eingabefeld -->
+    <!-- Eingabefeld (.key label): leichte Fläche, feiner Rand, Fokusring -->
     <Style x:Key="Hp.Shell.TextBox" TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
-        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceInput}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
         <Setter Property="CaretBrush" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
         <Setter Property="SelectionOpacity" Value="0.35" />
@@ -221,14 +360,14 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="12" Background="{TemplateBinding Background}"
+                        <Border x:Name="Body" CornerRadius="11" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" />
-                        <Border x:Name="Focus" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="11" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.TextMuted}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Focus" Property="Opacity" Value="1" />
@@ -242,11 +381,11 @@
         </Setter>
     </Style>
 
-    <!-- Passwortfeld (Bot-Passwort): wie das Eingabefeld, zeigt nur Punkte -->
+    <!-- Passwortfeld (Bot-Passwort, API-Schlüssel): wie das Eingabefeld, zeigt nur Punkte -->
     <Style x:Key="Hp.Shell.PasswordBox" TargetType="PasswordBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
-        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceInput}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
         <Setter Property="CaretBrush" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="SelectionBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
         <Setter Property="SelectionOpacity" Value="0.35" />
@@ -258,14 +397,14 @@
             <Setter.Value>
                 <ControlTemplate TargetType="PasswordBox">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="12" Background="{TemplateBinding Background}"
+                        <Border x:Name="Body" CornerRadius="11" Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" />
-                        <Border x:Name="Focus" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="11" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                         <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.TextMuted}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Focus" Property="Opacity" Value="1" />
@@ -279,9 +418,9 @@
         </Setter>
     </Style>
 
-    <!-- Link (öffnet eine Webseite im Standardbrowser): Akzentfarbe, unterstrichen bei Fokus und beim Überfahren -->
+    <!-- Link (öffnet eine Webseite im Standardbrowser): Akzenttext, unterstrichen bei Fokus und beim Überfahren -->
     <Style x:Key="Hp.Shell.LinkButton" TargetType="Button">
-        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
         <Setter Property="FontSize" Value="12.5" />
         <Setter Property="FontWeight" Value="SemiBold" />
@@ -332,7 +471,7 @@
         </Setter>
     </Style>
 
-    <!-- Auswählbare Zeile: Hover-Fläche, Auswahl mit Akzentbalken (keine Effekte pro Zeile) -->
+    <!-- Auswählbare Zeile: Hover-Fläche, Auswahl in Akzent 14 % mit Akzentbalken (keine Effekte pro Zeile) -->
     <Style x:Key="Hp.Shell.ListBoxItem" TargetType="ListBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -343,9 +482,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Grid Background="Transparent">
-                        <Border x:Name="Body" CornerRadius="9" Background="Transparent" />
-                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" Margin="3,7" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
-                        <Border x:Name="Focus" CornerRadius="9" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
+                        <Border x:Name="Body" CornerRadius="10" Background="Transparent" />
+                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" Margin="3,8" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -353,11 +492,11 @@
                             <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SelectionFill}" />
                             <Setter TargetName="Bar" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Focus" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -380,8 +519,8 @@
     </Style>
 
     <!--
-        Auswahl-Kästchen als Karte (Bildschirm-Auswahl): ganze Zeile klickbar, Haken im Verlauf. Der Haken „springt“
-        kurz auf, wenn Animationen erlaubt sind; sonst erscheint er sofort.
+        Auswahl-Kästchen als Karte (Bildschirm-Auswahl): ganze Zeile klickbar, Haken im Akzentverlauf, gewählt mit Ring.
+        Der Haken „springt“ kurz auf, wenn Animationen erlaubt sind; sonst erscheint er sofort.
     -->
     <Style x:Key="Hp.Shell.CheckCard" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
@@ -392,15 +531,15 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="1" />
-                        <Border x:Name="Selected" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Body" CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <Border x:Name="Selected" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.SelectionRing}" Opacity="0" />
                         <Grid Margin="14,12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid Width="22" Height="22" VerticalAlignment="Center">
-                                <Border x:Name="Box" CornerRadius="7" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" Background="{DynamicResource Hp.Brush.Surface}" />
+                                <Border x:Name="Box" CornerRadius="7" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" Background="{DynamicResource Hp.Brush.Surface2}" />
                                 <Border x:Name="Fill" CornerRadius="7" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                                 <TextBlock x:Name="Check" Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE73E;" FontSize="12" FontWeight="Bold"
                                            Foreground="{DynamicResource Hp.Brush.TextOnAccent}" HorizontalAlignment="Center" Opacity="0" RenderTransformOrigin="0.5,0.5">
@@ -411,18 +550,18 @@
                             </Grid>
                             <ContentPresenter Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
                         </Grid>
-                        <Border x:Name="Focus" CornerRadius="12" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="18" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Fill" Property="Opacity" Value="1" />
                             <Setter TargetName="Check" Property="Opacity" Value="1" />
                             <Setter TargetName="Selected" Property="Opacity" Value="1" />
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SelectionFill}" />
                         </Trigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -439,7 +578,7 @@
                             </MultiDataTrigger.EnterActions>
                         </MultiDataTrigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Focus" Property="Opacity" Value="0.85" />
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -459,18 +598,18 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" BorderThickness="1">
+                    <Border x:Name="Body" CornerRadius="11" Background="{DynamicResource Hp.Brush.Surface2}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1">
                         <TextBlock x:Name="Arrow" Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE70D;" FontSize="11" Margin="0,0,14,0"
                                    HorizontalAlignment="Right" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.TextMuted}" />
-                            <Setter TargetName="Arrow" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                            <Setter TargetName="Arrow" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
-                            <Setter TargetName="Arrow" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                            <Setter TargetName="Arrow" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -521,17 +660,21 @@
                         <ContentPresenter IsHitTestVisible="False" Margin="14,0,36,0" VerticalAlignment="Center" HorizontalAlignment="Left"
                                           Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" />
-                        <Border x:Name="Focus" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" IsHitTestVisible="False" />
+                        <Border x:Name="Focus" CornerRadius="11" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" IsHitTestVisible="False" />
                         <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" Focusable="False"
                                IsOpen="{TemplateBinding IsDropDownOpen}"
                                PopupAnimation="{DynamicResource {x:Static SystemParameters.ComboBoxPopupAnimationKey}}">
-                            <Grid Margin="0,4,14,14" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.WindowBackground}">
-                                    <Border.Effect>
-                                        <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.4" Color="{DynamicResource Hp.Color.Shadow}" />
-                                    </Border.Effect>
+                            <Grid Margin="0,4,14,16" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                <!-- Schatten als weicher Verlauf unter der Liste -->
+                                <Border Margin="6,10,-8,-14" CornerRadius="18" Opacity="0.6" IsHitTestVisible="False">
+                                    <Border.Background>
+                                        <RadialGradientBrush Center="0.5,0.6" GradientOrigin="0.5,0.6" RadiusX="0.6" RadiusY="0.6">
+                                            <GradientStop Color="{DynamicResource Hp.Color.Shadow}" Offset="0.3" />
+                                            <GradientStop Color="Transparent" Offset="1" />
+                                        </RadialGradientBrush>
+                                    </Border.Background>
                                 </Border>
-                                <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.WindowBackground}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" BorderThickness="1" Padding="4">
+                                <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.Menu}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" Padding="4">
                                     <ScrollViewer Focusable="False">
                                         <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
                                     </ScrollViewer>
@@ -557,10 +700,292 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Margin" Value="0,0,8,0" />
     </Style>
+    <Style x:Key="Hp.Shell.ButtonIcon" TargetType="views:LineIcon">
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
 
     <!--
-        Tray-Menü: abgerundet, App-Verlauf als Hintergrund, Kopf mit Status-Pille. Schatten auf einem eigenen
-        Element hinter dem Menü (Texte bleiben ClearType-scharf).
+        Navigation der Einstellungen (.navb): Symbol und Name; der gerade sichtbare Bereich ist hinterlegt, hat einen
+        Verlaufsbalken links und ein Symbol in der Akzentfarbe. Unterpunkte eingerückt und kleiner.
+    -->
+    <Style x:Key="Hp.Shell.NavButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="12" Background="Transparent" />
+                        <Border x:Name="Bar" Width="3" CornerRadius="0,3,3,0" Margin="-14,9,0,9" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="12" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                        <StackPanel Orientation="Horizontal" Margin="{TemplateBinding Padding}" VerticalAlignment="Center">
+                            <views:LineIcon x:Name="Icon" Width="16" Height="16" Margin="0,0,12,0" Data="{Binding (views:SettingsSection.Icon), RelativeSource={RelativeSource TemplatedParent}}" />
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger SourceName="Icon" Property="Data" Value="{x:Null}">
+                            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="views:SettingsSection.IsCurrent" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                            <Setter TargetName="Bar" Property="Opacity" Value="1" />
+                            <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Hp.Shell.NavSubButton" TargetType="Button" BasedOn="{StaticResource Hp.Shell.NavButton}">
+        <Setter Property="Height" Value="32" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Padding" Value="40,0,12,0" />
+    </Style>
+
+    <!-- Umschalter mit zwei oder drei Teilen (.seg): gewählter Teil im Akzentverlauf -->
+    <Style x:Key="Hp.Shell.SegmentHost" TargetType="Border">
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="CornerRadius" Value="11" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="Hp.Shell.Segment" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="MinWidth" Value="58" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="8" Background="Transparent" />
+                        <Border x:Name="Focus" CornerRadius="8" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Accent}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Hp.Shell.SegmentSmall" TargetType="RadioButton" BasedOn="{StaticResource Hp.Shell.Segment}">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Padding" Value="8,0" />
+    </Style>
+
+    <!-- Quadratische Symbol-Schaltfläche (.ibtn) -->
+    <Style x:Key="Hp.Shell.SquareButton" TargetType="Button" BasedOn="{StaticResource Hp.GhostButton}">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!--
+        Farbvorlage (.pc): Verlaufsfläche mit DUO/TRI-Kennzeichen, Name darunter; gewählt mit 2-px-Ring in der Farbe der
+        Bedienelemente und Haken rechts oben. Hebt sich beim Überfahren leicht.
+    -->
+    <Style x:Key="Hp.Shell.PresetTile" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="Height" Value="70" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="RenderTransform">
+            <Setter.Value>
+                <TranslateTransform />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="14" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <Border Margin="4,4,4,0" Height="38" VerticalAlignment="Top" CornerRadius="10" Background="{Binding Gradient}" />
+                        <Border Margin="8,8,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="4" Background="#6B000000" Padding="4,2,4,2">
+                            <TextBlock Text="{Binding Tag}" FontSize="9" FontWeight="Bold" Foreground="White" />
+                        </Border>
+                        <Grid x:Name="Mark" Width="16" Height="16" Margin="0,8,8,0" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
+                            <Ellipse Fill="White" />
+                            <views:LineIcon Width="11" Height="11" StrokeThickness="3.2" Foreground="#FF111111" Data="{StaticResource Hp.Icon.Check}" />
+                        </Grid>
+                        <TextBlock Margin="4,0,4,8" VerticalAlignment="Bottom" HorizontalAlignment="Center" FontWeight="Bold" FontSize="11.5"
+                                   TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                        <Border x:Name="Ring" CornerRadius="14" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.SelectionRing}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="16" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                            <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Auswahlkarte für Thema und Effektstufe (.tho, .fo): Vorschau oben, Name und Erklärung darunter -->
+    <Style x:Key="Hp.Shell.ChoiceCard" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <ContentPresenter Margin="8,8,8,10" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        <Border x:Name="Ring" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.SelectionRing}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="18" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Farbfeld (.wl): Farbfläche mit Nummer und Stift, Rolle, Hex-Wert, Erklärung -->
+    <Style x:Key="Hp.Shell.ColorWell" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <ContentPresenter Margin="10" />
+                        <Border x:Name="Focus" CornerRadius="18" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Cursor" Value="Arrow" />
+                            <Setter TargetName="Body" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Kontrast-Kennzeichen (.cchip) -->
+    <Style x:Key="Hp.Shell.Chip" TargetType="Border">
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Padding" Value="8,0,4,0" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+
+    <!-- Vorschau-Spiel (.mt): Bildstreifen, gewählt mit Ring -->
+    <Style x:Key="Hp.Shell.PreviewThumb" TargetType="RadioButton">
+        <Setter Property="Width" Value="96" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid x:Name="Root" Opacity="0.72">
+                        <Border CornerRadius="10" Background="{Binding Field}" />
+                        <Border CornerRadius="10" ClipToBounds="True">
+                            <Border.Background>
+                                <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                            </Border.Background>
+                        </Border>
+                        <Border x:Name="Ring" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Line}" />
+                        <Border x:Name="Focus" CornerRadius="12" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Root" Property="Opacity" Value="1" />
+                            <Setter TargetName="Ring" Property="BorderThickness" Value="2" />
+                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource Hp.Brush.SelectionRing}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Tray-Menü (E89): wie das Windows-11-Menü mit Kopf (Programmsymbol in der Kachel, Name, Zustand mit Punkt), Einträgen
+        mit Linien-Symbolen und hervorgehobenem „HDR jetzt …“. Schatten auf einem eigenen Element hinter dem Menü als
+        weicher Verlauf; die Texte bleiben ClearType-scharf.
     -->
     <Style x:Key="Hp.Shell.TrayMenu" TargetType="ContextMenu">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
@@ -571,41 +996,41 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
-                    <Grid x:Name="PART_Body" Margin="10,6,14,16">
-                        <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.WindowBackground}">
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.45" Color="{DynamicResource Hp.Color.Shadow}" />
-                            </Border.Effect>
+                    <Grid x:Name="PART_Body" Margin="10,6,16,20">
+                        <Border Margin="4,14,-10,-18" CornerRadius="26" Opacity="0.7" IsHitTestVisible="False">
+                            <Border.Background>
+                                <RadialGradientBrush Center="0.5,0.58" GradientOrigin="0.5,0.58" RadiusX="0.58" RadiusY="0.56">
+                                    <GradientStop Color="{DynamicResource Hp.Color.Shadow}" Offset="0.45" />
+                                    <GradientStop Color="Transparent" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
                         </Border>
-                        <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.WindowBackground}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" BorderThickness="1">
+                        <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.Menu}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1">
                             <Grid>
-                                <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.BackgroundGlow}" />
+                                <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.BackgroundGlow}" Opacity="0.7" />
                                 <StackPanel Margin="6">
-                                    <Grid Margin="10,10,10,10">
+                                    <Grid Margin="8,8,8,8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Grid Width="34" Height="34" Margin="0,0,12,0">
-                                            <Border CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" />
-                                            <TextBlock Text="H" FontFamily="{StaticResource Hp.Font.Display}" FontWeight="Black" FontSize="18"
-                                                       Foreground="{DynamicResource Hp.Brush.TextOnAccent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <Grid Width="32" Height="32" Margin="0,0,12,0">
+                                            <Border x:Name="LogoOff" CornerRadius="10" Background="{DynamicResource Hp.Brush.Surface2}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                                            <Border x:Name="LogoOn" CornerRadius="10" Background="{DynamicResource Hp.Brush.HdrOn}" Visibility="Collapsed" />
+                                            <views:LineIcon x:Name="LogoSun" Width="20" Height="20" StrokeThickness="0" Fill="{DynamicResource Hp.Brush.AccentText}" Data="{StaticResource Hp.Icon.LogoSun}" />
+                                            <views:LineIcon x:Name="LogoGlyph" Width="20" Height="20" StrokeThickness="2" Foreground="{DynamicResource Hp.Brush.AccentText}" Data="{StaticResource Hp.Icon.Logo}" />
                                         </Grid>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock Text="{x:Static res:CommonStrings.AppName}" FontFamily="{StaticResource Hp.Font.Display}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource Hp.Brush.Text}" />
-                                            <TextBlock Text="{Binding StatusDetail}" Style="{StaticResource Hp.Text.Caption}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" MaxWidth="170" />
+                                            <TextBlock Text="{x:Static res:CommonStrings.AppName}" FontFamily="{DynamicResource Hp.Font.Display}" FontWeight="Bold" FontSize="15" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                            <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                <Ellipse x:Name="Dot" Width="7" Height="7" Margin="0,1,7,0" Fill="{DynamicResource Hp.Brush.TextMuted}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding StatusTitle}" FontSize="11.5" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                                                <TextBlock Text=" · " FontSize="11.5" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                                                <TextBlock Text="{Binding StatusDetail}" FontSize="11.5" Foreground="{DynamicResource Hp.Brush.TextSecondary}" TextTrimming="CharacterEllipsis" MaxWidth="170" />
+                                            </StackPanel>
                                         </StackPanel>
-                                        <Grid Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0">
-                                            <Border x:Name="PillOff" CornerRadius="9" Padding="10,3,10,4" Background="{DynamicResource Hp.Brush.HdrOff}">
-                                                <TextBlock Text="{Binding StatusTitle}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}" />
-                                            </Border>
-                                            <Border x:Name="PillOn" CornerRadius="9" Padding="10,3,10,4" Background="{DynamicResource Hp.Brush.HdrOn}" Visibility="Collapsed">
-                                                <TextBlock Text="{Binding StatusTitle}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" />
-                                            </Border>
-                                        </Grid>
                                     </Grid>
-                                    <Rectangle Height="1" Margin="8,0,8,6" Fill="{DynamicResource Hp.Brush.Border}" />
+                                    <Rectangle Height="1" Margin="8,0,8,4" Fill="{DynamicResource Hp.Brush.Line}" />
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" KeyboardNavigation.TabNavigation="Cycle" />
                                 </StackPanel>
                             </Grid>
@@ -613,8 +1038,11 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsHdrOn}" Value="True">
-                            <Setter TargetName="PillOn" Property="Visibility" Value="Visible" />
-                            <Setter TargetName="PillOff" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="LogoOn" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="LogoOff" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="LogoSun" Property="Fill" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+                            <Setter TargetName="LogoGlyph" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+                            <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Hp.Brush.Shine}" />
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -625,15 +1053,15 @@
     <Style x:Key="Hp.Shell.TrayMenuItem" TargetType="MenuItem">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="Padding" Value="10,9" />
+        <Setter Property="Padding" Value="10,8" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
                     <Grid Background="Transparent" Margin="0,1">
-                        <Border x:Name="Hover" CornerRadius="9" Background="{DynamicResource Hp.Brush.SurfaceHover}" Opacity="0" />
-                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" Margin="2,9" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Hover" CornerRadius="8" Background="{DynamicResource Hp.Brush.SurfaceHover}" Opacity="0" />
+                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" Margin="2,8" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                         <Grid Margin="{TemplateBinding Padding}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="30" />
@@ -643,10 +1071,10 @@
                             <ContentPresenter x:Name="IconHost" ContentSource="Icon" VerticalAlignment="Center" HorizontalAlignment="Left"
                                               TextElement.Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                             <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
-                            <Grid x:Name="Switch" Grid.Column="2" Width="32" Height="18" Margin="14,0,2,0" VerticalAlignment="Center" Visibility="Collapsed">
-                                <Border x:Name="Track" CornerRadius="9" Background="{DynamicResource Hp.Brush.HdrOff}" />
-                                <Border x:Name="TrackOn" CornerRadius="9" Background="{DynamicResource Hp.Brush.HdrOn}" Opacity="0" />
-                                <Ellipse x:Name="Knob" Width="12" Height="12" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource Hp.Brush.ToggleThumb}" />
+                            <Grid x:Name="Switch" Grid.Column="2" Width="34" Height="20" Margin="14,0,2,0" VerticalAlignment="Center" Visibility="Collapsed">
+                                <Border x:Name="Track" CornerRadius="10" Background="{DynamicResource Hp.Brush.HdrOff}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
+                                <Border x:Name="TrackOn" CornerRadius="10" Background="{DynamicResource Hp.Brush.ToggleOn}" Opacity="0" />
+                                <Ellipse x:Name="Knob" Width="14" Height="14" Margin="3,0" HorizontalAlignment="Left" Fill="{DynamicResource Hp.Brush.ToggleOff}" />
                             </Grid>
                         </Grid>
                     </Grid>
@@ -654,7 +1082,7 @@
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Hover" Property="Opacity" Value="1" />
                             <Setter TargetName="Bar" Property="Opacity" Value="1" />
-                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
                         </Trigger>
                         <Trigger Property="IsCheckable" Value="True">
                             <Setter TargetName="Switch" Property="Visibility" Value="Visible" />
@@ -662,6 +1090,37 @@
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="TrackOn" Property="Opacity" Value="1" />
                             <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                            <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource Hp.Brush.ToggleThumb}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Hervorgehobener Eintrag „HDR jetzt …“ (.tm-i.hl): Akzent 24 % hinterlegt -->
+    <Style x:Key="Hp.Shell.TrayMenuItem.Highlight" TargetType="MenuItem" BasedOn="{StaticResource Hp.Shell.TrayMenuItem}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid Background="Transparent" Margin="0,1">
+                        <Border CornerRadius="8" Background="{DynamicResource Hp.Brush.AccentSoft}" />
+                        <Border x:Name="Hover" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" />
+                        <Grid Margin="{TemplateBinding Padding}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter ContentSource="Icon" VerticalAlignment="Center" HorizontalAlignment="Left" TextElement.Foreground="{DynamicResource Hp.Brush.AccentText}" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" TextElement.FontWeight="SemiBold" />
+                        </Grid>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Hover" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -681,8 +1140,8 @@
         <Setter Property="IsEnabled" Value="False" />
         <Setter Property="Focusable" Value="False" />
         <Setter Property="IsTabStop" Value="False" />
-        <Setter Property="FontSize" Value="12" />
-        <Setter Property="Padding" Value="10,5,10,4" />
+        <Setter Property="FontSize" Value="11.5" />
+        <Setter Property="Padding" Value="10,3,10,4" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
@@ -706,7 +1165,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Separator">
-                    <Rectangle Height="1" Margin="12,5" Fill="{DynamicResource Hp.Brush.Border}" />
+                    <Rectangle Height="1" Margin="12,4" Fill="{DynamicResource Hp.Brush.Line}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

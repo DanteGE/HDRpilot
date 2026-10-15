@@ -48,6 +48,16 @@ public static class ThemeManager
         return key?.GetValue("AppsUseLightTheme") is not int light || light == 0;
     }
 
+    /// <summary>
+    /// Helle Taskleiste (Windows-Einstellung „Standard-Windows-Modus“, SystemUsesLightTheme = 1). Das Tray- und das
+    /// Fenstersymbol stehen dort und bekommen ihre Linienfarben danach (E89, G10.2). Fehlt der Wert: dunkel.
+    /// </summary>
+    public static bool ReadSystemTaskbarLight()
+    {
+        using var key = _registry.OpenKey(RegistryHiveKind.CurrentUser, PersonalizeKey);
+        return key?.GetValue("SystemUsesLightTheme") is int light && light != 0;
+    }
+
     public static void Apply(Application app)
     {
         var dark = Override ?? Preference ?? ReadSystemPrefersDark();

@@ -62,6 +62,9 @@ public static class ThemeKeys
     /// <summary>Leuchten im Hintergrund (Verlauf aus der Atmosphäre).</summary>
     public const string BrushBackgroundGlow = "Hp.Brush.BackgroundGlow";
 
+    /// <summary>Zweites Leuchten im Hintergrund, links unten aus dem Akzent (Prototyp .bgl).</summary>
+    public const string BrushBackgroundGlow2 = "Hp.Brush.BackgroundGlow2";
+
     public const string BrushTitleBar = "Hp.Brush.TitleBar";
 
     public const string BrushSurface = "Hp.Brush.Surface";
@@ -157,6 +160,9 @@ public static class ThemeKeys
     /// <summary>Daumen eines ausgeschalteten Schalters (--off).</summary>
     public const string BrushToggleOff = "Hp.Brush.ToggleOff";
 
+    /// <summary>Spur eines eingeschalteten Schalters: Akzent → Atmosphäre, mindestens 3:1 gegen Fläche und Hintergrund.</summary>
+    public const string BrushToggleOn = "Hp.Brush.ToggleOn";
+
     public const string BrushToggleThumb = "Hp.Brush.ToggleThumb";
 
     /// <summary>HDR an: Verlauf Akzent → Atmosphäre → Glanz.</summary>
@@ -169,6 +175,15 @@ public static class ThemeKeys
     public const string BrushWarning = "Hp.Brush.Warning";
 
     public const string BrushDanger = "Hp.Brush.Danger";
+
+    /// <summary>Hinterlegung von Erfolgs-Kennzeichen (Prototyp .okc), Text darauf in <see cref="BrushSuccess"/>.</summary>
+    public const string BrushSuccessSoft = "Hp.Brush.SuccessSoft";
+
+    /// <summary>Hinterlegung von Warn-Kennzeichen und Hinweisen (Prototyp .wrn, .perf).</summary>
+    public const string BrushWarningSoft = "Hp.Brush.WarningSoft";
+
+    /// <summary>Hinterlegung von Fehler-Kennzeichen (Prototyp .bad).</summary>
+    public const string BrushDangerSoft = "Hp.Brush.DangerSoft";
 
     public const string BrushSourceSteam = "Hp.Brush.Source.Steam";
 

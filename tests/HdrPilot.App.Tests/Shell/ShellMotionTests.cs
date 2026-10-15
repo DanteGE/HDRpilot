@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Effects;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
 
@@ -76,17 +75,20 @@ public sealed class ShellMotionTests
             var glow = (UIElement)section.Template.FindName("PART_Glow", section);
 
             section.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
-            var hover = (Ring: ring.Opacity, RingAnimated: ring.HasAnimatedProperties, Blur: glow.Effect is BlurEffect);
+            var hover = (Ring: ring.Opacity, RingAnimated: ring.HasAnimatedProperties, Glow: glow.Opacity, GlowAnimated: glow.HasAnimatedProperties, Blur: glow.Effect is not null);
 
             section.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
-            return (hover, LeaveRing: ring.Opacity, LeaveBlur: glow.Effect is BlurEffect);
+            return (hover, LeaveRing: ring.Opacity, LeaveBlur: glow.Effect is not null, LeaveGlow: glow.Opacity);
         });
 
+        // Nie ein Unschärfe-Effekt (E89): das Leuchten ist ein vorab gezeichneter Verlauf.
+        Assert.False(result.hover.Blur);
+        Assert.False(result.LeaveBlur);
         if (allowed)
         {
-            // Mit Animationen: Rahmen blendet ein, Leuchten mit Unschärfe nur auf dieser einen Karte.
+            // Mit Animationen: Rahmen und Leuchten blenden ein.
             Assert.True(result.hover.RingAnimated);
-            Assert.True(result.hover.Blur);
+            Assert.True(result.hover.GlowAnimated);
         }
         else
         {
@@ -94,7 +96,9 @@ public sealed class ShellMotionTests
             Assert.False(result.hover.RingAnimated);
             Assert.False(result.hover.Blur);
             Assert.Equal(0.0, result.LeaveRing);
-            Assert.False(result.LeaveBlur);
+            Assert.Equal(0.0, result.LeaveGlow);
+            Assert.Equal(0.0, result.hover.Glow); // ohne Animationseffekte kein Leuchten, nur der Rahmen
+            Assert.False(result.hover.GlowAnimated);
         }
     }
 

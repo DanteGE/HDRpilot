@@ -32,7 +32,7 @@ public sealed partial class AppServices
     {
         var logger = LoggerFactory.CreateLogger("Tray");
         var gate = new NotificationGate(() => Config.Current.Settings.Notifications, new ShellUserNotificationState(), logger);
-        return new TrayService(ShellAdapter, gate, logger);
+        return new TrayService(ShellAdapter, gate, logger, appearance: Appearance, windowIcon: WindowIconSource.Shared);
     }
 
     private partial IAutostartService CreateAutostartService()
@@ -60,13 +60,35 @@ public sealed partial class AppServices
     private partial Window CreateSettingsWindow()
     {
         var window = new SettingsWindow();
-        window.Attach(new SettingsViewModel(ShellAdapter, new DialogFolderPicker(window)));
+        window.Attach(new SettingsViewModel(ShellAdapter, new DialogFolderPicker(window), LoggerFactory.CreateLogger("Einstellungen")));
         return window;
     }
 
-    /// <summary>Zustände der Einstellungen für Bildschirmfotos (E89). Gerüst: das Fenster, wie es öffnet.</summary>
-    partial void AddSettingsSnapshotScenes(List<SnapshotScene> scenes) =>
+    /// <summary>
+    /// Zustände der Einstellungen für Bildschirmfotos (E89, G10.8): wie das Fenster öffnet, die Seite „Darstellung“ oben, bei
+    /// „Bilder“ und bei „Symbole und Tray“. Vor dem Foto wartet der Zustand, bis Abdeckung, Beispiele und Vorschau geladen
+    /// sind (höchstens 20 s), und springt dann zum Anker.
+    /// </summary>
+    partial void AddSettingsSnapshotScenes(List<SnapshotScene> scenes)
+    {
         scenes.Add(new SnapshotScene("einstellungen", "allgemein", CreateSettingsWindow));
+        scenes.Add(SettingsScene("darstellung", "NavAppearance"));
+        scenes.Add(SettingsScene("darstellung-bilder", "NavAppearanceArtwork"));
+        scenes.Add(SettingsScene("darstellung-tray", "NavAppearanceTray"));
+    }
+
+    private SnapshotScene SettingsScene(string name, string anchor) => new("einstellungen", name, CreateSettingsWindow, async window =>
+    {
+        if (window is SettingsWindow settings && settings.DataContext is SettingsViewModel model)
+        {
+            await Task.WhenAny(model.Appearance.Loaded, Task.Delay(TimeSpan.FromSeconds(20)));
+            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            settings.ScrollToSection(anchor);
+        }
+    })
+    {
+        Settle = TimeSpan.FromMilliseconds(1800),
+    };
 
     /// <summary>Adapter: was Tray und Einstellungen von AppServices brauchen. Hält keine Fenster.</summary>
     private sealed class ShellHost(AppServices app) : ITrayHost, IShellContext
@@ -130,6 +152,8 @@ public sealed partial class AppServices
         public void OpenLogFolder() => app.OpenLogFolder();
 
         public Task ExitAsync() => app.ExitAsync();
+
+        public void OpenLibrary() => app.ShowMainWindow();
 
         public void OnSettingsSaved(bool searchFoldersChanged)
         {

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
 using HdrPilot.Core.AutoHdr;
@@ -158,6 +159,10 @@ public sealed partial class TrayService : ITrayService
     private readonly Func<ITrayIconSurface> _createSurface;
     private readonly Func<int> _iconSize;
     private readonly Func<DateTimeOffset> _now;
+    private readonly IAppearanceService? _appearance;
+    private readonly WindowIconSource? _windowIcon;
+    private IconPalette _iconPalette = IconPalette.Default;
+    private bool _lightTaskbar;
     private ITrayIconSurface? _notifyIcon;
     private TrayIcon? _icon;
     private TrayState _state = TrayState.Initial;
@@ -173,13 +178,17 @@ public sealed partial class TrayService : ITrayService
     /// <param name="surfaceFactory">Erzeugt das Symbol im Infobereich (Standard: NotifyIcon; Tests: Attrappe).</param>
     /// <param name="iconSize">Kantenlänge des Symbols in Pixeln (Standard: kleine Symbole bei System-DPI).</param>
     /// <param name="clock">Uhr für den Countdown des Neustart-Puffers (Standard: Systemzeit; Tests: steuerbar).</param>
+    /// <param name="appearance">Farbschema und Taskleisten-Thema für das Symbol (E89, G10.2); null: Auslieferungsfarben.</param>
+    /// <param name="windowIcon">Fenstersymbol, das den Zustand mitbekommt (HDR an/aus, Pause, Spiel läuft); null: keins.</param>
     public TrayService(
         ITrayHost host,
         NotificationGate gate,
         ILogger? logger = null,
         Func<ITrayIconSurface>? surfaceFactory = null,
         Func<int>? iconSize = null,
-        Func<DateTimeOffset>? clock = null)
+        Func<DateTimeOffset>? clock = null,
+        IAppearanceService? appearance = null,
+        WindowIconSource? windowIcon = null)
     {
         _host = host;
         _gate = gate;
@@ -187,7 +196,12 @@ public sealed partial class TrayService : ITrayService
         _createSurface = surfaceFactory ?? (() => new NotifyIconSurface());
         _iconSize = iconSize ?? TrayIconRenderer.SystemSmallIconSize;
         _now = clock ?? (() => DateTimeOffset.UtcNow);
+        _appearance = appearance;
+        _windowIcon = windowIcon;
     }
+
+    /// <summary>Spezifikation des gerade gezeigten Symbols (Prüfung).</summary>
+    public TrayIconSpec? CurrentIconSpec => _icon?.Spec;
 
     public void Initialize()
     {
@@ -209,6 +223,12 @@ public sealed partial class TrayService : ITrayService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Tray: Anfangszustand nicht lesbar.");
+        }
+
+        if (_appearance is not null)
+        {
+            ReadAppearance();
+            _appearance.Changed += OnAppearanceChanged;
         }
 
         Apply(_state);
@@ -290,6 +310,11 @@ public sealed partial class TrayService : ITrayService
         }
 
         _disposed = true;
+        if (_appearance is not null)
+        {
+            _appearance.Changed -= OnAppearanceChanged;
+        }
+
         _recheck?.Stop();
         _recheck = null;
         StopCountdown();
@@ -357,7 +382,8 @@ public sealed partial class TrayService : ITrayService
         }
 
         _state = state;
-        var spec = TrayPresentation.IconFor(state);
+        var spec = TrayPresentation.IconFor(state) with { Palette = _iconPalette, LightTaskbar = _lightTaskbar };
+        _windowIcon?.SetState(spec.HdrOn, spec.Paused, spec.GameRunning);
         var size = _iconSize();
         if (_icon is null || _icon.Spec != spec || _icon.Size != size)
         {
@@ -378,6 +404,35 @@ public sealed partial class TrayService : ITrayService
 
         ApplyTooltip();
         _menuModel?.Update(state);
+    }
+
+    /// <summary>
+    /// Farbschema oder Taskleisten-Thema gewechselt: Symbol mit dem letzten Zustand neu zeichnen. Gleiche Farben (etwa nur
+    /// die Effektstufe geändert) ergeben dieselbe Spezifikation, dann wird nichts gezeichnet.
+    /// </summary>
+    private void OnAppearanceChanged(object? sender, EventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        ReadAppearance();
+        Apply(_state);
+    }
+
+    private void ReadAppearance()
+    {
+        try
+        {
+            var current = _appearance!.Current;
+            _iconPalette = IconPalette.From(PaletteEngine.Compute(current.Palette, dark: true, current.AutoTextOnAccent));
+            _lightTaskbar = current.LightTaskbar;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "Tray: Farben der Darstellung nicht lesbar, es gelten die Auslieferungsfarben.");
+        }
     }
 
     /// <summary>Tooltip aus dem letzten Zustand; startet oder beendet den Countdown des Neustart-Puffers.</summary>

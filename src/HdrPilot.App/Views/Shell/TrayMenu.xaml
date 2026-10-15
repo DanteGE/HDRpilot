@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
              xmlns:res="clr-namespace:HdrPilot.App.Resources"
+             xmlns:views="clr-namespace:HdrPilot.App.Views.Shell"
              xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Shell"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance vm:TrayMenuViewModel}"
@@ -13,8 +14,9 @@
              AutomationProperties.Name="{x:Static res:ShellStrings.TrayMenuName}">
     <ContextMenu.Resources>
         <Style TargetType="MenuItem" BasedOn="{StaticResource Hp.Shell.TrayMenuItem}" />
-        <Style x:Key="MenuGlyph" TargetType="TextBlock" BasedOn="{StaticResource Hp.Shell.Glyph}">
-            <Setter Property="FontSize" Value="16" />
+        <Style x:Key="MenuIcon" TargetType="views:LineIcon">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
         </Style>
     </ContextMenu.Resources>
 
@@ -24,16 +26,17 @@
               AutomationProperties.Name="{Binding VersionText}"
               Header="{Binding VersionText}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE946;" FontSize="14" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Width="14" Height="14" Data="{StaticResource Hp.Icon.Info}" />
         </MenuItem.Icon>
     </MenuItem>
     <Separator Style="{StaticResource Hp.Shell.TrayMenuSeparator}" />
-    <MenuItem AutomationProperties.AutomationId="TrayToggleHdr"
+    <MenuItem Style="{StaticResource Hp.Shell.TrayMenuItem.Highlight}"
+              AutomationProperties.AutomationId="TrayToggleHdr"
               AutomationProperties.Name="{Binding ToggleHdrText}"
               Header="{Binding ToggleHdrText}"
               Command="{Binding ToggleHdrCommand}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE706;" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Data="{StaticResource Hp.Icon.Sun}" />
         </MenuItem.Icon>
     </MenuItem>
     <!-- Globaler Auto-HDR-Schalter von Windows (G9.9): beim Öffnen gelesen, gilt ab dem nächsten Spielstart; nicht lesbar: gesperrt.
@@ -48,7 +51,7 @@
               IsEnabled="{Binding CanToggleAutoHdr}"
               IsChecked="{Binding IsAutoHdrOn, Mode=TwoWay}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="{x:Static infra:AppGlyphs.AutoHdr}" />
+            <TextBlock Style="{StaticResource Hp.Shell.Glyph}" FontSize="16" Text="{x:Static infra:AppGlyphs.AutoHdr}" />
         </MenuItem.Icon>
     </MenuItem>
     <MenuItem AutomationProperties.AutomationId="TrayPause"
@@ -57,7 +60,7 @@
               IsCheckable="True"
               IsChecked="{Binding IsPaused, Mode=TwoWay}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE769;" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Data="{StaticResource Hp.Icon.Pause}" />
         </MenuItem.Icon>
     </MenuItem>
     <Separator Style="{StaticResource Hp.Shell.TrayMenuSeparator}" />
@@ -67,7 +70,7 @@
               FontWeight="SemiBold"
               Command="{Binding OpenCommand}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7FC;" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Data="{StaticResource Hp.Icon.Library}" />
         </MenuItem.Icon>
     </MenuItem>
     <MenuItem AutomationProperties.AutomationId="TraySettings"
@@ -75,7 +78,7 @@
               Header="{x:Static res:ShellStrings.TrayMenuSettings}"
               Command="{Binding SettingsCommand}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE713;" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Data="{StaticResource Hp.Icon.Settings}" />
         </MenuItem.Icon>
     </MenuItem>
     <MenuItem AutomationProperties.AutomationId="TrayLogs"
@@ -83,7 +86,7 @@
               Header="{x:Static res:ShellStrings.TrayMenuLogs}"
               Command="{Binding LogsCommand}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE838;" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Data="{StaticResource Hp.Icon.Logs}" />
         </MenuItem.Icon>
     </MenuItem>
     <Separator Style="{StaticResource Hp.Shell.TrayMenuSeparator}" />
@@ -92,7 +95,7 @@
               Header="{x:Static res:ShellStrings.TrayMenuExit}"
               Command="{Binding ExitCommand}">
         <MenuItem.Icon>
-            <TextBlock Style="{StaticResource MenuGlyph}" Text="&#xE7E8;" />
+            <views:LineIcon Style="{StaticResource MenuIcon}" Data="{StaticResource Hp.Icon.Power}" />
         </MenuItem.Icon>
     </MenuItem>
 </ContextMenu>

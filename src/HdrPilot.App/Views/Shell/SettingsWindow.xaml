@@ -1050,8 +1050,15 @@
                                                                         </LinearGradientBrush>
                                                                     </Rectangle.Fill>
                                                                 </Rectangle>
-                                                                <TextBlock x:Name="NameText" Visibility="Collapsed" Margin="10,0,30,10" VerticalAlignment="Bottom" FontFamily="{DynamicResource Hp.Font.Display}"
-                                                                           FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArt}" TextTrimming="CharacterEllipsis" Text="{Binding GameName}" />
+                                                                <!-- Name, bei „Titelbild aus Symbol“ mit dem Symbol davor (das erzeugte Titelbild enthält keins, wie in der Bibliothek) -->
+                                                                <DockPanel x:Name="NameText" Visibility="Collapsed" Margin="10,0,30,10" VerticalAlignment="Bottom">
+                                                                    <Border x:Name="IconTile" DockPanel.Dock="Left" Width="30" Height="30" CornerRadius="8" Margin="0,0,8,0" Visibility="Collapsed"
+                                                                            Background="#59000000" BorderBrush="#33FFFFFF" BorderThickness="1">
+                                                                        <Image Source="{Binding Icon}" Width="22" Height="22" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" />
+                                                                    </Border>
+                                                                    <TextBlock VerticalAlignment="Center" FontFamily="{DynamicResource Hp.Font.Display}" FontSize="14" FontWeight="Bold"
+                                                                               Foreground="{DynamicResource Hp.Brush.TextOnArt}" TextTrimming="CharacterEllipsis" Text="{Binding GameName}" />
+                                                                </DockPanel>
                                                                 <Grid x:Name="Covers" Visibility="Collapsed" Margin="0,6">
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="*" />
@@ -1074,6 +1081,9 @@
                                                         <DataTrigger Binding="{Binding ShowsName}" Value="True">
                                                             <Setter TargetName="NameShade" Property="Visibility" Value="Visible" />
                                                             <Setter TargetName="NameText" Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasIcon}" Value="True">
+                                                            <Setter TargetName="IconTile" Property="Visibility" Value="Visible" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding IsCover}" Value="True">
                                                             <Setter TargetName="Wide" Property="Visibility" Value="Collapsed" />

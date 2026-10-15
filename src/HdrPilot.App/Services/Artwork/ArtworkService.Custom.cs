@@ -149,6 +149,11 @@ public sealed partial class ArtworkService
                 // Größe unbekannt.
             }
         }
+        else if (GeneratedSize(spec.Generate) is { } generated)
+        {
+            // Erzeugte Bilder: die Größe der gespeicherten Fassung, nicht die der kleinen Vorschau.
+            (width, height) = generated;
+        }
         else if (preview is BitmapSource bitmap)
         {
             (width, height) = (bitmap.PixelWidth, bitmap.PixelHeight);
@@ -156,6 +161,16 @@ public sealed partial class ArtworkService
 
         return new ArtworkCandidate(token, spec.Kind, spec.Origin, label, note, preview, width, height, isCurrent);
     }
+
+    /// <summary>Pixelgröße, in der ein Erzeuger sein Bild in art\gen ablegt (null: kein erzeugtes Bild mit fester Größe).</summary>
+    private static (int Width, int Height)? GeneratedSize(Generator generator) => generator switch
+    {
+        Generator.Hero => (ArtworkRenderer.HeroWidth, ArtworkRenderer.HeroHeight),
+        Generator.CoverFromHero or Generator.CoverFromField => (ArtworkRenderer.CoverWidth, ArtworkRenderer.CoverHeight),
+        Generator.Header => (ArtworkRenderer.HeaderWidth, ArtworkRenderer.HeaderHeight),
+        Generator.Monogram => (ArtworkRenderer.IconSize, ArtworkRenderer.IconSize),
+        _ => null,
+    };
 
     /// <summary>Hinweis zu einem anderen lokalen Bild: SplashScreen eines Xbox-Pakets ist oft Engine-Logo oder Titelkarte.</summary>
     private string? AlternativeNote(GameState state, LocatedImage alternative)

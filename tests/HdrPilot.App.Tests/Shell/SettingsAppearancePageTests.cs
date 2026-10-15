@@ -167,6 +167,33 @@ public sealed class SettingsAppearancePageTests
     }
 
     [Fact]
+    public async Task Appearance_page_shows_the_icon_next_to_the_name_for_a_hero_made_from_the_icon()
+    {
+        // Das erzeugte Titelbild enthält kein Symbol (CORE); wie in der Bibliothek legt die Seite Symbol und Name darüber.
+        var (page, config, context) = Create();
+        page.Dispose();
+        var crab = new GameConfig { Source = GameSource.Steam, SourceId = "3570950", Name = "Everything is Crab Playtest" };
+        var bg3 = new GameConfig { Source = GameSource.Gog, SourceId = "1456460669", Name = "Baldur's Gate 3" };
+        config.Update(c => c.Games.AddRange([crab, bg3]));
+        var art = new ExampleArtwork(
+            new FallbackExample(FallbackKind.HeroFromIcon, crab.Key, crab.Name, "Steam · aus Everything is Crab.exe · 256 px"),
+            new FallbackExample(FallbackKind.NameInsteadOfLogo, bg3.Key, bg3.Name, "GOG · kein Logo im Cache"));
+        context.Artwork = art;
+
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await vm.Loaded;
+
+        var fromIcon = vm.FallbackExamples.Single(e => e.Kind == FallbackKind.HeroFromIcon);
+        var nameOnly = vm.FallbackExamples.Single(e => e.Kind == FallbackKind.NameInsteadOfLogo);
+        Assert.True(fromIcon.ShowsName && fromIcon.ShowsIcon && fromIcon.HasIcon);
+        Assert.Same(art.IconImage, fromIcon.Icon);
+        Assert.True(nameOnly.ShowsName);
+        Assert.False(nameOnly.ShowsIcon || nameOnly.HasIcon); // Gegenprobe: echtes Titelbild, nur der Name
+        Assert.Equal([crab.Key], art.IconRequests);
+        vm.Dispose();
+    }
+
+    [Fact]
     public void Appearance_page_previews_the_most_recently_played_games()
     {
         var games = Enumerable.Range(1, 6).Select(i => new GameConfig
@@ -275,6 +302,69 @@ public sealed class SettingsAppearancePageTests
 
         public void Dispose()
         {
+        }
+    }
+
+    /// <summary>Bilderdienst mit festen Beispielen; merkt sich, für welche Spiele ein Symbol angefragt wurde.</summary>
+    private sealed class ExampleArtwork(params FallbackExample[] examples) : IArtworkService
+    {
+        public event EventHandler<ArtworkChangedEventArgs>? Changed
+        {
+            add { }
+            remove { }
+        }
+
+        public ImageSource IconImage { get; } = Pixel();
+
+        public List<string> IconRequests { get; } = [];
+
+        public ImageSource? GetCachedImage(GameConfig game, ArtworkKind kind, int decodeWidth) => null;
+
+        public Task<ImageSource?> GetImageAsync(GameConfig game, ArtworkKind kind, int decodeWidth, CancellationToken cancellationToken = default)
+        {
+            if (kind == ArtworkKind.Icon)
+            {
+                IconRequests.Add(game.Key);
+                return Task.FromResult<ImageSource?>(IconImage);
+            }
+
+            return Task.FromResult<ImageSource?>(Pixel());
+        }
+
+        public GameArtwork? GetCachedArtwork(GameConfig game) => null;
+
+        public Task<GameArtwork> GetArtworkAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
+            NullArtworkService.Instance.GetArtworkAsync(game, heroDecodeWidth, cancellationToken);
+
+        public Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ArtworkCandidate>>([]);
+
+        public string SaveCustomImage(GameConfig game, ArtworkKind kind, string sourcePath) => throw new NotSupportedException();
+
+        public void DeleteCustomImage(string? token)
+        {
+        }
+
+        public Task<ArtworkCoverage> GetCoverageAsync(IReadOnlyList<GameConfig> games, CancellationToken cancellationToken = default) => Task.FromResult(ArtworkCoverage.Empty);
+
+        public Task<IReadOnlyList<FallbackExample>> GetFallbackExamplesAsync(IReadOnlyList<GameConfig> games, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FallbackExample>>(examples);
+
+        public IDisposable Acquire() => NoLease.Instance;
+
+        public void ClearCache()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private static ImageSource Pixel()
+        {
+            var bitmap = System.Windows.Media.Imaging.BitmapSource.Create(1, 1, 96, 96, PixelFormats.Bgra32, null, new byte[] { 0, 0, 0, 255 }, 4);
+            bitmap.Freeze();
+            return bitmap;
         }
     }
 

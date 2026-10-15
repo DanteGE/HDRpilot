@@ -164,6 +164,7 @@ public sealed class FallbackExampleItem : ObservableObject
 {
     private ImageSource? _image;
     private ImageSource? _original;
+    private ImageSource? _icon;
 
     public FallbackExampleItem(FallbackExample example, string title, Brush field)
     {
@@ -212,9 +213,29 @@ public sealed class FallbackExampleItem : ObservableObject
 
     public bool HasOriginal => _original is not null;
 
+    /// <summary>
+    /// Nur bei „Titelbild aus Symbol“: das Symbol des Spiels links vom Namen. Das erzeugte Titelbild enthält kein Symbol (es
+    /// stünde bei jeder Höhe des Titelbereichs woanders); die Bibliothek legt es ebenso darüber.
+    /// </summary>
+    public ImageSource? Icon
+    {
+        get => _icon;
+        internal set
+        {
+            if (SetProperty(ref _icon, value))
+            {
+                OnPropertyChanged(nameof(HasIcon));
+            }
+        }
+    }
+
+    public bool HasIcon => _icon is not null;
+
+    public bool ShowsIcon => Kind == FallbackKind.HeroFromIcon;
+
     public bool IsCover => Kind is FallbackKind.CoverGenerated or FallbackKind.CoverFromSmearedCapsule or FallbackKind.Monogram;
 
-    public bool ShowsName => Kind == FallbackKind.NameInsteadOfLogo;
+    public bool ShowsName => Kind is FallbackKind.NameInsteadOfLogo or FallbackKind.HeroFromIcon;
 }
 
 /// <summary>Ein Spiel zur Auswahl in der Live-Vorschau.</summary>

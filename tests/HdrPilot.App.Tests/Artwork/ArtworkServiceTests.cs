@@ -242,6 +242,12 @@ public sealed class ArtworkServiceTests : IDisposable
         Assert.Equal("alt:SplashScreen.png", candidates[1].Token);
         Assert.All(candidates, c => Assert.True(c.Preview is BitmapSource { PixelWidth: <= ArtworkService.PreviewSize }));
 
+        // Größenangabe: das Bild selbst, nicht die kleine Vorschau (erzeugt 1920 × 620, Splash in Dateigröße).
+        Assert.Equal((ArtworkRenderer.HeroWidth, ArtworkRenderer.HeroHeight), (candidates[2].PixelWidth, candidates[2].PixelHeight));
+        Assert.Equal((620, 300), (candidates[1].PixelWidth, candidates[1].PixelHeight));
+        var covers = await service.GetCandidatesAsync(game, ArtworkKind.Cover, Ct);
+        Assert.Equal((ArtworkRenderer.CoverWidth, ArtworkRenderer.CoverHeight), (covers[^1].PixelWidth, covers[^1].PixelHeight));
+
         // Wahl des Splash: das Titelbild kommt dann aus dem Paket, die Wahl ist markiert.
         game.Artwork = new GameArtworkChoice { Hero = candidates[1].Token };
         var chosen = await service.GetArtworkAsync(game, 1920, Ct);

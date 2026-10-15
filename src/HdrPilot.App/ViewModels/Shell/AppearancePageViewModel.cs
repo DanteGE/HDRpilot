@@ -1186,6 +1186,11 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
             item.Image = item.IsCover
                 ? await _context.Artwork.GetImageAsync(game, ArtworkKind.Cover, 300, _cancel.Token)
                 : await _context.Artwork.GetImageAsync(game, ArtworkKind.Hero, 720, _cancel.Token);
+            if (item.ShowsIcon)
+            {
+                item.Icon = await _context.Artwork.GetImageAsync(game, ArtworkKind.Icon, 64, _cancel.Token);
+            }
+
             if (item.Kind == FallbackKind.CoverFromSmearedCapsule)
             {
                 var candidates = await _context.Artwork.GetCandidatesAsync(game, ArtworkKind.Cover, _cancel.Token);

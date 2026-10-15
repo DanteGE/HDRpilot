@@ -44,7 +44,15 @@ public sealed unsafe partial class DpapiProtector : ISecretProtector
     private const uint CRYPTPROTECT_UI_FORBIDDEN = 0x1;
 
     /// <summary>Zusätzlicher Schlüsselanteil: andere Programme desselben Benutzers entschlüsseln nicht ohne Weiteres.</summary>
-    private static readonly byte[] Entropy = "HdrPilot.PCGamingWiki.v1"u8.ToArray();
+    private static readonly byte[] PcgwEntropy = "HdrPilot.PCGamingWiki.v1"u8.ToArray();
+
+    private readonly byte[] _entropy;
+
+    /// <param name="entropy">Eigener Schlüsselanteil (etwa für den SteamGridDB-Schlüssel, E89); null: der von PCGamingWiki.</param>
+    public DpapiProtector(byte[]? entropy = null)
+    {
+        _entropy = entropy is { Length: > 0 } ? entropy.ToArray() : PcgwEntropy;
+    }
 
     public static DpapiProtector Instance { get; } = new();
 
@@ -52,13 +60,13 @@ public sealed unsafe partial class DpapiProtector : ISecretProtector
 
     public byte[] Unprotect(byte[] data) => Transform(data, protect: false);
 
-    private static byte[] Transform(byte[] data, bool protect)
+    private byte[] Transform(byte[] data, bool protect)
     {
         fixed (byte* input = data)
-        fixed (byte* entropy = Entropy)
+        fixed (byte* entropy = _entropy)
         {
             var inBlob = new DATA_BLOB { cbData = (uint)data.Length, pbData = input };
-            var entropyBlob = new DATA_BLOB { cbData = (uint)Entropy.Length, pbData = entropy };
+            var entropyBlob = new DATA_BLOB { cbData = (uint)_entropy.Length, pbData = entropy };
             var outBlob = default(DATA_BLOB);
             var ok = protect
                 ? CryptProtectData(&inBlob, null, &entropyBlob, null, null, CRYPTPROTECT_UI_FORBIDDEN, &outBlob)

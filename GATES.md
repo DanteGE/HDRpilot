@@ -368,3 +368,83 @@ Entscheidungen des Nutzers (2026-10-12):
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~AutoHdrTray" -MinTests 5
   EXPECT: TESTS_OK
   EVIDENCE: 2026-10-13: exit 0, TESTS_OK 11. phase6-traymenu.ps1 kennt den Eintrag (nur bearbeitet; der Lauf mit echter Maus folgt mit dem Nutzer, G9.8).
+
+## Phase 10: Neugestaltung „Showcase Hero“ (Wunsch des Nutzers 2026-10-14/15, E89)
+
+Spezifikation: `docs/design/showcase-hero/README.md` (Entscheidungen, Bildquellen, Effekte mit WPF-Primitiven), lauffähiger
+Prototyp v4 unter `docs/design/showcase-hero/prototyp/`. Die vier Anmerkungen des Nutzers zum Prototyp (Raster im Vollbild,
+Reihenfolge Liste/Raster/Regal, Nit-Skala bis zur echten HDR-Spitze, Anordnung der Seite „Darstellung“) gelten als Teil der
+Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
+
+- [ ] G10.1: Farben und Themen: Duoton und Tritonus mit 8 Vorgaben und eigenen Farben, Hell/Dunkel/Automatisch (Automatisch folgt Windows), gespeichert in der Konfiguration (alte Konfigurationen laden unverändert); alle Farb-Ressourcen der Oberfläche werden aus der Palette abgeleitet (Akzent, Atmosphäre, Glanz; Mischfarben vorab berechnet), Text auf Akzentflächen hält den Kontrast automatisch (mindestens 4,5:1 für Text, 3:1 für Bedienelemente); per Unit-Tests mit Gegenproben belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Palette|FullyQualifiedName~Theme" -MinTests 20
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G10.2: Tray-Symbol und Fenstersymbol in den Palettenfarben, Zustände HDR an, HDR aus und Automatik pausiert, in den Größen 16 bis 256 px, neu erzeugt nur bei Farb- oder Taskleisten-Themawechsel (nie im Leerlauf); per Unit-Tests mit Gegenproben belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~TrayIcon|FullyQualifiedName~WindowIcon" -MinTests 8
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G10.3: Spielbilder aus lokalen Quellen, nur lesend:
+  - Quellen: Steam `librarycache` (Titelbild, Logo mit deutscher Variante bevorzugt, Cover, unscharfes Titelbild), GOG-Galaxy-Cache, Ubisoft-Cache, Xbox-Paketbilder, Symbol aus der EXE (Epic, EA).
+  - Erzeugte Ersatzbilder: Titelbild, Cover und Monogramm, gespeichert unter `%LocalAppData%\HDRpilot\art`.
+  - Verschmierte Steam-Cover werden erkannt und durch einen Ausschnitt aus dem Titelbild ersetzt; Logos werden auf ihren sichtbaren Teil zugeschnitten.
+  - Je Bild einmal berechnet und zwischengespeichert: Umgebungsfarben und eine helle „HDR“-Fassung.
+  - Neue Bilder erscheinen von selbst (Beobachtung der Cache-Ordner); eigene Bilder per Rechtsklick „Bild wählen…“ bleiben dauerhaft.
+  - Belegt per Unit-Tests mit Gegenproben und einer Messung an einer Kopie der echten Bibliothek (Abdeckung je Launcher wie im Prototyp: Steam Titelbild ≥ 631 von 636).
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Artwork" -MinTests 30
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G10.4: SteamGridDB optional: standardmäßig aus, nur mit eigenem API-Schlüssel (verschlüsselt gespeichert wie das PCGamingWiki-Bot-Passwort), füllt nur fehlende Bilder, klare Anzeige des Netzwerkzugriffs; ist es aus, gibt es nachweislich keinen Netzwerkzugriff dafür; per Unit-Tests mit Attrappe (nie das echte Netz in Tests) belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDb" -MinTests 8
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G10.5: Bibliothek im neuen Design:
+  - Ansichten in der Reihenfolge **Liste, Raster, Regal**; Liste ist der Standard, die Wahl wird gemerkt.
+  - Liste: virtualisiert, sortierbar, „HDR automatisch“ je Zeile, schlanker Titelbereich des gewählten Spiels.
+  - Raster: skaliert bei jeder Fenstergröße sauber, auch im Vollbild bei 3440×1440: Spaltenzahl und Kachelgröße folgen der Breite, nichts gestreckt oder abgeschnitten.
+  - Regal: Titelbild und Kachelreihe.
+  - Detailbereich mit allen bisherigen Funktionen (STARTEN, AUTOMATIK, BILD, EXE-DATEIEN, Bilder); alle bisherigen Funktionen und Tastenkürzel bleiben.
+  - Belegt per UI-Automation an einer Testinstanz und Bildern bei 1280×800, 1920×1080 und 3440×1440 in hell und dunkel.
+  CHECK: ps tools\gates\phase10-ui.ps1
+  EXPECT: PHASE10_UI_OK
+  EVIDENCE: pending
+
+- [ ] G10.6: Effekte wie im Prototyp: langsamer Zoom und Tiefenwirkung des Titelbilds, Überblendung beim Spielwechsel, Umgebungsfarbe, HDR-Moment (Lichtstreifen, helle Fassung, Partikel höchstens 2,5 s, leuchtender Rand). Stufen Voll, Reduziert und Aus; die Windows-Option „Animationseffekte“ wird beachtet. Dauer-Effekte laufen mit höchstens 30 fps und pausieren bei minimiertem oder inaktivem Fenster und während eines Spiels; bei geschlossenem Fenster läuft nichts. Ohne BlurEffect, DropShadowEffect und Mischmodi; per Unit-Tests mit Gegenproben belegt (Steuerung der Effekte)
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Effect|FullyQualifiedName~Motion" -MinTests 15
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G10.7: Echte Bildschirmwerte über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv), gelesen nur bei HDR- oder Bildschirmwechsel; das „Maximum“ jeder Nit-Skala ist die höchste Nit-Zahl des Bildschirms bei aktivem HDR (nie ein fester Wert wie 1000); per Unit-Tests mit Attrappe belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~DisplayLuminance" -MinTests 6
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G10.8: Einstellungen im neuen Design mit Seite „Darstellung“:
+  - Inhalt: Farben Duoton/Tritonus mit Vorgaben und eigenem Farbwähler, Thema, Effektstufe, Bilder (lokal, SteamGridDB optional), Vorschau von Tray-Symbol und Tray-Menü.
+  - Anordnung: Raster mit Höchstbreite je Bereich und mehreren Spalten bei breiten Fenstern, damit im Vollbild nichts in die Länge gezogen wird (Anmerkung des Nutzers).
+  - Belegt per UI-Automation und Bildern bei 1280×800, 1920×1080 und 3440×1440.
+  CHECK: ps tools\gates\phase10-settings-ui.ps1
+  EXPECT: PHASE10_SETTINGS_UI_OK
+  EVIDENCE: pending
+
+- [ ] G10.9: Leistung, gemessen am echten Desktop mit eingeschaltetem Bildschirm:
+  - Bei geschlossenem Fenster bleibt der Leerlauf wie bisher (`phase3-idle.ps1`).
+  - Offenes Fenster in Ruhe: Grafikkartenlast der Testinstanz im Mittel unter 5 % und nie über 20 %.
+  - HDR-Moment: unter 30 % Spitze.
+  - Minimiert oder inaktiv: keine Bildaufrufe.
+  - Ohne aktiven Bildschirm meldet das Gate UMGEBUNG und gilt nicht als bestanden.
+  CHECK: ps tools\gates\phase10-gpu.ps1
+  EXPECT: PHASE10_GPU_OK
+  EVIDENCE: pending
+
+- [ ] G10.10: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (auch die bisherigen UI-Gates nach Anpassung), Anti-Cheat-Architekturtest grün, README und E89 passen zu den resx-Texten, unabhängige Prüfung mit Gegenprüfung
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: pending
+
+- [ ] G10.11: Abnahme durch den Nutzer am echten System (Aussehen, Effekte, Bedienung, Vollbild bei 3440×1440)
+  EVIDENCE: pending

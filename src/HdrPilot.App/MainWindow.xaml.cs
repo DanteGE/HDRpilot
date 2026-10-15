@@ -127,6 +127,9 @@ public partial class MainWindow : ChromeWindow
     /// <summary>Gerade aktive Ansicht, wie sie angeordnet ist.</summary>
     public LibraryViewMode? AppliedView => _appliedView;
 
+    /// <summary>Verschiebung des Detailbereichs (Schublade im Regal).</summary>
+    private TranslateTransform DrawerShift => OwnShift(DetailsArea);
+
     public void Attach(LibraryViewModel viewModel)
     {
         _viewModel = viewModel;
@@ -383,7 +386,10 @@ public partial class MainWindow : ChromeWindow
             LibraryMotion.FadeIn(HeaderArea, TimeSpan.Zero, offsetY: 10);
             LibraryMotion.FadeIn(HeroContent, TimeSpan.FromMilliseconds(60), offsetY: 18, durationMs: 420);
             LibraryMotion.FadeIn(ListArea, TimeSpan.FromMilliseconds(110), offsetY: 16, durationMs: 380);
-            LibraryMotion.FadeIn(DetailsArea, TimeSpan.FromMilliseconds(160), offsetX: 18, durationMs: 380);
+            if (_appliedView != LibraryViewMode.Shelf)
+            {
+                LibraryMotion.FadeIn(DetailsArea, TimeSpan.FromMilliseconds(160), offsetX: 18, durationMs: 380); // im Regal: Schublade, eigene Bewegung
+            }
         }
 
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateToolbarLayout);
@@ -443,6 +449,7 @@ public partial class MainWindow : ChromeWindow
             DetailsColumn.Width = new GridLength(0);
             Grid.SetColumn(DetailsArea, 0);
             Grid.SetColumnSpan(DetailsArea, 3);
+            DetailsArea.SetResourceReference(Border.BackgroundProperty, "Lib.Brush.Drawer");
             DetailsArea.HorizontalAlignment = HorizontalAlignment.Right;
             Panel.SetZIndex(DrawerShade, 5);
             Panel.SetZIndex(DetailsArea, 6);
@@ -455,10 +462,11 @@ public partial class MainWindow : ChromeWindow
             SplitterColumn.Width = new GridLength(24);
             Grid.SetColumn(DetailsArea, 2);
             Grid.SetColumnSpan(DetailsArea, 1);
+            DetailsArea.SetResourceReference(Border.BackgroundProperty, "Hp.Brush.Panel");
             DetailsArea.HorizontalAlignment = HorizontalAlignment.Stretch;
             DetailsArea.Width = double.NaN;
-            ((TranslateTransform)DetailsArea.RenderTransform).BeginAnimation(TranslateTransform.XProperty, null);
-            ((TranslateTransform)DetailsArea.RenderTransform).X = 0;
+            DrawerShift.BeginAnimation(TranslateTransform.XProperty, null);
+            DrawerShift.X = 0;
             DetailsArea.Visibility = Visibility.Visible;
             DrawerShade.Opacity = 0;
             DrawerShade.IsHitTestVisible = false;
@@ -628,6 +636,7 @@ public partial class MainWindow : ChromeWindow
         ChipGroup.Visibility = stage >= 6 ? Visibility.Collapsed : Visibility.Visible;
         FilterMenuButton.Visibility = stage >= 6 ? Visibility.Visible : Visibility.Collapsed;
         SortOrder.Width = stage >= 5 ? 60 : 196;
+        SortOrder.Tag = stage >= 5 ? "Compact" : null; // nur das Zeichen der Sortierung (Lib.ComboBox)
 
         // Stufe 7: Ansicht und Aktionen in einer eigenen Zeile über den Filtern (rechtsbündig wie sonst).
         var stacked = stage >= 7;
@@ -995,6 +1004,11 @@ public partial class MainWindow : ChromeWindow
                 new Point(1, 0.5)))
             : Frozen(new SolidColorBrush(ColorMath.WithAlpha(_scheme.Accent, 0.14)));
         Resources["Lib.Brush.ListCard"] = Frozen(new SolidColorBrush(_dark ? AmbientPalette.Alpha(bg, 0.55) : Color.FromArgb(0x9E, 255, 255, 255)));
+
+        // Schublade im Regal: fast deckend (WPF hat keinen Weichzeichner für den Hintergrund wie der Prototyp).
+        Resources["Lib.Brush.Drawer"] = Frozen(new SolidColorBrush(_dark
+            ? AmbientPalette.Alpha(ColorMath.MixOklab(bg, Color.FromRgb(0x0B, 0x0C, 0x12), 0.55), 0.97)
+            : Color.FromArgb(0xF7, 0xF8, 0xF9, 0xFC)));
         Resources["Lib.Brush.PaneGlow"] = Frozen(new RadialGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(p.A2, _dark ? 0.22 : 0.10), 0), new GradientStop(AmbientPalette.Alpha(p.A2, 0), 1)])
         {
@@ -1108,7 +1122,7 @@ public partial class MainWindow : ChromeWindow
         }
 
         var open = vm.IsDetailsDrawerOpen;
-        var shift = (TranslateTransform)DetailsArea.RenderTransform;
+        var shift = DrawerShift;
         var duration = instant || _motion is null ? TimeSpan.Zero : _motion.Transition(DrawerMotion);
         var hidden = DetailsArea.Width + 60;
         DetailsArea.Visibility = Visibility.Visible;
@@ -1276,7 +1290,7 @@ public partial class MainWindow : ChromeWindow
         var px = ((p.X / Hero.ActualWidth) - 0.5) * 2;
         var py = ((p.Y / Hero.ActualHeight) - 0.5) * 2;
         Hero.SetPointer(px, py, PointerDuration);
-        var shift = (TranslateTransform)HeroContent.RenderTransform;
+        var shift = OwnShift(HeroContent);
         shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(7 * Math.Clamp(px, -1, 1), PointerDuration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
         shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(4 * Math.Clamp(py, -1, 1), PointerDuration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
     }
@@ -1291,7 +1305,7 @@ public partial class MainWindow : ChromeWindow
         _pointerActive = false;
         var duration = _motion?.ContinuousAllowed == true ? PointerDuration : TimeSpan.Zero;
         Hero.SetPointer(0, 0, duration);
-        var shift = (TranslateTransform)HeroContent.RenderTransform;
+        var shift = OwnShift(HeroContent);
         shift.BeginAnimation(TranslateTransform.XProperty, null);
         shift.BeginAnimation(TranslateTransform.YProperty, null);
         shift.X = 0;
@@ -1391,6 +1405,19 @@ public partial class MainWindow : ChromeWindow
     }
 
     // ---------- Hilfen ----------
+
+    /// <summary>Eigene Verschiebung eines Elements (aus dem XAML); entsteht neu, falls jemand sie ersetzt hat.</summary>
+    private static TranslateTransform OwnShift(UIElement element)
+    {
+        if (element.RenderTransform is TranslateTransform { IsFrozen: false } shift)
+        {
+            return shift;
+        }
+
+        var created = new TranslateTransform();
+        element.RenderTransform = created;
+        return created;
+    }
 
     private static void InvalidateMeasureTree(DependencyObject root)
     {

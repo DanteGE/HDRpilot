@@ -90,6 +90,34 @@ public sealed partial class EffectViewsTests
     }
 
     [Fact]
+    public void Effect_opening_fade_keeps_the_own_transforms_of_drawer_and_hero()
+    {
+        WpfTestHost.Run(() =>
+        {
+            foreach (var view in new[] { LibraryViewMode.Shelf, LibraryViewMode.List })
+            {
+                var (window, model, _) = Open();
+                model.SetViewMode(view, persist: false);
+                WpfTestHost.Layout(window, new Size(1600, 1000));
+                var details = (FrameworkElement)window.FindName("DetailsArea");
+                var hero = (FrameworkElement)window.FindName("HeroContent");
+                var drawerShift = details.RenderTransform;
+                var heroShift = hero.RenderTransform;
+
+                // Wie beim Öffnen des Fensters: Bereiche blenden nacheinander ein (Stufe „Voll“).
+                window.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+                Assert.Same(heroShift, hero.RenderTransform);
+                Assert.Same(drawerShift, details.RenderTransform);
+
+                model.IsDetailsDrawerOpen = view == LibraryViewMode.Shelf;
+                WpfTestHost.Layout(window, new Size(1600, 1000));
+                Assert.IsType<System.Windows.Media.TranslateTransform>(details.RenderTransform);
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
     public void Effect_main_window_reduced_level_plays_only_the_short_moment()
     {
         WpfTestHost.Run(() =>

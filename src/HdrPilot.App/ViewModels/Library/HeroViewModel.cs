@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services.Artwork;
@@ -68,6 +69,8 @@ public sealed class HeroViewModel : ObservableObject
             if (SetProperty(ref _artwork, value))
             {
                 OnPropertyChanged(nameof(Logo));
+                OnPropertyChanged(nameof(LogoWidth));
+                OnPropertyChanged(nameof(LogoHeight));
                 OnPropertyChanged(nameof(HasLogo));
                 OnPropertyChanged(nameof(ShowName));
                 OnPropertyChanged(nameof(IsGenerated));
@@ -78,7 +81,26 @@ public sealed class HeroViewModel : ObservableObject
         }
     }
 
-    public ImageSource? Logo => _artwork?.Logo?.Image;
+    /// <summary>Logo ohne durchsichtigen Rand (<see cref="LibraryArt.TrimTransparent"/>).</summary>
+    public ImageSource? Logo => LibraryArt.TrimTransparent(_artwork?.Logo?.Image);
+
+    /// <summary>
+    /// Größe des zugeschnittenen Logos in Bildpunkten (nicht in WPF-Einheiten): Manche Logos tragen 300 dpi und mehr in den
+    /// Metadaten und stünden sonst winzig da. Das Fenster skaliert das Logo damit wie der Prototyp nur verkleinernd.
+    /// </summary>
+    public double LogoWidth => Logo switch
+    {
+        BitmapSource bitmap => bitmap.PixelWidth,
+        { } image => image.Width,
+        _ => 0,
+    };
+
+    public double LogoHeight => Logo switch
+    {
+        BitmapSource bitmap => bitmap.PixelHeight,
+        { } image => image.Height,
+        _ => 0,
+    };
 
     public bool HasLogo => Logo is not null;
 

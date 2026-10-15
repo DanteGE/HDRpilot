@@ -613,8 +613,11 @@
         <!-- Titel im schmalen Titelbereich (Liste, Raster): Logo, sonst der Name in der Titelschrift -->
         <DataTemplate x:Key="HeroTitleCompact" DataType="{x:Type vm:HeroViewModel}">
             <Grid>
-                <Image Source="{Binding Logo}" MaxWidth="380" MaxHeight="94" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                       RenderOptions.BitmapScalingMode="HighQuality" Visibility="{Binding HasLogo, Converter={StaticResource Lib.BoolToVisibility}}" />
+                <!-- Logo in Bildpunkten gemessen (nicht nach dpi-Angabe der Datei), nur verkleinert -->
+                <Viewbox MaxWidth="380" MaxHeight="94" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                         Visibility="{Binding HasLogo, Converter={StaticResource Lib.BoolToVisibility}}">
+                    <Image Source="{Binding Logo}" Width="{Binding LogoWidth}" Height="{Binding LogoHeight}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Viewbox>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Visibility="{Binding ShowName, Converter={StaticResource Lib.BoolToVisibility}}">
                     <ContentControl Width="72" Height="72" Margin="0,0,18,0" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroIconTile}"
                                     Visibility="{Binding ShowIconTile, Converter={StaticResource Lib.BoolToVisibility}}" />
@@ -633,8 +636,11 @@
         <!-- Titel im großen Titelbereich (Regal) -->
         <DataTemplate x:Key="HeroTitleLarge" DataType="{x:Type vm:HeroViewModel}">
             <Grid>
-                <Image Source="{Binding Logo}" MaxWidth="600" MaxHeight="190" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-                       RenderOptions.BitmapScalingMode="HighQuality" Visibility="{Binding HasLogo, Converter={StaticResource Lib.BoolToVisibility}}" />
+                <!-- Logo in Bildpunkten gemessen (nicht nach dpi-Angabe der Datei), nur verkleinert -->
+                <Viewbox MaxWidth="600" MaxHeight="190" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                         Visibility="{Binding HasLogo, Converter={StaticResource Lib.BoolToVisibility}}">
+                    <Image Source="{Binding Logo}" Width="{Binding LogoWidth}" Height="{Binding LogoHeight}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Viewbox>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Visibility="{Binding ShowName, Converter={StaticResource Lib.BoolToVisibility}}">
                     <ContentControl Width="128" Height="128" Margin="0,0,24,0" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroIconTile}"
                                     Visibility="{Binding ShowIconTile, Converter={StaticResource Lib.BoolToVisibility}}" />
@@ -938,7 +944,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="ListColumn" Width="65*" MinWidth="{x:Static vm:LibraryLayout.ListMinWidth}" />
                 <ColumnDefinition x:Name="SplitterColumn" Width="24" />
-                <ColumnDefinition x:Name="DetailsColumn" Width="35*" MinWidth="{x:Static vm:LibraryLayout.DetailsMinWidth}" />
+                <ColumnDefinition x:Name="DetailsColumn" Width="35*" MinWidth="{x:Static vm:LibraryLayout.DetailsMinWidth}" MaxWidth="{x:Static lib:ShowcaseLayout.MaxPaneWidth}" />
             </Grid.ColumnDefinitions>
 
             <!-- Liste mit Werkzeugleiste, Hinweisen und den drei Ansichten -->

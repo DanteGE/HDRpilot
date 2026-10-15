@@ -55,7 +55,7 @@ public sealed class ArtworkTileViewModel
         return
         [
             Tile(ArtworkKind.Hero, LibraryStrings.Artwork_TileHero, artwork?.Hero, summary.Hero, item),
-            Tile(ArtworkKind.Logo, LibraryStrings.Artwork_TileLogo, artwork?.Logo, summary.Logo, item),
+            Tile(ArtworkKind.Logo, LibraryStrings.Artwork_TileLogo, artwork?.Logo is { } logo ? logo with { Image = LibraryArt.TrimTransparent(logo.Image)! } : null, summary.Logo, item),
             Tile(ArtworkKind.Cover, LibraryStrings.Artwork_TileCover, artwork?.Cover, summary.Cover, item),
             new ArtworkTileViewModel(
                 ArtworkKind.Icon,

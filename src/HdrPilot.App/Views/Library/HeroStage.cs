@@ -559,6 +559,23 @@ public sealed class HeroStage : Grid
 
         public Border Boost { get; } = new() { Opacity = 0 };
 
+        /// <summary>
+        /// Ohne vorab berechnete helle Fassung (Bilddienst): warmes Licht über dem Bild, am Spitzlicht am stärksten. WPF hat
+        /// keine Helligkeitsfilter; so wirkt das Bild bei HDR an trotzdem heller (Prototyp: brightness 1,18).
+        /// </summary>
+        private static Brush Lift { get; } = Frozen(new RadialGradientBrush(
+            [
+                new GradientStop(Color.FromArgb(0x47, 0xFF, 0xF6, 0xE2), 0),
+                new GradientStop(Color.FromArgb(0x1F, 0xFF, 0xF6, 0xE2), 0.5),
+                new GradientStop(Color.FromArgb(0x0A, 0xFF, 0xF6, 0xE2), 1),
+            ])
+        {
+            Center = new Point(0.6, 0.38),
+            GradientOrigin = new Point(0.6, 0.38),
+            RadiusX = 0.75,
+            RadiusY = 0.9,
+        });
+
         public ScaleTransform Zoom { get; } = new(1, 1);
 
         public TranslateTransform Shift { get; } = new();
@@ -574,7 +591,7 @@ public sealed class HeroStage : Grid
             if (Image is not null)
             {
                 Art.Background = new ImageBrush(Image) { Stretch = Stretch.Fill };
-                Boost.Background = artwork?.HeroBoost?.Image is { } boost ? new ImageBrush(boost) { Stretch = Stretch.Fill } : null;
+                Boost.Background = artwork?.HeroBoost?.Image is { } boost ? new ImageBrush(boost) { Stretch = Stretch.Fill } : Lift;
                 return;
             }
 
@@ -611,6 +628,7 @@ public sealed class HeroStage : Grid
             });
             Generated.Children.Add(Pattern(hero.Name, height, view));
             Root.Children.Insert(0, Generated);
+            Boost.Background = Lift;
         }
 
         public void Clear()

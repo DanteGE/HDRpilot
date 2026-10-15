@@ -48,6 +48,8 @@
     <SolidColorBrush x:Key="Lib.Brush.RowSelection" Color="#24FF8A3D" />
     <!-- Fläche der Liste (dunkel: Fenstergrund 55 %, hell: Weiß 62 %) -->
     <SolidColorBrush x:Key="Lib.Brush.ListCard" Color="#8C120B12" />
+    <!-- Detailbereich als Schublade im Regal: fast deckend (MainWindow färbt nach dem Spiel) -->
+    <SolidColorBrush x:Key="Lib.Brush.Drawer" Color="#F70B0C12" />
     <!-- Leuchten im Detailbereich (Spielfarben oben links, Zweitfarbe unten rechts) -->
     <SolidColorBrush x:Key="Lib.Brush.PaneGlow" Color="Transparent" />
     <!-- Automatik-Karte im Regal -->
@@ -385,6 +387,11 @@
     </Style>
 
     <!-- Auswahlliste der Werkzeugleiste (Quelle, Sortierung): Glasfläche, Pfeil, Rahmen beim Öffnen -->
+    <!-- Gefaltete Auswahl (Werkzeugleiste, Tag „Compact“): nur das Zeichen des gewählten Eintrags, etwa der Sortierung -->
+    <DataTemplate x:Key="Lib.GlyphOnly">
+        <TextBlock Style="{StaticResource Lib.Glyph}" Text="{Binding Glyph}" FontSize="13" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+    </DataTemplate>
+
     <Style x:Key="Lib.ComboBox" TargetType="ComboBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
@@ -446,6 +453,10 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Tag" Value="Compact">
+                            <Setter TargetName="ContentSite" Property="ContentTemplate" Value="{StaticResource Lib.GlyphOnly}" />
+                            <Setter TargetName="ContentSite" Property="Margin" Value="10,0,26,0" />
+                        </Trigger>
                         <DataTrigger Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True">
                             <Setter TargetName="PART_Popup" Property="PopupAnimation" Value="Fade" />
                         </DataTrigger>
@@ -1192,7 +1203,7 @@
                                 </RadialGradientBrush>
                             </Border.Background>
                         </Border>
-                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.Surface2}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
+                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
                         <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                         <Border x:Name="FocusRing" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0.9" Visibility="Collapsed" />
                         <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleOff}" HorizontalAlignment="Left" Margin="3,0,0,0"
@@ -1262,7 +1273,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <Grid Width="44" Height="24" Background="Transparent">
-                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.Surface2}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
+                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
                         <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                         <Border x:Name="FocusRing" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0.9" Visibility="Collapsed" />
                         <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleOff}" HorizontalAlignment="Left" Margin="3,0,0,0"

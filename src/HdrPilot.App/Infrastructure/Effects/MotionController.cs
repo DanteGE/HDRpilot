@@ -135,6 +135,7 @@ public sealed class MotionController : IDisposable
     private bool _disposed;
     private EffectLevel _level;
     private bool _continuousAllowed;
+    private MotionPause _lastPause = MotionPause.None;
 
     public MotionController(IAppearanceService appearance)
     {
@@ -257,8 +258,13 @@ public sealed class MotionController : IDisposable
         var levelChanged = level != _level;
         _level = level;
         var allowed = EffectPolicy.ContinuousAllowed(level, Context);
-        var changed = levelChanged || allowed != _continuousAllowed;
+        var wasAllowed = _continuousAllowed;
+        var before = _lastPause;
         _continuousAllowed = allowed;
+        _lastPause = Pause;
+
+        // Auch ein anderer Grund des Anhaltens zählt (Statuszeile: minimiert → im Hintergrund).
+        var changed = levelChanged || allowed != wasAllowed || _lastPause != before;
         foreach (var effect in _effects)
         {
             if (levelChanged)

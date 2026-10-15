@@ -201,19 +201,25 @@ public sealed class MainWindowLayoutTests
     {
         WpfTestHost.Run(() =>
         {
-            var (window, _, _) = Open(SteamGame(), ratio: 0.45);
+            var (window, _, _) = Open(SteamGame(), ratio: 0.3);
             var list = (ColumnDefinition)window.FindName("ListColumn");
             var details = (ColumnDefinition)window.FindName("DetailsColumn");
             Assert.True(list.Width.IsStar && details.Width.IsStar);
-            Assert.Equal(0.45, details.Width.Value / (list.Width.Value + details.Width.Value), 3);
+            Assert.Equal(0.3, details.Width.Value / (list.Width.Value + details.Width.Value), 3);
             Assert.Equal(LibraryLayout.ListMinWidth, list.MinWidth);
             Assert.Equal(LibraryLayout.DetailsMinWidth, details.MinWidth);
+            Assert.Equal(ShowcaseLayout.MaxPaneWidth, details.MaxWidth);
 
             WpfTestHost.Layout(window, new Size(1280, 800));
             var (list1, details1) = (list.ActualWidth, details.ActualWidth);
             WpfTestHost.Layout(window, new Size(1700, 800));
             Assert.True(list.ActualWidth > list1 && details.ActualWidth > details1, "beide Spalten wachsen mit");
-            Assert.Equal(0.45, details.ActualWidth / (list.ActualWidth + details.ActualWidth), 2);
+            Assert.Equal(0.3, details.ActualWidth / (list.ActualWidth + details.ActualWidth), 2);
+
+            // Showcase Hero: Der Detailbereich wächst höchstens bis 560 px (Prototyp 340–396), den Rest bekommt die Liste.
+            WpfTestHost.Layout(window, new Size(3440, 1440));
+            Assert.Equal(ShowcaseLayout.MaxPaneWidth, details.ActualWidth, 1);
+            Assert.True(list.ActualWidth > 2000, "Liste bei 3440 px: " + list.ActualWidth);
             window.Close();
         });
     }

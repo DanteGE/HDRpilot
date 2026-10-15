@@ -71,9 +71,17 @@ public sealed class LibraryMotion : INotifyPropertyChanged
         opacity.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(delay + duration), ease));
         opacity.Freeze();
 
-        // Grundwert 0: Nach dem Ende (FillBehavior.Stop) steht das Element ohne Sprung an seinem Platz.
-        var shift = new TranslateTransform();
-        element.RenderTransform = shift;
+        // Grundwert 0: Nach dem Ende (FillBehavior.Stop) steht das Element ohne Sprung an seinem Platz. Eine eigene
+        // Verschiebung des Elements (Schublade, Titelbereich) wird mitbenutzt und bleibt; sonst kommt eine vorübergehende.
+        var own = element.RenderTransform as TranslateTransform;
+        var borrowed = own is { IsFrozen: false };
+        var shift = borrowed ? own! : new TranslateTransform();
+        var previous = element.ReadLocalValue(UIElement.RenderTransformProperty);
+        if (!borrowed)
+        {
+            element.RenderTransform = shift;
+        }
+
         var move = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
         var property = offsetX != 0 ? TranslateTransform.XProperty : TranslateTransform.YProperty;
         var start = offsetX != 0 ? offsetX : offsetY;
@@ -83,9 +91,16 @@ public sealed class LibraryMotion : INotifyPropertyChanged
         move.Completed += (_, _) =>
         {
             // Aufräumen (Listen-Container werden wiederverwendet); eine neuere Einblendung behält ihre Verschiebung.
-            if (ReferenceEquals(element.RenderTransform, shift))
+            if (!borrowed && ReferenceEquals(element.RenderTransform, shift))
             {
-                element.ClearValue(UIElement.RenderTransformProperty);
+                if (previous == DependencyProperty.UnsetValue)
+                {
+                    element.ClearValue(UIElement.RenderTransformProperty);
+                }
+                else
+                {
+                    element.SetValue(UIElement.RenderTransformProperty, previous);
+                }
             }
         };
 

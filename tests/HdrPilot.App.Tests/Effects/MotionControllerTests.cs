@@ -344,6 +344,27 @@ public sealed class MotionControllerTests
     }
 
     [Fact]
+    public void Motion_changed_reports_a_new_pause_reason_for_the_status_line()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (motion, _, _) = Create();
+            var changes = new List<MotionPause>();
+            motion.Changed += (_, _) => changes.Add(motion.Pause);
+            motion.SetWindowState(visible: true, minimized: true, active: false);
+            changes.Clear();
+
+            // Wieder sichtbar, aber inaktiv: Dauer-Effekte bleiben aus, nur der Grund ändert sich.
+            motion.SetWindowState(visible: true, minimized: false, active: false);
+            Assert.Equal([MotionPause.Background], changes);
+
+            motion.SetWindowState(visible: true, minimized: false, active: false);
+            Assert.Single(changes); // unverändert: keine Meldung
+            motion.Dispose();
+        });
+    }
+
+    [Fact]
     public void Motion_window_never_shown_reports_a_hidden_context()
     {
         WpfTestHost.Run(() =>

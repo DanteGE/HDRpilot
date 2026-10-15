@@ -57,6 +57,12 @@ public static class ShowcaseLayout
     public const double MinNameColumn = 180;
 
     /// <summary>
+    /// Breitester Detailbereich in Liste und Raster (E89): Der Prototyp hat 340–396 px; mit dem Trenner darf er breiter werden,
+    /// aber nie so breit, dass er bei 3440 px oder einer alten gespeicherten Aufteilung die Hälfte des Fensters füllt.
+    /// </summary>
+    public const double MaxPaneWidth = 560;
+
+    /// <summary>
     /// Höhe des Titelbereichs: Liste clamp(H·0,22; 180; 240), beim Scrollen 120; Raster clamp(H·0,24; 196; 260); Regal
     /// clamp(H·0,62; 500; 660). Im Regal darf er bei sehr hohen Fenstern (über 1122 px, etwa 3440×1440) mitwachsen, damit
     /// unter der Kachelreihe keine leere Fläche bleibt: Obergrenze dort H − 462.

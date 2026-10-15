@@ -60,6 +60,12 @@ public sealed class ThemeResourcesTests
             Assert.Equal([cyber.AccentFill1, cyber.AccentFill2, cyber.AccentFill3], hdrOn.GradientStops.Select(s => s.Color));
             Assert.Equal([cyber.Control1, cyber.Control2], ((LinearGradientBrush)d[ThemeKeys.BrushToggleOn]).GradientStops.Select(s => s.Color));
 
+            // Weiße Schrift auf Neongrün: die Flächen weichen aus, der Verlauf nimmt die Flächen, nicht die Rohfarben.
+            var neon = PaletteEngine.Compute(PaletteEngineTests.Colors("neongruen", PaletteMode.Duotone), true, autoTextOnAccent: false);
+            var n = ThemeResources.Build(neon);
+            Assert.NotEqual(neon.C1, neon.AccentFill1);
+            Assert.Equal([neon.AccentFill1, neon.AccentFill2], ((LinearGradientBrush)n[ThemeKeys.BrushAccent]).GradientStops.Select(s => s.Color));
+
             // Gegenprobe: eine andere Palette ergibt einen anderen Akzent, das Wörterbuch ist nicht fest.
             var glut = ThemeResources.Build(PaletteEngine.Compute(PaletteEngineTests.Colors("glut", PaletteMode.Duotone), true, true));
             Assert.NotEqual((Color)d[ThemeKeys.ColorC1], (Color)glut[ThemeKeys.ColorC1]);

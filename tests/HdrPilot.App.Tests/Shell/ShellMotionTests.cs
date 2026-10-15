@@ -75,7 +75,7 @@ public sealed class ShellMotionTests
             var glow = (UIElement)section.Template.FindName("PART_Glow", section);
 
             section.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
-            var hover = (Ring: ring.Opacity, RingAnimated: ring.HasAnimatedProperties, GlowAnimated: glow.HasAnimatedProperties, Blur: glow.Effect is not null);
+            var hover = (Ring: ring.Opacity, RingAnimated: ring.HasAnimatedProperties, Glow: glow.Opacity, GlowAnimated: glow.HasAnimatedProperties, Blur: glow.Effect is not null);
 
             section.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
             return (hover, LeaveRing: ring.Opacity, LeaveBlur: glow.Effect is not null, LeaveGlow: glow.Opacity);
@@ -97,6 +97,7 @@ public sealed class ShellMotionTests
             Assert.False(result.hover.Blur);
             Assert.Equal(0.0, result.LeaveRing);
             Assert.Equal(0.0, result.LeaveGlow);
+            Assert.Equal(0.0, result.hover.Glow); // ohne Animationseffekte kein Leuchten, nur der Rahmen
             Assert.False(result.hover.GlowAnimated);
         }
     }

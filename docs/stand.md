@@ -46,8 +46,14 @@ abgenommen und will die Umsetzung später.
   2. Reihenfolge der Ansichten: Liste, Raster, Regal.
   3. Das „Maximum“ jeder Nit-Skala ist die höchste Nit-Zahl des Bildschirms bei aktivem HDR (456), nie 1000.
   4. In „Darstellung“ werden die Bereiche im Vollbild zu lang gezogen; Anordnung und Skalierung überarbeiten.
-- **Nächster Schritt bei Wiederaufnahme:** die Anmerkungen einarbeiten, dann Abnahmekriterien als Phase 10 in
-  `GATES.md`, inklusive Messgate für Grafikkarten- und Prozessorlast. Danach die Umsetzung in WPF mit Agenten.
+- **Seit 2026-10-15 in Umsetzung:**
+  - Abnahmekriterien als Phase 10 in `GATES.md` (G10.1–G10.11), die Anmerkungen des Nutzers sind eingeschlossen.
+  - Code auf dem Zweig `feature/showcase`, Arbeitsordner `.worktrees/s11-ui`. Teilzweige `feature/showcase-core`,
+    `-theme` und `-views`.
+  - Ablauf: Entwurf, drei Teile parallel, Zusammenführen, Feinschliff an Bildern bei drei Größen, Prüfung mit drei
+    Blickwinkeln, Korrektur.
+  - Der Nutzer hat dafür keine Installation freigegeben. Die Messung der Grafikkartenlast (G10.9) braucht einen
+    eingeschalteten Monitor.
 
 ## Aktuell: HDRpilot 1.4.0 mit Windows Auto HDR ist beim Nutzer installiert
 Phase 9 ist fertig bis auf den gemeinsamen Abschlusstest (G9.8). Nichts läuft im Hintergrund, alles ist committet.

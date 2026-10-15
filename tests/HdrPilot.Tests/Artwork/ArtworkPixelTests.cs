@@ -33,6 +33,15 @@ public sealed class ArtworkPixelTests
 
         Assert.False(black.IsSmeared, black.ToString());
         Assert.False(detailed.IsSmeared, detailed.ToString());
+
+        // Oben verschmiert, unten aber eine einfarbige Fläche (Schriftband): unten zu wenig Streuung, keine erzeugte Kapsel.
+        var plainBottom = PixelAnalysis.Smear(Image(60, 90, (x, y) =>
+        {
+            var stripe = (byte)(128 + (90 * Math.Sin(2 * Math.PI * x / 60)));
+            return y < 10 ? (stripe, (byte)(stripe / 2), (byte)(255 - stripe)) : y > 60 ? ((byte)12, (byte)14, (byte)20) : ((byte)(x * 4), (byte)(y * 2), (byte)90);
+        }));
+        Assert.True(plainBottom.BottomDeviation < 10 && plainBottom.TopDeviation > 3, plainBottom.ToString());
+        Assert.False(plainBottom.IsSmeared, plainBottom.ToString());
         Assert.Throws<ArgumentException>(() => PixelAnalysis.Smear(new byte[4 * 10 * 10], 10, 10));
     }
 

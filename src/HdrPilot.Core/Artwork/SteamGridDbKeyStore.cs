@@ -15,7 +15,7 @@ namespace HdrPilot.Core.Artwork;
 public sealed class SteamGridDbKeyStore(IFileSystem fileSystem, string path, ISecretProtector protector, ILogger? logger = null)
 {
     /// <summary>Eigener Schlüsselanteil für DPAPI (anders als beim PCGamingWiki-Konto).</summary>
-    public static ReadOnlySpan<byte> Entropy => "HdrPilot.SteamGridDB.v1"u8;
+    public static ReadOnlySpan<byte> Entropy => "HDRpilot.SteamGridDB.v1"u8;
 
     /// <summary>Längster angenommener Schlüssel (SteamGridDB vergibt 32 Hex-Zeichen).</summary>
     public const int MaxKeyLength = 256;

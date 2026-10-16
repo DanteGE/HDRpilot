@@ -1,10 +1,88 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-14. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-16. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
-## In Arbeit: Neugestaltung der Oberfläche (Wunsch des Nutzers 2026-10-14)
-Noch kein Code, erst die Designrichtung. Die Vorschauseite war privat, die
+## Pausiert am 2026-10-16: Umsetzung „Showcase Hero“ (Phase 10)
+Auf Wunsch des Nutzers gesichert. Alles ist committet, nichts läuft.
+Installiert ist weiter 1.4.0. **1.5.0 nur nach ausdrücklichem Ja des Nutzers installieren;** dabei müssen die
+Einstellungen der Vorversion erhalten bleiben (vorher/nachher vergleichen).
+
+**Zweige und Arbeitsordner:**
+- **`feature/showcase`** (`.worktrees/s11-ui`, 09824b7): die Neugestaltung mit allen Prüf- und Korrekturrunden.
+  - **Zuletzt am 2026-10-16:**
+    - Speicher nach dem Schließen, helle HDR-Fassung nur im Ruhezustand, Messgrenze im GPU-Gate (37ef909).
+    - Helle Ebene nach verzögertem HDR-Moment; phase10-gpu meldet bei Fokusverlust UMGEBUNG statt FEHLER (52e7d1e).
+    - Weiches Überblenden der hellen Ebene (8f796fc, 09824b7).
+  - **Gegenprüfung:** ohne offene Funde, nur ein kosmetischer Hinweis. Wechselt die Effektstufe mitten im Übergang,
+    behält die Ebene die Dauer ihres ersten Übergangs.
+  - **GPU-Gate:** lief am 2026-10-16 mit eingeschaltetem Monitor einmal komplett grün (PHASE10_GPU_OK). Gemessen:
+    - Liste in Ruhe: 1,2 % GPU.
+    - HDR-Moment: Spitze rund 24 % GPU.
+    - Minimiert: 0,2 % CPU.
+- **`feature/hero-height`** (`.worktrees/s11-hero`, 9e51e95, auf 37ef909): Ziehgriff für die Höhe des Titelbereichs in
+  der Liste (Wunsch 2026-10-16).
+  - **Höhe und Speicherung:** Standard ein Drittel der Fensterhöhe, 186 px bis H − 416 (abzüglich sichtbarer Hinweise).
+    Gemerkt als `settings.libraryHeroRatio`.
+  - **Bedienung:**
+    - Doppelklick oder Eingabetaste setzt zurück, Esc bricht das Ziehen ab.
+    - Pfeiltasten 24 px, Bild auf/ab 96 px, Pos1/Ende.
+    - UI-Automation über RangeValue und Invoke.
+    - Kein Einklappen beim Scrollen mehr.
+  - **Lage des Griffs:** mittig auf der Unterkante des Titelbilds. Über der Werkzeugleiste ist so viel Luft wie darunter:
+    Liste 10 px, Raster 22 px. Der Titelbereich des Rasters gibt in niedrigen Fenstern nach.
+  - **phase10-ui:** nimmt die Skalierung aus der DPI des Fensters.
+  - **Prüfung:** von zwei Blickwinkeln geprüft, 9 Funde behoben.
+- **`feature/toolbar-wrap`** (`.worktrees/s11-bar`, eaff8e2, enthält feature/hero-height): Die Werkzeugleiste bricht in
+  gefüllte, ausgeglichene Zeilen um (`ToolbarFlowPanel`), alle Elemente mit Text, ohne „Filter“-Menü.
+  - **Status:** ungeprüft, der Lauf wurde vor der Prüfung angehalten. Inhaltlich überholt durch die neuen Anmerkungen
+    des Nutzers (unten). Nicht ohne Entscheidung zusammenführen. Das Umbrechen kann als Rückfall für schmale Fenster
+    weiterverwendet werden.
+
+**Offene Entscheidung des Nutzers: Werkzeugleiste über der Liste.** Nichts davon einbauen, bevor er geantwortet hat.
+Seine Anmerkungen (2026-10-16, wörtlich):
+1. „Die "Automatik", "Neu" und "HDR-Fähig" Buttons zum Filtern müssen nicht so groß sein, sie können so klein bleiben
+   wie der "Neu Laden" Button. Erklärungen können bei 1-2 sekündigem Mouse-Over angezeigt werden.“
+2. „Eine sinnvolle Lösung zum Aus- und Einblenden der Leiste hätte ich gerne von dir. Sie muss cool und zeitgemäß
+   sein.“
+3. „Die Anpassung der Icons an schmale Fenster muss smooth sein und optisch sauber aussehen, es kann bei Bedarf bei
+   schmalen Fenstern zweizeilig werden, aber der Fokus muss auf einzeilig liegen.“
+
+Vorschläge einer Entwurfsrunde liegen in `docs/design/showcase-hero/werkzeugleiste-vorschlaege.md`: vier Konzepte
+(Bewegung, Bedienung, Platz, fließende Anpassung) und eine Bewertung mit Empfehlung. **Sie sind dem Nutzer noch nicht
+vorgelegt.**
+
+**Nächste Schritte, in dieser Reihenfolge:**
+1. **Vorschläge vorlegen,** am besten mit einer Vorschau. Die Wahl des Nutzers abholen.
+2. **Werkzeugleiste umsetzen und prüfen:**
+   - auf `feature/toolbar-wrap` oder neu von `feature/hero-height` aus;
+   - Prüfung aus zwei Blickwinkeln;
+   - Bilder bei 1280×800, 1366×768, 1920×1080 und 3440×1440, hell und dunkel, mit Pixelmessung der Abstände.
+3. **In `feature/showcase` zusammenführen.** In `HeroStage.cs` ist ein Konflikt möglich (`_scrimEdge` aus hero-height
+   gegen die Überblend-Korrekturen).
+4. **Abschlussprüfung:**
+   - build, voller test, phase10-ui, phase10-settings-ui, phase3-idle;
+   - phase4-ui, phase6-ui, phase8-icons, phase9-autohdr-ui;
+   - phase7-setup gegen die Testwurzel, phase4-resources, phase5-readme;
+   - phase10-gpu bei eingeschaltetem Monitor.
+5. **Abschluss auf `phase5/release`:**
+   - Merge in `phase5/release`, G10-Nachweise in `GATES.md` eintragen;
+   - Version 1.5.0 setzen, Setup bauen, **nicht installieren**;
+   - Berichte der Läufe nach `docs/design/showcase-hero/` übernehmen;
+   - `main` vorspulen.
+6. **Aufräumen:** die Arbeitsordner s11-core, s11-theme, s11-views und nicht mehr gebrauchte ältere entfernen (vorher
+   ansehen).
+7. **Mit dem Nutzer:** G10.9 (GPU), G10.11 (Sichtabnahme), G9.8 (Auto-HDR-Livetest), echtes Tray-Gate.
+
+**Bekannte Wackeltests:**
+- `Main_window_has_no_binding_errors_in_any_view`: fängt Bindungsfehler parallel laufender Tests ein und ist für sich
+  allein grün. Der Nutzer hat dafür am 2026-10-16 eine eigene Sitzung gestartet („Fix flaky binding-error test
+  interference“). Deren Ergebnis ist unbekannt; den Stand prüfen, bevor man daran arbeitet.
+- Selten: `HdrListServiceTests.Empty_password_reuses_the_stored_one_for_the_same_user_only` und
+  `ArtworkReviewTests.Steamgriddb_images_count_only_while_steamgriddb_is_on`.
+
+## Vorgeschichte: Neugestaltung der Oberfläche (Wunsch des Nutzers 2026-10-14)
+Stand der Designphase; die Umsetzung steht oben unter „Pausiert am 2026-10-16“. Die Vorschauseite war privat, die
 Quellen der Entwürfe lagen nur lokal; beides ist nicht Teil des Repositorys.
 
 **Vorgaben des Nutzers:**

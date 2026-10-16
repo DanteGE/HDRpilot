@@ -410,7 +410,13 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
     - gemerkt in der Konfiguration, Doppelklick setzt auf den Standard zurück;
     - Standard etwa ein Drittel der Fensterhöhe;
     - kein automatisches Schrumpfen beim Scrollen mehr;
-    - mit Tastatur bedienbar.
+    - mit Tastatur bedienbar;
+    - der Griff liegt genau auf der Grenze zwischen Titelbild und Liste (Wunsch 2026-10-16).
+  - Werkzeugleiste über der Liste (Wünsche des Nutzers 2026-10-16):
+    - über der Leiste (bis zur Unterkante des Titelbilds) so viel Luft wie darunter (Liste 10 px, Raster 22 px bis zur ersten Kachelreihe);
+    - Filter „Automatik“, „Neu“ und „HDR-fähig“ so klein wie „Neu einlesen“, Erklärung nach 1–2 s Mouse-Over;
+    - die Leiste lässt sich aus- und einblenden, „cool und zeitgemäß“ (Lösung noch vom Nutzer zu wählen);
+    - einzeilig hat Vorrang; nur in schmalen Fenstern bei Bedarf zweizeilig; die Anpassung an schmale Fenster ist fließend und optisch sauber.
   - Raster: skaliert bei jeder Fenstergröße sauber, auch im Vollbild bei 3440×1440: Spaltenzahl und Kachelgröße folgen der Breite, nichts gestreckt oder abgeschnitten.
   - Regal: Titelbild und Kachelreihe.
   - Detailbereich mit allen bisherigen Funktionen (STARTEN, AUTOMATIK, BILD, EXE-DATEIEN, Bilder); alle bisherigen Funktionen und Tastenkürzel bleiben.

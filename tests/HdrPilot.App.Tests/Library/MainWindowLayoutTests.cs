@@ -284,6 +284,51 @@ public sealed class MainWindowLayoutTests
     }
 
     [Fact]
+    public void Hero_handle_moves_with_the_keyboard_in_steps_and_enter_restores_the_standard()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, context, model) = Open(SteamGame());
+            var splitter = (HeroSplitter)window.FindName("HeroSplitter");
+            var size = new Size(1745, 982);
+            WpfTestHost.Layout(window, size);
+            var root = ((FrameworkElement)window.FindName("Root")).ActualHeight;
+            var start = window.HeroHeight;
+            Assert.Equal(Math.Round(root / 3), start);
+
+            // Pfeiltasten: Schritte von 24 px (Pfeil nach unten: Titelbereich höher), Bild ab: 96 px; sofort angewandt.
+            Press(window, splitter, Key.Down, size);
+            Press(window, splitter, Key.Down, size);
+            Assert.Equal(start + (2 * HeroSplitter.SmallStep), window.HeroHeight);
+            Press(window, splitter, Key.Up, size);
+            Assert.Equal(start + HeroSplitter.SmallStep, window.HeroHeight);
+            Press(window, splitter, Key.PageDown, size);
+            Assert.Equal(start + HeroSplitter.SmallStep + HeroSplitter.LargeStep, window.HeroHeight);
+            Assert.Equal(window.HeroHeight - ShowcaseLayout.HeroSplitterOverlap, splitter.TransformToAncestor((Visual)window.FindName("Root")).Transform(default).Y, 0.5);
+            Assert.Null(context.Config.Settings.LibraryHeroRatio); // gesammelt, noch nicht gespeichert
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(Math.Round(window.HeroHeight / root, 4), context.Config.Settings.LibraryHeroRatio);
+
+            // Ende und Pos1: größte und kleinste Höhe; darüber hinaus geschieht nichts.
+            Press(window, splitter, Key.End, size);
+            Assert.Equal(root - 410, window.HeroHeight);
+            Press(window, splitter, Key.PageDown, size);
+            Assert.Equal(root - 410, window.HeroHeight);
+            Press(window, splitter, Key.Home, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+            Press(window, splitter, Key.Up, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+
+            // Eingabetaste wie Doppelklick: Standardhöhe, nichts mehr gemerkt.
+            Press(window, splitter, Key.Enter, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            window.Close();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        });
+    }
+
+    [Fact]
     public void Toolbar_never_overflows_and_folds_in_stages_when_narrow()
     {
         WpfTestHost.Run(() =>

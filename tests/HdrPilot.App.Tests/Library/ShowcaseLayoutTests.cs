@@ -94,32 +94,135 @@ public sealed class ShowcaseLayoutTests
     }
 
     [Theory]
-    [InlineData(1000, 220)]
-    [InlineData(800, 180)]
-    [InlineData(1440, 240)]
-    public void Showcase_list_hero_is_slim_and_collapses_to_120(double height, double expected)
+    [InlineData(800, 267)]
+    [InlineData(1080, 360)]
+    [InlineData(1440, 480)]
+    [InlineData(727, 242)] // 1280×800 bei 110 %
+    [InlineData(982, 327)] // 1920×1080 bei 110 %
+    [InlineData(1309, 436)] // 3440×1440 bei 110 %
+    [InlineData(620, 207)] // kleinste Fensterhöhe
+    public void Showcase_list_hero_defaults_to_a_third_of_the_window_height(double height, double expected)
     {
-        Assert.Equal(expected, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, listCollapsed: false));
-        Assert.Equal(ShowcaseLayout.CollapsedListHero, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, listCollapsed: true));
+        // Wunsch des Nutzers: Standard etwa ein Drittel (vorher clamp(H·0,22; 180; 240), bei 1440 px nur 240 px).
+        Assert.Equal(expected, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height));
+        Assert.Equal(expected, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, listRatio: null));
+        Assert.Equal(expected, ShowcaseLayout.ListHeroHeight(height, null));
+        Assert.InRange(expected / height, 0.32, 0.345);
+    }
+
+    [Theory]
+    [InlineData(620)]
+    [InlineData(727)]
+    [InlineData(800)]
+    [InlineData(982)]
+    [InlineData(1080)]
+    [InlineData(1309)]
+    [InlineData(1440)]
+    [InlineData(2160)]
+    public void Showcase_list_hero_range_keeps_a_readable_hero_and_five_list_rows(double height)
+    {
+        var (min, max) = ShowcaseLayout.ListHeroRange(height);
+
+        // Kleinster Titelbereich: Unter dem Kopf (98 px) bleiben 66 px für Logo, Angaben und den 50 px hohen Knopf.
+        Assert.Equal(ShowcaseLayout.MinListHero, min);
+        Assert.True(min - 98 - 16 >= 50, "Inhalt des Titelbereichs " + (min - 98 - 16));
+
+        // Größter: Ziehgriff, Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze Zeilen und die Statuszeile
+        // bleiben (H − 410).
+        Assert.Equal(height - 410, max);
+        var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max) + ShowcaseLayout.StackedToolbarHeight + 10;
+        var rows = height - ShowcaseLayout.PaneBottom - listTop - ShowcaseLayout.ListHeaderHeight;
+        Assert.True(rows >= ShowcaseLayout.MinListRows * ShowcaseLayout.ListRowHeight, $"H {height}: {rows} px für Zeilen");
+
+        // Gemerkte Anteile gelten nur innerhalb des Bereichs.
+        Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99));
+        Assert.Equal(min, ShowcaseLayout.ListHeroHeight(height, 0.01));
+        Assert.InRange(ShowcaseLayout.ListHeroHeight(height, null), min, max);
+    }
+
+    [Fact]
+    public void Showcase_list_hero_range_never_inverts_in_tiny_windows()
+    {
+        // Unter der kleinsten Fensterhöhe (Testfenster, Fehler im Layout): nie kleiner als das Minimum, nie Ausnahme.
+        foreach (var height in new[] { 0.0, -5, double.NaN, 300, 541 })
+        {
+            var (min, max) = ShowcaseLayout.ListHeroRange(height);
+            Assert.True(max >= min, $"H {height}: {min}–{max}");
+            Assert.InRange(ShowcaseLayout.ListHeroHeight(height, 0.5), min, max);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(0.0)]
+    [InlineData(-0.2)]
+    [InlineData(1.0)]
+    [InlineData(7.5)]
+    public void Stored_list_hero_ratio_that_makes_no_sense_means_the_default(double? stored)
+    {
+        Assert.Equal(ShowcaseLayout.DefaultListHeroRatio, ShowcaseLayout.NormalizeListHeroRatio(stored), 9);
+        Assert.Equal(ShowcaseLayout.ListHeroHeight(982, null), ShowcaseLayout.ListHeroHeight(982, stored));
+    }
+
+    [Fact]
+    public void Stored_list_hero_ratio_round_trips_and_survives_a_smaller_window()
+    {
+        // 3440×1440 bei 110 % (1309 px): Titelbereich auf 800 px gezogen und gemerkt (wie im ViewModel auf vier Stellen).
+        var ratio = Math.Round(ShowcaseLayout.ListHeroRatio(800, 1309)!.Value, 4);
+        Assert.Equal(0.6112, ratio);
+        Assert.Equal(800, ShowcaseLayout.ListHeroHeight(1309, ratio));
+
+        // Kleinere Fenster: Fünf Zeilen gehen vor, die Höhe wird begrenzt; wo Platz ist, gilt der Anteil. Der Anteil selbst
+        // bleibt gemerkt, im großen Fenster gilt wieder die gewählte Höhe.
+        Assert.Equal(727 - 410, ShowcaseLayout.ListHeroHeight(727, ratio));
+        Assert.Equal(800 - 410, ShowcaseLayout.ListHeroHeight(800, ratio));
+        Assert.Equal(660, ShowcaseLayout.ListHeroHeight(1080, ratio));
+        Assert.Equal(880, ShowcaseLayout.ListHeroHeight(1440, ratio));
+        Assert.Equal(800, ShowcaseLayout.ListHeroHeight(1309, ratio));
+
+        // Jede ganze Höhe im Bereich übersteht das Merken bei 1440 px ohne Abweichung.
+        var (min, max) = ShowcaseLayout.ListHeroRange(1440);
+        for (var h = min; h <= max; h++)
+        {
+            var stored = Math.Round(ShowcaseLayout.ListHeroRatio(h, 1440)!.Value, 4);
+            Assert.Equal(h, ShowcaseLayout.ListHeroHeight(1440, stored));
+        }
+
+        Assert.Null(ShowcaseLayout.ListHeroRatio(300, 0));
+        Assert.Null(ShowcaseLayout.ListHeroRatio(double.NaN, 900));
+    }
+
+    [Fact]
+    public void Showcase_list_toolbar_sits_below_the_hero_handle_grid_and_shelf_are_unchanged()
+    {
+        // Liste: Ziehgriff von 16 px über dem unteren Rand des Titelbilds (dessen Inhalt endet dort) bis zur Werkzeugleiste.
+        Assert.Equal(400 - ShowcaseLayout.HeroSplitterOverlap + ShowcaseLayout.HeroSplitterHeight, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400));
+        Assert.Equal(404, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400));
+
+        // Raster und Regal wie bisher.
+        Assert.Equal(398, ShowcaseLayout.ToolbarTop(LibraryViewMode.Grid, 400));
+        Assert.Equal(570, ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, 620));
     }
 
     [Fact]
     public void Showcase_shelf_hero_is_big_and_grid_hero_medium()
     {
-        Assert.Equal(620, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1000, false));
-        Assert.Equal(500, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 800, false)); // wie der Prototyp bei 1280×800
-        Assert.Equal(240, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, 1000, false));
-        Assert.Equal(196, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, 700, false));
+        Assert.Equal(620, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1000));
+        Assert.Equal(500, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 800)); // wie der Prototyp bei 1280×800
+        Assert.Equal(240, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, 1000));
+        Assert.Equal(196, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, 700));
 
         // 3440 × 1440: das Regal behält unten Platz für die Kachelreihe (Abweichung vom Prototyp: höchstens H − 462).
-        var shelf = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1400, false);
+        var shelf = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1400);
         Assert.True(1400 - shelf >= 462, "Platz für die Reihe: " + (1400 - shelf));
 
         // … und füllt ihn: unter der größten Reihe (340 + 34) und der Seitenangabe bleibt kein leeres Band (Sichtprüfung
         // 3440×1440: bei H·0,62 waren es 135 px). Gegenprobe: bei 1000 px bleibt es beim Prototyp (620).
         foreach (var height in new[] { 1309.0, 1400, 1440 })
         {
-            var row = height - ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, false) - ShowcaseLayout.BodyBottom;
+            var row = height - ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height) - ShowcaseLayout.BodyBottom;
             Assert.InRange(row - ShowcaseLayout.ShelfPadding - 340, 0, 50);
         }
     }
@@ -136,7 +239,7 @@ public sealed class ShowcaseLayoutTests
     public void Shelf_hero_leaves_room_for_whole_tiles_at_every_window_height(double height)
     {
         // Gegenprobe zum Prototyp: clamp(H·0,62; 500; 660) ließe bei 727 px nur 189 px für die Reihe (Kachel 200 + 34).
-        var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, false);
+        var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height);
         var row = height - hero - ShowcaseLayout.BodyBottom;
         var tile = ShowcaseLayout.Shelf(1600, row).TileHeight;
 

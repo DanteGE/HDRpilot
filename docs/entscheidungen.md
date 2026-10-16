@@ -834,8 +834,8 @@ Grafikkartenlast der Testinstanz; ohne aktiven Bildschirm meldet es UMGEBUNG und
 
 Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht oder ihn genauer fasst:
 - Bilder: Reihenfolge je Bildart eigene Wahl → Launcher-Bild → SteamGridDB (nur eingeschaltet, nur wenn das Bild fehlt)
-  → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 120 bis
-  660 px hoch ist; die Bibliothek zeigt das Symbol (höchstens 1,5-fach vergrößert) links vom Namen. Ein Xbox-Kachelbild
+  → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 180 bis
+  über 1000 px hoch ist; die Bibliothek zeigt das Symbol (höchstens 1,5-fach vergrößert) links vom Namen. Ein Xbox-Kachelbild
   wird dagegen rechts der Mitte eingezeichnet. Zusätzlich gibt es ein erzeugtes Kopfbild (460×215) als Vorschaubild der
   Liste. Die helle Fassung entsteht nur bei aktivem Fenster und ohne laufendes oder startendes Spiel (siehe unten,
   „Ruhezustand“), in Stufenbreiten bis 2560 px (JPEG, `art\boost`, höchstens 300 MB); dekodierte Bilder im Speicher
@@ -906,3 +906,14 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   warme Licht (0,6 s, „Reduziert“ 0,3 s, „Aus“ sofort). `phase10-gpu.ps1` misst Teil 1 erst, wenn das Laden der Bilder
   fertig ist, verlangt höchstens 1 % eines Kerns und laut Protokoll 0 Uhren der Dauer-Effekte, solange sie angehalten
   oder minimiert sind (Stufe Debug: „Effekte: … Uhren n“, „Bilder: nichts mehr in Arbeit.“).
+- Höhe des Titelbereichs in der Liste (Wunsch des Nutzers 2026-10-16, G10.5): Ein Ziehgriff (`HeroSplitter`) direkt unter
+  dem Inhalt des Titelbereichs, über der Werkzeugleiste, stellt sie ein. Gemerkt wird der Anteil an der Fensterhöhe
+  (`settings.libraryHeroRatio`, ohne Eintrag gilt der Standard) erst nach dem Ziehen oder einer Taste, nie nach einem
+  bloßen Klick. Standard ist ein Drittel der Fensterhöhe (vorher clamp(H·0,22; 180; 240), bei 1440 px also nur 240 px),
+  mindestens 180 px, höchstens H − 410: Darunter bleiben Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze
+  Zeilen und die Statuszeile. In kleineren Fenstern wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
+  klappt der Titelbereich nicht mehr auf 120 px zusammen („Größe bleibt“). Bedienung: Ziehen ohne Animation, Pfeiltasten
+  oben/unten 24 px, Bild auf/ab 96 px, Pos1/Ende kleinste bzw. größte Höhe, Doppelklick und Eingabetaste zurück zum
+  Standard (mit der Bewegung beim Wechsel der Ansicht). Für die UI-Automation ist der Griff ein Thumb mit Wertebereich
+  (RangeValue, Höhe in Pixeln) und Auslösen (Invoke wie Doppelklick). Raster und Regal bleiben unverändert. Neuer Zustand
+  `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.

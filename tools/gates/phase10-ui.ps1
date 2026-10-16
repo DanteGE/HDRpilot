@@ -1,8 +1,11 @@
 ﻿# Gate G10.5: Bibliothek „Showcase Hero“ per UI-Automation an einer eigenen Testinstanz (eigene Ablage, echte Bibliothek
 # eingelesen und alle Spiele auf „HDR automatisch“ aus, nur Fenster dieser Prozess-ID, keine Maus- oder Tastatureingaben)
-# und Bildschirmfotos der drei Ansichten bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
+# und Bildschirmfotos der drei Ansichten und der gescrollten Liste bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
 #   - Ansichten in der Reihenfolge Liste, Raster, Regal; Liste ist der Standard, die Wahl wird gemerkt (auch nach Neustart)
 #   - Liste: virtualisiert, nach Spalten sortierbar (gespeichert), Schalter „HDR automatisch“ je Zeile, Vorschau Bild/Symbol
+#   - Liste: Höhe des Titelbereichs per Ziehgriff HeroSplitter (Wunsch des Nutzers 2026-10-16): Standard ein Drittel der
+#     Fensterhöhe, per UI-Automation gesetzt (RangeValue, keine echte Eingabe), gemerkt (auch nach Neustart), Auslösen
+#     (Invoke, wie Doppelklick) setzt zurück; Raster und Regal ohne Griff und mit ihrer bisherigen Höhe
 #   - Raster: gleich große Kacheln über die ganze Breite, keine leere Spalte rechts, nichts ragt hinaus, bei jeder Größe
 #   - Regal: Kachelreihe mit Blättern, Karte „Automatik“, Details als Schublade (öffnen und schließen)
 #   - Detailbereich mit allen bisherigen Funktionen und „BILDER“; Kontextmenü des Spiels; „Bild wählen…“ mit eigener Datei
@@ -175,6 +178,39 @@ try {
     Select-El (Find-Id $win 'ThumbnailImageButton')
     Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryThumbnail }) 'Vorschau „Bild“ (Standard) gespeichert'
 
+    # --- Liste: Höhe des Titelbereichs per Ziehgriff, nur über UI-Automation (RangeValue, keine Maus- oder Tastatureingabe) ---
+    # Werte des Griffs in geräteunabhängigen Pixeln. Der Griff ist 20 px hoch (daraus die Skalierung des Bildschirms); die
+    # Höhe des Fensterinhalts ist sein größter Wert + 410 (Werkzeugleiste, Kopf, fünf Zeilen, Statuszeile darunter) und muss
+    # zur gemessenen Fensterhöhe passen (Rahmen und Ränder höchstens 12 px). Lagen werden nur relativ verglichen, so
+    # zählen Rahmen und Rundung der Bildschirmkoordinaten nicht.
+    $grip = Find-Id $win 'HeroSplitter' 3000
+    Check ($null -ne $grip) 'Ziehgriff HeroSplitter in der Liste vorhanden'
+    $scale = 1.0; $rootDip = 0.0; $heroSet = 0.0; $segOffset = 0.0
+    $gripRange = $null
+    if ($grip -and $grip.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$gripRange)) {
+        $scale = (Rect $grip).Height / 20
+        $value = $gripRange.Current.Value
+        $rootDip = $gripRange.Current.Maximum + 410
+        $chrome = (Rect $win).Height / $scale - $rootDip
+        Note ("Ziehgriff: Wert {0}, Bereich {1}–{2}, Fensterinhalt {3} px hoch (Fenster {4:N1}), Skalierung {5:N2}" -f $value, $gripRange.Current.Minimum, $gripRange.Current.Maximum, $rootDip, ((Rect $win).Height / $scale), $scale)
+        Check ($grip.Current.Name -eq 'Höhe des Titelbereichs' -and $grip.Current.IsKeyboardFocusable) ('Ziehgriff benannt und mit Tastatur erreichbar („{0}“)' -f $grip.Current.Name)
+        Check ($gripRange.Current.Minimum -eq 180 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 180 px, höchstens Fensterinhalt − 410 (Rahmen {0:N1} px)" -f $chrome)
+        Check ([math]::Abs($value - [math]::Round($rootDip / 3)) -le 1) ('Standard: ein Drittel der Fensterhöhe ({0} von {1} px)' -f $value, $rootDip)
+        Check ($null -eq (Read-Config $cfg).settings.libraryHeroRatio) 'Standardhöhe wird nicht gespeichert (libraryHeroRatio fehlt)'
+        $gripTop = (Rect $grip).Top
+        $listTop = (Rect (Find-Id $win 'GameList')).Top
+        $heroSet = [math]::Round($gripRange.Current.Minimum + ($gripRange.Current.Maximum - $gripRange.Current.Minimum) * 0.6)
+        $gripRange.SetValue($heroSet)
+        # Griff und Liste rücken um genau die Änderung nach unten: Der Titelbereich ist so viel höher.
+        $moved = { (((Rect $grip).Top - $gripTop) / $scale) - ($heroSet - $value) }
+        $listMoved = { (((Rect (Find-Id $win 'GameList')).Top - $listTop) / $scale) - ($heroSet - $value) }
+        Check (Wait-Until { [math]::Abs($gripRange.Current.Value - $heroSet) -lt 0.5 -and [math]::Abs((& $moved)) -le 1.5 -and [math]::Abs((& $listMoved)) -le 1.5 } 4000) ("Per UI-Automation von {0} auf {1} px gesetzt, Griff und Liste folgen (Abweichung {2:N1} / {3:N1} px)" -f $value, $heroSet, (& $moved), (& $listMoved))
+        Check (Wait-Until { $r = (Read-Config $cfg).settings.libraryHeroRatio; $null -ne $r -and [math]::Abs([double]$r - $heroSet / $rootDip) -lt 0.0005 }) ("In der Konfiguration gemerkt (libraryHeroRatio {0}, erwartet {1:N4})" -f (Read-Config $cfg).settings.libraryHeroRatio, ($heroSet / $rootDip))
+        Check ((Shown-Items (Find-Id $win 'GameList')).Count -ge 5) ("Darunter weiter Zeilen der Liste ({0})" -f (Shown-Items (Find-Id $win 'GameList')).Count)
+        # Lage der Ansicht-Schalter zur Werkzeugleiste (in der Liste 4 px unter dem Titelbereich): misst unten Raster und Regal
+        $segOffset = (((Rect $views[0]).Top - (Rect $win).Top) / $scale) - ($heroSet + 4)
+    } else { Check $false 'Ziehgriff mit Wertebereich (RangeValue)' }
+
     # --- Detailbereich: alle bisherigen Funktionen und „BILDER“ ---
     foreach ($id in 'DetailsPanel', 'DetailName', 'LaunchButton', 'CreateDesktopShortcutButton', 'CreateStartMenuShortcutButton', 'DetailHdrAuto', 'DetailRestore', 'DetailDisplay', 'DetailAutoHdr', 'AddExeButton', 'RemoveExeButton', 'RelearnExeButton', 'ChooseArtworkButton', 'ArtworkTileHero', 'ArtworkTileLogo', 'ArtworkTileCover', 'DetailIconButton', 'LibrarySplitter', 'ProfileMenuButton') {
         Check ($null -ne (Find-Id $win $id 3000)) "Detail-Element $id vorhanden"
@@ -221,6 +257,13 @@ try {
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Grid' }) 'Raster gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
     Check ((Find-Id $win 'GameList' 500) -eq $null -or (Find-Id $win 'GameList' 500).Current.IsOffscreen) 'Liste ausgeblendet'
+    # Raster wie bisher: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste
+    Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Raster ohne Ziehgriff'
+    if ($rootDip -gt 0) {
+        $rasterHero = (((Rect $views[1]).Top - (Rect $win).Top) / $scale) - $segOffset + 2
+        $rasterExpected = [math]::Round([math]::Min(260, [math]::Max(196, $rootDip * 0.24)))
+        Check ([math]::Abs($rasterHero - $rasterExpected) -le 1.5) ("Raster: Titelbereich wie bisher ({0:N1} px, erwartet {1})" -f $rasterHero, $rasterExpected)
+    }
     $gridTiles = @(Get-ListItems (Find-Id $win 'GameGrid') | Where-Object { -not (Rect $_).IsEmpty }).Count
     Check ($total -lt 120 -or $gridTiles -lt $total / 2) "Raster virtualisiert ($gridTiles von $total Kacheln erzeugt)"
     foreach ($size in @(@(1600, 1000), @(1280, 800), @(1920, 1080), @(1000, 700))) {
@@ -238,6 +281,13 @@ try {
     Select-El $views[2]
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Shelf' }) 'Regal gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
+    # Regal wie bisher: ohne Ziehgriff, Werkzeugleiste 50 px über dem unteren Rand des großen Titelbereichs
+    Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Regal ohne Ziehgriff'
+    if ($rootDip -gt 0) {
+        $shelfHero = (((Rect $views[2]).Top - (Rect $win).Top) / $scale) - $segOffset + 50
+        $shelfExpected = [math]::Round([math]::Min([math]::Max([math]::Min([math]::Max($rootDip * 0.62, 500), 660), $rootDip - 462), [math]::Max(440, $rootDip - 38 - 34 - 200)))
+        Check ([math]::Abs($shelfHero - $shelfExpected) -le 1.5) ("Regal: Titelbereich wie bisher ({0:N1} px, erwartet {1})" -f $shelfHero, $shelfExpected)
+    }
     $shelf = Find-Id $win 'GameShelf' 3000
     Check ($null -ne $shelf -and (Shown-Items $shelf).Count -ge 3) "Regal zeigt eine Kachelreihe ($(if ($shelf) { (Shown-Items $shelf).Count }) Kacheln)"
     foreach ($id in 'CardHdrAuto', 'CardRestore', 'CardAutoHdr', 'DetailsDrawerButton', 'ShelfNextButton', 'ShelfPrevButton', 'ShelfPosition', 'HeroLaunchButton', 'HeroDesktopButton', 'HeroStartMenuButton') {
@@ -268,16 +318,31 @@ try {
     if ($win2) {
         Select-El (Find-Id $win2 'ViewListButton')
         Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryView }) 'Zurück zur Liste: Standard, nichts gespeichert'
+
+        # Gemerkte Höhe des Titelbereichs nach dem Neustart (gleiche Fenstergröße), dann Auslösen wie Doppelklick: Standard
+        [void](Resize-Window $win2 1600 1000)
+        $grip2 = Find-Id $win2 'HeroSplitter' 5000
+        $range2 = $null
+        if ($grip2 -and $heroSet -gt 0 -and $grip2.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range2)) {
+            Check (Wait-Until { [math]::Abs($range2.Current.Value - $heroSet) -le 1 } 4000) ("Nach Neustart wieder {0} px hoch (Griff {1})" -f $heroSet, $range2.Current.Value)
+            $invoke2 = $null
+            if ($grip2.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$invoke2)) {
+                $invoke2.Invoke()
+                $root2 = $range2.Current.Maximum + 410
+                Check (Wait-Until { [math]::Abs($range2.Current.Value - $root2 / 3) -le 1.5 } 4000) ("Auslösen (wie Doppelklick) setzt auf ein Drittel zurück ({0} von {1:N0} px)" -f $range2.Current.Value, $root2)
+                Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryHeroRatio }) 'Zurückgesetzt: libraryHeroRatio entfällt in der Konfiguration'
+            } else { Check $false 'Ziehgriff lässt sich auslösen (Invoke)' }
+        } else { Check $false 'Ziehgriff nach Neustart vorhanden' }
     }
     Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null
     Check ($app2.WaitForExit(10000)) 'Testinstanz beendet'
     Check (@((Read-Config $cfg).games | Where-Object { $_.hdrAuto -or $_.autoHdr }).Count -eq 0) 'Am Ende hat kein Spiel „HDR automatisch“ oder „Windows Auto HDR“ an'
 
-    # --- Bildschirmfotos: drei Ansichten, drei Größen, hell und dunkel ---
+    # --- Bildschirmfotos: drei Ansichten und die gescrollte Liste, drei Größen, hell und dunkel ---
     $shots = Join-Path $ShotsDir ('lauf-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-raster,hauptfenster-regal', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
+    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
     Check ($snap.ExitCode -eq 0) "Bildschirmfotos gerendert (Exit-Code $($snap.ExitCode))"
-    foreach ($view in 'liste', 'raster', 'regal') {
+    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal') {
         foreach ($size in '1280x800', '1920x1080', '3440x1440') {
             foreach ($theme in 'dunkel', 'hell') {
                 $file = Join-Path $shots "hauptfenster-$view-$size-$theme.png"

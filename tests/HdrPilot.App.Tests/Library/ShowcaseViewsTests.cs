@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -20,7 +22,9 @@ namespace HdrPilot.App.Tests.Library;
 /// <summary>
 /// Hauptfenster „Showcase Hero“ auf dem WPF-Testhost (E89, G10.5), erzeugt und angeordnet, nie angezeigt: drei Ansichten in
 /// der Reihenfolge Liste, Raster, Regal; nur die aktive Ansicht hat Daten; das Raster verteilt gleich große Kacheln über
-/// die ganze Breite und erzeugt nur sichtbare; Tastenkürzel, Kontextmenü, Nit-Anzeige und keine Bindungsfehler.
+/// die ganze Breite und erzeugt nur sichtbare; der Titelbereich der Liste ist ein Drittel hoch und per Ziehgriff einstellbar
+/// (Ziehen, UI-Automation, gemerkt, kein Einklappen beim Scrollen); Tastenkürzel, Kontextmenü, Nit-Anzeige und keine
+/// Bindungsfehler.
 /// </summary>
 public sealed class ShowcaseViewsTests
 {
@@ -164,7 +168,7 @@ public sealed class ShowcaseViewsTests
             Arrange(window, new Size(1600, 1000));
 
             var rootHeight = Named<FrameworkElement>(window, "Root").ActualHeight;
-            Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, rootHeight, false), window.HeroHeight);
+            Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, rootHeight), window.HeroHeight);
             Assert.True(window.HeroHeight >= 500);
             Assert.Equal(Visibility.Visible, Named<FrameworkElement>(window, "AutomationCard").Visibility);
             Assert.Equal(Visibility.Visible, Named<FrameworkElement>(window, "HeroLarge").Visibility);
@@ -179,11 +183,11 @@ public sealed class ShowcaseViewsTests
             Assert.True(panel.VisibleCount >= 5, "Kacheln im Regal: " + panel.VisibleCount);
             Assert.InRange(Containers(shelf).Count, panel.VisibleCount, panel.VisibleCount + 10);
 
-            // Liste: schmaler Titelbereich, Details als Spalte mit Trenner.
+            // Liste: Titelbereich ein Drittel hoch (einstellbar), Details als Spalte mit Trenner.
             model.ViewMode = LibraryViewMode.List;
             Arrange(window, new Size(1600, 1000));
-            Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.List, rootHeight, false), window.HeroHeight);
-            Assert.InRange(window.HeroHeight, 180, 240);
+            Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.List, rootHeight), window.HeroHeight);
+            Assert.Equal(Math.Round(rootHeight / 3), window.HeroHeight);
             Assert.Equal(Visibility.Collapsed, Named<FrameworkElement>(window, "AutomationCard").Visibility);
             Assert.Equal(Visibility.Visible, Named<FrameworkElement>(window, "LibrarySplitter").Visibility);
             window.Close();
@@ -385,6 +389,244 @@ public sealed class ShowcaseViewsTests
             Assert.Equal(Visibility.Collapsed, actions.Visibility);
             Assert.True(window.CompactNameWidth < MainWindow.MaxCompactName, "Umbruchbreite " + window.CompactNameWidth);
             Assert.True(compact.ActualWidth <= visible + 0.5, $"Titelbereich {compact.ActualWidth:0} px breit, sichtbar {visible:0} px (Titel {title.ActualWidth:0} px)");
+            window.Close();
+        });
+    }
+
+    /// <summary>Oberkante im Inhalt des Fensters (Root, ohne den 1-px-Rahmen), wie die Rechnungen von ShowcaseLayout.</summary>
+    private static double Top(MainWindow window, FrameworkElement element) => element.TransformToAncestor(Named<Visual>(window, "Root")).Transform(default).Y;
+
+    private static double Bottom(MainWindow window, FrameworkElement element) => Top(window, element) + element.ActualHeight;
+
+    private static IRangeValueProvider HeroRange(HeroSplitter splitter) =>
+        Assert.IsAssignableFrom<IRangeValueProvider>(UIElementAutomationPeer.CreatePeerForElement(splitter).GetPattern(PatternInterface.RangeValue));
+
+    /// <summary>Zeilen der Liste, die ganz zu sehen sind.</summary>
+    private static int WholeRows(MainWindow window)
+    {
+        var list = Named<ListBox>(window, "GameList");
+        return Containers(list).Count(row =>
+        {
+            var top = row.TransformToAncestor(list).Transform(default).Y;
+            return row.ActualHeight > 0 && top >= -0.5 && top + row.ActualHeight <= list.ActualHeight + 0.5;
+        });
+    }
+
+    [Theory]
+    [InlineData(1164, 727)] // 1280×800 bei 110 % (Werkzeugleiste zweizeilig)
+    [InlineData(1280, 800)]
+    [InlineData(1745, 982)] // 1920×1080 bei 110 %
+    [InlineData(1920, 1080)]
+    [InlineData(3127, 1309)] // 3440×1440 bei 110 %
+    [InlineData(3440, 1440)]
+    public void List_hero_is_a_third_high_by_default_with_its_handle_between_hero_and_toolbar(double width, double height)
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(width, height);
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(80)), size: size);
+            model.SelectedGame = model.Games[0];
+            Arrange(window, size);
+            window.UpdateToolbarLayout(); // im nie angezeigten Fenster nicht von selbst (zweizeilig bei 1164 px)
+            Arrange(window, size);
+            var rootHeight = Named<FrameworkElement>(window, "Root").ActualHeight;
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+
+            // Standard: ein Drittel der Fensterhöhe (Wunsch des Nutzers; vorher höchstens 240 px).
+            Assert.Equal(Math.Round(rootHeight / 3), window.HeroHeight);
+            Assert.Equal(window.HeroHeight, Named<FrameworkElement>(window, "Hero").ActualHeight);
+
+            // Griff: sichtbar, bedienbar, für Bildschirmleser benannt, mit Wertebereich.
+            Assert.Equal(Visibility.Visible, splitter.Visibility);
+            Assert.Equal("HeroSplitter", AutomationProperties.GetAutomationId(splitter));
+            Assert.Equal(LibraryStrings.HeroSplitter_Name, AutomationProperties.GetName(splitter));
+            Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetHelpText(splitter)));
+            Assert.True(splitter.Focusable && splitter.IsTabStop);
+            Assert.Equal(Cursors.SizeNS, splitter.Cursor);
+            var range = HeroRange(splitter);
+            Assert.Equal(window.HeroHeight, range.Value);
+            Assert.Equal(ShowcaseLayout.MinListHero, range.Minimum);
+            Assert.Equal(rootHeight - 410, range.Maximum);
+            Assert.Equal(AutomationControlType.Thumb, UIElementAutomationPeer.CreatePeerForElement(splitter).GetAutomationControlType());
+
+            // Lage: am unteren Rand des Titelbilds unter dessen Inhalt, darunter die Werkzeugleiste, dann die Liste; nur über
+            // der Spalte der Liste (nicht unter dem Detailbereich).
+            var handleTop = Top(window, splitter);
+            var handleBottom = Bottom(window, splitter);
+            Assert.Equal(window.HeroHeight - ShowcaseLayout.HeroSplitterOverlap, handleTop, 0.5);
+            Assert.True(splitter.ActualHeight >= 20, "Griff " + splitter.ActualHeight + " px hoch");
+            // Inhalt nach seiner Anordnung, ohne die Verschiebung des Einblendens (läuft nach der Wahl des Spiels noch).
+            var compact = Named<FrameworkElement>(window, "HeroCompact");
+            var compactBottom = Top(window, Named<FrameworkElement>(window, "HeroContent")) + VisualTreeHelper.GetOffset(compact).Y + compact.ActualHeight;
+            Assert.True(compactBottom <= handleTop + 0.5, $"Inhalt des Titelbereichs (bis {compactBottom:0}) ragt in den Griff ({handleTop:0})");
+            var toolbarTop = Top(window, Named<FrameworkElement>(window, "ToolbarArea"));
+            Assert.True(toolbarTop >= handleBottom - 0.5, $"Werkzeugleiste ({toolbarTop:0}) unter dem Griff ({handleBottom:0})");
+            Assert.True(Top(window, Named<FrameworkElement>(window, "ListCard")) >= handleBottom + 40, "Liste unter der Werkzeugleiste");
+            var details = Named<FrameworkElement>(window, "DetailsArea");
+            var handleRight = splitter.TransformToAncestor(window).Transform(new Point(splitter.ActualWidth, 0)).X;
+            Assert.True(handleRight <= details.TransformToAncestor(window).Transform(default).X - 20, "Griff endet vor dem Detailbereich");
+
+            // Größter Titelbereich: mindestens fünf ganze Zeilen bleiben, auch mit zweizeiliger Werkzeugleiste.
+            range.SetValue(range.Maximum);
+            Arrange(window, size);
+            Assert.Equal(width < 1200, window.ToolbarStage == MainWindow.MaxToolbarStage);
+            Assert.Equal(rootHeight - 410, window.HeroHeight);
+            Assert.True(WholeRows(window) >= ShowcaseLayout.MinListRows, $"{width}×{height}: {WholeRows(window)} ganze Zeilen");
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_follows_the_handle_live_and_is_remembered_only_after_a_real_drag()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var context = new TestLibraryContext(ManyGames(40));
+            var (window, model, _) = Open(context, size: size);
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var rootHeight = Named<FrameworkElement>(window, "Root").ActualHeight;
+            var start = window.HeroHeight;
+            var updates = context.Updates;
+            var delays = context.Dispatcher.PendingDelays;
+
+            // Ziehen: Der Titelbereich folgt sofort (ohne Animation), der Griff mit ihm; gemerkt wird noch nichts.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 30));
+            Assert.Equal(start + 30, window.HeroHeight);
+            Arrange(window, size);
+            Assert.Equal(start + 30 - ShowcaseLayout.HeroSplitterOverlap, Top(window, splitter), 0.5);
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 24.6)); // ab der neuen Lage des Griffs, ganze Pixel
+            Assert.Equal(start + 55, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Ende des Ziehens: Anteil an der Fensterhöhe gemerkt, einmal gespeichert.
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
+            Assert.Equal(Math.Round((start + 55) / rootHeight, 4), model.HeroRatio);
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(model.HeroRatio, context.Config.Settings.LibraryHeroRatio);
+            Assert.Equal(updates + 1, context.Updates);
+
+            // Bloßer Klick auf den Griff: nichts gemerkt, nichts geschrieben.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
+            Assert.Equal(0, context.Dispatcher.PendingDelays);
+            Assert.Equal(updates + 1, context.Updates);
+
+            // Über den Rand hinaus: Der Griff bleibt am größten Wert stehen.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 5000));
+            Assert.Equal(rootHeight - 410, window.HeroHeight);
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -9000));
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(Math.Round(ShowcaseLayout.MinListHero / rootHeight, 4), context.Config.Settings.LibraryHeroRatio);
+
+            // Doppelklick: zurück zum Standard, nichts mehr gemerkt.
+            splitter.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Control.MouseDoubleClickEvent });
+            Arrange(window, size);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(Math.Round(rootHeight / 3), window.HeroHeight);
+            Assert.Equal(window.HeroHeight, splitter.Value);
+            context.Dispatcher.RunDelayed();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_height_is_set_by_ui_automation_restored_after_reopening_and_kept_across_views_and_window_sizes()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var large = new Size(3127, 1309);
+            var context = new TestLibraryContext(ManyGames(40));
+            var (window, model, _) = Open(context, size: large);
+            var range = HeroRange(Named<HeroSplitter>(window, "HeroSplitter"));
+
+            // UI-Automation ohne echte Eingaben: setzen wie eine Taste, sofort angewandt und gemerkt.
+            range.SetValue(600);
+            Assert.Equal(600, window.HeroHeight);
+            Assert.Throws<ArgumentOutOfRangeException>(() => range.SetValue(range.Maximum + 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => range.SetValue(ShowcaseLayout.MinListHero - 1));
+            Assert.Equal(600, window.HeroHeight);
+            var rootHeight = Named<FrameworkElement>(window, "Root").ActualHeight;
+            window.Close(); // speichert beim Schließen
+            var stored = context.Config.Settings.LibraryHeroRatio;
+            Assert.Equal(Math.Round(600 / rootHeight, 4), stored);
+
+            // Neu gestartet mit dieser Konfiguration: dieselbe Höhe.
+            context = new TestLibraryContext(ManyGames(40));
+            context.ConfigService.Update(c => c.Settings.LibraryHeroRatio = stored);
+            (window, model, _) = Open(context, size: large);
+            Assert.Equal(stored, model.HeroRatio);
+            Assert.Equal(600, window.HeroHeight);
+
+            // Raster und Regal unverändert (ohne Griff); zurück in der Liste wieder die gemerkte Höhe.
+            model.ViewMode = LibraryViewMode.Grid;
+            Arrange(window, large);
+            Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, rootHeight), window.HeroHeight);
+            Assert.Equal(Visibility.Collapsed, Named<HeroSplitter>(window, "HeroSplitter").Visibility);
+            Assert.Equal(window.HeroHeight - 2, Top(window, Named<FrameworkElement>(window, "ToolbarArea")), 0.5);
+            model.ViewMode = LibraryViewMode.Shelf;
+            Arrange(window, large);
+            Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, rootHeight), window.HeroHeight);
+            Assert.Equal(Visibility.Collapsed, Named<HeroSplitter>(window, "HeroSplitter").Visibility);
+            model.ViewMode = LibraryViewMode.List;
+            Arrange(window, large);
+            Assert.Equal(600, window.HeroHeight);
+
+            // Kleineres Fenster: begrenzt (fünf Zeilen gehen vor), der gemerkte Anteil bleibt; groß wieder 600 px.
+            Arrange(window, new Size(1164, 727));
+            var smallRoot = Named<FrameworkElement>(window, "Root").ActualHeight;
+            Assert.Equal(smallRoot - 410, window.HeroHeight);
+            Assert.Equal(smallRoot - 410, HeroRange(Named<HeroSplitter>(window, "HeroSplitter")).Maximum);
+            Arrange(window, large);
+            Assert.Equal(600, window.HeroHeight);
+            Assert.Equal(stored, model.HeroRatio);
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(stored, context.Config.Settings.LibraryHeroRatio);
+
+            // Auslösen per UI-Automation wie Doppelklick und Eingabetaste: Standardhöhe, nichts mehr gemerkt.
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            Assert.IsAssignableFrom<IInvokeProvider>(UIElementAutomationPeer.CreatePeerForElement(splitter).GetPattern(PatternInterface.Invoke)).Invoke();
+            Arrange(window, large);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(Math.Round(rootHeight / 3), window.HeroHeight);
+            window.Close();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        });
+    }
+
+    [Fact]
+    public void List_hero_keeps_its_height_while_the_list_scrolls()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(200)), size: size); // erstes Spiel gewählt, ohne Einblenden
+            Assert.Same(model.Games[0], model.SelectedGame);
+
+            // Wie beim Anzeigen: Was das Fenster beim Laden an der Liste anmeldet, hört beim Scrollen mit.
+            window.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+            Arrange(window, size);
+            var before = window.HeroHeight;
+            var scroll = Assert.IsType<ScrollViewer>(Named<ListBox>(window, "GameList").Template.FindName("ScrollHost", Named<ListBox>(window, "GameList")));
+
+            // Früher klappte der Titelbereich ab 60 px Scrollweg auf 120 px zusammen (Wunsch des Nutzers: „Größe bleibt“).
+            window.ScrollListBy(30);
+            Arrange(window, size);
+            WpfTestHost.DoEvents();
+            Arrange(window, size);
+            Assert.True(scroll.VerticalOffset > 600, "gescrollt: " + scroll.VerticalOffset);
+            Assert.Equal(before, window.HeroHeight);
+            // Inhalt des Titelbereichs weder ausgeblendet noch gesperrt (die Deckkraft setzt nur das Einblenden beim Öffnen).
+            var compact = Named<FrameworkElement>(window, "HeroCompact");
+            Assert.Equal(BaseValueSource.Default, DependencyPropertyHelper.GetValueSource(compact, UIElement.OpacityProperty).BaseValueSource);
+            Assert.True(compact.IsHitTestVisible);
+            Assert.True(Named<FrameworkElement>(window, "CompactActions").IsEnabled);
             window.Close();
         });
     }

@@ -19,16 +19,20 @@ using Microsoft.Extensions.Logging;
 namespace HdrPilot.App;
 
 /// <summary>
-/// Hauptfenster „Spielebibliothek“ im Stil „Showcase Hero“ (E89). Die Ansicht ordnet an (Titelbereich je Ansicht, Werkzeugleiste
-/// mit stufenweisem Falten, Liste/Raster/Regal, Detailbereich bzw. Schublade, Statuszeile), überträgt Umgebungsfarben und
-/// Titelbild auf <see cref="AmbientBackdrop"/> und <see cref="HeroStage"/> und führt die Effekte über einen
+/// Hauptfenster „Spielebibliothek“ im Stil „Showcase Hero“ (E89). Die Ansicht ordnet an (Titelbereich je Ansicht, in der Liste
+/// per Ziehgriff in der Höhe einstellbar; Werkzeugleiste mit stufenweisem Falten, Liste/Raster/Regal, Detailbereich bzw.
+/// Schublade, Statuszeile), überträgt Umgebungsfarben und Titelbild auf <see cref="AmbientBackdrop"/> und
+/// <see cref="HeroStage"/> und führt die Effekte über einen
 /// <see cref="MotionController"/>: Dauer-Effekte nur bei Stufe „Voll“, sichtbarem, aktivem Fenster und ohne laufendes Spiel,
 /// höchstens 30 Bilder pro Sekunde; der HDR-Moment über <see cref="HdrMomentPlayer"/>. Beim Schließen wird alles entfernt und
 /// das ViewModel freigegeben (meldet sich überall ab).
 /// </summary>
 public partial class MainWindow : ChromeWindow
 {
-    /// <summary>Höhe des Titelbereichs (animiert beim Wechsel der Ansicht und beim Einklappen der Liste).</summary>
+    /// <summary>
+    /// Höhe des Titelbereichs: animiert beim Wechsel der Ansicht und beim Zurücksetzen am Ziehgriff, beim Ziehen und mit den
+    /// Tasten des Griffs sofort.
+    /// </summary>
     public static readonly DependencyProperty HeroHeightProperty = DependencyProperty.Register(
         nameof(HeroHeight), typeof(double), typeof(MainWindow), new PropertyMetadata(220.0, (d, _) => ((MainWindow)d).ApplyVerticalLayout()));
 
@@ -69,7 +73,7 @@ public partial class MainWindow : ChromeWindow
     private ContinuousEffect? _sheen;
     private HeroViewModel? _hero;
     private LibraryViewMode? _appliedView;
-    private bool _listCollapsed;
+    private double? _heroRatio;
     private bool _dark = true;
     private int _toolbarStage;
     private bool _toolbarQueued;
@@ -188,8 +192,10 @@ public partial class MainWindow : ChromeWindow
         OnMotionChanged(this, EventArgs.Empty);
         viewModel.SetWindowActive(_motion.WindowActive);
 
-        // Gemerkte Aufteilung sofort setzen (Sternbreiten); an die tatsächliche Breite angepasst wird beim Laden.
+        // Gemerkte Aufteilung sofort setzen (Sternbreiten); an die tatsächliche Breite angepasst wird beim Laden. Ebenso die
+        // gemerkte Höhe des Titelbereichs der Liste (Anteil an der Fensterhöhe, begrenzt beim Anordnen).
         ApplyDetailsRatio(LibraryLayout.Normalize(viewModel.DetailsRatio));
+        _heroRatio = viewModel.HeroRatio;
         viewModel.SelectInitial();
         ReadTheme();
         ApplyView(viewModel.ViewMode, animate: false);
@@ -461,11 +467,6 @@ public partial class MainWindow : ChromeWindow
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _listScroll = GameList.Template?.FindName("ScrollHost", GameList) as ScrollViewer;
-        if (_listScroll is not null)
-        {
-            _listScroll.ScrollChanged += OnListScrolled;
-        }
-
         ApplyLayout(animate: false);
         FitDetailsColumn();
         if (LibraryMotion.Instance.IsFull)
@@ -513,10 +514,7 @@ public partial class MainWindow : ChromeWindow
         HeroLarge.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
         AutomationCard.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
         DrawerCloseButton.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
-        if (view != LibraryViewMode.List)
-        {
-            _listCollapsed = false;
-        }
+        HeroSplitter.Visibility = view == LibraryViewMode.List ? Visibility.Visible : Visibility.Collapsed;
 
         // Nur die aktive Ansicht hat Daten und eine Auswahl-Bindung (sonst schriebe eine leere Liste die Auswahl auf null).
         Activate(GameList, view == LibraryViewMode.List, vm);
@@ -648,7 +646,16 @@ public partial class MainWindow : ChromeWindow
             vm.HeroDecodeWidth = (int)Math.Ceiling(width * dpi.DpiScaleX);
         }
 
-        var target = ShowcaseLayout.HeroHeight(view, height, _listCollapsed);
+        var target = ShowcaseLayout.HeroHeight(view, height, _heroRatio);
+        if (view == LibraryViewMode.List)
+        {
+            // Bereich des Ziehgriffs für diese Fensterhöhe; sein Wert ist die Höhe, auf die der Titelbereich gerade geht.
+            var (min, max) = ShowcaseLayout.ListHeroRange(height);
+            HeroSplitter.Minimum = min;
+            HeroSplitter.Maximum = max;
+            HeroSplitter.Value = target;
+        }
+
         var duration = animate && _motion is { } motion ? motion.Transition(HeroMotion) : TimeSpan.Zero;
         if (duration > TimeSpan.Zero && Math.Abs(target - HeroHeight) > 0.5)
         {
@@ -682,6 +689,7 @@ public partial class MainWindow : ChromeWindow
         var columnsTop = shelf ? ShowcaseLayout.HeaderTop : ShowcaseLayout.PaneTop;
         ListArea.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop), 0, 0);
         LibrarySplitter.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop + ShowcaseLayout.ToolbarToBody), 0, 0);
+        HeroSplitter.Margin = new Thickness(0, Math.Max(0, hero - ShowcaseLayout.HeroSplitterOverlap - columnsTop), 0, 0);
 
         // Text im Titelbereich: Liste/Raster links vom Detailbereich, Regal links von der Automatik-Karte.
         var width = Root.ActualWidth > 0 ? Root.ActualWidth : Width;
@@ -695,9 +703,6 @@ public partial class MainWindow : ChromeWindow
         LargeOverline.Visibility = overline ? Visibility.Visible : Visibility.Collapsed;
         room += overline ? 0 : 30;
         LargeTitle.MaxHeight = room >= ShowcaseLayout.LargeTitleHeight ? double.PositiveInfinity : Math.Max(48, Math.Floor(room));
-        HeroCompact.Opacity = _listCollapsed ? 0 : 1;
-        HeroCompact.IsHitTestVisible = !_listCollapsed;
-        CompactActions.IsEnabled = !_listCollapsed; // eingeklappt auch nicht per Tab erreichbar
     }
 
     private void ApplyListColumns()
@@ -890,6 +895,39 @@ public partial class MainWindow : ChromeWindow
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Ziehgriff unter dem Titelbereich der Liste bewegt (Ziehen, Taste, UI-Automation): Der Titelbereich folgt sofort, ohne
+    /// Animation. Ab jetzt gilt der neue Anteil an der Fensterhöhe (auch beim Ändern der Fenstergröße); gemerkt wird er erst
+    /// in <see cref="OnHeroSplitterCommitted"/>.
+    /// </summary>
+    private void OnHeroSplitterMoved(object? sender, EventArgs e)
+    {
+        if (_appliedView != LibraryViewMode.List)
+        {
+            return;
+        }
+
+        var height = Root.ActualHeight > 0 ? Root.ActualHeight : Height;
+        _heroRatio = ShowcaseLayout.ListHeroRatio(HeroSplitter.Value, height);
+        BeginAnimation(HeroHeightProperty, null);
+        HeroHeight = ShowcaseLayout.ListHeroHeight(height, _heroRatio);
+    }
+
+    /// <summary>Ziehen beendet, Taste oder UI-Automation: Anteil merken (gesammelt gespeichert, nach einem bloßen Klick nie).</summary>
+    private void OnHeroSplitterCommitted(object? sender, EventArgs e)
+    {
+        _viewModel?.SetHeroRatio(_heroRatio);
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateLight); // Spitzlicht nach der neuen Höhe
+    }
+
+    /// <summary>Doppelklick oder Eingabetaste am Ziehgriff: zurück zur Standardhöhe (nichts mehr gemerkt), mit Bewegung nach Stufe.</summary>
+    private void OnHeroSplitterReset(object? sender, EventArgs e)
+    {
+        _heroRatio = null;
+        _viewModel?.SetHeroRatio(null);
+        ApplyLayout(animate: true);
+    }
+
     /// <summary>Klick auf die Kachel „Symbol“ im Detailbereich: öffnet das Menü „Symbol ändern…“ darunter (E86).</summary>
     private void OnDetailIconClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
 
@@ -911,20 +949,15 @@ public partial class MainWindow : ChromeWindow
 
     // ---------- Liste, Raster, Regal ----------
 
-    private void OnListScrolled(object sender, ScrollChangedEventArgs e)
+    /// <summary>
+    /// Bildschirmfoto und Tests: Liste um so viele Zeilen nach unten scrollen. Der Titelbereich bleibt dabei, wie er ist
+    /// (kein Einklappen beim Scrollen mehr, Wunsch des Nutzers 2026-10-16).
+    /// </summary>
+    public void ScrollListBy(int rows)
     {
-        if (_appliedView != LibraryViewMode.List || e.VerticalChange == 0)
+        if ((_listScroll ?? GameList.Template?.FindName("ScrollHost", GameList) as ScrollViewer) is { } scroll)
         {
-            return;
-        }
-
-        // Beim Scrollen klappt der Titelbereich auf 120 px zusammen (mehr Zeilen); ganz oben wieder auf.
-        var offset = ((ScrollViewer)sender).VerticalOffset;
-        var collapse = offset > 60 || (offset > 0 && _listCollapsed);
-        if (collapse != _listCollapsed)
-        {
-            _listCollapsed = collapse;
-            ApplyLayout(animate: true);
+            scroll.ScrollToVerticalOffset(scroll.VerticalOffset + (rows * ShowcaseLayout.ListRowHeight));
         }
     }
 
@@ -1489,9 +1522,9 @@ public partial class MainWindow : ChromeWindow
     /// <summary>Tiefenwirkung: Zeiger über dem Titelbild verschiebt die Ebenen (nur Dauer-Effekte erlaubt, gedrosselt auf 30 Hz).</summary>
     private void OnPointerMove(object sender, MouseEventArgs e)
     {
-        if (_motion is not { ContinuousAllowed: true } || Hero.ActualWidth <= 0)
+        if (_motion is not { ContinuousAllowed: true } || Hero.ActualWidth <= 0 || HeroSplitter.IsDragging)
         {
-            return;
+            return; // beim Ziehen am Griff bleibt das Bild stehen
         }
 
         var p = e.GetPosition(Hero);
@@ -1596,11 +1629,6 @@ public partial class MainWindow : ChromeWindow
         _motion?.Dispose();
         _moment = null;
         _motion = null;
-        if (_listScroll is not null)
-        {
-            _listScroll.ScrollChanged -= OnListScrolled;
-        }
-
         if (_hero is not null)
         {
             _hero.PropertyChanged -= OnHeroPropertyChanged;

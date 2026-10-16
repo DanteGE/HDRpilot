@@ -92,6 +92,13 @@ public sealed class AppSettings
     public double? LibraryPaneRatio { get; set; }
 
     /// <summary>
+    /// Höhe des Titelbereichs in der Liste der Spielebibliothek als Anteil der Fensterhöhe (0 bis 1), gemerkt erst, wenn der
+    /// Ziehgriff gezogen oder per Tastatur verstellt wurde (Wunsch des Nutzers 2026-10-16). Null: Standard (ein Drittel). Die
+    /// Oberfläche begrenzt die Höhe auf das Fenster, der gemerkte Anteil bleibt dabei unverändert.
+    /// </summary>
+    public double? LibraryHeroRatio { get; set; }
+
+    /// <summary>
     /// Gemerkte Ansicht der Spielebibliothek (E89): "List" (Standard), "Grid" (Raster) oder "Shelf" (Regal). Text statt
     /// Aufzählung wie bei <see cref="LibrarySortOrder"/>; Unbekanntes gilt als Liste.
     /// </summary>

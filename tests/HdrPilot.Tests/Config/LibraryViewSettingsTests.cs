@@ -3,7 +3,10 @@ using HdrPilot.Tests.TestSupport;
 
 namespace HdrPilot.Tests.Config;
 
-/// <summary>Einstellungen der Spielebibliothek (Sortierung, Spaltenbreite): ältere und neuere config.json bleiben lesbar.</summary>
+/// <summary>
+/// Einstellungen der Spielebibliothek (Sortierung, Spaltenbreite, Höhe des Titelbereichs): ältere und neuere config.json
+/// bleiben lesbar.
+/// </summary>
 public sealed class LibraryViewSettingsTests
 {
     private const string Path = @"C:\Users\Test\AppData\Roaming\HdrPilot\config.json";
@@ -52,6 +55,42 @@ public sealed class LibraryViewSettingsTests
         var reloaded = Service().Current.Settings;
         Assert.Equal("LastPlayed", reloaded.LibrarySortOrder);
         Assert.Equal(0.412, reloaded.LibraryDetailsRatio);
+    }
+
+    [Fact]
+    public void Config_without_the_hero_height_loads_unchanged_and_the_hero_height_survives_a_restart()
+    {
+        // Konfiguration von vor dem Ziehgriff (Wunsch des Nutzers 2026-10-16): alles andere bleibt, wie es ist.
+        _fs.AddFile(Path, """
+            {
+              "version": 1,
+              "settings": { "pollIntervalMs": 800, "libraryPaneRatio": 0.31, "libraryView": "Grid", "librarySortOrder": "LastPlayed" },
+              "games": [ { "source": "Steam", "sourceId": "570", "name": "Dota 2", "hdrAuto": true } ]
+            }
+            """);
+        var service = Service();
+
+        Assert.Null(service.LoadWarning);
+        var settings = service.Current.Settings;
+        Assert.Null(settings.LibraryHeroRatio);
+        Assert.Equal((800, 0.31, "Grid", "LastPlayed"), (settings.PollIntervalMs, settings.LibraryPaneRatio, settings.LibraryView, settings.LibrarySortOrder));
+        Assert.True(Assert.Single(service.Current.Games).HdrAuto);
+
+        // Ohne gemerkte Höhe taucht das Feld beim Speichern nicht auf.
+        service.Update(c => c.Settings.GracePeriodSeconds = 12);
+        Assert.DoesNotContain("libraryHeroRatio", _fs.ReadAllText(Path), StringComparison.Ordinal);
+
+        // Gemerkt: steht in der Datei und kommt nach einem Neustart unverändert zurück, die übrigen Werte auch.
+        service.Update(c => c.Settings.LibraryHeroRatio = 0.4584);
+        Assert.Contains("\"libraryHeroRatio\": 0.4584", _fs.ReadAllText(Path), StringComparison.Ordinal);
+        var reloaded = Service().Current;
+        Assert.Equal(0.4584, reloaded.Settings.LibraryHeroRatio);
+        Assert.Equal((800, 0.31, "Grid", 12), (reloaded.Settings.PollIntervalMs, reloaded.Settings.LibraryPaneRatio, reloaded.Settings.LibraryView, reloaded.Settings.GracePeriodSeconds));
+        Assert.Equal("Dota 2", Assert.Single(reloaded.Games).Name);
+
+        // Zurück zum Standard: Feld entfällt wieder.
+        service.Update(c => c.Settings.LibraryHeroRatio = null);
+        Assert.DoesNotContain("libraryHeroRatio", _fs.ReadAllText(Path), StringComparison.Ordinal);
     }
 
     [Fact]

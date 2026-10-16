@@ -18,10 +18,10 @@ namespace HdrPilot.App.ViewModels.Library;
 /// <para>
 /// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
 /// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert und sortiert wird über eine
-/// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung und Breite des Detailbereichs
-/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryPaneRatio). Die HDR-Unterstützung
-/// laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“) wird beim Öffnen und nach jedem Abgleich aus dem
-/// Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
+/// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung, Breite des Detailbereichs und Höhe
+/// des Titelbereichs der Liste merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryPaneRatio,
+/// AppSettings.LibraryHeroRatio). Die HDR-Unterstützung laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“)
+/// wird beim Öffnen und nach jedem Abgleich aus dem Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
 /// </para>
 /// </summary>
 public sealed partial class LibraryViewModel : ObservableObject, IDisposable
@@ -32,7 +32,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>„Angesehen“ wird gesammelt gespeichert (Blättern mit den Pfeiltasten schreibt nicht je Spiel).</summary>
     public static readonly TimeSpan SeenDelay = TimeSpan.FromMilliseconds(400);
 
-    /// <summary>Die Spaltenbreite wird gesammelt gespeichert (Verschieben mit den Pfeiltasten schreibt nicht je Schritt).</summary>
+    /// <summary>
+    /// Spaltenbreite und Höhe des Titelbereichs werden gesammelt gespeichert (Verschieben mit den Pfeiltasten schreibt nicht
+    /// je Schritt).
+    /// </summary>
     public static readonly TimeSpan LayoutDelay = TimeSpan.FromMilliseconds(400);
 
     private static readonly StringComparer NameOrder = StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true);
@@ -47,7 +50,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private IDisposable? _seenDelay;
     private IDisposable? _layoutDelay;
     private bool _layoutPending;
+    private bool _heroPending;
     private double? _detailsRatio;
+    private double? _heroRatio;
     private SortOption _selectedSort;
 
     private AppConfig? _syncedConfig;
@@ -94,12 +99,13 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         _selectedSource = _allSources;
         SourceOptions = [_allSources];
 
-        // Sortierung und Spaltenbreite aus der Konfiguration (unbekannte oder fehlende Werte: Standard).
+        // Sortierung, Spaltenbreite und Höhe des Titelbereichs aus der Konfiguration (unbekannte oder fehlende Werte: Standard).
         var settings = _context.Config.Settings;
         SortOptions = GameSorting.CreateOptions();
         var order = GameSorting.Parse(settings.LibrarySortOrder);
         _selectedSort = SortOptions.First(o => o.Order == order);
         _detailsRatio = settings.LibraryPaneRatio;
+        _heroRatio = settings.LibraryHeroRatio;
 
         GamesView = new ListCollectionView(Games) { Filter = Matches };
         ApplySortToView();
@@ -288,7 +294,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         set => SelectedSortOption = SortOptions.First(o => o.Order == value);
     }
 
-    // ---------- Spaltenbreite ----------
+    // ---------- Spaltenbreite, Höhe des Titelbereichs ----------
 
     /// <summary>Gemerkter Anteil des Detailbereichs (null: Standard). Das Fenster begrenzt ihn auf seine Größe.</summary>
     public double? DetailsRatio => _detailsRatio;
@@ -307,6 +313,27 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
         _detailsRatio = value;
         _layoutPending = true;
+        _layoutDelay?.Dispose();
+        _layoutDelay = _context.Ui.Delay(LayoutDelay, FlushLayout);
+    }
+
+    /// <summary>Gemerkte Höhe des Titelbereichs der Liste als Anteil der Fensterhöhe (null: Standard, ein Drittel).</summary>
+    public double? HeroRatio => _heroRatio;
+
+    /// <summary>
+    /// Neue Höhe des Titelbereichs der Liste nach dem Ziehen am Griff oder per Tastatur (null: zurück zum Standard). Auf
+    /// vier Stellen gerundet (bei 1440 px Fensterhöhe unter 0,1 px), gespeichert wie <see cref="SetDetailsRatio"/>.
+    /// </summary>
+    public void SetHeroRatio(double? ratio)
+    {
+        double? value = ratio is { } r && double.IsFinite(r) ? Math.Round(Math.Clamp(r, 0.01, 0.99), 4) : null;
+        if (_disposed || Nullable.Equals(value, _heroRatio))
+        {
+            return;
+        }
+
+        _heroRatio = value;
+        _heroPending = true;
         _layoutDelay?.Dispose();
         _layoutDelay = _context.Ui.Delay(LayoutDelay, FlushLayout);
     }
@@ -793,7 +820,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         FlushSeen(); // Vorgemerktes „angesehen“ nicht verlieren.
-        FlushLayout(); // ebenso eine gerade verschobene Spaltenbreite
+        FlushLayout(); // ebenso eine gerade verschobene Spaltenbreite bzw. Höhe des Titelbereichs
         _disposed = true;
         _lifetime.Cancel();
         _searchDelay?.Dispose();
@@ -967,14 +994,30 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         _layoutDelay?.Dispose();
         _layoutDelay = null;
-        if (!_layoutPending)
+        if (!_layoutPending && !_heroPending)
         {
             return;
         }
 
+        // Nur, was sich geändert hat: Die andere Angabe bleibt, wie sie in der Konfiguration steht.
+        var pane = _layoutPending;
+        var hero = _heroPending;
         _layoutPending = false;
+        _heroPending = false;
         var ratio = _detailsRatio;
-        _ = WriteAsync(c => c.Settings.LibraryPaneRatio = ratio);
+        var heroRatio = _heroRatio;
+        _ = WriteAsync(c =>
+        {
+            if (pane)
+            {
+                c.Settings.LibraryPaneRatio = ratio;
+            }
+
+            if (hero)
+            {
+                c.Settings.LibraryHeroRatio = heroRatio;
+            }
+        });
     }
 
     private void UpdateVisibleCount()

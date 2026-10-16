@@ -1636,6 +1636,50 @@
         </Setter>
     </Style>
 
+    <!--
+        Ziehgriff unter dem Titelbereich der Liste (lib:HeroSplitter): wie Lib.Splitter, nur waagerecht. In Ruhe ein dezenter
+        Griff in der Mitte der Liste, beim Überfahren, Ziehen oder mit Tastaturfokus leuchtet er in der Akzentfarbe, dazu eine
+        feine Linie über die Breite der Liste. Mit Tastatur bedienbar (Pfeiltasten oben/unten, siehe HeroSplitter).
+    -->
+    <Style x:Key="Lib.HeroSplitter" TargetType="lib:HeroSplitter">
+        <Setter Property="Height" Value="{x:Static lib:ShowcaseLayout.HeroSplitterHeight}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Cursor" Value="SizeNS" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:HeroSplitter">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Border x:Name="Line" Height="1" VerticalAlignment="Center" Margin="18,0" Background="{DynamicResource Hp.Brush.LineStrong}" Opacity="0" />
+                        <Border x:Name="Rest" Width="36" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource Hp.Brush.LineStrong}" />
+                        <Border x:Name="Grip" Width="52" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Abschnitt des Detailbereichs (Prototyp .sec): ohne eigene Fläche, Überschrift mit auslaufender Linie -->
     <Style x:Key="Lib.Section" TargetType="Border">
         <Setter Property="Background" Value="Transparent" />

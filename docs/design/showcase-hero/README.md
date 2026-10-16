@@ -38,8 +38,10 @@ Online liegen alle Entwurfsrunden zum Vergleich (privat, nur für den Nutzer):
   soll premium, detailreich und kräftig sichtbar sein. Schlichte Entwürfe hat der Nutzer als „nicht professionell
   genug, Effekte zu dezent“ verworfen.
 - **Ansichten:**
-  - **Liste** ist der Standard und Pflicht: kompakt, sortierbar, mit „HDR automatisch“ je Zeile und einem schlanken
-    Titelbereich des gewählten Spiels oben.
+  - **Liste** ist der Standard und Pflicht: kompakt, sortierbar, mit „HDR automatisch“ je Zeile und dem Titelbereich
+    des gewählten Spiels oben. Dessen Höhe stellt der Nutzer per Ziehgriff zwischen Titelbereich und Liste ein
+    (Wunsch vom 2026-10-16, gemerkt, Doppelklick: Standard). Standard ist ein Drittel der Fensterhöhe; beim Scrollen
+    bleibt die Höhe, wie sie ist (anders als im Prototyp, der auf 120 px einklappt).
   - Dazu **Regal** (Titelbild und Kachelreihe) und **Raster**.
   - Die gewählte Ansicht wird gemerkt.
 - **Bilder:**

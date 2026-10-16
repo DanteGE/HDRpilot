@@ -87,6 +87,74 @@ public sealed class LibraryLayoutTests
     });
 
     [Fact]
+    public void Hero_ratio_is_saved_once_after_moving_and_on_close() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+        Assert.Null(vm.HeroRatio);
+        var updates = context.Updates;
+
+        // Mehrere Schritte mit den Pfeiltasten am Ziehgriff: ein Schreibvorgang nach der Wartezeit, vier Stellen.
+        vm.SetHeroRatio(0.4);
+        vm.SetHeroRatio(0.41234567);
+        Assert.Equal(updates, context.Updates);
+        Assert.Equal(0.4123, vm.HeroRatio);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(updates + 1, context.Updates);
+        Assert.Equal(0.4123, context.Config.Settings.LibraryHeroRatio);
+        Assert.Null(context.Config.Settings.LibraryPaneRatio); // die Breite des Detailbereichs bleibt unberührt
+
+        // Gleicher Wert: nichts zu tun. Unsinnige Werte: begrenzt bzw. Standard.
+        vm.SetHeroRatio(0.4123);
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+        vm.SetHeroRatio(7.5);
+        Assert.Equal(0.99, vm.HeroRatio);
+        vm.SetHeroRatio(double.NaN);
+        Assert.Null(vm.HeroRatio);
+
+        // Doppelklick (Standard) nach einer Änderung und gleich danach schließen: wird beim Schließen noch gespeichert.
+        vm.SetHeroRatio(0.5);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(0.5, context.Config.Settings.LibraryHeroRatio);
+        vm.SetHeroRatio(null);
+        vm.Dispose();
+        Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+    });
+
+    [Fact]
+    public void Hero_and_details_ratios_are_read_from_the_configuration_and_only_the_changed_one_is_written() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        context.ConfigService.Update(c =>
+        {
+            c.Settings.LibraryHeroRatio = 0.45;
+            c.Settings.LibraryPaneRatio = 0.3;
+        });
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+        Assert.Equal(0.45, vm.HeroRatio);
+        Assert.Equal(0.3, vm.DetailsRatio);
+
+        // Beide geändert: ein Schreibvorgang mit beiden.
+        var updates = context.Updates;
+        vm.SetHeroRatio(0.5);
+        vm.SetDetailsRatio(0.32);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(updates + 1, context.Updates);
+        Assert.Equal((0.5, 0.32), (context.Config.Settings.LibraryHeroRatio, context.Config.Settings.LibraryPaneRatio));
+
+        // Nur die Breite geändert: Die Höhe wird nicht mit dem Stand des Fensters überschrieben (und umgekehrt).
+        context.ConfigService.Update(c => c.Settings.LibraryHeroRatio = 0.6);
+        vm.SetDetailsRatio(0.33);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal((0.6, 0.33), (context.Config.Settings.LibraryHeroRatio, context.Config.Settings.LibraryPaneRatio));
+        context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = 0.4);
+        vm.SetHeroRatio(0.55);
+        vm.Dispose();
+        Assert.Equal((0.55, 0.4), (context.Config.Settings.LibraryHeroRatio, context.Config.Settings.LibraryPaneRatio));
+    });
+
+    [Fact]
     public void Details_ratio_is_read_from_the_configuration() => Sta.Run(() =>
     {
         var context = SampleContext();

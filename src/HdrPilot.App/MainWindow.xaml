@@ -1022,6 +1022,17 @@
                 <ColumnDefinition x:Name="DetailsColumn" Width="35*" MinWidth="{x:Static vm:LibraryLayout.DetailsMinWidth}" MaxWidth="{x:Static lib:ShowcaseLayout.MaxPaneWidth}" />
             </Grid.ColumnDefinitions>
 
+            <!--
+                Ziehgriff zwischen Titelbereich und Liste (nur Liste, Wunsch des Nutzers 2026-10-16): direkt unter dem Inhalt
+                des Titelbereichs, über der Werkzeugleiste. Lage, Bereich und Merken (AppSettings.LibraryHeroRatio) setzt
+                MainWindow.xaml.cs; in der Tab-Reihenfolge vor der Werkzeugleiste.
+            -->
+            <lib:HeroSplitter x:Name="HeroSplitter" Style="{StaticResource Lib.HeroSplitter}" Margin="0,100,0,0"
+                              Moved="OnHeroSplitterMoved" Committed="OnHeroSplitterCommitted" ResetRequested="OnHeroSplitterReset"
+                              AutomationProperties.AutomationId="HeroSplitter" AutomationProperties.Name="{x:Static res:LibraryStrings.HeroSplitter_Name}"
+                              AutomationProperties.HelpText="{x:Static res:LibraryStrings.HeroSplitter_Help}"
+                              ToolTip="{x:Static res:LibraryStrings.HeroSplitter_Tooltip}" ToolTipService.InitialShowDelay="900" />
+
             <!-- Liste mit Werkzeugleiste, Hinweisen und den drei Ansichten -->
             <Grid x:Name="ListArea" Margin="0,114,0,0">
                 <Grid.RowDefinitions>

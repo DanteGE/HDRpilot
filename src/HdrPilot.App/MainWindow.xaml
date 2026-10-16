@@ -1028,7 +1028,7 @@
                 MainWindow.xaml.cs; in der Tab-Reihenfolge vor der Werkzeugleiste.
             -->
             <lib:HeroSplitter x:Name="HeroSplitter" Style="{StaticResource Lib.HeroSplitter}" Margin="0,100,0,0"
-                              Moved="OnHeroSplitterMoved" Committed="OnHeroSplitterCommitted" ResetRequested="OnHeroSplitterReset"
+                              Moved="OnHeroSplitterMoved" Committed="OnHeroSplitterCommitted" Discarded="OnHeroSplitterDiscarded" ResetRequested="OnHeroSplitterReset"
                               AutomationProperties.AutomationId="HeroSplitter" AutomationProperties.Name="{x:Static res:LibraryStrings.HeroSplitter_Name}"
                               AutomationProperties.HelpText="{x:Static res:LibraryStrings.HeroSplitter_Help}"
                               ToolTip="{x:Static res:LibraryStrings.HeroSplitter_Tooltip}" ToolTipService.InitialShowDelay="900" />

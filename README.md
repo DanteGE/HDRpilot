@@ -88,7 +88,11 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   - **Liste** (Standard): je Spiel eine Zeile mit Vorschau, Name, Quelle, „Zuletzt gespielt“, HDR-Kennzeichen und dem
     Schalter **HDR automatisch**. Ein Klick auf eine Spaltenüberschrift sortiert. Links über der Liste wählst du die
     Vorschau: **16:9-Vorschaubild** oder **Symbol**. In schmalen Fenstern fallen erst die Quelle, dann die HDR-Spalte
-    und „Zuletzt gespielt“ weg; beim Scrollen wird der Titelbereich flacher.
+    und „Zuletzt gespielt“ weg. Wie hoch der Titelbereich über der Liste ist, stellst du mit dem Griff an seiner
+    Unterkante ein: ziehen oder, wenn der Griff den Fokus hat, Pfeil hoch/runter (Bild auf/ab in größeren Schritten,
+    Pos1/Ende kleinste bzw. größte Höhe); Esc bricht das Ziehen ab, Doppelklick oder Eingabetaste stellen den Standard
+    wieder her (ein Drittel der Fensterhöhe). HDRpilot merkt sich die Höhe; darunter bleiben immer mindestens fünf ganze
+    Zeilen der Liste zu sehen. Beim Scrollen bleibt die Höhe, wie sie ist.
   - **Raster**: Cover im Format 2:3. Spaltenzahl und Kachelgröße richten sich nach der Fensterbreite, im Vollbild
     genauso wie im kleinen Fenster; nichts wird gestreckt oder abgeschnitten. Der Schalter „HDR automatisch“ erscheint
     an der gewählten Kachel und beim Zeigen mit der Maus.

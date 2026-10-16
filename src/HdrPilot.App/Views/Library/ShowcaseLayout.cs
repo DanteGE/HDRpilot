@@ -55,10 +55,12 @@ public static class ShowcaseLayout
     public const double PaneGap = 24;
 
     /// <summary>
-    /// Kleinster Titelbereich der Liste: Unter dem Kopf (bis 98 px) bleiben 66 px für Logo bzw. Name, Kennzeile, Angaben und
-    /// den 50 px hohen Knopf „Starten“ (Innenrand unten 16 px); so klein war er bisher in niedrigen Fenstern.
+    /// Kleinster Titelbereich der Liste (und des Rasters in niedrigen Fenstern): Unter dem Kopf (bis 98 px) bleiben über dem
+    /// unteren Innenrand (16 px) 72 px, so hoch wie die Symbol-Kachel vor dem Namen eines Spiels ohne Logo (fest 72 × 72);
+    /// Logo bzw. Name, Kennzeile, Angaben und der 50 px hohe Knopf „Starten“ brauchen weniger. Mit 180 px (66 px Platz) war
+    /// der untere Rand der Kachel abgeschnitten.
     /// </summary>
-    public const double MinListHero = 180;
+    public const double MinListHero = 98 + 72 + 16;
 
     /// <summary>Titelbereich der Liste ohne gemerkte Höhe: ein Drittel der Fensterhöhe (Wunsch des Nutzers 2026-10-16).</summary>
     public const double DefaultListHeroRatio = 1.0 / 3;
@@ -75,12 +77,15 @@ public static class ShowcaseLayout
     /// <summary>Werkzeugleiste in zwei Zeilen (Stufe 7 in schmalen Fenstern): Ansicht und Aktionen über den Filtern (40 + 8 + 40).</summary>
     public const double StackedToolbarHeight = 88;
 
+    /// <summary>Werkzeugleiste in einer Zeile.</summary>
+    public const double ToolbarHeight = 40;
+
     /// <summary>
     /// Luft zwischen Werkzeugleiste und Inhalt darunter (<see cref="ToolbarToBody"/> ohne die 40 px der Leiste). Genauso viel
     /// Luft bleibt in Liste und Raster über der Leiste bis zur Unterkante des Titelbilds (Wunsch des Nutzers 2026-10-16: oben
     /// so viel wie unten).
     /// </summary>
-    public const double ToolbarGap = ToolbarToBody - 40;
+    public const double ToolbarGap = ToolbarToBody - ToolbarHeight;
 
     /// <summary>
     /// Ziehgriff zwischen Titelbereich und Liste (HeroSplitter): liegt mit seiner Mitte genau auf der Grenze, der Unterkante
@@ -130,15 +135,17 @@ public static class ShowcaseLayout
 
     /// <summary>
     /// Höhe des Titelbereichs: Liste nach <see cref="ListHeroHeight"/> (einstellbar, Standard ein Drittel der Fensterhöhe,
-    /// beim Scrollen unverändert); Raster clamp(H·0,24; 196; 260); Regal clamp(H·0,62; 500; 660). Im Regal wächst er bei
-    /// sehr hohen Fenstern (über 1122 px, etwa 3440×1440) auf H − 462 mit: Die größte Kachelreihe (340 px) samt
-    /// Seitenangabe liegt dann unten an, ohne leeres Band darunter (bei H·0,62 blieben im Vollbild bis 135 px frei). In
-    /// niedrigen Fenstern (etwa 1280×800 bei 110 % Skalierung, 727 px) gibt er nach, bis die kleinste Kachel ganz über der
-    /// Statuszeile steht (die Reihe beginnt am unteren Rand des Titelbilds und endet <see cref="BodyBottom"/> über dem
-    /// Fensterrand), höchstens bis 440 px.
+    /// beim Scrollen unverändert); Raster nach <see cref="GridHeroHeight"/> (clamp(H·0,24; 196; 260), in niedrigen Fenstern
+    /// weniger); Regal clamp(H·0,62; 500; 660). Im Regal wächst er bei sehr hohen Fenstern (über 1122 px, etwa 3440×1440) auf
+    /// H − 462 mit: Die größte Kachelreihe (340 px) samt Seitenangabe liegt dann unten an, ohne leeres Band darunter (bei
+    /// H·0,62 blieben im Vollbild bis 135 px frei). In niedrigen Fenstern (etwa 1280×800 bei 110 % Skalierung, 727 px) gibt
+    /// er nach, bis die kleinste Kachel ganz über der Statuszeile steht (die Reihe beginnt am unteren Rand des Titelbilds und
+    /// endet <see cref="BodyBottom"/> über dem Fensterrand), höchstens bis 440 px.
     /// </summary>
     /// <param name="listRatio">Gemerkte Höhe des Titelbereichs der Liste als Anteil der Fensterhöhe (null: Standard).</param>
-    public static double HeroHeight(LibraryViewMode view, double windowHeight, double? listRatio = null)
+    /// <param name="notices">Hinweise zwischen Werkzeugleiste und Liste bzw. Raster (Fehler beim Einlesen, Vorschläge; 0: keine).</param>
+    /// <param name="gridRow">Raster: Werkzeugleiste und Kachel zusammen, wie angeordnet (0: Kacheln noch nicht gemessen).</param>
+    public static double HeroHeight(LibraryViewMode view, double windowHeight, double? listRatio = null, double notices = 0, double gridRow = 0)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
         var value = view switch
@@ -146,38 +153,66 @@ public static class ShowcaseLayout
             LibraryViewMode.Shelf => Math.Min(
                 Math.Max(Math.Clamp(h * 0.62, 500, 660), h - 462),
                 Math.Max(MinShelfHero, h - BodyBottom - ShelfPadding - MinShelfTile)),
-            LibraryViewMode.Grid => Math.Clamp(h * 0.24, 196, 260),
-            _ => ListHeroHeight(h, listRatio),
+            LibraryViewMode.Grid => GridHeroHeight(h, gridRow, notices),
+            _ => ListHeroHeight(h, listRatio, notices),
         };
         return Math.Round(value);
     }
 
     /// <summary>
-    /// Titelbereich der Liste (Wunsch des Nutzers 2026-10-16): gemerkter Anteil an der Fensterhöhe (Standard
-    /// <see cref="DefaultListHeroRatio"/>, etwa 267 px bei 800, 360 bei 1080 und 480 bei 1440 px), in ganzen Pixeln und auf
-    /// <see cref="ListHeroRange"/> begrenzt. Der Anteil bleibt gemerkt, wie er ist: In einem niedrigeren Fenster gilt die
-    /// Grenze, in einem höheren wieder die gewählte Höhe.
+    /// Titelbereich des Rasters: clamp(H·0,24; 196; 260). In niedrigen Fenstern gibt er nach, bis die erste Kachelreihe ganz
+    /// über der Statuszeile steht (darüber die Werkzeugleiste mit gleicher Luft oben und unten, die Hinweise und der
+    /// Innenabstand des Rasters), höchstens bis <see cref="MinListHero"/>: etwa bei 1000×620 und 1178×620 (Startgröße auf
+    /// 1920×1080 bei 150 % und auf 1280×720) mit zweizeiliger Werkzeugleiste.
     /// </summary>
-    public static double ListHeroHeight(double windowHeight, double? ratio)
+    /// <param name="gridRow">Werkzeugleiste (ein- oder zweizeilig) und Kachel zusammen, wie angeordnet (0: Kacheln noch nicht gemessen).</param>
+    /// <param name="notices">Hinweise zwischen Werkzeugleiste und Raster (0: keine).</param>
+    public static double GridHeroHeight(double windowHeight, double gridRow, double notices = 0)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
-        var (min, max) = ListHeroRange(h);
+        var hero = Math.Clamp(h * 0.24, 196, 260);
+        if (double.IsFinite(gridRow) && gridRow > 0)
+        {
+            // Über der Leiste so viel Luft wie unter ihr bis zur ersten Kachelreihe (ToolbarTop), dann die Kachel bis zum
+            // unteren Rand des Rasters.
+            var below = (2 * (ToolbarGap + GridPaddingTop)) + gridRow + Notices(notices) + PaneBottom;
+            hero = Math.Min(hero, Math.Max(MinListHero, Math.Floor(h - below)));
+        }
+
+        return Math.Round(hero);
+    }
+
+    /// <summary>
+    /// Titelbereich der Liste (Wunsch des Nutzers 2026-10-16): gemerkter Anteil an der Fensterhöhe (Standard
+    /// <see cref="DefaultListHeroRatio"/>, etwa 267 px bei 800, 360 bei 1080 und 480 bei 1440 px), in ganzen Pixeln und auf
+    /// <see cref="ListHeroRange"/> begrenzt. Der Anteil bleibt gemerkt, wie er ist: In einem niedrigeren Fenster (oder mit
+    /// Hinweisen über der Liste) gilt die Grenze, in einem höheren wieder die gewählte Höhe.
+    /// </summary>
+    /// <param name="notices">Hinweise zwischen Werkzeugleiste und Liste (0: keine), siehe <see cref="ListHeroRange"/>.</param>
+    public static double ListHeroHeight(double windowHeight, double? ratio, double notices = 0)
+    {
+        var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
+        var (min, max) = ListHeroRange(h, notices);
         return Math.Clamp(Math.Round(NormalizeListHeroRatio(ratio) * h), min, max);
     }
 
     /// <summary>
     /// Kleinste und größte Höhe des Titelbereichs der Liste: mindestens <see cref="MinListHero"/>; höchstens so hoch, dass
-    /// darunter Ziehgriff, Werkzeugleiste (auch zweizeilig, <see cref="StackedToolbarHeight"/>), Kopf der Liste,
-    /// <see cref="MinListRows"/> ganze Zeilen und die Statuszeile Platz behalten. Das sind H − 416, etwa 311 px bei 727,
-    /// 566 bei 982 und 893 bei 1309 px Fensterhöhe; mit einzeiliger Werkzeugleiste bleiben sechs Zeilen.
+    /// darunter Ziehgriff, Werkzeugleiste (auch zweizeilig, <see cref="StackedToolbarHeight"/>), die Hinweise (Fehler beim
+    /// Einlesen, Vorschläge, auch aufgeklappt), Kopf der Liste, <see cref="MinListRows"/> ganze Zeilen und die Statuszeile
+    /// Platz behalten. Ohne Hinweise sind das H − 416, etwa 311 px bei 727, 566 bei 982 und 893 bei 1309 px Fensterhöhe;
+    /// mit einzeiliger Werkzeugleiste bleiben sechs Zeilen.
     /// </summary>
-    public static (double Min, double Max) ListHeroRange(double windowHeight)
+    /// <param name="notices">Höhe der Hinweise über der Liste, wie angeordnet (0: keine).</param>
+    public static (double Min, double Max) ListHeroRange(double windowHeight, double notices = 0)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
-        var below = ToolbarTop(LibraryViewMode.List, 0) + StackedToolbarHeight + ToolbarGap + ListHeaderHeight
+        var below = ToolbarTop(LibraryViewMode.List, 0) + StackedToolbarHeight + Notices(notices) + ToolbarGap + ListHeaderHeight
             + (MinListRows * ListRowHeight) + PaneBottom;
         return (MinListHero, Math.Max(MinListHero, Math.Floor(h - below)));
     }
+
+    private static double Notices(double notices) => double.IsFinite(notices) && notices > 0 ? notices : 0;
 
     /// <summary>Gemerkter Anteil, bereinigt: fehlend oder unsinnig (nicht zwischen 0 und 1) ergibt den Standard.</summary>
     public static double NormalizeListHeroRatio(double? ratio) =>

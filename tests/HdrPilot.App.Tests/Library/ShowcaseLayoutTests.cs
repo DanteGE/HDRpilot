@@ -123,9 +123,11 @@ public sealed class ShowcaseLayoutTests
     {
         var (min, max) = ShowcaseLayout.ListHeroRange(height);
 
-        // Kleinster Titelbereich: Unter dem Kopf (98 px) bleiben 66 px für Logo, Angaben und den 50 px hohen Knopf.
+        // Kleinster Titelbereich: Unter dem Kopf (98 px) bleiben über dem unteren Innenrand 72 px, so hoch wie die
+        // Symbol-Kachel eines Spiels ohne Logo (mit 180 px waren es 66, die Kachel war unten abgeschnitten); Logo, Angaben
+        // und der 50 px hohe Knopf brauchen weniger.
         Assert.Equal(ShowcaseLayout.MinListHero, min);
-        Assert.True(min - 98 - 16 >= 50, "Inhalt des Titelbereichs " + (min - 98 - 16));
+        Assert.True(min - 98 - 16 >= 72, "Inhalt des Titelbereichs " + (min - 98 - 16));
 
         // Größter: Ziehgriff, Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze Zeilen und die Statuszeile
         // bleiben (H − 416).
@@ -138,6 +140,63 @@ public sealed class ShowcaseLayoutTests
         Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99));
         Assert.Equal(min, ShowcaseLayout.ListHeroHeight(height, 0.01));
         Assert.InRange(ShowcaseLayout.ListHeroHeight(height, null), min, max);
+    }
+
+    [Theory]
+    [InlineData(727, 60)] // Fehler beim Einlesen (zugeklappt)
+    [InlineData(982, 128)] // Fehler und Vorschläge
+    [InlineData(982, 372)] // beide aufgeklappt
+    [InlineData(1309, 250)]
+    public void Showcase_list_hero_range_keeps_five_rows_below_the_notices(double height, double notices)
+    {
+        // Prüfung 2026-10-16: Die Hinweise liegen zwischen Werkzeugleiste und Liste; ohne sie in der Rechnung blieben beim
+        // größten Titelbereich mit Hinweisen nur etwa drei ganze Zeilen, aufgeklappt keine.
+        var (min, max) = ShowcaseLayout.ListHeroRange(height, notices);
+        Assert.Equal(ShowcaseLayout.MinListHero, min);
+        Assert.Equal(Math.Max(min, height - 416 - notices), max);
+        var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max) + ShowcaseLayout.StackedToolbarHeight + notices + 10;
+        var rows = height - ShowcaseLayout.PaneBottom - listTop - ShowcaseLayout.ListHeaderHeight;
+        Assert.True(max == min || rows >= ShowcaseLayout.MinListRows * ShowcaseLayout.ListRowHeight, $"H {height}: {rows} px für Zeilen");
+
+        // Der gemerkte Anteil bleibt, die Höhe wird nur begrenzt; ohne Hinweise gilt wieder die gewählte Höhe.
+        Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99, notices));
+        Assert.Equal(max, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, 0.99, notices));
+        Assert.Equal(height - 416, ShowcaseLayout.ListHeroHeight(height, 0.99));
+
+        // Unsinnige Höhen der Hinweise zählen nicht.
+        Assert.Equal(ShowcaseLayout.ListHeroRange(height), ShowcaseLayout.ListHeroRange(height, double.NaN));
+        Assert.Equal(ShowcaseLayout.ListHeroRange(height), ShowcaseLayout.ListHeroRange(height, -40));
+    }
+
+    [Theory]
+    [InlineData(618, 88 + 255, 191)] // 1000×620 (Rahmen 2 px): zweizeilige Leiste, Kachel 170 × 255
+    [InlineData(618, 88 + 252, 194)] // 1178×620 (Startgröße auf 1920×1080 bei 150 %): Kachel 168 × 252
+    [InlineData(618, 40 + 264, 196)] // 1400×620: einzeilige Leiste, die Reihe passt ohnehin
+    [InlineData(725, 88 + 246, 196)] // 1164×727 (1280×800 bei 110 %)
+    [InlineData(980, 40 + 243, 235)] // 1745×982 (1920×1080 bei 110 %): wie bisher clamp(H·0,24; 196; 260)
+    [InlineData(618, 88 + 330, ShowcaseLayout.MinListHero)] // nie kleiner als der kleinste Titelbereich
+    [InlineData(618, 0, 196)] // Kacheln noch nicht gemessen
+    public void Showcase_grid_hero_gives_way_until_the_first_tile_row_is_whole(double height, double gridRow, double expected)
+    {
+        // Prüfung 2026-10-16: Mit 22 px Luft über der Werkzeugleiste (Wunsch des Nutzers: oben so viel wie unten) war bei
+        // 1000×620 und 1178×620 die erste Kachelreihe unten abgeschnitten. Der Titelbereich gibt so weit nach, wie nötig.
+        var hero = ShowcaseLayout.GridHeroHeight(height, gridRow);
+        Assert.Equal(expected, hero);
+        Assert.Equal(expected, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, height, gridRow: gridRow));
+        var standard = Math.Round(Math.Clamp(height * 0.24, 196, 260));
+        Assert.Equal(standard, ShowcaseLayout.GridHeroHeight(height, 0));
+
+        // Erste Kachel: unter der Leiste (Luft oben wie unten) und dem Innenabstand; endet über der Statuszeile.
+        var tileBottom = ShowcaseLayout.ToolbarTop(LibraryViewMode.Grid, hero) + gridRow + ShowcaseLayout.ToolbarGap + ShowcaseLayout.GridPaddingTop;
+        Assert.True(hero == ShowcaseLayout.MinListHero || gridRow == 0 || tileBottom <= height - ShowcaseLayout.PaneBottom, $"H {height}: Kachel endet bei {tileBottom}");
+        Assert.True(hero == standard || tileBottom >= height - ShowcaseLayout.PaneBottom - 1, $"H {height}: Titelbereich {hero} kleiner als nötig");
+
+        // Hinweise über dem Raster schieben die Reihe tiefer: der Titelbereich gibt mehr nach (höchstens bis zum Minimum).
+        if (gridRow > 0)
+        {
+            var withNotices = Math.Max(ShowcaseLayout.MinListHero, Math.Min(expected, height - 84 - gridRow - 60 - ShowcaseLayout.PaneBottom));
+            Assert.Equal(withNotices, ShowcaseLayout.GridHeroHeight(height, gridRow, 60));
+        }
     }
 
     [Fact]

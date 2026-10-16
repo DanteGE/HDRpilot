@@ -74,6 +74,9 @@ public partial class MainWindow : ChromeWindow
     private HeroViewModel? _hero;
     private LibraryViewMode? _appliedView;
     private double? _heroRatio;
+    private double _heroTarget;
+    private double _gridRow;
+    private bool _heroRefreshQueued;
     private bool _dark = true;
     private int _toolbarStage;
     private bool _toolbarQueued;
@@ -86,6 +89,7 @@ public partial class MainWindow : ChromeWindow
     private bool _pointerActive;
     private readonly TranslateTransform _sheenShift = new(1.2, 0);
     private VirtualizingTilePanel? _shelfPanel;
+    private VirtualizingTilePanel? _gridPanel;
 
     public MainWindow()
     {
@@ -108,6 +112,19 @@ public partial class MainWindow : ChromeWindow
         ApplyDetailsRatio(LibraryLayout.DefaultDetailsRatio);
         Loaded += OnLoaded;
         Root.SizeChanged += (_, _) => ApplyLayout(animate: false);
+
+        // Spitzlicht nach der tatsächlichen Höhe des Titelbereichs: auch nach dem Ziehen, dem Zurücksetzen und dem Wechsel der
+        // Ansicht (beim Anordnen steht die neue Höhe noch nicht fest).
+        Hero.SizeChanged += (_, _) => UpdateLight();
+
+        // Hinweise erscheinen, verschwinden oder klappen auf: Die Liste behält ihre ganzen Zeilen, das Raster seine erste Reihe.
+        NoticeArea.SizeChanged += (_, e) =>
+        {
+            if (e.HeightChanged)
+            {
+                RefreshHeroHeight();
+            }
+        };
 
         // Spalten der Liste nach ihrer eigenen Breite (ändert sich auch mit dem Trenner, ohne dass sich das Fenster ändert).
         ListCard.SizeChanged += (_, _) => ApplyListColumns();
@@ -568,8 +585,10 @@ public partial class MainWindow : ChromeWindow
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
             {
                 HookShelfPanel();
+                HookGridPanel();
                 FitDetailsColumn();
                 UpdateToolbarLayout();
+                RefreshHeroHeight(); // Raster: Kacheln jetzt gemessen
                 RevealSelection(center: true);
             });
         }
@@ -585,6 +604,88 @@ public partial class MainWindow : ChromeWindow
             UpdateShelfPosition();
         }
     }
+
+    /// <summary>
+    /// Das Kachel-Panel des Rasters entsteht erst, wenn das Raster sichtbar ist. Ändern sich danach Kachelgröße (Breite der
+    /// Spalte, Bildlaufleiste) oder Werkzeugleiste (ein- oder zweizeilig: das Raster wird dabei immer neu gemessen), wird die
+    /// Höhe des Titelbereichs geprüft (<see cref="ShowcaseLayout.GridHeroHeight"/>), nach dem Anordnen und nur dann, nicht
+    /// bei jedem Bildlauf.
+    /// </summary>
+    private void HookGridPanel()
+    {
+        if (_gridPanel is null && FindTilePanel(GameGrid) is { } panel)
+        {
+            _gridPanel = panel;
+            panel.LayoutUpdatedTiles += (_, _) =>
+            {
+                if (_appliedView == LibraryViewMode.Grid && GridRow() != _gridRow)
+                {
+                    QueueHeroRefresh();
+                }
+            };
+        }
+    }
+
+    /// <summary>Raster: Werkzeugleiste (ein- oder zweizeilig) und Kachel zusammen, wie zuletzt angeordnet (0: Kacheln noch nicht gemessen).</summary>
+    private double GridRow() =>
+        (_gridPanel ?? FindTilePanel(GameGrid)) is { TileHeight: > 0 } panel
+            ? (_toolbarStage >= MaxToolbarStage ? ShowcaseLayout.StackedToolbarHeight : ShowcaseLayout.ToolbarHeight) + panel.TileHeight
+            : 0;
+
+    /// <summary>
+    /// Höhe des Titelbereichs neu bestimmen, wenn sich etwas geändert hat, das erst nach dem Anordnen feststeht (Hinweise,
+    /// im Raster Werkzeugleiste und Kachelgröße), und nur dann neu anordnen. Eine laufende Bewegung (Wechsel der Ansicht)
+    /// läuft zum neuen Ziel weiter, sonst gilt die Höhe sofort.
+    /// </summary>
+    private void RefreshHeroHeight()
+    {
+        if (_viewModel is null || _appliedView is not { } view)
+        {
+            return;
+        }
+
+        var height = Root.ActualHeight > 0 ? Root.ActualHeight : Height;
+        if (HeroTarget(view, height) != _heroTarget)
+        {
+            ApplyLayout(animate: Math.Abs(HeroHeight - _heroTarget) > 0.5);
+        }
+        else if (view == LibraryViewMode.List)
+        {
+            ApplyHeroRange(height); // gleiche Höhe, aber anderer Bereich (etwa Hinweise weg)
+        }
+    }
+
+    /// <summary>
+    /// Bereich des Ziehgriffs für diese Fensterhöhe und die Hinweise über der Liste; sein Wert ist die Höhe, auf die der
+    /// Titelbereich gerade geht.
+    /// </summary>
+    private void ApplyHeroRange(double height)
+    {
+        var (min, max) = ShowcaseLayout.ListHeroRange(height, NoticeArea.ActualHeight);
+        HeroSplitter.Minimum = min;
+        HeroSplitter.Maximum = max;
+        HeroSplitter.Value = _heroTarget;
+    }
+
+    private void QueueHeroRefresh()
+    {
+        if (!_heroRefreshQueued)
+        {
+            _heroRefreshQueued = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                _heroRefreshQueued = false;
+                RefreshHeroHeight();
+            });
+        }
+    }
+
+    /// <summary>
+    /// Höhe, auf die der Titelbereich gehört: je Ansicht und Fensterhöhe, in der Liste nach der gewählten Höhe, mit den
+    /// Hinweisen über Liste bzw. Raster und im Raster nach Werkzeugleiste und Kachelgröße.
+    /// </summary>
+    private double HeroTarget(LibraryViewMode view, double height) =>
+        ShowcaseLayout.HeroHeight(view, height, _heroRatio, NoticeArea.ActualHeight, view == LibraryViewMode.Grid ? GridRow() : 0);
 
     private static void Activate(ListBox list, bool active, LibraryViewModel vm)
     {
@@ -646,14 +747,12 @@ public partial class MainWindow : ChromeWindow
             vm.HeroDecodeWidth = (int)Math.Ceiling(width * dpi.DpiScaleX);
         }
 
-        var target = ShowcaseLayout.HeroHeight(view, height, _heroRatio);
+        _gridRow = view == LibraryViewMode.Grid ? GridRow() : 0;
+        var target = HeroTarget(view, height);
+        _heroTarget = target;
         if (view == LibraryViewMode.List)
         {
-            // Bereich des Ziehgriffs für diese Fensterhöhe; sein Wert ist die Höhe, auf die der Titelbereich gerade geht.
-            var (min, max) = ShowcaseLayout.ListHeroRange(height);
-            HeroSplitter.Minimum = min;
-            HeroSplitter.Maximum = max;
-            HeroSplitter.Value = target;
+            ApplyHeroRange(height);
         }
 
         var duration = animate && _motion is { } motion ? motion.Transition(HeroMotion) : TimeSpan.Zero;
@@ -910,14 +1009,21 @@ public partial class MainWindow : ChromeWindow
         var height = Root.ActualHeight > 0 ? Root.ActualHeight : Height;
         _heroRatio = ShowcaseLayout.ListHeroRatio(HeroSplitter.Value, height);
         BeginAnimation(HeroHeightProperty, null);
-        HeroHeight = ShowcaseLayout.ListHeroHeight(height, _heroRatio);
+        _heroTarget = HeroTarget(LibraryViewMode.List, height);
+        HeroHeight = _heroTarget;
     }
 
     /// <summary>Ziehen beendet, Taste oder UI-Automation: Anteil merken (gesammelt gespeichert, nach einem bloßen Klick nie).</summary>
-    private void OnHeroSplitterCommitted(object? sender, EventArgs e)
+    private void OnHeroSplitterCommitted(object? sender, EventArgs e) => _viewModel?.SetHeroRatio(_heroRatio);
+
+    /// <summary>
+    /// Ziehen ohne Ergebnis beendet (zurück an der Ausgangslage, Esc): wieder die gemerkte Höhe, nicht der Anteil, den das
+    /// Ziehen zuletzt ergab (sonst bliebe etwa eine im kleinen Fenster begrenzte Höhe bis zum Neustart kleiner).
+    /// </summary>
+    private void OnHeroSplitterDiscarded(object? sender, EventArgs e)
     {
-        _viewModel?.SetHeroRatio(_heroRatio);
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateLight); // Spitzlicht nach der neuen Höhe
+        _heroRatio = _viewModel?.HeroRatio;
+        ApplyLayout(animate: false);
     }
 
     /// <summary>Doppelklick oder Eingabetaste am Ziehgriff: zurück zur Standardhöhe (nichts mehr gemerkt), mit Bewegung nach Stufe.</summary>

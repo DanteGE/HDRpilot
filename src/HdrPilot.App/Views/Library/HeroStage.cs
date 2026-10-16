@@ -52,6 +52,14 @@ public sealed class HeroStage : Grid
     private readonly Rectangle _scrimLeft = new();
     private readonly Rectangle _scrimRight = new();
     private readonly Rectangle _scrimBottom = new() { VerticalAlignment = VerticalAlignment.Bottom };
+
+    /// <summary>
+    /// Unterste Pixelzeile in der Grundfarbe (wie das Ende des Verlaufs darüber), 2 px über den Rand hinaus und wie alles
+    /// abgeschnitten: Fällt die Unterkante nicht auf ganze Bildschirmpixel (etwa 242 px bei 110 %), rastet der Verlauf auf
+    /// die Pixelzeile darüber ein, während das größere Bild die angeschnittene Zeile noch füllt. Ohne diesen Rand stand dort
+    /// eine 1 px hohe Linie aus nicht abgedunkeltem Bild, genau am Ziehgriff.
+    /// </summary>
+    private readonly Rectangle _scrimEdge = new() { VerticalAlignment = VerticalAlignment.Bottom, Height = 3, Margin = new Thickness(0, 0, 0, -2) };
     private readonly Rectangle _flash = new() { IsHitTestVisible = false, Opacity = 0 };
     private readonly Canvas _sweep = new() { IsHitTestVisible = false, ClipToBounds = true };
     private readonly Rectangle _sweepBand = new() { Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5) };
@@ -118,6 +126,7 @@ public sealed class HeroStage : Grid
         _scrim.Children.Add(_scrimRight);
         _scrim.Children.Add(_scrimTop);
         _scrim.Children.Add(_scrimBottom);
+        _scrim.Children.Add(_scrimEdge);
         Children.Add(_scrim);
         Children.Add(_flash);
 
@@ -458,6 +467,7 @@ public sealed class HeroStage : Grid
             _scrimBottom.Fill = Frozen(Vertical((AmbientPalette.Alpha(bg, 0), shelf ? 0.9 : 0.66), (bg, 1)));
         }
 
+        _scrimEdge.Fill = Frozen(new SolidColorBrush(bg));
         _scrimRight.Fill = Frozen(Horizontal((AmbientPalette.Alpha(bg, 0), 0.70), (AmbientPalette.Alpha(bg, (shelf ? 0.45 : 1) * 0.55), 1)));
         Relayout();
     }

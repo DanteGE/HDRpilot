@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -325,6 +326,54 @@ public sealed class MainWindowLayoutTests
             Assert.Null(model.HeroRatio);
             window.Close();
             Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        });
+    }
+
+    [Fact]
+    public void Hero_handle_drag_is_canceled_with_escape_like_the_column_splitter()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Esc beim Ziehen tat nichts, die gezogene Höhe wurde beim Loslassen gemerkt. Der Trenner der
+            // Spalten (GridSplitter) bricht mit Esc ab und stellt die Breite davor wieder her; der Griff jetzt ebenso.
+            var (window, context, model) = Open(SteamGame());
+            var splitter = (HeroSplitter)window.FindName("HeroSplitter");
+            var size = new Size(1745, 982);
+            WpfTestHost.Layout(window, size);
+            var start = window.HeroHeight;
+            var delays = context.Dispatcher.PendingDelays;
+
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 60));
+            Assert.Equal(start + 60, window.HeroHeight);
+            Press(window, splitter, Key.Escape, size);
+            Assert.Equal(start, window.HeroHeight); // sofort zurück
+            Assert.Equal(start, splitter.Value);
+
+            // Ohne echte Maus beendet erst das Loslassen das Ziehen (in der App schon Esc): nichts gemerkt.
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 60, false));
+            WpfTestHost.Layout(window, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Maus verloren (Ziehen als abgebrochen gemeldet): ebenso zurück, nichts gemerkt.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -48));
+            Assert.Equal(start - 48, window.HeroHeight);
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, -48, true));
+            WpfTestHost.Layout(window, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Esc ohne Ziehen gehört nicht dem Griff (das Fenster leert damit die Suche bzw. schließt die Schublade).
+            var escape = new KeyEventArgs(Keyboard.PrimaryDevice, new TestPresentationSource(), Environment.TickCount, Key.Escape) { RoutedEvent = Keyboard.KeyDownEvent };
+            splitter.RaiseEvent(escape);
+            Assert.False(escape.Handled);
+            context.Dispatcher.RunDelayed();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+            window.Close();
         });
     }
 

@@ -198,7 +198,7 @@ try {
         $chrome = (Rect $win).Height / $scale - $rootDip
         Note ("Ziehgriff: Wert {0}, Bereich {1}–{2}, Fensterinhalt {3} px hoch (Fenster {4:N1}), Skalierung {5:N2}" -f $value, $gripRange.Current.Minimum, $gripRange.Current.Maximum, $rootDip, ((Rect $win).Height / $scale), $scale)
         Check ($grip.Current.Name -eq 'Höhe des Titelbereichs' -and $grip.Current.IsKeyboardFocusable) ('Ziehgriff benannt und mit Tastatur erreichbar („{0}“)' -f $grip.Current.Name)
-        Check ($gripRange.Current.Minimum -eq 180 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 180 px, höchstens Fensterinhalt − 416 (Rahmen {0:N1} px)" -f $chrome)
+        Check ($gripRange.Current.Minimum -eq 186 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 186 px (Symbol-Kachel ganz), höchstens Fensterinhalt − 416 (Rahmen {0:N1} px)" -f $chrome)
         Check ([math]::Abs($value - [math]::Round($rootDip / 3)) -le 1) ('Standard: ein Drittel der Fensterhöhe ({0} von {1} px)' -f $value, $rootDip)
         Check ($null -eq (Read-Config $cfg).settings.libraryHeroRatio) 'Standardhöhe wird nicht gespeichert (libraryHeroRatio fehlt)'
         $gripTop = (Rect $grip).Top
@@ -261,8 +261,9 @@ try {
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Grid' }) 'Raster gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
     Check ((Find-Id $win 'GameList' 500) -eq $null -or (Find-Id $win 'GameList' 500).Current.IsOffscreen) 'Liste ausgeblendet'
-    # Raster: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste, Werkzeugleiste
-    # 22 px unter dem Titelbild (so viel Luft wie darunter bis zur ersten Kachelreihe)
+    # Raster: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste (weniger nur in
+    # niedrigen Fenstern, bis die erste Kachelreihe ganz zu sehen ist), Werkzeugleiste 22 px unter dem Titelbild (so viel
+    # Luft wie darunter bis zur ersten Kachelreihe)
     Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Raster ohne Ziehgriff'
     if ($rootDip -gt 0) {
         $rasterHero = (((Rect $views[1]).Top - (Rect $win).Top) / $scale) - $segOffset - 22

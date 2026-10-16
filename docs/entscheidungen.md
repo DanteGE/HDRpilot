@@ -834,7 +834,7 @@ Grafikkartenlast der Testinstanz; ohne aktiven Bildschirm meldet es UMGEBUNG und
 
 Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht oder ihn genauer fasst:
 - Bilder: Reihenfolge je Bildart eigene Wahl → Launcher-Bild → SteamGridDB (nur eingeschaltet, nur wenn das Bild fehlt)
-  → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 180 bis
+  → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 186 bis
   über 1000 px hoch ist; die Bibliothek zeigt das Symbol (höchstens 1,5-fach vergrößert) links vom Namen. Ein Xbox-Kachelbild
   wird dagegen rechts der Mitte eingezeichnet. Zusätzlich gibt es ein erzeugtes Kopfbild (460×215) als Vorschaubild der
   Liste. Die helle Fassung entsteht nur bei aktivem Fenster und ohne laufendes oder startendes Spiel (siehe unten,
@@ -910,13 +910,20 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Grenze zwischen Titelbild und Liste stellt sie ein. Gemerkt wird der Anteil an der Fensterhöhe
   (`settings.libraryHeroRatio`, ohne Eintrag gilt der Standard) erst nach dem Ziehen oder einer Taste, nie nach einem
   bloßen Klick. Standard ist ein Drittel der Fensterhöhe (vorher clamp(H·0,22; 180; 240), bei 1440 px also nur 240 px),
-  mindestens 180 px, höchstens H − 416: Darunter bleiben Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze
-  Zeilen und die Statuszeile. In kleineren Fenstern wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
+  mindestens 186 px (unter dem Kopf bleibt die 72 px hohe Symbol-Kachel eines Spiels ohne Logo ganz; mit 180 px war sie
+  unten abgeschnitten), höchstens H − 416: Darunter bleiben Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze
+  Zeilen und die Statuszeile; Hinweise über der Liste (Fehler beim Einlesen, Vorschläge, auch aufgeklappt) gehen davon
+  ab. In kleineren Fenstern (oder mit Hinweisen) wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
   klappt der Titelbereich nicht mehr auf 120 px zusammen („Größe bleibt“). Bedienung: Ziehen ohne Animation, Pfeiltasten
   oben/unten 24 px, Bild auf/ab 96 px, Pos1/Ende kleinste bzw. größte Höhe, Doppelklick und Eingabetaste zurück zum
-  Standard (mit der Bewegung beim Wechsel der Ansicht). Für die UI-Automation ist der Griff ein Thumb mit Wertebereich
-  (RangeValue, Höhe in Pixeln) und Auslösen (Invoke wie Doppelklick). Der Griff liegt mit seiner Mitte genau auf der
-  Unterkante des Titelbilds (Trefferfläche 20 px, je 10 px darüber und darunter). Die Werkzeugleiste hat oben so viel
-  Luft wie unten bis zum Inhalt (Wunsch des Nutzers 2026-10-16): in der Liste 10 px unter dem Titelbild, im Raster 22 px
-  wie bis zur ersten Kachelreihe (10 px und der Innenabstand des Rasters); Regal unverändert. Neuer Zustand
-  `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.
+  Standard (mit der Bewegung beim Wechsel der Ansicht). Esc bricht das Ziehen ab wie beim Trenner der Spalten. Endet
+  ein Ziehen ohne Änderung (an der Ausgangslage losgelassen, Esc, Maus verloren), gilt wieder die gemerkte Höhe. Für die
+  UI-Automation ist der Griff ein Thumb mit Wertebereich (RangeValue, Höhe in Pixeln) und Auslösen (Invoke wie
+  Doppelklick). Der Griff liegt mit seiner Mitte genau auf der Unterkante des Titelbilds (Trefferfläche 20 px, je 10 px
+  darüber und darunter). Die Werkzeugleiste hat oben so viel Luft wie unten bis zum Inhalt (Wunsch des Nutzers
+  2026-10-16): in der Liste 10 px unter dem Titelbild, im Raster 22 px wie bis zur ersten Kachelreihe (10 px und der
+  Innenabstand des Rasters); Regal unverändert. Damit die erste Kachelreihe des Rasters auch in niedrigen Fenstern ganz
+  zu sehen bleibt (1000×620 und 1178×620 mit zweizeiliger Werkzeugleiste, die Startgröße auf 1920×1080 bei 150 %), gibt
+  dort sein Titelbereich nach, höchstens bis 186 px. Der dunkle Verlauf am unteren Rand des Titelbilds reicht 2 px über
+  den Rand: Fällt die Unterkante nicht auf ganze Bildschirmpixel, stand dort sonst eine 1 px hohe helle Linie. Neuer
+  Zustand `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.

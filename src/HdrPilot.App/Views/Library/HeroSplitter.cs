@@ -9,14 +9,15 @@ namespace HdrPilot.App.Views.Library;
 
 /// <summary>
 /// Ziehgriff am unteren Rand des Titelbereichs der Liste (Wunsch des Nutzers 2026-10-16): stellt dessen Höhe in
-/// geräteunabhängigen Pixeln ein. Mit der Maus ziehen; Pfeiltasten oben/unten in Schritten von <see cref="SmallStep"/>,
-/// Bild auf/ab in Schritten von <see cref="LargeStep"/>, Pos1/Ende kleinste bzw. größte Höhe; Doppelklick und Eingabetaste
-/// setzen auf den Standard zurück. Für die UI-Automation ein Griff mit Wertebereich (RangeValue), lesbar und setzbar ohne
-/// echte Eingaben; Auslösen (Invoke) setzt wie der Doppelklick zurück.
+/// geräteunabhängigen Pixeln ein. Mit der Maus ziehen (Esc bricht ab, wie beim Trenner der Spalten); Pfeiltasten oben/unten
+/// in Schritten von <see cref="SmallStep"/>, Bild auf/ab in Schritten von <see cref="LargeStep"/>, Pos1/Ende kleinste bzw.
+/// größte Höhe; Doppelklick und Eingabetaste setzen auf den Standard zurück. Für die UI-Automation ein Griff mit
+/// Wertebereich (RangeValue), lesbar und setzbar ohne echte Eingaben; Auslösen (Invoke) setzt wie der Doppelklick zurück.
 /// <para>
 /// Bereich und Wert setzt nur das Fenster. Was der Nutzer tut, meldet der Griff: <see cref="Moved"/> bei jeder Änderung
 /// (beim Ziehen laufend), <see cref="Committed"/>, wenn sie fertig ist und gemerkt werden soll (Ende des Ziehens, Taste,
-/// UI-Automation; nie nach einem bloßen Klick), und <see cref="ResetRequested"/>.
+/// UI-Automation; nie nach einem bloßen Klick), <see cref="Discarded"/>, wenn ein Ziehen ohne Ergebnis endet, und
+/// <see cref="ResetRequested"/>.
 /// </para>
 /// </summary>
 public sealed class HeroSplitter : Thumb
@@ -37,8 +38,9 @@ public sealed class HeroSplitter : Thumb
         nameof(Value), typeof(double), typeof(HeroSplitter), new PropertyMetadata(0.0, OnValueChanged, CoerceValue));
 
     private double _dragStart;
+    private bool _dragging;
     private bool _dragMoved;
-    private bool _dragReset;
+    private bool _dragCanceled;
 
     public HeroSplitter()
     {
@@ -53,6 +55,13 @@ public sealed class HeroSplitter : Thumb
 
     /// <summary>Eine Änderung ist fertig und soll gemerkt werden.</summary>
     public event EventHandler? Committed;
+
+    /// <summary>
+    /// Ein Ziehen hat die Höhe bewegt, endet aber ohne Änderung, die gemerkt wird: zurück an der Ausgangslage losgelassen oder
+    /// abgebrochen (Esc, Maus verloren; der Griff steht dann wieder auf der Höhe vor dem Ziehen). Im Fenster gilt wieder die
+    /// gemerkte Höhe, nicht der Anteil, den das Ziehen zuletzt ergab.
+    /// </summary>
+    public event EventHandler? Discarded;
 
     /// <summary>Doppelklick oder Eingabetaste: zurück zur Standardhöhe.</summary>
     public event EventHandler? ResetRequested;
@@ -127,6 +136,12 @@ public sealed class HeroSplitter : Thumb
             case Key.Enter:
                 ResetRequested?.Invoke(this, EventArgs.Empty);
                 break;
+            case Key.Escape when _dragging:
+                // Ziehen abbrechen wie beim Trenner der Spalten (GridSplitter): zurück zur Höhe davor, nichts gemerkt.
+                _dragCanceled = true;
+                MoveTo(_dragStart, commit: false);
+                CancelDrag(); // endet in OnDragCompleted (ohne Maus, etwa im Test, erst mit dem Loslassen)
+                break;
             default:
                 return;
         }
@@ -154,16 +169,10 @@ public sealed class HeroSplitter : Thumb
     }
 
     /// <summary>
-    /// Der zweite Klick eines Doppelklicks beginnt auch ein Ziehen: Dessen Bewegungen und Ende gelten nicht, sonst würde eine
-    /// kleine Bewegung dabei die Standardhöhe gleich wieder als eigene Höhe merken.
+    /// Doppelklick: zurück zum Standard. Als erledigt markiert, erreicht der zweite Druck den Thumb nicht mehr (Control meldet
+    /// den Doppelklick, bevor UIElement OnMouseLeftButtonDown aufruft): Er beginnt kein Ziehen, dessen kleine Bewegung die
+    /// Standardhöhe gleich wieder als eigene Höhe merken könnte.
     /// </summary>
-    protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
-    {
-        _dragReset = e.ClickCount >= 2;
-        base.OnMouseLeftButtonDown(e);
-    }
-
-    /// <summary>Doppelklick: zurück zum Standard.</summary>
     private void OnDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left)
@@ -176,7 +185,9 @@ public sealed class HeroSplitter : Thumb
     private void OnDragStarted(object sender, DragStartedEventArgs e)
     {
         _dragStart = Value;
+        _dragging = true;
         _dragMoved = false;
+        _dragCanceled = false;
     }
 
     /// <summary>
@@ -185,26 +196,41 @@ public sealed class HeroSplitter : Thumb
     /// </summary>
     private void OnDragDelta(object sender, DragDeltaEventArgs e)
     {
-        if (_dragReset)
-        {
-            return;
-        }
-
         var before = Value;
         MoveTo(Value + e.VerticalChange, commit: false);
         _dragMoved |= Value != before;
     }
 
+    /// <summary>
+    /// Ende des Ziehens: gemerkt wird nur eine echte Änderung. Abgebrochen (Esc, Maus verloren) geht der Griff zurück auf die
+    /// Höhe vor dem Ziehen. Hat das Ziehen bewegt, ohne dass etwas gemerkt wird, gilt im Fenster wieder die gemerkte Höhe
+    /// (<see cref="Discarded"/>).
+    /// </summary>
     private void OnDragCompleted(object sender, DragCompletedEventArgs e)
     {
-        var reset = _dragReset;
-        _dragReset = false;
-        if (!reset && _dragMoved && Value != _dragStart)
+        if (!_dragging)
+        {
+            return; // schon beendet
+        }
+
+        var moved = _dragMoved;
+        var canceled = e.Canceled || _dragCanceled;
+        _dragMoved = false;
+        _dragCanceled = false;
+        _dragging = false;
+        if (canceled)
+        {
+            MoveTo(_dragStart, commit: false);
+        }
+
+        if (!canceled && moved && Value != _dragStart)
         {
             Committed?.Invoke(this, EventArgs.Empty);
         }
-
-        _dragMoved = false;
+        else if (moved)
+        {
+            Discarded?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>

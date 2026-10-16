@@ -7,11 +7,14 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using HdrPilot.App.Resources;
+using HdrPilot.App.Services.Artwork;
 using HdrPilot.App.Services.Display;
 using HdrPilot.App.Tests.Shell;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
+using HdrPilot.Core.Artwork;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Tests.TestSupport;
@@ -647,6 +650,301 @@ public sealed class ShowcaseViewsTests
             Assert.True(compact.IsHitTestVisible);
             Assert.True(Named<FrameworkElement>(window, "CompactActions").IsEnabled);
             window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_drag_back_to_the_start_and_the_second_press_of_a_double_click_remember_nothing()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var context = new TestLibraryContext(ManyGames(40));
+            var (window, model, _) = Open(context, size: size);
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var start = window.HeroHeight;
+            var delays = context.Dispatcher.PendingDelays;
+
+            // Prüfung 2026-10-16: hin und zurück gezogen und an der Ausgangslage losgelassen. Nichts gemerkt; der Standard
+            // bliebe sonst nicht Standard, sondern stünde fest auf dem Anteil 0,3333.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 30));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -30));
+            Assert.Equal(start, window.HeroHeight);
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
+            Arrange(window, size);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+            Assert.Equal(start, window.HeroHeight);
+
+            // Eine eigene Höhe, dann Doppelklick. Sein zweiter Druck (wie vom Eingabesystem: MouseDown, daraus der linke Knopf
+            // mit ClickCount 2) setzt zurück und beginnt kein Ziehen, dessen kleine Bewegung das Zurücksetzen gleich wieder
+            // überschreiben könnte: Control meldet den Doppelklick, bevor der Thumb den Druck sieht; erledigt erreicht er ihn nie.
+            HeroRange(splitter).SetValue(start + 96);
+            context.Dispatcher.RunDelayed();
+            Assert.NotNull(context.Config.Settings.LibraryHeroRatio);
+            var press = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Mouse.MouseDownEvent };
+            typeof(MouseButtonEventArgs).GetProperty(nameof(MouseButtonEventArgs.ClickCount))!.GetSetMethod(nonPublic: true)!.Invoke(press, [2]);
+            splitter.RaiseEvent(press);
+            Assert.True(press.Handled);
+            Assert.False(splitter.IsDragging);
+            Arrange(window, size);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(start, window.HeroHeight);
+            context.Dispatcher.RunDelayed();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+
+            // Gegenprobe: Ein einfacher Druck beginnt das Ziehen (sonst prüfte das oben nichts).
+            var single = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Mouse.MouseDownEvent };
+            typeof(MouseButtonEventArgs).GetProperty(nameof(MouseButtonEventArgs.ClickCount))!.GetSetMethod(nonPublic: true)!.Invoke(single, [1]);
+            splitter.RaiseEvent(single);
+            Assert.True(splitter.IsDragging);
+            splitter.CancelDrag(); // ohne echte Maus endet das Ziehen nicht von selbst
+            Assert.Null(model.HeroRatio);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_drag_without_result_keeps_the_remembered_height_for_larger_windows()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Gemerkt ist 0,6, im kleinen Fenster begrenzt. Griff hin und her bewegt, an derselben Stelle
+            // losgelassen: Danach galt im Fenster der Anteil der begrenzten Höhe, beim Vergrößern blieb der Titelbereich bis zum
+            // Neustart kleiner als 0,6 · H.
+            var small = new Size(1164, 727);
+            var large = new Size(3127, 1309);
+            var context = new TestLibraryContext(ManyGames(40));
+            context.ConfigService.Update(c => c.Settings.LibraryHeroRatio = 0.6);
+            var (window, model, _) = Open(context, size: small);
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var smallRoot = Named<FrameworkElement>(window, "Root").ActualHeight;
+            Assert.Equal(smallRoot - 416, window.HeroHeight);
+
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -40));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 40));
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
+            Arrange(window, small);
+            Assert.Equal(smallRoot - 416, window.HeroHeight);
+            Assert.Equal(0.6, model.HeroRatio);
+
+            Arrange(window, large);
+            var largeRoot = Named<FrameworkElement>(window, "Root").ActualHeight;
+            Assert.Equal(Math.Round(0.6 * largeRoot), window.HeroHeight);
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(0.6, context.Config.Settings.LibraryHeroRatio);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_light_follows_the_height_after_resetting_the_handle()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Nach dem Zurücksetzen (Doppelklick, Eingabetaste) blieb das Spitzlicht auf der Höhe des
+            // kleinen Titelbereichs, bis Spiel oder Farben wechselten.
+            var size = new Size(1745, 982);
+            var (window, _, _) = Open(new TestLibraryContext(ManyGames(40)), size: size);
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var range = HeroRange(splitter);
+            range.SetValue(range.Minimum);
+            Arrange(window, size);
+            var low = window.HeroStage.Light.Y;
+
+            Assert.IsAssignableFrom<IInvokeProvider>(UIElementAutomationPeer.CreatePeerForElement(splitter).GetPattern(PatternInterface.Invoke)).Invoke();
+            Arrange(window, size);
+            var afterReset = window.HeroStage.Light.Y;
+
+            // Vergleich: neu angeordnet bei gleicher Höhe (Fensterbreite ein Pixel anders), das Licht liegt dort, wo es hingehört.
+            Arrange(window, new Size(size.Width + 1, size.Height));
+            var expected = window.HeroStage.Light.Y;
+            Assert.True(expected > low + 1, $"Licht im hohen Titelbereich {expected:0}, im niedrigen {low:0}");
+            Assert.Equal(expected, afterReset, 0.5);
+
+            // Ebenso nach dem Ziehen und mit Tasten: Das Licht folgt der Höhe.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -120));
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, -120, false));
+            Arrange(window, new Size(size.Width + 1, size.Height));
+            var dragged = window.HeroStage.Light.Y;
+            Arrange(window, size);
+            Assert.Equal(window.HeroStage.Light.Y, dragged, 0.5);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_range_keeps_five_whole_rows_below_the_notices()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Die Hinweise (Fehler beim Einlesen, Vorschläge) liegen zwischen Werkzeugleiste und Liste. Beim
+            // größten Titelbereich blieben mit ihnen nur etwa drei ganze Zeilen, aufgeklappt keine.
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(80)), size: size);
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var root = Named<FrameworkElement>(window, "Root").ActualHeight;
+            HeroRange(splitter).SetValue(root - 416);
+            Arrange(window, size);
+            var chosen = model.HeroRatio;
+            Assert.True(WholeRows(window) >= ShowcaseLayout.MinListRows);
+
+            foreach (var notices in new[] { 60.0, 190.0 }) // zugeklappt, aufgeklappt
+            {
+                var notice = new Border { Height = notices - 10, Margin = new Thickness(0, 10, 0, 0) };
+                Named<StackPanel>(window, "NoticeArea").Children.Add(notice);
+                Arrange(window, size);
+                Assert.Equal(root - 416 - notices, window.HeroHeight);
+                Assert.Equal(root - 416 - notices, HeroRange(splitter).Maximum);
+                Assert.True(WholeRows(window) >= ShowcaseLayout.MinListRows, $"mit {notices} px Hinweisen: {WholeRows(window)} ganze Zeilen");
+                Named<StackPanel>(window, "NoticeArea").Children.Remove(notice);
+                Arrange(window, size);
+                Assert.Equal(root - 416, window.HeroHeight); // gewählte Höhe wieder, ohne dass sie neu gemerkt wurde
+                Assert.Equal(chosen, model.HeroRatio);
+            }
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void List_hero_at_its_smallest_still_shows_the_whole_icon_tile_of_a_game_without_logo()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Bei 180 px blieben unter dem Kopf 66 px, die Symbol-Kachel (72 px) eines Spiels ohne Logo war
+            // unten abgeschnitten.
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(40)), size: size);
+            Assert.True(model.Hero?.ShowIconTile, "Spiel ohne Titelbild und Logo: Symbol-Kachel vor dem Namen");
+            var range = HeroRange(Named<HeroSplitter>(window, "HeroSplitter"));
+            range.SetValue(range.Minimum);
+            Arrange(window, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+
+            var title = Named<FrameworkElement>(window, "CompactTitle");
+            var tile = WpfTestHost.Visuals(title).OfType<ContentControl>().Single(c => c.Width == 72 && c.Visibility == Visibility.Visible && c.ActualHeight > 0);
+
+            // Lage nach der Anordnung, ohne die Verschiebungen des Einblendens (laufen nach der Wahl des Spiels noch).
+            var root = Named<Visual>(window, "Root");
+            var top = 0.0;
+            for (DependencyObject v = tile; !ReferenceEquals(v, root); v = VisualTreeHelper.GetParent(v))
+            {
+                top += VisualTreeHelper.GetOffset((Visual)v).Y;
+            }
+
+            Assert.True(top >= 98 - 0.5, $"Kachel beginnt bei {top:0.0}, unter dem Kopf erst bei 98");
+            Assert.True(top + tile.ActualHeight <= window.HeroHeight - 16 + 0.5, $"Kachel endet bei {top + tile.ActualHeight:0.0}, Titelbereich {window.HeroHeight}");
+            window.Close();
+        });
+    }
+
+    [Theory]
+    [InlineData(1000, 620)] // kleinstes Fenster
+    [InlineData(1178, 620)] // Startgröße auf 1920×1080 bei 150 % und auf 1280×720
+    [InlineData(1164, 727)] // 1280×800 bei 110 %
+    [InlineData(1745, 982)] // 1920×1080 bei 110 %
+    public void Grid_shows_its_first_tile_row_whole_with_as_much_air_above_the_toolbar_as_below(double width, double height)
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Mit 22 px Luft über der Werkzeugleiste (Wunsch des Nutzers: oben so viel wie unten) war in
+            // niedrigen Fenstern mit zweizeiliger Leiste die erste Kachelreihe unten abgeschnitten (vorher passte sie). Der
+            // Titelbereich gibt so weit nach, wie nötig; die Luft bleibt.
+            var size = new Size(width, height);
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(80)), LibraryViewMode.Grid, size);
+            model.SelectedGame = model.Games[0];
+            Arrange(window, size);
+            window.UpdateToolbarLayout(); // im nie angezeigten Fenster nicht von selbst
+            Arrange(window, size);
+            Assert.Equal(width < 1200, window.ToolbarStage == MainWindow.MaxToolbarStage);
+
+            var grid = Named<ListBox>(window, "GameGrid");
+            var toolbar = Named<FrameworkElement>(window, "ToolbarArea");
+            var heroStage = Named<FrameworkElement>(window, "Hero");
+            var tile = (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(0);
+            var gridBottom = Bottom(window, grid);
+            Assert.True(Bottom(window, tile) <= gridBottom + 0.5, $"{width}×{height}: Kachel endet bei {Bottom(window, tile):0}, Raster bei {gridBottom:0}");
+            Assert.True(Top(window, tile) >= Top(window, grid) - 0.5);
+            var above = Top(window, toolbar) - Bottom(window, heroStage);
+            var below = Top(window, tile) - Bottom(window, toolbar);
+            Assert.Equal(ShowcaseLayout.ToolbarGap + ShowcaseLayout.GridPaddingTop, above, 0.5);
+            Assert.Equal(above, below, 0.5);
+            Assert.True(window.HeroHeight >= ShowcaseLayout.MinListHero);
+            Assert.True(window.HeroHeight == ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, Named<FrameworkElement>(window, "Root").ActualHeight) || Bottom(window, tile) >= gridBottom - 1, "Titelbereich nicht kleiner als nötig");
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Grid_hero_follows_the_tile_size_after_switching_views_and_moving_the_column_splitter()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Die Kachelgröße steht erst nach dem Anordnen fest: beim ersten Wechsel ins Raster und wenn der Trenner die Spalte
+            // der Liste breiter oder schmaler macht, ohne dass sich das Fenster ändert.
+            var size = new Size(1178, 620);
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(80)), size: size);
+            Arrange(window, size);
+            window.UpdateToolbarLayout();
+            Arrange(window, size);
+            Assert.Equal(MainWindow.MaxToolbarStage, window.ToolbarStage); // schon in der Liste zweizeilig
+
+            model.ViewMode = LibraryViewMode.Grid;
+            Arrange(window, size);
+            AssertFirstRow(window, "nach dem Wechsel");
+
+            foreach (var ratio in new[] { LibraryLayout.MinDetailsRatio, 0.5, 0.35 })
+            {
+                model.SetDetailsRatio(ratio);
+                Arrange(window, size);
+                AssertFirstRow(window, "Detailbereich " + ratio);
+            }
+
+            window.Close();
+        });
+
+        static void AssertFirstRow(MainWindow window, string step)
+        {
+            var grid = Named<ListBox>(window, "GameGrid");
+            var panel = Assert.IsType<VirtualizingTilePanel>(MainWindow.FindTilePanel(grid));
+            var tile = (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(0);
+            var root = Named<FrameworkElement>(window, "Root").ActualHeight;
+            var expected = ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, root, gridRow: ShowcaseLayout.StackedToolbarHeight + panel.TileHeight);
+            Assert.True(expected == window.HeroHeight, $"{step}: Titelbereich {window.HeroHeight}, erwartet {expected} (Kachel {panel.TileHeight})");
+            Assert.True(window.HeroHeight == ShowcaseLayout.MinListHero || Bottom(window, tile) <= Bottom(window, grid) + 0.5, $"{step}: Kachel endet bei {Bottom(window, tile):0}, Raster bei {Bottom(window, grid):0}");
+        }
+    }
+
+    [Fact]
+    public void Hero_bottom_edge_shows_no_line_of_bright_image_on_a_fractional_pixel()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Fällt die Unterkante des Titelbilds nicht auf ganze Bildschirmpixel (242 px bei 110 % sind
+            // 266,2), rastete der dunkle Verlauf auf die Zeile darüber ein, das größere Bild füllte die angeschnittene Zeile:
+            // eine 1 px hohe helle Linie genau am Ziehgriff.
+            var stage = new HeroStage { Width = 400, Height = 242, VerticalAlignment = VerticalAlignment.Top };
+            var host = new Grid { Width = 400, Height = 262, Background = Brushes.Black, Children = { stage } };
+            host.Measure(new Size(400, 262));
+            host.Arrange(new Rect(0, 0, 400, 262));
+            var white = FakeArtworkService.Solid(32, 9, Colors.White);
+            stage.Show(null, new GameArtwork("A", new ArtworkImage(white, ArtworkKind.Hero, ArtworkOrigin.Launcher, 32, 9, "Steam"), null, null, null, null, null, AmbientColors.FromName("A"), ArtworkSummary.Empty), TimeSpan.Zero);
+            host.UpdateLayout();
+
+            const double scale = 1.1;
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(400 * scale), (int)Math.Ceiling(262 * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+            bitmap.Render(host);
+            var stride = bitmap.PixelWidth * 4;
+            var pixels = new byte[stride * bitmap.PixelHeight];
+            bitmap.CopyPixels(pixels, stride, 0);
+            double Brightness(int row) => Enumerable.Range(20, 360).Average(x => (double)pixels[(row * stride) + (x * 4) + 1]);
+
+            var cut = (int)Math.Floor(242 * scale); // angeschnittene Zeile 266
+            Assert.True(Brightness(cut) <= Brightness(cut - 1) + 2, $"Zeile {cut}: {Brightness(cut):0}, darüber {Brightness(cut - 1):0}");
         });
     }
 

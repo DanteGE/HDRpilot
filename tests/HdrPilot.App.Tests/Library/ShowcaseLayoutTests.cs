@@ -100,7 +100,7 @@ public sealed class ShowcaseLayoutTests
     [InlineData(727, 242)] // 1280×800 bei 110 %
     [InlineData(982, 327)] // 1920×1080 bei 110 %
     [InlineData(1309, 436)] // 3440×1440 bei 110 %
-    [InlineData(620, 207)] // kleinste Fensterhöhe
+    [InlineData(620, 204)] // kleinste Fensterhöhe: durch fünf ganze Zeilen begrenzt (620 − 416)
     public void Showcase_list_hero_defaults_to_a_third_of_the_window_height(double height, double expected)
     {
         // Wunsch des Nutzers: Standard etwa ein Drittel (vorher clamp(H·0,22; 180; 240), bei 1440 px nur 240 px).
@@ -128,8 +128,8 @@ public sealed class ShowcaseLayoutTests
         Assert.True(min - 98 - 16 >= 50, "Inhalt des Titelbereichs " + (min - 98 - 16));
 
         // Größter: Ziehgriff, Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze Zeilen und die Statuszeile
-        // bleiben (H − 410).
-        Assert.Equal(height - 410, max);
+        // bleiben (H − 416).
+        Assert.Equal(height - 416, max);
         var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max) + ShowcaseLayout.StackedToolbarHeight + 10;
         var rows = height - ShowcaseLayout.PaneBottom - listTop - ShowcaseLayout.ListHeaderHeight;
         Assert.True(rows >= ShowcaseLayout.MinListRows * ShowcaseLayout.ListRowHeight, $"H {height}: {rows} px für Zeilen");
@@ -176,8 +176,8 @@ public sealed class ShowcaseLayoutTests
 
         // Kleinere Fenster: Fünf Zeilen gehen vor, die Höhe wird begrenzt; wo Platz ist, gilt der Anteil. Der Anteil selbst
         // bleibt gemerkt, im großen Fenster gilt wieder die gewählte Höhe.
-        Assert.Equal(727 - 410, ShowcaseLayout.ListHeroHeight(727, ratio));
-        Assert.Equal(800 - 410, ShowcaseLayout.ListHeroHeight(800, ratio));
+        Assert.Equal(727 - 416, ShowcaseLayout.ListHeroHeight(727, ratio));
+        Assert.Equal(800 - 416, ShowcaseLayout.ListHeroHeight(800, ratio));
         Assert.Equal(660, ShowcaseLayout.ListHeroHeight(1080, ratio));
         Assert.Equal(880, ShowcaseLayout.ListHeroHeight(1440, ratio));
         Assert.Equal(800, ShowcaseLayout.ListHeroHeight(1309, ratio));
@@ -195,14 +195,23 @@ public sealed class ShowcaseLayoutTests
     }
 
     [Fact]
-    public void Showcase_list_toolbar_sits_below_the_hero_handle_grid_and_shelf_are_unchanged()
+    public void Showcase_toolbar_has_the_same_gap_above_as_below_in_list_and_grid()
     {
-        // Liste: Ziehgriff von 16 px über dem unteren Rand des Titelbilds (dessen Inhalt endet dort) bis zur Werkzeugleiste.
-        Assert.Equal(400 - ShowcaseLayout.HeroSplitterOverlap + ShowcaseLayout.HeroSplitterHeight, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400));
-        Assert.Equal(404, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400));
+        // Wunsch des Nutzers 2026-10-16: zwischen Unterkante des Titelbilds und Werkzeugleiste so viel Luft wie zwischen
+        // Werkzeugleiste (40 px) und Inhalt darunter: in der Liste bis zu deren Rahmen, im Raster bis zur ersten Kachelreihe.
+        Assert.Equal(10, ShowcaseLayout.ToolbarGap);
+        Assert.Equal(ShowcaseLayout.ToolbarToBody - 40, ShowcaseLayout.ToolbarGap);
+        Assert.Equal(410, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400));
+        Assert.Equal(422, ShowcaseLayout.ToolbarTop(LibraryViewMode.Grid, 400));
+        Assert.Equal(ShowcaseLayout.ToolbarGap + ShowcaseLayout.GridPaddingTop, ShowcaseLayout.ToolbarTop(LibraryViewMode.Grid, 400) - 400);
 
-        // Raster und Regal wie bisher.
-        Assert.Equal(398, ShowcaseLayout.ToolbarTop(LibraryViewMode.Grid, 400));
+        // Ziehgriff der Liste: mit seiner Mitte auf der Unterkante des Titelbilds (Wunsch des Nutzers), bis zur Leiste; oben
+        // bleibt er im unteren Innenrand des Titelbereichs (16 px, dessen Inhalt endet dort).
+        Assert.Equal(400 - ShowcaseLayout.HeroSplitterOverlap + ShowcaseLayout.HeroSplitterHeight, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400));
+        Assert.Equal(ShowcaseLayout.HeroSplitterHeight / 2, ShowcaseLayout.HeroSplitterOverlap);
+        Assert.True(ShowcaseLayout.HeroSplitterOverlap <= 16);
+
+        // Regal wie bisher.
         Assert.Equal(570, ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, 620));
     }
 

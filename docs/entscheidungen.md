@@ -906,14 +906,17 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   warme Licht (0,6 s, „Reduziert“ 0,3 s, „Aus“ sofort). `phase10-gpu.ps1` misst Teil 1 erst, wenn das Laden der Bilder
   fertig ist, verlangt höchstens 1 % eines Kerns und laut Protokoll 0 Uhren der Dauer-Effekte, solange sie angehalten
   oder minimiert sind (Stufe Debug: „Effekte: … Uhren n“, „Bilder: nichts mehr in Arbeit.“).
-- Höhe des Titelbereichs in der Liste (Wunsch des Nutzers 2026-10-16, G10.5): Ein Ziehgriff (`HeroSplitter`) direkt unter
-  dem Inhalt des Titelbereichs, über der Werkzeugleiste, stellt sie ein. Gemerkt wird der Anteil an der Fensterhöhe
+- Höhe des Titelbereichs in der Liste (Wunsch des Nutzers 2026-10-16, G10.5): Ein Ziehgriff (`HeroSplitter`) auf der
+  Grenze zwischen Titelbild und Liste stellt sie ein. Gemerkt wird der Anteil an der Fensterhöhe
   (`settings.libraryHeroRatio`, ohne Eintrag gilt der Standard) erst nach dem Ziehen oder einer Taste, nie nach einem
   bloßen Klick. Standard ist ein Drittel der Fensterhöhe (vorher clamp(H·0,22; 180; 240), bei 1440 px also nur 240 px),
-  mindestens 180 px, höchstens H − 410: Darunter bleiben Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze
+  mindestens 180 px, höchstens H − 416: Darunter bleiben Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze
   Zeilen und die Statuszeile. In kleineren Fenstern wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
   klappt der Titelbereich nicht mehr auf 120 px zusammen („Größe bleibt“). Bedienung: Ziehen ohne Animation, Pfeiltasten
   oben/unten 24 px, Bild auf/ab 96 px, Pos1/Ende kleinste bzw. größte Höhe, Doppelklick und Eingabetaste zurück zum
   Standard (mit der Bewegung beim Wechsel der Ansicht). Für die UI-Automation ist der Griff ein Thumb mit Wertebereich
-  (RangeValue, Höhe in Pixeln) und Auslösen (Invoke wie Doppelklick). Raster und Regal bleiben unverändert. Neuer Zustand
+  (RangeValue, Höhe in Pixeln) und Auslösen (Invoke wie Doppelklick). Der Griff liegt mit seiner Mitte genau auf der
+  Unterkante des Titelbilds (Trefferfläche 20 px, je 10 px darüber und darunter). Die Werkzeugleiste hat oben so viel
+  Luft wie unten bis zum Inhalt (Wunsch des Nutzers 2026-10-16): in der Liste 10 px unter dem Titelbild, im Raster 22 px
+  wie bis zur ersten Kachelreihe (10 px und der Innenabstand des Rasters); Regal unverändert. Neuer Zustand
   `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.

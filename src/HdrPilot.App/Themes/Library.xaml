@@ -1653,6 +1653,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="lib:HeroSplitter">
+                    <!-- Griff und Linie in der Mitte: genau auf der Unterkante des Titelbilds (ShowcaseLayout.HeroSplitterOverlap) -->
                     <Grid Background="{TemplateBinding Background}">
                         <Border x:Name="Line" Height="1" VerticalAlignment="Center" Margin="18,0" Background="{DynamicResource Hp.Brush.LineStrong}" Opacity="0" />
                         <Border x:Name="Rest" Width="36" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"

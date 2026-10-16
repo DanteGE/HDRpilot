@@ -18,6 +18,8 @@ Add-Type -AssemblyName System.Drawing, PresentationCore
 $ok = $true
 function Check([bool]$cond, [string]$what) { if ($cond) { Note "ok   $what" } else { Note "FEHLER $what"; $script:ok = $false } }
 function Rect($el) { $el.Current.BoundingRectangle }
+# Skalierung des Bildschirms aus der DPI des Testfensters (nur lesend)
+Add-Type -Namespace HdrPilotGate -Name Dpi -MemberDefinition '[DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);'
 
 # Elemente in eigenen Fenstern derselben Prozess-ID (Kontextmenü, Dialog „Bild wählen…“)
 function Find-Top([int]$processId, [string]$automationId, [int]$timeoutMs = 5000) {
@@ -179,8 +181,9 @@ try {
     Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryThumbnail }) 'Vorschau „Bild“ (Standard) gespeichert'
 
     # --- Liste: Höhe des Titelbereichs per Ziehgriff, nur über UI-Automation (RangeValue, keine Maus- oder Tastatureingabe) ---
-    # Werte des Griffs in geräteunabhängigen Pixeln. Der Griff ist 20 px hoch (daraus die Skalierung des Bildschirms); die
-    # Höhe des Fensterinhalts ist sein größter Wert + 410 (Werkzeugleiste, Kopf, fünf Zeilen, Statuszeile darunter) und muss
+    # Werte des Griffs in geräteunabhängigen Pixeln. Die Skalierung kommt aus der DPI des Fensters (aus den 20 px des Griffs
+    # wäre sie wegen der Rundung der Bildschirmkoordinaten bis 5 % ungenau, nur ersatzweise); die
+    # Höhe des Fensterinhalts ist sein größter Wert + 416 (Werkzeugleiste, Kopf, fünf Zeilen, Statuszeile darunter) und muss
     # zur gemessenen Fensterhöhe passen (Rahmen und Ränder höchstens 12 px). Lagen werden nur relativ verglichen, so
     # zählen Rahmen und Rundung der Bildschirmkoordinaten nicht.
     $grip = Find-Id $win 'HeroSplitter' 3000
@@ -188,13 +191,14 @@ try {
     $scale = 1.0; $rootDip = 0.0; $heroSet = 0.0; $segOffset = 0.0
     $gripRange = $null
     if ($grip -and $grip.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$gripRange)) {
-        $scale = (Rect $grip).Height / 20
+        $dpi = [HdrPilotGate.Dpi]::GetDpiForWindow([IntPtr]$win.Current.NativeWindowHandle)
+        $scale = if ($dpi -gt 0) { $dpi / 96.0 } else { (Rect $grip).Height / 20 }
         $value = $gripRange.Current.Value
-        $rootDip = $gripRange.Current.Maximum + 410
+        $rootDip = $gripRange.Current.Maximum + 416
         $chrome = (Rect $win).Height / $scale - $rootDip
         Note ("Ziehgriff: Wert {0}, Bereich {1}–{2}, Fensterinhalt {3} px hoch (Fenster {4:N1}), Skalierung {5:N2}" -f $value, $gripRange.Current.Minimum, $gripRange.Current.Maximum, $rootDip, ((Rect $win).Height / $scale), $scale)
         Check ($grip.Current.Name -eq 'Höhe des Titelbereichs' -and $grip.Current.IsKeyboardFocusable) ('Ziehgriff benannt und mit Tastatur erreichbar („{0}“)' -f $grip.Current.Name)
-        Check ($gripRange.Current.Minimum -eq 180 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 180 px, höchstens Fensterinhalt − 410 (Rahmen {0:N1} px)" -f $chrome)
+        Check ($gripRange.Current.Minimum -eq 180 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 180 px, höchstens Fensterinhalt − 416 (Rahmen {0:N1} px)" -f $chrome)
         Check ([math]::Abs($value - [math]::Round($rootDip / 3)) -le 1) ('Standard: ein Drittel der Fensterhöhe ({0} von {1} px)' -f $value, $rootDip)
         Check ($null -eq (Read-Config $cfg).settings.libraryHeroRatio) 'Standardhöhe wird nicht gespeichert (libraryHeroRatio fehlt)'
         $gripTop = (Rect $grip).Top
@@ -207,8 +211,8 @@ try {
         Check (Wait-Until { [math]::Abs($gripRange.Current.Value - $heroSet) -lt 0.5 -and [math]::Abs((& $moved)) -le 1.5 -and [math]::Abs((& $listMoved)) -le 1.5 } 4000) ("Per UI-Automation von {0} auf {1} px gesetzt, Griff und Liste folgen (Abweichung {2:N1} / {3:N1} px)" -f $value, $heroSet, (& $moved), (& $listMoved))
         Check (Wait-Until { $r = (Read-Config $cfg).settings.libraryHeroRatio; $null -ne $r -and [math]::Abs([double]$r - $heroSet / $rootDip) -lt 0.0005 }) ("In der Konfiguration gemerkt (libraryHeroRatio {0}, erwartet {1:N4})" -f (Read-Config $cfg).settings.libraryHeroRatio, ($heroSet / $rootDip))
         Check ((Shown-Items (Find-Id $win 'GameList')).Count -ge 5) ("Darunter weiter Zeilen der Liste ({0})" -f (Shown-Items (Find-Id $win 'GameList')).Count)
-        # Lage der Ansicht-Schalter zur Werkzeugleiste (in der Liste 4 px unter dem Titelbereich): misst unten Raster und Regal
-        $segOffset = (((Rect $views[0]).Top - (Rect $win).Top) / $scale) - ($heroSet + 4)
+        # Lage der Ansicht-Schalter zur Werkzeugleiste (in der Liste 10 px unter dem Titelbild): misst unten Raster und Regal
+        $segOffset = (((Rect $views[0]).Top - (Rect $win).Top) / $scale) - ($heroSet + 10)
     } else { Check $false 'Ziehgriff mit Wertebereich (RangeValue)' }
 
     # --- Detailbereich: alle bisherigen Funktionen und „BILDER“ ---
@@ -257,10 +261,11 @@ try {
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Grid' }) 'Raster gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
     Check ((Find-Id $win 'GameList' 500) -eq $null -or (Find-Id $win 'GameList' 500).Current.IsOffscreen) 'Liste ausgeblendet'
-    # Raster wie bisher: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste
+    # Raster: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste, Werkzeugleiste
+    # 22 px unter dem Titelbild (so viel Luft wie darunter bis zur ersten Kachelreihe)
     Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Raster ohne Ziehgriff'
     if ($rootDip -gt 0) {
-        $rasterHero = (((Rect $views[1]).Top - (Rect $win).Top) / $scale) - $segOffset + 2
+        $rasterHero = (((Rect $views[1]).Top - (Rect $win).Top) / $scale) - $segOffset - 22
         $rasterExpected = [math]::Round([math]::Min(260, [math]::Max(196, $rootDip * 0.24)))
         Check ([math]::Abs($rasterHero - $rasterExpected) -le 1.5) ("Raster: Titelbereich wie bisher ({0:N1} px, erwartet {1})" -f $rasterHero, $rasterExpected)
     }
@@ -328,7 +333,7 @@ try {
             $invoke2 = $null
             if ($grip2.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$invoke2)) {
                 $invoke2.Invoke()
-                $root2 = $range2.Current.Maximum + 410
+                $root2 = $range2.Current.Maximum + 416
                 Check (Wait-Until { [math]::Abs($range2.Current.Value - $root2 / 3) -le 1.5 } 4000) ("Auslösen (wie Doppelklick) setzt auf ein Drittel zurück ({0} von {1:N0} px)" -f $range2.Current.Value, $root2)
                 Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryHeroRatio }) 'Zurückgesetzt: libraryHeroRatio entfällt in der Konfiguration'
             } else { Check $false 'Ziehgriff lässt sich auslösen (Invoke)' }

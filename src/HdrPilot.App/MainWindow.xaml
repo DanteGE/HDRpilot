@@ -1309,6 +1309,7 @@
                              ItemContainerStyle="{StaticResource GameTileWithMenu}" ItemTemplate="{StaticResource GameTileTemplate}"
                              AutomationProperties.AutomationId="GameGrid" AutomationProperties.Name="{x:Static res:LibraryStrings.Grid_Name}">
                         <ListBox.ItemsPanel>
+                            <!-- Innenabstand oben wie ShowcaseLayout.GridPaddingTop: danach richtet sich die Luft über der Werkzeugleiste -->
                             <ItemsPanelTemplate>
                                 <lib:VirtualizingTilePanel Arrangement="Grid" Gap="16" Padding="4,12,4,24" />
                             </ItemsPanelTemplate>

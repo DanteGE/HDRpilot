@@ -76,14 +76,21 @@ public static class ShowcaseLayout
     public const double StackedToolbarHeight = 88;
 
     /// <summary>
-    /// Ziehgriff zwischen Titelbereich und Liste (HeroSplitter): 20 px hoch, beginnt <see cref="HeroSplitterOverlap"/> über
-    /// dem unteren Rand des Titelbilds, also direkt unter dessen Inhalt (Innenrand unten 16 px); die Werkzeugleiste der Liste
-    /// steht direkt darunter.
+    /// Luft zwischen Werkzeugleiste und Inhalt darunter (<see cref="ToolbarToBody"/> ohne die 40 px der Leiste). Genauso viel
+    /// Luft bleibt in Liste und Raster über der Leiste bis zur Unterkante des Titelbilds (Wunsch des Nutzers 2026-10-16: oben
+    /// so viel wie unten).
     /// </summary>
-    public const double HeroSplitterHeight = 20;
+    public const double ToolbarGap = ToolbarToBody - 40;
 
-    /// <summary>So weit ragt der Ziehgriff in den Titelbereich (dessen unterer Innenrand, frei von Bedienelementen).</summary>
-    public const double HeroSplitterOverlap = 16;
+    /// <summary>
+    /// Ziehgriff zwischen Titelbereich und Liste (HeroSplitter): liegt mit seiner Mitte genau auf der Grenze, der Unterkante
+    /// des Titelbilds (Wunsch des Nutzers 2026-10-16), und reicht je <see cref="ToolbarGap"/> darüber (in den unteren
+    /// Innenrand des Titelbereichs, 16 px frei von Bedienelementen) und darunter bis zur Werkzeugleiste.
+    /// </summary>
+    public const double HeroSplitterHeight = 2 * ToolbarGap;
+
+    /// <summary>So weit ragt der Ziehgriff in den Titelbereich: so weit wie darunter, damit seine Mitte auf der Grenze liegt.</summary>
+    public const double HeroSplitterOverlap = ToolbarGap;
 
     /// <summary>Unterhalb dieser Fensterbreite: Kennzahlen im Kopf aus, Bildschirm-Kapsel kompakt, Ansicht-Text in der Statuszeile aus.</summary>
     public const double CompactWidth = 1366;
@@ -161,13 +168,13 @@ public static class ShowcaseLayout
     /// <summary>
     /// Kleinste und größte Höhe des Titelbereichs der Liste: mindestens <see cref="MinListHero"/>; höchstens so hoch, dass
     /// darunter Ziehgriff, Werkzeugleiste (auch zweizeilig, <see cref="StackedToolbarHeight"/>), Kopf der Liste,
-    /// <see cref="MinListRows"/> ganze Zeilen und die Statuszeile Platz behalten. Das sind H − 410, etwa 317 px bei 727,
-    /// 572 bei 982 und 899 bei 1309 px Fensterhöhe; mit einzeiliger Werkzeugleiste bleiben sechs Zeilen.
+    /// <see cref="MinListRows"/> ganze Zeilen und die Statuszeile Platz behalten. Das sind H − 416, etwa 311 px bei 727,
+    /// 566 bei 982 und 893 bei 1309 px Fensterhöhe; mit einzeiliger Werkzeugleiste bleiben sechs Zeilen.
     /// </summary>
     public static (double Min, double Max) ListHeroRange(double windowHeight)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
-        var below = ToolbarTop(LibraryViewMode.List, 0) + StackedToolbarHeight + (ToolbarToBody - 40) + ListHeaderHeight
+        var below = ToolbarTop(LibraryViewMode.List, 0) + StackedToolbarHeight + ToolbarGap + ListHeaderHeight
             + (MinListRows * ListRowHeight) + PaneBottom;
         return (MinListHero, Math.Max(MinListHero, Math.Floor(h - below)));
     }
@@ -188,14 +195,22 @@ public static class ShowcaseLayout
         heroHeight - LargeHeroBottom - (HeaderTop + HeaderHeight + 16) - LargeHeroChrome;
 
     /// <summary>
-    /// Oberkante der Werkzeugleiste: im Regal über dem unteren Rand des Titelbilds, im Raster direkt darunter, in der Liste
-    /// unter dem Ziehgriff (<see cref="HeroSplitterHeight"/> ab <see cref="HeroSplitterOverlap"/> über dem Rand).
+    /// Innenabstand des Rasters über der ersten Kachelreihe (VirtualizingTilePanel, Padding oben in MainWindow.xaml): Platz
+    /// für das Anheben und Leuchten der gewählten Kachel.
+    /// </summary>
+    public const double GridPaddingTop = 12;
+
+    /// <summary>
+    /// Oberkante der Werkzeugleiste: im Regal über dem unteren Rand des Titelbilds. In Liste und Raster unter der Unterkante
+    /// des Titelbilds mit derselben Luft wie darunter bis zum Inhalt (Wunsch des Nutzers 2026-10-16: oben so viel wie
+    /// unten): in der Liste <see cref="ToolbarGap"/> wie bis zum Rahmen der Liste (der Ziehgriff liegt auf der Unterkante
+    /// des Titelbilds), im Raster dazu <see cref="GridPaddingTop"/> wie bis zur ersten Kachelreihe.
     /// </summary>
     public static double ToolbarTop(LibraryViewMode view, double heroHeight) => view switch
     {
         LibraryViewMode.Shelf => heroHeight - 50,
-        LibraryViewMode.Grid => heroHeight - 2,
-        _ => heroHeight - HeroSplitterOverlap + HeroSplitterHeight,
+        LibraryViewMode.Grid => heroHeight + ToolbarGap + GridPaddingTop,
+        _ => heroHeight + ToolbarGap,
     };
 
     /// <summary>Breite des Detailbereichs ohne gemerkte Aufteilung: clamp(23 % der Fensterbreite; 340; 396).</summary>

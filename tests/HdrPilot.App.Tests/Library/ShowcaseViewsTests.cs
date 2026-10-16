@@ -446,7 +446,7 @@ public sealed class ShowcaseViewsTests
             var range = HeroRange(splitter);
             Assert.Equal(window.HeroHeight, range.Value);
             Assert.Equal(ShowcaseLayout.MinListHero, range.Minimum);
-            Assert.Equal(rootHeight - 410, range.Maximum);
+            Assert.Equal(rootHeight - 416, range.Maximum);
             Assert.Equal(AutomationControlType.Thumb, UIElementAutomationPeer.CreatePeerForElement(splitter).GetAutomationControlType());
 
             // Lage: am unteren Rand des Titelbilds unter dessen Inhalt, darunter die Werkzeugleiste, dann die Liste; nur über
@@ -454,7 +454,7 @@ public sealed class ShowcaseViewsTests
             var handleTop = Top(window, splitter);
             var handleBottom = Bottom(window, splitter);
             Assert.Equal(window.HeroHeight - ShowcaseLayout.HeroSplitterOverlap, handleTop, 0.5);
-            Assert.True(splitter.ActualHeight >= 20, "Griff " + splitter.ActualHeight + " px hoch");
+            Assert.Equal(ShowcaseLayout.HeroSplitterHeight, splitter.ActualHeight, 0.5);
             // Inhalt nach seiner Anordnung, ohne die Verschiebung des Einblendens (läuft nach der Wahl des Spiels noch).
             var compact = Named<FrameworkElement>(window, "HeroCompact");
             var compactBottom = Top(window, Named<FrameworkElement>(window, "HeroContent")) + VisualTreeHelper.GetOffset(compact).Y + compact.ActualHeight;
@@ -462,6 +462,19 @@ public sealed class ShowcaseViewsTests
             var toolbarTop = Top(window, Named<FrameworkElement>(window, "ToolbarArea"));
             Assert.True(toolbarTop >= handleBottom - 0.5, $"Werkzeugleiste ({toolbarTop:0}) unter dem Griff ({handleBottom:0})");
             Assert.True(Top(window, Named<FrameworkElement>(window, "ListCard")) >= handleBottom + 40, "Liste unter der Werkzeugleiste");
+
+            // Werkzeugleiste: oben (zur Unterkante des Titelbilds) so viel Luft wie unten (zur Liste), Wunsch des Nutzers; der
+            // sichtbare Griff liegt in dieser Luft.
+            var toolbar = Named<FrameworkElement>(window, "ToolbarArea");
+            var heroStage = Named<FrameworkElement>(window, "Hero");
+            var gapAbove = toolbarTop - (Top(window, heroStage) + heroStage.ActualHeight);
+            var gapBelow = Top(window, Named<FrameworkElement>(window, "ListCard")) - (toolbarTop + toolbar.ActualHeight);
+            Assert.Equal(gapBelow, gapAbove, 0.5);
+            Assert.Equal(10, gapAbove, 0.5);
+
+            // Der Griff liegt genau auf der Grenze zwischen Titelbild und Liste (Wunsch des Nutzers): seine Mitte auf der
+            // Unterkante des Titelbilds.
+            Assert.Equal(Top(window, heroStage) + heroStage.ActualHeight, handleTop + (splitter.ActualHeight / 2), 0.5);
             var details = Named<FrameworkElement>(window, "DetailsArea");
             var handleRight = splitter.TransformToAncestor(window).Transform(new Point(splitter.ActualWidth, 0)).X;
             Assert.True(handleRight <= details.TransformToAncestor(window).Transform(default).X - 20, "Griff endet vor dem Detailbereich");
@@ -470,7 +483,7 @@ public sealed class ShowcaseViewsTests
             range.SetValue(range.Maximum);
             Arrange(window, size);
             Assert.Equal(width < 1200, window.ToolbarStage == MainWindow.MaxToolbarStage);
-            Assert.Equal(rootHeight - 410, window.HeroHeight);
+            Assert.Equal(rootHeight - 416, window.HeroHeight);
             Assert.True(WholeRows(window) >= ShowcaseLayout.MinListRows, $"{width}×{height}: {WholeRows(window)} ganze Zeilen");
             window.Close();
         });
@@ -517,7 +530,7 @@ public sealed class ShowcaseViewsTests
             // Über den Rand hinaus: Der Griff bleibt am größten Wert stehen.
             splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
             splitter.RaiseEvent(new DragDeltaEventArgs(0, 5000));
-            Assert.Equal(rootHeight - 410, window.HeroHeight);
+            Assert.Equal(rootHeight - 416, window.HeroHeight);
             splitter.RaiseEvent(new DragDeltaEventArgs(0, -9000));
             Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
             splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
@@ -564,12 +577,18 @@ public sealed class ShowcaseViewsTests
             Assert.Equal(stored, model.HeroRatio);
             Assert.Equal(600, window.HeroHeight);
 
-            // Raster und Regal unverändert (ohne Griff); zurück in der Liste wieder die gemerkte Höhe.
+            // Raster und Regal ohne Griff und mit eigener Höhe; die Werkzeugleiste im Raster mit so viel Luft unter dem
+            // Titelbild wie darunter bis zur ersten Kachelreihe (22 px). Zurück in der Liste wieder die gemerkte Höhe.
             model.ViewMode = LibraryViewMode.Grid;
             Arrange(window, large);
             Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, rootHeight), window.HeroHeight);
             Assert.Equal(Visibility.Collapsed, Named<HeroSplitter>(window, "HeroSplitter").Visibility);
-            Assert.Equal(window.HeroHeight - 2, Top(window, Named<FrameworkElement>(window, "ToolbarArea")), 0.5);
+            var gridToolbar = Named<FrameworkElement>(window, "ToolbarArea");
+            var gridToolbarTop = Top(window, gridToolbar);
+            Assert.Equal(window.HeroHeight + 22, gridToolbarTop, 0.5);
+            var grid = Named<ListBox>(window, "GameGrid");
+            var tile = (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(1);
+            Assert.Equal(22, Top(window, tile) - (gridToolbarTop + gridToolbar.ActualHeight), 0.5);
             model.ViewMode = LibraryViewMode.Shelf;
             Arrange(window, large);
             Assert.Equal(ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, rootHeight), window.HeroHeight);
@@ -581,8 +600,8 @@ public sealed class ShowcaseViewsTests
             // Kleineres Fenster: begrenzt (fünf Zeilen gehen vor), der gemerkte Anteil bleibt; groß wieder 600 px.
             Arrange(window, new Size(1164, 727));
             var smallRoot = Named<FrameworkElement>(window, "Root").ActualHeight;
-            Assert.Equal(smallRoot - 410, window.HeroHeight);
-            Assert.Equal(smallRoot - 410, HeroRange(Named<HeroSplitter>(window, "HeroSplitter")).Maximum);
+            Assert.Equal(smallRoot - 416, window.HeroHeight);
+            Assert.Equal(smallRoot - 416, HeroRange(Named<HeroSplitter>(window, "HeroSplitter")).Maximum);
             Arrange(window, large);
             Assert.Equal(600, window.HeroHeight);
             Assert.Equal(stored, model.HeroRatio);

@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using HdrPilot.App.Resources;
 using HdrPilot.App.Services.Display;
 using HdrPilot.App.Tests.Shell;
 using HdrPilot.App.ViewModels.Library;
@@ -273,6 +274,114 @@ public sealed class ShowcaseViewsTests
             luminance.Set(new DisplayNits(FakeHdrController.Primary, "MSI MAG 341CQP", 1015, 600, 0.01, 10, HdrActive: true, PeakMeasuredWithHdr: true));
             WpfTestHost.DoEvents();
             Assert.Equal(1015, scale.Maximum);
+            window.Close();
+        });
+    }
+
+    [Theory]
+    [InlineData(1000, 620)] // kleinstes Fenster
+    [InlineData(1164, 727)] // 1280×800 bei 110 % Skalierung
+    [InlineData(1280, 720)]
+    [InlineData(1280, 800)]
+    [InlineData(1366, 768)]
+    [InlineData(1745, 982)] // 1920×1080 bei 110 %
+    [InlineData(1920, 1080)]
+    [InlineData(3127, 1309)] // 3440×1440 bei 110 %
+    [InlineData(3440, 1440)]
+    public void Shelf_tiles_stay_whole_above_the_status_bar_at_every_window_height(double width, double height)
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(12)), LibraryViewMode.Shelf, new Size(width, height));
+            model.SelectedGame = model.Games[0];
+            Arrange(window, new Size(width, height));
+
+            var shelf = Named<ListBox>(window, "GameShelf");
+            var statusTop = Named<FrameworkElement>(window, "StatusBar").TransformToAncestor(window).Transform(default).Y;
+            var shelfBottom = shelf.TransformToAncestor(window).Transform(new Point(0, shelf.ActualHeight)).Y;
+            var tiles = Containers(shelf).Where(c => c.ActualHeight > 0).ToList();
+            Assert.NotEmpty(tiles);
+            foreach (var tile in tiles)
+            {
+                var top = tile.TransformToAncestor(shelf).Transform(default).Y;
+                Assert.True(top >= 0 && top + tile.ActualHeight <= shelf.ActualHeight + 0.5,
+                    $"{width}×{height}: Kachel {top:0}–{top + tile.ActualHeight:0} in Reihe 0–{shelf.ActualHeight:0}, Titelbereich {window.HeroHeight:0}");
+                Assert.InRange(tile.ActualHeight / tile.ActualWidth, 1.48, 1.52); // 2:3, Breite auf ganze Pixel gerundet
+            }
+
+            Assert.True(shelfBottom <= statusTop + 0.5, $"{width}×{height}: Reihe endet bei {shelfBottom:0}, Statuszeile beginnt bei {statusTop:0}");
+            Assert.True(window.HeroHeight >= ShowcaseLayout.MinShelfHero, $"{width}×{height}: Titelbereich {window.HeroHeight:0}");
+
+            // Kennzeile, Logo bzw. Name, Angaben und Knöpfe ragen nicht in den Kopf (unter 92 px).
+            var heroLarge = Named<FrameworkElement>(window, "HeroLarge");
+            var header = Named<FrameworkElement>(window, "HeaderArea");
+            var heroTop = heroLarge.TransformToAncestor(window).Transform(default).Y;
+            var headerBottom = header.TransformToAncestor(window).Transform(new Point(0, header.ActualHeight)).Y;
+            Assert.True(heroTop >= headerBottom, $"{width}×{height}: Titelinhalt beginnt bei {heroTop:0}, Kopf endet bei {headerBottom:0}");
+
+            // Die Werkzeugleiste liegt unter der Automatik-Karte, nicht darauf.
+            var card = Named<FrameworkElement>(window, "AutomationCard");
+            var cardBottom = card.TransformToAncestor(window).Transform(new Point(0, card.ActualHeight)).Y;
+            var toolbarTop = Named<FrameworkElement>(window, "ToolbarArea").TransformToAncestor(window).Transform(default).Y;
+            Assert.True(toolbarTop >= cardBottom, $"{width}×{height}: Werkzeugleiste bei {toolbarTop:0}, Karte endet bei {cardBottom:0}");
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Folder_path_is_shortened_in_the_middle_when_its_column_is_narrower_than_the_text()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Wie eine EXE-Zeile im schmalen Detailbereich (Schublade im Regal): Ordner | Herkunft rechts
+            const string folder = @"…\FunkTag\FunkTagProjekt\Binaries\Win64";
+            var text = new MiddleEllipsisText { FullText = folder, FontSize = 11 };
+            var origin = new TextBlock { Text = "beim Spielen erkannt", FontSize = 10.5, Margin = new Thickness(10, 0, 0, 0) };
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Grid.SetColumn(origin, 1);
+            row.Children.Add(new StackPanel { Children = { text } });
+            row.Children.Add(origin);
+
+            for (var i = 0; i < 3; i++)
+            {
+                WpfTestHost.Layout(row, new Size(260, 40));
+                WpfTestHost.DoEvents();
+            }
+
+            var column = row.ColumnDefinitions[0].ActualWidth;
+            var dpi = VisualTreeHelper.GetDpi(text).PixelsPerDip;
+            var shown = new FormattedText(text.Text, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+                new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, Brushes.Black, dpi).WidthIncludingTrailingWhitespace;
+            Assert.NotEqual(folder, text.Text);
+            Assert.Contains(PathEllipsis.Ellipsis, text.Text, StringComparison.Ordinal);
+            Assert.EndsWith("Win64", text.Text, StringComparison.Ordinal); // das Ende bleibt lesbar, nichts unter der Herkunft
+            Assert.True(shown <= column + 0.5, $"{text.Text}: {shown:0.0} px in {column:0.0} px");
+            Assert.Equal(folder, text.ToolTip);
+        });
+    }
+
+    [Fact]
+    public void Frozen_hdr_moment_for_snapshots_shows_on_in_capsule_and_button_without_switching()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var context = new TestLibraryContext(ManyGames(3));
+            var (window, model, _) = Open(context);
+            model.SelectedGame = model.Games[0];
+            Assert.Equal(LibraryStrings.Hdr_TurnOn, model.HdrToggleText);
+
+            // Bildschirmfotos des HDR-Moments (--snapshot): Kapsel und Knopf zeigen einheitlich „an“, geschaltet wird nichts.
+            window.FreezeHdrMoment(0.35);
+            WpfTestHost.DoEvents();
+
+            Assert.False(model.IsHdrOn);
+            Assert.True(model.ShowsHdrOn);
+            Assert.Equal(LibraryStrings.Nits_HdrOn, model.HdrShortText);
+            Assert.Equal(LibraryStrings.Hdr_TurnOff, model.HdrToggleText);
+            Assert.Equal(LibraryStrings.Hdr_TurnOff, AutomationProperties.GetName(Named<Button>(window, "ToggleHdrButton")));
+            Assert.Equal(0, context.ToggleHdrCalls);
             window.Close();
         });
     }

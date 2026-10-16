@@ -57,6 +57,10 @@ Stand: 2026-10-16, Zweig `feature/showcase-views`. Grundlage: genehmigter Protot
 
 ## Offene Punkte für andere Teile
 
+Stand nach der Zusammenführung (G10.10): Bilddienst (Kandidaten, eigene Bilder, helle Fassung), Helligkeitsdienst und
+`ContentUnderTitleBar` wirken; `Hp.Font.Display` hat in `Controls.xaml` und den Token-Dateien denselben Wert. Offen
+bleiben nur die Abnahme am echten System und phase10-gpu.ps1 mit eingeschaltetem Bildschirm (siehe E89).
+
 - **Bilddienst (CORE, G10.3)**: `GetCandidatesAsync` liefert noch keine Kandidaten, `SaveCustomImage` wirft noch
   (eigene Bilder lassen sich wählen, aber noch nicht übernehmen), `HeroBoost` fehlt. Die Ansichten nutzen alles, sobald
   es da ist.

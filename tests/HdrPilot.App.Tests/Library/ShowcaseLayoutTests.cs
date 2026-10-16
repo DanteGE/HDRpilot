@@ -107,13 +107,35 @@ public sealed class ShowcaseLayoutTests
     public void Showcase_shelf_hero_is_big_and_grid_hero_medium()
     {
         Assert.Equal(620, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1000, false));
-        Assert.Equal(500, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 620, false));
+        Assert.Equal(500, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 800, false)); // wie der Prototyp bei 1280×800
         Assert.Equal(240, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, 1000, false));
         Assert.Equal(196, ShowcaseLayout.HeroHeight(LibraryViewMode.Grid, 700, false));
 
         // 3440 × 1440: das Regal behält unten Platz für die Kachelreihe (Abweichung vom Prototyp: höchstens H − 462).
         var shelf = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1400, false);
         Assert.True(1400 - shelf >= 462, "Platz für die Reihe: " + (1400 - shelf));
+    }
+
+    [Theory]
+    [InlineData(620)] // kleinste Fensterhöhe
+    [InlineData(700)]
+    [InlineData(727)] // 1280×800 bei 110 % Skalierung
+    [InlineData(768)]
+    [InlineData(800)]
+    [InlineData(982)]
+    [InlineData(1309)]
+    [InlineData(1440)]
+    public void Shelf_hero_leaves_room_for_whole_tiles_at_every_window_height(double height)
+    {
+        // Gegenprobe zum Prototyp: clamp(H·0,62; 500; 660) ließe bei 727 px nur 189 px für die Reihe (Kachel 200 + 34).
+        var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, false);
+        var row = height - hero - ShowcaseLayout.BodyBottom;
+        var tile = ShowcaseLayout.Shelf(1600, row).TileHeight;
+
+        Assert.True(tile + ShowcaseLayout.ShelfPadding <= row, $"H {height}: Titelbereich {hero}, Reihe {row}, Kachel {tile}");
+        Assert.True(tile >= ShowcaseLayout.TinyShelfTile && (tile >= ShowcaseLayout.MinShelfTile || height < 712), $"H {height}: Kachel {tile}");
+        Assert.True(hero >= ShowcaseLayout.MinShelfHero, $"H {height}: Titelbereich {hero}");
+        Assert.True(hero >= 500 || row - ShowcaseLayout.ShelfPadding <= ShowcaseLayout.MinShelfTile + 1, $"H {height}: Titelbereich {hero} kleiner als nötig");
     }
 
     [Theory]

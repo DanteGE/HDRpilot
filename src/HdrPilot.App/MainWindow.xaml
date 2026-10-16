@@ -746,7 +746,7 @@
             </Grid>
             <!-- Regal -->
             <StackPanel x:Name="HeroLarge" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="0,0,0,74" Visibility="Collapsed">
-                <StackPanel Orientation="Horizontal">
+                <StackPanel x:Name="LargeOverline" Orientation="Horizontal">
                     <Border Width="28" Height="2" CornerRadius="1" VerticalAlignment="Center" Margin="0,0,10,0" Background="{DynamicResource Hp.Brush.AccentShine}" />
                     <TextBlock Style="{StaticResource Lib.ArtOverline}" Text="{Binding Overline}" />
                 </StackPanel>

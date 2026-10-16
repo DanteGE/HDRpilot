@@ -840,6 +840,9 @@
                                                     </Rectangle.RenderTransform>
                                                 </Rectangle>
                                                 <Canvas x:Name="DemoParticles" IsHitTestVisible="False">
+                                                    <Canvas.RenderTransform>
+                                                        <TranslateTransform x:Name="DemoRise" />
+                                                    </Canvas.RenderTransform>
                                                     <Ellipse Canvas.Left="96" Canvas.Top="36" Width="6" Height="6" Fill="White" Opacity="0.9" />
                                                     <Ellipse Canvas.Left="112" Canvas.Top="24" Width="6" Height="6" Fill="White" Opacity="0.7" />
                                                     <Ellipse Canvas.Left="84" Canvas.Top="18" Width="5" Height="5" Fill="White" Opacity="0.55" />

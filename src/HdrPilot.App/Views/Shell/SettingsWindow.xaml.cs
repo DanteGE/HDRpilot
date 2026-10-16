@@ -225,9 +225,7 @@ public partial class SettingsWindow : ChromeWindow
         DemoSweep.Opacity = 1;
         var sweep = Forever(new DoubleAnimation(-60, 260, new Duration(TimeSpan.FromSeconds(2.6))) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
         DemoSweepMove.BeginAnimation(TranslateTransform.XProperty, sweep);
-        var rise = new TranslateTransform();
-        DemoParticles.RenderTransform = rise;
-        rise.BeginAnimation(TranslateTransform.YProperty, Forever(new DoubleAnimation(0, -30, new Duration(TimeSpan.FromSeconds(2.2)))));
+        DemoRise.BeginAnimation(TranslateTransform.YProperty, Forever(new DoubleAnimation(0, -30, new Duration(TimeSpan.FromSeconds(2.2)))));
         DemoParticles.BeginAnimation(OpacityProperty, Forever(new DoubleAnimation(1, 0, new Duration(TimeSpan.FromSeconds(2.2)))));
 
         // Langsamer Zoom der Vorschau (Ken Burns): Maßstab 1,02 → 1,12 und leichte Drift, hin und zurück.
@@ -243,7 +241,10 @@ public partial class SettingsWindow : ChromeWindow
         DemoSweepMove.BeginAnimation(TranslateTransform.XProperty, null);
         DemoSweep.Opacity = 0;
         DemoParticles.BeginAnimation(OpacityProperty, null);
-        DemoParticles.RenderTransform = Transform.Identity;
+
+        // Die Animation selbst abmelden: Ein nur abgehängtes Transform behielte seine Endlos-Uhr, und WPF zeichnete weiter
+        // 30 Bilder pro Sekunde, auch nach dem Schließen des Fensters (gemessen: 1,5 % eines Kerns im Infobereich).
+        DemoRise.BeginAnimation(TranslateTransform.YProperty, null);
         DemoParticles.Opacity = 1;
         StageZoom.BeginAnimation(ScaleTransform.ScaleXProperty, null);
         StageZoom.BeginAnimation(ScaleTransform.ScaleYProperty, null);

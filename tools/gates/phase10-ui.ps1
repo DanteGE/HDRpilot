@@ -122,6 +122,25 @@ try {
         Check ($null -ne (Find-Id $win $id 3000)) "Element $id vorhanden"
     }
 
+    # --- Bildschirm-Kapsel (G10.7, Anmerkung 3): Skala von 0 bis zur Spitze bei eingeschaltetem HDR, nie fest 1000 ---
+    # Die Kapsel selbst ist ein Grid ohne Automatisierungs-Peer; ihre Teile prüft die Liste oben. Die Werte liest die App
+    # im Hintergrund, sobald das Fenster offen ist; ohne aktiven Bildschirm bleibt es bei „—“.
+    [void](Wait-Until { $p = Find-Id $win 'NitsPeak' 500; $p -and $p.Current.Name -match '\d' } 4000)
+    $peakEl = Find-Id $win 'NitsPeak' 3000
+    $peakText = if ($peakEl) { [string]$peakEl.Current.Name } else { '' }
+    $peakValue = 0.0
+    if ([double]::TryParse(($peakText -replace ',', '.'), [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$peakValue) -and $peakValue -gt 0) {
+        $scale = Find-Id $win 'NitsScale' 3000
+        $range = $null
+        if ($scale -and $scale.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range)) {
+            $max = $range.Current.Maximum
+            Check ([Math]::Abs($max - $peakValue) -lt 0.5 -and $max -ne 1000) ("Nit-Skala endet an der Spitze: Maximum {0} = Spitze {1}" -f $max, $peakText)
+        } else { Check $false 'Nit-Skala NitsScale mit Wertebereich vorhanden' }
+    } else {
+        Check ($null -eq (Find-Id $win 'NitsScale' 500)) ('Ohne Bildschirmwerte keine Skala (Spitze „{0}“)' -f $peakText)
+        Note 'UMGEBUNG: keine Bildschirmwerte (Bildschirm aus oder noch nicht gelesen), Vergleich Skala/Spitze übersprungen'
+    }
+
     Invoke-El (Find-Id $win 'ColumnSortLastPlayed')
     Check (Wait-Until { (Read-Config $cfg).settings.librarySortOrder -match 'LastPlayed' }) 'Spalte „Zuletzt gespielt“ sortiert und wird gespeichert'
     Invoke-El (Find-Id $win 'ColumnSortName')

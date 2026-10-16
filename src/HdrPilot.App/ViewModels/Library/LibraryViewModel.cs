@@ -427,7 +427,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _hdrStatusText, value);
     }
 
-    public string HdrToggleText => _isHdrOn ? LibraryStrings.Hdr_TurnOff : LibraryStrings.Hdr_TurnOn;
+    /// <summary>„HDR einschalten“ / „HDR ausschalten“; folgt wie die Kapsel auch der HDR-Vorschau der Bildschirmfotos.</summary>
+    public string HdrToggleText => ShowsHdrOn ? LibraryStrings.Hdr_TurnOff : LibraryStrings.Hdr_TurnOn;
 
     public string? ActiveSessionText
     {

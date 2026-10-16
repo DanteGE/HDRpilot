@@ -381,6 +381,7 @@ public sealed partial class LibraryViewModel
         OnPropertyChanged(nameof(PreviewHdr));
         OnPropertyChanged(nameof(ShowsHdrOn));
         OnPropertyChanged(nameof(HdrShortText));
+        OnPropertyChanged(nameof(HdrToggleText));
     }
 
     /// <summary>HDR an oder in der Vorschau an (Kapsel, Titelbild, Kacheln).</summary>

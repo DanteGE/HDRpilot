@@ -62,22 +62,54 @@ public static class ShowcaseLayout
     /// </summary>
     public const double MaxPaneWidth = 560;
 
+    /// <summary>Kleinste Kachel im Regal (Prototyp: clamp(h − 34; 200; 340)).</summary>
+    public const double MinShelfTile = 200;
+
+    /// <summary>Kachel im Regal, wenn selbst der kleinste Titelbereich keine 200 px übrig lässt (Fensterhöhe unter 712 px).</summary>
+    public const double TinyShelfTile = 100;
+
+    /// <summary>
+    /// Kleinster Titelbereich im Regal, wenn das Fenster für 500 px samt Kachelreihe zu niedrig ist: Die Werkzeugleiste
+    /// (50 px über dem unteren Rand) bleibt unter der Automatik-Karte (unterer Rand bei etwa 384 px).
+    /// </summary>
+    public const double MinShelfHero = 440;
+
+    /// <summary>Unterer Innenrand des großen Titelbereichs (Regal) unter den Knöpfen.</summary>
+    public const double LargeHeroBottom = 74;
+
+    /// <summary>Kennzeile, Angaben und Knöpfe des großen Titelbereichs samt Abständen (ohne Logo bzw. Name).</summary>
+    public const double LargeHeroChrome = 150;
+
+    /// <summary>Höchste Höhe von Logo bzw. Name im großen Titelbereich (Viewbox des Prototyps).</summary>
+    public const double LargeTitleHeight = 190;
+
     /// <summary>
     /// Höhe des Titelbereichs: Liste clamp(H·0,22; 180; 240), beim Scrollen 120; Raster clamp(H·0,24; 196; 260); Regal
     /// clamp(H·0,62; 500; 660). Im Regal darf er bei sehr hohen Fenstern (über 1122 px, etwa 3440×1440) mitwachsen, damit
-    /// unter der Kachelreihe keine leere Fläche bleibt: Obergrenze dort H − 462.
+    /// unter der Kachelreihe keine leere Fläche bleibt: Obergrenze dort H − 462. In niedrigen Fenstern (etwa 1280×800 bei
+    /// 110 % Skalierung, 727 px) gibt er nach, bis die kleinste Kachel ganz über der Statuszeile steht (die Reihe beginnt am
+    /// unteren Rand des Titelbilds und endet <see cref="BodyBottom"/> über dem Fensterrand), höchstens bis 440 px.
     /// </summary>
     public static double HeroHeight(LibraryViewMode view, double windowHeight, bool listCollapsed)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
         var value = view switch
         {
-            LibraryViewMode.Shelf => Math.Clamp(h * 0.62, 500, Math.Max(660, h - 462)),
+            LibraryViewMode.Shelf => Math.Min(
+                Math.Clamp(h * 0.62, 500, Math.Max(660, h - 462)),
+                Math.Max(MinShelfHero, h - BodyBottom - ShelfPadding - MinShelfTile)),
             LibraryViewMode.Grid => Math.Clamp(h * 0.24, 196, 260),
             _ => listCollapsed ? CollapsedListHero : Math.Clamp(h * 0.22, 180, 240),
         };
         return Math.Round(value);
     }
+
+    /// <summary>
+    /// Platz für Logo bzw. Name im großen Titelbereich (Regal) zwischen Kopf und Knöpfen: Titelbereich minus unterer
+    /// Innenrand, Kopf samt 16 px Luft und <see cref="LargeHeroChrome"/>. Ab 190 px gilt die volle Größe.
+    /// </summary>
+    public static double LargeTitleRoom(double heroHeight) =>
+        heroHeight - LargeHeroBottom - (HeaderTop + HeaderHeight + 16) - LargeHeroChrome;
 
     /// <summary>Oberkante der Werkzeugleiste: im Regal über dem unteren Rand des Titelbilds, sonst direkt darunter.</summary>
     public static double ToolbarTop(LibraryViewMode view, double heroHeight) => view == LibraryViewMode.Shelf ? heroHeight - 50 : heroHeight - 2;
@@ -85,10 +117,18 @@ public static class ShowcaseLayout
     /// <summary>Breite des Detailbereichs ohne gemerkte Aufteilung: clamp(23 % der Fensterbreite; 340; 396).</summary>
     public static double PaneWidth(double windowWidth) => Math.Round(Math.Clamp((double.IsFinite(windowWidth) ? windowWidth : 1600) * 0.23, 340, 396));
 
-    /// <summary>Kachelreihe im Regal: Höhe clamp(h − 34; 200; 340), Breite 2/3 davon, sichtbare Kacheln nach der Breite.</summary>
+    /// <summary>Innenabstand der Kachelreihe oben und unten zusammen (12 + 22).</summary>
+    public const double ShelfPadding = 34;
+
+    /// <summary>
+    /// Kachelreihe im Regal: Höhe clamp(h − 34; 200; 340), Breite 2/3 davon, sichtbare Kacheln nach der Breite. Ist die
+    /// Reihe niedriger als die kleinste Kachel (nur in sehr niedrigen Fenstern), wird die Kachel kleiner statt abgeschnitten,
+    /// höchstens bis 100 px.
+    /// </summary>
     public static ShelfMetrics Shelf(double width, double height, double gap = 18)
     {
-        var tileHeight = Math.Round(Math.Clamp((double.IsFinite(height) ? height : 0) - 34, 200, 340));
+        var available = (double.IsFinite(height) ? height : 0) - ShelfPadding;
+        var tileHeight = Math.Round(available >= MinShelfTile ? Math.Min(available, 340) : Math.Max(available, TinyShelfTile));
         var tileWidth = Math.Round(tileHeight * 2 / 3);
         var usable = (double.IsFinite(width) ? width : 0) - (2 * Pad);
         var visible = Math.Max(2, (int)Math.Floor((usable + gap) / (tileWidth + gap)));

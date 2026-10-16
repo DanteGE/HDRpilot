@@ -98,6 +98,9 @@ Bezeichnungen stehen wörtlich so in `ShellStrings.resx`.
 
 ## Offene Punkte für die Integration
 
+Stand nach der Zusammenführung (G10.10): README und E89 sind ergänzt; Abdeckungstabelle, Beispiele, Nit-Werte und helle
+Fassung kommen aus den echten Diensten.
+
 - README: Abschnitt Einstellungen um die Navigation und die Seite „Darstellung“ ergänzen (Bezeichnungen oben), „Abbrechen“
   gilt nicht für die Darstellung. Tray-Symbol beschreiben (Linie bei „HDR aus“, Kachel bei „HDR an“, Abzeichen).
 - E89: Raster-Zahlen (520/760/24/3), Kontrastregeln, Farbwechsel 0,9 s, Symbol-Zustände und „neu nur bei Wechsel“.

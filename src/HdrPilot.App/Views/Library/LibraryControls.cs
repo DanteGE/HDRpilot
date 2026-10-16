@@ -147,6 +147,10 @@ public sealed class MiddleEllipsisText : TextBlock
     {
         TextWrapping = TextWrapping.NoWrap;
 
+        // Mit Kürzung misst ein TextBlock höchstens den verfügbaren Platz; sonst ordnet WPF ihn in voller Textbreite an,
+        // schneidet nur ab und SizeChanged meldet nie die schmalere Spalte (Ende des Pfads unter der Herkunft verdeckt).
+        TextTrimming = TextTrimming.CharacterEllipsis;
+
         // MeasureOverride von TextBlock ist versiegelt: gekürzt wird nach jeder Größenänderung des Platzes.
         SizeChanged += (_, e) => Update(e.NewSize.Width);
     }

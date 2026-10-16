@@ -76,10 +76,48 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 
 ### Spielebibliothek
 
-- Links die Liste aller gefundenen Spiele mit Symbol, Name, Quelle und dem Schalter **HDR automatisch**, rechts die
-  Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit den Pfeiltasten verschieben, per
-  Doppelklick zurücksetzen); die Breite merkt sich HDRpilot.
-- Ein Kennzeichen „HDR“ zeigt Spiele, die laut PCGamingWiki HDR unterstützen, „HDR*“ solche mit eingeschränktem HDR.
+- Im Kopf stehen die Zahl der Spiele, die Bildschirm-Kapsel und die Knöpfe **HDR einschalten** bzw. **HDR ausschalten**
+  (schaltet sofort, unabhängig von einem Spiel), **Automatik pausieren** und das Zahnrad für die Einstellungen. Die
+  Kapsel zeigt den Zielbildschirm mit Farbtiefe, ob HDR an ist, und seine Werte laut Windows: Spitze, Vollbild und
+  Minimum in nits. Die Skala reicht von 0 bis zur Spitze bei eingeschaltetem HDR, auch wenn HDR gerade aus ist (die
+  Fähigkeit des Bildschirms, keine Messung); solange HDRpilot die Werte nicht kennt, steht dort „—“.
+- Darunter der Titelbereich des gewählten Spiels: Titelbild, Logo oder Name, wann es zuletzt gespielt wurde, die Quelle
+  und ein Kennzeichen zur HDR-Unterstützung. Beim Wechsel des Spiels blendet das Bild über; Umgebungslicht und Leuchten
+  des Fensters nehmen die Farben des Titelbilds an (abschaltbar unter „Darstellung“, siehe „Einstellungen“).
+- Drei Ansichten, umschaltbar in der Werkzeugleiste oder mit Strg+1, Strg+2 und Strg+3; die Wahl bleibt gespeichert:
+  - **Liste** (Standard): je Spiel eine Zeile mit Vorschau, Name, Quelle, „Zuletzt gespielt“, HDR-Kennzeichen und dem
+    Schalter **HDR automatisch**. Ein Klick auf eine Spaltenüberschrift sortiert. Links über der Liste wählst du die
+    Vorschau: **16:9-Vorschaubild** oder **Symbol**. In schmalen Fenstern fallen erst die Quelle, dann die HDR-Spalte
+    und „Zuletzt gespielt“ weg; beim Scrollen wird der Titelbereich flacher.
+  - **Raster**: Cover im Format 2:3. Spaltenzahl und Kachelgröße richten sich nach der Fensterbreite, im Vollbild
+    genauso wie im kleinen Fenster; nichts wird gestreckt oder abgeschnitten. Der Schalter „HDR automatisch“ erscheint
+    an der gewählten Kachel und beim Zeigen mit der Maus.
+  - **Regal**: großes Titelbild mit **Starten**, **Desktop** und **Startmenü**, darunter eine Reihe Cover zum Blättern
+    und rechts die Karte „AUTOMATIK“ mit den wichtigsten Schaltern. **Details** (oder die Taste I) öffnet alle Details
+    als Schublade, Esc schließt sie.
+- In Liste und Raster stehen rechts die Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit
+  den Pfeiltasten verschieben, per Doppelklick zurücksetzen); die Breite merkt sich HDRpilot, höchstens 560 px.
+- Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR
+  automatisch“, Esc leert die Suche. Rechtsklick, Umschalt+F10 oder die Menütaste öffnen das Spielmenü mit **Starten**,
+  **HDR automatisch**, **Nach dem Spiel zurückstellen**, **Windows Auto HDR**, **Bild wählen…**, **Symbol ändern…**
+  bzw. **Symbol zurücksetzen**, **Desktop-Verknüpfung erstellen**, **Zum Startmenü hinzufügen** und
+  **Installationsordner öffnen**.
+- Titelbild, Logo und Cover kommen aus den Bild-Zwischenspeichern der Launcher auf dem PC (Steam, GOG Galaxy, Ubisoft
+  Connect, Xbox-Paket), nur lesend, nie aus dem Netz. Fehlt eines, erzeugt HDRpilot ein Ersatzbild aus Symbol und Name;
+  neue Bilder eines Launchers erscheinen von selbst (siehe „So funktioniert es“). Ein anderes Bild wählst du per
+  Rechtsklick › **Bild wählen…** oder im Abschnitt „BILDER“ der Details: Je Reiter **Titelbild**, **Logo** und
+  **Cover** stehen **Automatisch**, weitere lokale Bilder (etwa der Startbildschirm eines Xbox-Pakets), das erzeugte
+  Bild und **Eigene Datei…** (PNG, JPG, WebP, BMP) zur Wahl; **Übernehmen** speichert, **Zurücksetzen** wählt im
+  aktuellen Reiter wieder **Automatisch**. Eigene Bilder legt HDRpilot verkleinert in seinem Datenordner ab, die
+  gewählte Datei bleibt unverändert. Optional füllt SteamGridDB fehlende Bilder aus dem Netz (siehe „Einstellungen“).
+- Bewegung: Das Titelbild zoomt langsam und folgt leicht der Maus, Lichtstrahlen und Lichtpunkte ziehen darüber. Geht
+  HDR an, während die Bibliothek offen ist, läuft ein kurzer HDR-Moment (Lichtstreifen, hellere Fassung des Titelbilds,
+  Partikel für höchstens 2,5 s, leuchtender Rand). Wie viel sich bewegt, stellst du unter „Darstellung“ › „Effekte“
+  ein; minimiert, im Hintergrund und während ein Spiel läuft steht alles still. Rechts in der Statuszeile steht, was
+  gerade gilt.
+- Was PCGamingWiki über die HDR-Unterstützung weiß, zeigt die Liste in der Spalte „HDR“: „NATIV“, „TEILWEISE“
+  (eingeschränkt) oder „MOD“ (nur per Mod). Kacheln von Spielen mit HDR tragen ein Kennzeichen „HDR“, der Titelbereich
+  nennt „NATIVES HDR“, „HDR TEILWEISE“, „HDR PER MOD“ oder „HDR UNBEKANNT“.
 - Das violette Kennzeichen „AUTO HDR“ direkt hinter dem Namen zeigt Spiele, bei denen **Windows Auto HDR** an ist. Es ist
   nur eine Anzeige; geschaltet wird in den Details, wirken tut es beim Start über HDRpilot (siehe „Windows Auto HDR“).
   Sein Funkel-Symbol hat sonst nur der Eintrag **Auto HDR** im Infobereich.
@@ -102,7 +140,8 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - **Vorschläge aus deinen Suchordnern**: Unterordner deiner Suchordner mit EXE-Dateien erscheinen oben in der
   Bibliothek. Übernommen wird nur, was du dort hinzufügst.
 - Details zum gewählten Spiel, von oben nach unten:
-  - **Mit HDR starten**: schaltet HDR ein, wartet die Bestätigung ab und startet dann das Spiel.
+  - **Starten** (für Bildschirmleser **Mit HDR starten**): schaltet HDR ein, wartet die Bestätigung ab und startet dann
+    das Spiel. Ist **Nach dem Start in den Infobereich** an (siehe „Einstellungen“), schließt sich die Bibliothek danach.
   - **Desktop** / **Startmenü**: legt eine Verknüpfung „<Spiel> (HDR)“ an, die das Spiel genauso über HDRpilot startet.
     Im Startmenü liegt sie im Ordner „HDRpilot“. Sie zeigt das Symbol der Liste, auch dein eigenes (dafür legt HDRpilot
     neben dessen PNG eine ICO-Datei ab, die beim Zurücksetzen bleibt, damit die Verknüpfung ihr Symbol behält). Ist das
@@ -126,13 +165,18 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     Die Liste zeigt die bekannten EXEs mit Herkunft („vom Launcher“, „beim Spielen erkannt“, „von dir hinzugefügt“).
     Du kannst EXEs hinzufügen (auch außerhalb des Spielordners), entfernen (dann zählen sie für dieses Spiel nie) und
     mit **Wieder aufnehmen** zurückholen. **Neu lernen** vergisst die beim Spielen erkannten EXEs.
+  - Abschnitt „BILDER“: Titelbild, Logo, Cover und Symbol des Spiels; ein Klick öffnet **Bild wählen…**, beim Symbol
+    das Menü mit **Symbol ändern…**. Darunter steht, woher die Bilder kommen, etwa „Lokal aus dem Steam-Cache · nichts
+    heruntergeladen“ oder „Eigene Datei · nur auf diesem PC“.
   - **Aus der Bibliothek entfernen**: nur für selbst hinzugefügte Spiele.
 
 ### Infobereich
 
-Das Symbol zeigt, ob HDR gerade an ist, und bei pausierter Automatik zusätzlich Pausenbalken. Der Tooltip nennt die
-Spiele, für die HDRpilot gerade HDR geschaltet hat, ob die Automatik aktiv ist und gegebenenfalls, wie lange der
-Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
+Das Symbol, eine Sonne über dem Horizont in den Farben deines Farbschemas, zeigt den Zustand: bei ausgeschaltetem HDR
+als Linie, bei eingeschaltetem als gefüllte Kachel, bei pausierter Automatik mit gelbem Pause-Abzeichen und, solange ein
+Spiel mit HDR läuft, mit grünem Abzeichen. Das Fenstersymbol in Titelleiste und Taskleiste zeigt dasselbe. Der Tooltip
+nennt die Spiele, für die HDRpilot gerade HDR geschaltet hat, ob die Automatik aktiv ist und gegebenenfalls, wie lange
+der Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
 
 - **HDR jetzt einschalten** / **HDR jetzt ausschalten**
 - **Auto HDR**: zeigt, ob der Schalter „Auto HDR“ von Windows gerade an ist (gelesen beim Öffnen des Menüs), und
@@ -164,6 +208,16 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
 | Suchordner | Ordner mit Spielen ohne Launcher; Unterordner mit EXE werden vorgeschlagen | keine |
 | Hilfsprozesse ausschließen | Programme, die nie als Spiel zählen (Absturzmelder, Installer und Laufzeitpakete, Anti-Cheat-Installer und -Dienste, reine Launcher-Fenster …) | Standardliste |
+| Farbschema | Duoton oder Tritonus, eine der acht Vorlagen oder eigene Farben; färbt Oberfläche, Tray- und Fenstersymbol | Abendrot, Duoton |
+| Textfarbe auf Akzentflächen automatisch | Dunkle Schrift oder Weiß auf Akzentflächen, je nachdem, was besser lesbar ist | an |
+| Hintergrund folgt dem Spiel | Umgebungslicht und Leuchten der Bibliothek nehmen die Farben des gewählten Titelbilds an | an |
+| Thema | Automatisch (wie der App-Modus von Windows), Hell oder Dunkel | Automatisch |
+| Effekte | Voll, Reduziert (nur kurze Übergänge bis 0,3 s) oder Aus | Voll |
+| Beim Spielen anhalten | Solange ein Spiel läuft, steht jede Animation still | an |
+| Im Hintergrund anhalten | Minimiert, verdeckt oder nicht aktiv steht jede Animation still | an |
+| Windows-Animationseffekte beachten | Ist „Animationseffekte“ in Windows aus, gilt mindestens „Reduziert“ | an |
+| Nach dem Start in den Infobereich | Nach einem Start aus der Bibliothek schließt sich das Fenster, HDRpilot läuft im Infobereich weiter | aus |
+| SteamGridDB (online) | Fehlende Titelbilder, Logos und Cover von steamgriddb.com laden, nur mit eigenem API-Schlüssel | aus |
 | Bei jedem Start abgleichen | HDR-Liste von PCGamingWiki 30 s nach dem Start abgleichen, höchstens einmal pro Stunde (siehe „HDR-Liste“) | an |
 | Protokollstufe (Erweitert) | Wie ausführlich protokolliert wird | Normal |
 | Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert und gerade kein Spiel läuft; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
@@ -176,10 +230,41 @@ Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protok
 `true`; sie setzt für Spiele mit „Windows Auto HDR“ auch den Auto-HDR-Schalter vor dem Spiel). Den Neustart-Puffer
 speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der Standard von 1 Minute.
 
-Rechts im Kopf der Einstellungen steht die Version von HDRpilot, dieselbe Nummer wie im Infobereich-Menü.
+Links führt eine Navigation durch die Bereiche (**Allgemein**, **Bildschirme**, **Automatik**, **Suchordner**,
+**Hilfsprozesse**, **Darstellung** mit **Farben**, **Bilder** und **Symbole und Tray**, **Erweitert**, **Protokolle**);
+alle stehen untereinander auf einer Seite, ein Klick springt hin. Oben in der Navigation steht die Version von
+HDRpilot, dieselbe Nummer wie im Infobereich-Menü, unten die Zahl der Spiele und **Spielebibliothek öffnen**. In
+breiten Fenstern stehen die Bereiche in bis zu drei Spalten nebeneinander, jeder höchstens 760 px breit; im Vollbild
+bleibt der Rest frei, statt die Bereiche in die Länge zu ziehen.
 
-Die Darstellung folgt dem hellen oder dunklen App-Modus von Windows. Animationen laufen nur, wenn in Windows
-„Animationseffekte“ an ist, und nur solange ein Fenster sichtbar ist.
+**Speichern** (Strg+S) und **Abbrechen** (Esc) gelten für alle Bereiche außer der Darstellung. Was du unter
+„Darstellung“ änderst, gilt und speichert sofort (**Wird sofort angewendet**); **Abbrechen** nimmt es nicht zurück,
+**Standard** setzt die ganze Darstellung zurück. Dort gibt es:
+
+- **Farbschema**: **Duoton** (Akzent und Atmosphäre, der Glanz entsteht aus der Atmosphäre) oder **Tritonus** (Akzent,
+  Atmosphäre und Glanz), acht Vorlagen (Abendrot, Cyber, Neongrün, Royal, Gletscher, Synthwave, Glut, Polarlicht) und
+  eigene Farben: Ein Klick auf ein Farbfeld öffnet den Farbwähler (Feld, Farbton-Leiste, Hex-Wert). Der Akzent färbt
+  Schaltflächen und Auswahl, die Atmosphäre Hintergrund und Leuchten, der Glanz HDR-Moment und Lichtstreifen. Alle
+  Farben der Oberfläche, das Tray-Symbol und das Fenstersymbol folgen dem Schema; Text auf Akzentflächen bleibt
+  mindestens 4,5:1 lesbar, Schalter und Fokusrahmen heben sich mindestens 3:1 ab.
+- **Live-Vorschau**: deine zuletzt gespielten Spiele im gewählten Schema. Der Schalter **HDR** zeigt den HDR-Moment nur
+  in der Vorschau und schaltet kein HDR.
+- **Thema**: **Automatisch** (wie der App-Modus von Windows), **Hell** oder **Dunkel**.
+- **Effekte**: **Voll**, **Reduziert** (nur kurze Übergänge bis 0,3 s, keine Daueranimation) oder **Aus**, dazu
+  **Beim Spielen anhalten**, **Im Hintergrund anhalten**, **Windows-Animationseffekte beachten** und **Nach dem Start in
+  den Infobereich**. Daueranimationen laufen mit höchstens 30 Bildern pro Sekunde; bei geschlossenem Fenster läuft gar
+  nichts.
+- **Bilder**: wie viele Bilder je Launcher lokal gefunden und genutzt werden, je Ersatzfall ein Beispiel aus deiner
+  Bibliothek und **SteamGridDB (online)**.
+- **Symbole und Tray**: Tray- und Fenstersymbol in allen Zuständen und in echter Größe, das Tray-Menü und eine
+  Taskleiste zur Vorschau (**Hell** oder **Dunkel**, nur für die Vorschau).
+
+**SteamGridDB (online)** ist die einzige Bildquelle aus dem Netz und standardmäßig aus. Eingeschaltet und mit eigenem
+API-Schlüssel von steamgriddb.com (eintragen, dann **Prüfen**) lädt HDRpilot nur Titelbilder, Logos und Cover, die lokal
+fehlen und die du nicht selbst gewählt hast: nach dem Einschalten, nach dem Prüfen eines Schlüssels und höchstens einmal
+am Tag eine Minute nach dem Start, nie während eines Spiels. Der Schlüssel wird verschlüsselt (DPAPI) für dein
+Windows-Konto gespeichert und nie ins Protokoll geschrieben; die Zeile darunter zeigt den letzten Netzwerkzugriff. Aus
+oder ohne Schlüssel gibt es keinen Netzwerkzugriff dafür.
 
 ## So funktioniert es
 
@@ -252,6 +337,31 @@ Unreal-Spielen zählt zuerst `<Projekt>\Binaries\Win64\*-Shipping.exe`.
 Findet sich gar kein echtes Symbol, sucht HDRpilot bis drei Ordnerebenen tief (höchstens 300 Ordner und 1 s). Die
 gewählte Quelle merkt es sich in `icon-cache.json`, damit die Liste nach einem Neustart keine Spielordner durchsucht.
 Symbole lädt HDRpilot nur für sichtbare Zeilen und nur, solange die Bibliothek offen ist.
+
+**Spielbilder:** Titelbild, Logo und Cover liest HDRpilot nur aus den Bild-Zwischenspeichern der Launcher: Steam
+`appcache\librarycache` (deutsche Fassungen zuerst), GOG Galaxy `webcache`, Ubisoft Connect `cache\assets` und bei
+Xbox-Spielen das Kachelbild im Paket. Epic, EA und Battle.net haben keinen solchen Speicher; dort und bei selbst
+eingetragenen Spielen kommt das Symbol aus der Spiel-EXE. Fehlt ein Bild, erzeugt HDRpilot ein Ersatzbild: ein
+Titelbild aus den Farben des Symbols mit dem Namen als Muster, ein Cover aus Titelbild oder Symbol mit dem Namen, statt
+eines Logos den Namen in der Titelschrift und ohne Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte
+Kapselbilder als einziges Cover) erkennt HDRpilot und ersetzt sie durch einen Ausschnitt aus dem Titelbild; Logos
+schneidet es auf ihren sichtbaren Teil zu. Umgebungsfarben und die hellere Fassung für den HDR-Moment berechnet es je
+Bild einmal und legt sie mit den Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab. Solange ein Fenster offen ist,
+beobachtet es die Ordner der Launcher, sodass neue Bilder von selbst erscheinen; bei geschlossenem Fenster gibt es
+weder Beobachtung noch Bilder im Speicher. Eigene Bilder („Bild wählen…“) stehen je Bildart in `config.json`
+(`artwork`) und liegen in `art\custom\`.
+
+**SteamGridDB:** nur eingeschaltet und mit eigenem Schlüssel (siehe „Einstellungen“). Gefragt wird
+`www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen, und nur nach unbewegten Bildern ohne
+NSFW- oder Spaß-Markierung. Bilder lädt HDRpilot nur von https-Adressen unter steamgriddb.com, höchstens 15 MB je
+Bild, mit mindestens 1 s Abstand und höchstens 200 Anfragen je Lauf; was SteamGridDB nicht hat, fragt es 30 Tage lang
+nicht erneut. Geladene Bilder liegen in `art\sgdb\`.
+
+**Bildschirmwerte:** Spitze, Vollbild, Minimum, Farbtiefe und ob HDR an ist, liest HDRpilot über die
+Grafikschnittstelle von Windows (DXGI), nur solange ein Fenster sie zeigt und nur nach einem HDR- oder
+Bildschirmwechsel. Die Spitze bei eingeschaltetem HDR merkt es sich in `display-luminance.json`; sie ist das Maximum
+jeder Nit-Skala, auch wenn HDR gerade aus ist. Gibt es noch keine Messung mit HDR, gilt der aktuelle Wert. Meldet
+Windows keine Werte (etwa bei ausgeschaltetem Bildschirm), steht dort „—“.
 
 **Schalten:** über die Windows-Anzeige-Schnittstelle (DisplayConfig), danach wird der Zustand jedes Mal erneut gelesen
 und so bestätigt. Ab Windows 11 24H2 (Build 26100) nutzt HDRpilot die neue HDR-Schnittstelle, sonst die ältere
@@ -356,7 +466,8 @@ HDRpilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme k
   sichtbare Fenster ebenfalls nur bei Windows ab.
 - Es liest und schreibt keinen Spielspeicher, schleust keinen Code ein, setzt keine Hooks, legt kein Overlay über das
   Spiel und ändert weder Priorität noch Prozessorzuteilung von Spielen. Die Protokolle von Epic und Steam liest es nur.
-- Es lädt keinen Treiber und braucht keine Administratorrechte. Netzwerk nutzt es nur für die HDR-Liste.
+- Es lädt keinen Treiber und braucht keine Administratorrechte. Netzwerk nutzt es nur für die HDR-Liste und, wenn du
+  es einschaltest, für SteamGridDB.
 - HDR schaltet es über die Anzeige-Einstellungen von Windows, wie der HDR-Schalter in den Windows-Einstellungen.
 - „Windows Auto HDR“ schaltet es nur über den Auto-HDR-Schalter in den Grafikeinstellungen von Windows unter HKCU, wie
   der Schalter in den Windows-Einstellungen selbst, und zwar vor dem Spielstart; das Spiel und seine Dateien fasst es

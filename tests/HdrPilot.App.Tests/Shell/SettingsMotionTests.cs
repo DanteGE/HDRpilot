@@ -108,6 +108,66 @@ public sealed class SettingsMotionTests
         });
     }
 
+    [Fact]
+    public void Settings_motion_stop_leaves_no_endless_clock_behind()
+    {
+        // Ein Endlos-Takt, der nur abgehängt statt abgemeldet wird, lässt WPF weiter zeichnen, auch nach dem Schließen
+        // (gemessen: 1,5 % eines Kerns im Infobereich, nachdem die Einstellungen einmal aktiv offen waren).
+        WpfTestHost.Run(() =>
+        {
+            var window = SettingsLayoutTests.CreateWindow(out _);
+            WpfTestHost.Layout(window, new Size(1600, 1000));
+
+            // Schon vorher belegte Werte (beendete Übergänge der Schalter halten ihren Endwert) zählen nicht.
+            var before = Animated(window).ToHashSet();
+            Invoke(window, "StartContinuous");
+            var started = Animated(window).Where(a => !before.Contains(a)).ToList();
+            Assert.True(started.Count >= 4, "Vorführkarte und Zoom der Vorschau laufen: " + started.Count);
+
+            Invoke(window, "StopContinuous");
+            Assert.All(started, a => Assert.False(a.HasAnimatedProperties, a.GetType().Name + " läuft nach dem Anhalten weiter"));
+            window.Close();
+        });
+    }
+
+    private static void Invoke(object target, string method) =>
+        target.GetType().GetMethod(method, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(target, null);
+
+    /// <summary>Elemente und ihre Transformationen, an denen gerade eine Animation hängt.</summary>
+    private static IEnumerable<System.Windows.Media.Animation.IAnimatable> Animated(DependencyObject root)
+    {
+        foreach (var element in WpfTestHost.Visuals(root).OfType<UIElement>())
+        {
+            if (element.HasAnimatedProperties)
+            {
+                yield return element;
+            }
+
+            var transforms = new Stack<System.Windows.Media.Transform>();
+            if (element.RenderTransform is { } transform)
+            {
+                transforms.Push(transform);
+            }
+
+            while (transforms.Count > 0)
+            {
+                var t = transforms.Pop();
+                if (t is System.Windows.Media.TransformGroup group)
+                {
+                    foreach (var child in group.Children)
+                    {
+                        transforms.Push(child);
+                    }
+                }
+
+                if (t.HasAnimatedProperties)
+                {
+                    yield return t;
+                }
+            }
+        }
+    }
+
     private sealed class Notifier : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;

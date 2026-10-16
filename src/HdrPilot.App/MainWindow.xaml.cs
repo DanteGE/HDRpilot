@@ -599,6 +599,13 @@ public partial class MainWindow : ChromeWindow
         var paneWidth = DetailsColumn.ActualWidth > 0 ? DetailsColumn.ActualWidth : ShowcaseLayout.PaneWidth(width);
         var right = shelf ? ShowcaseLayout.Pad + 380 : ShowcaseLayout.Pad + paneWidth + 28;
         HeroContent.Margin = new Thickness(ShowcaseLayout.Pad, 0, Math.Max(0, right), 0);
+
+        // Regal in niedrigen Fenstern: Logo bzw. Name verkleinern (zuletzt ohne Kennzeile), damit nichts in den Kopf ragt.
+        var room = shelf ? ShowcaseLayout.LargeTitleRoom(hero) : double.PositiveInfinity;
+        var overline = room >= 80;
+        LargeOverline.Visibility = overline ? Visibility.Visible : Visibility.Collapsed;
+        room += overline ? 0 : 30;
+        LargeTitle.MaxHeight = room >= ShowcaseLayout.LargeTitleHeight ? double.PositiveInfinity : Math.Max(48, Math.Floor(room));
         HeroCompact.Opacity = _listCollapsed ? 0 : 1;
         HeroCompact.IsHitTestVisible = !_listCollapsed;
     }

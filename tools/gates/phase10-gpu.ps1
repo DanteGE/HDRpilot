@@ -6,16 +6,22 @@
 #   - Offenes, aktives Fenster in Ruhe (Dauer-Effekte laufen): Mittel unter 5 %, nie über 20 %
 #   - HDR-Moment (--test-hdr-moment, ohne HDR-Schaltung): Spitze unter 30 %
 #   - Minimiert und inaktiv (Einstellungen davor): keine Bildaufrufe (unter 1 %)
-#   - Fenster geschlossen: keine Last; der Leerlauf der Überwachung wie bisher (phase3-idle.ps1, mit -SkipIdleGate aus)
-# Ohne aktiven Bildschirm (gesperrt, Bildschirm aus, keine Zähler, kein messbarer Bildaufbau) meldet das Gate UMGEBUNG
-# (Exit-Code 2) und gilt nicht als bestanden. Schaltet kein HDR, startet kein Spiel.
+#   - Fenster geschlossen: nach 10 s Aufräumen (Bilder freigeben, index.json schreiben) 30 s lang keine Grafiklast, CPU
+#     höchstens 0,5 % eines Kerns wie im Infobereich ohne Fenster, Handles höchstens +20; der Leerlauf der Überwachung
+#     wie bisher (phase3-idle.ps1, mit -SkipIdleGate aus)
+# Ohne aktiven Bildschirm (gesperrt, Bildschirm aus oder schlafend, keine Zähler, kein messbarer Bildaufbau) meldet das
+# Gate UMGEBUNG (Exit-Code 2) und gilt nicht als bestanden. Schaltet kein HDR, startet kein Spiel.
 param(
     [int]$IdleSeconds = 20,
     [int]$QuietSeconds = 8,
+    [int]$ClosedSettleSeconds = 10,
+    [int]$ClosedSeconds = 30,
     [double]$MaxIdleMean = 5,
     [double]$MaxIdlePeak = 20,
     [double]$MaxMomentPeak = 30,
     [double]$MaxQuiet = 1,
+    [double]$MaxClosedCpu = 0.5,
+    [int]$MaxClosedHandleGrowth = 20,
     [switch]$SkipIdleGate
 )
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
@@ -47,7 +53,8 @@ function Gpu-Measure([int]$processId, [int]$seconds, [string]$label) {
     }
     $mean = ($values | Measure-Object -Average).Average
     $peak = ($values | Measure-Object -Maximum).Maximum
-    Note ("{0}: {1} Proben, Mittel {2:N2} %, Spitze {3:N2} % ({4})" -f $label, $values.Count, $mean, $peak, (($values | ForEach-Object { '{0:N0}' -f $_ }) -join ' '))
+    # Out-Host: sonst landete die Zeile im Rückgabewert der Funktion statt im Protokoll
+    Note ("{0}: {1} Proben, Mittel {2:N2} %, Spitze {3:N2} % ({4})" -f $label, $values.Count, $mean, $peak, (($values | ForEach-Object { '{0:N0}' -f $_ }) -join ' ')) | Out-Host
     return [pscustomobject]@{ Mean = [double]$mean; Peak = [double]$peak }
 }
 
@@ -89,6 +96,12 @@ try {
     if (-not (Is-Active $win $app.Id)) { Umgebung 'Fenster der Testinstanz lässt sich nicht aktivieren (kein interaktiver Desktop?)' }
     $effects = Get-Text (Find-Id $win 'EffectsState' 3000)
     Note "Statuszeile Effekte: $effects"
+    # Ein ausgeschalteter oder schlafender Bildschirm meldet über DXGI 0 nits (die Kapsel zeigt dann „—“); dann misst
+    # die Grafikkarte nicht, was der Nutzer sähe
+    $peakEl = Find-Id $win 'NitsPeak' 3000
+    $peakText = if ($peakEl) { [string]$peakEl.Current.Name } else { '' }
+    Note ('Bildschirm-Kapsel: Spitze „{0}“' -f $peakText)
+    if ($peakText -notmatch '\d') { Umgebung 'Der Bildschirm meldet keine Helligkeitswerte (DXGI 0 nits: ausgeschaltet oder im Ruhezustand)' }
 
     # --- Offenes Fenster in Ruhe ---
     $proc = Get-Process -Id $app.Id; $cpuStart = $proc.TotalProcessorTime; $timeStart = Get-Date
@@ -134,16 +147,17 @@ try {
 
         # --- Geschlossen: Instanz läuft im Infobereich weiter ---
         $wp.Close()
-        Start-Sleep -Seconds 3
+        Start-Sleep -Seconds $ClosedSettleSeconds   # Aufräumen nach dem Schließen nicht mitmessen
         Check (-not $app.HasExited) 'Fenster geschlossen, Instanz läuft im Infobereich weiter'
         $proc = Get-Process -Id $app.Id
-        $cpu0 = $proc.TotalProcessorTime; $t0 = Get-Date
-        $closed = Gpu-Measure $app.Id $QuietSeconds 'Geschlossen'
+        $cpu0 = $proc.TotalProcessorTime; $t0 = Get-Date; $h0 = $proc.HandleCount
+        $closed = Gpu-Measure $app.Id $ClosedSeconds 'Geschlossen'
         $proc.Refresh()
         $cpuPct = ($proc.TotalProcessorTime - $cpu0).TotalMilliseconds / ((Get-Date) - $t0).TotalMilliseconds * 100
-        Note ("Geschlossen: CPU {0:N2} % eines Kerns" -f $cpuPct)
+        Note ("Geschlossen: CPU {0:N2} % eines Kerns, Handles {1} -> {2}" -f $cpuPct, $h0, $proc.HandleCount)
         Check ($closed.Peak -lt $MaxQuiet) ("Geschlossen: Spitze {0:N2} % < {1} %" -f $closed.Peak, $MaxQuiet)
-        Check ($cpuPct -lt 1) ("Geschlossen: CPU {0:N2} % < 1 %" -f $cpuPct)
+        Check ($cpuPct -le $MaxClosedCpu) ("Geschlossen: CPU {0:N2} % <= {1} %" -f $cpuPct, $MaxClosedCpu)
+        Check (($proc.HandleCount - $h0) -le $MaxClosedHandleGrowth) ("Geschlossen: Handles +{0} <= {1}" -f ($proc.HandleCount - $h0), $MaxClosedHandleGrowth)
     } else { Check $false 'Fenster lässt sich per UI-Automation minimieren' }
 
     Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null

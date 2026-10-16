@@ -1416,15 +1416,20 @@ public partial class MainWindow : ChromeWindow
     /// <summary>
     /// HDR ging bei offenem Fenster an. Die helle Fassung liegt meist schon vorab bereit; lädt sie noch, wartet der Moment
     /// höchstens <see cref="LibraryViewModel.MomentBoostWait"/> auf sie, kommt sie später, blendet der Titelbereich sie über.
+    /// Ist HDR nach dem Warten wieder aus (oder das Fenster zu), spielt keiner mehr.
     /// </summary>
     private async void OnHdrMomentRequested(object? sender, EventArgs e)
     {
-        if (_viewModel is { } vm)
+        if (_viewModel is not { } vm)
         {
-            await vm.WaitForHeroBoostAsync(LibraryViewModel.MomentBoostWait);
+            return;
         }
 
-        PlayMoment(transientBoost: false);
+        await vm.WaitForHeroBoostAsync(LibraryViewModel.MomentBoostWait);
+        if (_viewModel is { ShowsHdrOn: true })
+        {
+            PlayMoment(transientBoost: false);
+        }
     }
 
     private HdrMomentKind PlayMoment(bool transientBoost)

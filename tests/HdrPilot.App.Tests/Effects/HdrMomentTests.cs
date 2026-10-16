@@ -114,6 +114,26 @@ public sealed class HdrMomentTests
     }
 
     [Theory]
+    [InlineData(EffectLevel.Full)]
+    [InlineData(EffectLevel.Reduced)]
+    public void Effect_hdr_moment_with_real_hdr_leaves_the_bright_layer_to_the_hero_stage(EffectLevel level)
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Bei echtem HDR blendet der Titelbereich die helle Fassung ein und hält sie; nähme der Moment die Ebene, fiele sie
+            // beim Entfernen seines Storyboards (Ende, Abbruch) zurück. Nur der Prüf-Moment blendet sie selbst kurz ein.
+            var (player, parts, _, _) = Create();
+            var boost = (DependencyObject)parts.Boost()!;
+            player.Play(level, Shown, Scene, transientBoost: false);
+            Assert.DoesNotContain(boost, player.Board!.Children.Select(Storyboard.GetTarget));
+
+            player.Play(level, Shown, Scene, transientBoost: true);
+            Assert.Contains(boost, player.Board!.Children.Select(Storyboard.GetTarget));
+            player.Dispose();
+        });
+    }
+
+    [Theory]
     [InlineData("Off", false, false)]
     [InlineData("Full", true, false)]
     [InlineData("Full", false, true)]

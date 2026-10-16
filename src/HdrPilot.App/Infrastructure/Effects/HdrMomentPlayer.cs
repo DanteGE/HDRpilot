@@ -91,7 +91,8 @@ public sealed class HdrMomentPlayer : IDisposable
 
     /// <summary>
     /// Spielt den Moment, wenn die Regeln es erlauben. <paramref name="transientBoost"/>: die helle Fassung nur für die
-    /// Dauer des Moments zeigen (Prüfung ohne echte HDR-Schaltung); sonst bleibt sie, solange HDR an ist (Sache des Titelbereichs).
+    /// Dauer des Moments zeigen (Prüfung ohne echte HDR-Schaltung); sonst lässt der Moment ihre Ebene unberührt, sie bleibt,
+    /// solange HDR an ist (Sache des Titelbereichs).
     /// </summary>
     public HdrMomentKind Play(EffectLevel level, MotionContext context, HdrMomentScene scene, bool transientBoost)
     {
@@ -280,17 +281,15 @@ public sealed class HdrMomentPlayer : IDisposable
         Add(board, Pulse(TimeSpan.FromSeconds(1.1), 1, (0.18, 0.18)), _parts.Flash, UIElement.OpacityProperty);
         Add(board, Pulse(EdgeDuration, 1, (0.22, 0.22)), _parts.EdgeGlow, UIElement.OpacityProperty);
 
-        // Helle Fassung: blendet in 1,2 s ein; nur für die Prüfung danach wieder aus.
-        if (_parts.Boost() is { } boost)
+        // Helle Fassung nur für die Prüfung: blendet in 1,2 s ein und danach wieder aus. Bei echtem HDR gehört die Ebene dem
+        // Titelbereich (er blendet sie ebenso in 1,2 s ein und hält sie, solange HDR an ist); nähme der Moment sie, fiele sie
+        // beim Entfernen seines Storyboards (Ende, Abbruch) auf ihren eigenen Wert zurück, auch bei HDR an.
+        if (transientBoost && _parts.Boost() is { } boost)
         {
-            var opacity = new DoubleAnimationUsingKeyFrames { FillBehavior = transientBoost ? FillBehavior.Stop : FillBehavior.HoldEnd };
+            var opacity = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
             opacity.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(1.2)), new SineEase()));
-            if (transientBoost)
-            {
-                opacity.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(2.0))));
-                opacity.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(EffectPolicy.HdrMomentDuration)));
-            }
-
+            opacity.KeyFrames.Add(new LinearDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(2.0))));
+            opacity.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(EffectPolicy.HdrMomentDuration)));
             Add(board, opacity, boost, UIElement.OpacityProperty);
         }
 

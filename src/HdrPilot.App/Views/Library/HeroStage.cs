@@ -335,7 +335,24 @@ public sealed class HeroStage : Grid
         target.BeginAnimation(property, new DoubleAnimation(to, duration) { EasingFunction = ease ?? new SineEase { EasingMode = EasingMode.EaseInOut } }, HandoffBehavior.SnapshotAndReplace);
     }
 
-    private static void SetBoost(HeroSlot slot, bool on, TimeSpan duration) => Animate(slot.Boost, OpacityProperty, on && slot.HasBoostLayer ? 1 : 0, duration);
+    /// <summary>
+    /// Helle Ebene nach dem HDR-Zustand. Ihr eigener Wert ist immer das Ziel, der Übergang läuft nur darüber: Lässt eine andere
+    /// Animation die Ebene los (der Prüf-Moment blendet sie nur für seine Dauer ein, ein entferntes Storyboard), steht sie
+    /// damit auf dem HDR-Zustand statt wieder auf 0.
+    /// </summary>
+    private static void SetBoost(HeroSlot slot, bool on, TimeSpan duration)
+    {
+        var to = on && slot.HasBoostLayer ? 1.0 : 0.0;
+        var from = slot.Boost.Opacity;
+        slot.Boost.SetValue(OpacityProperty, to);
+        if (duration <= TimeSpan.Zero)
+        {
+            slot.Boost.BeginAnimation(OpacityProperty, null);
+            return;
+        }
+
+        slot.Boost.BeginAnimation(OpacityProperty, new DoubleAnimation(from, to, duration) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } }, HandoffBehavior.SnapshotAndReplace);
+    }
 
     private void Relayout()
     {
@@ -594,7 +611,7 @@ public sealed class HeroStage : Grid
 
         public Border Art { get; } = new();
 
-        /// <summary>Ebene der hellen Fassung; ihre Deckkraft führen HDR-Übergang und HDR-Moment.</summary>
+        /// <summary>Ebene der hellen Fassung; ihre Deckkraft führt der HDR-Übergang (nur der Prüf-Moment blendet sie kurz ein).</summary>
         public Grid Boost { get; } = new() { Opacity = 0 };
 
         /// <summary>Die helle Fassung selbst (oben in der Ebene; kommt sie spät, blendet sie über das warme Licht).</summary>

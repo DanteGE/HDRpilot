@@ -21,7 +21,9 @@
 #     der Überwachung wie bisher (phase3-idle.ps1, mit -SkipIdleGate aus)
 # Ohne aktiven Bildschirm (gesperrt, Bildschirm aus oder schlafend, keine Zähler, kein messbarer Bildaufbau) laufen Teil 1
 # und 3 trotzdem; das Gate meldet dann UMGEBUNG (Exit-Code 2) und gilt nicht als bestanden, ein Fehler in Teil 1 oder 3
-# meldet Exit-Code 1. Schaltet kein HDR, startet kein Spiel.
+# meldet Exit-Code 1. Verliert das Testfenster während einer Messung in Teil 2 den Vordergrund (jemand arbeitet am PC),
+# wird es einmal neu aktiviert und die Messung wiederholt; bleibt es nicht aktiv, ebenso UMGEBUNG mit dem Prozess im
+# Vordergrund. Werte über den Grenzen bleiben FEHLER. Schaltet kein HDR, startet kein Spiel.
 param(
     [int]$IdleSeconds = 20,
     [int]$QuietSeconds = 8,
@@ -147,6 +149,33 @@ function Is-Active($win, [int]$processId) {
     try { $f = [Windows.Automation.AutomationElement]::FocusedElement; return $null -ne $f -and $f.Current.ProcessId -eq $processId } catch { return $false }
 }
 
+# Name des Prozesses im Vordergrund (Fokus laut UI-Automation, nur gelesen)
+function Foreground-Name {
+    try {
+        $f = [Windows.Automation.AutomationElement]::FocusedElement
+        if ($f) { $p = Get-Process -Id $f.Current.ProcessId -ErrorAction SilentlyContinue; if ($p) { return $p.ProcessName } }
+    } catch {}
+    return 'unbekannt'
+}
+
+# Messung bei aktivem Testfenster. Verliert es dabei den Vordergrund (jemand arbeitet am PC und wechselt die Anwendung),
+# wird es einmal wie beim Start (SetFocus über UI-Automation) neu aktiviert und die Messung wiederholt; bleibt es nicht
+# aktiv, liegt das an der Umgebung, nicht an der App: UMGEBUNG mit dem Prozess im Vordergrund (Exit-Code 2), Rückgabe
+# $null. Die Grenzwerte prüft der Aufrufer (FEHLER).
+function Measure-Active([scriptblock]$measure, [string]$label) {
+    $result = & $measure
+    if (Is-Active $win $app.Id) { return $result }
+    Note ('{0}: Fenster verlor während der Messung den Vordergrund an „{1}“, einmal neu aktivieren und wiederholen' -f $label, (Foreground-Name)) | Out-Host
+    try { $win.SetFocus() } catch {}
+    Start-Sleep -Seconds 1
+    if (Is-Active $win $app.Id) {
+        $result = & $measure
+        if (Is-Active $win $app.Id) { return $result }
+    }
+    $script:umgebung = 'Fenster der Testinstanz verlor während der Messung „{0}“ den Vordergrund an „{1}“ (andere Anwendung im Vordergrund)' -f $label, (Foreground-Name)
+    return $null
+}
+
 function Effects-Text($win) { $e = Find-Id $win 'EffectsState' 3000; if ($e) { [string](Get-Text $e) } else { '' } }
 
 function Resize-To($win, [int]$w, [int]$h) {
@@ -248,10 +277,11 @@ try {
         if ($inactive) { Check ($inactive.Gpu.Peak -lt $MaxQuiet) ("Inaktiv: Grafikkarte Spitze {0:N2} % < {1} %" -f $inactive.Gpu.Peak, $MaxQuiet) }
         if ($minimized) { Check ($minimized.Gpu.Peak -lt $MaxQuiet) ("Minimiert: Grafikkarte Spitze {0:N2} % < {1} %" -f $minimized.Gpu.Peak, $MaxQuiet) }
 
-        $idle = Cpu-During $app.Id { Gpu-Measure $app.Id $IdleSeconds 'Liste 1600×1000 in Ruhe' }
-        Note ("Liste in Ruhe: CPU {0:N2} % eines Kerns (zeigt, dass die Dauer-Effekte zeichnen)" -f $idle.Cpu)
-        Check (Is-Active $win $app.Id) 'Fenster blieb während der Messung aktiv'
+        $idle = Measure-Active { Cpu-During $app.Id { Gpu-Measure $app.Id $IdleSeconds 'Liste 1600×1000 in Ruhe' } } 'Liste 1600×1000 in Ruhe'
+        if ($idle) { Note ("Liste in Ruhe: CPU {0:N2} % eines Kerns (zeigt, dass die Dauer-Effekte zeichnen)" -f $idle.Cpu) }
+    }
 
+    if (-not $umgebung) {
         # HDR-Moment ohne HDR-Schaltung, mit heller Fassung (die Instanz lädt sie vor dem Abspielen)
         $logBefore = (Read-Log $cfg).Length
         Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--test-hdr-moment') | Out-Null
@@ -276,9 +306,11 @@ try {
             Select-El (Find-Id $win $view[0] 3000)
             try { $win.SetFocus() } catch {}
             Start-Sleep -Seconds 4   # Wechsel der Ansicht, Bilder in der neuen Größe
-            $wide = Cpu-During $app.Id { Gpu-Measure $app.Id $IdleSeconds ("{0} {1}×{2} in Ruhe" -f $view[1], $WideWidth, $WideHeight) }
+            $what = "{0} {1}×{2} in Ruhe" -f $view[1], $WideWidth, $WideHeight
+            $wide = Measure-Active { Cpu-During $app.Id { Gpu-Measure $app.Id $IdleSeconds $what } } $what
+            if (-not $wide) { break }   # Vordergrund verloren: UMGEBUNG
             Note ("{0} in Ruhe: CPU {1:N2} % eines Kerns" -f $view[1], $wide.Cpu)
-            Check ((Is-Active $win $app.Id) -and $wide.Gpu.Mean -lt $MaxIdleMean -and $wide.Gpu.Peak -le $MaxIdlePeak) ("{0} {1}×{2} in Ruhe: Mittel {3:N2} % < {4} %, Spitze {5:N2} % <= {6} %" -f $view[1], $WideWidth, $WideHeight, $wide.Gpu.Mean, $MaxIdleMean, $wide.Gpu.Peak, $MaxIdlePeak)
+            Check ($wide.Gpu.Mean -lt $MaxIdleMean -and $wide.Gpu.Peak -le $MaxIdlePeak) ("{0}: Mittel {1:N2} % < {2} %, Spitze {3:N2} % <= {4} %" -f $what, $wide.Gpu.Mean, $MaxIdleMean, $wide.Gpu.Peak, $MaxIdlePeak)
         }
     }
 
@@ -306,7 +338,7 @@ finally { Stop-Started }
 
 if (-not $ok) { exit 1 }
 if ($umgebung) {
-    Note "UMGEBUNG $umgebung (Teil 1 und 3 bestanden, die Grafikkarte ist ohne aktiven Bildschirm nicht messbar)"
+    Note "UMGEBUNG $umgebung (Teil 1 und 3 bestanden, die Grafikkarte ist so nicht messbar)"
     Write-Output 'PHASE10_GPU_UMGEBUNG'
     exit 2
 }

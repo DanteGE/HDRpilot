@@ -147,7 +147,8 @@ public sealed class ArtworkPickerViewModel : ObservableObject
         get => _chosen.GetValueOrDefault(_kind);
         set
         {
-            if (value is null || ReferenceEquals(value, Selected))
+            // Nur Möglichkeiten des aktuellen Reiters (während ein anderer Reiter lädt, gehört die alte Liste nicht dazu).
+            if (value is null || ReferenceEquals(value, Selected) || !Candidates.Contains(value))
             {
                 return;
             }
@@ -200,6 +201,8 @@ public sealed class ArtworkPickerViewModel : ObservableObject
             return;
         }
 
+        // Die Liste des vorigen Reiters nicht stehen lassen: eine Wahl darin gälte sonst für die neue Bildart.
+        Candidates.Clear();
         IsLoading = true;
         IReadOnlyList<ArtworkCandidate> candidates;
         try

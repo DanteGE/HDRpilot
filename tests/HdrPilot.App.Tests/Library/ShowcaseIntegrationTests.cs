@@ -142,12 +142,9 @@ public sealed class ShowcaseIntegrationTests
         var picker = await OpenPicker(vm, context, game.Key, shown);
         await PickOwnFile(picker, second);
         picker.Kind = ArtworkKind.Logo; // zweite Änderung, damit geschrieben werden muss
-        for (var i = 0; i < 200 && !picker.Candidates.Any(c => c.Token == ArtworkOverride.Generated); i++)
-        {
-            await Task.Delay(25);
-        }
-
+        await Loaded(picker);
         picker.Selected = picker.Candidates.Single(c => c.Token == ArtworkOverride.Generated);
+        Assert.Equal(ArtworkOverride.Generated, picker.Selected?.Token);
         context.FailNextUpdate = new IOException("Platte voll");
 
         Assert.False(await picker.ApplyAsync());
@@ -155,6 +152,28 @@ public sealed class ShowcaseIntegrationTests
         // Die Konfiguration zeigt weiter auf die eigene Datei: sie darf beim Zurücknehmen nicht gelöscht werden.
         Assert.Equal(token, context.Config.FindGame(game.Key)!.Artwork!.Hero);
         Assert.True(File.Exists(CustomFile(art, token)));
+    });
+
+    [Fact]
+    public void Integration_picker_ignores_a_choice_from_the_previous_tab_while_the_next_one_loads() => Sta.Run(async () =>
+    {
+        using var art = new ArtworkFixture();
+        var (context, service, game, token) = WithOwnHero(art);
+        using var lease = service.Acquire();
+        using var vm = new LibraryViewModel(context, Dialogs(art.Save(Path.Combine(art.Root, "eigene", "x.png"), ArtworkFixture.Solid(64, 64, colorful: true)), out var shown));
+        var picker = await OpenPicker(vm, context, game.Key, shown);
+        var heroGenerated = picker.Candidates.Single(c => c.Token == ArtworkOverride.Generated);
+
+        picker.Kind = ArtworkKind.Logo;
+        Assert.DoesNotContain(heroGenerated, picker.Candidates); // die Titelbild-Liste ist weg, solange das Logo lädt
+        picker.Selected = heroGenerated; // Klick in die alte Liste: gilt nicht für das Logo
+        await Loaded(picker);
+
+        Assert.Null(picker.Selected?.Token); // Logo bleibt automatisch
+        Assert.False(await picker.ApplyAsync()); // nichts geändert, nichts geschrieben
+        Assert.Equal(token, context.Config.FindGame(game.Key)!.Artwork!.Hero);
+        Assert.Null(context.Config.FindGame(game.Key)!.Artwork!.Logo);
+        Assert.Equal(0, context.Updates);
     });
 
     /// <summary>Spiel mit Steam-Titelbild und schon gewähltem eigenen Titelbild (800 px breit) über den echten Bilderdienst.</summary>
@@ -212,6 +231,17 @@ public sealed class ShowcaseIntegrationTests
         }
 
         Assert.Equal(file, picker.Selected?.PendingFile);
+    }
+
+    /// <summary>Warten, bis der Reiter seine Möglichkeiten geladen hat.</summary>
+    private static async Task Loaded(ArtworkPickerViewModel picker)
+    {
+        for (var i = 0; i < 200 && (picker.IsLoading || picker.Candidates.Count == 0); i++)
+        {
+            await Task.Delay(25);
+        }
+
+        Assert.False(picker.IsLoading);
     }
 
     private static string CustomFile(ArtworkFixture art, string token) => Path.Combine(art.ArtDirectory, "custom", ArtworkOverride.FileOf(token)!);

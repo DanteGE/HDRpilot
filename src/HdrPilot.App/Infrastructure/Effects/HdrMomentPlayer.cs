@@ -261,7 +261,8 @@ public sealed class HdrMomentPlayer : IDisposable
         Add(board, travel, _parts.SweepBand, "(UIElement.RenderTransform).(TranslateTransform.X)");
         Add(board, Pulse(SweepDuration, 0.95, (0.10, 0.80)), _parts.SweepBand, UIElement.OpacityProperty);
 
-        // Lichtlinie auf Höhe des Spitzlichts: wächst aus der Mitte, verglimmt breiter.
+        // Lichtlinie auf Höhe des Spitzlichts: wächst aus der Mitte, verglimmt breiter und rasch (Prototyp sk1: ease-out),
+        // damit sie nicht als harte Linie stehen bleibt.
         var lineBegin = TimeSpan.FromSeconds(0.2);
         var lineDuration = TimeSpan.FromSeconds(1.3);
         var scale = new DoubleAnimationUsingKeyFrames { BeginTime = lineBegin, FillBehavior = FillBehavior.Stop };
@@ -269,7 +270,7 @@ public sealed class HdrMomentPlayer : IDisposable
         scale.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(lineDuration * 0.25), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
         scale.KeyFrames.Add(new EasingDoubleKeyFrame(1.2, KeyTime.FromTimeSpan(lineDuration), new QuadraticEase { EasingMode = EasingMode.EaseOut }));
         Add(board, scale, _parts.SweepLine, "(UIElement.RenderTransform).(ScaleTransform.ScaleX)");
-        var lineOpacity = Pulse(lineDuration, 1, (0.25, 0.25));
+        var lineOpacity = Pulse(lineDuration, 1, (0.25, 0.25), EasingMode.EaseOut);
         lineOpacity.BeginTime = lineBegin;
         Add(board, lineOpacity, _parts.SweepLine, UIElement.OpacityProperty);
 
@@ -294,8 +295,8 @@ public sealed class HdrMomentPlayer : IDisposable
         return board;
     }
 
-    /// <summary>0 → Spitze (ab Anteil <paramref name="hold"/>.Item1) → gehalten bis Item2 → 0 am Ende.</summary>
-    private static DoubleAnimationUsingKeyFrames Pulse(TimeSpan duration, double peak, (double Rise, double Fall) hold)
+    /// <summary>0 → Spitze (ab Anteil <paramref name="hold"/>.Item1) → gehalten bis Item2 → 0 am Ende (Abklingen nach <paramref name="fall"/>).</summary>
+    private static DoubleAnimationUsingKeyFrames Pulse(TimeSpan duration, double peak, (double Rise, double Fall) hold, EasingMode fall = EasingMode.EaseIn)
     {
         var animation = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
         animation.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.Zero)));
@@ -305,7 +306,7 @@ public sealed class HdrMomentPlayer : IDisposable
             animation.KeyFrames.Add(new LinearDoubleKeyFrame(peak, KeyTime.FromTimeSpan(duration * hold.Fall)));
         }
 
-        animation.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(duration), new QuadraticEase { EasingMode = EasingMode.EaseIn }));
+        animation.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(duration), new QuadraticEase { EasingMode = fall }));
         return animation;
     }
 

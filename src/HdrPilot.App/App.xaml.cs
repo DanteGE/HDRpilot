@@ -133,7 +133,7 @@ public partial class App : Application
         SnapshotPlan plan;
         try
         {
-            plan = SnapshotPlan.Parse(args.SnapshotSizes, args.SnapshotScenes, args.SnapshotThemes);
+            plan = SnapshotPlan.Parse(args.SnapshotSizes, args.SnapshotScenes, args.SnapshotThemes, args.SnapshotDisplay);
         }
         catch (FormatException)
         {

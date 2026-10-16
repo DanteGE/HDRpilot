@@ -372,7 +372,7 @@ public sealed partial class LibraryViewModel
         RevealRequested?.Invoke(this, item);
     }
 
-    /// <summary>Darstellung von HDR ohne Schaltung (Bildschirmfotos): Kapsel „HDR EIN“, Titelbild hell.</summary>
+    /// <summary>Darstellung von HDR ohne Schaltung (Bildschirmfotos): Kapsel „HDR EIN“, Titelbild hell, Statuszeile „HDR ein“.</summary>
     public bool PreviewHdr { get; private set; }
 
     internal void SetPreviewHdr(bool on)
@@ -382,6 +382,7 @@ public sealed partial class LibraryViewModel
         OnPropertyChanged(nameof(ShowsHdrOn));
         OnPropertyChanged(nameof(HdrShortText));
         OnPropertyChanged(nameof(HdrToggleText));
+        UpdateAutomationState();
     }
 
     /// <summary>HDR an oder in der Vorschau an (Kapsel, Titelbild, Kacheln).</summary>
@@ -686,7 +687,7 @@ public sealed partial class LibraryViewModel
             AutomationState = AutomationState.Paused;
             AutomationStateText = LibraryStrings.Status_Paused;
         }
-        else if (_isHdrOn)
+        else if (_isHdrOn || PreviewHdr)
         {
             AutomationState = AutomationState.HdrOn;
             AutomationStateText = LibraryStrings.Status_ActiveHdrOn;

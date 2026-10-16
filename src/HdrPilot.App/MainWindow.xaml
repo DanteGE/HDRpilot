@@ -34,12 +34,87 @@
             </MenuItem>
         </ContextMenu>
 
+        <!-- Querformat-Bild eines Spiels (64 × 36), sonst Farbfeld mit Symbol bzw. Monogramm: Listenzeile und Kopf des Kontextmenüs -->
+        <DataTemplate x:Key="GameThumbnail" DataType="{x:Type vm:GameItemViewModel}">
+            <Grid Width="64" Height="36">
+                <Border CornerRadius="7" Background="{Binding NameField}" />
+                <TextBlock x:Name="Mono" Text="{Binding Monogram}" FontFamily="{StaticResource Lib.Font.Display}" FontWeight="Bold" FontSize="12"
+                           Foreground="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Image x:Name="SmallIcon" Source="{Binding Icon}" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality" />
+                <Border CornerRadius="7" lib:ImageFill.Source="{Binding Thumbnail}" Visibility="{Binding HasThumbnail, Converter={StaticResource Lib.BoolToVisibility}}" />
+                <Border CornerRadius="7" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Line}" />
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                    <Setter TargetName="SmallIcon" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Icon, Converter={StaticResource Lib.BoolToVisibility}}" Value="Visible">
+                    <Setter TargetName="Mono" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Vorschau der Listenzeile: Querformat-Bild (GameThumbnail) oder Symbol, je nach Wahl in der Kopfzeile der Liste -->
+        <DataTemplate x:Key="RowThumbnail" DataType="{x:Type vm:GameItemViewModel}">
+            <Grid>
+                <ContentPresenter x:Name="ImageThumb" Content="{Binding}" ContentTemplate="{StaticResource GameThumbnail}" />
+                <Grid x:Name="IconThumb" Width="32" Height="32" Visibility="Collapsed">
+                    <Border Style="{StaticResource Lib.SourceTile}" />
+                    <TextBlock Style="{StaticResource Lib.SourceGlyph}" />
+                    <Image Source="{Binding Icon}" Width="28" Height="28" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Grid>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding DataContext.IsThumbnailIcon, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                    <Setter TargetName="ImageThumb" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="IconThumb" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!--
+            Kontextmenü eines Spiels mit Kopf wie im Prototyp (.ctx .ch): Vorschau, Name und „Quelle · zuletzt gespielt“ des
+            gewählten Spiels, auf das die Einträge wirken. Nur der Kopf ist neu, Fläche und Schatten wie Lib.ContextMenu.
+        -->
+        <Style x:Key="GameContextMenuStyle" TargetType="ContextMenu" BasedOn="{StaticResource Lib.ContextMenu}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Grid Margin="8,4,12,18">
+                            <Border Style="{StaticResource Lib.PopupShadow}" />
+                            <Border Style="{StaticResource Lib.PopupBody}">
+                                <StackPanel>
+                                    <DockPanel Margin="6,4,6,8" DataContext="{Binding SelectedGame}" Visibility="{Binding Converter={StaticResource Lib.BoolToVisibility}}">
+                                        <ContentControl Width="64" Height="36" Focusable="False" IsTabStop="False" Content="{Binding}" ContentTemplate="{StaticResource GameThumbnail}" />
+                                        <StackPanel Margin="12,0,4,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="Bold" MaxWidth="240" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                            <TextBlock FontSize="12" FontWeight="Normal" Margin="0,2,0,0" MaxWidth="240" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextSecondary}">
+                                                <TextBlock.Text>
+                                                    <MultiBinding StringFormat="{x:Static res:LibraryStrings.Context_Subtitle}">
+                                                        <Binding Path="SourceName" />
+                                                        <Binding Path="LastPlayedText" />
+                                                    </MultiBinding>
+                                                </TextBlock.Text>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <Border Height="1" Margin="6,0,6,5" Background="{DynamicResource Hp.Brush.Line}"
+                                            Visibility="{Binding SelectedGame, Converter={StaticResource Lib.BoolToVisibility}}" />
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" KeyboardNavigation.TabNavigation="Cycle" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!--
             Kontextmenü eines Spiels (Rechtsklick auf Zeile oder Kachel, Umschalt+F10/Menütaste, „···“ im Detailbereich). Die
             Zeile wird dabei gewählt; Einträge wirken auf das gewählte Spiel. Nur bestehende Funktionen, in der Reihenfolge des
             Prototyps.
         -->
-        <ContextMenu x:Key="GameContextMenu" x:Shared="False" Style="{StaticResource Lib.ContextMenu}"
+        <ContextMenu x:Key="GameContextMenu" x:Shared="False" Style="{StaticResource GameContextMenuStyle}"
                      DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"
                      AutomationProperties.AutomationId="GameContextMenu" AutomationProperties.Name="{x:Static res:LibraryStrings.Context_MenuName}">
             <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.Context_Launch}" InputGestureText="{x:Static res:LibraryStrings.Key_Enter}"
@@ -120,37 +195,6 @@
             <EventSetter Event="MouseMove" Handler="OnTileMouseMove" />
         </Style>
 
-        <!-- Vorschau der Listenzeile: Querformat-Bild (64 × 36) oder Symbol, sonst Farbfeld mit Symbol bzw. Monogramm -->
-        <DataTemplate x:Key="RowThumbnail" DataType="{x:Type vm:GameItemViewModel}">
-            <Grid>
-                <Grid x:Name="ImageThumb" Width="64" Height="36">
-                    <Border CornerRadius="7" Background="{Binding NameField}" />
-                    <TextBlock x:Name="Mono" Text="{Binding Monogram}" FontFamily="{StaticResource Lib.Font.Display}" FontWeight="Bold" FontSize="12"
-                               Foreground="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    <Image x:Name="SmallIcon" Source="{Binding Icon}" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality" />
-                    <Border CornerRadius="7" lib:ImageFill.Source="{Binding Thumbnail}" Visibility="{Binding HasThumbnail, Converter={StaticResource Lib.BoolToVisibility}}" />
-                    <Border CornerRadius="7" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Line}" />
-                </Grid>
-                <Grid x:Name="IconThumb" Width="32" Height="32" Visibility="Collapsed">
-                    <Border Style="{StaticResource Lib.SourceTile}" />
-                    <TextBlock Style="{StaticResource Lib.SourceGlyph}" />
-                    <Image Source="{Binding Icon}" Width="28" Height="28" RenderOptions.BitmapScalingMode="HighQuality" />
-                </Grid>
-            </Grid>
-            <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding DataContext.IsThumbnailIcon, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
-                    <Setter TargetName="ImageThumb" Property="Visibility" Value="Collapsed" />
-                    <Setter TargetName="IconThumb" Property="Visibility" Value="Visible" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
-                    <Setter TargetName="SmallIcon" Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Icon, Converter={StaticResource Lib.BoolToVisibility}}" Value="Visible">
-                    <Setter TargetName="Mono" Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-            </DataTemplate.Triggers>
-        </DataTemplate>
-
         <!-- Zeile der Spieleliste (Prototyp .row): Vorschau | Spiel mit Kennzeichen | Quelle | Zuletzt gespielt | HDR | HDR automatisch -->
         <DataTemplate x:Key="GameRowTemplate" DataType="{x:Type vm:GameItemViewModel}">
             <Grid x:Name="Row" Height="46">
@@ -198,16 +242,16 @@
                         <TextBlock Text="{x:Static res:LibraryStrings.Badge_NotInstalled}" FontSize="12" Margin="5,0,0,0" Foreground="{DynamicResource Hp.Brush.Warning}" />
                     </StackPanel>
                 </lib:NameWithBadgesPanel>
-                <StackPanel x:Name="SourceCell" Grid.Column="2" Width="124" Margin="14,0,0,0" Orientation="Horizontal" VerticalAlignment="Center"
+                <StackPanel x:Name="SourceCell" Grid.Column="2" Width="{Binding (lib:GameListColumns.SourceWidth), RelativeSource={RelativeSource Self}}" Margin="14,0,0,0" Orientation="Horizontal" VerticalAlignment="Center"
                             Visibility="{Binding (lib:GameListColumns.ShowSource), RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.BoolToVisibility}}">
                     <Ellipse Style="{StaticResource Lib.SourceDot}" />
                     <TextBlock Text="{Binding SourceName}" Margin="8,0,0,0" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                Foreground="{DynamicResource Hp.Brush.TextSecondary}" VerticalAlignment="Center" />
                 </StackPanel>
-                <TextBlock x:Name="LastPlayedCell" Grid.Column="3" Width="140" Margin="14,0,0,0" Text="{Binding LastPlayedText}" FontSize="12.5"
+                <TextBlock x:Name="LastPlayedCell" Grid.Column="3" Width="{Binding (lib:GameListColumns.LastPlayedWidth), RelativeSource={RelativeSource Self}}" Margin="14,0,0,0" Text="{Binding LastPlayedText}" FontSize="12.5"
                            Foreground="{DynamicResource Hp.Brush.TextSecondary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                            Visibility="{Binding (lib:GameListColumns.ShowLastPlayed), RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.BoolToVisibility}}" />
-                <Grid x:Name="HdrCell" Grid.Column="4" Width="96" Margin="14,0,0,0" VerticalAlignment="Center"
+                <Grid x:Name="HdrCell" Grid.Column="4" Width="{Binding (lib:GameListColumns.HdrWidth), RelativeSource={RelativeSource Self}}" Margin="14,0,0,0" VerticalAlignment="Center"
                       Visibility="{Binding (lib:GameListColumns.ShowHdr), RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.BoolToVisibility}}">
                     <TextBlock Text="{x:Static res:LibraryStrings.List_HdrUnknown}" FontSize="12" Foreground="{DynamicResource Hp.Brush.TextMuted}" VerticalAlignment="Center"
                                Visibility="{Binding ShowHdrPill, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}" />
@@ -621,8 +665,9 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Visibility="{Binding ShowName, Converter={StaticResource Lib.BoolToVisibility}}">
                     <ContentControl Width="72" Height="72" Margin="0,0,18,0" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroIconTile}"
                                     Visibility="{Binding ShowIconTile, Converter={StaticResource Lib.BoolToVisibility}}" />
+                    <!-- Umbruchbreite vom Fenster (FitCompactHero): wird es eng, bricht der Name um statt abgeschnitten zu werden -->
                     <Viewbox StretchDirection="DownOnly" MaxHeight="84" HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <Grid MaxWidth="560">
+                        <Grid MaxWidth="{Binding CompactNameWidth, RelativeSource={RelativeSource AncestorType=Window}}">
                             <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="36" FontWeight="Bold" TextWrapping="Wrap" LineHeight="38"
                                        Foreground="{DynamicResource Lib.Brush.HeroTitle}" />
                             <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="36" FontWeight="Bold" TextWrapping="Wrap" LineHeight="38"
@@ -731,6 +776,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
@@ -738,11 +784,39 @@
                 </Grid.RowDefinitions>
                 <ContentControl x:Name="CompactTitle" Grid.RowSpan="2" VerticalAlignment="Bottom" Focusable="False" Margin="0,0,26,0"
                                 Content="{Binding}" ContentTemplate="{StaticResource HeroTitleCompact}" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,10">
+                <StackPanel x:Name="CompactOverline" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,10">
                     <Border Width="28" Height="2" CornerRadius="1" VerticalAlignment="Center" Margin="0,0,10,0" Background="{DynamicResource Hp.Brush.AccentShine}" />
                     <TextBlock Style="{StaticResource Lib.ArtOverline}" Text="{Binding Overline}" />
                 </StackPanel>
                 <ContentControl x:Name="CompactMeta" Grid.Column="1" Grid.Row="1" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroMeta}" />
+                <!--
+                    Starten und „Beim Start …“ rechts wie im Prototyp (gleicher Befehl wie im Detailbereich). Reicht der Platz neben
+                    Logo und Angaben nicht, entfällt zuerst die Angabe, dann der Knopf (MainWindow.xaml.cs, FitCompactActions).
+                -->
+                <StackPanel x:Name="CompactActions" Grid.Column="2" Grid.RowSpan="2" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="24,0,0,0"
+                            DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <Button x:Name="CompactLaunchButton" Style="{StaticResource Lib.PlayButton}" Command="{Binding Details.LaunchCommand}"
+                            AutomationProperties.AutomationId="CompactLaunchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Launch_Button}"
+                            ToolTip="{x:Static res:LibraryStrings.Launch_Hint}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE768;" FontSize="15" Margin="0,0,12,0" />
+                            <TextBlock Text="{x:Static res:LibraryStrings.Launch_ButtonShort}" />
+                        </StackPanel>
+                    </Button>
+                    <Border x:Name="CompactLaunchChip" Margin="10,0,0,0" Height="50" CornerRadius="15" Padding="16,0" Background="#57000000" BorderBrush="#1FFFFFFF" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" FontSize="15" Margin="0,0,10,0">
+                                <TextBlock.Foreground>
+                                    <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" />
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                            <StackPanel>
+                                <TextBlock Text="{x:Static res:LibraryStrings.Hero_ChipLabel}" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource Lib.Brush.ArtCaption}" />
+                                <TextBlock Text="{Binding Hero.ChipText}" FontSize="13" FontWeight="Bold" Margin="0,4,0,0" Foreground="{DynamicResource Hp.Brush.TextOnArt}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
             <!-- Regal -->
             <StackPanel x:Name="HeroLarge" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="0,0,0,74" Visibility="Collapsed">
@@ -753,7 +827,7 @@
                 <ContentControl x:Name="LargeTitle" Margin="0,14,0,0" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroTitleLarge}" />
                 <ContentControl x:Name="LargeMeta" Margin="0,18,0,0" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroMeta}" />
                 <!-- Starten | Desktop | Startmenü | Beim Start … -->
-                <StackPanel Orientation="Horizontal" Margin="0,22,0,0" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+                <StackPanel x:Name="LargeActions" Orientation="Horizontal" Margin="0,22,0,0" DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
                     <Button x:Name="HeroLaunchButton" Style="{StaticResource Lib.PlayButton}" Command="{Binding Details.LaunchCommand}"
                             AutomationProperties.AutomationId="HeroLaunchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Launch_Button}"
                             ToolTip="{x:Static res:LibraryStrings.Launch_Hint}">
@@ -776,7 +850,7 @@
                             <TextBlock Text="{x:Static res:LibraryStrings.Shortcut_StartMenu}" />
                         </StackPanel>
                     </Button>
-                    <Border Margin="10,0,0,0" Height="50" CornerRadius="15" Padding="16,0" Background="#57000000" BorderBrush="#1FFFFFFF" BorderThickness="1">
+                    <Border x:Name="LargeLaunchChip" Margin="10,0,0,0" Height="50" CornerRadius="15" Padding="16,0" Background="#57000000" BorderBrush="#1FFFFFFF" BorderThickness="1">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" FontSize="15" Margin="0,0,10,0">
                                 <TextBlock.Foreground>
@@ -1189,16 +1263,16 @@
                                         ToolTip="{x:Static res:LibraryStrings.List_SortByColumn}">
                                     <TextBlock Text="{Binding ListHeaderText}" />
                                 </Button>
-                                <TextBlock Grid.Column="2" Width="124" Margin="14,0,0,0" Text="{x:Static res:LibraryStrings.List_ColumnSource}" Style="{StaticResource Lib.Overline}"
+                                <TextBlock Grid.Column="2" Width="{Binding (lib:GameListColumns.SourceWidth), RelativeSource={RelativeSource Self}}" Margin="14,0,0,0" Text="{x:Static res:LibraryStrings.List_ColumnSource}" Style="{StaticResource Lib.Overline}"
                                            Visibility="{Binding (lib:GameListColumns.ShowSource), RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.BoolToVisibility}}" />
-                                <Button Grid.Column="3" Width="140" Margin="14,0,0,0" Style="{StaticResource Lib.ColumnHeader}" Tag="{Binding IsSortedByLastPlayed}"
+                                <Button Grid.Column="3" Width="{Binding (lib:GameListColumns.LastPlayedWidth), RelativeSource={RelativeSource Self}}" Margin="14,0,0,0" Style="{StaticResource Lib.ColumnHeader}" Tag="{Binding IsSortedByLastPlayed}"
                                         Command="{Binding SortByCommand}" CommandParameter="{x:Static vm:GameSortOrder.LastPlayed}"
                                         Visibility="{Binding (lib:GameListColumns.ShowLastPlayed), RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.BoolToVisibility}}"
                                         AutomationProperties.AutomationId="ColumnSortLastPlayed" AutomationProperties.Name="{x:Static res:LibraryStrings.Sort_ByLastPlayed}"
                                         ToolTip="{x:Static res:LibraryStrings.List_SortByColumn}">
                                     <TextBlock Text="{x:Static res:LibraryStrings.List_ColumnLastPlayed}" />
                                 </Button>
-                                <Button Grid.Column="4" Width="96" Margin="14,0,0,0" Style="{StaticResource Lib.ColumnHeader}" Tag="{Binding IsSortedByHdr}"
+                                <Button Grid.Column="4" Width="{Binding (lib:GameListColumns.HdrWidth), RelativeSource={RelativeSource Self}}" Margin="14,0,0,0" Style="{StaticResource Lib.ColumnHeader}" Tag="{Binding IsSortedByHdr}"
                                         Command="{Binding SortByCommand}" CommandParameter="{x:Static vm:GameSortOrder.HdrSupport}"
                                         Visibility="{Binding (lib:GameListColumns.ShowHdr), RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.BoolToVisibility}}"
                                         AutomationProperties.AutomationId="ColumnSortHdr" AutomationProperties.Name="{x:Static res:LibraryStrings.Sort_ByHdrSupport}"
@@ -1478,7 +1552,7 @@
                                                         <TextBlock Text="{x:Static res:LibraryStrings.Details_Display}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}" />
                                                         <TextBlock Text="{x:Static res:LibraryStrings.Details_DisplayHint}" FontSize="12" Margin="0,1,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                                                     </StackPanel>
-                                                    <ComboBox Grid.Column="1" Style="{StaticResource Lib.ComboBox}" Height="34" Width="160" FontSize="12" ItemsSource="{Binding Displays}" SelectedItem="{Binding SelectedDisplay}"
+                                                    <ComboBox Grid.Column="1" Style="{StaticResource Lib.ComboBox}" Height="34" MinWidth="160" MaxWidth="240" FontSize="12" ItemsSource="{Binding Displays}" SelectedItem="{Binding SelectedDisplay}"
                                                               ItemTemplate="{StaticResource DisplayOptionTemplate}"
                                                               AutomationProperties.AutomationId="DetailDisplay" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_Display}" />
                                                 </Grid>

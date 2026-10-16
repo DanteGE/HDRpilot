@@ -52,7 +52,9 @@ public sealed class HeroStage : Grid
     private readonly Rectangle _flash = new() { IsHitTestVisible = false, Opacity = 0 };
     private readonly Canvas _sweep = new() { IsHitTestVisible = false, ClipToBounds = true };
     private readonly Rectangle _sweepBand = new() { Opacity = 0, RenderTransformOrigin = new Point(0.5, 0.5) };
-    private readonly Rectangle _sweepLine = new() { Opacity = 0, Height = 3, RenderTransformOrigin = new Point(0.5, 0.5) };
+    private readonly Grid _sweepLine = new() { Opacity = 0, Height = SweepLineGlow, RenderTransformOrigin = new Point(0.5, 0.5) };
+    private readonly Rectangle _sweepHalo = new();
+    private readonly Rectangle _sweepCore = new() { Height = 3, VerticalAlignment = VerticalAlignment.Center };
     private readonly ParticleLayer _particles = new() { Margin = new Thickness(0, ParticleTop, 0, 0) };
     private readonly List<Rectangle> _rayBars = [];
     private readonly List<Ellipse> _dots = [];
@@ -70,6 +72,12 @@ public sealed class HeroStage : Grid
 
     /// <summary>Partikel erst unterhalb der Kopfzeile (nie über Titelleiste und Fensterknöpfen).</summary>
     public const double ParticleTop = 96;
+
+    /// <summary>
+    /// Höhe der Lichtlinie samt Schein (Prototyp: 3-px-Linie mit box-shadow 22 px): ein Verlauf statt eines Schattens, damit
+    /// die Linie wie Licht wirkt und nicht wie eine harte Kante quer durchs Bild.
+    /// </summary>
+    private const double SweepLineGlow = 44;
 
     public HeroStage()
     {
@@ -113,6 +121,8 @@ public sealed class HeroStage : Grid
         _sweepBand.RenderTransform = new TranslateTransform();
         _sweepBand.LayoutTransform = new SkewTransform(-20, 0);
         _sweepLine.RenderTransform = new ScaleTransform(1, 1);
+        _sweepLine.Children.Add(_sweepHalo);
+        _sweepLine.Children.Add(_sweepCore);
         _sweep.Children.Add(_sweepBand);
         _sweep.Children.Add(_sweepLine);
         Children.Add(_sweep);
@@ -247,7 +257,7 @@ public sealed class HeroStage : Grid
         _bloomHalo.Fill = Frozen(Radial(center, 0.40, 0.70, [(AmbientPalette.Alpha(_palette.A3, halo), 0), (AmbientPalette.Alpha(_palette.A3, 0), 0.72)]));
         var flash = ColorMath.Mix(_palette.A3, Colors.White, 0.5);
         _flash.Fill = Frozen(Radial(center, 0.44, 0.80, [(AmbientPalette.Alpha(flash, 0.78), 0), (AmbientPalette.Alpha(flash, 0), 0.7)]));
-        Canvas.SetTop(_sweepLine, y - 1.5);
+        Canvas.SetTop(_sweepLine, y - (SweepLineGlow / 2));
     }
 
     /// <summary>HDR an: helle Fassung und Leuchten einblenden, Schleier und gedämpfte Strahlen weg (Übergang nach Stufe).</summary>
@@ -381,7 +391,7 @@ public sealed class HeroStage : Grid
             new GradientStop(AmbientPalette.Alpha(_accent, 0.38), 0.74),
             new GradientStop(AmbientPalette.Alpha(_accent, 0), 1),
         ], new Point(0, 0.5), new Point(1, 0.5)));
-        _sweepLine.Fill = Frozen(new LinearGradientBrush(
+        _sweepCore.Fill = Frozen(new LinearGradientBrush(
         [
             new GradientStop(AmbientPalette.Alpha(a3, 0), 0),
             new GradientStop(a3, 0.22),
@@ -389,6 +399,14 @@ public sealed class HeroStage : Grid
             new GradientStop(_accent, 0.78),
             new GradientStop(AmbientPalette.Alpha(_accent, 0), 1),
         ], new Point(0, 0.5), new Point(1, 0.5)));
+
+        // Schein um die Linie: flache Ellipse, in der Mitte am hellsten, zu den Enden und nach oben und unten hin weich.
+        _sweepHalo.Fill = Frozen(new RadialGradientBrush(
+        [
+            new GradientStop(AmbientPalette.Alpha(ColorMath.Mix(a3, Colors.White, 0.25), 0.55), 0),
+            new GradientStop(AmbientPalette.Alpha(a3, 0.22), 0.45),
+            new GradientStop(AmbientPalette.Alpha(a3, 0), 1),
+        ]));
         SetLight(_light.X * Math.Max(1, ActualWidth), _light.Y, _palette.Highlight);
     }
 

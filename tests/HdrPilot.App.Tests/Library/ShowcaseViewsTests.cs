@@ -252,6 +252,30 @@ public sealed class ShowcaseViewsTests
     }
 
     [Fact]
+    public void Snapshot_draws_the_context_menu_of_the_selected_row_without_opening_a_popup()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, _) = Open(new TestLibraryContext(ManyGames(6)));
+            model.SelectedGame = model.Games[1];
+            Arrange(window, new Size(1600, 1000));
+
+            var overlay = window.CreateContextMenuPreview();
+
+            Assert.NotNull(overlay);
+            var menu = Assert.IsType<ContextMenu>(overlay.Element);
+            WpfTestHost.DoEvents();
+            Assert.False(menu.IsOpen); // nie ein Popup auf dem echten Bildschirm
+            Assert.Same(model, menu.DataContext); // wirkt wie beim Rechtsklick auf das gewählte Spiel
+            Assert.Contains(menu.Items.OfType<MenuItem>(), m => AutomationProperties.GetAutomationId(m) == "ContextLaunch");
+            var root = Named<FrameworkElement>(window, "Root");
+            Assert.InRange(overlay.Position.X, 0, root.ActualWidth - menu.DesiredSize.Width);
+            Assert.InRange(overlay.Position.Y, 0, root.ActualHeight - menu.DesiredSize.Height);
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void Nits_capsule_shows_real_values_and_the_scale_ends_at_the_peak()
     {
         WpfTestHost.Run(() =>
@@ -329,6 +353,43 @@ public sealed class ShowcaseViewsTests
     }
 
     [Fact]
+    public void Compact_hero_offers_launch_while_there_is_room_and_never_cuts_the_name()
+    {
+        WpfTestHost.Run(() =>
+        {
+            GameConfig[] games = [Game(GameSource.Xbox, "x1", "Clive Barker's Hellraiser: Revival", isNew: false), .. ManyGames(5)];
+            var (window, model, _) = Open(new TestLibraryContext(games));
+            model.SelectedGame = model.Games.First(g => g.Key == "Xbox:x1");
+            var compact = Named<FrameworkElement>(window, "HeroCompact");
+            var actions = Named<FrameworkElement>(window, "CompactActions");
+            var title = Named<FrameworkElement>(window, "CompactTitle");
+            void Fit(Size size)
+            {
+                Arrange(window, size);
+                window.FitCompactHero();
+                Arrange(window, size);
+            }
+
+            // 1920×1080 bei 110 %: Starten und „Beim Start …“ rechts im Titelbereich wie im Prototyp, mit demselben Befehl.
+            Fit(new Size(1745, 982));
+            Assert.Equal(Visibility.Visible, actions.Visibility);
+            Assert.Equal(Visibility.Visible, Named<FrameworkElement>(window, "CompactLaunchChip").Visibility);
+            Assert.Same(model.Details!.LaunchCommand, Named<Button>(window, "CompactLaunchButton").Command);
+            var right = actions.TransformToAncestor(compact).Transform(new Point(actions.ActualWidth, 0)).X;
+            Assert.True(right <= compact.ActualWidth + 0.5, $"Knöpfe enden bei {right:0}, Titelbereich {compact.ActualWidth:0} breit");
+
+            // Kleinstes Fenster: Knöpfe weichen, der lange Name bricht um statt abgeschnitten zu werden (Gegenprobe zum Stand vorher).
+            Fit(new Size(1000, 620));
+            var content = Named<FrameworkElement>(window, "HeroContent");
+            var visible = Named<FrameworkElement>(window, "Root").ActualWidth - content.Margin.Left - content.Margin.Right;
+            Assert.Equal(Visibility.Collapsed, actions.Visibility);
+            Assert.True(window.CompactNameWidth < MainWindow.MaxCompactName, "Umbruchbreite " + window.CompactNameWidth);
+            Assert.True(compact.ActualWidth <= visible + 0.5, $"Titelbereich {compact.ActualWidth:0} px breit, sichtbar {visible:0} px (Titel {title.ActualWidth:0} px)");
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void Folder_path_is_shortened_in_the_middle_when_its_column_is_narrower_than_the_text()
     {
         WpfTestHost.Run(() =>
@@ -381,6 +442,7 @@ public sealed class ShowcaseViewsTests
             Assert.Equal(LibraryStrings.Nits_HdrOn, model.HdrShortText);
             Assert.Equal(LibraryStrings.Hdr_TurnOff, model.HdrToggleText);
             Assert.Equal(LibraryStrings.Hdr_TurnOff, AutomationProperties.GetName(Named<Button>(window, "ToggleHdrButton")));
+            Assert.Equal(LibraryStrings.Status_ActiveHdrOn, model.AutomationStateText); // Statuszeile passt zur Kapsel
             Assert.Equal(0, context.ToggleHdrCalls);
             window.Close();
         });

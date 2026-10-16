@@ -15,7 +15,8 @@ namespace HdrPilot.App;
 /// <item><c>--prepare &lt;Quelle:ID&gt; --ready-event &lt;name&gt;</c> vom Wrapper an die laufende Instanz: HDR für einen Start
 /// vorbereiten, den der Wrapper selbst ausführt, und danach das Ereignis setzen.</item>
 /// <item>Nur für Entwicklung und Prüfskripte, nur mit <c>--config-dir</c> (E54, E89): <c>--snapshot &lt;ordner&gt;</c> mit
-/// <c>--snapshot-sizes</c>, <c>--snapshot-scenes</c> und <c>--snapshot-themes</c> (siehe <see cref="Infrastructure.SnapshotPlan"/>),
+/// <c>--snapshot-sizes</c>, <c>--snapshot-scenes</c>, <c>--snapshot-themes</c> und <c>--snapshot-display</c> (siehe
+/// <see cref="Infrastructure.SnapshotPlan"/>),
 /// <c>--artwork-report &lt;datei&gt;</c> und <c>--test-hdr-moment</c> (wird weitergereicht).</item>
 /// <item><c>--</c> beendet die Befehle: alles danach (der Spielbefehl) wird nie als Befehl von HdrPilot gelesen.</item>
 /// </list>
@@ -63,6 +64,12 @@ public sealed record AppArguments
 
     /// <summary>Entwicklung (E89): Themen der Bildschirmfotos, „dunkel“, „hell“ oder beide.</summary>
     public string? SnapshotThemes { get; init; }
+
+    /// <summary>
+    /// Entwicklung (E89): Werte eines Bildschirms für die Bildschirmfotos, „Name;Spitze;Vollbild;Minimum;Bit“, etwa
+    /// „MAG 341C OLED;456;254;0;10“, wenn der Monitor aus ist und DXGI nichts meldet.
+    /// </summary>
+    public string? SnapshotDisplay { get; init; }
 
     /// <summary>
     /// Entwicklung (E89, G10.3): Abdeckung der Bibliothek mit lokalen Bildern als JSON in diese Datei schreiben, dann beenden.
@@ -125,6 +132,9 @@ public sealed record AppArguments
                     break;
                 case "--snapshot-themes" when i + 1 < args.Count:
                     result = result with { SnapshotThemes = args[++i] };
+                    break;
+                case "--snapshot-display" when i + 1 < args.Count:
+                    result = result with { SnapshotDisplay = args[++i] };
                     break;
                 case "--artwork-report" when i + 1 < args.Count:
                     result = result with { ArtworkReport = args[++i] };

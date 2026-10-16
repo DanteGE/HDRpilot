@@ -31,6 +31,22 @@ public partial class MainWindow : ChromeWindow
     public static readonly DependencyProperty HeroHeightProperty = DependencyProperty.Register(
         nameof(HeroHeight), typeof(double), typeof(MainWindow), new PropertyMetadata(220.0, (d, _) => ((MainWindow)d).ApplyVerticalLayout()));
 
+    /// <summary>Breitester Name im schmalen Titelbereich, bevor er umbricht (gesetzt von <see cref="FitCompactHero"/>).</summary>
+    public static readonly DependencyProperty CompactNameWidthProperty = DependencyProperty.Register(
+        nameof(CompactNameWidth), typeof(double), typeof(MainWindow), new PropertyMetadata(MaxCompactName));
+
+    /// <summary>Name im schmalen Titelbereich höchstens so breit (wie bisher fest im XAML).</summary>
+    public const double MaxCompactName = 560;
+
+    /// <summary>
+    /// Kleinste Breite für Logo bzw. Namen im schmalen Titelbereich (ohne Symbol-Kachel), bevor Kennzeile und Angaben weichen:
+    /// schmaler bräche ein langer Name in vier Zeilen um und würde winzig.
+    /// </summary>
+    public const double MinCompactTitle = 300;
+
+    /// <summary>Symbol-Kachel vor dem Namen (72 px und 18 px Abstand, nur bei erzeugtem Titelbild).</summary>
+    private const double CompactIconTile = 90;
+
     /// <summary>
     /// Stufen der Werkzeugleiste (Prototyp f1–f6): je höher, desto mehr ist gefaltet. Stufe 7 (nicht im Prototyp): Reicht
     /// selbst die gefaltete Leiste nicht (Fenster um 1000 px), stehen Ansicht und Aktionen über den Filtern.
@@ -56,6 +72,7 @@ public partial class MainWindow : ChromeWindow
     private bool _dark = true;
     private int _toolbarStage;
     private bool _toolbarQueued;
+    private bool _compactHeroQueued;
     private double _appliedDetailsRatio;
     private AmbientPalette _palette;
     private PaletteColors _scheme;
@@ -89,6 +106,9 @@ public partial class MainWindow : ChromeWindow
 
         // Spalten der Liste nach ihrer eigenen Breite (ändert sich auch mit dem Trenner, ohne dass sich das Fenster ändert).
         ListCard.SizeChanged += (_, _) => ApplyListColumns();
+
+        // Logo oder Name des Spiels geladen bzw. gewechselt: Platz für Starten im schmalen Titelbereich neu prüfen.
+        CompactTitle.SizeChanged += (_, _) => QueueCompactHero();
         PreviewMouseMove += OnPointerMove;
         MouseLeave += (_, _) => ResetPointer();
         ThemeManager.ThemeChanged += OnThemeChanged;
@@ -122,6 +142,12 @@ public partial class MainWindow : ChromeWindow
     {
         get => (double)GetValue(HeroHeightProperty);
         set => SetValue(HeroHeightProperty, value);
+    }
+
+    public double CompactNameWidth
+    {
+        get => (double)GetValue(CompactNameWidthProperty);
+        set => SetValue(CompactNameWidthProperty, value);
     }
 
     /// <summary>Gerade aktive Ansicht, wie sie angeordnet ist.</summary>
@@ -232,6 +258,30 @@ public partial class MainWindow : ChromeWindow
         vm.SetPreviewHdr(true);
         ApplyHdrState(instant: true);
         _moment.Freeze(Hero.MomentScene(_palette.ParticleColors(_scheme, vm.Context.Appearance.Current.BackgroundFollowsGame)), fraction, transientBoost: false);
+    }
+
+    /// <summary>
+    /// Bildschirmfoto: Kontextmenü des gewählten Spiels wie nach einem Rechtsklick in seine Zeile bzw. Kachel. Ein Kontextmenü
+    /// gehört immer in ein Popup (das auf dem echten Bildschirm aufginge); es wird deshalb ohne Eltern angeordnet und über das
+    /// Fenster gezeichnet. Null, wenn das gewählte Spiel gerade nicht zu sehen ist.
+    /// </summary>
+    public SnapshotOverlay? CreateContextMenuPreview()
+    {
+        var list = _appliedView switch { LibraryViewMode.Grid => GameGrid, LibraryViewMode.Shelf => GameShelf, _ => GameList };
+        if (_viewModel?.SelectedGame is not { } item
+            || list.ItemContainerGenerator.ContainerFromItem(item) is not ListBoxItem target
+            || TryFindResource("GameContextMenu") is not ContextMenu menu)
+        {
+            return null;
+        }
+
+        menu.PlacementTarget = target; // Datenkontext über PlacementTarget.Tag wie beim echten Öffnen
+        menu.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var size = menu.DesiredSize;
+        var at = target.TranslatePoint(new Point(Math.Min(260, target.ActualWidth * 0.5), target.ActualHeight * 0.6), Root);
+        var x = Math.Clamp(at.X, 8, Math.Max(8, Root.ActualWidth - size.Width - 8));
+        var y = Math.Clamp(at.Y, 8, Math.Max(8, Root.ActualHeight - size.Height - 8));
+        return new SnapshotOverlay(menu, new Point(x, y));
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -608,6 +658,7 @@ public partial class MainWindow : ChromeWindow
         LargeTitle.MaxHeight = room >= ShowcaseLayout.LargeTitleHeight ? double.PositiveInfinity : Math.Max(48, Math.Floor(room));
         HeroCompact.Opacity = _listCollapsed ? 0 : 1;
         HeroCompact.IsHitTestVisible = !_listCollapsed;
+        CompactActions.IsEnabled = !_listCollapsed; // eingeklappt auch nicht per Tab erreichbar
     }
 
     private void ApplyListColumns()
@@ -626,6 +677,99 @@ public partial class MainWindow : ChromeWindow
             _toolbarQueued = true;
             Dispatcher.BeginInvoke(DispatcherPriority.Render, UpdateToolbarLayout);
         }
+
+        QueueCompactHero();
+    }
+
+    private void QueueCompactHero()
+    {
+        if (!_compactHeroQueued && IsLoaded)
+        {
+            _compactHeroQueued = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Render, FitCompactHero);
+        }
+    }
+
+    /// <summary>
+    /// Schmaler Titelbereich (Liste, Raster): Logo bzw. Name links, Kennzeile und Angaben daneben, Starten und „Beim Start …“
+    /// rechts. Reicht die Breite nicht, entfällt zuerst „Beim Start …“, dann der Knopf (der Detailbereich hat beides immer).
+    /// Danach wird der Name umbrochen bzw. das Logo verkleinert, damit Kennzeile und Angaben daneben Platz behalten; erst wenn
+    /// dem Titel dann weniger als <see cref="MinCompactTitle"/> bliebe, fallen auch diese weg. Nie wird der Name abgeschnitten.
+    /// Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte passt. Gemessen wird die
+    /// gewünschte Breite ohne Begrenzung, wie bei der Werkzeugleiste.
+    /// </summary>
+    public void FitCompactHero()
+    {
+        _compactHeroQueued = false;
+
+        // Platz laut Anordnung (Fensterbreite ohne die Ränder aus ApplyVerticalLayout): ActualWidth wäre bei zu breitem Inhalt
+        // dessen Breite, nicht die sichtbare.
+        var room = (Root.ActualWidth > 0 ? Root.ActualWidth : Width) - HeroContent.Margin.Left - HeroContent.Margin.Right;
+        if (!(room > 0))
+        {
+            return;
+        }
+
+        // Regal: „Beim Start …“ nur, wenn die Knopfzeile links neben der Automatik-Karte Platz hat (sonst abgeschnitten).
+        LargeLaunchChip.Visibility = Visibility.Visible;
+        if (HeroLarge.Visibility == Visibility.Visible)
+        {
+            InvalidateMeasureTree(LargeActions);
+            LargeActions.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            if (LargeActions.DesiredSize.Width > room + 0.5)
+            {
+                LargeLaunchChip.Visibility = Visibility.Collapsed;
+            }
+
+            InvalidateMeasureTree(LargeActions);
+        }
+
+        if (HeroCompact.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        var available = room - HeroCompact.Margin.Left - HeroCompact.Margin.Right;
+
+        double Needed()
+        {
+            InvalidateMeasureTree(HeroCompact);
+            HeroCompact.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return HeroCompact.DesiredSize.Width;
+        }
+
+        CompactTitle.ClearValue(MaxWidthProperty);
+        CompactNameWidth = MaxCompactName;
+        CompactOverline.Visibility = Visibility.Visible;
+        CompactMeta.Visibility = Visibility.Visible;
+        CompactLaunchChip.Visibility = Visibility.Visible;
+        CompactActions.Visibility = Visibility.Visible;
+        if (Needed() > available + 0.5)
+        {
+            CompactLaunchChip.Visibility = Visibility.Collapsed;
+            if (Needed() > available + 0.5)
+            {
+                CompactActions.Visibility = Visibility.Collapsed;
+                if (Needed() > available + 0.5)
+                {
+                    // Titel neben Kennzeile und Angaben einpassen (CompactTitle hat rechts 26 px Abstand).
+                    var gap = CompactTitle.Margin.Right;
+                    var icon = _viewModel?.Hero?.ShowIconTile == true ? CompactIconTile : 0;
+                    var titleRoom = available - Math.Max(CompactOverline.DesiredSize.Width, CompactMeta.DesiredSize.Width) - gap;
+                    if (titleRoom - icon < MinCompactTitle)
+                    {
+                        CompactOverline.Visibility = Visibility.Collapsed;
+                        CompactMeta.Visibility = Visibility.Collapsed;
+                        titleRoom = available - gap;
+                    }
+
+                    CompactTitle.MaxWidth = Math.Max(0, Math.Floor(titleRoom));
+                    CompactNameWidth = Math.Clamp(Math.Floor(titleRoom - icon), 1, MaxCompactName);
+                }
+            }
+        }
+
+        InvalidateMeasureTree(HeroCompact);
     }
 
     private void ApplyToolbarStage(int stage)
@@ -639,6 +783,9 @@ public partial class MainWindow : ChromeWindow
         ViewShelfLabel.Visibility = labels;
         SearchHost.Width = stage >= 3 ? 150 : 236;
         SearchKey.Opacity = stage >= 3 ? 0 : 1;
+
+        // Ohne „Strg+F“ braucht das Feld rechts keinen Platz dafür: „Suchen …“ bleibt ganz lesbar.
+        SearchBox.Padding = new Thickness(38, 0, stage >= 3 ? 12 : 70, 0);
         SourceFilter.Width = stage >= 4 ? 150 : 188;
         ChipGroup.Visibility = stage >= 6 ? Visibility.Collapsed : Visibility.Visible;
         FilterMenuButton.Visibility = stage >= 6 ? Visibility.Visible : Visibility.Collapsed;
@@ -955,6 +1102,7 @@ public partial class MainWindow : ChromeWindow
 
         ApplyAmbient(instant);
         Hero.Show(_hero, _hero?.Artwork, instant ? TimeSpan.Zero : HeroTransition());
+        QueueCompactHero();
         if (!instant && _hero is not null && LibraryMotion.Instance.IsFull)
         {
             // Logo und Angaben gestaffelt nachziehen (Prototyp .hc.k1 .an).
@@ -1012,10 +1160,11 @@ public partial class MainWindow : ChromeWindow
             : Frozen(new SolidColorBrush(ColorMath.WithAlpha(_scheme.Accent, 0.14)));
         Resources["Lib.Brush.ListCard"] = Frozen(new SolidColorBrush(_dark ? AmbientPalette.Alpha(bg, 0.55) : Color.FromArgb(0x9E, 255, 255, 255)));
 
-        // Schublade im Regal: fast deckend (WPF hat keinen Weichzeichner für den Hintergrund wie der Prototyp).
+        // Schublade im Regal: deckend (WPF hat keinen Weichzeichner für den Hintergrund wie der Prototyp; schon 3 % Durchsicht
+        // ließen die Knöpfe der Kopfzeile als Geisterschrift durchscheinen).
         Resources["Lib.Brush.Drawer"] = Frozen(new SolidColorBrush(_dark
-            ? AmbientPalette.Alpha(ColorMath.MixOklab(bg, Color.FromRgb(0x0B, 0x0C, 0x12), 0.55), 0.97)
-            : Color.FromArgb(0xF7, 0xF8, 0xF9, 0xFC)));
+            ? AmbientPalette.Alpha(ColorMath.MixOklab(bg, Color.FromRgb(0x0B, 0x0C, 0x12), 0.55), 1)
+            : Color.FromRgb(0xF8, 0xF9, 0xFC)));
         Resources["Lib.Brush.PaneGlow"] = Frozen(new RadialGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(p.A2, _dark ? 0.22 : 0.10), 0), new GradientStop(AmbientPalette.Alpha(p.A2, 0), 1)])
         {

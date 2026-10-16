@@ -6,6 +6,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using HdrPilot.App.Services.Display;
 
 namespace HdrPilot.App.Infrastructure;
 
@@ -46,24 +47,40 @@ public sealed record SnapshotScene(string Window, string Name, Func<Window> Crea
     /// <summary>Wartezeit nach dem Anzeigen (Daten, Bilder, Einblendungen), vor <see cref="Prepare"/>.</summary>
     public TimeSpan Settle { get; init; } = TimeSpan.FromMilliseconds(1500);
 
+    /// <summary>
+    /// Was über dem Fenster liegt, aber nicht Teil davon sein kann, etwa ein Kontextmenü: Als echtes Popup ginge es auf dem
+    /// sichtbaren Bildschirm auf und käme nicht ins Bild. Wird nach <see cref="Prepare"/> abgefragt und darübergezeichnet.
+    /// </summary>
+    public Func<Window, IReadOnlyList<SnapshotOverlay>>? Overlays { get; init; }
+
+    /// <summary>
+    /// False für Dialoge mit fester Größe (etwa „Bild wählen…“): Sie werden in ihrer eigenen Größe gerendert, nicht in den
+    /// Größen des Plans, die sie nur leer auseinanderziehen würden, wie es der Nutzer nie sieht.
+    /// </summary>
+    public bool Resizable { get; init; } = true;
+
     public string Id => Window + "-" + Name;
 }
 
+/// <summary>Element, das über das Fenster gezeichnet wird, mit seiner linken oberen Ecke in geräteunabhängigen Pixeln des Fensters.</summary>
+public sealed record SnapshotOverlay(FrameworkElement Element, Point Position);
+
 /// <summary>
 /// Was gerendert wird: Größen (leer: Startgröße des Fensters), Auswahl der Zustände (leer: alle; ein Eintrag passt auf
-/// <see cref="SnapshotScene.Id"/>, <see cref="SnapshotScene.Window"/> oder <see cref="SnapshotScene.Name"/>) und Themen
-/// (true dunkel, false hell).
+/// <see cref="SnapshotScene.Id"/>, <see cref="SnapshotScene.Window"/> oder <see cref="SnapshotScene.Name"/>), Themen
+/// (true dunkel, false hell) und auf Wunsch feste Werte eines Bildschirms (null: echte Werte über DXGI).
 /// </summary>
-public sealed record SnapshotPlan(IReadOnlyList<SnapshotSize> Sizes, IReadOnlyList<string> Scenes, IReadOnlyList<bool> Themes)
+public sealed record SnapshotPlan(IReadOnlyList<SnapshotSize> Sizes, IReadOnlyList<string> Scenes, IReadOnlyList<bool> Themes, DisplayNits? Display = null)
 {
     /// <summary>Wie bisher: alle Zustände in Startgröße, dunkel und hell.</summary>
     public static SnapshotPlan Default { get; } = new([], [], [true, false]);
 
     /// <summary>
-    /// Aus den Schaltern <c>--snapshot-sizes</c> („1280x800,1920x1080“ oder „review“), <c>--snapshot-scenes</c> (Komma-Liste)
-    /// und <c>--snapshot-themes</c> („dunkel,hell“). Fehlende Angaben: Standard. Wirft <see cref="FormatException"/>.
+    /// Aus den Schaltern <c>--snapshot-sizes</c> („1280x800,1920x1080“ oder „review“), <c>--snapshot-scenes</c> (Komma-Liste),
+    /// <c>--snapshot-themes</c> („dunkel,hell“) und <c>--snapshot-display</c> („Name;Spitze;Vollbild;Minimum;Bit“). Fehlende
+    /// Angaben: Standard. Wirft <see cref="FormatException"/>.
     /// </summary>
-    public static SnapshotPlan Parse(string? sizes, string? scenes, string? themes)
+    public static SnapshotPlan Parse(string? sizes, string? scenes, string? themes, string? display = null)
     {
         var sizeList = new List<SnapshotSize>();
         foreach (var part in Split(sizes))
@@ -96,7 +113,32 @@ public sealed record SnapshotPlan(IReadOnlyList<SnapshotSize> Sizes, IReadOnlyLi
         return new SnapshotPlan(
             sizeList.Distinct().ToList(),
             Split(scenes).ToList(),
-            themeList.Count == 0 ? Default.Themes : themeList.Distinct().ToList());
+            themeList.Count == 0 ? Default.Themes : themeList.Distinct().ToList(),
+            ParseDisplay(display));
+    }
+
+    /// <summary>„MAG 341C OLED;456;254;0;10“: Name, Spitze, Vollbild und Minimum in Nits (Punkt als Dezimalzeichen), Bit je Farbe.</summary>
+    private static DisplayNits? ParseDisplay(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var parts = text.Split(';', StringSplitOptions.TrimEntries);
+        static bool Nits(string s, out double value) =>
+            double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && double.IsFinite(value) && value >= 0;
+        if (parts.Length != 5
+            || parts[0].Length == 0
+            || !Nits(parts[1], out var peak) || peak <= 0
+            || !Nits(parts[2], out var full)
+            || !Nits(parts[3], out var min)
+            || !int.TryParse(parts[4], NumberStyles.None, CultureInfo.InvariantCulture, out var bits))
+        {
+            throw new FormatException("Ungültige Angabe für --snapshot-display: " + text);
+        }
+
+        return new DisplayNits("snapshot", parts[0], peak, full, min, bits, HdrActive: false, PeakMeasuredWithHdr: true);
     }
 
     public bool Includes(SnapshotScene scene) => Scenes.Count == 0 || Scenes.Any(s =>
@@ -132,7 +174,7 @@ public static class SnapshotRenderer
                 ThemeManager.Apply(app);
                 foreach (var scene in scenes.Where(plan.Includes))
                 {
-                    IReadOnlyList<SnapshotSize?> sizes = plan.Sizes.Count == 0 ? [null] : plan.Sizes.Select(s => (SnapshotSize?)s).ToList();
+                    IReadOnlyList<SnapshotSize?> sizes = plan.Sizes.Count == 0 || !scene.Resizable ? [null] : plan.Sizes.Select(s => (SnapshotSize?)s).ToList();
                     foreach (var size in sizes)
                     {
                         var path = Path.Combine(directory, FileName(scene, size, dark));
@@ -209,7 +251,7 @@ public static class SnapshotRenderer
                 await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
             }
 
-            Save(window, path, size);
+            Save(window, path, size, scene.Overlays?.Invoke(window) ?? []);
         }
         finally
         {
@@ -222,7 +264,7 @@ public static class SnapshotRenderer
         }
     }
 
-    private static void Save(Window window, string path, SnapshotSize? size)
+    private static void Save(Window window, string path, SnapshotSize? size, IReadOnlyList<SnapshotOverlay> overlays)
     {
         var content = (FrameworkElement)window.Content;
         var root = (Visual)(VisualTreeHelper.GetChildrenCount(window) > 0 ? VisualTreeHelper.GetChild(window, 0) : content);
@@ -231,6 +273,28 @@ public static class SnapshotRenderer
         var height = size?.Height ?? (int)Math.Ceiling(window.ActualHeight * dpi.DpiScaleY);
         var bitmap = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
         bitmap.Render(root);
+        foreach (var overlay in overlays)
+        {
+            // Ohne Eltern angeordnet; über einen Pinsel mit festem Ausschnitt an seine Stelle gezeichnet (wie gerendert, ohne Versatz).
+            var element = overlay.Element;
+            element.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var box = new Rect(element.DesiredSize);
+            element.Arrange(box);
+            element.UpdateLayout();
+            var layer = new DrawingVisual();
+            using (var dc = layer.RenderOpen())
+            {
+                var brush = new VisualBrush(element)
+                {
+                    Stretch = Stretch.Fill,
+                    ViewboxUnits = BrushMappingMode.Absolute,
+                    Viewbox = box,
+                };
+                dc.DrawRectangle(brush, null, new Rect(overlay.Position, box.Size));
+            }
+
+            bitmap.Render(layer);
+        }
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(path);

@@ -7,6 +7,7 @@ using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Artwork;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.HdrSupport;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 
@@ -58,8 +59,9 @@ public sealed partial class AppServices
 
     /// <summary>
     /// Zustände der Bibliothek für Bildschirmfotos (E89, G10.5): die drei Ansichten, das Regal mit offener Schublade, der
-    /// HDR-Moment bei 35 % (ohne HDR-Schaltung), ein Spiel mit erzeugtem Titelbild und „Bild wählen…“. Ansicht und Auswahl
-    /// werden nur im ViewModel gesetzt, ohne Schreiben in die Konfiguration.
+    /// HDR-Moment bei 35 % (ohne HDR-Schaltung), ein Spiel mit erzeugtem Titelbild, ein Spiel mit eigenem HDR, das
+    /// Kontextmenü eines Spiels und „Bild wählen…“. Ansicht und Auswahl werden nur im ViewModel gesetzt, ohne Schreiben in
+    /// die Konfiguration.
     /// </summary>
     partial void AddLibrarySnapshotScenes(List<SnapshotScene> scenes)
     {
@@ -70,7 +72,13 @@ public sealed partial class AppServices
         scenes.Add(new SnapshotScene("hauptfenster", "liste-hdr", () => LibraryScene(LibraryViewMode.List), FreezeMomentAsync) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal-hdr", () => LibraryScene(LibraryViewMode.Shelf), FreezeMomentAsync) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "ersatzbild", () => LibraryScene(LibraryViewMode.List), SelectGeneratedHeroAsync) { Settle = LibrarySettle });
-        scenes.Add(new SnapshotScene("hauptfenster", "bildwahl", CreatePickerScene) { Settle = TimeSpan.FromSeconds(2) });
+        scenes.Add(new SnapshotScene("hauptfenster", "nativ-hdr", () => LibraryScene(LibraryViewMode.Grid), SelectNativeHdrAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "kontextmenue", () => LibraryScene(LibraryViewMode.List))
+        {
+            Settle = LibrarySettle,
+            Overlays = window => window is MainWindow main && main.CreateContextMenuPreview() is { } menu ? [menu] : [],
+        });
+        scenes.Add(new SnapshotScene("hauptfenster", "bildwahl", CreatePickerScene) { Settle = TimeSpan.FromSeconds(2), Resizable = false });
     }
 
     /// <summary>Prüfung (G10.9): HDR-Moment im offenen Hauptfenster abspielen, ohne HDR zu schalten.</summary>
@@ -136,6 +144,24 @@ public sealed partial class AppServices
                 await Task.Delay(2200);
                 return;
             }
+        }
+    }
+
+    /// <summary>Ein weiteres Spiel mit eigenem HDR laut PCGamingWiki, bevorzugt eines mit „HDR automatisch“.</summary>
+    private static async Task SelectNativeHdrAsync(Window window)
+    {
+        if (window is not MainWindow { ViewModel: { } vm })
+        {
+            return;
+        }
+
+        var native = vm.GamesView.Cast<GameItemViewModel>()
+            .Where(g => g.HdrSupport == HdrSupportStatus.Native && !ReferenceEquals(g, vm.SelectedGame))
+            .ToList();
+        if ((native.FirstOrDefault(g => g.HdrAuto) ?? native.FirstOrDefault()) is { } item)
+        {
+            vm.SelectQuietly(item);
+            await Task.Delay(2200);
         }
     }
 

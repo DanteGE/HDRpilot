@@ -11,8 +11,18 @@ public readonly record struct ShelfMetrics(double TileWidth, double TileHeight, 
     public double Pitch => TileWidth + Gap;
 }
 
-/// <summary>Welche Spalten der Liste Platz haben (die Spalte „Spiel“ behält immer mindestens <see cref="ShowcaseLayout.MinNameColumn"/>).</summary>
-public readonly record struct ListColumns(bool Source, bool LastPlayed, bool Hdr);
+/// <summary>
+/// Welche Spalten der Liste Platz haben (die Spalte „Spiel“ behält immer mindestens <see cref="ShowcaseLayout.MinNameColumn"/>)
+/// und wie breit „Quelle“, „Zuletzt gespielt“ und „HDR“ sind (breiter nur in sehr breiten Listen, siehe
+/// <see cref="ShowcaseLayout.MaxNameColumn"/>).
+/// </summary>
+public readonly record struct ListColumns(
+    bool Source,
+    bool LastPlayed,
+    bool Hdr,
+    double SourceWidth = ShowcaseLayout.SourceColumn,
+    double LastPlayedWidth = ShowcaseLayout.LastPlayedColumn,
+    double HdrWidth = ShowcaseLayout.HdrColumn);
 
 /// <summary>
 /// Maße des Hauptfensters im Stil „Showcase Hero“ (Prototyp v4, app.css), als reine Funktionen: Höhe des Titelbereichs je
@@ -85,10 +95,11 @@ public static class ShowcaseLayout
 
     /// <summary>
     /// Höhe des Titelbereichs: Liste clamp(H·0,22; 180; 240), beim Scrollen 120; Raster clamp(H·0,24; 196; 260); Regal
-    /// clamp(H·0,62; 500; 660). Im Regal darf er bei sehr hohen Fenstern (über 1122 px, etwa 3440×1440) mitwachsen, damit
-    /// unter der Kachelreihe keine leere Fläche bleibt: Obergrenze dort H − 462. In niedrigen Fenstern (etwa 1280×800 bei
-    /// 110 % Skalierung, 727 px) gibt er nach, bis die kleinste Kachel ganz über der Statuszeile steht (die Reihe beginnt am
-    /// unteren Rand des Titelbilds und endet <see cref="BodyBottom"/> über dem Fensterrand), höchstens bis 440 px.
+    /// clamp(H·0,62; 500; 660). Im Regal wächst er bei sehr hohen Fenstern (über 1122 px, etwa 3440×1440) auf H − 462 mit:
+    /// Die größte Kachelreihe (340 px) samt Seitenangabe liegt dann unten an, ohne leeres Band darunter (bei H·0,62 blieben
+    /// im Vollbild bis 135 px frei). In niedrigen Fenstern (etwa 1280×800 bei 110 % Skalierung, 727 px) gibt er nach, bis
+    /// die kleinste Kachel ganz über der Statuszeile steht (die Reihe beginnt am unteren Rand des Titelbilds und endet
+    /// <see cref="BodyBottom"/> über dem Fensterrand), höchstens bis 440 px.
     /// </summary>
     public static double HeroHeight(LibraryViewMode view, double windowHeight, bool listCollapsed)
     {
@@ -96,7 +107,7 @@ public static class ShowcaseLayout
         var value = view switch
         {
             LibraryViewMode.Shelf => Math.Min(
-                Math.Clamp(h * 0.62, 500, Math.Max(660, h - 462)),
+                Math.Max(Math.Clamp(h * 0.62, 500, 660), h - 462),
                 Math.Max(MinShelfHero, h - BodyBottom - ShelfPadding - MinShelfTile)),
             LibraryViewMode.Grid => Math.Clamp(h * 0.24, 196, 260),
             _ => listCollapsed ? CollapsedListHero : Math.Clamp(h * 0.22, 180, 240),
@@ -135,27 +146,43 @@ public static class ShowcaseLayout
         return new ShelfMetrics(tileWidth, tileHeight, gap, visible);
     }
 
+    /// <summary>Spalte „Quelle“ der Liste (Prototyp).</summary>
+    public const double SourceColumn = 124;
+
+    /// <summary>Spalte „Zuletzt gespielt“ der Liste (Prototyp).</summary>
+    public const double LastPlayedColumn = 140;
+
+    /// <summary>Spalte „HDR“ der Liste (Prototyp).</summary>
+    public const double HdrColumn = 96;
+
+    /// <summary>
+    /// Breiteste Spalte „Spiel“: In sehr breiten Listen (Vollbild 3440 px) bekommen „Quelle“, „Zuletzt gespielt“ und „HDR“
+    /// den Platz darüber zu gleichen Teilen, statt dass zwischen Name und Quelle eine leere Fläche entsteht.
+    /// </summary>
+    public const double MaxNameColumn = 640;
+
     /// <summary>
     /// Spalten der Liste (Prototyp: Vorschau 64 | Spiel | Quelle 124 | Zuletzt gespielt 140 | HDR 96 | HDR automatisch 118,
     /// Abstände 14, Innenabstand 28). Wird es eng, fallen zuerst „Quelle“, dann „HDR“, dann „Zuletzt gespielt“ weg; „Spiel“
-    /// und „HDR automatisch“ bleiben immer.
+    /// und „HDR automatisch“ bleiben immer. Wäre „Spiel“ breiter als <see cref="MaxNameColumn"/>, wachsen die übrigen
+    /// sichtbaren Spalten gleichmäßig mit (ganze Pixel).
     /// </summary>
     public static ListColumns ListColumnsFor(double listWidth, double thumbnailWidth = 64)
     {
         var width = double.IsFinite(listWidth) ? listWidth : 0;
         var name = width - (thumbnailWidth + 118 + (2 * 14) + 28);
         bool source = true, hdr = true, last = true;
-        name -= 124 + 14 + 96 + 14 + 140 + 14;
+        name -= SourceColumn + 14 + HdrColumn + 14 + LastPlayedColumn + 14;
         if (name < MinNameColumn)
         {
             source = false;
-            name += 124 + 14;
+            name += SourceColumn + 14;
         }
 
         if (name < MinNameColumn)
         {
             hdr = false;
-            name += 96 + 14;
+            name += HdrColumn + 14;
         }
 
         if (name < MinNameColumn)
@@ -163,7 +190,9 @@ public static class ShowcaseLayout
             last = false;
         }
 
-        return new ListColumns(source, last, hdr);
+        var shown = (source ? 1 : 0) + (last ? 1 : 0) + (hdr ? 1 : 0);
+        var extra = shown > 0 && name > MaxNameColumn ? Math.Floor((name - MaxNameColumn) / shown) : 0;
+        return new ListColumns(source, last, hdr, SourceColumn + extra, LastPlayedColumn + extra, HdrColumn + extra);
     }
 
     /// <summary>

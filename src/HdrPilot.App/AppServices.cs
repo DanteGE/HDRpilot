@@ -96,8 +96,8 @@ public sealed partial class AppServices : IAsyncDisposable
     /// <summary>SteamGridDB (optional, Standard aus) für lokal fehlende Bilder (E89).</summary>
     public ISteamGridDbService SteamGridDb { get; }
 
-    /// <summary>Echte Helligkeitswerte der Bildschirme über DXGI (E89).</summary>
-    public IDisplayLuminanceService Luminance { get; }
+    /// <summary>Echte Helligkeitswerte der Bildschirme über DXGI (E89); nur Bildschirmfotos setzen feste Werte ein.</summary>
+    public IDisplayLuminanceService Luminance { get; private set; }
 
     public IShortcutService Shortcuts { get; }
 
@@ -357,6 +357,13 @@ public sealed partial class AppServices : IAsyncDisposable
     /// </summary>
     public Task<IReadOnlyList<string>> RenderSnapshotsAsync(string directory, SnapshotPlan plan)
     {
+        if (plan.Display is { } display)
+        {
+            // Vor dem ersten Fenster: Kapsel, Skala und Vorschau zeigen die vorgegebenen Werte (Monitor aus, DXGI ohne Werte).
+            Luminance.Dispose();
+            Luminance = new FixedDisplayLuminanceService(display);
+        }
+
         var scenes = new List<SnapshotScene>();
         AddLibrarySnapshotScenes(scenes);
         AddSettingsSnapshotScenes(scenes);

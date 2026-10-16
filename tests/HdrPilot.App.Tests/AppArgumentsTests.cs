@@ -122,11 +122,12 @@ public sealed class AppArgumentsTests
     public void Snapshot_options_are_parsed_but_never_forwarded()
     {
         // E89: Größen, Zustände und Themen der Bildschirmfotos gehören zum Bildschirmfoto-Lauf, nie zu einer laufenden Instanz.
-        var args = AppArguments.Parse(["--snapshot", @"C:\shots", "--config-dir", @"C:\t", "--snapshot-sizes", "1280x800,3440x1440", "--snapshot-scenes", "hauptfenster", "--snapshot-themes", "hell"]);
+        var args = AppArguments.Parse(["--snapshot", @"C:\shots", "--config-dir", @"C:\t", "--snapshot-sizes", "1280x800,3440x1440", "--snapshot-scenes", "hauptfenster", "--snapshot-themes", "hell", "--snapshot-display", "MAG 341C OLED;456;254;0;10"]);
         Assert.Equal(@"C:\shots", args.SnapshotDir);
         Assert.Equal("1280x800,3440x1440", args.SnapshotSizes);
         Assert.Equal("hauptfenster", args.SnapshotScenes);
         Assert.Equal("hell", args.SnapshotThemes);
+        Assert.Equal("MAG 341C OLED;456;254;0;10", args.SnapshotDisplay);
         Assert.Empty(args.Unknown);
         Assert.False(args.HasCommand);
         Assert.Empty(args.ToForwardedArgs());

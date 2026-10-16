@@ -36,8 +36,8 @@ Stand: 2026-10-16, Zweig `feature/showcase-views`. Grundlage: genehmigter Protot
 
 ## Bewusste Abweichungen vom Prototyp
 
-1. **Regal bei hohen Fenstern**: Titelbereich `clamp(H × 0,62; 500; max(660; H − 462))`, damit die Kachelreihe bei
-   1440 px Höhe ganz sichtbar bleibt.
+1. **Regal bei hohen Fenstern**: Titelbereich `max(clamp(H × 0,62; 500; 660); H − 462)`, damit die Kachelreihe bei
+   1440 px Höhe ganz sichtbar bleibt und unten anliegt (kein leeres Band darunter).
 2. **Werkzeugleiste**: Stufen wie `fitToolbar`, aber die Filter-Chips falten zuletzt (Stufe 6, nach der Sortierung in
    Stufe 5), damit sie bei der Standardgröße direkt schaltbar bleiben (phase4-ui); Stufe 7 (zwei Zeilen) für Fenster um
    1000 px, die der Prototyp nicht hatte.
@@ -52,7 +52,8 @@ Stand: 2026-10-16, Zweig `feature/showcase-views`. Grundlage: genehmigter Protot
    sich nicht animieren (Absturz beim ersten Aktivieren, von `EffectViewsTests` gefunden).
 6. **Logo** ohne durchsichtigen Rand (`LibraryArt.TrimTransparent`, wie `trimLogo` im Prototyp) und nach Bildpunkten
    statt dpi-Angabe der Datei skaliert.
-7. **Schublade im Regal** fast deckend (97 %) statt Glas mit Weichzeichner.
+7. **Schublade im Regal** deckend statt Glas mit Weichzeichner (Sichtprüfung: bei 97 % schien die Kopfzeile als
+   Geisterschrift durch).
 8. Polarlichter aus `app.css` sind nicht umgesetzt (nicht in der Effektliste von G10.6).
 
 ## Offene Punkte für andere Teile

@@ -50,6 +50,32 @@ public sealed class SnapshotPlanTests
     }
 
     [Fact]
+    public void Display_values_for_snapshots_are_parsed()
+    {
+        // Monitor aus: Kapsel und Skala der Bildschirmfotos mit den Werten des MAG 341C (Skala bis zur Spitze 456).
+        var display = SnapshotPlan.Parse(null, null, null, "MAG 341C OLED; 456; 254; 0.0000; 10").Display;
+
+        Assert.NotNull(display);
+        Assert.Equal("MAG 341C OLED", display.FriendlyName);
+        Assert.Equal(456, display.PeakNits);
+        Assert.Equal(254, display.FullFrameNits);
+        Assert.Equal(0, display.MinNits);
+        Assert.Equal(10, display.BitsPerColor);
+        Assert.Null(SnapshotPlan.Parse(null, null, null).Display);
+    }
+
+    [Theory]
+    [InlineData("MAG 341C OLED;456;254;0")]
+    [InlineData(";456;254;0;10")]
+    [InlineData("MAG 341C OLED;0;254;0;10")]
+    [InlineData("MAG 341C OLED;456,5;254;0;10")]
+    [InlineData("MAG 341C OLED;456;254;-1;10")]
+    public void Invalid_display_values_are_rejected(string display)
+    {
+        Assert.Throws<FormatException>(() => SnapshotPlan.Parse(null, null, null, display));
+    }
+
+    [Fact]
     public void File_names_carry_scene_size_and_theme()
     {
         var scene = new SnapshotScene("hauptfenster", "raster", NoWindow);

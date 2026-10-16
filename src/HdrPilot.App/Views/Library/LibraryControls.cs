@@ -6,7 +6,7 @@ using System.Windows.Media;
 namespace HdrPilot.App.Views.Library;
 
 /// <summary>
-/// Spalten der Listenzeilen (E89): vererbbare Schalter, die das Fenster an der Liste setzt (<see cref="ShowcaseLayout.ListColumnsFor"/>)
+/// Spalten der Listenzeilen (E89): vererbbare Schalter und Breiten, die das Fenster an der Liste setzt (<see cref="ShowcaseLayout.ListColumnsFor"/>)
 /// und die Kopfzeile und jede Zeile lesen. So passen Kopf und Zeilen ohne gemeinsame Spaltendefinition zusammen.
 /// </summary>
 public static class GameListColumns
@@ -19,6 +19,15 @@ public static class GameListColumns
 
     public static readonly DependencyProperty ShowHdrProperty = DependencyProperty.RegisterAttached(
         "ShowHdr", typeof(bool), typeof(GameListColumns), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.Inherits));
+
+    public static readonly DependencyProperty SourceWidthProperty = DependencyProperty.RegisterAttached(
+        "SourceWidth", typeof(double), typeof(GameListColumns), new FrameworkPropertyMetadata(ShowcaseLayout.SourceColumn, FrameworkPropertyMetadataOptions.Inherits));
+
+    public static readonly DependencyProperty LastPlayedWidthProperty = DependencyProperty.RegisterAttached(
+        "LastPlayedWidth", typeof(double), typeof(GameListColumns), new FrameworkPropertyMetadata(ShowcaseLayout.LastPlayedColumn, FrameworkPropertyMetadataOptions.Inherits));
+
+    public static readonly DependencyProperty HdrWidthProperty = DependencyProperty.RegisterAttached(
+        "HdrWidth", typeof(double), typeof(GameListColumns), new FrameworkPropertyMetadata(ShowcaseLayout.HdrColumn, FrameworkPropertyMetadataOptions.Inherits));
 
     /// <summary>Helles Thema: gewählte Zeile zusätzlich mit Ring (Akzent 45 %), damit sie auf Weiß deutlich bleibt.</summary>
     public static readonly DependencyProperty LightThemeProperty = DependencyProperty.RegisterAttached(
@@ -40,9 +49,36 @@ public static class GameListColumns
 
     public static void SetShowHdr(DependencyObject d, bool value) => d.SetValue(ShowHdrProperty, value);
 
+    public static double GetSourceWidth(DependencyObject d) => (double)d.GetValue(SourceWidthProperty);
+
+    public static void SetSourceWidth(DependencyObject d, double value) => d.SetValue(SourceWidthProperty, value);
+
+    public static double GetLastPlayedWidth(DependencyObject d) => (double)d.GetValue(LastPlayedWidthProperty);
+
+    public static void SetLastPlayedWidth(DependencyObject d, double value) => d.SetValue(LastPlayedWidthProperty, value);
+
+    public static double GetHdrWidth(DependencyObject d) => (double)d.GetValue(HdrWidthProperty);
+
+    public static void SetHdrWidth(DependencyObject d, double value) => d.SetValue(HdrWidthProperty, value);
+
     /// <summary>Spalten an einem Element setzen (nur bei Änderung, die Vererbung läuft sonst durch alle Zeilen).</summary>
     public static void Apply(DependencyObject target, ListColumns columns)
     {
+        if (GetSourceWidth(target) != columns.SourceWidth)
+        {
+            SetSourceWidth(target, columns.SourceWidth);
+        }
+
+        if (GetLastPlayedWidth(target) != columns.LastPlayedWidth)
+        {
+            SetLastPlayedWidth(target, columns.LastPlayedWidth);
+        }
+
+        if (GetHdrWidth(target) != columns.HdrWidth)
+        {
+            SetHdrWidth(target, columns.HdrWidth);
+        }
+
         if (GetShowSource(target) != columns.Source)
         {
             SetShowSource(target, columns.Source);

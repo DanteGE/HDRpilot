@@ -114,6 +114,14 @@ public sealed class ShowcaseLayoutTests
         // 3440 × 1440: das Regal behält unten Platz für die Kachelreihe (Abweichung vom Prototyp: höchstens H − 462).
         var shelf = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, 1400, false);
         Assert.True(1400 - shelf >= 462, "Platz für die Reihe: " + (1400 - shelf));
+
+        // … und füllt ihn: unter der größten Reihe (340 + 34) und der Seitenangabe bleibt kein leeres Band (Sichtprüfung
+        // 3440×1440: bei H·0,62 waren es 135 px). Gegenprobe: bei 1000 px bleibt es beim Prototyp (620).
+        foreach (var height in new[] { 1309.0, 1400, 1440 })
+        {
+            var row = height - ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, false) - ShowcaseLayout.BodyBottom;
+            Assert.InRange(row - ShowcaseLayout.ShelfPadding - 340, 0, 50);
+        }
     }
 
     [Theory]
@@ -151,6 +159,24 @@ public sealed class ShowcaseLayoutTests
         var columns = ShowcaseLayout.ListColumnsFor(listWidth);
 
         Assert.Equal(new ListColumns(source, last, hdr), columns);
+    }
+
+    [Fact]
+    public void Showcase_list_columns_share_the_width_of_very_wide_lists()
+    {
+        // Vollbild 3440 px: Liste etwa 2700 px breit. Ohne Verteilung wäre „Spiel“ über 2000 px breit, mit einer leeren
+        // Fläche zwischen Name und Quelle; die Spalten dahinter wachsen gleichmäßig, „Spiel“ bleibt bei 640 px.
+        var wide = ShowcaseLayout.ListColumnsFor(2700);
+        var extra = wide.SourceWidth - ShowcaseLayout.SourceColumn;
+        var name = 2700 - (64 + 118 + 28 + 28) - (3 * 14) - wide.SourceWidth - wide.LastPlayedWidth - wide.HdrWidth;
+
+        Assert.True(extra > 400, "Zuschlag " + extra);
+        Assert.Equal(extra, wide.LastPlayedWidth - ShowcaseLayout.LastPlayedColumn);
+        Assert.Equal(extra, wide.HdrWidth - ShowcaseLayout.HdrColumn);
+        Assert.InRange(name, ShowcaseLayout.MaxNameColumn, ShowcaseLayout.MaxNameColumn + 3);
+
+        // Gegenprobe: bei üblichen Breiten (1920 px, Liste etwa 1240 px) bleiben die Spalten wie im Prototyp.
+        Assert.Equal(new ListColumns(true, true, true), ShowcaseLayout.ListColumnsFor(1240));
     }
 
     [Fact]

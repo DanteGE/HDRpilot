@@ -90,3 +90,30 @@ public sealed class NullDisplayLuminanceService : IDisplayLuminanceService
     {
     }
 }
+
+/// <summary>
+/// Feste Werte eines Bildschirms, nur für Bildschirmfotos (<c>--snapshot-display</c>, E89): So zeigen Kapsel, Skala und
+/// Vorschau die Werte auch bei ausgeschaltetem Monitor, wenn DXGI nichts meldet. Liest nie etwas.
+/// </summary>
+public sealed class FixedDisplayLuminanceService(DisplayNits display) : IDisplayLuminanceService
+{
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public DisplayNits? Primary => display;
+
+    public IReadOnlyList<DisplayNits> Displays { get; } = [display];
+
+    public void Invalidate()
+    {
+    }
+
+    public IDisposable Acquire() => Artwork.NoLease.Instance;
+
+    public void Dispose()
+    {
+    }
+}

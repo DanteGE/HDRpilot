@@ -857,10 +857,21 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   gebracht), „HDR an“ die gefüllte Kachel, „Automatik pausiert“ mit gelbem und „Spiel läuft“ mit grünem Abzeichen
   (Pause geht vor); unter 24 px eine am Pixelraster ausgerichtete, vereinfachte Glyphe.
 - Bibliothek: Der Detailbereich behält den Trenner, ist aber höchstens 560 px breit (Doppelklick: 23 %); der
-  Titelbereich im Regal ist höchstens Fensterhöhe − 462 px hoch und gibt in niedrigen Fenstern bis 440 px nach (Logo
+  Titelbereich im Regal ist höchstens Fensterhöhe − 462 px hoch (in sehr hohen Fenstern genau so hoch, damit unter der
+  Kachelreihe kein leeres Band bleibt) und gibt in niedrigen Fenstern bis 440 px nach (Logo
   bzw. Name werden dann kleiner), damit die Kachelreihe ganz über der Statuszeile und die Werkzeugleiste unter der
   Automatik-Karte steht; erst unter 712 px Fensterhöhe werden die Kacheln kleiner als 200 px (höchstens bis 100 px).
   Die Werkzeugleiste faltet in Stufen, die Filter zuletzt. Der Startknopf heißt sichtbar „Starten“, für Bildschirmleser
-  weiter „Mit HDR starten“. Neu im Spielmenü: „Installationsordner öffnen“. Die Schublade im Regal ist zu 97 % deckend
-  (keine Unschärfe); die Polarlichter des Prototyps sind nicht umgesetzt. Im Dialog „Bild wählen…“ verschwindet die
-  Liste des vorigen Reiters beim Wechsel sofort, damit eine Wahl nie für die falsche Bildart gilt.
+  weiter „Mit HDR starten“. Neu im Spielmenü: „Installationsordner öffnen“. Die Schublade im Regal ist deckend (keine
+  Unschärfe; schon 3 % Durchsicht ließen die Kopfzeile als Geisterschrift durchscheinen); die Polarlichter des Prototyps
+  sind nicht umgesetzt. Im Dialog „Bild wählen…“ verschwindet die Liste des vorigen Reiters beim Wechsel sofort, damit
+  eine Wahl nie für die falsche Bildart gilt.
+- Sichtprüfung (Bildschirmfotos aller Ansichten, hell und dunkel, 1100×680 bis 3440×1440): Der schmale Titelbereich von
+  Liste und Raster zeigt wie im Prototyp rechts „Starten“ und „Beim Start …“; wird es eng, weicht erst die Angabe, dann
+  der Knopf, danach bricht ein langer Name um bzw. wird das Logo kleiner, und erst unter 300 px fallen Kennzeile und
+  Angaben weg (nie abgeschnitten). Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte
+  passt. Ist die Liste so breit, dass „Spiel“ über 640 px bekäme (Vollbild), wachsen „Quelle“, „Zuletzt gespielt“ und
+  „HDR“ gleichmäßig mit. Das Spielmenü hat oben Vorschau, Name und „Quelle · zuletzt gespielt“ wie im Prototyp. Die
+  Lichtlinie des HDR-Moments hat einen weichen Schein und verglimmt rasch. Für Bildschirmfotos bei ausgeschaltetem
+  Monitor setzt `--snapshot-display "Name;Spitze;Vollbild;Minimum;Bit"` feste Bildschirmwerte ein; die Zustände
+  `nativ-hdr` und `kontextmenue` (das Menü wird ohne Popup über das Fenster gezeichnet) kamen dazu.

@@ -396,6 +396,9 @@ public sealed class TestLibraryContext : ILibraryContext
 
     public LaunchOutcome NextLaunch { get; set; } = new(true, "gestartet", new DateTimeOffset(2026, 10, 7, 12, 0, 1, TimeSpan.Zero), null);
 
+    /// <summary>Gesetzt: der nächste Start wartet auf diese Quelle (Tests: Start läuft noch).</summary>
+    public TaskCompletionSource<LaunchOutcome>? PendingLaunch { get; set; }
+
     public Exception? FailNextUpdate { get; set; }
 
     public int Updates { get; private set; }
@@ -543,7 +546,7 @@ public sealed class TestLibraryContext : ILibraryContext
     public Task<LaunchOutcome> LaunchAsync(string gameKey)
     {
         Launched.Add(gameKey);
-        return Task.FromResult(NextLaunch);
+        return PendingLaunch?.Task ?? Task.FromResult(NextLaunch);
     }
 
     public void ShowSettings() => SettingsShown++;

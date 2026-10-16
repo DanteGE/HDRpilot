@@ -350,11 +350,13 @@ Titelbild aus den Farben des Symbols mit dem Namen als Muster, ein Cover aus Tit
 eines Logos den Namen in der Titelschrift und ohne Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte
 Kapselbilder als einziges Cover) erkennt HDRpilot und ersetzt sie durch einen Ausschnitt aus dem Titelbild; Logos
 schneidet es auf ihren sichtbaren Teil zu. Umgebungsfarben berechnet es je Bild einmal, die hellere Fassung des
-Titelbilds nur, wenn sie zu sehen ist (HDR an oder HDR-Moment), und legt beides mit den Ersatzbildern unter
-`%LOCALAPPDATA%\HDRpilot\art\` ab. Solange ein Fenster offen ist, beobachtet es die Ordner der Launcher (bei Ubisoft
-Connect auch den Produkt-Cache), sodass neue Bilder von selbst erscheinen; im Speicher hält es höchstens 192 MB Bilder.
-Bei geschlossenem Fenster gibt es weder Beobachtung noch Bilder im Speicher, und Bilder von Spielen, die nicht mehr in
-der Bibliothek stehen, räumt es dann auf. Eigene Bilder („Bild wählen…“, höchstens 32 MB und 100 Megapixel, größere
+Titelbilds nur bei aktivem Bibliotheksfenster und nie, solange ein Spiel läuft oder startet: kurz nachdem die Auswahl
+zur Ruhe gekommen ist, mit niedriger Priorität, damit sie bereitliegt, wenn HDR angeht. Beides legt es mit den
+Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab. Solange ein Fenster offen ist, beobachtet es die Ordner der
+Launcher (bei Ubisoft Connect auch den Produkt-Cache), sodass neue Bilder von selbst erscheinen; im Speicher hält es
+höchstens 192 MB Bilder. Bei geschlossenem Fenster gibt es weder Beobachtung noch Bilder im Speicher (auch den
+Grafikspeicher des Fensters gibt HDRpilot wenige Sekunden nach dem Schließen zurück), und Bilder von Spielen, die nicht
+mehr in der Bibliothek stehen, räumt es dann auf. Eigene Bilder („Bild wählen…“, höchstens 32 MB und 100 Megapixel, größere
 Fotos werden verkleinert) stehen je Bildart in `config.json` (`artwork`) und liegen in `art\custom\`.
 
 **SteamGridDB:** nur eingeschaltet und mit eigenem Schlüssel (siehe „Einstellungen“). Gefragt wird

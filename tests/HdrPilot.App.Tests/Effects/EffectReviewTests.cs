@@ -107,7 +107,9 @@ public sealed class EffectReviewTests
             context.Dispatcher.RunDelayed();
             Assert.Equal(HdrMomentKind.Full, window.PlayTestHdrMomentAsync().Result);
             Assert.Contains(stage.CurrentBoostLayer()!, Targets(window.Moment.Board!));
-            Assert.Equal(2, art.BoostRequests.Count);
+
+            // Je Spiel einmal geholt: vor dem Moment oder schon vorab (aktives Fenster, Auswahl zur Ruhe gekommen).
+            Assert.Equal(["Steam:1091500", "Epic:Crow"], art.BoostRequests.Concat(art.PrefetchRequests));
             window.Close();
         });
     }

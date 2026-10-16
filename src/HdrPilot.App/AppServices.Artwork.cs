@@ -24,6 +24,7 @@ public sealed partial class AppServices
         HelperPatterns = () => Config.Current.Settings.HelperExecutablePatterns,
         SteamGridDbEnabled = () => Config.Current.Settings.Artwork?.SteamGridDb == true,
         LibraryKeys = () => Config.Current.Games.Select(g => g.Key).ToList(),
+        GameRunning = () => Sessions.Sessions.Count > 0,
         PostToUi = action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action),
         Logger = LoggerFactory.CreateLogger("Bilder"),
     });

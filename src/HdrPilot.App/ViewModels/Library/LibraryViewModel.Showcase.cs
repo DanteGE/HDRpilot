@@ -39,6 +39,15 @@ public sealed partial class LibraryViewModel
     /// <summary>Bei schnellem Wechsel (gehaltene Pfeiltaste) wird das Titelbild erst so lange nach dem letzten Wechsel geladen.</summary>
     public static readonly TimeSpan HeroDelay = TimeSpan.FromMilliseconds(120);
 
+    /// <summary>
+    /// So lange nach dem letzten Wechsel der Auswahl (Titelbild geladen) wird die helle Fassung vorab geladen, mit niedriger
+    /// Priorität und nur bei aktivem Fenster ohne laufendes Spiel: So ist sie da, wenn HDR angeht.
+    /// </summary>
+    public static readonly TimeSpan BoostPrefetchDelay = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>So lange wartet der HDR-Moment höchstens auf eine noch ladende helle Fassung; kommt sie später, blendet sie über.</summary>
+    public static readonly TimeSpan MomentBoostWait = TimeSpan.FromMilliseconds(300);
+
     private readonly LinkedList<GameItemViewModel> _coverOrder = new();
     private readonly Dictionary<GameItemViewModel, LinkedListNode<GameItemViewModel>> _coverNodes = [];
     private LibraryViewMode _viewMode;
@@ -57,6 +66,11 @@ public sealed partial class LibraryViewModel
     private AutomationState _automationState;
     private string _automationStateText = string.Empty;
     private bool _showcaseReady;
+    private bool _windowActive;
+    private int _launching;
+    private IDisposable? _boostPrefetch;
+    private CancellationTokenSource? _boostCancel;
+    private Task _boostLoad = Task.CompletedTask;
 
     /// <summary>HDR wurde bei offenem Fenster eingeschaltet: das Fenster spielt den HDR-Moment.</summary>
     public event EventHandler? HdrMomentRequested;
@@ -383,22 +397,61 @@ public sealed partial class LibraryViewModel
         OnPropertyChanged(nameof(HdrShortText));
         OnPropertyChanged(nameof(HdrToggleText));
         UpdateAutomationState();
-        _ = EnsureHeroBoostAsync(force: false);
+        UpdateBoostWork(restart: false);
     }
 
     /// <summary>
-    /// Helle Fassung des gewählten Titelbilds holen, wenn sie zu sehen ist (HDR an oder in der Vorschau) oder
-    /// <paramref name="force"/> (der HDR-Moment spielt gleich, auch ohne HDR). Nur dann: Sie kostet Rechenzeit und Speicher.
-    /// Fertig, sobald sie im Titelbereich steht oder es keine gibt.
+    /// Helle Fassung des gewählten Titelbilds holen, wenn sie zu sehen ist (HDR an oder in der Vorschau) und sie berechnet
+    /// werden darf (<see cref="BoostAllowed"/>), oder <paramref name="force"/> (Prüfung und Bildschirmfotos: der HDR-Moment
+    /// spielt gleich, auch ohne HDR). Sie kostet Rechenzeit und Speicher. Fertig, sobald sie im Titelbereich steht oder es
+    /// keine gibt.
     /// </summary>
     public Task EnsureHeroBoostAsync(bool force)
     {
-        if (_disposed || (!force && !ShowsHdrOn) || _hero is not { Artwork: { Hero: not null, HeroBoost: null } artwork } hero)
+        if (_disposed || (!force && (!ShowsHdrOn || !BoostAllowed)) || _hero is not { Artwork: { Hero: not null, HeroBoost: null } artwork } hero)
         {
             return Task.CompletedTask;
         }
 
-        return LoadHeroBoostAsync(hero, artwork);
+        return StartHeroBoost(hero, artwork, prefetch: false);
+    }
+
+    /// <summary>
+    /// Darf die helle Fassung jetzt berechnet werden (dekodieren, aufhellen, als JPEG schreiben)? Nur bei sichtbarem, aktivem
+    /// Fenster und wenn kein Spiel läuft oder über die Bibliothek startet; im Hintergrund, minimiert und geschlossen nie.
+    /// </summary>
+    public bool BoostAllowed => !_disposed && _windowActive && _launching == 0 && _context.Sessions.Count == 0;
+
+    /// <summary>
+    /// Fenster sichtbar, nicht minimiert und aktiv (setzt das Fenster). Aktiv: die helle Fassung des gewählten Spiels vorab
+    /// laden (bei HDR an gleich); sonst wartendes Vorab-Laden und noch nicht begonnene Anfragen abbrechen.
+    /// </summary>
+    public void SetWindowActive(bool active)
+    {
+        if (_windowActive == active)
+        {
+            return;
+        }
+
+        _windowActive = active;
+        UpdateBoostWork(restart: false);
+    }
+
+    /// <summary>
+    /// HDR-Moment: kurz (höchstens <paramref name="max"/>) auf eine noch ladende helle Fassung warten. Kommt sie später,
+    /// blendet der Titelbereich sie über. Sofort fertig, wenn nichts lädt.
+    /// </summary>
+    public async Task WaitForHeroBoostAsync(TimeSpan max)
+    {
+        var load = _boostLoad;
+        if (load.IsCompleted)
+        {
+            return;
+        }
+
+        var expired = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var timer = _context.Ui.Delay(max, () => expired.TrySetResult());
+        await Task.WhenAny(load, expired.Task);
     }
 
     /// <summary>HDR an oder in der Vorschau an (Kapsel, Titelbild, Kacheln).</summary>
@@ -448,6 +501,20 @@ public sealed partial class LibraryViewModel
 
     /// <summary>Cover, die die Bibliothek gerade hält (Tests: Obergrenze).</summary>
     internal int HeldCovers => _coverOrder.Count;
+
+    /// <summary>Start über die Bibliothek beginnt: bis er fertig ist (HDR an, Spiel gestartet), wird keine helle Fassung berechnet.</summary>
+    internal void OnLaunchStarting()
+    {
+        _launching++;
+        UpdateBoostWork(restart: false);
+    }
+
+    /// <summary>Start über die Bibliothek ist fertig (gelungen oder nicht); danach entscheidet die laufende Sitzung.</summary>
+    internal void OnLaunchFinished()
+    {
+        _launching = Math.Max(0, _launching - 1);
+        UpdateBoostWork(restart: false);
+    }
 
     /// <summary>Start über die Bibliothek ist gelungen: auf Wunsch schließt das Fenster (HDRpilot läuft im Infobereich weiter).</summary>
     internal void OnLaunchSucceeded()
@@ -503,6 +570,7 @@ public sealed partial class LibraryViewModel
     {
         _heroDelay?.Dispose();
         _heroDelay = null;
+        StopBoostWork();
         _artworkRun++;
         _context.Artwork.Changed -= OnArtworkChanged;
         _context.Luminance.Changed -= OnLuminanceChanged;
@@ -533,6 +601,7 @@ public sealed partial class LibraryViewModel
         ChooseArtworkCommand?.RaiseCanExecuteChanged();
         _heroDelay?.Dispose();
         _heroDelay = null;
+        StopBoostWork(); // die helle Fassung des vorigen Spiels wird nicht mehr gebraucht
         _artworkRun++;
         Hero = item is null ? null : new HeroViewModel(item, () => Now, IsPaused);
         OnPropertyChanged(nameof(HasHero));
@@ -599,15 +668,77 @@ public sealed partial class LibraryViewModel
             details.SetArtwork(artwork);
         }
 
-        _ = EnsureHeroBoostAsync(force: false);
+        // Auswahl samt Titelbild steht: helle Fassung bei HDR an gleich, sonst nach kurzer Ruhe vorab (nur wenn erlaubt).
+        UpdateBoostWork(restart: true);
     }
 
-    private async Task LoadHeroBoostAsync(HeroViewModel hero, GameArtwork artwork)
+    /// <summary>
+    /// Fenster, Spiel, HDR oder Auswahl haben sich geändert: Darf die helle Fassung berechnet werden, wird sie bei HDR an gleich
+    /// geholt, sonst nach <see cref="BoostPrefetchDelay"/> Ruhe vorab geladen (<paramref name="restart"/>: die Ruhe beginnt
+    /// neu). Darf sie nicht, entfallen wartendes Vorab-Laden und noch nicht begonnene Anfragen.
+    /// </summary>
+    private void UpdateBoostWork(bool restart)
+    {
+        if (!_showcaseReady || !BoostAllowed)
+        {
+            StopBoostWork();
+            return;
+        }
+
+        if (ShowsHdrOn)
+        {
+            _boostPrefetch?.Dispose(); // zu sehen: gleich mit normaler Priorität statt vorab
+            _boostPrefetch = null;
+            _ = EnsureHeroBoostAsync(force: false);
+            return;
+        }
+
+        if (_hero is { Artwork: { Hero: not null, HeroBoost: null } } && (restart || _boostPrefetch is null))
+        {
+            _boostPrefetch?.Dispose();
+            _boostPrefetch = _context.Ui.Delay(BoostPrefetchDelay, PrefetchHeroBoost);
+        }
+    }
+
+    /// <summary>Auswahl ist zur Ruhe gekommen: helle Fassung mit niedriger Priorität vorab laden (sichtbare Bilder gehen vor).</summary>
+    private void PrefetchHeroBoost()
+    {
+        _boostPrefetch = null;
+        if (BoostAllowed && _hero is { Artwork: { Hero: not null, HeroBoost: null } artwork } hero)
+        {
+            _ = StartHeroBoost(hero, artwork, prefetch: true);
+        }
+    }
+
+    /// <summary>Wartendes Vorab-Laden abbrechen und noch nicht begonnene Anfragen nach der hellen Fassung zurückziehen.</summary>
+    private void StopBoostWork()
+    {
+        _boostPrefetch?.Dispose();
+        _boostPrefetch = null;
+        if (_boostCancel is { } cancel)
+        {
+            _boostCancel = null;
+            cancel.Cancel();
+            cancel.Dispose();
+        }
+    }
+
+    private Task StartHeroBoost(HeroViewModel hero, GameArtwork artwork, bool prefetch)
+    {
+        _boostCancel ??= CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        var load = LoadHeroBoostAsync(hero, artwork, prefetch, _boostCancel.Token);
+        _boostLoad = load;
+        return load;
+    }
+
+    private async Task LoadHeroBoostAsync(HeroViewModel hero, GameArtwork artwork, bool prefetch, CancellationToken cancellationToken)
     {
         ArtworkImage? boost;
         try
         {
-            boost = await _context.Artwork.GetHeroBoostAsync(hero.Item.Config, _heroDecodeWidth, _lifetime.Token);
+            boost = prefetch
+                ? await _context.Artwork.PrefetchHeroBoostAsync(hero.Item.Config, _heroDecodeWidth, cancellationToken)
+                : await _context.Artwork.GetHeroBoostAsync(hero.Item.Config, _heroDecodeWidth, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -700,8 +831,10 @@ public sealed partial class LibraryViewModel
     {
         UpdateAutomationState();
 
-        // HDR an: die helle Fassung des Titelbilds wird jetzt gebraucht (der Moment blendet sie ein, sobald sie da ist).
-        _ = EnsureHeroBoostAsync(force: false);
+        // HDR an: die helle Fassung des Titelbilds wird jetzt gebraucht (meist liegt sie schon vorab bereit; der Moment wartet
+        // kurz auf sie oder sie blendet über). Aber nie, solange ein Spiel läuft oder startet oder das Fenster nicht aktiv ist:
+        // Dann fallen auch Vorab-Laden und wartende Anfragen weg.
+        UpdateBoostWork(restart: false);
         if (!_showcaseReady || _disposed || wasOn || !_isHdrOn)
         {
             return;

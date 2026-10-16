@@ -41,6 +41,12 @@ public sealed class FakeArtworkService : IArtworkService
     /// <summary>Angefragte helle Fassungen (Spielschlüssel).</summary>
     public List<string> BoostRequests { get; } = [];
 
+    /// <summary>Vorab angefragte helle Fassungen (niedrige Priorität, Spielschlüssel).</summary>
+    public List<string> PrefetchRequests { get; } = [];
+
+    /// <summary>Gesetzt: Anfragen nach der hellen Fassung warten auf diese Quelle (Tests: sie lädt noch).</summary>
+    public TaskCompletionSource<ArtworkImage?>? PendingBoost { get; set; }
+
     /// <summary>Vergessene Spiele (<see cref="Forget"/>).</summary>
     public List<string> Forgotten { get; } = [];
 
@@ -98,10 +104,19 @@ public sealed class FakeArtworkService : IArtworkService
     public Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
     {
         BoostRequests.Add(game.Key);
-        return Task.FromResult(WithHero.Contains(game.Key)
-            ? new ArtworkImage(Solid(32, 9, Colors.Moccasin), ArtworkKind.Hero, ArtworkOrigin.Launcher, 3840, 1240, "Steam")
-            : null);
+        return Boost(game);
     }
+
+    /// <summary>Wie <see cref="GetHeroBoostAsync"/>, gezählt in <see cref="PrefetchRequests"/>.</summary>
+    public Task<ArtworkImage?> PrefetchHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
+    {
+        PrefetchRequests.Add(game.Key);
+        return Boost(game);
+    }
+
+    private Task<ArtworkImage?> Boost(GameConfig game) => PendingBoost?.Task ?? Task.FromResult(WithHero.Contains(game.Key)
+        ? new ArtworkImage(Solid(32, 9, Colors.Moccasin), ArtworkKind.Hero, ArtworkOrigin.Launcher, 3840, 1240, "Steam")
+        : null);
 
     public void Forget(string gameKey)
     {

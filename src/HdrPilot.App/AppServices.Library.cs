@@ -47,7 +47,7 @@ public sealed partial class AppServices
     /// <summary>Das Fenster bekommt einen eigenen Kontext; beides wird beim Schließen vollständig freigegeben.</summary>
     private partial Window CreateMainWindow()
     {
-        var window = new MainWindow();
+        var window = new MainWindow { EffectsLog = LoggerFactory.CreateLogger("Bibliothek") };
         var testing = ConfigDirArgument() is not null;
         var testIconFile = testing ? System.Environment.GetEnvironmentVariable(TestIconFileVariable) : null;
         var testArtFile = testing ? System.Environment.GetEnvironmentVariable(TestArtFileVariable) : null;

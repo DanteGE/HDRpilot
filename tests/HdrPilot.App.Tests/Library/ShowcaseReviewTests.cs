@@ -33,13 +33,15 @@ public sealed class ShowcaseReviewTests
     {
         var (context, art) = Context();
         using var vm = new LibraryViewModel(context, new FakeDialogs());
+        vm.SetWindowActive(true);
         vm.SelectedGame = vm.Games[0];
-        context.Dispatcher.RunDelayed();
 
-        // HDR aus: der Titelbereich zeigt das normale Bild, die helle Fassung wird nicht berechnet.
+        // HDR aus: der Titelbereich zeigt das normale Bild, die helle Fassung wird nicht gleich berechnet (vorab erst, wenn
+        // die Auswahl zur Ruhe gekommen ist, ShowcaseBoostTests).
         Assert.NotNull(vm.Hero!.Artwork);
         Assert.Null(vm.Hero.Artwork!.HeroBoost);
         Assert.Empty(art.BoostRequests);
+        Assert.Empty(art.PrefetchRequests);
 
         // HDR an: jetzt wird sie gebraucht und kommt in den Titelbereich.
         context.Hdr.Displays[0].HdrOn = true;
@@ -53,13 +55,16 @@ public sealed class ShowcaseReviewTests
         Assert.NotNull(vm.Hero!.Artwork!.HeroBoost);
         Assert.Equal(2, art.BoostRequests.Count);
 
-        // HDR wieder aus, nächster Wechsel: keine neue Anfrage.
+        // HDR wieder aus, nächster Wechsel: keine neue Anfrage; nur nach der Ruhe vorab (niedrige Priorität).
         context.Hdr.Displays[0].HdrOn = false;
         context.RaiseHdrStateChanged();
         vm.SelectedGame = vm.Games[0];
-        context.Dispatcher.RunDelayed();
         Assert.Equal(2, art.BoostRequests.Count);
-        Assert.Null(vm.Hero!.Artwork!.HeroBoost);
+        context.Dispatcher.RunDelayed(); // Titelbild bei schnellem Wechsel
+        context.Dispatcher.RunDelayed(); // Ruhe vorbei
+        Assert.Equal(2, art.BoostRequests.Count);
+        Assert.Equal(["Steam:1091500"], art.PrefetchRequests);
+        Assert.NotNull(vm.Hero!.Artwork!.HeroBoost);
     });
 
     [Fact]

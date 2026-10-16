@@ -41,7 +41,13 @@ public sealed class ArtworkFixture : IDisposable
     public string LibraryCache => Path.Combine(SteamRoot, "appcache", "librarycache");
 
     /// <summary>Bilderdienst auf diesen Ordnern; Ereignisse kommen sofort, ohne Beobachtung der Ordner (außer gewünscht).</summary>
-    public ArtworkService Service(bool watch = false, Func<string, string?>? stamp = null, long memoryBudget = 64L * 1024 * 1024, TimeSpan? debounce = null)
+    public ArtworkService Service(
+        bool watch = false,
+        Func<string, string?>? stamp = null,
+        long memoryBudget = 64L * 1024 * 1024,
+        TimeSpan? debounce = null,
+        int maxParallel = 2,
+        Func<bool>? gameRunning = null)
     {
         var service = new ArtworkService(new ArtworkServiceOptions
         {
@@ -53,6 +59,8 @@ public sealed class ArtworkFixture : IDisposable
             SaveDelay = TimeSpan.FromMilliseconds(50),
             FileStamp = stamp,
             MemoryBudget = memoryBudget,
+            MaxParallel = maxParallel,
+            GameRunning = gameRunning ?? (() => false),
         });
         _services.Add(service);
         return service;

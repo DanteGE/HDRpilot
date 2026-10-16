@@ -837,9 +837,10 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 120 bis
   660 px hoch ist; die Bibliothek zeigt das Symbol (höchstens 1,5-fach vergrößert) links vom Namen. Ein Xbox-Kachelbild
   wird dagegen rechts der Mitte eingezeichnet. Zusätzlich gibt es ein erzeugtes Kopfbild (460×215) als Vorschaubild der
-  Liste. Die helle Fassung entsteht nur, wenn sie zu sehen ist (HDR an, HDR-Moment, HDR-Vorschau), in Stufenbreiten bis
-  2560 px (JPEG, `art\boost`, höchstens 300 MB); dekodierte Bilder im Speicher höchstens 192 MB, die Bildsätze des
-  Titelbereichs (höchstens sieben) eingerechnet. Kennung je Spiel per SHA-256 (gekürzt) über Wahl,
+  Liste. Die helle Fassung entsteht nur bei aktivem Fenster und ohne laufendes oder startendes Spiel (siehe unten,
+  „Ruhezustand“), in Stufenbreiten bis 2560 px (JPEG, `art\boost`, höchstens 300 MB); dekodierte Bilder im Speicher
+  höchstens 192 MB, die Bildsätze des Titelbereichs (höchstens sieben) eingerechnet. Kennung je Spiel per SHA-256
+  (gekürzt) über Wahl,
   Symbol-Hinweise, Installationsordner sowie Pfad, Größe und Änderungszeit jeder gefundenen Datei. Ein zweites eigenes
   Bild derselben Art ersetzt das erste unter demselben Namen; scheitert das Speichern der Konfiguration, bleibt jede
   Datei liegen, auf die sie noch zeigt. Gemessen an einer Kopie der Bibliothek (651 Spiele): Steam Titelbild 631/636,
@@ -891,3 +892,17 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   ändern…“ erneuert auch die Bilder. Eigene Bilder bis 32 MB und 100 Megapixel (beim Dekodieren verkleinert), größere
   melden „zu groß“. Die Werte der Bildschirm-Kapsel nennen für Bildschirmleser, was sie sind („Spitze in Nits: 456“);
   die Ansichten haben die Linien-Symbole des Prototyps; die Vorschau des Tray-Menüs gleicht dem echten Menü.
+- Nach der erneuten Prüfung (Speicher, Ruhezustand, Messgrenze): Nach dem Schließen eines Fensters gibt HDRpilot den
+  Speicher in zwei Schritten zurück: sofort wie bisher und genau einmal, wenn der Bilddienst aufgeräumt hat (laufende
+  Ladevorgänge beendet, was sie noch ablegten, verworfen), mindestens 2 s vergangen sind und kein Fenster mehr offen ist.
+  Dann zeichnet ein 1×1-Hilfsfenster hinter dem Desktop drei Bilder (WPF hält die Texturen eines geschlossenen Fensters
+  samt Grafikgerät, bis wieder gezeichnet wird; gemessen rund 230 MB im Grafiktreiber), und ein gründlicher GC verdichtet
+  auch den großen Objektspeicher. Gemessen nach 80 gewählten Spielen: festgeschrieben vorher rund 380 MB auch nach 40 s,
+  jetzt rund 140 MB nach wenigen Sekunden (im Infobereich vor dem Öffnen rund 160 MB). Nichts davon läuft wiederholt. Die
+  helle Fassung („Ruhezustand“) berechnet HDRpilot nur bei sichtbarem, aktivem Fenster und nie, solange ein Spiel läuft
+  oder über die Bibliothek startet (auch der Bilddienst rechnet sie dann nicht): 1,5 s nachdem die Auswahl samt Titelbild
+  steht, vorab mit niedriger Priorität (sichtbare Bilder gehen vor, eine normale Anfrage zieht sie vor), bei HDR an
+  sofort. Der HDR-Moment wartet höchstens 0,3 s auf eine noch ladende Fassung; kommt sie später, blendet sie über das
+  warme Licht (0,6 s, „Reduziert“ 0,3 s, „Aus“ sofort). `phase10-gpu.ps1` misst Teil 1 erst, wenn das Laden der Bilder
+  fertig ist, verlangt höchstens 1 % eines Kerns und laut Protokoll 0 Uhren der Dauer-Effekte, solange sie angehalten
+  oder minimiert sind (Stufe Debug: „Effekte: … Uhren n“, „Bilder: nichts mehr in Arbeit.“).

@@ -708,6 +708,7 @@ public sealed class GameDetailsViewModel : ObservableObject
     {
         IsLaunching = true;
         ShowMessage(LibraryStrings.Launch_Running, StatusKind.Info, DetailMessageArea.Launch);
+        _owner.OnLaunchStarting(); // solange der Start läuft, rechnet die Bibliothek keine helle Fassung
         try
         {
             var outcome = await _owner.Context.LaunchAsync(Item.Key);
@@ -733,6 +734,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         finally
         {
             IsLaunching = false;
+            _owner.OnLaunchFinished();
         }
     }
 

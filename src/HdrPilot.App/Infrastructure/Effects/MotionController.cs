@@ -52,6 +52,13 @@ public sealed class ContinuousEffect
 
     public bool IsPaused { get; private set; }
 
+    /// <summary>
+    /// Bestimmen gerade Uhren dieses Storyboards Werte (laufend oder nur angehalten), die WPF taktet? Nach <see cref="Pause"/>
+    /// und <see cref="Remove"/> nicht mehr: Ein nur angehaltenes Storyboard hielte seine Uhren, und WPF taktete weiter. Ein
+    /// frisch begonnenes zählt ab dem ersten Takt.
+    /// </summary>
+    public bool HasLiveClock => _board is not null && Animated(_board).Any(p => DependencyPropertyHelper.GetValueSource(p.Target, p.Property).IsAnimated);
+
     /// <summary>Soll laufen (etwa nur, solange eine Kachel gewählt ist oder HDR an ist); der Controller prüft zusätzlich die Regeln.</summary>
     public bool Wanted { get; private set; } = true;
 
@@ -212,6 +219,15 @@ public sealed class MotionController : IDisposable
     /// <summary>Stufe, Erlaubnis oder Grund des Anhaltens haben sich geändert (Statuszeile, Ansicht).</summary>
     public event EventHandler? Changed;
 
+    /// <summary>Das Fenster wurde sichtbar oder unsichtbar, minimiert oder wiederhergestellt, aktiv oder inaktiv.</summary>
+    public event EventHandler? WindowChanged;
+
+    /// <summary>Fenster sichtbar, nicht minimiert und aktiv (nur dann rechnet die Bibliothek die helle Fassung).</summary>
+    public bool WindowActive => _visible && !_minimized && _active;
+
+    /// <summary>Dauer-Effekte, deren Uhren WPF gerade taktet (angehalten und minimiert: 0; Prüfung phase10-gpu.ps1).</summary>
+    public int LiveClocks => _effects.Count(e => e.HasLiveClock);
+
     /// <summary>Wirksame Stufe (Windows-Animationseffekte und Hardware-Darstellung berücksichtigt).</summary>
     public EffectLevel Level => _level;
 
@@ -272,10 +288,15 @@ public sealed class MotionController : IDisposable
     /// <summary>Lage des Fensters von außen setzen (Tests; ein nie angezeigtes Fenster ist nie sichtbar oder aktiv).</summary>
     public void SetWindowState(bool visible, bool minimized, bool active)
     {
+        var changed = _visible != visible || _minimized != minimized || _active != active;
         _visible = visible;
         _minimized = minimized;
         _active = active;
         Evaluate();
+        if (changed && !_disposed)
+        {
+            WindowChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>Ein Spiel läuft (laufende Sitzung) oder nicht mehr.</summary>
@@ -374,6 +395,7 @@ public sealed class MotionController : IDisposable
         _effects.Clear();
         _continuousAllowed = false;
         Changed = null;
+        WindowChanged = null;
     }
 
     private void Apply(ContinuousEffect effect)

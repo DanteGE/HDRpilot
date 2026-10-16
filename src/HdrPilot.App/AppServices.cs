@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
@@ -33,6 +34,7 @@ public sealed partial class AppServices : IAsyncDisposable
     private Window? _mainWindow;
     private Window? _settingsWindow;
     private int _scanRunning;
+    private UiMemoryRelease? _memoryRelease;
 
     public AppServices(AutomationHost host, Dispatcher dispatcher, SingleInstance? instance)
     {
@@ -321,7 +323,7 @@ public sealed partial class AppServices : IAsyncDisposable
             _mainWindow.Closed += (_, _) =>
             {
                 _mainWindow = null;
-                ReleaseUiMemory();
+                MemoryRelease.WindowClosed();
             };
             _mainWindow.Show();
         }
@@ -343,7 +345,7 @@ public sealed partial class AppServices : IAsyncDisposable
             _settingsWindow.Closed += (_, _) =>
             {
                 _settingsWindow = null;
-                ReleaseUiMemory();
+                MemoryRelease.WindowClosed();
             };
             _settingsWindow.Show();
         }
@@ -449,12 +451,64 @@ public sealed partial class AppServices : IAsyncDisposable
         window.Activate();
     }
 
-    /// <summary>Nach dem Schließen eines Fensters: Speicher zurückgeben, damit HdrPilot im Hintergrund schlank bleibt.</summary>
-    private static void ReleaseUiMemory()
+    /// <summary>
+    /// Nach dem Schließen eines Fensters: sofort und noch einmal, wenn alles zur Ruhe gekommen ist (Bilddienst aufgeräumt,
+    /// Grafikspeicher freigegeben, siehe <see cref="UiMemoryRelease"/>). Nichts läuft wiederholt.
+    /// </summary>
+    private UiMemoryRelease MemoryRelease => _memoryRelease ??= new UiMemoryRelease(new UiMemoryReleaseOptions
+    {
+        AnyWindowOpen = () => _mainWindow is not null || _settingsWindow is not null,
+        CleanupFinished = () => Artwork.WhenReleasedAsync(),
+        FlushGraphics = FlushGraphicsMemoryAsync,
+        Collect = thorough =>
+        {
+            if (!thorough)
+            {
+                ReleaseUiMemory();
+                return;
+            }
+
+            using var process = Process.GetCurrentProcess();
+            var before = process.PrivateMemorySize64;
+            ReleaseUiMemory(thorough: true);
+            process.Refresh();
+            _logger.LogDebug("Speicher nach dem Schließen zurückgegeben: {Before} MB → {After} MB festgeschrieben.", before / (1024 * 1024), process.PrivateMemorySize64 / (1024 * 1024));
+        },
+        UiIdle = async () => await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.ApplicationIdle),
+    });
+
+    /// <summary>Grafikspeicher geschlossener Fenster freigeben (Hilfsfenster hinter dem Desktop); Fehler nur ins Protokoll.</summary>
+    private async Task FlushGraphicsMemoryAsync()
+    {
+        try
+        {
+            await GraphicsMemoryFlush.RunAsync();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or ExternalException)
+        {
+            _logger.LogDebug("Grafikspeicher nicht freigegeben: {Error}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Speicher zurückgeben, damit HdrPilot im Hintergrund schlank bleibt. <paramref name="thorough"/> (einmal, wenn nach dem
+    /// Schließen alles zur Ruhe gekommen ist): auch den Speicher großer Objekte verdichten und freien Speicher des GC an
+    /// Windows zurückgeben.
+    /// </summary>
+    private static void ReleaseUiMemory(bool thorough = false)
     {
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
         GC.WaitForPendingFinalizers();
-        GC.Collect();
+        if (thorough)
+        {
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+        }
+        else
+        {
+            GC.Collect();
+        }
+
         using var process = Process.GetCurrentProcess();
         SetProcessWorkingSetSize(process.Handle, -1, -1);
     }

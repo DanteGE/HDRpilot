@@ -125,10 +125,26 @@ public interface IArtworkService : IDisposable
 
     /// <summary>
     /// Helle „HDR“-Fassung des Titelbilds für denselben Satz (einmal berechnet und auf der Platte gemerkt). Nur anfragen, wenn
-    /// sie zu sehen ist: HDR an, HDR-Moment oder HDR-Vorschau; null, wenn sie sich nicht berechnen lässt. Standard: null.
+    /// sie zu sehen ist: HDR an, HDR-Moment oder HDR-Vorschau; null, wenn sie sich nicht berechnen lässt oder gerade ein Spiel
+    /// läuft. Standard: null.
     /// </summary>
     Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
         Task.FromResult<ArtworkImage?>(null);
+
+    /// <summary>
+    /// Helle Fassung vorab laden, mit niedriger Priorität: erst, wenn keine andere Anfrage mehr ansteht (sichtbare Bilder
+    /// gehen vor). Für das gewählte Spiel, wenn die Auswahl zur Ruhe gekommen ist, das Fenster aktiv ist und kein Spiel läuft;
+    /// so ist sie da, wenn HDR angeht. Eine spätere normale Anfrage zieht sie vor. Standard: wie <see cref="GetHeroBoostAsync"/>.
+    /// </summary>
+    Task<ArtworkImage?> PrefetchHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
+        GetHeroBoostAsync(game, heroDecodeWidth, cancellationToken);
+
+    /// <summary>
+    /// Fertig, sobald nach dem Ende der letzten Freigabe aufgeräumt ist: laufende Arbeit beendet, Speicher geleert, Bilder
+    /// entfernter Spiele gelöscht, Verzeichnis geschrieben. Solange eine Freigabe besteht oder nie eine bestand: sofort.
+    /// Standard: sofort.
+    /// </summary>
+    Task WhenReleasedAsync() => Task.CompletedTask;
 
     /// <summary>Wahlmöglichkeiten für „Bild wählen…“ (Launcher-Bild, andere lokale Bilder, erzeugt, aktuelle eigene Datei).</summary>
     Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default);

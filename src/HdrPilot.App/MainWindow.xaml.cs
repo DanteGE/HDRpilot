@@ -14,6 +14,7 @@ using HdrPilot.App.Resources;
 using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
+using Microsoft.Extensions.Logging;
 
 namespace HdrPilot.App;
 
@@ -124,6 +125,12 @@ public partial class MainWindow : ChromeWindow
     public HdrMomentPlayer? Moment => _moment;
 
     /// <summary>
+    /// Protokoll der Effekte (optional, vor <see cref="Attach"/> setzen): bei jeder Änderung Stufe, Grund des Anhaltens und wie
+    /// viele Dauer-Effekte noch Uhren haben (Stufe Debug; phase10-gpu.ps1 verlangt 0, solange sie angehalten sind).
+    /// </summary>
+    public ILogger? EffectsLog { get; set; }
+
+    /// <summary>
     /// Takt des Auswahlrings (Dauer-Effekt). Im Code erzeugt und über eine Bindung an das Fenster gelesen: als Ressource oder
     /// Bindungsquelle in einer Vorlage würde WPF ihn einfrieren, dann ließe er sich nicht mehr animieren.
     /// </summary>
@@ -177,7 +184,9 @@ public partial class MainWindow : ChromeWindow
         _sheen = _motion.Register("TitleSheen", this, CreateSheen, wanted: false);
         _moment = new HdrMomentPlayer(Hero.MomentParts(EdgeGlow), _frameClock, _effectTime);
         _motion.SetGameRunning(viewModel.IsGameRunning);
+        _motion.WindowChanged += OnMotionWindowChanged;
         OnMotionChanged(this, EventArgs.Empty);
+        viewModel.SetWindowActive(_motion.WindowActive);
 
         // Gemerkte Aufteilung sofort setzen (Sternbreiten); an die tatsächliche Breite angepasst wird beim Laden.
         ApplyDetailsRatio(LibraryLayout.Normalize(viewModel.DetailsRatio));
@@ -1382,6 +1391,13 @@ public partial class MainWindow : ChromeWindow
 
         LibraryMotion.Instance.SetLevel(motion.Level);
         vm.SetEffectsState(motion.Level, motion.Pause, vm.Context.Appearance.Current.ReducedByWindows);
+        EffectsLog?.LogDebug(
+            "Effekte: Stufe {Level}, Pause {Pause}, Dauer-Effekte laufen {Running}, angehalten {Paused}, Uhren {Clocks}",
+            motion.Level,
+            motion.Pause,
+            motion.Effects.Count(e => e.IsRunning && !e.IsPaused),
+            motion.Effects.Count(e => e.IsPaused),
+            motion.LiveClocks);
         EffectsGlyph.Foreground = vm.EffectsPaused ? (Brush)FindResource("Lib.Brush.Amber") : (Brush)FindResource(ThemeKeys.BrushAccentText);
         if (!motion.OneShotAllowed)
         {
@@ -1394,7 +1410,22 @@ public partial class MainWindow : ChromeWindow
         }
     }
 
-    private void OnHdrMomentRequested(object? sender, EventArgs e) => PlayMoment(transientBoost: false);
+    /// <summary>Sichtbar, minimiert oder aktiv geändert: nur ein aktives Fenster rechnet die helle Fassung (ViewModel).</summary>
+    private void OnMotionWindowChanged(object? sender, EventArgs e) => _viewModel?.SetWindowActive(_motion?.WindowActive == true);
+
+    /// <summary>
+    /// HDR ging bei offenem Fenster an. Die helle Fassung liegt meist schon vorab bereit; lädt sie noch, wartet der Moment
+    /// höchstens <see cref="LibraryViewModel.MomentBoostWait"/> auf sie, kommt sie später, blendet der Titelbereich sie über.
+    /// </summary>
+    private async void OnHdrMomentRequested(object? sender, EventArgs e)
+    {
+        if (_viewModel is { } vm)
+        {
+            await vm.WaitForHeroBoostAsync(LibraryViewModel.MomentBoostWait);
+        }
+
+        PlayMoment(transientBoost: false);
+    }
 
     private HdrMomentKind PlayMoment(bool transientBoost)
     {

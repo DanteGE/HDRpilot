@@ -5,10 +5,12 @@
 # ohne Rohdaten die ganzzahligen Prozente), je Probe die ausgelastetste Engine-Art (wie der Task-Manager), einmal pro
 # Sekunde.
 #   Teil 1, ohne Bildschirmwerte prüfbar:
+#   - Gemessen wird erst, wenn das Laden der Bilder nach dem Öffnen fertig ist (Protokoll der Testinstanz auf Stufe Debug:
+#     „Bilder: nichts mehr in Arbeit.“ nach dem letzten „Bilder: Laden beginnt.“, seit 2 s unverändert).
 #   - Inaktiv (Dialog „Spiel hinzufügen“ davor, er hat keine Dauer-Effekte; der Fokus steht auf einem Knopf, damit kein
-#     blinkender Cursor die Zeichenschleife wachhält) und minimiert: die Statuszeile meldet die Pause, CPU der Instanz
-#     höchstens 2 % eines Kerns (fängt eine durchlaufende Zeichenschleife; das Nachladen der Bilder nach dem Öffnen kostet
-#     allein bis etwa 1,5 %), mit Bildschirm auch: Grafikkarte unter 1 %
+#     blinkender Cursor die Zeichenschleife wachhält) und minimiert: die Statuszeile meldet die Pause, das Protokoll meldet
+#     0 Uhren der Dauer-Effekte („Effekte: … Uhren 0“; ein nur angehaltenes Storyboard hielte seine Uhren und WPF taktete
+#     weiter, gemessen 1,5 bis 1,9 %), CPU der Instanz höchstens 1 % eines Kerns, mit Bildschirm auch: Grafikkarte unter 1 %
 #   Teil 2, braucht den eingeschalteten Bildschirm:
 #   - Offenes, aktives Fenster in Ruhe (Dauer-Effekte laufen): Liste bei 1600×1000, Regal und Raster bei 3440×1440 (der
 #     größte bewegte Titelbereich): je Mittel unter 5 %, nie über 20 %
@@ -31,7 +33,8 @@ param(
     [double]$MaxIdlePeak = 20,
     [double]$MaxMomentPeak = 30,
     [double]$MaxQuiet = 1,
-    [double]$MaxPausedCpu = 2,
+    [double]$MaxPausedCpu = 1,
+    [int]$LoadTimeoutSeconds = 60,
     [double]$MaxClosedCpu = 0.5,
     [int]$MaxClosedHandleGrowth = 20,
     [switch]$SkipIdleGate
@@ -113,6 +116,33 @@ function Read-Log([string]$cfg) {
     return ($parts -join '')
 }
 
+# Laden der Bilder fertig: im Protokoll steht nach dem letzten „Laden beginnt“ ein „nichts mehr in Arbeit“, und 2 s später
+# ist es noch so. Liefert die Wartezeit in Sekunden, -1 bei Zeitüberschreitung
+function Wait-ArtworkIdle([string]$cfg, [int]$timeoutSeconds) {
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $quietAt = -2; $since = 0.0
+    while ($sw.Elapsed.TotalSeconds -lt $timeoutSeconds) {
+        $log = Read-Log $cfg
+        $begin = $log.LastIndexOf('Bilder: Laden beginnt.')
+        $idle = $log.LastIndexOf('Bilder: nichts mehr in Arbeit.')
+        if ($idle -gt $begin -or ($begin -lt 0 -and $idle -lt 0)) {
+            # dieselbe letzte Meldung „nichts mehr in Arbeit“ seit 2 s: fertig
+            if ($quietAt -ne $idle) { $quietAt = $idle; $since = $sw.Elapsed.TotalSeconds }
+            elseif ($sw.Elapsed.TotalSeconds - $since -ge 2) { return [Math]::Round($sw.Elapsed.TotalSeconds, 1) }
+        } else { $quietAt = -2 }
+        Start-Sleep -Milliseconds 250
+    }
+    return -1
+}
+
+# Letzte Meldung der Effekte im Protokoll (Stufe, Grund des Anhaltens, laufende und angehaltene Dauer-Effekte, Uhren)
+function Last-Effects([string]$cfg) {
+    $found = [regex]::Matches((Read-Log $cfg), 'Effekte: Stufe (\w+), Pause (\w+), Dauer-Effekte laufen (\d+), angehalten (\d+), Uhren (\d+)')
+    if ($found.Count -eq 0) { return $null }
+    $m = $found[$found.Count - 1]
+    return [pscustomobject]@{ Level = $m.Groups[1].Value; Pause = $m.Groups[2].Value; Running = [int]$m.Groups[3].Value; Paused = [int]$m.Groups[4].Value; Clocks = [int]$m.Groups[5].Value; Text = $m.Value }
+}
+
 function Is-Active($win, [int]$processId) {
     try { $f = [Windows.Automation.AutomationElement]::FocusedElement; return $null -ne $f -and $f.Current.ProcessId -eq $processId } catch { return $false }
 }
@@ -139,6 +169,8 @@ $inactive = $null; $minimized = $null
 try {
     $config = Read-Config $cfg
     foreach ($game in @($config.games)) { $game.hdrAuto = $false; if ($game.PSObject.Properties['autoHdr']) { $game.autoHdr = $false } }
+    # Stufe Debug: Effekte (Uhren) und Bilderdienst (Laden fertig) melden sich im Protokoll
+    $config.settings | Add-Member -NotePropertyName logLevel -NotePropertyValue 'Debug' -Force
     [IO.File]::WriteAllText((Join-Path $cfg 'config.json'), ($config | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
     Note "Spiele in der Testablage: $(@($config.games).Count)"
 
@@ -147,7 +179,10 @@ try {
     if (-not $win) { throw 'Hauptfenster fehlt' }
     Resize-To $win 1600 1000
     try { $win.SetFocus() } catch {}
-    Start-Sleep -Seconds 12   # Laden der Bilder, Einblenden, JIT nicht mitmessen
+    Start-Sleep -Seconds 4   # Einblenden, JIT nicht mitmessen
+    # Laden der Bilder (sichtbare Zeilen, Titelbild, vorab die helle Fassung) abwarten, bevor gemessen wird
+    $loaded = Wait-ArtworkIdle $cfg $LoadTimeoutSeconds
+    Check ($loaded -ge 0) ("Laden der Bilder nach dem Öffnen fertig (nach weiteren {0} s, höchstens {1} s)" -f $loaded, $LoadTimeoutSeconds)
     if (-not (Is-Active $win $app.Id)) { try { $win.SetFocus() } catch {}; Start-Sleep -Seconds 1 }
     $active = Is-Active $win $app.Id
     if (-not $active) { $umgebung = 'Fenster der Testinstanz lässt sich nicht aktivieren (kein interaktiver Desktop?)' }
@@ -165,6 +200,10 @@ try {
         $text = Effects-Text $win
         Note "Statuszeile Effekte (Dialog davor): $text"
         Check ($text -match 'Hintergrund') ('Inaktiv: Statuszeile meldet die Pause im Hintergrund („{0}“)' -f $text)
+        $fx = Last-Effects $cfg
+        Note ("Protokoll Effekte (Dialog davor): {0}" -f $(if ($fx) { $fx.Text } else { 'keine Meldung' }))
+        Check ($null -ne $fx -and $fx.Pause -eq 'Background' -and $fx.Clocks -eq 0) ('Inaktiv: angehaltene Dauer-Effekte ohne Uhren ({0})' -f $(if ($fx) { "$($fx.Paused) angehalten, Uhren $($fx.Clocks)" } else { 'keine Meldung' }))
+        Check ((Wait-ArtworkIdle $cfg 10) -ge 0) 'Inaktiv: kein Laden der Bilder während der Messung'
         $inactive = Cpu-During $app.Id { Gpu-Measure $app.Id $QuietSeconds 'Inaktiv (Dialog „Spiel hinzufügen“ davor)' }
         Note ("Inaktiv: CPU {0:N2} % eines Kerns" -f $inactive.Cpu)
         Check ($inactive.Cpu -le $MaxPausedCpu) ("Inaktiv: CPU {0:N2} % <= {1} % (Dauer-Effekte angehalten)" -f $inactive.Cpu, $MaxPausedCpu)
@@ -176,10 +215,17 @@ try {
     $wp = $null
     if ($win.TryGetCurrentPattern([Windows.Automation.WindowPattern]::Pattern, [ref]$wp)) {
         $wp.SetWindowVisualState([Windows.Automation.WindowVisualState]::Minimized)
-        Start-Sleep -Seconds 2
+        # Nach dem Minimieren übersetzt der Laufzeit-Compiler (Debug-Build, ohne ReadyToRun) noch einige Sekunden oft
+        # gerufene Methoden neu (Thread „.NET Tiered Compilation Worker“, gemessen 3,4 % in den ersten 6 s, 0,5 bis 0,8 %
+        # in den nächsten 6 s, danach höchstens 0,3 %); das ist kein Zeichnen und wird nicht mitgemessen. Eine
+        # durchlaufende Zeichenschleife bliebe dagegen.
+        Start-Sleep -Seconds 12
         $text = Effects-Text $win
         Note "Statuszeile Effekte (minimiert): $text"
         Check ($text -match 'minimiert') ('Minimiert: Statuszeile meldet die Pause („{0}“)' -f $text)
+        $fx = Last-Effects $cfg
+        Note ("Protokoll Effekte (minimiert): {0}" -f $(if ($fx) { $fx.Text } else { 'keine Meldung' }))
+        Check ($null -ne $fx -and $fx.Pause -eq 'Hidden' -and $fx.Clocks -eq 0 -and $fx.Running -eq 0) ('Minimiert: keine Dauer-Effekte und keine Uhren ({0})' -f $(if ($fx) { "laufen $($fx.Running), Uhren $($fx.Clocks)" } else { 'keine Meldung' }))
         $minimized = Cpu-During $app.Id { Gpu-Measure $app.Id $QuietSeconds 'Minimiert' }
         Note ("Minimiert: CPU {0:N2} % eines Kerns" -f $minimized.Cpu)
         Check ($minimized.Cpu -le $MaxPausedCpu) ("Minimiert: CPU {0:N2} % <= {1} % (keine Bildaufrufe)" -f $minimized.Cpu, $MaxPausedCpu)

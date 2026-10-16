@@ -57,9 +57,18 @@ public sealed partial class ArtworkService
         return artwork;
     }
 
-    /// <summary>Helle Fassung des Titelbilds in der Breite des Satzes (Arbeits-Thread); null, wenn sie sich nicht berechnen lässt.</summary>
+    /// <summary>
+    /// Helle Fassung des Titelbilds in der Breite des Satzes (Arbeits-Thread); null, wenn sie sich nicht berechnen lässt oder
+    /// gerade ein Spiel läuft (dann rechnet HDRpilot nichts, auch keine Anfrage, die schon vorher wartete).
+    /// </summary>
     private ArtworkImage? LoadHeroBoost(GameConfig game, int heroWidth)
     {
+        if (_options.GameRunning())
+        {
+            _logger.LogDebug("Bilder: helle Fassung von {Game} nicht berechnet, ein Spiel läuft.", game.Key);
+            return null;
+        }
+
         var state = Resolve(game, full: true);
         var key = BoostKey(state, heroWidth);
         if (_memory.TryGetValue(key, out var known) && known is ArtworkImage cached)

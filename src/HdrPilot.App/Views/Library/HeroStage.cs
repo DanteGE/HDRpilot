@@ -25,6 +25,9 @@ public sealed class HeroStage : Grid
     /// <summary>Überblenden beim Spielwechsel (Deckkraft), Verschieben/Zoomen dauert 1,2 s.</summary>
     public static readonly TimeSpan CrossfadeDuration = TimeSpan.FromSeconds(0.9);
 
+    /// <summary>Kommt die helle Fassung, während ihre Ebene zu sehen ist (HDR an, HDR-Moment), blendet sie so lange über.</summary>
+    public static readonly TimeSpan BoostFadeDuration = TimeSpan.FromSeconds(0.6);
+
     private static readonly Color Ink = Color.FromRgb(0x04, 0x05, 0x09);
     private static readonly Color WarmWhite = Color.FromRgb(0xFF, 0xF6, 0xE2);
     private static readonly IEasingFunction Settle = new ExponentialEase { EasingMode = EasingMode.EaseOut, Exponent = 6 };
@@ -159,8 +162,11 @@ public sealed class HeroStage : Grid
         var shownFallback = _slots[_current].Generated is not null;
         if (string.Equals(key, _shownKey, StringComparison.Ordinal) && ReferenceEquals(image, _shownImage) && (image is not null || shownFallback || hero is null))
         {
-            // Schon zu sehen (dasselbe Bild oder dasselbe Ersatzbild); nur die helle Fassung kann nachkommen (HDR an, Moment).
-            _slots[_current].SetBoost(artwork?.HeroBoost?.Image, ActualWidth + 96, ActualHeight + 72, _view);
+            // Schon zu sehen (dasselbe Bild oder dasselbe Ersatzbild); nur die helle Fassung kann nachkommen. Ist ihre Ebene
+            // gerade zu sehen (HDR an, Moment), blendet sie über, statt mitten im Moment aufzuspringen.
+            var shown = _slots[_current];
+            var boostFade = shown.Boost.Opacity > 0 ? Scale(transition, BoostFadeDuration.TotalSeconds) : TimeSpan.Zero;
+            shown.SetBoost(artwork?.HeroBoost?.Image, ActualWidth + 96, ActualHeight + 72, _view, boostFade);
             return;
         }
 
@@ -298,10 +304,13 @@ public sealed class HeroStage : Grid
         new(this, _sweepBand, _sweepLine, _flash, edgeGlow, _particles, CurrentBoostLayer);
 
     /// <summary>Ebene der hellen Fassung im sichtbaren Bildplatz (null, solange der Platz nichts zeigt).</summary>
-    public FrameworkElement? CurrentBoostLayer() => _slots[_current].Boost.Background is null ? null : _slots[_current].Boost;
+    public FrameworkElement? CurrentBoostLayer() => _slots[_current].HasBoostLayer ? _slots[_current].Boost : null;
 
     /// <summary>Gerade gezeigte helle Fassung (null: keine, dann nur warmes Licht über dem Bild).</summary>
     public ImageSource? ShownBoost => _slots[_current].BoostImage;
+
+    /// <summary>Die helle Fassung selbst in der Ebene des sichtbaren Bildplatzes (über dem warmen Licht; Tests: Überblenden).</summary>
+    public FrameworkElement CurrentBoostImageLayer => _slots[_current].BoostArt;
 
     /// <summary>Lage und Farben für den nächsten HDR-Moment.</summary>
     public HdrMomentScene MomentScene(IReadOnlyList<Color> particleColors)
@@ -326,7 +335,7 @@ public sealed class HeroStage : Grid
         target.BeginAnimation(property, new DoubleAnimation(to, duration) { EasingFunction = ease ?? new SineEase { EasingMode = EasingMode.EaseInOut } }, HandoffBehavior.SnapshotAndReplace);
     }
 
-    private static void SetBoost(HeroSlot slot, bool on, TimeSpan duration) => Animate(slot.Boost, OpacityProperty, on && slot.Boost.Background is not null ? 1 : 0, duration);
+    private static void SetBoost(HeroSlot slot, bool on, TimeSpan duration) => Animate(slot.Boost, OpacityProperty, on && slot.HasBoostLayer ? 1 : 0, duration);
 
     private void Relayout()
     {
@@ -574,16 +583,28 @@ public sealed class HeroStage : Grid
             Root.RenderTransform = group;
             Root.RenderTransformOrigin = new Point(0.5, 0.5);
             Root.Children.Add(Art);
+            Boost.Children.Add(BoostLight);
+            Boost.Children.Add(BoostArt);
             Root.Children.Add(Boost);
             RenderOptions.SetBitmapScalingMode(Art, BitmapScalingMode.HighQuality);
-            RenderOptions.SetBitmapScalingMode(Boost, BitmapScalingMode.HighQuality);
+            RenderOptions.SetBitmapScalingMode(BoostArt, BitmapScalingMode.HighQuality);
         }
 
         public Grid Root { get; } = new() { Opacity = 0, IsHitTestVisible = false };
 
         public Border Art { get; } = new();
 
-        public Border Boost { get; } = new() { Opacity = 0 };
+        /// <summary>Ebene der hellen Fassung; ihre Deckkraft führen HDR-Übergang und HDR-Moment.</summary>
+        public Grid Boost { get; } = new() { Opacity = 0 };
+
+        /// <summary>Die helle Fassung selbst (oben in der Ebene; kommt sie spät, blendet sie über das warme Licht).</summary>
+        public Border BoostArt { get; } = new();
+
+        /// <summary>Gibt es in der Ebene etwas zu zeigen (warmes Licht oder helle Fassung)?</summary>
+        public bool HasBoostLayer => BoostLight.Background is not null || BoostArt.Background is not null;
+
+        /// <summary>Warmes Licht (unten in der Ebene), solange es keine helle Fassung gibt.</summary>
+        private Border BoostLight { get; } = new();
 
         /// <summary>
         /// Ohne vorab berechnete helle Fassung (Bilddienst): warmes Licht über dem Bild, am Spitzlicht am stärksten. WPF hat
@@ -621,7 +642,15 @@ public sealed class HeroStage : Grid
             {
                 Art.Background = new ImageBrush(Image) { Stretch = Stretch.Fill };
                 BoostImage = artwork?.HeroBoost?.Image;
-                Boost.Background = BoostImage is { } boost ? new ImageBrush(boost) { Stretch = Stretch.Fill } : Lift;
+                if (BoostImage is { } boost)
+                {
+                    BoostArt.Background = new ImageBrush(boost) { Stretch = Stretch.Fill };
+                }
+                else
+                {
+                    BoostLight.Background = Lift;
+                }
+
                 return;
             }
 
@@ -658,14 +687,16 @@ public sealed class HeroStage : Grid
             });
             Generated.Children.Add(Pattern(hero.Name, height, view));
             Root.Children.Insert(0, Generated);
-            Boost.Background = Lift;
+            BoostLight.Background = Lift;
         }
 
         /// <summary>
-        /// Helle Fassung nachträglich einsetzen (kommt erst, wenn HDR an ist oder der Moment spielt); die Deckkraft der Ebene
-        /// bleibt, wie Übergang oder Moment sie gerade führen. Ohne Titelbild (Ersatzbild) oder ohne neue Fassung: nichts.
+        /// Helle Fassung nachträglich einsetzen (sie kommt nach dem Titelbild: vorab geladen, bei HDR an oder vor dem Moment);
+        /// die Deckkraft der Ebene bleibt, wie Übergang oder Moment sie gerade führen. <paramref name="fade"/> größer 0: über das
+        /// warme Licht einblenden (die Ebene ist gerade zu sehen), sonst sofort. Ohne Titelbild (Ersatzbild) oder ohne neue
+        /// Fassung: nichts.
         /// </summary>
-        public void SetBoost(ImageSource? boost, double width, double height, LibraryViewMode view)
+        public void SetBoost(ImageSource? boost, double width, double height, LibraryViewMode view, TimeSpan fade)
         {
             if (boost is null || Image is null || ReferenceEquals(boost, BoostImage))
             {
@@ -673,14 +704,32 @@ public sealed class HeroStage : Grid
             }
 
             BoostImage = boost;
-            Boost.Background = new ImageBrush(boost) { Stretch = Stretch.Fill };
+            BoostArt.Background = new ImageBrush(boost) { Stretch = Stretch.Fill };
             Layout(width, height, view);
+            if (fade <= TimeSpan.Zero)
+            {
+                ShowBoostArt();
+                return;
+            }
+
+            var animation = new DoubleAnimation(0, 1, fade) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
+            animation.Completed += (_, _) =>
+            {
+                if (ReferenceEquals(BoostImage, boost))
+                {
+                    ShowBoostArt(); // Uhr weg, warmes Licht darunter wird nicht mehr gebraucht
+                }
+            };
+            BoostArt.BeginAnimation(UIElement.OpacityProperty, animation);
         }
 
         public void Clear()
         {
             Art.Background = null;
-            Boost.Background = null;
+            BoostLight.Background = null;
+            BoostArt.Background = null;
+            BoostArt.BeginAnimation(UIElement.OpacityProperty, null);
+            BoostArt.Opacity = 1;
             BoostImage = null;
             Image = null;
             if (Generated is not null)
@@ -697,11 +746,19 @@ public sealed class HeroStage : Grid
             {
                 var crop = CoverCrop.Compute(bitmap.PixelWidth, bitmap.PixelHeight, width, height, 0.5, view == LibraryViewMode.Shelf ? 0.35 : 0.28);
                 brush.Viewbox = crop;
-                if (Boost.Background is ImageBrush boost)
+                if (BoostArt.Background is ImageBrush boost)
                 {
                     boost.Viewbox = crop;
                 }
             }
+        }
+
+        /// <summary>Helle Fassung ganz zeigen (ohne Uhr); das warme Licht darunter entfällt.</summary>
+        private void ShowBoostArt()
+        {
+            BoostArt.BeginAnimation(UIElement.OpacityProperty, null);
+            BoostArt.Opacity = 1;
+            BoostLight.Background = null;
         }
 
         /// <summary>Name in Großbuchstaben als Umriss (FormattedText → Geometrie), gedreht, links ausgeblendet.</summary>

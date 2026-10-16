@@ -33,6 +33,9 @@ public sealed class ArtworkServiceOptions
     /// <summary>Schlüssel der Spiele in der Bibliothek, zum Aufräumen nach dem Schließen; null: nie aufräumen.</summary>
     public Func<IReadOnlyCollection<string>>? LibraryKeys { get; init; }
 
+    /// <summary>Läuft gerade ein Spiel? Dann wird keine helle Fassung berechnet (Standard: nie).</summary>
+    public Func<bool> GameRunning { get; init; } = () => false;
+
     /// <summary>Führt eine Aktion auf dem UI-Thread aus (Ereignisse); Standard: sofort auf dem aufrufenden Thread.</summary>
     public Action<Action> PostToUi { get; init; } = action => action();
 
@@ -71,9 +74,10 @@ public sealed class ArtworkServiceOptions
 /// </para>
 /// <para>
 /// Geladen wird auf höchstens <see cref="ArtworkServiceOptions.MaxParallel"/> eigenen STA-Threads, zuletzt angefragte
-/// zuerst; sie enden, sobald nichts mehr ansteht. Bilder sind eingefroren und höchstens in der angefragten Breite dekodiert;
-/// der Speicher ist begrenzt (<see cref="ImageMemoryCache"/>). Speicher, Beobachtung der Cache-Ordner und Zeitgeber gibt es
-/// nur, solange ein Fenster eine Freigabe hält (<see cref="Acquire"/>); danach läuft nichts mehr.
+/// zuerst, Vorab-Laden (<see cref="PrefetchHeroBoostAsync"/>) erst, wenn sonst nichts ansteht; die Threads enden, sobald
+/// nichts mehr ansteht. Bilder sind eingefroren und höchstens in der angefragten Breite dekodiert; der Speicher ist begrenzt
+/// (<see cref="ImageMemoryCache"/>). Speicher, Beobachtung der Cache-Ordner und Zeitgeber gibt es nur, solange ein Fenster
+/// eine Freigabe hält (<see cref="Acquire"/>); danach läuft nichts mehr (<see cref="WhenReleasedAsync"/>).
 /// </para>
 /// </summary>
 public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwork
@@ -92,6 +96,7 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     private readonly object _setGate = new();
     private readonly Dictionary<string, WorkItem> _inflight = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<WorkItem> _queue = new();
+    private readonly Stack<WorkItem> _lowQueue = new();
     private readonly object _queueGate = new();
     private readonly object _indexGate = new();
     private readonly object _leaseGate = new();
@@ -99,6 +104,8 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     private Timer? _saveTimer;
     private bool _indexDirty;
     private ArtworkWatcher? _watcher;
+    private TaskCompletionSource? _workersIdle;
+    private Task _released = Task.CompletedTask;
     private int _workers;
     private int _generation;
     private int _leases;
@@ -190,7 +197,19 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
             value => value as GameArtwork ?? EmptyArtwork(snapshot));
     }
 
-    public Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
+    public Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
+        HeroBoostAsync(game, heroDecodeWidth, low: false, cancellationToken);
+
+    public Task<ArtworkImage?> PrefetchHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
+        HeroBoostAsync(game, heroDecodeWidth, low: true, cancellationToken);
+
+    /// <summary>
+    /// Fertig, sobald nach dem Ende der letzten Freigabe aufgeräumt ist (siehe <see cref="ReleaseLease"/>); solange eine
+    /// Freigabe besteht, die letzte Aufräumarbeit (meist längst fertig).
+    /// </summary>
+    public Task WhenReleasedAsync() => Volatile.Read(ref _released);
+
+    private Task<ArtworkImage?> HeroBoostAsync(GameConfig game, int heroDecodeWidth, bool low, CancellationToken cancellationToken)
     {
         var width = NormalizeWidth(ArtworkKind.Hero, heroDecodeWidth);
         if (_states.TryGetValue(game.Key, out var state) && state.ConfigStamp == ConfigStamp(game) && _memory.TryGetValue(BoostKey(state, width), out var cached) && cached is ArtworkImage known)
@@ -200,7 +219,7 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
 
         var snapshot = Snapshot(game);
         return Typed(
-            Enqueue(snapshot.Key + "|" + ConfigStamp(snapshot) + "|boost|" + width, () => Guarded(snapshot, () => LoadHeroBoost(snapshot, width), () => null), cancellationToken),
+            Enqueue(snapshot.Key + "|" + ConfigStamp(snapshot) + "|boost|" + width, () => Guarded(snapshot, () => LoadHeroBoost(snapshot, width), () => null), cancellationToken, low),
             value => value as ArtworkImage);
     }
 
@@ -257,14 +276,23 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         lock (_queueGate)
         {
             _generation++;
-            while (_queue.Count > 0)
+            foreach (var queue in new[] { _queue, _lowQueue })
             {
-                _queue.Pop().Completion.TrySetResult(null);
+                while (queue.Count > 0)
+                {
+                    queue.Pop().Completion.TrySetResult(null);
+                }
             }
 
             _inflight.Clear();
         }
 
+        ClearMemory();
+    }
+
+    /// <summary>Bilder, Bildsätze und ermittelte Angaben im Speicher vergessen (die Warteschlange bleibt).</summary>
+    private void ClearMemory()
+    {
         _memory.Clear();
         lock (_setGate)
         {
@@ -381,10 +409,11 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     private static string ImageKey(GameState state, ArtworkKind kind, int width) => state.Key + "|" + state.Signature + "|" + kind + "|" + width;
 
     /// <summary>
-    /// Stellt Arbeit oben auf den Stapel (zuletzt angefragt, zuerst geladen). Gleiche Anfragen teilen sich eine Arbeit; sie
-    /// entfällt nur, wenn alle Anfragenden abgebrochen haben (etwa weggescrollte Zeilen).
+    /// Stellt Arbeit oben auf den Stapel (zuletzt angefragt, zuerst geladen); <paramref name="low"/>: auf den Stapel für
+    /// Vorab-Laden, der erst drankommt, wenn der normale leer ist. Gleiche Anfragen teilen sich eine Arbeit; sie entfällt nur,
+    /// wenn alle Anfragenden abgebrochen haben (etwa weggescrollte Zeilen). Eine normale Anfrage zieht vorab Angefragtes vor.
     /// </summary>
-    private Task<object?> Enqueue(string key, Func<object?> work, CancellationToken cancellationToken)
+    private Task<object?> Enqueue(string key, Func<object?> work, CancellationToken cancellationToken, bool low = false)
     {
         WorkItem item;
         lock (_queueGate)
@@ -393,17 +422,25 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
             {
                 item = existing;
                 item.Waiters.Add(cancellationToken);
+
+                // Jetzt gebraucht: oben auf den normalen Stapel; der Eintrag auf dem anderen wird übersprungen.
+                if (!low && item.Low && !item.Taken)
+                {
+                    item.Low = false;
+                    _queue.Push(item);
+                }
             }
             else
             {
-                item = new WorkItem(key, work, _generation);
+                item = new WorkItem(key, work, _generation) { Low = low };
                 item.Waiters.Add(cancellationToken);
                 _inflight[key] = item;
-                _queue.Push(item);
+                (low ? _lowQueue : _queue).Push(item);
                 if (_workers < Math.Max(1, _options.MaxParallel))
                 {
+                    var first = _workers == 0;
                     _workers++;
-                    StartWorker();
+                    StartWorker(first);
                 }
             }
         }
@@ -411,10 +448,43 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         return cancellationToken.CanBeCanceled ? item.Completion.Task.WaitAsync(cancellationToken) : item.Completion.Task;
     }
 
-    /// <summary>Arbeits-Thread (STA, weil erzeugte Bilder mit WPF gezeichnet werden); endet, sobald nichts mehr ansteht.</summary>
-    private void StartWorker()
+    /// <summary>Nächste Arbeit (unter der Sperre der Warteschlange): erst der normale Stapel, dann das Vorab-Laden.</summary>
+    private bool TryTake([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out WorkItem? item)
     {
-        var thread = new Thread(Work)
+        while (_queue.Count > 0 || _lowQueue.Count > 0)
+        {
+            var next = _queue.Count > 0 ? _queue.Pop() : _lowQueue.Pop();
+            if (!next.Taken)
+            {
+                next.Taken = true;
+                item = next;
+                return true;
+            }
+        }
+
+        item = null;
+        return false;
+    }
+
+    /// <summary>Fertig, sobald kein Arbeits-Thread mehr läuft (sofort, wenn keiner läuft).</summary>
+    private Task WhenWorkersIdle()
+    {
+        lock (_queueGate)
+        {
+            if (_workers == 0)
+            {
+                return Task.CompletedTask;
+            }
+
+            _workersIdle ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            return _workersIdle.Task;
+        }
+    }
+
+    /// <summary>Arbeits-Thread (STA, weil erzeugte Bilder mit WPF gezeichnet werden); endet, sobald nichts mehr ansteht.</summary>
+    private void StartWorker(bool first)
+    {
+        var thread = new Thread(() => Work(first))
         {
             IsBackground = true,
             Priority = ThreadPriority.BelowNormal,
@@ -424,8 +494,16 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         thread.Start();
     }
 
-    private void Work()
+    /// <param name="first">Erster Arbeits-Thread nach einer Pause: meldet den Beginn (Stufe Debug, phase10-gpu.ps1).</param>
+    private void Work(bool first)
     {
+        if (first)
+        {
+            _logger.LogDebug("Bilder: Laden beginnt.");
+        }
+
+        TaskCompletionSource? idle = null;
+        var last = false;
         try
         {
             while (true)
@@ -433,13 +511,20 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
                 WorkItem item;
                 lock (_queueGate)
                 {
-                    if (_queue.Count == 0)
+                    if (!TryTake(out var next))
                     {
                         _workers--;
+                        if (_workers == 0)
+                        {
+                            last = true;
+                            idle = _workersIdle;
+                            _workersIdle = null;
+                        }
+
                         return;
                     }
 
-                    item = _queue.Pop();
+                    item = next;
                 }
 
                 try
@@ -484,6 +569,12 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         {
             // Der Thread endet: seinen Dispatcher (falls WPF einen angelegt hat) ordentlich beenden.
             Dispatcher.FromThread(Thread.CurrentThread)?.InvokeShutdown();
+            if (last)
+            {
+                _logger.LogDebug("Bilder: nichts mehr in Arbeit.");
+            }
+
+            idle?.TrySetResult();
         }
     }
 
@@ -663,8 +754,19 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         // Fenster zu: Bilder freigeben, Bilder entfernter Spiele aufräumen, Verzeichnis im Hintergrund schreiben, kein
         // Zeitgeber bleibt.
         ClearCache();
-        _ = Task.Run(() =>
+        var cleanup = Task.Run(async () =>
         {
+            // Laufende Arbeit (höchstens MaxParallel Bilder) zu Ende kommen lassen: Was sie danach noch in den Speicher legt,
+            // gehört keinem Fenster mehr und bliebe sonst bis zum nächsten Öffnen liegen.
+            await WhenWorkersIdle().ConfigureAwait(false);
+            lock (_leaseGate)
+            {
+                if (_leases == 0)
+                {
+                    ClearMemory();
+                }
+            }
+
             PruneRemovedGames();
             FlushIndex();
             lock (_indexGate)
@@ -677,6 +779,7 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
                 }
             }
         });
+        Volatile.Write(ref _released, cleanup);
     }
 
     private sealed class WorkItem(string key, Func<object?> work, int generation)
@@ -686,6 +789,12 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         public Func<object?> Work => work;
 
         public int Generation => generation;
+
+        /// <summary>Nur vorab angefragt (auf dem Stapel für Vorab-Laden; unter der Sperre der Warteschlange).</summary>
+        public bool Low { get; set; }
+
+        /// <summary>Schon von einem Arbeits-Thread genommen (unter der Sperre der Warteschlange).</summary>
+        public bool Taken { get; set; }
 
         public TaskCompletionSource<object?> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

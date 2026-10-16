@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -21,8 +22,9 @@ namespace HdrPilot.App.Tests.Effects;
 /// <summary>
 /// Effekte nach der unabhängigen Prüfung (G10.10): Der HDR-Moment blendet die helle Fassung des gerade sichtbaren Bildplatzes
 /// ein (auch wenn sie erst nach dem Öffnen kam), nach dem Moment (auch einem verzögerten oder abgebrochenen) folgt die helle
-/// Ebene dem HDR-Zustand, Partikel takten mit höchstens 60 Bildern pro Sekunde über eine Zeitleiste, Dauer-Effekte laufen
-/// nur, wenn etwas sie zeigt, und die Stufe gilt auch für Einstellungen und Tray-Menü.
+/// Ebene dem HDR-Zustand und blendet dabei weich über (auch nach dem Spielwechsel, bei mehrfacher Meldung und wenn der
+/// Zustand im selben Bild kippt), Partikel takten mit höchstens 60 Bildern pro Sekunde über eine Zeitleiste, Dauer-Effekte
+/// laufen nur, wenn etwas sie zeigt, und die Stufe gilt auch für Einstellungen und Tray-Menü.
 /// </summary>
 public sealed class EffectReviewTests
 {
@@ -177,11 +179,13 @@ public sealed class EffectReviewTests
             var layer = window.HeroStage.CurrentBoostLayer()!;
             art.PendingBoost = new TaskCompletionSource<Services.Artwork.ArtworkImage?>();
 
-            // HDR an und wieder aus, während der Moment auf die helle Fassung wartet: Danach spielt keiner, die Ebene bleibt aus.
+            // HDR an und wieder aus, während der Moment auf die helle Fassung wartet: Danach spielt keiner, die Ebene bleibt aus
+            // (im selben Bild an und aus: sie war nie zu sehen, blitzt also auch nicht auf).
             SetHdr(context, on: true);
             SetHdr(context, on: false);
             context.Dispatcher.RunDelayed();
-            PumpFor(1.5);
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value < 0.01), Format(shown));
             Assert.False(window.Moment!.IsPlaying);
             Assert.Equal(HdrMomentKind.None, window.Moment.LastKind);
             Assert.Equal(0, layer.Opacity);
@@ -279,6 +283,175 @@ public sealed class EffectReviewTests
                 layer.BeginAnimation(UIElement.OpacityProperty, null);
                 Assert.Equal(on ? 1 : 0, layer.Opacity);
             }
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_fades_in_when_the_hdr_state_comes_several_times_in_one_frame()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Befund der Nachprüfung: Ein Abgleich meldet ShowsHdrOn dreimal hintereinander. Animierte vorher nichts die Ebene
+            // (gleich nach Show), meldete WPF bis zum nächsten Bild schon ihr Ziel; der zweite Aufruf ersetzte den Übergang
+            // durch einen von 1 nach 1, die helle Ebene sprang an.
+            var (stage, layer) = ShownStage(hdr: false);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpFor(0.2);
+            Assert.True(layer.Opacity < 0.3, "nach 0,2 s schon " + Format(layer.Opacity));
+            PumpFor(1.3);
+            Assert.Equal(1, layer.Opacity);
+        });
+    }
+
+    [Theory]
+    [InlineData("Full")]
+    [InlineData("Reduced")]
+    public void Effect_bright_layer_fades_after_a_game_switch(string level)
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Befund der Nachprüfung: Nach jedem Spielwechsel sprang die helle Ebene bei HDR an sofort auf 1 (statt 1,2 s
+            // bzw. 0,3 s) und bei HDR aus sofort auf 0; Schleier, Leuchten und Strahlen blendeten weiter.
+            var (window, model, _, context) = Open();
+            context.Appearance.Update(s => s.EffectLevel = level);
+            model.SelectedGame = model.Games[1];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+            Assert.Equal(0, layer.Opacity);
+
+            SetHdr(context, on: true);
+            var rising = Sample(layer, 0.1);
+            Assert.True(rising.Count > 0 && rising[0].Value < 0.5 && rising.All(s => s.At > 0.15 || s.Value < 1), "HDR an: " + Format(rising));
+            PumpFor(1.5);
+            Assert.Equal(1, layer.Opacity);
+
+            // Spielwechsel bei HDR an: Die Ebene des neuen Bilds steht gleich auf 1 und blendet bei HDR aus.
+            model.SelectedGame = model.Games[0];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            layer = window.HeroStage.CurrentBoostLayer()!;
+            Assert.Equal(1, layer.Opacity);
+            SetHdr(context, on: false);
+            var falling = Sample(layer, 0.1);
+            Assert.True(falling.Count > 0 && falling[0].Value > 0.5 && falling.All(s => s.At > 0.15 || s.Value > 0), "HDR aus: " + Format(falling));
+            PumpFor(1.5);
+            Assert.Equal(0, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_hdr_switched_back_in_one_frame_after_a_game_switch_leaves_the_bright_layer_as_it_was()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, _, context) = Open();
+            model.SelectedGame = model.Games[1];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+
+            // HDR an und gleich wieder aus (zwei Abgleiche im selben Bild, jeder wendet den Zustand mehrmals an): kein Aufblitzen.
+            SetHdr(context, on: true);
+            SetHdr(context, on: false);
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value < 0.01), "an, aus: " + Format(shown));
+
+            // Bei HDR an zum nächsten Spiel, dann aus und gleich wieder an: Die Ebene bleibt stehen.
+            SetHdr(context, on: true);
+            PumpFor(1.5);
+            model.SelectedGame = model.Games[0];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            layer = window.HeroStage.CurrentBoostLayer()!;
+            Assert.Equal(1, layer.Opacity);
+            SetHdr(context, on: false);
+            SetHdr(context, on: true);
+            shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value > 0.99), "aus, an: " + Format(shown));
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_on_and_off_in_one_frame_stays_off()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // An und aus im selben Bild: Die Ebene war nie zu sehen, also blitzt sie auch nicht auf (blendete sonst von 1 aus).
+            var (stage, layer) = ShownStage(hdr: false);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value < 0.01), Format(shown));
+            Assert.Equal(0, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_off_and_on_in_one_frame_fades_from_what_is_shown()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Aus und an im selben Bild bei voller Ebene: Sie bleibt stehen (fiel sonst auf 0 und blendete neu ein).
+            var (stage, layer) = ShownStage(hdr: true);
+            Assert.Equal(1, layer.Opacity);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value > 0.99), Format(shown));
+            Assert.Equal(1, layer.Opacity);
+
+            // Mitten im Einblenden: Es geht dort weiter, wo die Ebene gerade steht.
+            stage.SetHdr(false, TimeSpan.Zero);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpFor(0.4);
+            var before = layer.Opacity;
+            Assert.InRange(before, 0.02, 0.98);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown[0].Value >= before - 0.01, Format(before) + " → " + Format(shown));
+            Assert.Equal(1, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_fades_out_from_a_state_set_at_once()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Ein sofort gesetzter Zustand (Öffnen, Thema) zwischen zwei Übergängen im selben Bild gilt: Der nächste Übergang
+            // beginnt bei ihm, nicht am Anfang des ersetzten.
+            var (stage, layer) = ShownStage(hdr: false);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.Zero);
+            Assert.Equal(1, layer.Opacity);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(layer, 0.2);
+            Assert.True(shown.Count > 0 && shown[0].Value > 0.9, Format(shown));
+            PumpFor(1.3);
+            Assert.Equal(0, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_fade_runs_on_when_the_same_state_comes_again()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Neue Helligkeitswerte melden ShowsHdrOn später noch einmal: Der laufende Übergang bleibt, statt neu zu beginnen.
+            var (stage, layer) = ShownStage(hdr: false);
+            var start = DateTime.UtcNow;
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpFor(0.5);
+            Assert.True(layer.Opacity < 0.99, Format(layer.Opacity));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpUntil(() => DateTime.UtcNow - start >= TimeSpan.FromSeconds(1.45), 5);
+            Assert.Equal(1, layer.Opacity);
         });
     }
 
@@ -464,6 +637,41 @@ public sealed class EffectReviewTests
     }
 
     private static void PumpFor(double seconds) => PumpUntil(() => false, seconds);
+
+    /// <summary>Deckkraft von <paramref name="layer"/> in jedem Bild für <paramref name="seconds"/> (Sekunden seit dem Aufruf, Wert).</summary>
+    private static List<(double At, double Value)> Sample(UIElement layer, double seconds)
+    {
+        var start = DateTime.UtcNow;
+        var samples = new List<(double At, double Value)>();
+        EventHandler record = (_, _) => samples.Add(((DateTime.UtcNow - start).TotalSeconds, layer.Opacity));
+        CompositionTarget.Rendering += record;
+        try
+        {
+            PumpFor(seconds);
+        }
+        finally
+        {
+            CompositionTarget.Rendering -= record;
+        }
+
+        return samples;
+    }
+
+    private static string Format(double value) => value.ToString("0.00", CultureInfo.InvariantCulture);
+
+    private static string Format(List<(double At, double Value)> samples) =>
+        string.Join(" ", samples.Take(16).Select(s => Format(s.At) + "s:" + Format(s.Value)));
+
+    /// <summary>Titelbereich ohne Fenster, Bild mit heller Fassung sofort gezeigt (vorher animierte nichts ihre Ebene).</summary>
+    private static (HeroStage Stage, FrameworkElement Layer) ShownStage(bool hdr)
+    {
+        var stage = new HeroStage();
+        stage.Measure(new Size(1600, 300));
+        stage.Arrange(new Rect(0, 0, 1600, 300));
+        stage.SetHdr(hdr, TimeSpan.Zero);
+        stage.Show(null, Artwork("A"), TimeSpan.Zero);
+        return (stage, stage.CurrentBoostLayer()!);
+    }
 
     /// <summary>Moment ans Ende spulen, warten, bis er abgebaut ist, und laufende Übergänge (höchstens 1,2 s) auslaufen lassen.</summary>
     private static void FinishMoment(MainWindow window)

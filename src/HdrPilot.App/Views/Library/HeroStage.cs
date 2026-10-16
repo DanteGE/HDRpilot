@@ -339,19 +339,35 @@ public sealed class HeroStage : Grid
     /// Helle Ebene nach dem HDR-Zustand. Ihr eigener Wert ist immer das Ziel, der Übergang läuft nur darüber: Lässt eine andere
     /// Animation die Ebene los (der Prüf-Moment blendet sie nur für seine Dauer ein, ein entferntes Storyboard), steht sie
     /// damit auf dem HDR-Zustand statt wieder auf 0.
+    /// <para>
+    /// Ein Abgleich meldet den HDR-Zustand mehrmals hintereinander, neue Helligkeitswerte später noch einmal: Ist er schon das
+    /// Ziel, läuft der Übergang dorthin weiter (oder ist fertig), statt neu zu beginnen. Den Anfang eines neuen Übergangs
+    /// liest die Ebene nur, wenn der letzte schon ein Bild hatte: Bis dahin meldet WPF als Deckkraft oft schon das Ziel
+    /// (immer, wenn vorher nichts die Ebene animierte, etwa gleich nach dem Spielwechsel). Kippt der Zustand vorher (an und
+    /// aus im selben Bild), ist noch der Anfang des letzten Übergangs zu sehen, und dort beginnt der neue.
+    /// </para>
     /// </summary>
     private static void SetBoost(HeroSlot slot, bool on, TimeSpan duration)
     {
         var to = on && slot.HasBoostLayer ? 1.0 : 0.0;
-        var from = slot.Boost.Opacity;
-        slot.Boost.SetValue(OpacityProperty, to);
         if (duration <= TimeSpan.Zero)
         {
+            slot.BoostFade = null; // sofort: Der Zustand gilt, ein noch nicht gezeigter Übergang ist hinfällig.
+            slot.Boost.SetValue(OpacityProperty, to);
             slot.Boost.BeginAnimation(OpacityProperty, null);
             return;
         }
 
-        slot.Boost.BeginAnimation(OpacityProperty, new DoubleAnimation(from, to, duration) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } }, HandoffBehavior.SnapshotAndReplace);
+        if (slot.Boost.ReadLocalValue(OpacityProperty) is double target && target == to)
+        {
+            return;
+        }
+
+        var from = slot.BoostFade is { CurrentTime: null, Timeline: DoubleAnimation { From: { } start } } ? start : slot.Boost.Opacity;
+        slot.Boost.SetValue(OpacityProperty, to);
+        var fade = new DoubleAnimation(from, to, duration) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } }.CreateClock();
+        slot.Boost.ApplyAnimationClock(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+        slot.BoostFade = fade;
     }
 
     private void Relayout()
@@ -613,6 +629,9 @@ public sealed class HeroStage : Grid
 
         /// <summary>Ebene der hellen Fassung; ihre Deckkraft führt der HDR-Übergang (nur der Prüf-Moment blendet sie kurz ein).</summary>
         public Grid Boost { get; } = new() { Opacity = 0 };
+
+        /// <summary>Letzter Übergang der Ebene zum HDR-Zustand (null nach einem sofort gesetzten Zustand).</summary>
+        public AnimationClock? BoostFade { get; set; }
 
         /// <summary>Die helle Fassung selbst (oben in der Ebene; kommt sie spät, blendet sie über das warme Licht).</summary>
         public Border BoostArt { get; } = new();

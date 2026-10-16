@@ -20,8 +20,8 @@ namespace HdrPilot.App;
 
 /// <summary>
 /// Hauptfenster „Spielebibliothek“ im Stil „Showcase Hero“ (E89). Die Ansicht ordnet an (Titelbereich je Ansicht, in der Liste
-/// per Ziehgriff in der Höhe einstellbar; Werkzeugleiste mit stufenweisem Falten, Liste/Raster/Regal, Detailbereich bzw.
-/// Schublade, Statuszeile), überträgt Umgebungsfarben und Titelbild auf <see cref="AmbientBackdrop"/> und
+/// per Ziehgriff in der Höhe einstellbar; Werkzeugleiste, die in gefüllte Zeilen umbricht, Liste/Raster/Regal, Detailbereich
+/// bzw. Schublade, Statuszeile), überträgt Umgebungsfarben und Titelbild auf <see cref="AmbientBackdrop"/> und
 /// <see cref="HeroStage"/> und führt die Effekte über einen
 /// <see cref="MotionController"/>: Dauer-Effekte nur bei Stufe „Voll“, sichtbarem, aktivem Fenster und ohne laufendes Spiel,
 /// höchstens 30 Bilder pro Sekunde; der HDR-Moment über <see cref="HdrMomentPlayer"/>. Beim Schließen wird alles entfernt und
@@ -52,12 +52,6 @@ public partial class MainWindow : ChromeWindow
     /// <summary>Symbol-Kachel vor dem Namen (72 px und 18 px Abstand, nur bei erzeugtem Titelbild).</summary>
     private const double CompactIconTile = 90;
 
-    /// <summary>
-    /// Stufen der Werkzeugleiste (Prototyp f1–f6): je höher, desto mehr ist gefaltet. Stufe 7 (nicht im Prototyp): Reicht
-    /// selbst die gefaltete Leiste nicht (Fenster um 1000 px), stehen Ansicht und Aktionen über den Filtern.
-    /// </summary>
-    public const int MaxToolbarStage = 7;
-
     private static readonly TimeSpan HeroMotion = TimeSpan.FromSeconds(0.8);
     private static readonly TimeSpan DrawerMotion = TimeSpan.FromSeconds(0.55);
     private static readonly TimeSpan PointerDuration = TimeSpan.FromSeconds(0.6);
@@ -78,8 +72,6 @@ public partial class MainWindow : ChromeWindow
     private double _gridRow;
     private bool _heroRefreshQueued;
     private bool _dark = true;
-    private int _toolbarStage;
-    private bool _toolbarQueued;
     private bool _compactHeroQueued;
     private double _appliedDetailsRatio;
     private AmbientPalette _palette;
@@ -126,6 +118,17 @@ public partial class MainWindow : ChromeWindow
             }
         };
 
+        // Werkzeugleiste in einer anderen Zahl von Zeilen (Fensterbreite, Trenner, Wechsel der Ansicht): Titelbereich, Griff,
+        // Trenner und im Regal ihre eigene Lage nach ihrer neuen Höhe. Nur bei einer Änderung, nie im Leerlauf.
+        ToolbarArea.SizeChanged += (_, e) =>
+        {
+            if (e.HeightChanged)
+            {
+                RefreshHeroHeight();
+                ApplyVerticalLayout();
+            }
+        };
+
         // Spalten der Liste nach ihrer eigenen Breite (ändert sich auch mit dem Trenner, ohne dass sich das Fenster ändert).
         ListCard.SizeChanged += (_, _) => ApplyListColumns();
 
@@ -160,8 +163,8 @@ public partial class MainWindow : ChromeWindow
     /// <summary>Maske des Glanzes über dem Namen: ein schmales Band, das „TitleSheen“ verschiebt (aus demselben Grund im Code).</summary>
     public Brush SheenMask { get; }
 
-    /// <summary>Stufe der Werkzeugleiste (0: alles ausgeschrieben, 6: alles gefaltet).</summary>
-    public int ToolbarStage => _toolbarStage;
+    /// <summary>Zeilen der Werkzeugleiste, wie zuletzt angeordnet (Tests, Prüfung).</summary>
+    public int ToolbarRows => ToolbarArea.Rows;
 
     /// <summary>Titelbereich (für Tests und Bildschirmfotos).</summary>
     public HeroStage HeroStage => Hero;
@@ -218,40 +221,6 @@ public partial class MainWindow : ChromeWindow
         ApplyView(viewModel.ViewMode, animate: false);
         UpdateHero(instant: true);
         ApplyHdrState(instant: true);
-    }
-
-    /// <summary>
-    /// Ordnet die Werkzeugleiste für die verfügbare Breite an (Prototyp fitToolbar): Stufe 1 „Spiel hinzufügen“ nur als
-    /// Symbol, 2 Ansichten ohne Beschriftung, 3 Suche schmal, 4 Quelle schmal, 5 Sortierung nur als Symbol, 6 Filter-Chips in
-    /// „Filter“, 7 zwei Zeilen. Anders als im Prototyp (f5 Chips, f6 Sortierung) falten die Chips zuletzt: Bei der
-    /// Standardgröße (1600 px) bleiben die drei Filter direkt schaltbar. Gemessen wird die gewünschte Breite der Leiste (passt
-    /// sich an andere Sprachen an).
-    /// </summary>
-    public void UpdateToolbarLayout()
-    {
-        _toolbarQueued = false;
-        var available = ToolbarArea.ActualWidth;
-        if (available <= 0)
-        {
-            return;
-        }
-
-        var stage = 0;
-        for (; stage <= MaxToolbarStage; stage++)
-        {
-            ApplyToolbarStage(stage);
-
-            // Ohne Begrenzung messen; geänderte Breiten und Sichtbarkeiten innen machen die Leiste selbst nicht ungültig.
-            InvalidateMeasureTree(ToolbarArea);
-            ToolbarArea.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-            if (stage == MaxToolbarStage || FilterGroup.DesiredSize.Width + ActionGroup.DesiredSize.Width <= available + 0.5)
-            {
-                break;
-            }
-        }
-
-        _toolbarStage = Math.Min(stage, MaxToolbarStage);
-        ApplyToolbarStage(_toolbarStage);
     }
 
     /// <summary>
@@ -497,8 +466,6 @@ public partial class MainWindow : ChromeWindow
                 LibraryMotion.FadeIn(DetailsArea, TimeSpan.FromMilliseconds(160), offsetX: 18, durationMs: 380); // im Regal: Schublade, eigene Bewegung
             }
         }
-
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdateToolbarLayout);
     }
 
     /// <summary>Fenstergröße des Prototyps (1600 × 1000), auf kleineren Bildschirmen auf 92 % der Arbeitsfläche begrenzt.</summary>
@@ -587,7 +554,6 @@ public partial class MainWindow : ChromeWindow
                 HookShelfPanel();
                 HookGridPanel();
                 FitDetailsColumn();
-                UpdateToolbarLayout();
                 RefreshHeroHeight(); // Raster: Kacheln jetzt gemessen
                 RevealSelection(center: true);
             });
@@ -607,7 +573,7 @@ public partial class MainWindow : ChromeWindow
 
     /// <summary>
     /// Das Kachel-Panel des Rasters entsteht erst, wenn das Raster sichtbar ist. Ändern sich danach Kachelgröße (Breite der
-    /// Spalte, Bildlaufleiste) oder Werkzeugleiste (ein- oder zweizeilig: das Raster wird dabei immer neu gemessen), wird die
+    /// Spalte, Bildlaufleiste) oder Werkzeugleiste (Zahl ihrer Zeilen: das Raster wird dabei immer neu gemessen), wird die
     /// Höhe des Titelbereichs geprüft (<see cref="ShowcaseLayout.GridHeroHeight"/>), nach dem Anordnen und nur dann, nicht
     /// bei jedem Bildlauf.
     /// </summary>
@@ -626,16 +592,15 @@ public partial class MainWindow : ChromeWindow
         }
     }
 
-    /// <summary>Raster: Werkzeugleiste (ein- oder zweizeilig) und Kachel zusammen, wie zuletzt angeordnet (0: Kacheln noch nicht gemessen).</summary>
+    /// <summary>Raster: Werkzeugleiste (in ihrer tatsächlichen Höhe) und Kachel zusammen, wie zuletzt angeordnet (0: Kacheln noch nicht gemessen).</summary>
     private double GridRow() =>
-        (_gridPanel ?? FindTilePanel(GameGrid)) is { TileHeight: > 0 } panel
-            ? (_toolbarStage >= MaxToolbarStage ? ShowcaseLayout.StackedToolbarHeight : ShowcaseLayout.ToolbarHeight) + panel.TileHeight
-            : 0;
+        (_gridPanel ?? FindTilePanel(GameGrid)) is { TileHeight: > 0 } panel ? ToolbarHeight() + panel.TileHeight : 0;
 
     /// <summary>
     /// Höhe des Titelbereichs neu bestimmen, wenn sich etwas geändert hat, das erst nach dem Anordnen feststeht (Hinweise,
-    /// im Raster Werkzeugleiste und Kachelgröße), und nur dann neu anordnen. Eine laufende Bewegung (Wechsel der Ansicht)
-    /// läuft zum neuen Ziel weiter, sonst gilt die Höhe sofort.
+    /// Zahl der Zeilen der Werkzeugleiste, etwa nach dem Wechsel der Ansicht, im Raster die Kachelgröße), und nur dann neu
+    /// anordnen. Eine laufende Bewegung (Wechsel der Ansicht) läuft zum neuen Ziel weiter, sonst gilt die Höhe sofort. Der
+    /// gemerkte Anteil der Liste bleibt; nur die Grenze ändert sich.
     /// </summary>
     private void RefreshHeroHeight()
     {
@@ -656,12 +621,12 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Bereich des Ziehgriffs für diese Fensterhöhe und die Hinweise über der Liste; sein Wert ist die Höhe, auf die der
-    /// Titelbereich gerade geht.
+    /// Bereich des Ziehgriffs für diese Fensterhöhe, die Hinweise über der Liste und die Höhe der Werkzeugleiste; sein Wert
+    /// ist die Höhe, auf die der Titelbereich gerade geht.
     /// </summary>
     private void ApplyHeroRange(double height)
     {
-        var (min, max) = ShowcaseLayout.ListHeroRange(height, NoticeArea.ActualHeight);
+        var (min, max) = ShowcaseLayout.ListHeroRange(height, NoticeArea.ActualHeight, ToolbarHeight());
         HeroSplitter.Minimum = min;
         HeroSplitter.Maximum = max;
         HeroSplitter.Value = _heroTarget;
@@ -682,10 +647,23 @@ public partial class MainWindow : ChromeWindow
 
     /// <summary>
     /// Höhe, auf die der Titelbereich gehört: je Ansicht und Fensterhöhe, in der Liste nach der gewählten Höhe, mit den
-    /// Hinweisen über Liste bzw. Raster und im Raster nach Werkzeugleiste und Kachelgröße.
+    /// Hinweisen über Liste bzw. Raster, der Höhe der Werkzeugleiste und im Raster nach Werkzeugleiste und Kachelgröße.
     /// </summary>
     private double HeroTarget(LibraryViewMode view, double height) =>
-        ShowcaseLayout.HeroHeight(view, height, _heroRatio, NoticeArea.ActualHeight, view == LibraryViewMode.Grid ? GridRow() : 0);
+        ShowcaseLayout.HeroHeight(
+            view, height, _heroRatio, NoticeArea.ActualHeight, view == LibraryViewMode.Grid ? GridRow() : 0, ToolbarHeight(), ToolbarBesideCard(view));
+
+    /// <summary>
+    /// Regal: Die Werkzeugleiste endet links neben der Automatik-Karte, wenn sie umgebrochen in voller Breite nicht mehr
+    /// unter die Karte passt (<see cref="ShowcaseLayout.ShelfToolbarBesideCard"/>; die Kacheln bleiben ganz).
+    /// </summary>
+    private bool ToolbarBesideCard(LibraryViewMode view)
+    {
+        var width = Root.ActualWidth > 0 ? Root.ActualWidth : Width;
+        var height = Root.ActualHeight > 0 ? Root.ActualHeight : Height;
+        return view == LibraryViewMode.Shelf
+            && ShowcaseLayout.ShelfToolbarBesideCard(height, ToolbarArea.HeightFor(width - (2 * ShowcaseLayout.Pad)));
+    }
 
     private static void Activate(ListBox list, bool active, LibraryViewModel vm)
     {
@@ -729,7 +707,12 @@ public partial class MainWindow : ChromeWindow
         ColumnsArea.Margin = shelf
             ? new Thickness(0, ShowcaseLayout.HeaderTop, 0, ShowcaseLayout.PaneBottom)
             : new Thickness(ShowcaseLayout.Pad, ShowcaseLayout.PaneTop, ShowcaseLayout.Pad, ShowcaseLayout.PaneBottom);
-        ToolbarArea.Margin = shelf ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad, 0) : default;
+
+        // Regal: Werkzeugleiste über die ganze Breite; in niedrigen Fenstern, wo sie umgebrochen nicht unter die
+        // Automatik-Karte passt, endet sie links neben ihr (die Kacheln bleiben ganz).
+        ToolbarArea.Margin = shelf
+            ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad + (ToolbarBesideCard(view) ? ShowcaseLayout.ShelfCardBeside : 0), 0)
+            : default;
         NoticeArea.Margin = shelf ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad, 0) : default;
         if (shelf)
         {
@@ -769,10 +752,13 @@ public partial class MainWindow : ChromeWindow
         ApplyVerticalLayout();
         ApplyListColumns();
         UpdateLight();
-        QueueToolbarLayout();
+        QueueCompactHero();
     }
 
-    /// <summary>Senkrechte Anordnung nach der (animierten) Höhe des Titelbereichs.</summary>
+    /// <summary>Höhe der Werkzeugleiste, wie angeordnet (eine oder mehr Zeilen); vor dem ersten Anordnen eine Zeile.</summary>
+    private double ToolbarHeight() => Math.Max(ToolbarArea.ActualHeight, ShowcaseLayout.ToolbarHeight);
+
+    /// <summary>Senkrechte Anordnung nach der (animierten) Höhe des Titelbereichs und der Höhe der Werkzeugleiste.</summary>
     private void ApplyVerticalLayout()
     {
         if (_appliedView is not { } view)
@@ -784,10 +770,11 @@ public partial class MainWindow : ChromeWindow
         Hero.Height = hero;
         HeroContent.Height = hero;
         var shelf = view == LibraryViewMode.Shelf;
-        var toolbarTop = ShowcaseLayout.ToolbarTop(view, hero);
+        var toolbar = ToolbarHeight();
+        var toolbarTop = ShowcaseLayout.ToolbarTop(view, hero, toolbar);
         var columnsTop = shelf ? ShowcaseLayout.HeaderTop : ShowcaseLayout.PaneTop;
         ListArea.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop), 0, 0);
-        LibrarySplitter.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop + ShowcaseLayout.ToolbarToBody), 0, 0);
+        LibrarySplitter.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop + toolbar + ShowcaseLayout.ToolbarGap), 0, 0);
         HeroSplitter.Margin = new Thickness(0, Math.Max(0, hero - ShowcaseLayout.HeroSplitterOverlap - columnsTop), 0, 0);
 
         // Text im Titelbereich: Liste/Raster links vom Detailbereich, Regal links von der Automatik-Karte.
@@ -796,11 +783,17 @@ public partial class MainWindow : ChromeWindow
         var right = shelf ? ShowcaseLayout.Pad + 380 : ShowcaseLayout.Pad + paneWidth + 28;
         HeroContent.Margin = new Thickness(ShowcaseLayout.Pad, 0, Math.Max(0, right), 0);
 
-        // Regal in niedrigen Fenstern: Logo bzw. Name verkleinern (zuletzt ohne Kennzeile), damit nichts in den Kopf ragt.
-        var room = shelf ? ShowcaseLayout.LargeTitleRoom(hero) : double.PositiveInfinity;
+        // Regal: Knöpfe 24 px über der (umgebrochen nach oben gewachsenen) Werkzeugleiste. In niedrigen Fenstern Logo bzw.
+        // Name verkleinern, ohne Kennzeile und zuletzt (Leiste neben der Karte im kleinsten Fenster) ohne die Angaben (18 px
+        // Abstand und Zeile, alles steht auch in Karte und Schublade), damit nichts in den Kopf ragt.
+        HeroLarge.Margin = new Thickness(0, 0, 0, ShowcaseLayout.LargeHeroInset(toolbar));
+        var room = shelf ? ShowcaseLayout.LargeTitleRoom(hero, toolbar) : double.PositiveInfinity;
         var overline = room >= 80;
         LargeOverline.Visibility = overline ? Visibility.Visible : Visibility.Collapsed;
         room += overline ? 0 : 30;
+        var meta = room >= 48;
+        LargeMeta.Visibility = meta ? Visibility.Visible : Visibility.Collapsed;
+        room += meta ? 0 : 46;
         LargeTitle.MaxHeight = room >= ShowcaseLayout.LargeTitleHeight ? double.PositiveInfinity : Math.Max(48, Math.Floor(room));
     }
 
@@ -811,17 +804,6 @@ public partial class MainWindow : ChromeWindow
             var thumb = _viewModel?.IsThumbnailIcon == true ? 32 : 64;
             GameListColumns.Apply(ListCard, ShowcaseLayout.ListColumnsFor(ListCard.ActualWidth - 2, thumb));
         }
-    }
-
-    private void QueueToolbarLayout()
-    {
-        if (!_toolbarQueued && IsLoaded)
-        {
-            _toolbarQueued = true;
-            Dispatcher.BeginInvoke(DispatcherPriority.Render, UpdateToolbarLayout);
-        }
-
-        QueueCompactHero();
     }
 
     private void QueueCompactHero()
@@ -839,7 +821,7 @@ public partial class MainWindow : ChromeWindow
     /// Danach wird der Name umbrochen bzw. das Logo verkleinert, damit Kennzeile und Angaben daneben Platz behalten; erst wenn
     /// dem Titel dann weniger als <see cref="MinCompactTitle"/> bliebe, fallen auch diese weg. Nie wird der Name abgeschnitten.
     /// Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte passt. Gemessen wird die
-    /// gewünschte Breite ohne Begrenzung, wie bei der Werkzeugleiste.
+    /// gewünschte Breite ohne Begrenzung.
     /// </summary>
     public void FitCompactHero()
     {
@@ -913,34 +895,6 @@ public partial class MainWindow : ChromeWindow
         }
 
         InvalidateMeasureTree(HeroCompact);
-    }
-
-    private void ApplyToolbarStage(int stage)
-    {
-        AddGameLabel.Visibility = stage >= 1 ? Visibility.Collapsed : Visibility.Visible;
-        AddGameButton.Padding = stage >= 1 ? new Thickness(0) : new Thickness(11, 0, 11, 0);
-        AddGameButton.Width = stage >= 1 ? 40 : double.NaN;
-        var labels = stage >= 2 ? Visibility.Collapsed : Visibility.Visible;
-        ViewListLabel.Visibility = labels;
-        ViewGridLabel.Visibility = labels;
-        ViewShelfLabel.Visibility = labels;
-        SearchHost.Width = stage >= 3 ? 150 : 236;
-        SearchKey.Opacity = stage >= 3 ? 0 : 1;
-
-        // Ohne „Strg+F“ braucht das Feld rechts keinen Platz dafür: „Suchen …“ bleibt ganz lesbar.
-        SearchBox.Padding = new Thickness(38, 0, stage >= 3 ? 12 : 70, 0);
-        SourceFilter.Width = stage >= 4 ? 150 : 188;
-        ChipGroup.Visibility = stage >= 6 ? Visibility.Collapsed : Visibility.Visible;
-        FilterMenuButton.Visibility = stage >= 6 ? Visibility.Visible : Visibility.Collapsed;
-        SortOrder.Width = stage >= 5 ? 60 : 196;
-        SortOrder.Tag = stage >= 5 ? "Compact" : null; // nur das Zeichen der Sortierung (Lib.ComboBox)
-
-        // Stufe 7: Ansicht und Aktionen in einer eigenen Zeile über den Filtern (rechtsbündig wie sonst).
-        var stacked = stage >= 7;
-        DockPanel.SetDock(ActionGroup, stacked ? Dock.Top : Dock.Right);
-        ActionGroup.HorizontalAlignment = stacked ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
-        ActionGroup.Margin = stacked ? new Thickness(0, 0, 0, 8) : default;
-        ListArea.RowDefinitions[0].Height = stacked ? GridLength.Auto : new GridLength(40);
     }
 
     /// <summary>Anteil des Detailbereichs als Sternbreiten: beide Spalten wachsen mit dem Fenster im selben Verhältnis.</summary>
@@ -1039,9 +993,6 @@ public partial class MainWindow : ChromeWindow
 
     /// <summary>„···“ im Kopf des Detailbereichs: Kontextmenü des Spiels.</summary>
     private void OnProfileMenuClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
-
-    /// <summary>Zusammengefaltete Filter: Menü mit den drei Filtern.</summary>
-    private void OnFilterMenuClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
 
     private static void OpenMenuBelow(object sender)
     {

@@ -867,7 +867,7 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   hoch, damit unter der Kachelreihe kein leeres Band bleibt) und gibt in niedrigen Fenstern bis 440 px nach (Logo
   bzw. Name werden dann kleiner), damit die Kachelreihe ganz über der Statuszeile und die Werkzeugleiste unter der
   Automatik-Karte steht; erst unter 712 px Fensterhöhe werden die Kacheln kleiner als 200 px (höchstens bis 100 px).
-  Die Werkzeugleiste faltet in Stufen, die Filter zuletzt. Der Startknopf heißt sichtbar „Starten“, für Bildschirmleser
+  Die Werkzeugleiste bricht in Zeilen um (siehe unten). Der Startknopf heißt sichtbar „Starten“, für Bildschirmleser
   weiter „Mit HDR starten“. Neu im Spielmenü: „Installationsordner öffnen“. Die Schublade im Regal ist deckend (keine
   Unschärfe; schon 3 % Durchsicht ließen die Kopfzeile als Geisterschrift durchscheinen); die Polarlichter des Prototyps
   sind nicht umgesetzt. Im Dialog „Bild wählen…“ verschwindet die Liste des vorigen Reiters beim Wechsel sofort, damit
@@ -911,9 +911,10 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   (`settings.libraryHeroRatio`, ohne Eintrag gilt der Standard) erst nach dem Ziehen oder einer Taste, nie nach einem
   bloßen Klick. Standard ist ein Drittel der Fensterhöhe (vorher clamp(H·0,22; 180; 240), bei 1440 px also nur 240 px),
   mindestens 186 px (unter dem Kopf bleibt die 72 px hohe Symbol-Kachel eines Spiels ohne Logo ganz; mit 180 px war sie
-  unten abgeschnitten), höchstens H − 416: Darunter bleiben Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze
-  Zeilen und die Statuszeile; Hinweise über der Liste (Fehler beim Einlesen, Vorschläge, auch aufgeklappt) gehen davon
-  ab. In kleineren Fenstern (oder mit Hinweisen) wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
+  unten abgeschnitten), höchstens H − 328 − Höhe der Werkzeugleiste (H − 368, − 416 bzw. − 464 bei einer bis drei
+  Zeilen): Darunter bleiben Werkzeugleiste, Kopf der Liste, fünf ganze Zeilen und die Statuszeile; Hinweise über der
+  Liste (Fehler beim Einlesen, Vorschläge, auch aufgeklappt) gehen davon ab. In kleineren Fenstern (oder mit Hinweisen
+  bzw. mehr Zeilen der Werkzeugleiste) wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
   klappt der Titelbereich nicht mehr auf 120 px zusammen („Größe bleibt“). Bedienung: Ziehen ohne Animation, Pfeiltasten
   oben/unten 24 px, Bild auf/ab 96 px, Pos1/Ende kleinste bzw. größte Höhe, Doppelklick und Eingabetaste zurück zum
   Standard (mit der Bewegung beim Wechsel der Ansicht). Esc bricht das Ziehen ab wie beim Trenner der Spalten. Endet
@@ -923,7 +924,35 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   darüber und darunter). Die Werkzeugleiste hat oben so viel Luft wie unten bis zum Inhalt (Wunsch des Nutzers
   2026-10-16): in der Liste 10 px unter dem Titelbild, im Raster 22 px wie bis zur ersten Kachelreihe (10 px und der
   Innenabstand des Rasters); Regal unverändert. Damit die erste Kachelreihe des Rasters auch in niedrigen Fenstern ganz
-  zu sehen bleibt (1000×620 und 1178×620 mit zweizeiliger Werkzeugleiste, die Startgröße auf 1920×1080 bei 150 %), gibt
+  zu sehen bleibt (1000×620 und 1178×620 mit umgebrochener Werkzeugleiste, die Startgröße auf 1920×1080 bei 150 %), gibt
   dort sein Titelbereich nach, höchstens bis 186 px. Der dunkle Verlauf am unteren Rand des Titelbilds reicht 2 px über
   den Rand: Fällt die Unterkante nicht auf ganze Bildschirmpixel, stand dort sonst eine 1 px hohe helle Linie. Neuer
   Zustand `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.
+- Werkzeugleiste in gefüllten Zeilen (Wunsch des Nutzers 2026-10-16, gewählt „Blöcke, Zeilen gefüllt“): Sie faltet
+  nicht mehr in Stufen (Beschriftungen weg, Suche und Quelle schmal, Sortierung nur als Zeichen, Chips im Menü „Filter“,
+  zuletzt zwei Zeilen); alle zehn Elemente bleiben immer ganz ausgeschrieben, das Menü „Filter“ entfällt. Passt alles
+  in natürlicher Breite, steht es in einer Zeile wie bisher: links Suche, Quelle, Sortierung und die drei Chips,
+  rechtsbündig Ansicht, Neu einlesen, gesehen und „Spiel hinzufügen“, dazwischen der freie Platz; nur die Suche wächst
+  dort, höchstens auf 320 px (bei 3440 px wird nichts absurd breit). Sonst so wenige Zeilen wie möglich, die Elemente in
+  ihrer Reihenfolge so verteilt, dass die breiteste Zeile so schmal wie möglich ist (bei Gleichstand die gleichmäßigste
+  Verteilung), und jede Zeile genau auf die Breite der Liste gestreckt, links und rechts bündig mit ihrer Karte, 8 px
+  zwischen Elementen und Zeilen. Den Zuwachs bekommen die Elemente nach Anteilen: Suche 4, Quelle, Sortierung und Chips
+  je 2, Ansicht und „Spiel hinzufügen“ je 1; Neu einlesen und gesehen bleiben 40 px. Gestreckt bleibt der Inhalt
+  geordnet: Text links, Pfeil der Auswahllisten und Zähler der Chips am rechten Ende, die drei Ansichten teilen den Platz
+  gleichmäßig, „Spiel hinzufügen“ steht in der Mitte. Im Test (96 dpi, ohne gemerkte Aufteilung) hat sie bei 3440×1440
+  eine Zeile, 1920×1080, 1600×1000, 1366×768 und 1280×800 zwei, 1164×727 (1280×800 bei 110 %) drei, kleinstes Fenster
+  vier, schmalste Liste (400 px) fünf. Was von der Höhe der Leiste abhängt, nimmt ihre tatsächliche Höhe: größter
+  Titelbereich der Liste (siehe oben), Titelbereich des Rasters (erste Kachelreihe), Lage des Trenners, Zeile der Leiste
+  in der Liste; die Luft darüber und darunter bleibt (Liste 10 px, Raster 22 px), der Griff auf der Unterkante des
+  Titelbilds. Mit drei oder vier Zeilen passt die erste Kachelreihe des Rasters unter etwa 680 px Fensterhöhe nicht mehr
+  ganz (Titelbereich dann 186 px, das Raster scrollt). Im Regal wächst die umgebrochene
+  Leiste nach oben ins Titelbild, die Kachelreihe bleibt, wo sie ist; Kennzeile, Logo, Angaben und Knöpfe rücken mit
+  (24 px über der Leiste), und der kleinste Titelbereich wächst um die weiteren Zeilen (zwei Zeilen: 488 statt 440 px),
+  damit die Leiste unter der Automatik-Karte bleibt. In Fenstern unter etwa 660 px Höhe (kleinstes Fenster, Startgröße
+  auf 1920×1080 bei 150 %) passt das nicht mehr mit ganzen Kacheln: Dann endet die Leiste links neben der Karte, der
+  Titelbereich bekommt alles bis auf eine Reihe von 100-px-Kacheln, und Kennzeile bzw. Angaben weichen, wenn nötig.
+  Die Elemente werden nur angeordnet, nie aus- oder umgehängt: Die Tab-Reihenfolge folgt der sichtbaren (Zeile für Zeile
+  von links nach rechts), beim Umbrechen geht kein Fokus verloren. Gerechnet wird nur, wenn WPF neu misst (Größe oder
+  Inhalt geändert), nie im Leerlauf; die Rechnung ist eine reine Funktion (`ToolbarFlowPanel.Layout`). Prüfung:
+  `test.ps1 -Filter "FullyQualifiedName~ToolbarFlow|FullyQualifiedName~MainWindowLayout"`, `phase10-ui.ps1` (alle
+  Elemente ausgeschrieben und Zeilen bündig bei 1600×1000 und im schmalen Fenster).

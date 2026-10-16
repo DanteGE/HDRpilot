@@ -954,11 +954,8 @@
   <data name="Nits_TooltipUnknown" xml:space="preserve">
     <value>Die Helligkeitswerte des Bildschirms sind noch nicht bekannt. HDRpilot liest sie bei einem HDR- oder Bildschirmwechsel.</value>
   </data>
-  <data name="Toolbar_Filter" xml:space="preserve">
-    <value>Filter</value>
-  </data>
-  <data name="Toolbar_FilterName" xml:space="preserve">
-    <value>Filter (Automatik, Neu, HDR-fähig)</value>
+  <data name="Toolbar_Name" xml:space="preserve">
+    <value>Werkzeugleiste der Bibliothek</value>
   </data>
   <data name="Chip_HdrAuto" xml:space="preserve">
     <value>Automatik</value>

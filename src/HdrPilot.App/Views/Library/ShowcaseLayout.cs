@@ -74,16 +74,16 @@ public static class ShowcaseLayout
     /// <summary>Kopf der Liste mit den Spaltennamen samt Rahmen oben und unten (36 + 2).</summary>
     public const double ListHeaderHeight = 38;
 
-    /// <summary>Werkzeugleiste in zwei Zeilen (Stufe 7 in schmalen Fenstern): Ansicht und Aktionen über den Filtern (40 + 8 + 40).</summary>
-    public const double StackedToolbarHeight = 88;
-
-    /// <summary>Werkzeugleiste in einer Zeile.</summary>
+    /// <summary>
+    /// Werkzeugleiste in einer Zeile. Passt sie nicht nebeneinander, bricht sie in gefüllte Zeilen um (ToolbarFlowPanel,
+    /// Wunsch des Nutzers 2026-10-16), je Zeile 40 px und 8 px dazwischen; was davon abhängt, nimmt ihre tatsächliche Höhe.
+    /// </summary>
     public const double ToolbarHeight = 40;
 
     /// <summary>
     /// Luft zwischen Werkzeugleiste und Inhalt darunter (<see cref="ToolbarToBody"/> ohne die 40 px der Leiste). Genauso viel
     /// Luft bleibt in Liste und Raster über der Leiste bis zur Unterkante des Titelbilds (Wunsch des Nutzers 2026-10-16: oben
-    /// so viel wie unten).
+    /// so viel wie unten), bei jeder Zahl von Zeilen.
     /// </summary>
     public const double ToolbarGap = ToolbarToBody - ToolbarHeight;
 
@@ -115,16 +115,23 @@ public static class ShowcaseLayout
     /// <summary>Kleinste Kachel im Regal (Prototyp: clamp(h − 34; 200; 340)).</summary>
     public const double MinShelfTile = 200;
 
-    /// <summary>Kachel im Regal, wenn selbst der kleinste Titelbereich keine 200 px übrig lässt (Fensterhöhe unter 712 px).</summary>
+    /// <summary>
+    /// Kachel im Regal, wenn selbst der kleinste Titelbereich keine 200 px übrig lässt (Fensterhöhe unter 712 px, mit
+    /// umgebrochener Werkzeugleiste unter 760 px).
+    /// </summary>
     public const double TinyShelfTile = 100;
 
     /// <summary>
     /// Kleinster Titelbereich im Regal, wenn das Fenster für 500 px samt Kachelreihe zu niedrig ist: Die Werkzeugleiste
-    /// (50 px über dem unteren Rand) bleibt unter der Automatik-Karte (unterer Rand bei etwa 384 px).
+    /// (50 px über dem unteren Rand) bleibt unter der Automatik-Karte (unterer Rand bei etwa 384 px). Mit umgebrochener
+    /// Werkzeugleiste um deren zusätzliche Zeilen mehr (<see cref="ToolbarExtra"/>), siehe <see cref="ToolbarTop"/>.
     /// </summary>
     public const double MinShelfHero = 440;
 
-    /// <summary>Unterer Innenrand des großen Titelbereichs (Regal) unter den Knöpfen.</summary>
+    /// <summary>
+    /// Unterer Innenrand des großen Titelbereichs (Regal) unter den Knöpfen, mit einzeiliger Werkzeugleiste; mit
+    /// umgebrochener um deren zusätzliche Zeilen mehr (<see cref="LargeHeroInset"/>).
+    /// </summary>
     public const double LargeHeroBottom = 74;
 
     /// <summary>Kennzeile, Angaben und Knöpfe des großen Titelbereichs samt Abständen (ohne Logo bzw. Name).</summary>
@@ -140,21 +147,36 @@ public static class ShowcaseLayout
     /// H − 462 mit: Die größte Kachelreihe (340 px) samt Seitenangabe liegt dann unten an, ohne leeres Band darunter (bei
     /// H·0,62 blieben im Vollbild bis 135 px frei). In niedrigen Fenstern (etwa 1280×800 bei 110 % Skalierung, 727 px) gibt
     /// er nach, bis die kleinste Kachel ganz über der Statuszeile steht (die Reihe beginnt am unteren Rand des Titelbilds und
-    /// endet <see cref="BodyBottom"/> über dem Fensterrand), höchstens bis 440 px.
+    /// endet <see cref="BodyBottom"/> über dem Fensterrand), höchstens bis 440 px. Ist die Werkzeugleiste umgebrochen, wächst
+    /// sie im Regal nach oben in das Titelbild (die Kachelreihe bleibt, wo sie ist) und bleibt dabei unter der
+    /// Automatik-Karte: Der kleinste Titelbereich wächst um ihre zusätzlichen Zeilen (<see cref="ToolbarExtra"/>, bei zwei
+    /// Zeilen 488 px). Steht sie neben der Karte (<see cref="ShelfToolbarBesideCard"/>, nur unter etwa 660 px), bekommt er
+    /// alles bis auf eine Reihe ganzer Kacheln von <see cref="TinyShelfTile"/> (mindestens 440 px): Platz für Titel und
+    /// Leiste übereinander.
     /// </summary>
     /// <param name="listRatio">Gemerkte Höhe des Titelbereichs der Liste als Anteil der Fensterhöhe (null: Standard).</param>
     /// <param name="notices">Hinweise zwischen Werkzeugleiste und Liste bzw. Raster (Fehler beim Einlesen, Vorschläge; 0: keine).</param>
     /// <param name="gridRow">Raster: Werkzeugleiste und Kachel zusammen, wie angeordnet (0: Kacheln noch nicht gemessen).</param>
-    public static double HeroHeight(LibraryViewMode view, double windowHeight, double? listRatio = null, double notices = 0, double gridRow = 0)
+    /// <param name="toolbarHeight">Höhe der Werkzeugleiste, wie angeordnet (eine Zeile: <see cref="ToolbarHeight"/>).</param>
+    /// <param name="besideCard">Regal: Die Werkzeugleiste endet links neben der Automatik-Karte.</param>
+    public static double HeroHeight(
+        LibraryViewMode view,
+        double windowHeight,
+        double? listRatio = null,
+        double notices = 0,
+        double gridRow = 0,
+        double toolbarHeight = ToolbarHeight,
+        bool besideCard = false)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
         var value = view switch
         {
+            LibraryViewMode.Shelf when besideCard => Math.Max(MinShelfHero, h - BodyBottom - ShelfPadding - TinyShelfTile),
             LibraryViewMode.Shelf => Math.Min(
                 Math.Max(Math.Clamp(h * 0.62, 500, 660), h - 462),
-                Math.Max(MinShelfHero, h - BodyBottom - ShelfPadding - MinShelfTile)),
+                Math.Max(MinShelfHero + ToolbarExtra(toolbarHeight), h - BodyBottom - ShelfPadding - MinShelfTile)),
             LibraryViewMode.Grid => GridHeroHeight(h, gridRow, notices),
-            _ => ListHeroHeight(h, listRatio, notices),
+            _ => ListHeroHeight(h, listRatio, notices, toolbarHeight),
         };
         return Math.Round(value);
     }
@@ -163,9 +185,9 @@ public static class ShowcaseLayout
     /// Titelbereich des Rasters: clamp(H·0,24; 196; 260). In niedrigen Fenstern gibt er nach, bis die erste Kachelreihe ganz
     /// über der Statuszeile steht (darüber die Werkzeugleiste mit gleicher Luft oben und unten, die Hinweise und der
     /// Innenabstand des Rasters), höchstens bis <see cref="MinListHero"/>: etwa bei 1000×620 und 1178×620 (Startgröße auf
-    /// 1920×1080 bei 150 % und auf 1280×720) mit zweizeiliger Werkzeugleiste.
+    /// 1920×1080 bei 150 % und auf 1280×720) mit umgebrochener Werkzeugleiste.
     /// </summary>
-    /// <param name="gridRow">Werkzeugleiste (ein- oder zweizeilig) und Kachel zusammen, wie angeordnet (0: Kacheln noch nicht gemessen).</param>
+    /// <param name="gridRow">Werkzeugleiste (in ihrer tatsächlichen Höhe) und Kachel zusammen, wie angeordnet (0: Kacheln noch nicht gemessen).</param>
     /// <param name="notices">Hinweise zwischen Werkzeugleiste und Raster (0: keine).</param>
     public static double GridHeroHeight(double windowHeight, double gridRow, double notices = 0)
     {
@@ -186,33 +208,60 @@ public static class ShowcaseLayout
     /// Titelbereich der Liste (Wunsch des Nutzers 2026-10-16): gemerkter Anteil an der Fensterhöhe (Standard
     /// <see cref="DefaultListHeroRatio"/>, etwa 267 px bei 800, 360 bei 1080 und 480 bei 1440 px), in ganzen Pixeln und auf
     /// <see cref="ListHeroRange"/> begrenzt. Der Anteil bleibt gemerkt, wie er ist: In einem niedrigeren Fenster (oder mit
-    /// Hinweisen über der Liste) gilt die Grenze, in einem höheren wieder die gewählte Höhe.
+    /// Hinweisen über der Liste bzw. mehr Zeilen der Werkzeugleiste) gilt die Grenze, sonst wieder die gewählte Höhe.
     /// </summary>
     /// <param name="notices">Hinweise zwischen Werkzeugleiste und Liste (0: keine), siehe <see cref="ListHeroRange"/>.</param>
-    public static double ListHeroHeight(double windowHeight, double? ratio, double notices = 0)
+    /// <param name="toolbarHeight">Höhe der Werkzeugleiste, wie angeordnet (eine Zeile: <see cref="ToolbarHeight"/>).</param>
+    public static double ListHeroHeight(double windowHeight, double? ratio, double notices = 0, double toolbarHeight = ToolbarHeight)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
-        var (min, max) = ListHeroRange(h, notices);
+        var (min, max) = ListHeroRange(h, notices, toolbarHeight);
         return Math.Clamp(Math.Round(NormalizeListHeroRatio(ratio) * h), min, max);
     }
 
     /// <summary>
     /// Kleinste und größte Höhe des Titelbereichs der Liste: mindestens <see cref="MinListHero"/>; höchstens so hoch, dass
-    /// darunter Ziehgriff, Werkzeugleiste (auch zweizeilig, <see cref="StackedToolbarHeight"/>), die Hinweise (Fehler beim
-    /// Einlesen, Vorschläge, auch aufgeklappt), Kopf der Liste, <see cref="MinListRows"/> ganze Zeilen und die Statuszeile
-    /// Platz behalten. Ohne Hinweise sind das H − 416, etwa 311 px bei 727, 566 bei 982 und 893 bei 1309 px Fensterhöhe;
-    /// mit einzeiliger Werkzeugleiste bleiben sechs Zeilen.
+    /// darunter Ziehgriff, die Werkzeugleiste in ihrer tatsächlichen Höhe (eine bis drei Zeilen, in der schmalsten Liste
+    /// mehr), die Hinweise (Fehler beim Einlesen, Vorschläge, auch aufgeklappt), Kopf der Liste, <see cref="MinListRows"/>
+    /// ganze Zeilen und die Statuszeile Platz behalten. Ohne Hinweise sind das H − 328 − Höhe der Leiste: H − 368 mit einer
+    /// Zeile, H − 416 mit zwei (etwa 311 px bei 727 und 566 bei 982 px Fensterhöhe), H − 464 mit drei.
     /// </summary>
     /// <param name="notices">Höhe der Hinweise über der Liste, wie angeordnet (0: keine).</param>
-    public static (double Min, double Max) ListHeroRange(double windowHeight, double notices = 0)
+    /// <param name="toolbarHeight">Höhe der Werkzeugleiste, wie angeordnet (eine Zeile: <see cref="ToolbarHeight"/>).</param>
+    public static (double Min, double Max) ListHeroRange(double windowHeight, double notices = 0, double toolbarHeight = ToolbarHeight)
     {
         var h = double.IsFinite(windowHeight) && windowHeight > 0 ? windowHeight : 1000;
-        var below = ToolbarTop(LibraryViewMode.List, 0) + StackedToolbarHeight + Notices(notices) + ToolbarGap + ListHeaderHeight
-            + (MinListRows * ListRowHeight) + PaneBottom;
+        var below = ToolbarTop(LibraryViewMode.List, 0) + ToolbarHeight + ToolbarExtra(toolbarHeight) + Notices(notices) + ToolbarGap
+            + ListHeaderHeight + (MinListRows * ListRowHeight) + PaneBottom;
         return (MinListHero, Math.Max(MinListHero, Math.Floor(h - below)));
     }
 
     private static double Notices(double notices) => double.IsFinite(notices) && notices > 0 ? notices : 0;
+
+    /// <summary>
+    /// Wie viel höher die Werkzeugleiste ist als eine Zeile (umgebrochen: 48 px je weitere Zeile); 0 für eine Zeile und für
+    /// unsinnige Werte (noch nicht angeordnet).
+    /// </summary>
+    public static double ToolbarExtra(double toolbarHeight) =>
+        double.IsFinite(toolbarHeight) && toolbarHeight > ToolbarHeight ? toolbarHeight - ToolbarHeight : 0;
+
+    /// <summary>Automatik-Karte im Regal (330 px) samt Abstand zur Werkzeugleiste, wenn diese daneben endet.</summary>
+    public const double ShelfCardBeside = 330 + 16;
+
+    /// <summary>
+    /// Regal in niedrigen Fenstern (unter etwa 660 px, etwa 1920×1080 bei 150 % oder das kleinste Fenster): Passt die in
+    /// voller Breite umgebrochene Werkzeugleiste nicht mehr zwischen Automatik-Karte und eine Reihe ganzer Kacheln von
+    /// mindestens <see cref="TinyShelfTile"/>, endet sie links neben der Karte (<see cref="ShelfCardBeside"/>) und wächst dort
+    /// nach oben; Kennzeile und Angaben über ihr weichen, wenn der Platz nicht reicht (MainWindow.xaml.cs). Die Kacheln
+    /// bleiben ganz.
+    /// </summary>
+    /// <param name="fullToolbarHeight">Höhe, die die Werkzeugleiste in voller Breite hätte.</param>
+    public static bool ShelfToolbarBesideCard(double windowHeight, double fullToolbarHeight)
+    {
+        var extra = ToolbarExtra(fullToolbarHeight);
+        return extra > 0 && double.IsFinite(windowHeight) && windowHeight > 0
+            && windowHeight < MinShelfHero + extra + BodyBottom + ShelfPadding + TinyShelfTile;
+    }
 
     /// <summary>Gemerkter Anteil, bereinigt: fehlend oder unsinnig (nicht zwischen 0 und 1) ergibt den Standard.</summary>
     public static double NormalizeListHeroRatio(double? ratio) =>
@@ -223,11 +272,18 @@ public static class ShowcaseLayout
         double.IsFinite(heroHeight) && double.IsFinite(windowHeight) && heroHeight > 0 && windowHeight > 0 ? heroHeight / windowHeight : null;
 
     /// <summary>
-    /// Platz für Logo bzw. Name im großen Titelbereich (Regal) zwischen Kopf und Knöpfen: Titelbereich minus unterer
-    /// Innenrand, Kopf samt 16 px Luft und <see cref="LargeHeroChrome"/>. Ab 190 px gilt die volle Größe.
+    /// Unterer Innenrand des großen Titelbereichs (Regal) unter den Knöpfen: <see cref="LargeHeroBottom"/>, mit umgebrochener
+    /// Werkzeugleiste um ihre zusätzlichen Zeilen mehr. So bleiben zwischen Knöpfen und Leiste immer 24 px.
     /// </summary>
-    public static double LargeTitleRoom(double heroHeight) =>
-        heroHeight - LargeHeroBottom - (HeaderTop + HeaderHeight + 16) - LargeHeroChrome;
+    public static double LargeHeroInset(double toolbarHeight = ToolbarHeight) => LargeHeroBottom + ToolbarExtra(toolbarHeight);
+
+    /// <summary>
+    /// Platz für Logo bzw. Name im großen Titelbereich (Regal) zwischen Kopf und Knöpfen: Titelbereich minus unterer
+    /// Innenrand (<see cref="LargeHeroInset"/>), Kopf samt 16 px Luft und <see cref="LargeHeroChrome"/>. Ab 190 px gilt die
+    /// volle Größe.
+    /// </summary>
+    public static double LargeTitleRoom(double heroHeight, double toolbarHeight = ToolbarHeight) =>
+        heroHeight - LargeHeroInset(toolbarHeight) - (HeaderTop + HeaderHeight + 16) - LargeHeroChrome;
 
     /// <summary>
     /// Innenabstand des Rasters über der ersten Kachelreihe (VirtualizingTilePanel, Padding oben in MainWindow.xaml): Platz
@@ -236,14 +292,17 @@ public static class ShowcaseLayout
     public const double GridPaddingTop = 12;
 
     /// <summary>
-    /// Oberkante der Werkzeugleiste: im Regal über dem unteren Rand des Titelbilds. In Liste und Raster unter der Unterkante
-    /// des Titelbilds mit derselben Luft wie darunter bis zum Inhalt (Wunsch des Nutzers 2026-10-16: oben so viel wie
-    /// unten): in der Liste <see cref="ToolbarGap"/> wie bis zum Rahmen der Liste (der Ziehgriff liegt auf der Unterkante
-    /// des Titelbilds), im Raster dazu <see cref="GridPaddingTop"/> wie bis zur ersten Kachelreihe.
+    /// Oberkante der Werkzeugleiste: im Regal über dem unteren Rand des Titelbilds, ihre letzte Zeile endet
+    /// <see cref="ToolbarGap"/> darüber (umgebrochen wächst sie nach oben, die Kachelreihe bleibt). In Liste und Raster unter
+    /// der Unterkante des Titelbilds mit derselben Luft wie darunter bis zum Inhalt (Wunsch des Nutzers 2026-10-16: oben so
+    /// viel wie unten, bei jeder Zahl von Zeilen): in der Liste <see cref="ToolbarGap"/> wie bis zum Rahmen der Liste (der
+    /// Ziehgriff liegt auf der Unterkante des Titelbilds), im Raster dazu <see cref="GridPaddingTop"/> wie bis zur ersten
+    /// Kachelreihe.
     /// </summary>
-    public static double ToolbarTop(LibraryViewMode view, double heroHeight) => view switch
+    /// <param name="toolbarHeight">Höhe der Werkzeugleiste, wie angeordnet (eine Zeile: <see cref="ToolbarHeight"/>).</param>
+    public static double ToolbarTop(LibraryViewMode view, double heroHeight, double toolbarHeight = ToolbarHeight) => view switch
     {
-        LibraryViewMode.Shelf => heroHeight - 50,
+        LibraryViewMode.Shelf => heroHeight - ToolbarToBody - ToolbarExtra(toolbarHeight),
         LibraryViewMode.Grid => heroHeight + ToolbarGap + GridPaddingTop,
         _ => heroHeight + ToolbarGap,
     };

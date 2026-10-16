@@ -223,7 +223,6 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _onlySelected, value))
             {
                 OnPropertyChanged(nameof(IsFiltered));
-                OnPropertyChanged(nameof(ActiveFilterCount));
                 RefreshView();
             }
         }
@@ -237,7 +236,6 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _onlyNew, value))
             {
                 OnPropertyChanged(nameof(IsFiltered));
-                OnPropertyChanged(nameof(ActiveFilterCount));
                 RefreshView();
             }
         }
@@ -252,7 +250,6 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _onlyHdrCapable, value))
             {
                 OnPropertyChanged(nameof(IsFiltered));
-                OnPropertyChanged(nameof(ActiveFilterCount));
                 RefreshView();
             }
         }
@@ -581,7 +578,6 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OnlyNew));
         OnPropertyChanged(nameof(OnlyHdrCapable));
         OnPropertyChanged(nameof(IsFiltered));
-        OnPropertyChanged(nameof(ActiveFilterCount));
         RefreshView();
     }
 

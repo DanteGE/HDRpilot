@@ -44,6 +44,9 @@ Online liegen alle Entwurfsrunden zum Vergleich (privat, nur für den Nutzer):
     bleibt die Höhe, wie sie ist (anders als im Prototyp, der auf 120 px einklappt).
   - Dazu **Regal** (Titelbild und Kachelreihe) und **Raster**.
   - Die gewählte Ansicht wird gemerkt.
+  - **Werkzeugleiste** über der Liste (Wunsch vom 2026-10-16, „Blöcke, Zeilen gefüllt“): Alles bleibt ausgeschrieben.
+    Passt es nicht nebeneinander, bricht sie in so wenige, gleichmäßig gefüllte Zeilen um wie möglich, jede auf die
+    volle Breite gestreckt und an beiden Rändern bündig (statt wie im Prototyp Beschriftungen und Filter einzuklappen).
 - **Bilder:**
   - Echte Bilder aus den lokalen Launcher-Caches, nur gelesen.
   - Bei fehlenden Bildern erzeugt HDRpilot ein Ersatzbild. Per Rechtsklick lässt sich „Bild wählen…“.

@@ -100,7 +100,7 @@ public sealed class ShowcaseLayoutTests
     [InlineData(727, 242)] // 1280×800 bei 110 %
     [InlineData(982, 327)] // 1920×1080 bei 110 %
     [InlineData(1309, 436)] // 3440×1440 bei 110 %
-    [InlineData(620, 204)] // kleinste Fensterhöhe: durch fünf ganze Zeilen begrenzt (620 − 416)
+    [InlineData(620, 207)] // kleinste Fensterhöhe
     public void Showcase_list_hero_defaults_to_a_third_of_the_window_height(double height, double expected)
     {
         // Wunsch des Nutzers: Standard etwa ein Drittel (vorher clamp(H·0,22; 180; 240), bei 1440 px nur 240 px).
@@ -108,20 +108,25 @@ public sealed class ShowcaseLayoutTests
         Assert.Equal(expected, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, listRatio: null));
         Assert.Equal(expected, ShowcaseLayout.ListHeroHeight(height, null));
         Assert.InRange(expected / height, 0.32, 0.345);
+
+        // Mit zweizeiliger Werkzeugleiste im kleinsten Fenster durch fünf ganze Zeilen begrenzt (620 − 416).
+        Assert.Equal(Math.Min(expected, height - 416), ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, null, toolbarHeight: 88));
     }
 
     [Theory]
-    [InlineData(620)]
-    [InlineData(727)]
-    [InlineData(800)]
-    [InlineData(982)]
-    [InlineData(1080)]
-    [InlineData(1309)]
-    [InlineData(1440)]
-    [InlineData(2160)]
-    public void Showcase_list_hero_range_keeps_a_readable_hero_and_five_list_rows(double height)
+    [InlineData(620, 40)]
+    [InlineData(620, 88)]
+    [InlineData(727, 136)] // 1280×800 bei 110 %: Werkzeugleiste dreizeilig
+    [InlineData(800, 88)]
+    [InlineData(982, 88)]
+    [InlineData(1080, 40)]
+    [InlineData(1080, 88)]
+    [InlineData(1309, 40)]
+    [InlineData(1440, 136)]
+    [InlineData(2160, 40)]
+    public void Showcase_list_hero_range_keeps_a_readable_hero_and_five_list_rows_under_the_toolbar(double height, double toolbar)
     {
-        var (min, max) = ShowcaseLayout.ListHeroRange(height);
+        var (min, max) = ShowcaseLayout.ListHeroRange(height, toolbarHeight: toolbar);
 
         // Kleinster Titelbereich: Unter dem Kopf (98 px) bleiben über dem unteren Innenrand 72 px, so hoch wie die
         // Symbol-Kachel eines Spiels ohne Logo (mit 180 px waren es 66, die Kachel war unten abgeschnitten); Logo, Angaben
@@ -129,17 +134,18 @@ public sealed class ShowcaseLayoutTests
         Assert.Equal(ShowcaseLayout.MinListHero, min);
         Assert.True(min - 98 - 16 >= 72, "Inhalt des Titelbereichs " + (min - 98 - 16));
 
-        // Größter: Ziehgriff, Werkzeugleiste (auch zweizeilig), Kopf der Liste, fünf ganze Zeilen und die Statuszeile
-        // bleiben (H − 416).
-        Assert.Equal(height - 416, max);
-        var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max) + ShowcaseLayout.StackedToolbarHeight + 10;
+        // Größter: Ziehgriff, Werkzeugleiste in ihrer tatsächlichen Höhe (eine bis drei Zeilen), Kopf der Liste, fünf ganze
+        // Zeilen und die Statuszeile bleiben (H − 328 − Leiste: H − 368, H − 416 bzw. H − 464).
+        Assert.Equal(height - 328 - toolbar, max);
+        var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max, toolbar) + toolbar + 10;
         var rows = height - ShowcaseLayout.PaneBottom - listTop - ShowcaseLayout.ListHeaderHeight;
-        Assert.True(rows >= ShowcaseLayout.MinListRows * ShowcaseLayout.ListRowHeight, $"H {height}: {rows} px für Zeilen");
+        Assert.Equal(ShowcaseLayout.MinListRows * ShowcaseLayout.ListRowHeight, rows);
 
-        // Gemerkte Anteile gelten nur innerhalb des Bereichs.
-        Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99));
-        Assert.Equal(min, ShowcaseLayout.ListHeroHeight(height, 0.01));
-        Assert.InRange(ShowcaseLayout.ListHeroHeight(height, null), min, max);
+        // Gemerkte Anteile gelten nur innerhalb des Bereichs; der Anteil bleibt, nur die Grenze folgt der Leiste.
+        Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99, toolbarHeight: toolbar));
+        Assert.Equal(min, ShowcaseLayout.ListHeroHeight(height, 0.01, toolbarHeight: toolbar));
+        Assert.InRange(ShowcaseLayout.ListHeroHeight(height, null, toolbarHeight: toolbar), min, max);
+        Assert.Equal(ShowcaseLayout.ListHeroRange(height).Max, ShowcaseLayout.ListHeroRange(height, toolbarHeight: 0).Max); // vor dem Anordnen: eine Zeile
     }
 
     [Theory]
@@ -150,22 +156,22 @@ public sealed class ShowcaseLayoutTests
     public void Showcase_list_hero_range_keeps_five_rows_below_the_notices(double height, double notices)
     {
         // Prüfung 2026-10-16: Die Hinweise liegen zwischen Werkzeugleiste und Liste; ohne sie in der Rechnung blieben beim
-        // größten Titelbereich mit Hinweisen nur etwa drei ganze Zeilen, aufgeklappt keine.
-        var (min, max) = ShowcaseLayout.ListHeroRange(height, notices);
+        // größten Titelbereich mit Hinweisen nur etwa drei ganze Zeilen, aufgeklappt keine. Hier mit zweizeiliger Leiste (88 px).
+        var (min, max) = ShowcaseLayout.ListHeroRange(height, notices, 88);
         Assert.Equal(ShowcaseLayout.MinListHero, min);
         Assert.Equal(Math.Max(min, height - 416 - notices), max);
-        var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max) + ShowcaseLayout.StackedToolbarHeight + notices + 10;
+        var listTop = ShowcaseLayout.ToolbarTop(LibraryViewMode.List, max) + 88 + notices + 10;
         var rows = height - ShowcaseLayout.PaneBottom - listTop - ShowcaseLayout.ListHeaderHeight;
         Assert.True(max == min || rows >= ShowcaseLayout.MinListRows * ShowcaseLayout.ListRowHeight, $"H {height}: {rows} px für Zeilen");
 
         // Der gemerkte Anteil bleibt, die Höhe wird nur begrenzt; ohne Hinweise gilt wieder die gewählte Höhe.
-        Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99, notices));
-        Assert.Equal(max, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, 0.99, notices));
-        Assert.Equal(height - 416, ShowcaseLayout.ListHeroHeight(height, 0.99));
+        Assert.Equal(max, ShowcaseLayout.ListHeroHeight(height, 0.99, notices, 88));
+        Assert.Equal(max, ShowcaseLayout.HeroHeight(LibraryViewMode.List, height, 0.99, notices, toolbarHeight: 88));
+        Assert.Equal(height - 416, ShowcaseLayout.ListHeroHeight(height, 0.99, toolbarHeight: 88));
 
         // Unsinnige Höhen der Hinweise zählen nicht.
-        Assert.Equal(ShowcaseLayout.ListHeroRange(height), ShowcaseLayout.ListHeroRange(height, double.NaN));
-        Assert.Equal(ShowcaseLayout.ListHeroRange(height), ShowcaseLayout.ListHeroRange(height, -40));
+        Assert.Equal(ShowcaseLayout.ListHeroRange(height, 0, 88), ShowcaseLayout.ListHeroRange(height, double.NaN, 88));
+        Assert.Equal(ShowcaseLayout.ListHeroRange(height, 0, 88), ShowcaseLayout.ListHeroRange(height, -40, 88));
     }
 
     [Theory]
@@ -233,11 +239,12 @@ public sealed class ShowcaseLayoutTests
         Assert.Equal(0.6112, ratio);
         Assert.Equal(800, ShowcaseLayout.ListHeroHeight(1309, ratio));
 
-        // Kleinere Fenster: Fünf Zeilen gehen vor, die Höhe wird begrenzt; wo Platz ist, gilt der Anteil. Der Anteil selbst
-        // bleibt gemerkt, im großen Fenster gilt wieder die gewählte Höhe.
-        Assert.Equal(727 - 416, ShowcaseLayout.ListHeroHeight(727, ratio));
-        Assert.Equal(800 - 416, ShowcaseLayout.ListHeroHeight(800, ratio));
-        Assert.Equal(660, ShowcaseLayout.ListHeroHeight(1080, ratio));
+        // Kleinere Fenster: Fünf Zeilen unter der Werkzeugleiste gehen vor, die Höhe wird begrenzt; wo Platz ist, gilt der
+        // Anteil. Der Anteil selbst bleibt gemerkt, im großen Fenster gilt wieder die gewählte Höhe.
+        Assert.Equal(727 - 464, ShowcaseLayout.ListHeroHeight(727, ratio, toolbarHeight: 136));
+        Assert.Equal(800 - 416, ShowcaseLayout.ListHeroHeight(800, ratio, toolbarHeight: 88));
+        Assert.Equal(800 - 368, ShowcaseLayout.ListHeroHeight(800, ratio, toolbarHeight: 40));
+        Assert.Equal(660, ShowcaseLayout.ListHeroHeight(1080, ratio, toolbarHeight: 88));
         Assert.Equal(880, ShowcaseLayout.ListHeroHeight(1440, ratio));
         Assert.Equal(800, ShowcaseLayout.ListHeroHeight(1309, ratio));
 
@@ -270,8 +277,61 @@ public sealed class ShowcaseLayoutTests
         Assert.Equal(ShowcaseLayout.HeroSplitterHeight / 2, ShowcaseLayout.HeroSplitterOverlap);
         Assert.True(ShowcaseLayout.HeroSplitterOverlap <= 16);
 
-        // Regal wie bisher.
+        // Umgebrochen bleibt die Luft in Liste und Raster gleich (die Leiste wird nach unten höher).
+        Assert.Equal(410, ShowcaseLayout.ToolbarTop(LibraryViewMode.List, 400, 136));
+        Assert.Equal(422, ShowcaseLayout.ToolbarTop(LibraryViewMode.Grid, 400, 88));
+
+        // Regal wie bisher; umgebrochen wächst die Leiste nach oben ins Titelbild, ihre letzte Zeile endet 10 px über der
+        // Kachelreihe, die Knöpfe darüber rücken mit (Innenrand 74 + 48 je weitere Zeile).
         Assert.Equal(570, ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, 620));
+        Assert.Equal(522, ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, 620, 88));
+        Assert.Equal(620 - ShowcaseLayout.ToolbarGap, ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, 620, 136) + 136);
+        Assert.Equal(74, ShowcaseLayout.LargeHeroInset());
+        Assert.Equal(122, ShowcaseLayout.LargeHeroInset(88));
+        Assert.Equal(ShowcaseLayout.LargeTitleRoom(500) - 48, ShowcaseLayout.LargeTitleRoom(500, 88));
+        Assert.Equal(0, ShowcaseLayout.ToolbarExtra(0));
+        Assert.Equal(0, ShowcaseLayout.ToolbarExtra(double.NaN));
+        Assert.Equal(96, ShowcaseLayout.ToolbarExtra(136));
+    }
+
+    [Theory]
+    [InlineData(660)]
+    [InlineData(700)]
+    [InlineData(727)] // 1280×800 bei 110 %
+    [InlineData(768)]
+    [InlineData(800)]
+    [InlineData(1000)]
+    [InlineData(1440)]
+    public void Shelf_with_a_wrapped_toolbar_keeps_it_under_the_card_and_the_tiles_whole(double height)
+    {
+        // Zwei Zeilen in voller Breite: Die Leiste wächst nach oben, bleibt aber unter der Automatik-Karte (oberste Zeile ab
+        // 390 px wie die einzeilige); die Kachelreihe bleibt, wo sie mit einer Zeile wäre, solange das geht.
+        Assert.False(ShowcaseLayout.ShelfToolbarBesideCard(height, 88));
+        var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, toolbarHeight: 88);
+        var row = height - hero - ShowcaseLayout.BodyBottom;
+        var tile = ShowcaseLayout.Shelf(1600, row).TileHeight;
+
+        Assert.True(ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, hero, 88) >= ShowcaseLayout.ToolbarTop(LibraryViewMode.Shelf, ShowcaseLayout.MinShelfHero));
+        Assert.True(tile + ShowcaseLayout.ShelfPadding <= row, $"H {height}: Titelbereich {hero}, Reihe {row}, Kachel {tile}");
+        Assert.True(tile >= ShowcaseLayout.TinyShelfTile, $"H {height}: Kachel {tile}");
+        Assert.True(hero == ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height) || hero == ShowcaseLayout.MinShelfHero + 48, $"H {height}: Titelbereich {hero}");
+    }
+
+    [Theory]
+    [InlineData(618)] // kleinstes Fenster
+    [InlineData(631)] // Startgröße auf 1920×1080 bei 150 %
+    [InlineData(659)]
+    public void Shelf_too_low_for_a_wrapped_toolbar_under_the_card_puts_it_beside_the_card(double height)
+    {
+        // Unter dem Kärtchen wäre für zwei Zeilen und ganze Kacheln (100 px) kein Platz mehr: Die Leiste endet links neben
+        // der Karte, der Titelbereich bekommt alles bis auf eine Reihe von 100-px-Kacheln.
+        Assert.True(ShowcaseLayout.ShelfToolbarBesideCard(height, 88));
+        Assert.False(ShowcaseLayout.ShelfToolbarBesideCard(height, 40)); // eine Zeile passt immer darunter
+        Assert.False(ShowcaseLayout.ShelfToolbarBesideCard(660, 88));
+        var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, toolbarHeight: 136, besideCard: true);
+        Assert.Equal(height - ShowcaseLayout.BodyBottom - ShowcaseLayout.ShelfPadding - ShowcaseLayout.TinyShelfTile, hero);
+        Assert.Equal(ShowcaseLayout.TinyShelfTile, ShowcaseLayout.Shelf(1000, height - hero - ShowcaseLayout.BodyBottom).TileHeight);
+        Assert.True(hero >= ShowcaseLayout.MinShelfHero);
     }
 
     [Fact]

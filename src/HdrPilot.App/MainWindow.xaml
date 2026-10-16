@@ -1036,166 +1036,131 @@
             <!-- Liste mit Werkzeugleiste, Hinweisen und den drei Ansichten -->
             <Grid x:Name="ListArea" Margin="0,114,0,0">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="40" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
                 <!--
-                    Werkzeugleiste: Suche, Quelle, Sortierung, Filter-Chips, Ansicht, Neu einlesen, gesehen, hinzufügen. Wird es
-                    eng, faltet sie stufenweise (MainWindow.xaml.cs): erst Beschriftungen, dann die Chips in „Filter“.
+                    Werkzeugleiste: Suche, Quelle, Sortierung, Filter-Chips, Ansicht, Neu einlesen, gesehen, hinzufügen, immer ganz
+                    ausgeschrieben. Passt nicht alles nebeneinander, bricht sie in gefüllte Zeilen um (ToolbarFlowPanel, Wunsch des
+                    Nutzers 2026-10-16): Den Zuwachs bekommt zuerst die Suche, dann Auswahllisten und Chips, mäßig die Ansicht; in
+                    einer Zeile wächst nur die Suche (bis 320 px). Ihre Höhe gilt für Titelbereich und Trenner (MainWindow.xaml.cs).
                 -->
-                <DockPanel x:Name="ToolbarArea" LastChildFill="True" Margin="0,0,0,0">
-                    <StackPanel x:Name="ActionGroup" DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Border Style="{StaticResource Lib.SegmentFrame}" Margin="8,0,0,0" AutomationProperties.Name="{x:Static res:LibraryStrings.View_Name}">
-                            <!-- Linien-Symbole des Prototyps: auch ohne Beschriftung (ab Stufe 2) sind Raster und Regal unterscheidbar -->
-                            <StackPanel Orientation="Horizontal">
-                                <RadioButton x:Name="ViewListButton" Style="{StaticResource Lib.SegmentRadio}" GroupName="LibraryView" IsChecked="{Binding IsListView}"
-                                             AutomationProperties.AutomationId="ViewListButton" AutomationProperties.Name="{x:Static res:LibraryStrings.View_List}"
-                                             ToolTip="{x:Static res:LibraryStrings.View_ListTooltip}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <shell:LineIcon Width="15" Height="15" VerticalAlignment="Center" StrokeThickness="2" Data="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
-                                        <TextBlock x:Name="ViewListLabel" Text="{x:Static res:LibraryStrings.View_List}" Margin="6,0,0,0" />
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="ViewGridButton" Style="{StaticResource Lib.SegmentRadio}" GroupName="LibraryView" IsChecked="{Binding IsGridView}"
-                                             AutomationProperties.AutomationId="ViewGridButton" AutomationProperties.Name="{x:Static res:LibraryStrings.View_Grid}"
-                                             ToolTip="{x:Static res:LibraryStrings.View_GridTooltip}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <shell:LineIcon Width="15" Height="15" VerticalAlignment="Center" StrokeThickness="2" Data="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
-                                        <TextBlock x:Name="ViewGridLabel" Text="{x:Static res:LibraryStrings.View_Grid}" Margin="6,0,0,0" />
-                                    </StackPanel>
-                                </RadioButton>
-                                <RadioButton x:Name="ViewShelfButton" Style="{StaticResource Lib.SegmentRadio}" GroupName="LibraryView" IsChecked="{Binding IsShelfView}"
-                                             AutomationProperties.AutomationId="ViewShelfButton" AutomationProperties.Name="{x:Static res:LibraryStrings.View_Shelf}"
-                                             ToolTip="{x:Static res:LibraryStrings.View_ShelfTooltip}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <shell:LineIcon Width="15" Height="15" VerticalAlignment="Center" StrokeThickness="2" Data="M3 6h18M3 18h18M6 9v6M10 9v6M14 9v6M18 9v6" />
-                                        <TextBlock x:Name="ViewShelfLabel" Text="{x:Static res:LibraryStrings.View_Shelf}" Margin="6,0,0,0" />
-                                    </StackPanel>
-                                </RadioButton>
-                            </StackPanel>
+                <lib:ToolbarFlowPanel x:Name="ToolbarArea" AutomationProperties.AutomationId="LibraryToolbar" AutomationProperties.Name="{x:Static res:LibraryStrings.Toolbar_Name}">
+                    <Grid x:Name="SearchHost" lib:ToolbarFlowPanel.Basis="236" lib:ToolbarFlowPanel.SingleRowMaxWidth="320" lib:ToolbarFlowPanel.Grow="4">
+                        <TextBox x:Name="SearchBox" Style="{StaticResource Lib.SearchBox}" Tag="{x:Static res:LibraryStrings.Search_Short}"
+                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 AutomationProperties.AutomationId="SearchBox" AutomationProperties.Name="{x:Static res:LibraryStrings.Search_Name}" />
+                        <Border x:Name="SearchKey" Style="{StaticResource Lib.Kbd}" HorizontalAlignment="Right" Margin="0,0,10,0" IsHitTestVisible="False"
+                                Visibility="{Binding HasSearchText, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}">
+                            <TextBlock Text="{x:Static res:LibraryStrings.Key_CtrlF}" />
                         </Border>
-                        <Button x:Name="RescanButton" Style="{StaticResource Lib.ToolbarIconButton}" Margin="8,0,0,0" Command="{Binding RescanCommand}"
-                                AutomationProperties.AutomationId="RescanButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Rescan_Button}"
-                                ToolTip="{x:Static res:LibraryStrings.Rescan_Tooltip}">
-                            <TextBlock x:Name="RescanGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE72C;" FontSize="14" RenderTransformOrigin="0.5,0.5">
-                                <TextBlock.RenderTransform>
-                                    <RotateTransform />
-                                </TextBlock.RenderTransform>
-                            </TextBlock>
+                        <Button Style="{StaticResource Lib.LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
+                                Foreground="{DynamicResource Hp.Brush.TextMuted}" Command="{Binding ClearSearchCommand}"
+                                Visibility="{Binding HasSearchText, Converter={StaticResource Lib.BoolToVisibility}}"
+                                AutomationProperties.AutomationId="ClearSearchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Search_Clear}"
+                                ToolTip="{x:Static res:LibraryStrings.Search_Clear}">
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE711;" FontSize="11" Margin="4" />
                         </Button>
-                        <Button x:Name="MarkAllSeenButton" Style="{StaticResource Lib.ToolbarIconButton}" Margin="8,0,0,0" Content="&#xE890;" Command="{Binding MarkAllSeenCommand}"
-                                AutomationProperties.AutomationId="MarkAllSeenButton" AutomationProperties.Name="{x:Static res:LibraryStrings.MarkAllSeen_Name}"
-                                ToolTip="{x:Static res:LibraryStrings.MarkAllSeen_Name}" ToolTipService.ShowOnDisabled="True" />
-                        <Button x:Name="AddGameButton" Style="{StaticResource Lib.ToolbarButton}" Margin="8,0,0,0" Command="{Binding AddGameCommand}"
-                                AutomationProperties.AutomationId="AddGameButton" AutomationProperties.Name="{x:Static res:LibraryStrings.AddGame_Button}"
-                                ToolTip="{x:Static res:LibraryStrings.AddGame_Button}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE710;" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.AccentText}" />
-                                <TextBlock x:Name="AddGameLabel" Text="{x:Static res:LibraryStrings.AddGame_Button}" Margin="8,0,0,0" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-
-                    <StackPanel x:Name="FilterGroup" Orientation="Horizontal" ClipToBounds="False">
-                        <Grid x:Name="SearchHost" Width="236">
-                            <TextBox x:Name="SearchBox" Style="{StaticResource Lib.SearchBox}" Tag="{x:Static res:LibraryStrings.Search_Short}"
-                                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.AutomationId="SearchBox" AutomationProperties.Name="{x:Static res:LibraryStrings.Search_Name}" />
-                            <Border x:Name="SearchKey" Style="{StaticResource Lib.Kbd}" HorizontalAlignment="Right" Margin="0,0,10,0" IsHitTestVisible="False"
-                                    Visibility="{Binding HasSearchText, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}">
-                                <TextBlock Text="{x:Static res:LibraryStrings.Key_CtrlF}" />
+                    </Grid>
+                    <ComboBox x:Name="SourceFilter" Style="{StaticResource Lib.ComboBox}" lib:ToolbarFlowPanel.Basis="188" lib:ToolbarFlowPanel.Grow="2"
+                              ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ItemTemplate="{StaticResource SourceOptionTemplate}"
+                              ItemContainerStyle="{StaticResource Lib.SourceComboBoxItem}"
+                              AutomationProperties.AutomationId="SourceFilter" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_SourceName}" />
+                    <ComboBox x:Name="SortOrder" Style="{StaticResource Lib.ComboBox}" lib:ToolbarFlowPanel.Basis="196" lib:ToolbarFlowPanel.Grow="2"
+                              ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSortOption}" ItemTemplate="{StaticResource SortOptionTemplate}"
+                              AutomationProperties.AutomationId="SortOrder" AutomationProperties.Name="{x:Static res:LibraryStrings.Sort_Name}"
+                              ToolTip="{x:Static res:LibraryStrings.Sort_Name}" />
+                    <!-- Chips: Symbol und Text links, Zähler am rechten Ende (wie bei der Quelle); gestreckt bleiben sie so geordnet -->
+                    <ToggleButton Style="{StaticResource Lib.Chip}" lib:ToolbarFlowPanel.Grow="2" IsChecked="{Binding OnlySelected}"
+                                  AutomationProperties.AutomationId="OnlySelectedToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlySelectedName}"
+                                  ToolTip="{x:Static res:LibraryStrings.Filter_OnlySelectedName}">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource Lib.ChipCount}">
+                                <TextBlock Text="{Binding HdrAutoCount}" />
                             </Border>
-                            <Button Style="{StaticResource Lib.LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
-                                    Foreground="{DynamicResource Hp.Brush.TextMuted}" Command="{Binding ClearSearchCommand}"
-                                    Visibility="{Binding HasSearchText, Converter={StaticResource Lib.BoolToVisibility}}"
-                                    AutomationProperties.AutomationId="ClearSearchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Search_Clear}"
-                                    ToolTip="{x:Static res:LibraryStrings.Search_Clear}">
-                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE711;" FontSize="11" Margin="4" />
-                            </Button>
-                        </Grid>
-                        <ComboBox x:Name="SourceFilter" Width="188" Margin="8,0,0,0" Style="{StaticResource Lib.ComboBox}"
-                                  ItemsSource="{Binding SourceOptions}" SelectedItem="{Binding SelectedSource}" ItemTemplate="{StaticResource SourceOptionTemplate}"
-                                  ItemContainerStyle="{StaticResource Lib.SourceComboBoxItem}"
-                                  AutomationProperties.AutomationId="SourceFilter" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_SourceName}" />
-                        <ComboBox x:Name="SortOrder" Width="196" Margin="8,0,0,0" Style="{StaticResource Lib.ComboBox}"
-                                  ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSortOption}" ItemTemplate="{StaticResource SortOptionTemplate}"
-                                  AutomationProperties.AutomationId="SortOrder" AutomationProperties.Name="{x:Static res:LibraryStrings.Sort_Name}"
-                                  ToolTip="{x:Static res:LibraryStrings.Sort_Name}" />
-                        <StackPanel x:Name="ChipGroup" Orientation="Horizontal">
-                            <ToggleButton Margin="8,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlySelected}"
-                                          AutomationProperties.AutomationId="OnlySelectedToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlySelectedName}"
-                                          ToolTip="{x:Static res:LibraryStrings.Filter_OnlySelectedName}">
+                            <TextBlock Style="{StaticResource Lib.ChipGlyph}" Text="&#xE706;" />
+                            <TextBlock Text="{x:Static res:LibraryStrings.Chip_HdrAuto}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource Lib.Chip}" lib:ToolbarFlowPanel.Grow="2" IsChecked="{Binding OnlyNew}"
+                                  AutomationProperties.AutomationId="OnlyNewToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyNewName}"
+                                  ToolTip="{x:Static res:LibraryStrings.Filter_OnlyNewName}">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource Lib.ChipCount}">
+                                <TextBlock Text="{Binding NewCount}" />
+                            </Border>
+                            <TextBlock Style="{StaticResource Lib.ChipGlyph}" Text="&#xE734;" />
+                            <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyNew}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource Lib.Chip}" lib:ToolbarFlowPanel.Grow="2" IsChecked="{Binding OnlyHdrCapable}"
+                                  AutomationProperties.AutomationId="OnlyHdrCapableToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}"
+                                  ToolTip="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Right" Style="{StaticResource Lib.ChipCount}">
+                                <TextBlock Text="{Binding HdrCapableCount}" />
+                            </Border>
+                            <TextBlock Style="{StaticResource Lib.ChipGlyph}" Text="&#xE7F4;" />
+                            <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyHdrCapable}" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </ToggleButton>
+                    <!-- Ab hier rechtsbündig, solange alles in eine Zeile passt; gestreckt bekommen die drei Ansichten gleich viel dazu -->
+                    <shell:GroupBorder x:Name="ViewSegment" Style="{StaticResource Lib.SegmentFrame}" lib:ToolbarFlowPanel.EndGroup="True" lib:ToolbarFlowPanel.Grow="1"
+                                       AutomationProperties.AutomationId="ViewSegment" AutomationProperties.Name="{x:Static res:LibraryStrings.View_Name}">
+                        <lib:ToolbarFlowPanel Gap="0">
+                            <RadioButton x:Name="ViewListButton" Style="{StaticResource Lib.SegmentRadio}" GroupName="LibraryView" IsChecked="{Binding IsListView}"
+                                         lib:ToolbarFlowPanel.Grow="1" lib:ToolbarFlowPanel.SingleRowMaxWidth="Infinity"
+                                         AutomationProperties.AutomationId="ViewListButton" AutomationProperties.Name="{x:Static res:LibraryStrings.View_List}"
+                                         ToolTip="{x:Static res:LibraryStrings.View_ListTooltip}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource Lib.ChipGlyph}" Text="&#xE706;" />
-                                    <TextBlock Text="{x:Static res:LibraryStrings.Chip_HdrAuto}" VerticalAlignment="Center" />
-                                    <Border Style="{StaticResource Lib.ChipCount}">
-                                        <TextBlock Text="{Binding HdrAutoCount}" />
-                                    </Border>
+                                    <shell:LineIcon Width="15" Height="15" VerticalAlignment="Center" StrokeThickness="2" Data="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+                                    <TextBlock x:Name="ViewListLabel" Text="{x:Static res:LibraryStrings.View_List}" Margin="6,0,0,0" />
                                 </StackPanel>
-                            </ToggleButton>
-                            <ToggleButton Margin="8,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlyNew}"
-                                          AutomationProperties.AutomationId="OnlyNewToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyNewName}"
-                                          ToolTip="{x:Static res:LibraryStrings.Filter_OnlyNewName}">
+                            </RadioButton>
+                            <RadioButton x:Name="ViewGridButton" Style="{StaticResource Lib.SegmentRadio}" GroupName="LibraryView" IsChecked="{Binding IsGridView}"
+                                         lib:ToolbarFlowPanel.Grow="1" lib:ToolbarFlowPanel.SingleRowMaxWidth="Infinity"
+                                         AutomationProperties.AutomationId="ViewGridButton" AutomationProperties.Name="{x:Static res:LibraryStrings.View_Grid}"
+                                         ToolTip="{x:Static res:LibraryStrings.View_GridTooltip}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource Lib.ChipGlyph}" Text="&#xE734;" />
-                                    <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyNew}" VerticalAlignment="Center" />
-                                    <Border Style="{StaticResource Lib.ChipCount}">
-                                        <TextBlock Text="{Binding NewCount}" />
-                                    </Border>
+                                    <shell:LineIcon Width="15" Height="15" VerticalAlignment="Center" StrokeThickness="2" Data="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" />
+                                    <TextBlock x:Name="ViewGridLabel" Text="{x:Static res:LibraryStrings.View_Grid}" Margin="6,0,0,0" />
                                 </StackPanel>
-                            </ToggleButton>
-                            <ToggleButton Margin="8,0,0,0" Style="{StaticResource Lib.Chip}" IsChecked="{Binding OnlyHdrCapable}"
-                                          AutomationProperties.AutomationId="OnlyHdrCapableToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}"
-                                          ToolTip="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}">
+                            </RadioButton>
+                            <RadioButton x:Name="ViewShelfButton" Style="{StaticResource Lib.SegmentRadio}" GroupName="LibraryView" IsChecked="{Binding IsShelfView}"
+                                         lib:ToolbarFlowPanel.Grow="1" lib:ToolbarFlowPanel.SingleRowMaxWidth="Infinity"
+                                         AutomationProperties.AutomationId="ViewShelfButton" AutomationProperties.Name="{x:Static res:LibraryStrings.View_Shelf}"
+                                         ToolTip="{x:Static res:LibraryStrings.View_ShelfTooltip}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource Lib.ChipGlyph}" Text="&#xE7F4;" />
-                                    <TextBlock Text="{x:Static res:LibraryStrings.Filter_OnlyHdrCapable}" VerticalAlignment="Center" />
-                                    <Border Style="{StaticResource Lib.ChipCount}">
-                                        <TextBlock Text="{Binding HdrCapableCount}" />
-                                    </Border>
+                                    <shell:LineIcon Width="15" Height="15" VerticalAlignment="Center" StrokeThickness="2" Data="M3 6h18M3 18h18M6 9v6M10 9v6M14 9v6M18 9v6" />
+                                    <TextBlock x:Name="ViewShelfLabel" Text="{x:Static res:LibraryStrings.View_Shelf}" Margin="6,0,0,0" />
                                 </StackPanel>
-                            </ToggleButton>
+                            </RadioButton>
+                        </lib:ToolbarFlowPanel>
+                    </shell:GroupBorder>
+                    <!-- Feste Symbol-Schaltflächen: behalten ihre 40 px -->
+                    <Button x:Name="RescanButton" Style="{StaticResource Lib.ToolbarIconButton}" Command="{Binding RescanCommand}"
+                            AutomationProperties.AutomationId="RescanButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Rescan_Button}"
+                            ToolTip="{x:Static res:LibraryStrings.Rescan_Tooltip}">
+                        <TextBlock x:Name="RescanGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE72C;" FontSize="14" RenderTransformOrigin="0.5,0.5">
+                            <TextBlock.RenderTransform>
+                                <RotateTransform />
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Button>
+                    <Button x:Name="MarkAllSeenButton" Style="{StaticResource Lib.ToolbarIconButton}" Content="&#xE890;" Command="{Binding MarkAllSeenCommand}"
+                            AutomationProperties.AutomationId="MarkAllSeenButton" AutomationProperties.Name="{x:Static res:LibraryStrings.MarkAllSeen_Name}"
+                            ToolTip="{x:Static res:LibraryStrings.MarkAllSeen_Name}" ToolTipService.ShowOnDisabled="True" />
+                    <Button x:Name="AddGameButton" Style="{StaticResource Lib.ToolbarButton}" lib:ToolbarFlowPanel.Grow="1" Command="{Binding AddGameCommand}"
+                            AutomationProperties.AutomationId="AddGameButton" AutomationProperties.Name="{x:Static res:LibraryStrings.AddGame_Button}"
+                            ToolTip="{x:Static res:LibraryStrings.AddGame_Button}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE710;" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.AccentText}" />
+                            <TextBlock x:Name="AddGameLabel" Text="{x:Static res:LibraryStrings.AddGame_Button}" Margin="8,0,0,0" />
                         </StackPanel>
-                        <!-- Zusammengefaltet: dieselben drei Filter in einem Menü -->
-                        <Button x:Name="FilterMenuButton" Style="{StaticResource Lib.ToolbarButton}" Margin="8,0,0,0" Visibility="Collapsed" Click="OnFilterMenuClick"
-                                Tag="{Binding}"
-                                AutomationProperties.AutomationId="FilterMenuButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Toolbar_FilterName}">
-                            <Button.ContextMenu>
-                                <ContextMenu Style="{StaticResource Lib.ContextMenu}" DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
-                                    <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.Chip_HdrAuto}" IsCheckable="True" IsChecked="{Binding OnlySelected}"
-                                              InputGestureText="{Binding HdrAutoCount}" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlySelectedName}">
-                                        <MenuItem.Icon>
-                                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE706;" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.Filter_OnlyNew}" IsCheckable="True" IsChecked="{Binding OnlyNew}"
-                                              InputGestureText="{Binding NewCount}" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyNewName}">
-                                        <MenuItem.Icon>
-                                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE734;" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                    <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.Filter_OnlyHdrCapable}" IsCheckable="True" IsChecked="{Binding OnlyHdrCapable}"
-                                              InputGestureText="{Binding HdrCapableCount}" AutomationProperties.Name="{x:Static res:LibraryStrings.Filter_OnlyHdrCapableName}">
-                                        <MenuItem.Icon>
-                                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE7F4;" />
-                                        </MenuItem.Icon>
-                                    </MenuItem>
-                                </ContextMenu>
-                            </Button.ContextMenu>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE71C;" FontSize="13" Margin="0,0,8,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
-                                <TextBlock Text="{x:Static res:LibraryStrings.Toolbar_Filter}" />
-                                <Border Style="{StaticResource Lib.Count}" Background="{DynamicResource Hp.Brush.Accent}" TextElement.Foreground="{DynamicResource Hp.Brush.TextOnAccent}"
-                                        Visibility="{Binding ActiveFilterCount, Converter={StaticResource Lib.BoolToVisibility}}">
-                                    <TextBlock Text="{Binding ActiveFilterCount}" />
-                                </Border>
-                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="10" Margin="8,0,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </DockPanel>
+                    </Button>
+                </lib:ToolbarFlowPanel>
 
                 <!-- Hinweise: Fehler je Scanner und Vorschläge aus Suchordnern (nur wenn es welche gibt) -->
                 <StackPanel x:Name="NoticeArea" Grid.Row="1">

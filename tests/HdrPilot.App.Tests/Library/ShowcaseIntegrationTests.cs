@@ -1,9 +1,11 @@
 using System.Windows.Threading;
+using HdrPilot.App.Resources;
 using HdrPilot.App.Services.Artwork;
 using HdrPilot.App.Services.Display;
 using HdrPilot.App.Tests.Artwork;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Artwork;
+using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Tests.TestSupport;
@@ -106,6 +108,113 @@ public sealed class ShowcaseIntegrationTests
         Assert.Same(hero.Artwork.Icon!.Image, hero.IconImage);
         Assert.Equal(256, hero.Artwork.Icon.PixelWidth);
     });
+
+    [Fact]
+    public void Integration_a_second_own_image_replaces_the_first_under_the_same_name() => Sta.Run(async () =>
+    {
+        // Der Bilddienst legt eigene Bilder je Spiel und Art immer unter demselben Namen ab (gleiches Kennzeichen).
+        using var art = new ArtworkFixture();
+        var (context, service, game, token) = WithOwnHero(art);
+        var second = art.Save(Path.Combine(art.Root, "eigene", "zweites.png"), ArtworkFixture.Solid(1000, 400, colorful: true));
+        using var lease = service.Acquire();
+        using var vm = new LibraryViewModel(context, Dialogs(second, out var shown));
+        var picker = await OpenPicker(vm, context, game.Key, shown);
+
+        await PickOwnFile(picker, second);
+        Assert.True(await picker.ApplyAsync());
+
+        Assert.Equal(token, context.Config.FindGame(game.Key)!.Artwork!.Hero);
+        Assert.True(File.Exists(CustomFile(art, token)));
+        var artwork = await service.GetArtworkAsync(context.Config.FindGame(game.Key)!, 3840, TestContext.Current.CancellationToken);
+        Assert.Equal(ArtworkOrigin.Custom, artwork.Summary.Hero);
+        Assert.Equal(1000, artwork.Hero!.PixelWidth); // das neue Bild, nicht das erste (800 px)
+        Assert.Equal(LibraryText.Format(LibraryStrings.Picker_Applied, game.Name), vm.StatusMessage);
+    });
+
+    [Fact]
+    public void Integration_failed_write_keeps_the_own_image_the_config_still_uses() => Sta.Run(async () =>
+    {
+        using var art = new ArtworkFixture();
+        var (context, service, game, token) = WithOwnHero(art);
+        var second = art.Save(Path.Combine(art.Root, "eigene", "zweites.png"), ArtworkFixture.Solid(1000, 400, colorful: true));
+        using var lease = service.Acquire();
+        using var vm = new LibraryViewModel(context, Dialogs(second, out var shown));
+        var picker = await OpenPicker(vm, context, game.Key, shown);
+        await PickOwnFile(picker, second);
+        picker.Kind = ArtworkKind.Logo; // zweite Änderung, damit geschrieben werden muss
+        for (var i = 0; i < 200 && !picker.Candidates.Any(c => c.Token == ArtworkOverride.Generated); i++)
+        {
+            await Task.Delay(25);
+        }
+
+        picker.Selected = picker.Candidates.Single(c => c.Token == ArtworkOverride.Generated);
+        context.FailNextUpdate = new IOException("Platte voll");
+
+        Assert.False(await picker.ApplyAsync());
+
+        // Die Konfiguration zeigt weiter auf die eigene Datei: sie darf beim Zurücknehmen nicht gelöscht werden.
+        Assert.Equal(token, context.Config.FindGame(game.Key)!.Artwork!.Hero);
+        Assert.True(File.Exists(CustomFile(art, token)));
+    });
+
+    /// <summary>Spiel mit Steam-Titelbild und schon gewähltem eigenen Titelbild (800 px breit) über den echten Bilderdienst.</summary>
+    private static (TestLibraryContext Context, ArtworkService Service, GameConfig Game, string Token) WithOwnHero(ArtworkFixture art)
+    {
+        art.SteamFile("100", "library_hero.jpg", ArtworkFixture.Hero());
+        art.SteamFile("100", "logo.png", ArtworkFixture.Logo(320, 120, 40, 20, 200, 60));
+        var first = art.Save(Path.Combine(art.Root, "eigene", "erstes.png"), ArtworkFixture.Solid(800, 300, colorful: true));
+        var game = Game(GameSource.Steam, "100", "Mit Titelbild", isNew: false);
+        var context = new TestLibraryContext(game);
+        var ui = Dispatcher.CurrentDispatcher;
+        var service = new ArtworkService(new ArtworkServiceOptions
+        {
+            ArtDirectory = art.ArtDirectory,
+            IconDirectory = art.IconDirectory,
+            Roots = () => art.Roots,
+            PostToUi = action => ui.BeginInvoke(action),
+        });
+        context.Artwork = service;
+        var token = service.SaveCustomImage(game, ArtworkKind.Hero, first);
+        context.ConfigService.Update(c => c.FindGame(game.Key)!.Artwork = new GameArtworkChoice { Hero = token });
+        return (context, service, game, token);
+    }
+
+    private static FakeDialogs Dialogs(string file, out List<ArtworkPickerViewModel> shown)
+    {
+        var dialogs = new FakeDialogs();
+        dialogs.ArtworkFiles.Enqueue(file);
+        var list = new List<ArtworkPickerViewModel>();
+        dialogs.OnArtworkPicker = p =>
+        {
+            list.Add(p);
+            return false; // der Test übernimmt selbst (ein echter Dialog wartet auf den Nutzer)
+        };
+        shown = list;
+        return dialogs;
+    }
+
+    private static async Task<ArtworkPickerViewModel> OpenPicker(LibraryViewModel vm, TestLibraryContext context, string key, List<ArtworkPickerViewModel> shown)
+    {
+        vm.SelectedGame = vm.Games.Single(g => g.Key == key);
+        context.Dispatcher.RunDelayed();
+        vm.ChooseArtworkCommand.Execute("Hero");
+        var picker = Assert.Single(shown);
+        await picker.LoadAsync();
+        return picker;
+    }
+
+    private static async Task PickOwnFile(ArtworkPickerViewModel picker, string file)
+    {
+        picker.PickFileCommand.Execute(null);
+        for (var i = 0; i < 200 && picker.Selected?.PendingFile != file; i++)
+        {
+            await Task.Delay(25);
+        }
+
+        Assert.Equal(file, picker.Selected?.PendingFile);
+    }
+
+    private static string CustomFile(ArtworkFixture art, string token) => Path.Combine(art.ArtDirectory, "custom", ArtworkOverride.FileOf(token)!);
 
     private static DisplayInfo Display(bool hdrOn) => new()
     {

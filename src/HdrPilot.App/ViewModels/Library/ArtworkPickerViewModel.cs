@@ -252,13 +252,13 @@ public sealed class ArtworkPickerViewModel : ObservableObject
                 }
                 catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or FormatException or ArgumentException or System.Runtime.InteropServices.ExternalException)
                 {
-                    DeleteQuietly(saved);
+                    DeleteQuietly(Unreferenced(saved, before));
                     _owner.ShowStatus(LibraryStrings.Picker_NotAnImage, StatusKind.Error);
                     return false;
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
                 {
-                    DeleteQuietly(saved);
+                    DeleteQuietly(Unreferenced(saved, before));
                     _owner.ShowStatus(LibraryText.Format(LibraryStrings.Picker_SaveFailed, ex.Message), StatusKind.Error);
                     return false;
                 }
@@ -270,13 +270,21 @@ public sealed class ArtworkPickerViewModel : ObservableObject
         var normalized = GameArtworkChoice.Normalize(choice);
         if (SameChoice(before, normalized))
         {
-            return false;
+            // Neue eigene Datei für eine Art, die schon eine eigene hatte: Der Bilddienst legt sie unter demselben Namen ab,
+            // das Kennzeichen bleibt gleich und das neue Bild gilt schon. Nichts zu schreiben, aber übernommen.
+            if (saved.Count == 0)
+            {
+                return false;
+            }
+
+            _owner.ShowStatus(LibraryText.Format(LibraryStrings.Picker_Applied, Item.Name), StatusKind.Success);
+            return true;
         }
 
         var written = await _owner.WriteGameAsync(Item.Key, g => g.Artwork = normalized is null ? null : new GameArtworkChoice { Hero = normalized.Hero, Logo = normalized.Logo, Cover = normalized.Cover });
         if (!written)
         {
-            DeleteQuietly(saved);
+            DeleteQuietly(Unreferenced(saved, before));
             return false;
         }
 
@@ -317,6 +325,16 @@ public sealed class ArtworkPickerViewModel : ObservableObject
                 break;
         }
     }
+
+    /// <summary>
+    /// Neu gespeicherte eigene Dateien, auf die die bisherige Wahl nicht zeigt. Der Bilddienst legt eigene Bilder je Spiel und
+    /// Art immer unter demselben Namen ab; eine Datei, die die gespeicherte Wahl noch benutzt, darf beim Zurücknehmen nicht
+    /// gelöscht werden (sonst zeigte die Konfiguration auf eine fehlende Datei).
+    /// </summary>
+    private static IEnumerable<string> Unreferenced(IEnumerable<string> saved, GameArtworkChoice? before) =>
+        saved.Where(token => !string.Equals(token, before?.Hero, StringComparison.Ordinal)
+            && !string.Equals(token, before?.Logo, StringComparison.Ordinal)
+            && !string.Equals(token, before?.Cover, StringComparison.Ordinal));
 
     private static bool SameChoice(GameArtworkChoice? a, GameArtworkChoice? b) =>
         string.Equals(a?.Hero, b?.Hero, StringComparison.Ordinal)

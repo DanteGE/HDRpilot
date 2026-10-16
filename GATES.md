@@ -404,7 +404,13 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
 
 - [ ] G10.5: Bibliothek im neuen Design:
   - Ansichten in der Reihenfolge **Liste, Raster, Regal**; Liste ist der Standard, die Wahl wird gemerkt.
-  - Liste: virtualisiert, sortierbar, „HDR automatisch“ je Zeile, schlanker Titelbereich des gewählten Spiels.
+  - Liste: virtualisiert, sortierbar, „HDR automatisch“ je Zeile, Titelbereich des gewählten Spiels oben.
+  - Höhe des Titelbereichs (Wunsch des Nutzers 2026-10-16):
+    - per Ziehgriff am unteren Rand einstellbar, zwischen Liste und Titelbereich;
+    - gemerkt in der Konfiguration, Doppelklick setzt auf den Standard zurück;
+    - Standard etwa ein Drittel der Fensterhöhe;
+    - kein automatisches Schrumpfen beim Scrollen mehr;
+    - mit Tastatur bedienbar.
   - Raster: skaliert bei jeder Fenstergröße sauber, auch im Vollbild bei 3440×1440: Spaltenzahl und Kachelgröße folgen der Breite, nichts gestreckt oder abgeschnitten.
   - Regal: Titelbild und Kachelreihe.
   - Detailbereich mit allen bisherigen Funktionen (STARTEN, AUTOMATIK, BILD, EXE-DATEIEN, Bilder); alle bisherigen Funktionen und Tastenkürzel bleiben.

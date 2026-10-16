@@ -439,6 +439,27 @@ public sealed class EffectReviewTests
     }
 
     [Fact]
+    public void Effect_late_bright_image_fades_in_when_hdr_goes_off_in_the_same_frame()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Bild ohne helle Fassung bei HDR an sofort gezeigt; im selben Bild geht HDR aus und die helle Fassung kommt nach.
+            // Die Ebene ist noch voll zu sehen (ihr Ausblenden hatte noch kein Bild), also blendet die Fassung über das warme
+            // Licht, statt in voller Stärke aufzuspringen.
+            var artwork = Artwork("A");
+            var stage = new HeroStage();
+            stage.Measure(new Size(1600, 300));
+            stage.Arrange(new Rect(0, 0, 1600, 300));
+            stage.SetHdr(true, TimeSpan.Zero);
+            stage.Show(null, artwork with { HeroBoost = null }, TimeSpan.Zero);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            stage.Show(null, artwork, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(stage.CurrentBoostImageLayer, 0.2);
+            Assert.True(shown.Count > 0 && shown[0].Value < 0.1, Format(shown));
+        });
+    }
+
+    [Fact]
     public void Effect_bright_layer_fade_runs_on_when_the_same_state_comes_again()
     {
         WpfTestHost.Run(() =>

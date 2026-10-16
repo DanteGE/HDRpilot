@@ -165,7 +165,7 @@ public sealed class HeroStage : Grid
             // Schon zu sehen (dasselbe Bild oder dasselbe Ersatzbild); nur die helle Fassung kann nachkommen. Ist ihre Ebene
             // gerade zu sehen (HDR an, Moment), blendet sie über, statt mitten im Moment aufzuspringen.
             var shown = _slots[_current];
-            var boostFade = shown.Boost.Opacity > 0 ? Scale(transition, BoostFadeDuration.TotalSeconds) : TimeSpan.Zero;
+            var boostFade = shown.ShownBoost > 0 ? Scale(transition, BoostFadeDuration.TotalSeconds) : TimeSpan.Zero;
             shown.SetBoost(artwork?.HeroBoost?.Image, ActualWidth + 96, ActualHeight + 72, _view, boostFade);
             return;
         }
@@ -363,7 +363,7 @@ public sealed class HeroStage : Grid
             return;
         }
 
-        var from = slot.BoostFade is { CurrentTime: null, Timeline: DoubleAnimation { From: { } start } } ? start : slot.Boost.Opacity;
+        var from = slot.ShownBoost;
         slot.Boost.SetValue(OpacityProperty, to);
         var fade = new DoubleAnimation(from, to, duration) { EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } }.CreateClock();
         slot.Boost.ApplyAnimationClock(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
@@ -632,6 +632,12 @@ public sealed class HeroStage : Grid
 
         /// <summary>Letzter Übergang der Ebene zum HDR-Zustand (null nach einem sofort gesetzten Zustand).</summary>
         public AnimationClock? BoostFade { get; set; }
+
+        /// <summary>
+        /// Zu sehende Deckkraft der Ebene: Hatte der letzte Übergang noch kein Bild, meldet WPF als Deckkraft oft schon sein
+        /// Ziel; zu sehen ist dann noch sein Anfang.
+        /// </summary>
+        public double ShownBoost => BoostFade is { CurrentTime: null, Timeline: DoubleAnimation { From: { } start } } ? start : Boost.Opacity;
 
         /// <summary>Die helle Fassung selbst (oben in der Ebene; kommt sie spät, blendet sie über das warme Licht).</summary>
         public Border BoostArt { get; } = new();

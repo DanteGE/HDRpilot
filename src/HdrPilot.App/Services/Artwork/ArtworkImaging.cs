@@ -19,16 +19,28 @@ public sealed record BgraImage(int Width, int Height, byte[] Pixels)
 }
 
 /// <summary>
+/// Bilddatei zu groß (über 32 MB, über 100 Megapixel oder verkleinert noch über 36 Megapixel): eigene Meldung „zu groß“.
+/// Zählt wie jeder Lesefehler als „Bild nicht lesbar“ (<see cref="ArtworkImaging.IsDecodeFailure"/>).
+/// </summary>
+public sealed class ImageTooLargeException(string message) : IOException(message);
+
+/// <summary>
 /// Dekodieren und Kodieren der Spielbilder mit den Bilddecodern von Windows (WPF/WIC, E89). Gelesen wird immer geteilt (der
 /// Launcher darf gleichzeitig schreiben), nie verändert. Bilder werden höchstens in der angefragten Breite dekodiert (nie
-/// hochskaliert) und eingefroren. Zu große Dateien (über 32 MB oder 36 Megapixel) gelten als unlesbar. Alle Methoden laufen auf
-/// beliebigen Threads; Fehler kommen als Ausnahme (siehe <see cref="IsDecodeFailure"/>).
+/// hochskaliert) und eingefroren. Die Größe steht vor dem Dekodieren fest (Kopf der Datei): Dateien über 32 MB oder
+/// 100 Megapixel und Bilder, die auch verkleinert noch über 36 Megapixel hätten, gelten als zu groß
+/// (<see cref="ImageTooLargeException"/>). Alle Methoden laufen auf beliebigen Threads; Fehler kommen als Ausnahme (siehe
+/// <see cref="IsDecodeFailure"/>).
 /// </summary>
 public static class ArtworkImaging
 {
     public const long MaxFileBytes = 32L * 1024 * 1024;
 
+    /// <summary>Höchstens so viele Pixel hat ein dekodiertes Bild (Speicher).</summary>
     public const long MaxPixels = 6000L * 6000;
+
+    /// <summary>Höchstens so viele Pixel darf eine Bilddatei haben; dekodiert wird sie verkleinert (Handyfotos mit 48 MP gehen).</summary>
+    public const long MaxSourcePixels = 100_000_000;
 
     /// <summary>Breite und Höhe einer Bilddatei (Kopf, sonst der Decoder ohne Pixel); .ico und .exe: größtes Symbol.</summary>
     public static (int Width, int Height) Measure(string path)
@@ -66,7 +78,7 @@ public static class ArtworkImaging
         }
 
         using var stream = OpenRead(path);
-        var (width, _) = FrameSize(stream);
+        var (width, _) = FrameSize(stream, maxWidth);
         stream.Position = 0;
         var image = new BitmapImage();
         image.BeginInit();
@@ -100,7 +112,7 @@ public static class ArtworkImaging
         else
         {
             using var stream = OpenRead(path);
-            _ = FrameSize(stream);
+            _ = FrameSize(stream, width);
             stream.Position = 0;
             var image = new BitmapImage();
             image.BeginInit();
@@ -198,8 +210,41 @@ public static class ArtworkImaging
         }
     }
 
-    /// <summary>Fehler, die „Bild nicht lesbar“ bedeuten (fehlender Decoder, kaputte oder zu große Datei, gesperrt).</summary>
-    public static bool IsDecodeFailure(Exception ex) => IconReader.IsDecodeFailure(ex) || ex is System.Runtime.InteropServices.COMException or FileFormatException;
+    /// <summary>
+    /// Prüft Bytes (etwa einen Download) als Bild, ohne sie ganz zu dekodieren: Größe aus dem Kopf (höchstens
+    /// <paramref name="maxPixels"/>), dann ein kleines Vorschaubild, damit auch die Pixeldaten lesbar sind.
+    /// </summary>
+    public static (int Width, int Height) Validate(byte[] data, long maxPixels)
+    {
+        if (data.LongLength > MaxFileBytes)
+        {
+            throw new ImageTooLargeException("Bild ist zu groß: " + data.LongLength + " Byte.");
+        }
+
+        using var stream = new MemoryStream(data, writable: false);
+        var (width, height) = FrameSize(stream, 64);
+        if ((long)width * height > maxPixels)
+        {
+            throw new ImageTooLargeException("Bild hat zu viele Pixel: " + width + " × " + height + ".");
+        }
+
+        stream.Position = 0;
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+        image.StreamSource = stream;
+        image.DecodePixelWidth = Math.Min(64, width);
+        image.EndInit();
+        return (width, height);
+    }
+
+    /// <summary>
+    /// Fehler, die „Bild nicht lesbar“ bedeuten (fehlender Decoder, kaputte oder zu große Datei, gesperrt, für den Decoder zu
+    /// wenig Speicher).
+    /// </summary>
+    public static bool IsDecodeFailure(Exception ex) =>
+        IconReader.IsDecodeFailure(ex) || ex is System.Runtime.InteropServices.COMException or FileFormatException or OutOfMemoryException;
 
     /// <summary>Datei geteilt öffnen; zu große Dateien werden abgelehnt.</summary>
     public static FileStream OpenRead(string path)
@@ -208,15 +253,29 @@ public static class ArtworkImaging
         if (stream.Length > MaxFileBytes)
         {
             stream.Dispose();
-            throw new InvalidDataException("Bild ist zu groß: " + Path.GetFileName(path));
+            throw new ImageTooLargeException("Bild ist zu groß: " + Path.GetFileName(path));
         }
 
         return stream;
     }
 
-    /// <summary>Größe des ersten Bildes ohne Pixel; zu viele Pixel werden abgelehnt.</summary>
-    private static (int Width, int Height) FrameSize(Stream stream)
+    /// <summary>
+    /// Größe des ersten Bildes aus dem Kopf, ohne Pixel zu dekodieren. Abgelehnt werden Dateien über
+    /// <see cref="MaxSourcePixels"/> und Bilder, die in höchstens <paramref name="maxWidth"/> Breite (0: ganz) noch über
+    /// <see cref="MaxPixels"/> hätten.
+    /// </summary>
+    private static (int Width, int Height) FrameSize(Stream stream, int maxWidth)
     {
+        // Zuerst der Kopf der Datei ohne Decoder (PNG, JPEG, BMP, GIF, WebP): Riesige Bilder fallen heraus, bevor WIC sie
+        // anfasst; erst dann die genaue Größe über den Decoder (ohne Pixel).
+        var probe = new byte[(int)Math.Min(ImageHeader.ProbeLength, stream.Length - stream.Position)];
+        stream.ReadExactly(probe);
+        stream.Position = 0;
+        if (ImageHeader.TryGetSize(probe, out var headerWidth, out var headerHeight))
+        {
+            CheckSize(headerWidth, headerHeight, maxWidth);
+        }
+
         var frame = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None).Frames[0];
         int width = frame.PixelWidth, height = frame.PixelHeight;
         if (width <= 0 || height <= 0)
@@ -224,11 +283,22 @@ public static class ArtworkImaging
             throw new InvalidDataException("Bild ohne Pixel.");
         }
 
-        if ((long)width * height > MaxPixels)
+        CheckSize(width, height, maxWidth);
+        return (width, height);
+    }
+
+    private static void CheckSize(int width, int height, int maxWidth)
+    {
+        if ((long)width * height > MaxSourcePixels)
         {
-            throw new InvalidDataException("Bild hat zu viele Pixel: " + width + " × " + height + ".");
+            throw new ImageTooLargeException("Bild hat zu viele Pixel: " + width + " × " + height + ".");
         }
 
-        return (width, height);
+        var decodedWidth = maxWidth > 0 && maxWidth < width ? maxWidth : width;
+        var decodedHeight = (long)Math.Ceiling(height * (decodedWidth / (double)width));
+        if (decodedWidth * decodedHeight > MaxPixels)
+        {
+            throw new ImageTooLargeException("Bild hat auch verkleinert zu viele Pixel: " + width + " × " + height + ".");
+        }
     }
 }

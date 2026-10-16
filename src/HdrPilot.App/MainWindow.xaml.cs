@@ -57,7 +57,7 @@ public partial class MainWindow : ChromeWindow
     private static readonly TimeSpan DrawerMotion = TimeSpan.FromSeconds(0.55);
     private static readonly TimeSpan PointerDuration = TimeSpan.FromSeconds(0.6);
 
-    private readonly CompositionFrameClock _frameClock = new();
+    private readonly TimelineFrameClock _frameClock = new();
     private readonly StopwatchEffectTime _effectTime = new();
     private LibraryViewModel? _viewModel;
     private MotionController? _motion;
@@ -171,8 +171,10 @@ public partial class MainWindow : ChromeWindow
         Hero.RegisterEffects(_motion);
         _pulse = _motion.Register("CapsulePulse", this, CreatePulse, wanted: viewModel.ShowsHdrOn);
         _spin = _motion.Register("RescanSpin", this, CreateSpin, wanted: viewModel.IsScanning);
-        _ring = _motion.Register("SelectionRing", this, RingClock.CreateStoryboard);
-        _sheen = _motion.Register("TitleSheen", this, CreateSheen);
+        // Ring und Glanz nur, wenn etwas sie zeigt: den Ring zeichnen nur Kacheln (Raster, Regal), den Glanz nur der Name
+        // (nicht das Logo); das setzen ApplyView und UpdateSheen.
+        _ring = _motion.Register("SelectionRing", this, RingClock.CreateStoryboard, wanted: viewModel.ViewMode != LibraryViewMode.List);
+        _sheen = _motion.Register("TitleSheen", this, CreateSheen, wanted: false);
         _moment = new HdrMomentPlayer(Hero.MomentParts(EdgeGlow), _frameClock, _effectTime);
         _motion.SetGameRunning(viewModel.IsGameRunning);
         OnMotionChanged(this, EventArgs.Empty);
@@ -244,8 +246,22 @@ public partial class MainWindow : ChromeWindow
         ApplyDetailsRatio(ratio);
     }
 
-    /// <summary>HDR-Moment ohne HDR-Schaltung (Prüfung G10.9, --test-hdr-moment).</summary>
+    /// <summary>HDR-Moment ohne HDR-Schaltung mit dem, was gerade geladen ist (Tests).</summary>
     public HdrMomentKind PlayTestHdrMoment() => PlayMoment(transientBoost: true);
+
+    /// <summary>
+    /// HDR-Moment ohne HDR-Schaltung (Prüfung G10.9, --test-hdr-moment): zuerst die helle Fassung des Titelbilds holen, damit
+    /// der Moment mit allen Ebenen spielt (ohne HDR wird sie sonst nicht geladen), dann abspielen.
+    /// </summary>
+    public async Task<HdrMomentKind> PlayTestHdrMomentAsync()
+    {
+        if (_viewModel is { } vm)
+        {
+            await vm.EnsureHeroBoostAsync(force: true);
+        }
+
+        return PlayMoment(transientBoost: true);
+    }
 
     /// <summary>Bildschirmfoto: HDR an zeigen (ohne Schaltung) und den Moment bei diesem Anteil anhalten.</summary>
     public void FreezeHdrMoment(double fraction)
@@ -258,6 +274,19 @@ public partial class MainWindow : ChromeWindow
         vm.SetPreviewHdr(true);
         ApplyHdrState(instant: true);
         _moment.Freeze(Hero.MomentScene(_palette.ParticleColors(_scheme, vm.Context.Appearance.Current.BackgroundFollowsGame)), fraction, transientBoost: false);
+    }
+
+    /// <summary>Wie <see cref="FreezeHdrMoment"/>, wartet aber zuerst auf die helle Fassung (Bildschirmfotos).</summary>
+    public async Task FreezeHdrMomentAsync(double fraction)
+    {
+        if (_viewModel is not { } vm)
+        {
+            return;
+        }
+
+        vm.SetPreviewHdr(true);
+        await vm.EnsureHeroBoostAsync(force: true);
+        FreezeHdrMoment(fraction);
     }
 
     /// <summary>
@@ -469,6 +498,7 @@ public partial class MainWindow : ChromeWindow
         var changed = _appliedView != view;
         _appliedView = view;
         Hero.SetView(view);
+        _ring?.SetWanted(view != LibraryViewMode.List);
         var shelf = view == LibraryViewMode.Shelf;
         HeroCompact.Visibility = shelf ? Visibility.Collapsed : Visibility.Visible;
         HeroLarge.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
@@ -1102,6 +1132,7 @@ public partial class MainWindow : ChromeWindow
 
         ApplyAmbient(instant);
         Hero.Show(_hero, _hero?.Artwork, instant ? TimeSpan.Zero : HeroTransition());
+        UpdateSheen();
         QueueCompactHero();
         if (!instant && _hero is not null && LibraryMotion.Instance.IsFull)
         {
@@ -1116,8 +1147,12 @@ public partial class MainWindow : ChromeWindow
         {
             ApplyAmbient(instant: false);
             Hero.Show(_hero, _hero?.Artwork, HeroTransition());
+            UpdateSheen();
         }
     }
+
+    /// <summary>Glanz über dem Namen nur, wenn der Name zu sehen ist (mit Logo bleibt der Glanz-Text ausgeblendet).</summary>
+    private void UpdateSheen() => _sheen?.SetWanted(_hero?.ShowName == true);
 
     private TimeSpan HeroTransition() => _motion?.Level switch
     {

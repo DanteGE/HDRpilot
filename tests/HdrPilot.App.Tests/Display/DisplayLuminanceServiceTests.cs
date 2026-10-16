@@ -63,6 +63,51 @@ public sealed class DisplayLuminanceServiceTests
     }
 
     [Fact]
+    public async Task Zero_readings_of_a_sleeping_display_are_read_again_on_the_next_request()
+    {
+        // Bildschirm aus: DXGI meldet 0 nits, eine HDR-Spitze ist noch nicht gemerkt.
+        _reader.Values = [new DisplayLuminance(@"\\.\DISPLAY1", 0, 0, 0, 8, HdrActive: false)];
+        var service = Service();
+        using (service.Acquire())
+        {
+            await service.Idle;
+            Assert.Equal(1, service.ReadCount);
+            Assert.Equal(0, service.Primary!.PeakNits);
+
+            // Bildschirm wieder an, ohne dass sich Liste oder HDR-Zustand ändern: eine erneute Meldung liest nach.
+            _reader.Values = [new DisplayLuminance(@"\\.\DISPLAY1", 270, 270, 0.5, 8, HdrActive: false)];
+            service.Invalidate();
+            await service.Idle;
+            Assert.Equal(2, service.ReadCount);
+            Assert.Equal(270, service.Primary!.PeakNits);
+        }
+
+        // Gegenprobe: echte Werte gelten als gelesen, weder Melden noch erneutes Öffnen fragen DXGI ohne Wechsel.
+        service.Invalidate();
+        using (service.Acquire())
+        {
+            await service.Idle;
+        }
+
+        Assert.Equal(2, service.ReadCount);
+
+        // Werte 0 bei geschlossenem Fenster: beim nächsten Öffnen wird wieder gelesen.
+        var dark = Service();
+        _reader.Values = [new DisplayLuminance(@"\\.\DISPLAY1", 0, 0, 0, 8, HdrActive: false)];
+        using (dark.Acquire())
+        {
+            await dark.Idle;
+        }
+
+        using (dark.Acquire())
+        {
+            await dark.Idle;
+        }
+
+        Assert.Equal(2, dark.ReadCount);
+    }
+
+    [Fact]
     public async Task Peak_with_hdr_is_remembered_and_stays_the_scale_maximum_when_hdr_is_off()
     {
         var service = Service();

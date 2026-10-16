@@ -114,7 +114,7 @@ public partial class SettingsWindow : ChromeWindow
         if (_model is { } model)
         {
             model.Appearance.DpiScale = VisualTreeHelper.GetDpi(this).DpiScaleX;
-            _motion = new SettingsMotion(this, () => model.Appearance.State, model.Appearance, StartContinuous, StopContinuous);
+            _motion = new SettingsMotion(this, () => model.Appearance.State, model.Appearance, StartContinuous, StopContinuous, inView: EffectsInView);
         }
 
         UpdateLibraryCard();
@@ -208,6 +208,23 @@ public partial class SettingsWindow : ChromeWindow
         }
 
         MarkCurrent(current ?? NavGeneral);
+
+        // Vorschau oder Vorführkarte herein- oder hinausgescrollt: Dauer-Effekte nur, solange etwas davon zu sehen ist.
+        _motion?.Update();
+    }
+
+    /// <summary>Ist die Live-Vorschau oder die Vorführkarte „Voll“ gerade im sichtbaren Teil der Seite?</summary>
+    public bool EffectsInView() => IsInView(Stage) || IsInView(DemoSweep);
+
+    private bool IsInView(FrameworkElement element)
+    {
+        if (!element.IsVisible || !element.IsDescendantOf(Page) || Page.ViewportHeight <= 0)
+        {
+            return false;
+        }
+
+        var bounds = element.TransformToAncestor(Page).TransformBounds(new Rect(element.RenderSize));
+        return bounds.Bottom > 0 && bounds.Top < Page.ViewportHeight && bounds.Right > 0 && bounds.Left < Page.ViewportWidth;
     }
 
     private void MarkCurrent(Button current)

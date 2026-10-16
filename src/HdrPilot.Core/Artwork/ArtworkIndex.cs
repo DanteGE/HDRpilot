@@ -262,11 +262,12 @@ public sealed class ArtworkIndex(IFileSystem fileSystem, string path, ILogger? l
 
     /// <summary>
     /// Kennung des Stands eines Spiels: Name (steht in erzeugten Bildern), eigene Bildwahl, eigenes Symbol, Symbol-Hinweise,
-    /// EXE-Listen und Installationsordner (Symbol aus der EXE) sowie Pfad, Größe und Änderungszeit jeder gefundenen Datei.
-    /// Ändert sich etwas davon, werden die abgeleiteten Daten neu berechnet.
+    /// EXE-Listen, Installationsordner und eine eigene Ausschlussliste der Hilfsprogramme (Symbol aus der EXE) sowie Pfad,
+    /// Größe und Änderungszeit jeder gefundenen Datei. Ändert sich etwas davon, werden die abgeleiteten Daten neu berechnet.
     /// </summary>
     /// <param name="stamp">Größe und Änderungszeit einer Datei als Text; null, wenn sie fehlt.</param>
-    public static string Signature(GameConfig game, LocatedArtwork located, Func<string, string?> stamp, IEnumerable<string>? extraFiles = null)
+    /// <param name="helperPatterns">Eigene Ausschlussliste aus den Einstellungen (null: Standardliste, zählt nicht mit).</param>
+    public static string Signature(GameConfig game, LocatedArtwork located, Func<string, string?> stamp, IEnumerable<string>? extraFiles = null, IReadOnlyList<string>? helperPatterns = null)
     {
         var text = new StringBuilder(512);
         text.Append(CurrentVersion).Append('|').Append(game.Name).Append('|')
@@ -295,6 +296,12 @@ public sealed class ArtworkIndex(IFileSystem fileSystem, string path, ILogger? l
         foreach (var file in extraFiles ?? [])
         {
             text.Append(file).Append('@').Append(stamp(file)).Append('|');
+        }
+
+        // Nur eine eigene Liste zählt mit: Mit der Standardliste bleiben bestehende Kennungen gültig.
+        if (helperPatterns is not null)
+        {
+            text.Append("helper=").AppendJoin(';', helperPatterns).Append('|');
         }
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())), 0, 16);

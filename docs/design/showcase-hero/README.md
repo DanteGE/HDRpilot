@@ -1,7 +1,9 @@
 # Neugestaltung „Showcase Hero“: Stand für die spätere Umsetzung
 
 Stand 2026-10-14. Der Nutzer hat die Richtung „Showcase Hero“ gewählt und den lokalen Prototyp v4 mit
-„Sieht gut aus“ abgenommen. Er soll später in WPF umgesetzt werden. Noch gibt es keinen App-Code dafür.
+„Sieht gut aus“ abgenommen. Inzwischen ist er in WPF umgesetzt (Zweig `feature/showcase`, E89 in
+`docs/entscheidungen.md`, Berichte der Teile in `umsetzung-*.md`); dieser Ordner bleibt die Vorlage für Aussehen und
+Verhalten.
 
 ## Inhalt dieses Ordners
 

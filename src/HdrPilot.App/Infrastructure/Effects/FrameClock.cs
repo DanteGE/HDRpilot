@@ -1,15 +1,16 @@
 using System.Diagnostics;
-using System.Windows.Media;
+using System.Windows;
+using System.Windows.Media.Animation;
 
 namespace HdrPilot.App.Infrastructure.Effects;
 
 /// <summary>
-/// Bildtakt für kurze Effekte mit eigenem Zeichnen (Partikel des HDR-Moments). In der App <see cref="CompositionTarget.Rendering"/>,
-/// in Tests eine Attrappe. Wer sich anmeldet, muss sich wieder abmelden: Solange jemand angemeldet ist, zeichnet WPF jedes Bild.
+/// Bildtakt für kurze Effekte mit eigenem Zeichnen (Partikel des HDR-Moments). In der App <see cref="TimelineFrameClock"/>,
+/// in Tests eine Attrappe. Wer sich anmeldet, muss sich wieder abmelden: Solange jemand angemeldet ist, zeichnet WPF.
 /// </summary>
 public interface IFrameClock
 {
-    /// <summary>Wird je gezeichnetem Bild ausgelöst (UI-Thread).</summary>
+    /// <summary>Wird je Takt ausgelöst (UI-Thread).</summary>
     event EventHandler? Frame;
 
     /// <summary>Anzahl der Anmeldungen (für Tests und die Prüfung „nach 2,5 s 0 Bildaufrufe“).</summary>
@@ -22,11 +23,31 @@ public interface IEffectTime
     TimeSpan Now { get; }
 }
 
-/// <summary><see cref="CompositionTarget.Rendering"/> als <see cref="IFrameClock"/>; meldet sich nur an, solange jemand zuhört.</summary>
-public sealed class CompositionFrameClock : IFrameClock
+/// <summary>
+/// Bildtakt über eine Zeitleiste mit höchstens <see cref="EffectPolicy.OneShotFrameRate"/> Bildern pro Sekunde (Timeline.
+/// DesiredFrameRate), nicht über CompositionTarget.Rendering: Das zeichnete das ganze Fenster in der Bildwiederholrate des
+/// Bildschirms (100 Hz und mehr), egal was die Storyboards wünschen. Die Uhr der Zeitleiste läuft nur, solange jemand
+/// angemeldet ist; danach ist sie angehalten und freigegeben.
+/// </summary>
+public sealed class TimelineFrameClock : IFrameClock
 {
     private EventHandler? _frame;
+    private AnimationClock? _clock;
     private int _subscribers;
+
+    public TimelineFrameClock(int frameRate = EffectPolicy.OneShotFrameRate)
+    {
+        // Wert und Ziel sind gleich: Die Zeitleiste animiert nichts, sie gibt nur den Takt.
+        Timeline = new DoubleAnimation(0, 0, new Duration(TimeSpan.FromSeconds(1))) { RepeatBehavior = RepeatBehavior.Forever };
+        System.Windows.Media.Animation.Timeline.SetDesiredFrameRate(Timeline, frameRate);
+        Timeline.Freeze();
+    }
+
+    /// <summary>Die taktgebende Zeitleiste (Tests: Bildrate).</summary>
+    public DoubleAnimation Timeline { get; }
+
+    /// <summary>Gerade laufende Uhr (null ohne Anmeldung).</summary>
+    public AnimationClock? Clock => _clock;
 
     public event EventHandler? Frame
     {
@@ -37,12 +58,12 @@ public sealed class CompositionFrameClock : IFrameClock
                 return;
             }
 
+            _frame += value;
             if (_subscribers++ == 0)
             {
-                CompositionTarget.Rendering += OnRendering;
+                _clock = Timeline.CreateClock();
+                _clock.CurrentTimeInvalidated += OnTick;
             }
-
-            _frame += value;
         }
 
         remove
@@ -53,16 +74,25 @@ public sealed class CompositionFrameClock : IFrameClock
             }
 
             _frame -= value;
-            if (--_subscribers == 0)
+            if (--_subscribers == 0 && _clock is { } clock)
             {
-                CompositionTarget.Rendering -= OnRendering;
+                clock.CurrentTimeInvalidated -= OnTick;
+                clock.Controller?.Stop();
+                clock.Controller?.Remove();
+                _clock = null;
             }
         }
     }
 
     public int Subscribers => _subscribers;
 
-    private void OnRendering(object? sender, EventArgs e) => _frame?.Invoke(this, EventArgs.Empty);
+    private void OnTick(object? sender, EventArgs e)
+    {
+        if (_clock is { CurrentState: ClockState.Active })
+        {
+            _frame?.Invoke(this, EventArgs.Empty);
+        }
+    }
 }
 
 /// <summary>Zeit seit dem Start eines Stoppuhr-Objekts.</summary>

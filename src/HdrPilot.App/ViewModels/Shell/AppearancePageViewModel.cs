@@ -77,6 +77,8 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         ApplyPickerCommand = new RelayCommand(ApplyPicker);
         CancelPickerCommand = new RelayCommand(ClosePicker);
         _checkKeyCommand = new AsyncRelayCommand(CheckSteamGridDbKeyAsync, () => !_disposed);
+        RunSteamGridDbNowCommand = new RelayCommand(RunSteamGridDbNow, CanRunSteamGridDb);
+        RemoveSteamGridDbKeyCommand = new RelayCommand(RemoveSteamGridDbKey, () => !_disposed && SteamGridDbStatus.Key != SteamGridDbKeyState.Missing);
 
         Wells =
         [
@@ -504,6 +506,41 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
     public bool SteamGridDbStatusIsError => _steamGridDbMessageIsError || SteamGridDbStatus.Key == SteamGridDbKeyState.Unreadable;
 
+    /// <summary>„Fehlende Bilder jetzt laden“: nur eingeschaltet, mit Schlüssel und wenn gerade kein Lauf läuft.</summary>
+    public RelayCommand RunSteamGridDbNowCommand { get; }
+
+    /// <summary>„Schlüssel entfernen“: löscht den gespeicherten Schlüssel (hält einen laufenden Lauf an).</summary>
+    public RelayCommand RemoveSteamGridDbKeyCommand { get; }
+
+    private bool CanRunSteamGridDb() =>
+        !_disposed && SteamGridDbStatus is { Enabled: true, Key: SteamGridDbKeyState.Stored, IsRunning: false };
+
+    private void RunSteamGridDbNow()
+    {
+        if (CanRunSteamGridDb())
+        {
+            _ = _context.SteamGridDb.RunNowAsync();
+            RaiseSteamGridDb();
+        }
+    }
+
+    private void RemoveSteamGridDbKey()
+    {
+        try
+        {
+            _context.SteamGridDb.RemoveKey();
+            _steamGridDbMessage = null;
+            _steamGridDbMessageIsError = false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ErrorMessage = string.Format(CultureInfo.CurrentCulture, ShellStrings.SaveFailed, ex.Message);
+            _logger.LogWarning(ex, "SteamGridDB-Schlüssel ließ sich nicht entfernen.");
+        }
+
+        RaiseSteamGridDb();
+    }
+
     /// <summary>Eingabe im Schlüsselfeld (PasswordBox, nur in diese Richtung); nie gespeichert, bevor „Prüfen“ gedrückt ist.</summary>
     public void SetSteamGridDbKey(string? key) => _steamGridDbKey = string.IsNullOrWhiteSpace(key) ? null : key.Trim();
 
@@ -569,6 +606,10 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _previewHdr, value))
             {
                 OnPropertyChanged(nameof(PreviewHdrText));
+                if (value)
+                {
+                    _ = LoadPreviewBoostAsync(_previewVersion);
+                }
             }
         }
     }
@@ -666,42 +707,23 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Zeile im Kopf der Tray-Menü-Vorschau: „HDR aus · MAG 341C OLED“.</summary>
+    /// <summary>
+    /// Zeile im Kopf der Tray-Menü-Vorschau, wie im echten Menü: „HDR aus · Automatik aktiv“ (Pause und laufende Spiele aus
+    /// dem Stand der App; ohne ihn aus dem HDR-Zustand des Hauptbildschirms).
+    /// </summary>
     public string TrayMenuStatus
     {
         get
         {
-            var display = _context.Luminance.Primary?.FriendlyName;
-            if (string.IsNullOrWhiteSpace(display))
-            {
-                try
-                {
-                    display = _context.GetDisplays().FirstOrDefault(d => d.IsPrimary)?.FriendlyName;
-                }
-                catch (Exception ex) when (ex is not OutOfMemoryException)
-                {
-                    display = null;
-                }
-            }
-
-            var state = HdrOnNow ? ShellStrings.TrayStatusHdrOn : ShellStrings.TrayStatusHdrOff;
-            return string.IsNullOrWhiteSpace(display) ? state : string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayPreviewStatus, state, display);
+            var state = _context.QueryTrayState() ?? new TrayState(HdrOnNow, HdrSupported: true, Paused: false, ActiveGames: []);
+            return string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayPreviewStatus, TrayMenuViewModel.TitleOf(state), TrayMenuViewModel.DetailOf(state));
         }
     }
 
-    /// <summary>„Spitze 456 · Vollbild 254 nits · 10 Bit“; null, solange die Werte unbekannt sind.</summary>
-    public string? TrayMenuNits => _context.Luminance.Primary is { } d && d.PeakNits > 0
-        ? string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayMenuNits, NitScale.Format(NitScale.Maximum(d)), NitScale.Format(d.FullFrameNits), d.BitsPerColor)
-        : null;
-
-    public bool HasTrayMenuNits => TrayMenuNits is not null;
+    /// <summary>Graue Zeile unter dem Kopf wie im echten Menü: „Version 1.4.0“.</summary>
+    public string TrayMenuVersion => AppVersion.LabelText;
 
     public string TrayMenuToggleText => HdrOnNow ? ShellStrings.TrayMenuToggleHdrOff : ShellStrings.TrayMenuToggleHdrOn;
-
-    /// <summary>„Auto HDR · Gears of War: E…“ mit dem zuletzt gespielten Spiel.</summary>
-    public string TrayMenuAutoHdrText => PreviewGames.FirstOrDefault() is { } game
-        ? string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayPreviewItemWithGame, ShellStrings.TrayMenuAutoHdr, Shorten(game.Name, 16))
-        : ShellStrings.TrayMenuAutoHdr;
 
     public void Dispose()
     {
@@ -768,9 +790,6 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
     private static string SourceName(GameSource source) =>
         LibraryStrings.ResourceManager.GetString("Source_" + source, CultureInfo.CurrentUICulture) ?? source.ToString();
-
-    private static string Shorten(string text, int max) =>
-        text.Length <= max ? text : text[..(max - 1)].TrimEnd() + ShellStrings.Ellipsis;
 
     private static string GradeBrush(ContrastGrade grade, bool soft) =>
         (grade switch
@@ -963,8 +982,6 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         }
 
         OnPropertyChanged(nameof(PreviewNitsText));
-        OnPropertyChanged(nameof(TrayMenuNits));
-        OnPropertyChanged(nameof(HasTrayMenuNits));
         OnPropertyChanged(nameof(TrayMenuStatus));
         OnPropertyChanged(nameof(TrayMenuToggleText));
         UpdateTrayPreview();
@@ -990,6 +1007,8 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SteamGridDbHint));
         OnPropertyChanged(nameof(SteamGridDbStatusText));
         OnPropertyChanged(nameof(SteamGridDbStatusIsError));
+        RunSteamGridDbNowCommand.RaiseCanExecuteChanged();
+        RemoveSteamGridDbKeyCommand.RaiseCanExecuteChanged();
     }
 
     private void RaisePreview()
@@ -1218,6 +1237,10 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
             _previewArt = art;
             RaisePreview();
+            if (_previewHdr)
+            {
+                await LoadPreviewBoostAsync(version);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -1225,6 +1248,34 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Bilder der Vorschau für {Game} nicht lesbar.", item.Name);
+        }
+    }
+
+    /// <summary>Helle Fassung der Vorschau, nur wenn „HDR“ der Vorschau an ist (sie kostet Rechenzeit und Speicher).</summary>
+    private async Task LoadPreviewBoostAsync(int version)
+    {
+        if (_previewGame is not { } item || _previewArt is not { Hero: not null, HeroBoost: null } art)
+        {
+            return;
+        }
+
+        try
+        {
+            var boost = await _context.Artwork.GetHeroBoostAsync(item.Game, PreviewHeroWidth, _cancel.Token);
+            if (boost is null || _disposed || version != _previewVersion || !ReferenceEquals(_previewArt, art))
+            {
+                return;
+            }
+
+            _previewArt = art with { HeroBoost = boost };
+            OnPropertyChanged(nameof(PreviewBoost));
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Helle Fassung der Vorschau für {Game} nicht lesbar.", item.Name);
         }
     }
 

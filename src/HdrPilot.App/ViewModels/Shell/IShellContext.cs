@@ -52,6 +52,9 @@ public interface IShellContext
     void OpenLibrary()
     {
     }
+
+    /// <summary>Stand wie im Kopf des echten Tray-Menüs (HDR, Pause, laufende Spiele) für dessen Vorschau. Standard: null.</summary>
+    TrayState? QueryTrayState() => null;
 }
 
 /// <summary>Ordnerauswahl (Dialog). In Tests eine Attrappe.</summary>

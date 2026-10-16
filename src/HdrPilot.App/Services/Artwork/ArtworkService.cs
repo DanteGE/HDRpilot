@@ -27,6 +27,12 @@ public sealed class ArtworkServiceOptions
     /// <summary>Ausschlussliste für die EXE-Wahl (null: Standardliste).</summary>
     public Func<IReadOnlyList<string>?> HelperPatterns { get; init; } = () => null;
 
+    /// <summary>Schalter „SteamGridDB“: geladene Bilder von dort gelten nur, solange er an ist (Standard: aus).</summary>
+    public Func<bool> SteamGridDbEnabled { get; init; } = () => false;
+
+    /// <summary>Schlüssel der Spiele in der Bibliothek, zum Aufräumen nach dem Schließen; null: nie aufräumen.</summary>
+    public Func<IReadOnlyCollection<string>>? LibraryKeys { get; init; }
+
     /// <summary>Führt eine Aktion auf dem UI-Thread aus (Ereignisse); Standard: sofort auf dem aufrufenden Thread.</summary>
     public Action<Action> PostToUi { get; init; } = action => action();
 
@@ -82,7 +88,8 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     private readonly ImageMemoryCache _memory;
     private readonly ConcurrentDictionary<string, GameState> _states = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, object> _gameLocks = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, CachedArtwork> _artwork = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LinkedList<string> _setOrder = new();
+    private readonly object _setGate = new();
     private readonly Dictionary<string, WorkItem> _inflight = new(StringComparer.OrdinalIgnoreCase);
     private readonly Stack<WorkItem> _queue = new();
     private readonly object _queueGate = new();
@@ -96,6 +103,9 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     private int _generation;
     private int _leases;
     private bool _disposed;
+
+    /// <summary>Höchstens so viele Bildsätze für den Titelbereich bleiben im Speicher (gewähltes Spiel und die zuletzt gewählten).</summary>
+    public const int MaxCachedSets = 7;
 
     public ArtworkService(ArtworkServiceOptions options)
     {
@@ -164,13 +174,13 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     }
 
     public GameArtwork? GetCachedArtwork(GameConfig game) =>
-        _artwork.TryGetValue(game.Key, out var cached) && cached.ConfigStamp == ConfigStamp(game) ? cached.Artwork : null;
+        TryGetSet(game.Key) is { } cached && cached.ConfigStamp == ConfigStamp(game) ? cached.Artwork : null;
 
     public Task<GameArtwork> GetArtworkAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
     {
         var snapshot = Snapshot(game);
         var width = NormalizeWidth(ArtworkKind.Hero, heroDecodeWidth);
-        if (_artwork.TryGetValue(snapshot.Key, out var cached) && cached.ConfigStamp == ConfigStamp(snapshot) && cached.HeroWidth == width)
+        if (TryGetSet(snapshot.Key) is { } cached && cached.ConfigStamp == ConfigStamp(snapshot) && cached.HeroWidth == width)
         {
             return Task.FromResult(cached.Artwork);
         }
@@ -178,6 +188,20 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         return Typed(
             Enqueue(snapshot.Key + "|" + ConfigStamp(snapshot) + "|artwork|" + width, () => Guarded(snapshot, () => LoadArtwork(snapshot, width), () => null), cancellationToken),
             value => value as GameArtwork ?? EmptyArtwork(snapshot));
+    }
+
+    public Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
+    {
+        var width = NormalizeWidth(ArtworkKind.Hero, heroDecodeWidth);
+        if (_states.TryGetValue(game.Key, out var state) && state.ConfigStamp == ConfigStamp(game) && _memory.TryGetValue(BoostKey(state, width), out var cached) && cached is ArtworkImage known)
+        {
+            return Task.FromResult<ArtworkImage?>(known);
+        }
+
+        var snapshot = Snapshot(game);
+        return Typed(
+            Enqueue(snapshot.Key + "|" + ConfigStamp(snapshot) + "|boost|" + width, () => Guarded(snapshot, () => LoadHeroBoost(snapshot, width), () => null), cancellationToken),
+            value => value as ArtworkImage);
     }
 
     /// <summary>Satz ohne Bilder (Fenster inzwischen geschlossen oder unerwarteter Fehler): Farben aus dem Namen.</summary>
@@ -242,7 +266,11 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         }
 
         _memory.Clear();
-        _artwork.Clear();
+        lock (_setGate)
+        {
+            _setOrder.Clear();
+        }
+
         _states.Clear();
     }
 
@@ -324,10 +352,11 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     };
 
     /// <summary>
-    /// Kurze Kennung der Angaben eines Spiels, die die Bilder bestimmen (ohne Plattenzugriff, für den Speicher im Fenster).
-    /// Änderungen in den Launcher-Caches meldet die Beobachtung der Ordner.
+    /// Kurze Kennung der Angaben eines Spiels, die die Bilder bestimmen (ohne Plattenzugriff, für den Speicher im Fenster),
+    /// samt Ausschlussliste der Hilfsprogramme (sie bestimmt das Symbol aus der EXE). Änderungen in den Launcher-Caches meldet
+    /// die Beobachtung der Ordner.
     /// </summary>
-    private static string ConfigStamp(GameConfig game) => string.Join(
+    private string ConfigStamp(GameConfig game) => string.Join(
         '|',
         game.Name,
         game.Artwork?.Hero,
@@ -338,7 +367,8 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         string.Join(';', game.IconCandidates),
         string.Join(';', game.DetectedExecutables),
         string.Join(';', game.KnownExecutables),
-        string.Join(';', game.ExcludedExecutables));
+        string.Join(';', game.ExcludedExecutables),
+        string.Join(';', _options.HelperPatterns() ?? []));
 
     /// <summary>Breiten unter 16 px und über 3840 px gibt es nicht; Farbfeld und Symbol haben eigene Grenzen.</summary>
     private static int NormalizeWidth(ArtworkKind kind, int width) => kind switch
@@ -465,7 +495,7 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         }
 
         var roots = _roots.Value;
-        var folders = new[] { roots.SteamLibraryCache, roots.GogWebCache, roots.UbisoftAssets }.OfType<string>().ToList();
+        var folders = new[] { roots.SteamLibraryCache, roots.GogWebCache, roots.UbisoftAssets, UbisoftConfigurationFolder(roots) }.OfType<string>().ToList();
         if (folders.Count == 0)
         {
             return;
@@ -481,6 +511,10 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         _watcher = null;
     }
 
+    /// <summary>Ordner des Produkt-Caches von Ubisoft Connect (<c>cache\configuration</c>); null ohne Ubisoft Connect.</summary>
+    private static string? UbisoftConfigurationFolder(ArtworkRoots roots) =>
+        roots.UbisoftConfigurations is { } file ? Path.GetDirectoryName(file) : null;
+
     /// <summary>Neue oder geänderte Dateien in einem Bildcache: betroffene Spiele vergessen und melden.</summary>
     private void OnCachesChanged(IReadOnlyCollection<string>? paths)
     {
@@ -488,7 +522,6 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         {
             _locator.Value.Forget();
             _states.Clear();
-            _artwork.Clear();
             _memory.Clear();
             Raise(null);
             return;
@@ -497,6 +530,15 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         var roots = _roots.Value;
         IReadOnlyDictionary<string, IReadOnlyList<string>>? ubisoft = null;
         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Produkt-Cache von Ubisoft geändert (etwa ein neu installiertes Spiel): Zuordnung der Bilddateien neu lesen, bevor
+        // neue Dateien in cache\assets zugeordnet werden, und alle schon ermittelten Ubisoft-Spiele neu prüfen.
+        if (UbisoftConfigurationFolder(roots) is { } configuration && paths.Any(p => Core.Util.PathUtil.IsUnder(p, configuration)))
+        {
+            _locator.Value.Forget();
+            keys.UnionWith(_states.Values.Where(s => s.Game.Source == Core.Games.GameSource.Ubisoft).Select(s => s.Key));
+        }
+
         foreach (var path in paths)
         {
             if (roots.UbisoftAssets is { } assets && Core.Util.PathUtil.IsUnder(path, assets))
@@ -509,17 +551,80 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
 
         foreach (var key in keys)
         {
-            Forget(key);
+            ForgetInMemory(key);
             Raise(key);
         }
     }
 
-    /// <summary>Alles im Speicher zu einem Spiel vergessen (nächste Anfrage prüft neu).</summary>
-    private void Forget(string gameKey)
+    /// <summary>
+    /// Alles zu einem Spiel im Speicher vergessen und melden: „Symbol ändern…“ legt die Datei beim erneuten Ändern unter
+    /// demselben Namen ab, die Angaben des Spiels bleiben also gleich; erst so werden Symbol und daraus erzeugte Bilder neu
+    /// gelesen.
+    /// </summary>
+    public void Forget(string gameKey)
+    {
+        ForgetInMemory(gameKey);
+        Raise(gameKey);
+    }
+
+    /// <summary>Alles im Speicher zu einem Spiel vergessen (nächste Anfrage prüft neu); Bildsatz samt heller Fassung inbegriffen.</summary>
+    private void ForgetInMemory(string gameKey)
     {
         _states.TryRemove(gameKey, out _);
-        _artwork.TryRemove(gameKey, out _);
         _memory.RemovePrefix(gameKey + "|");
+    }
+
+    private static string SetKey(string gameKey) => gameKey + "|set";
+
+    /// <summary>Gemerkter Bildsatz eines Spiels (zählt als zuletzt benutzt); null, wenn er nicht mehr im Speicher ist.</summary>
+    private CachedArtwork? TryGetSet(string gameKey)
+    {
+        var key = SetKey(gameKey);
+        if (!_memory.TryGetValue(key, out var value) || value is not CachedArtwork cached)
+        {
+            return null;
+        }
+
+        lock (_setGate)
+        {
+            if (_setOrder.Find(key) is { } node)
+            {
+                _setOrder.Remove(node);
+                _setOrder.AddFirst(node);
+            }
+        }
+
+        return cached;
+    }
+
+    /// <summary>
+    /// Bildsatz merken: im Bildspeicher mit der Größe aller Bilder, die er hält (zählt zum Budget), und höchstens
+    /// <see cref="MaxCachedSets"/> Sätze (das gewählte Spiel und die zuletzt gewählten); der älteste fällt heraus.
+    /// </summary>
+    private void StoreSet(string gameKey, CachedArtwork cached)
+    {
+        var key = SetKey(gameKey);
+        var a = cached.Artwork;
+        var bytes = new[] { a.Hero, a.Field, a.Logo, a.Cover, a.Icon }
+            .OfType<ArtworkImage>()
+            .Select(i => i.Image)
+            .Distinct()
+            .Sum(ImageMemoryCache.SizeOf);
+        _memory.Set(key, cached, bytes);
+        lock (_setGate)
+        {
+            if (_setOrder.Find(key) is { } node)
+            {
+                _setOrder.Remove(node);
+            }
+
+            _setOrder.AddFirst(key);
+            while (_setOrder.Count > MaxCachedSets && _setOrder.Last is { } oldest)
+            {
+                _setOrder.RemoveLast();
+                _memory.Remove(oldest.Value);
+            }
+        }
     }
 
     private void Raise(string? gameKey)
@@ -555,10 +660,12 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
             StopWatching();
         }
 
-        // Fenster zu: Bilder freigeben, Verzeichnis im Hintergrund schreiben, kein Zeitgeber bleibt.
+        // Fenster zu: Bilder freigeben, Bilder entfernter Spiele aufräumen, Verzeichnis im Hintergrund schreiben, kein
+        // Zeitgeber bleibt.
         ClearCache();
         _ = Task.Run(() =>
         {
+            PruneRemovedGames();
             FlushIndex();
             lock (_indexGate)
             {

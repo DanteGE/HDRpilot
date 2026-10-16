@@ -240,7 +240,17 @@ public sealed class DisplayLuminanceService : IDisplayLuminanceService
             var readings = _options.Reader.ReadAll();
             lock (_gate)
             {
-                _signature = signature;
+                // Ein ausgeschalteter oder schlafender Bildschirm meldet überall 0 nits: dann nicht als gelesen merken, damit
+                // das nächste Öffnen oder Melden neu liest (sonst stünde „—“, bis sich Bildschirme oder HDR-Zustand ändern).
+                if (readings.Any(r => r.MaxLuminance > 0))
+                {
+                    _signature = signature;
+                }
+                else
+                {
+                    _signature = null;
+                    _stale = true;
+                }
             }
 
             nits = Combine(readings, displays, _options.Store, _options.Now());

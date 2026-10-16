@@ -170,12 +170,83 @@ public sealed class ArtworkServiceTests : IDisposable
         await service.GetImageAsync(game, ArtworkKind.Hero, 1280, Ct);
         Assert.False(Directory.Exists(boostDir), "nicht für jedes geladene Titelbild");
 
+        // Auch der Satz für den Titelbereich rechnet sie nicht aus (HDR aus: sie wäre nicht zu sehen).
         var artwork = await service.GetArtworkAsync(game, 1000, Ct);
+        Assert.Null(artwork.HeroBoost);
+        Assert.False(Directory.Exists(boostDir), "nicht für jedes gewählte Spiel");
 
-        Assert.NotNull(artwork.HeroBoost);
-        Assert.Equal(artwork.Hero!.PixelWidth, artwork.HeroBoost!.PixelWidth);
-        Assert.True(ArtworkFixture.Brightness(artwork.HeroBoost.Image) > ArtworkFixture.Brightness(artwork.Hero.Image) + 10);
+        var boost = await service.GetHeroBoostAsync(game, 1000, Ct);
+
+        Assert.NotNull(boost);
+        Assert.Equal(artwork.Hero!.PixelWidth, boost!.PixelWidth);
+        Assert.True(ArtworkFixture.Brightness(boost.Image) > ArtworkFixture.Brightness(artwork.Hero.Image) + 10);
         Assert.Equal(ArtworkFiles.BoostFileName(game.Key, 1280), Path.GetFileName(Assert.Single(Directory.GetFiles(boostDir))));
+        Assert.Same(boost, await service.GetHeroBoostAsync(game, 1000, Ct)); // im Speicher, nicht neu berechnet
+    }
+
+    [Fact]
+    public async Task Title_sets_count_in_the_memory_budget_and_are_not_kept_beyond_it()
+    {
+        // 20 gewählte Spiele mit 1920×620-Titelbild (je 4,8 MB) bei 10 MB Budget: Früher hielten die Sätze alle Bilder
+        // (190 MB), obwohl der Bildspeicher nur 5 MB meldete.
+        var games = Enumerable.Range(1, 20).Select(i => ArtworkFixture.Steam((1000 + i).ToString(System.Globalization.CultureInfo.InvariantCulture))).ToList();
+        foreach (var game in games)
+        {
+            _art.SteamFile(game.SourceId, "library_hero.jpg", ArtworkFixture.Hero(1920, 620));
+        }
+
+        var service = _art.Service(memoryBudget: 10L * 1024 * 1024);
+        using var lease = service.Acquire();
+        var heroes = await LoadHeroesWeakly(service, games);
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.True(service.MemoryBytes <= 10L * 1024 * 1024, "Speicher " + service.MemoryBytes);
+        var alive = heroes.Count(h => h.IsAlive);
+        Assert.True(alive <= 2, alive + " von 20 Titelbildern noch erreichbar");
+        Assert.NotNull(service.GetCachedArtwork(games[^1])); // das zuletzt gewählte bleibt sofort da
+    }
+
+    [Fact]
+    public async Task At_most_seven_title_sets_stay_in_memory()
+    {
+        var games = Enumerable.Range(1, 11).Select(i => ArtworkFixture.Steam((2000 + i).ToString(System.Globalization.CultureInfo.InvariantCulture))).ToList();
+        foreach (var game in games)
+        {
+            _art.SteamFile(game.SourceId, "library_hero.jpg", ArtworkFixture.Hero());
+        }
+
+        var service = _art.Service(); // 64 MB: das Budget allein hielte alle elf
+        using var lease = service.Acquire();
+        foreach (var game in games.Take(10))
+        {
+            await service.GetArtworkAsync(game, 640, Ct);
+        }
+
+        // Die sieben zuletzt gewählten bleiben; das älteste davon noch einmal ansehen zählt als zuletzt benutzt, dann fällt
+        // beim nächsten neuen Spiel das nächstälteste heraus.
+        Assert.NotNull(service.GetCachedArtwork(games[3]));
+        await service.GetArtworkAsync(games[10], 640, Ct);
+
+        var cached = games.Select(g => service.GetCachedArtwork(g) is not null).ToList();
+        Assert.Equal(ArtworkService.MaxCachedSets, cached.Count(c => c));
+        Assert.Equal([false, false, false, true, false, true, true, true, true, true, true], cached);
+    }
+
+    /// <summary>Lädt die Sätze nacheinander und gibt nur schwache Verweise auf ihre Titelbilder zurück.</summary>
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static async Task<List<WeakReference>> LoadHeroesWeakly(ArtworkService service, IReadOnlyList<GameConfig> games)
+    {
+        var heroes = new List<WeakReference>();
+        foreach (var game in games)
+        {
+            var artwork = await service.GetArtworkAsync(game, 1920, Ct);
+            heroes.Add(new WeakReference(artwork.Hero!.Image));
+        }
+
+        return heroes;
     }
 
     [Fact]

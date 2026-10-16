@@ -974,6 +974,18 @@
   <data name="SteamGridDbCheckName" xml:space="preserve">
     <value>Schlüssel bei SteamGridDB prüfen und speichern</value>
   </data>
+  <data name="SteamGridDbRunNow" xml:space="preserve">
+    <value>Fehlende Bilder jetzt laden</value>
+  </data>
+  <data name="SteamGridDbRunNowName" xml:space="preserve">
+    <value>Fehlende Bilder jetzt von SteamGridDB laden</value>
+  </data>
+  <data name="SteamGridDbRemoveKey" xml:space="preserve">
+    <value>Schlüssel entfernen</value>
+  </data>
+  <data name="SteamGridDbRemoveKeyName" xml:space="preserve">
+    <value>Gespeicherten SteamGridDB-Schlüssel entfernen</value>
+  </data>
   <data name="SteamGridDbKeyNote" xml:space="preserve">
     <value>Standard: aus. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben.</value>
   </data>
@@ -1083,12 +1095,6 @@
   </data>
   <data name="TrayMenuPreviewName" xml:space="preserve">
     <value>Vorschau des Tray-Menüs</value>
-  </data>
-  <data name="TrayMenuNits" xml:space="preserve">
-    <value>Spitze {0} · Vollbild {1} nits · {2} Bit</value>
-  </data>
-  <data name="TrayPreviewItemWithGame" xml:space="preserve">
-    <value>{0} · {1}</value>
   </data>
   <data name="TrayPreviewStatus" xml:space="preserve">
     <value>{0} · {1}</value>

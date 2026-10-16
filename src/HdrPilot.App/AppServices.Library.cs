@@ -81,18 +81,23 @@ public sealed partial class AppServices
         scenes.Add(new SnapshotScene("hauptfenster", "bildwahl", CreatePickerScene) { Settle = TimeSpan.FromSeconds(2), Resizable = false });
     }
 
-    /// <summary>Prüfung (G10.9): HDR-Moment im offenen Hauptfenster abspielen, ohne HDR zu schalten.</summary>
+    /// <summary>Prüfung (G10.9): HDR-Moment im offenen Hauptfenster abspielen (mit heller Fassung), ohne HDR zu schalten.</summary>
     partial void PlayTestHdrMoment()
     {
         if (_mainWindow is MainWindow window)
         {
-            var kind = window.PlayTestHdrMoment();
-            _logger.LogInformation("Prüfung: HDR-Moment gespielt ({Kind}).", kind);
+            _ = PlayTestHdrMomentAsync(window);
         }
         else
         {
             _logger.LogInformation("Prüfung: HDR-Moment angefordert, aber kein Hauptfenster offen.");
         }
+    }
+
+    private async Task PlayTestHdrMomentAsync(MainWindow window)
+    {
+        var kind = await window.PlayTestHdrMomentAsync();
+        _logger.LogInformation("Prüfung: HDR-Moment gespielt ({Kind}, helle Fassung {Boost}).", kind, window.HeroStage.ShownBoost is null ? "fehlt" : "da");
     }
 
     /// <summary>Mit eigener Ablage (--config-dir) gestartet: Verknüpfungen sollen dieselbe Ablage benutzen.</summary>
@@ -120,10 +125,14 @@ public sealed partial class AppServices
         }
     }
 
-    private static Task FreezeMomentAsync(Window window)
+    private static async Task FreezeMomentAsync(Window window)
     {
-        (window as MainWindow)?.FreezeHdrMoment(0.35);
-        return Task.Delay(200);
+        if (window is MainWindow main)
+        {
+            await main.FreezeHdrMomentAsync(0.35);
+        }
+
+        await Task.Delay(200);
     }
 
     /// <summary>Erstes Spiel der Liste ohne Titelbild aus einer Quelle (Ersatzbild); Spiele ohne Steam zuerst.</summary>

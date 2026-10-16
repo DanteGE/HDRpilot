@@ -41,7 +41,7 @@ public sealed class MainWindowLayoutTests
             Game(GameSource.Manual, "m1", "Eigenes Spiel", isNew: false, installed: false));
         if (ratio is not null)
         {
-            context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = ratio);
+            context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = ratio);
         }
 
         if (hdrSupport)
@@ -242,7 +242,7 @@ public sealed class MainWindowLayoutTests
             var ratio = details.Width.Value / (list.Width.Value + details.Width.Value);
             Assert.True(ratio < 0.75, "Sternanteil begrenzt: " + ratio);
             Assert.Equal(0.75, model.DetailsRatio); // gemerkter Wert bleibt für größere Fenster
-            Assert.Equal(0.75, context.Config.Settings.LibraryDetailsRatio);
+            Assert.Equal(0.75, context.Config.Settings.LibraryPaneRatio);
             window.Close();
         });
     }
@@ -265,9 +265,9 @@ public sealed class MainWindowLayoutTests
             var expected = before + (2 * splitter.KeyboardIncrement);
             Assert.InRange(details.ActualWidth, expected - 1, expected + 1);
             Assert.NotNull(model.DetailsRatio);
-            Assert.Null(context.Config.Settings.LibraryDetailsRatio); // gesammelt, noch nicht gespeichert
+            Assert.Null(context.Config.Settings.LibraryPaneRatio); // gesammelt, noch nicht gespeichert
             context.Dispatcher.RunDelayed();
-            var saved = context.Config.Settings.LibraryDetailsRatio;
+            var saved = context.Config.Settings.LibraryPaneRatio;
             Assert.NotNull(saved);
             Assert.True(saved > LibraryLayout.DefaultDetailsRatio, "Detailbereich breiter gemerkt: " + saved);
 
@@ -279,7 +279,7 @@ public sealed class MainWindowLayoutTests
 
             Assert.InRange(details.ActualWidth, LibraryLayout.DetailsMinWidth - 1, LibraryLayout.DetailsMinWidth + 1);
             window.Close();
-            Assert.True(context.Config.Settings.LibraryDetailsRatio < saved, "beim Schließen gespeichert");
+            Assert.True(context.Config.Settings.LibraryPaneRatio < saved, "beim Schließen gespeichert");
         });
     }
 

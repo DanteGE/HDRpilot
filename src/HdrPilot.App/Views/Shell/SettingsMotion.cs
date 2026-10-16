@@ -8,7 +8,8 @@ namespace HdrPilot.App.Views.Shell;
 /// <summary>
 /// Dauer-Effekte der Einstellungen (Vorführkarte „Voll“, langsamer Zoom der Live-Vorschau) nach den Regeln der Effekte
 /// (<see cref="EffectPolicy.ContinuousAllowed"/>): nur bei wirksamer Stufe „Voll“, sichtbarem, nicht minimiertem Fenster und
-/// (mit „Im Hintergrund anhalten“) nur, solange es aktiv ist. Ändern sich Fenster oder Darstellung, wird gestartet bzw.
+/// (mit „Im Hintergrund anhalten“) nur, solange es aktiv ist, und nur, solange etwas davon zu sehen ist (Seite „Darstellung“
+/// im sichtbaren Teil). Ändern sich Fenster, Darstellung oder Bildlauf (<see cref="Update"/>), wird gestartet bzw.
 /// angehalten; beim Schließen angehalten und abgemeldet. Selbst läuft hier keine Bildschleife.
 /// </summary>
 public sealed class SettingsMotion : IDisposable
@@ -19,15 +20,18 @@ public sealed class SettingsMotion : IDisposable
     private readonly Action _start;
     private readonly Action _stop;
     private readonly Func<MotionContext>? _context;
+    private readonly Func<bool>? _inView;
     private bool _running;
     private bool _disposed;
 
     /// <param name="state">Wirksame Darstellung (Stufe und Pausen-Schalter).</param>
     /// <param name="source">Meldet Änderungen der Darstellung (Seite „Darstellung“); null: nur Fensterereignisse.</param>
     /// <param name="context">Lage des Fensters (Tests); Standard: aus dem Fenster gelesen.</param>
-    public SettingsMotion(Window window, Func<AppearanceState> state, INotifyPropertyChanged? source, Action start, Action stop, Func<MotionContext>? context = null)
+    /// <param name="inView">Ist etwas von den Effekten zu sehen (im sichtbaren Teil der Seite)? null: immer.</param>
+    public SettingsMotion(Window window, Func<AppearanceState> state, INotifyPropertyChanged? source, Action start, Action stop, Func<MotionContext>? context = null, Func<bool>? inView = null)
     {
         _context = context;
+        _inView = inView;
         _window = window;
         _state = state;
         _source = source;
@@ -105,7 +109,7 @@ public sealed class SettingsMotion : IDisposable
             return;
         }
 
-        var allowed = EffectPolicy.ContinuousAllowed(_state().EffectLevel, Context);
+        var allowed = EffectPolicy.ContinuousAllowed(_state().EffectLevel, Context) && (_inView?.Invoke() ?? true);
         if (allowed == _running)
         {
             return;

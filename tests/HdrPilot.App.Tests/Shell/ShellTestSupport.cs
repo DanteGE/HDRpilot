@@ -67,6 +67,11 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
     /// <summary>Helligkeit der Bildschirme (E89); Standard: unbekannt.</summary>
     public IDisplayLuminanceService Luminance { get; set; } = NullDisplayLuminanceService.Instance;
 
+    /// <summary>Stand für den Kopf des Tray-Menüs (Vorschau); Standard: keiner (dann aus dem HDR-Zustand).</summary>
+    public TrayState? TrayState { get; set; }
+
+    public TrayState? QueryTrayState() => TrayState;
+
     public List<string> OpenedPages { get; } = [];
 
     /// <summary>Wenn gesetzt, scheitert das Öffnen einer Webseite damit.</summary>

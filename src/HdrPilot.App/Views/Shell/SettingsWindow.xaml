@@ -1158,6 +1158,14 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
+                                        <WrapPanel Margin="0,8,0,0">
+                                            <Button Style="{StaticResource Hp.GhostButton}" Margin="0,0,8,0" Command="{Binding RunSteamGridDbNowCommand}"
+                                                    AutomationProperties.AutomationId="SteamGridDbRunNowButton" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbRunNowName}"
+                                                    Content="{x:Static res:ShellStrings.SteamGridDbRunNow}" />
+                                            <Button Style="{StaticResource Hp.GhostButton}" Command="{Binding RemoveSteamGridDbKeyCommand}"
+                                                    AutomationProperties.AutomationId="SteamGridDbRemoveKeyButton" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbRemoveKeyName}"
+                                                    Content="{x:Static res:ShellStrings.SteamGridDbRemoveKey}" />
+                                        </WrapPanel>
                                         <DockPanel Margin="0,8,0,0">
                                             <views:LineIcon Width="13" Height="13" Margin="0,2,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.TextMuted}" Data="{StaticResource Hp.Icon.Info}" />
                                             <TextBlock Style="{StaticResource Hp.Shell.Note}" Text="{x:Static res:ShellStrings.SteamGridDbKeyNote}" />
@@ -1307,8 +1315,14 @@
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </DockPanel>
-                                                    <TextBlock Margin="48,0,8,6" FontSize="10.5" Opacity="0.6" Text="{Binding TrayMenuNits}"
-                                                               Visibility="{Binding HasTrayMenuNits, Converter={StaticResource Hp.Shell.BoolToVisibility}}" />
+                                                    <!-- Wie das echte Menü (TrayMenu.xaml): Kopf, Version, HDR, Auto HDR (Schalter von Windows), Pause -->
+                                                    <Rectangle Height="1" Margin="6,4" Fill="#40808080" />
+                                                    <Border Height="30" Padding="10,0" Opacity="0.6">
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <views:LineIcon Width="14" Height="14" Margin="0,0,11,0" Data="{StaticResource Hp.Icon.Info}" />
+                                                            <TextBlock FontSize="11.5" Text="{Binding TrayMenuVersion}" />
+                                                        </StackPanel>
+                                                    </Border>
                                                     <Rectangle Height="1" Margin="6,4" Fill="#40808080" />
                                                     <Border Height="30" CornerRadius="6" Padding="10,0" Background="{DynamicResource Hp.Brush.AccentSoft}">
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -1318,14 +1332,14 @@
                                                     </Border>
                                                     <Border Height="30" Padding="10,0">
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <views:LineIcon Width="15" Height="15" Margin="0,0,10,0" Data="{StaticResource Hp.Icon.Pause}" />
-                                                            <TextBlock Text="{x:Static res:ShellStrings.TrayMenuPause}" />
+                                                            <TextBlock Width="15" Margin="0,0,10,0" Style="{StaticResource Hp.Shell.Glyph}" FontSize="15" Text="{x:Static infra:AppGlyphs.AutoHdr}" />
+                                                            <TextBlock Text="{x:Static res:ShellStrings.TrayMenuAutoHdr}" />
                                                         </StackPanel>
                                                     </Border>
                                                     <Border Height="30" Padding="10,0">
                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                            <views:LineIcon Width="15" Height="15" Margin="0,0,10,0" Data="{StaticResource Hp.Icon.Pulse}" />
-                                                            <TextBlock Text="{Binding TrayMenuAutoHdrText}" TextTrimming="CharacterEllipsis" />
+                                                            <views:LineIcon Width="15" Height="15" Margin="0,0,10,0" Data="{StaticResource Hp.Icon.Pause}" />
+                                                            <TextBlock Text="{x:Static res:ShellStrings.TrayMenuPause}" />
                                                         </StackPanel>
                                                     </Border>
                                                     <Rectangle Height="1" Margin="6,4" Fill="#40808080" />

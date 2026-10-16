@@ -90,6 +90,16 @@ public static partial class ArtworkFiles
         return 3840;
     }
 
+    /// <summary>
+    /// Stamm einer von HDRpilot in art angelegten Datei (<see cref="Stem"/>, dahinter höchstens „-hero“, „-1920“ und so
+    /// weiter); null für jeden anderen Namen. Zum Aufräumen nach dem Entfernen eines Spiels aus der Bibliothek.
+    /// </summary>
+    public static string? StemOf(string? fileName) =>
+        fileName is not null && OwnFileName().Match(fileName) is { Success: true } match ? match.Groups["stem"].Value : null;
+
     [GeneratedRegex(@"^[A-Za-z0-9_.\-]{1,90}_[0-9A-F]{8}-(hero|logo|cover)\.(jpg|png)$", RegexOptions.CultureInvariant)]
     private static partial Regex OwnCustomName();
+
+    [GeneratedRegex(@"^(?<stem>[A-Za-z0-9_.\-]{1,90}_[0-9A-F]{8})(-[a-z0-9]{1,16})?\.(jpg|png|webp)$", RegexOptions.CultureInvariant)]
+    private static partial Regex OwnFileName();
 }

@@ -19,7 +19,7 @@ namespace HdrPilot.App.ViewModels.Library;
 /// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
 /// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert und sortiert wird über eine
 /// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung und Breite des Detailbereichs
-/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryDetailsRatio). Die HDR-Unterstützung
+/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryPaneRatio). Die HDR-Unterstützung
 /// laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“) wird beim Öffnen und nach jedem Abgleich aus dem
 /// Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
 /// </para>
@@ -99,7 +99,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         SortOptions = GameSorting.CreateOptions();
         var order = GameSorting.Parse(settings.LibrarySortOrder);
         _selectedSort = SortOptions.First(o => o.Order == order);
-        _detailsRatio = settings.LibraryDetailsRatio;
+        _detailsRatio = settings.LibraryPaneRatio;
 
         GamesView = new ListCollectionView(Games) { Filter = Matches };
         ApplySortToView();
@@ -974,7 +974,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
         _layoutPending = false;
         var ratio = _detailsRatio;
-        _ = WriteAsync(c => c.Settings.LibraryDetailsRatio = ratio);
+        _ = WriteAsync(c => c.Settings.LibraryPaneRatio = ratio);
     }
 
     private void UpdateVisibleCount()
@@ -1359,6 +1359,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             DeleteCustomIconQuietly(item.Key, name); // nicht eingetragen (Schreibfehler, Spiel entfernt): keine verwaiste Datei
         }
+
+        // Auch die Bilder: Symbol im Titelbereich und in „Bilder“, daraus erzeugte Titelbilder, Cover und Vorschaubilder.
+        _context.Artwork.Forget(item.Key);
     }
 
     /// <summary>
@@ -1380,6 +1383,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
         DeleteCustomIconQuietly(item.Key, name);
         RefreshIcon(item);
+        _context.Artwork.Forget(item.Key);
         ShowStatus(LibraryText.Format(LibraryStrings.Icon_ResetDone, item.Name), StatusKind.Success);
     }
 

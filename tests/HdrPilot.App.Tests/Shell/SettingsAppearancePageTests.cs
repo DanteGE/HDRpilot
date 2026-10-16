@@ -112,17 +112,95 @@ public sealed class SettingsAppearancePageTests
     {
         var (page, _, context) = Create();
         Assert.Equal(ShellStrings.PreviewNitsUnknown, page.PreviewNitsText); // unbekannt: kein Wert
-        Assert.Null(page.TrayMenuNits);
         page.Dispose();
 
         context.Luminance = new FixedLuminance(new DisplayNits(@"\\?\DISPLAY#MSI", "MAG 341C OLED", 456, 254, 0, 10, HdrActive: false, PeakMeasuredWithHdr: true));
         var withNits = new AppearancePageViewModel(context);
         Assert.Contains("456", withNits.PreviewNitsText, StringComparison.Ordinal);
         Assert.DoesNotContain("1000", withNits.PreviewNitsText, StringComparison.Ordinal);
-        Assert.Contains("456", withNits.TrayMenuNits!, StringComparison.Ordinal);
-        Assert.Contains("254", withNits.TrayMenuNits!, StringComparison.Ordinal);
-        Assert.Contains("MAG 341C OLED", withNits.TrayMenuStatus, StringComparison.Ordinal);
         withNits.Dispose();
+    }
+
+    [Fact]
+    public void Tray_menu_preview_shows_what_the_real_menu_shows_in_the_same_order()
+    {
+        // Kopf wie im echten Menü: HDR-Zustand und Automatik, darunter die Version (keine Nit-Zeile, kein Spielname).
+        var (page, _, context) = Create();
+        Assert.Equal(ShellStrings.TrayStatusHdrOff + " · " + ShellStrings.TrayStatusActive, page.TrayMenuStatus);
+        Assert.Equal(HdrPilot.App.Infrastructure.AppVersion.LabelText, page.TrayMenuVersion);
+        page.Dispose();
+        context.TrayState = new TrayState(HdrOn: true, HdrSupported: true, Paused: false, ActiveGames: ["Cyberpunk 2077"]);
+        var running = new AppearancePageViewModel(context);
+        Assert.Equal(ShellStrings.TrayStatusHdrOn + " · " + string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayStatusGame, "Cyberpunk 2077"), running.TrayMenuStatus);
+        running.Dispose();
+
+        // Reihenfolge der Einträge: Vorschau in SettingsWindow.xaml wie TrayMenu.xaml (Version, HDR, Auto HDR, Pause, …).
+        var menu = File.ReadAllText(HdrPilot.App.Tests.Library.SourceFiles.InRepository("src", "HdrPilot.App", "Views", "Shell", "TrayMenu.xaml"));
+        var settings = File.ReadAllText(HdrPilot.App.Tests.Library.SourceFiles.InRepository("src", "HdrPilot.App", "Views", "Shell", "SettingsWindow.xaml"));
+        var preview = settings[settings.IndexOf("x:Name=\"TrayMenuPreview\"", StringComparison.Ordinal)..];
+        preview = preview[..preview.IndexOf("</views:GroupBorder>", StringComparison.Ordinal)];
+        string[] entries = ["TrayMenuAutoHdr", "TrayMenuPause", "TrayMenuOpen", "TrayMenuSettings", "TrayMenuLogs", "TrayMenuExit"];
+        AssertInOrder(menu, ["VersionText", "ToggleHdrText", .. entries]);
+        AssertInOrder(preview, ["TrayMenuStatus", "TrayMenuVersion", "TrayMenuToggleText", .. entries]);
+        Assert.DoesNotContain("Nits", preview, StringComparison.Ordinal);
+    }
+
+    /// <summary>Die Texte kommen in dieser Reihenfolge vor (jeweils die erste Fundstelle).</summary>
+    private static void AssertInOrder(string text, string[] needles)
+    {
+        var positions = needles.Select(n => text.IndexOf(n, StringComparison.Ordinal)).ToArray();
+        Assert.All(positions, p => Assert.True(p >= 0));
+        Assert.Equal(positions.Order(), positions);
+    }
+
+    [Fact]
+    public async Task Preview_loads_the_bright_variant_only_when_its_hdr_switch_is_on()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var game = new GameConfig { Source = GameSource.Steam, SourceId = "5", Name = "Mit Titelbild", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        config.Update(c => c.Games.Add(game));
+        var art = new HdrPilot.App.Tests.Library.FakeArtworkService();
+        art.WithHero.Add(game.Key);
+        context.Artwork = art;
+
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await vm.Loaded;
+        Assert.NotNull(vm.PreviewHero);
+        Assert.Null(vm.PreviewBoost);
+        Assert.Empty(art.BoostRequests); // HDR der Vorschau aus: nicht berechnet
+
+        vm.PreviewHdr = true;
+
+        Assert.NotNull(vm.PreviewBoost);
+        Assert.Equal([game.Key], art.BoostRequests);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_offers_run_now_and_remove_key_only_when_they_make_sense()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb();
+        context.SteamGridDb = grid;
+        page.Dispose();
+        var vm = new AppearancePageViewModel(context);
+
+        Assert.False(vm.RunSteamGridDbNowCommand.CanExecute(null)); // aus, ohne Schlüssel
+        Assert.False(vm.RemoveSteamGridDbKeyCommand.CanExecute(null));
+
+        grid.Key = SteamGridDbKeyState.Stored;
+        vm.SteamGridDbEnabled = true;
+        Assert.True(vm.RunSteamGridDbNowCommand.CanExecute(null));
+        Assert.True(vm.RemoveSteamGridDbKeyCommand.CanExecute(null));
+
+        vm.RunSteamGridDbNowCommand.Execute(null);
+        vm.RemoveSteamGridDbKeyCommand.Execute(null);
+
+        Assert.Equal(["enabled:True", "run", "remove"], grid.Calls);
+        Assert.False(vm.RemoveSteamGridDbKeyCommand.CanExecute(null));
+        Assert.False(vm.RunSteamGridDbNowCommand.CanExecute(null));
+        vm.Dispose();
     }
 
     [Fact]
@@ -273,7 +351,9 @@ public sealed class SettingsAppearancePageTests
 
         public List<string> Calls { get; } = [];
 
-        public SteamGridDbStatus Status => SteamGridDbStatus.Off with { Enabled = _enabled };
+        public SteamGridDbKeyState Key { get; set; } = SteamGridDbKeyState.Missing;
+
+        public SteamGridDbStatus Status => SteamGridDbStatus.Off with { Enabled = _enabled, Key = Key };
 
         public void SetEnabled(bool enabled)
         {
@@ -290,7 +370,11 @@ public sealed class SettingsAppearancePageTests
 
         public void SaveKey(string key) => Calls.Add("save:" + key);
 
-        public void RemoveKey() => Calls.Add("remove");
+        public void RemoveKey()
+        {
+            Calls.Add("remove");
+            Key = SteamGridDbKeyState.Missing;
+        }
 
         public Task RunNowAsync(CancellationToken cancellationToken = default)
         {

@@ -29,7 +29,9 @@ public sealed class ContinuousEffect
 {
     private readonly Func<Storyboard> _factory;
     private readonly FrameworkElement _target;
+    private readonly List<HeldValue> _held = [];
     private Storyboard? _board;
+    private TimeSpan _pausedAt;
 
     internal ContinuousEffect(string name, FrameworkElement target, Func<Storyboard> factory)
     {
@@ -81,7 +83,11 @@ public sealed class ContinuousEffect
         }
         else if (IsPaused)
         {
-            _board.Resume(_target);
+            // An der gemerkten Stelle weiter: gehaltene Werte zurück, neu beginnen und sofort dorthin springen (nicht erst
+            // beim nächsten Takt, sonst zeigte ein Bild den Anfang).
+            Release();
+            _board.Begin(_target, isControllable: true);
+            _board.SeekAlignedToLastTick(_target, _pausedAt, TimeSeekOrigin.BeginTime);
         }
         else
         {
@@ -92,19 +98,38 @@ public sealed class ContinuousEffect
         IsPaused = false;
     }
 
-    /// <summary>Anhalten an der Stelle (sichtbares Fenster im Hintergrund: kein Sprung).</summary>
+    /// <summary>
+    /// Anhalten an der Stelle (sichtbares Fenster im Hintergrund: kein Sprung). Ein nur angehaltenes Storyboard ließe seine
+    /// Uhren weiterlaufen, und WPF taktete weiter (gemessen: 20 angehaltene Storyboards ≈ 3,7 % eines Kerns). Deshalb werden
+    /// die Werte des Augenblicks als Grundwerte gehalten, die Uhren entfernt und die Stelle gemerkt; <see cref="Run"/> setzt
+    /// dort fort.
+    /// </summary>
     internal void Pause()
     {
-        if (_board is not null && IsRunning && !IsPaused)
+        if (_board is null || !IsRunning || IsPaused)
         {
-            _board.Pause(_target);
-            IsPaused = true;
+            return;
         }
+
+        _pausedAt = _board.GetCurrentTime(_target) ?? TimeSpan.Zero;
+        var values = Animated(_board).Select(p => (p.Target, p.Property, Original: p.Target.ReadLocalValue(p.Property), Current: p.Target.GetValue(p.Property))).ToList();
+
+        // Remove baut die Uhren erst beim nächsten Takt ab; die Eigenschaften werden sofort gelöst (BeginAnimation mit null).
+        _board.Remove(_target);
+        foreach (var (target, property, original, current) in values)
+        {
+            (target as IAnimatable)?.BeginAnimation(property, null);
+            _held.Add(new HeldValue(target, property, original));
+            target.SetValue(property, current);
+        }
+
+        IsPaused = true;
     }
 
     /// <summary>Entfernen (minimiert, unsichtbar, Spiel läuft, Stufe geändert, Fenster zu): keine Uhr bleibt übrig.</summary>
     internal void Remove()
     {
+        Release();
         if (_board is not null)
         {
             _board.Remove(_target);
@@ -114,6 +139,46 @@ public sealed class ContinuousEffect
         IsRunning = false;
         IsPaused = false;
     }
+
+    /// <summary>Gehaltene Werte zurück auf die ursprünglichen Grundwerte.</summary>
+    private void Release()
+    {
+        foreach (var held in _held)
+        {
+            if (held.Original == DependencyProperty.UnsetValue)
+            {
+                held.Target.ClearValue(held.Property);
+            }
+            else
+            {
+                held.Target.SetValue(held.Property, held.Original);
+            }
+        }
+
+        _held.Clear();
+    }
+
+    /// <summary>Ziele und Eigenschaften aller Animationen eines Storyboards (nur einfache Pfade auf eine Eigenschaft).</summary>
+    private static IEnumerable<(DependencyObject Target, DependencyProperty Property)> Animated(TimelineGroup group)
+    {
+        foreach (var child in group.Children)
+        {
+            if (child is TimelineGroup inner)
+            {
+                foreach (var nested in Animated(inner))
+                {
+                    yield return nested;
+                }
+            }
+            else if (Storyboard.GetTarget(child) is { } target && target is not Freezable { IsFrozen: true }
+                && Storyboard.GetTargetProperty(child) is { PathParameters: [DependencyProperty property] })
+            {
+                yield return (target, property);
+            }
+        }
+    }
+
+    private sealed record HeldValue(DependencyObject Target, DependencyProperty Property, object Original);
 }
 
 /// <summary>

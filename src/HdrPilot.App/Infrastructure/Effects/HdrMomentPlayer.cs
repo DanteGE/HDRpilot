@@ -15,8 +15,9 @@ public sealed record HdrMomentScene(double Width, double Height, double LightX, 
 
 /// <summary>
 /// Elemente des HDR-Moments. <see cref="SweepBand"/> braucht eine <see cref="TranslateTransform"/>, <see cref="SweepLine"/>
-/// eine <see cref="ScaleTransform"/> als RenderTransform; <see cref="Boost"/> ist die vorab berechnete helle Fassung (null,
-/// solange es keine gibt).
+/// eine <see cref="ScaleTransform"/> als RenderTransform. <see cref="Boost"/> liefert die Ebene der hellen Fassung im gerade
+/// sichtbaren Bildplatz (null ohne Bild); gefragt wird erst beim Abspielen, denn der Titelbereich wechselt die Plätze und die
+/// Bilder kommen erst nach dem Öffnen des Fensters.
 /// </summary>
 public sealed record HdrMomentParts(
     FrameworkElement Host,
@@ -25,7 +26,7 @@ public sealed record HdrMomentParts(
     FrameworkElement Flash,
     FrameworkElement EdgeGlow,
     ParticleLayer Particles,
-    FrameworkElement? Boost);
+    Func<FrameworkElement?> Boost);
 
 /// <summary>Was ein Moment gespielt hat (Tests, Protokoll).</summary>
 public enum HdrMomentKind
@@ -43,7 +44,8 @@ public enum HdrMomentKind
 /// <summary>
 /// HDR-Moment (E89, G10.6): Lichtstreifen durch das Titelbild (1,6 s), Lichtlinie, Blitz am Spitzlicht, helle Fassung,
 /// leuchtender Fensterrand (1,8 s) und bis zu 160 Partikel, die nur 2,5 s über den Bildtakt gezeichnet werden; danach ist
-/// der Spieler abgemeldet (0 Bildaufrufe). Einmal-Effekte dürfen 60 Bilder pro Sekunde haben. Bei „Reduziert“ nur die helle
+/// der Spieler abgemeldet (0 Bildaufrufe). Einmal-Effekte dürfen 60 Bilder pro Sekunde haben (Storyboard und Bildtakt der
+/// Partikel, <see cref="TimelineFrameClock"/>). Bei „Reduziert“ nur die helle
 /// Fassung, höchstens 0,3 s; bei „Aus“ nichts. Für Bildschirmfotos lässt sich der Moment an einer Stelle anhalten
 /// (<see cref="Freeze"/>, ohne Bildtakt).
 /// </summary>
@@ -234,7 +236,7 @@ public sealed class HdrMomentPlayer : IDisposable
     {
         var board = new Storyboard();
         Timeline.SetDesiredFrameRate(board, EffectPolicy.OneShotFrameRate);
-        if (_parts.Boost is { } boost && transientBoost)
+        if (_parts.Boost() is { } boost && transientBoost)
         {
             var fade = EffectPolicy.ReducedTransition;
             var hold = EffectPolicy.HdrMomentDuration - fade;
@@ -279,7 +281,7 @@ public sealed class HdrMomentPlayer : IDisposable
         Add(board, Pulse(EdgeDuration, 1, (0.22, 0.22)), _parts.EdgeGlow, UIElement.OpacityProperty);
 
         // Helle Fassung: blendet in 1,2 s ein; nur für die Prüfung danach wieder aus.
-        if (_parts.Boost is { } boost)
+        if (_parts.Boost() is { } boost)
         {
             var opacity = new DoubleAnimationUsingKeyFrames { FillBehavior = transientBoost ? FillBehavior.Stop : FillBehavior.HoldEnd };
             opacity.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(1.2)), new SineEase()));

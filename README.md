@@ -153,7 +153,7 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   - **HDR automatisch**, **Bildschirm** (welcher Bildschirm geschaltet wird, Standard: die globale Einstellung) und
     **Nach dem Spiel zurückstellen** (danach wieder den HDR-Zustand von vorher herstellen, Standard: an).
   - Abschnitt „BILD“ mit **Windows Auto HDR**: Windows rechnet das SDR-Bild eines Spiels ohne eigenes HDR in HDR um
-    (DirectX 11/12). Das wirkt nur, wenn das Spiel über HDRpilot startet (**Mit HDR starten**, „(HDR)“-Verknüpfung,
+    (DirectX 11/12). Das wirkt nur, wenn das Spiel über HDRpilot startet (**Starten**, „(HDR)“-Verknüpfung,
     Steam-Startoption): HDRpilot schaltet Auto HDR in Windows direkt davor ein und nach dem Spiel wieder zurück; so steht
     es auch unter dem Schalter. Das Schalten selbst ändert in Windows noch nichts. Unabhängig von **HDR automatisch**; ist
     das aus, weist ein Hinweis darauf hin, dass Windows-HDR schon vor dem Spielstart an sein muss. Hat das Spiel laut
@@ -185,7 +185,7 @@ der Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
   gerade nur für ein Spiel eingeschaltet, sagt das der Tooltip: Nach dem Spiel ist er wieder aus. Ist der Wert nicht
   lesbar oder in einem fremden Format, ist der Eintrag gesperrt.
 - **Automatik pausieren**: keine neuen automatischen Schaltungen; laufende Spiele werden noch normal zurückgestellt.
-  „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Die Pause gilt, bis du sie
+  „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Die Pause gilt, bis du sie
   aufhebst oder HDRpilot neu startet; sie wird nicht gespeichert.
 - **Spieleliste öffnen**, **Einstellungen**, **Protokollordner öffnen**
 - **HDRpilot beenden**
@@ -203,7 +203,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Abfrageintervall | Wie oft nach Spielstarts gesehen wird | 1000 ms |
 | Nachlaufzeit | Wartezeit nach dem Spielende, bevor zurückgestellt wird | 10 s |
 | Neustart-Puffer | Endet ein Spiel weniger als 5 Minuten nach dem Start, bleibt HDR so lange an (Minuten und Sekunden, höchstens 30:00, 0:00 = aus; siehe „So funktioniert es“) | 1:00 |
-| Startfrist | Bei „Mit HDR starten“: so lange wird auf den Spielprozess gewartet | 120 s |
+| Startfrist | Bei „Starten“: so lange wird auf den Spielprozess gewartet | 120 s |
 | Mit Windows starten | Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | aus |
 | Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
 | Suchordner | Ordner mit Spielen ohne Launcher; Unterordner mit EXE werden vorgeschlagen | keine |
@@ -252,7 +252,8 @@ bleibt der Rest frei, statt die Bereiche in die Länge zu ziehen.
 - **Thema**: **Automatisch** (wie der App-Modus von Windows), **Hell** oder **Dunkel**.
 - **Effekte**: **Voll**, **Reduziert** (nur kurze Übergänge bis 0,3 s, keine Daueranimation) oder **Aus**, dazu
   **Beim Spielen anhalten**, **Im Hintergrund anhalten**, **Windows-Animationseffekte beachten** und **Nach dem Start in
-  den Infobereich**. Daueranimationen laufen mit höchstens 30 Bildern pro Sekunde; bei geschlossenem Fenster läuft gar
+  den Infobereich**. Die Stufe gilt überall: Bibliothek, Einstellungen, Dialoge und Tray-Menü. Daueranimationen laufen
+  mit höchstens 30 Bildern pro Sekunde und nur, solange etwas davon zu sehen ist; bei geschlossenem Fenster läuft gar
   nichts.
 - **Bilder**: wie viele Bilder je Launcher lokal gefunden und genutzt werden, je Ersatzfall ein Beispiel aus deiner
   Bibliothek und **SteamGridDB (online)**.
@@ -261,10 +262,13 @@ bleibt der Rest frei, statt die Bereiche in die Länge zu ziehen.
 
 **SteamGridDB (online)** ist die einzige Bildquelle aus dem Netz und standardmäßig aus. Eingeschaltet und mit eigenem
 API-Schlüssel von steamgriddb.com (eintragen, dann **Prüfen**) lädt HDRpilot nur Titelbilder, Logos und Cover, die lokal
-fehlen und die du nicht selbst gewählt hast: nach dem Einschalten, nach dem Prüfen eines Schlüssels und höchstens einmal
-am Tag eine Minute nach dem Start, nie während eines Spiels. Der Schlüssel wird verschlüsselt (DPAPI) für dein
-Windows-Konto gespeichert und nie ins Protokoll geschrieben; die Zeile darunter zeigt den letzten Netzwerkzugriff. Aus
-oder ohne Schlüssel gibt es keinen Netzwerkzugriff dafür.
+fehlen und die du nicht selbst gewählt hast: nach dem Einschalten, nach dem Prüfen eines Schlüssels, mit
+**Fehlende Bilder jetzt laden** und höchstens einmal am Tag eine Minute nach dem Start, nie während eines Spiels. Der
+Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben; die Zeile
+darunter zeigt den letzten Netzwerkzugriff, **Schlüssel entfernen** löscht ihn. Aus oder ohne Schlüssel gibt es keinen
+Netzwerkzugriff dafür: Ausschalten, Schlüssel entfernen oder ein Spielstart halten auch einen laufenden Abruf sofort an.
+Ausgeschaltet zeigt HDRpilot wieder die lokalen bzw. erzeugten Bilder; die geladenen bleiben für ein erneutes
+Einschalten liegen.
 
 ## So funktioniert es
 
@@ -279,7 +283,7 @@ Steam, liest HDRpilot das in deren eigenen Protokolldateien mit (nur lesend) und
 Spielprozess ein. Kommt das Spiel doch nicht, stellt die Startfrist HDR wieder zurück. Abschaltbar über
 `launcherSignals` in `config.json`.
 
-**Starten über HDRpilot (Weg B):** „Mit HDR starten“ oder eine „(HDR)“-Verknüpfung (`HDRpilot.exe --run <Quelle:ID>`)
+**Starten über HDRpilot (Weg B):** „Starten“ oder eine „(HDR)“-Verknüpfung (`HDRpilot.exe --run <Quelle:ID>`)
 schaltet HDR zuerst ein, wartet die Bestätigung ab und startet erst dann das Spiel: über den Launcher-Link der Quelle
 (etwa `steam://`), GOG-Spiele und selbst eingetragene Spiele direkt über ihre EXE. Das ist der sichere Weg für Spiele,
 die HDR nur beim Start prüfen. Erscheint innerhalb der Startfrist (Standard 120 s) kein erkannter Spielprozess, etwa
@@ -289,7 +293,7 @@ Einschalten, startet das Spiel trotzdem. Doppelte Startanforderungen (doppelter 
 
 **Steam-Startoption:** Mit `"…\HDRpilot.exe" --wrap -- %command%` in den Startoptionen eines Steam-Spiels startet Steam
 zuerst HDRpilot. Läuft HDRpilot, schaltet es HDR ein, wartet die Bestätigung und noch 1,5 s ab, startet dann das Spiel
-und beendet sich sofort (es hält nichts am Spiel fest). Wie bei „Mit HDR starten“ gilt das auch bei pausierter
+und beendet sich sofort (es hält nichts am Spiel fest). Wie bei „Starten“ gilt das auch bei pausierter
 Automatik und für Spiele ohne „HDR automatisch“. Läuft HDRpilot nicht oder ist das Spiel unbekannt, startet das Spiel
 sofort ohne HDR.
 
@@ -345,17 +349,19 @@ eingetragenen Spielen kommt das Symbol aus der Spiel-EXE. Fehlt ein Bild, erzeug
 Titelbild aus den Farben des Symbols mit dem Namen als Muster, ein Cover aus Titelbild oder Symbol mit dem Namen, statt
 eines Logos den Namen in der Titelschrift und ohne Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte
 Kapselbilder als einziges Cover) erkennt HDRpilot und ersetzt sie durch einen Ausschnitt aus dem Titelbild; Logos
-schneidet es auf ihren sichtbaren Teil zu. Umgebungsfarben und die hellere Fassung für den HDR-Moment berechnet es je
-Bild einmal und legt sie mit den Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab. Solange ein Fenster offen ist,
-beobachtet es die Ordner der Launcher, sodass neue Bilder von selbst erscheinen; bei geschlossenem Fenster gibt es
-weder Beobachtung noch Bilder im Speicher. Eigene Bilder („Bild wählen…“) stehen je Bildart in `config.json`
-(`artwork`) und liegen in `art\custom\`.
+schneidet es auf ihren sichtbaren Teil zu. Umgebungsfarben berechnet es je Bild einmal, die hellere Fassung des
+Titelbilds nur, wenn sie zu sehen ist (HDR an oder HDR-Moment), und legt beides mit den Ersatzbildern unter
+`%LOCALAPPDATA%\HDRpilot\art\` ab. Solange ein Fenster offen ist, beobachtet es die Ordner der Launcher (bei Ubisoft
+Connect auch den Produkt-Cache), sodass neue Bilder von selbst erscheinen; im Speicher hält es höchstens 192 MB Bilder.
+Bei geschlossenem Fenster gibt es weder Beobachtung noch Bilder im Speicher, und Bilder von Spielen, die nicht mehr in
+der Bibliothek stehen, räumt es dann auf. Eigene Bilder („Bild wählen…“, höchstens 32 MB und 100 Megapixel, größere
+Fotos werden verkleinert) stehen je Bildart in `config.json` (`artwork`) und liegen in `art\custom\`.
 
 **SteamGridDB:** nur eingeschaltet und mit eigenem Schlüssel (siehe „Einstellungen“). Gefragt wird
-`www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen, und nur nach unbewegten Bildern ohne
-NSFW- oder Spaß-Markierung. Bilder lädt HDRpilot nur von https-Adressen unter steamgriddb.com, höchstens 15 MB je
-Bild, mit mindestens 1 s Abstand und höchstens 200 Anfragen je Lauf; was SteamGridDB nicht hat, fragt es 30 Tage lang
-nicht erneut. Geladene Bilder liegen in `art\sgdb\`.
+`www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen (nur ein Treffer mit gleichem Namen zählt),
+und nur nach unbewegten Bildern ohne NSFW- oder Spaß-Markierung. Bilder lädt HDRpilot nur von https-Adressen unter
+steamgriddb.com, ohne Weiterleitungen, höchstens 15 MB je Bild, mit mindestens 1 s Abstand und höchstens 200 Anfragen
+je Lauf; was SteamGridDB nicht hat, fragt es 30 Tage lang nicht erneut. Geladene Bilder liegen in `art\sgdb\`.
 
 **Bildschirmwerte:** Spitze, Vollbild, Minimum, Farbtiefe und ob HDR an ist, liest HDRpilot über die
 Grafikschnittstelle von Windows (DXGI), nur solange ein Fenster sie zeigt und nur nach einem HDR- oder
@@ -397,11 +403,11 @@ anderes als „HDR automatisch“:
 | | „HDR automatisch“ | „Windows Auto HDR“ |
 |---|---|---|
 | Was passiert | HDRpilot schaltet Windows-HDR beim Spielstart ein und danach zurück | Windows rechnet das SDR-Bild in HDR um; HDRpilot schaltet dafür den Auto-HDR-Schalter von Windows direkt vor dem Start ein und danach zurück |
-| Wann | bei jedem erkannten Spielstart, auch ohne HDRpilot | nur bei einem Start über HDRpilot: „Mit HDR starten“, „(HDR)“-Verknüpfung, Steam-Startoption (dazu die Frühwarnung von Steam und Epic) |
+| Wann | bei jedem erkannten Spielstart, auch ohne HDRpilot | nur bei einem Start über HDRpilot: „Starten“, „(HDR)“-Verknüpfung, Steam-Startoption (dazu die Frühwarnung von Steam und Epic) |
 | Wo | Abschnitt „AUTOMATIK“ in den Details und Schalter in der Liste | Abschnitt „BILD“ in den Details, in der Liste nur das Kennzeichen „AUTO HDR“ |
 | Braucht | einen HDR-fähigen Bildschirm | Windows-HDR schon vor dem Spielstart an und ein Spiel mit DirectX 11 oder 12, das Windows für Auto HDR zulässt |
 
-Beide Schalter sind unabhängig voneinander. „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten
+Beide Schalter sind unabhängig voneinander. „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten
 HDR ohnehin vor dem Spiel ein; ist „HDR automatisch“ für das Spiel aus, steht unter dem Schalter ein Hinweis, dass HDR
 sonst schon vor dem Spielstart an sein muss. Hat ein Spiel laut PCGamingWiki eigenes HDR (Kennzeichen „HDR“ oder
 „HDR*“), sind Titel und Schalter blasser und ein Hinweis rät, das HDR des Spiels zu nehmen, das meist besser aussieht;
@@ -422,7 +428,7 @@ das in dieser Zeit startet.
 
 Ohne Start über HDRpilot schaltet HDRpilot Auto HDR nie, auch nicht, wenn es ein Spiel mit der Option laufen sieht:
 Windows hat den Schalter dann schon beim Spielstart gelesen. Aus demselben Grund setzt ein Start über HDRpilot nichts,
-solange das Spiel schon läuft (etwa ein zweiter Klick auf **Mit HDR starten** oder die „(HDR)“-Verknüpfung). HDRpilot
+solange das Spiel schon läuft (etwa ein zweiter Klick auf **Starten** oder die „(HDR)“-Verknüpfung). HDRpilot
 fasst nur Werte aus reinem Text mit `Schlüssel=Wert;`-Paaren an und schreibt keine Werte je Spiel-EXE, nur unter HKCU,
 nie unter HKLM, und braucht keine Administratorrechte.
 
@@ -608,10 +614,10 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
 ## Bekannte Grenzen
 
 - **Erkennung per Abfrage:** Zwischen Spielstart und HDR liegt bis zu ein Abfrageintervall (Standard 1 s) plus die
-  Schaltzeit, außer bei Epic und Steam mit Frühwarnung. Spiele, die HDR nur beim Start prüfen, über „Mit HDR starten“,
+  Schaltzeit, außer bei Epic und Steam mit Frühwarnung. Spiele, die HDR nur beim Start prüfen, über „Starten“,
   eine „(HDR)“-Verknüpfung oder (bei Steam) die Steam-Startoption starten.
 - **Spiel-EXE außerhalb des Installationsordners:** Manche Starter starten die eigentliche EXE woanders. Solche Spiele
-  erkennt HDRpilot erst, wenn du die EXE in den Details hinzufügst; bis dahin stellt auch „Mit HDR starten“ HDR nach
+  erkennt HDRpilot erst, wenn du die EXE in den Details hinzufügst; bis dahin stellt auch „Starten“ HDR nach
   der Startfrist wieder zurück.
 - **Mehrere Bildschirme:** HDRpilot erkennt nicht, auf welchem Bildschirm ein Spiel läuft, sondern schaltet die
   eingestellten (Standard: Hauptbildschirm). Läuft ein Spiel woanders, in den Details den richtigen **Bildschirm**
@@ -621,13 +627,13 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   Epic-Spiele ohne Manifest. Solche Spiele über „Spiel hinzufügen“ eintragen.
 - **Start über die Launcher:** Mit echten Spielen geprüft: Steam (Dying Light: The Beast), Epic (Dead Island 2), GOG
   (Cyberpunk 2077), Ubisoft Connect (Avatar: Frontiers of Pandora), EA app (Battlefield 6, mit EA Javelin) und Xbox
-  (Palworld), jeweils über „Mit HDR starten“ und über die Verknüpfung. HDR war jedes Mal an, bevor der Launcher das
+  (Palworld), jeweils über „Starten“ und über die Verknüpfung. HDR war jedes Mal an, bevor der Launcher das
   Spiel gestartet hat. Battle.net ist ungeprüft (siehe unten).
 - **Umschalten während des Spielstarts:** Bei der automatischen Erkennung schaltet HDRpilot HDR, während das Spiel
   gerade hochfährt. Das verkraften fast alle Spiele; Dead Island 2 blieb im Test bei einem von zwei automatischen
   Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Der Neustart-Puffer hilft beim zweiten Versuch, wenn der
   Neustart in seine Zeit fällt (Standard 1 Minute; wer länger für den Neustart braucht, stellt ihn unter „Einstellungen“
-  höher); sicherer sind „Mit HDR starten“, die Verknüpfung oder die Steam-Startoption.
+  höher); sicherer sind „Starten“, die Verknüpfung oder die Steam-Startoption.
 - **Frühwarnung:** nur für den Epic Games Launcher und Steam. Sie beruht auf deren Protokollformat, das sich mit einem
   Launcher-Update ändern kann; dann greift wieder die normale Erkennung.
 - **Steam-Startoption:** wirkt nur, wenn HDRpilot läuft (Autostart empfohlen) und das Spiel beim letzten Einlesen schon
@@ -637,7 +643,7 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   Angaben stammen von Freiwilligen und können lückenhaft sein.
 - **Hänger-Hinweis:** Ältere Store-Spiele (UWP), deren Fenster einem Windows-Rahmenprozess gehört, könnten im
   minimierten Zustand fälschlich als hängend gemeldet werden. Es bleibt bei einem Hinweis.
-- **GOG:** „Mit HDR starten“ startet die Spiel-EXE direkt, an GOG Galaxy vorbei. Cloud-Speicherstände, Overlay und
+- **GOG:** „Starten“ startet die Spiel-EXE direkt, an GOG Galaxy vorbei. Cloud-Speicherstände, Overlay und
   Spielzeit von Galaxy sind dann womöglich nicht aktiv.
 - **EA app:** Die Bibliotheksdatei der EA app ist verschlüsselt und an die Hardware gebunden; HDRpilot entschlüsselt
   sie bewusst nicht und findet EA-Spiele über die Installationsdaten der Spiele selbst.
@@ -655,7 +661,7 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   sie, nimmt HDRpilot die nächste Quelle. Ein eigenes Symbol gilt nur auf diesem PC, weil die PNG im lokalen Datenordner
   liegt; auf einem anderen PC zeigt das Spiel wieder das automatische Symbol.
 - **Windows Auto HDR:** wirkt nur bei Spielen mit DirectX 11 oder 12 (nicht bei DirectX 9, OpenGL und Vulkan), nur bei
-  Spielen, die Windows dafür zulässt (vorab nicht abfragbar), nur bei einem Start über HDRpilot („Mit HDR starten“,
+  Spielen, die Windows dafür zulässt (vorab nicht abfragbar), nur bei einem Start über HDRpilot („Starten“,
   „(HDR)“-Verknüpfung, Steam-Startoption, Frühwarnung) und nur, wenn Windows-HDR schon vor dem Spielstart an ist; ein
   Spiel, das schon läuft, bekommt es erst beim nächsten Start (Livetest unter Windows 11 26H2). Solange HDRpilot den
   Schalter hält, gilt Auto HDR auch für andere Spiele, die in dieser Zeit starten. Das Format der Windows-Einstellung ist
@@ -675,7 +681,7 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
 - **Spiel wird nicht erkannt:** Ist „HDR automatisch“ an und die Automatik nicht pausiert? Liegt die laufende EXE im
   Installationsordner? Wenn nicht, die EXE in den Details hinzufügen. Ist sie dort als „ausgeschlossen“ markiert, mit
   „Wieder aufnehmen“ zurückholen. Steht sie unter „Hilfsprozesse ausschließen“, das Muster dort entfernen.
-- **HDR kommt für ein Spiel zu spät oder das Spiel hängt beim automatischen Start:** über „Mit HDR starten“, eine
+- **HDR kommt für ein Spiel zu spät oder das Spiel hängt beim automatischen Start:** über „Starten“, eine
   „(HDR)“-Verknüpfung oder (bei Steam) die Steam-Startoption starten; dann ist HDR schon vor dem Spiel an.
 - **Steam-Startoption wirkt nicht:** Läuft HDRpilot? In `logs\wrap.log` steht je Start, ob HDR vorbereitet wurde und
   warum nicht. Kennt HDRpilot das Spiel noch nicht, einmal „Neu einlesen“.
@@ -686,11 +692,11 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   nachsehen und diese EXE in den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar
   weiter (im Test bei Palworld); HDRpilot weist nach 2 Minuten darauf hin. Dann den Spielprozess im Task-Manager
   beenden. Weitere Gründe: Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem Spiel
-  zurückstellen“ ist für dieses oder ein gleichzeitig gelaufenes Spiel aus. Nach „Mit HDR starten“ ohne Spielstart
+  zurückstellen“ ist für dieses oder ein gleichzeitig gelaufenes Spiel aus. Nach „Starten“ ohne Spielstart
   bleibt HDR bis zum Ende der Startfrist an.
-- **„Mit HDR starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
+- **„Starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
   HDRpilot keine Start-EXE. Dann das Spiel über seine EXE hinzufügen.
-- **Windows Auto HDR wirkt nicht:** Hast du das Spiel über HDRpilot gestartet („Mit HDR starten“, „(HDR)“-Verknüpfung
+- **Windows Auto HDR wirkt nicht:** Hast du das Spiel über HDRpilot gestartet („Starten“, „(HDR)“-Verknüpfung
   oder Steam-Startoption)? Ein Start direkt im Launcher ohne Startoption bekommt Auto HDR nur über die Frühwarnung, und
   dann nur, wenn Windows-HDR schon an ist. Das Spiel muss DirectX 11 oder 12 nutzen und von Windows für Auto HDR
   zugelassen sein; ob es greift, zeigt der Intensitätsregler in der Xbox Game Bar (Win+G). Das Einstellungsfenster der

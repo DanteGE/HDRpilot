@@ -66,7 +66,7 @@ public sealed partial class EffectViewsTests
             motion.SetWindowState(visible: true, minimized: false, active: true);
             var running = motion.Effects.Where(e => e.IsRunning).ToList();
             Assert.Contains(running, e => e.Name == "KenBurns");
-            Assert.Contains(running, e => e.Name == "SelectionRing");
+            Assert.DoesNotContain(running, e => e.Name == "SelectionRing"); // Liste: den Ring zeichnen nur Kacheln
             Assert.DoesNotContain(running, e => e.Name == "RescanSpin"); // nur beim Einlesen
             Assert.All(running, e => Assert.Equal(EffectPolicy.ContinuousFrameRate, Timeline.GetDesiredFrameRate(e.Board!)));
             Assert.False(string.IsNullOrWhiteSpace(model.EffectsText));
@@ -161,11 +161,9 @@ public sealed partial class EffectViewsTests
             var hit = Forbidden().Match(code);
             Assert.False(hit.Success, $"{Path.GetFileName(file)}: {hit.Value}");
 
-            // Eigenes Zeichnen je Bild nur über den Bildtakt der Effekte (meldet sich nach 2,5 s ab), keine Zeitgeber.
-            if (!file.EndsWith("FrameClock.cs", StringComparison.Ordinal))
-            {
-                Assert.DoesNotContain("CompositionTarget.Rendering", code, StringComparison.Ordinal);
-            }
+            // Eigenes Zeichnen je Bild nur über den Bildtakt der Effekte (Zeitleiste mit 60 Bildern pro Sekunde, meldet sich
+            // nach 2,5 s ab), nie über CompositionTarget.Rendering, keine Zeitgeber.
+            Assert.DoesNotContain("CompositionTarget.Rendering", code, StringComparison.Ordinal);
 
             Assert.DoesNotContain("DispatcherTimer", code, StringComparison.Ordinal);
         }

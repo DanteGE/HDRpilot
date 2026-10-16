@@ -42,6 +42,8 @@ public sealed partial class ArtworkService
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "Eigene Bilder gibt es für Titelbild, Logo und Cover.");
         }
 
+        // Große Fotos (48 MP und mehr) werden schon beim Dekodieren verkleinert; zu groß ist nur, was die Grenzen von
+        // ArtworkImaging überschreitet (eigene Meldung, nicht „kein lesbares Bild“).
         BitmapSource source;
         try
         {
@@ -52,6 +54,10 @@ public sealed partial class ArtworkService
                 _ => ArtworkRenderer.CoverWidth * 3,
             });
         }
+        catch (ImageTooLargeException)
+        {
+            throw;
+        }
         catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex))
         {
             throw new InvalidDataException(ArtworkStrings.Error_NotAnImage, ex);
@@ -61,7 +67,7 @@ public sealed partial class ArtworkService
         var file = ArtworkFiles.CustomFileName(game.Key, kind);
         ArtworkImaging.Save(image, Path.Combine(_options.ArtDirectory, ArtworkFiles.CustomFolder, file), 92);
         _logger.LogInformation("Bilder: eigenes {Kind} für {Game} gespeichert ({File}).", kind, game.Key, file);
-        Forget(game.Key);
+        ForgetInMemory(game.Key);
         Raise(game.Key);
         return ArtworkOverride.Custom(file);
     }

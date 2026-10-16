@@ -30,8 +30,9 @@ public sealed record ArtworkSummary(
 /// Alles, was Titelbereich, Kacheln und Detailbereich für ein Spiel brauchen. <see cref="Hero"/>, <see cref="Cover"/>,
 /// <see cref="Field"/> und <see cref="Icon"/> sind nie null, sobald das Spiel geladen ist (fehlt ein Launcher-Bild, ist es
 /// erzeugt); <see cref="Logo"/> ist null, wenn es kein Logo gibt (dann den Namen in der Titelschrift zeigen);
-/// <see cref="HeroBoost"/> ist die vorab berechnete, hellere „HDR“-Fassung des Titelbilds in derselben Größe (null, bis sie
-/// berechnet ist).
+/// <see cref="HeroBoost"/> ist die vorab berechnete, hellere „HDR“-Fassung des Titelbilds. Der Bilddienst liefert den Satz
+/// ohne sie (null); wer sie zeigt (HDR an, HDR-Moment, HDR-Vorschau), holt sie über
+/// <see cref="IArtworkService.GetHeroBoostAsync"/> und setzt sie mit <c>with</c> ein.
 /// </summary>
 public sealed record GameArtwork(
     string GameKey,
@@ -119,8 +120,15 @@ public interface IArtworkService : IDisposable
     /// <summary>Schon geladener Satz für den Titelbereich; sonst null.</summary>
     GameArtwork? GetCachedArtwork(GameConfig game);
 
-    /// <summary>Titelbild (in <paramref name="heroDecodeWidth"/>), helle Fassung, Farbfeld, Logo, Cover, Symbol und Umgebungsfarben.</summary>
+    /// <summary>Titelbild (in <paramref name="heroDecodeWidth"/>), Farbfeld, Logo, Cover, Symbol und Umgebungsfarben (ohne helle Fassung).</summary>
     Task<GameArtwork> GetArtworkAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Helle „HDR“-Fassung des Titelbilds für denselben Satz (einmal berechnet und auf der Platte gemerkt). Nur anfragen, wenn
+    /// sie zu sehen ist: HDR an, HDR-Moment oder HDR-Vorschau; null, wenn sie sich nicht berechnen lässt. Standard: null.
+    /// </summary>
+    Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default) =>
+        Task.FromResult<ArtworkImage?>(null);
 
     /// <summary>Wahlmöglichkeiten für „Bild wählen…“ (Launcher-Bild, andere lokale Bilder, erzeugt, aktuelle eigene Datei).</summary>
     Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default);
@@ -140,6 +148,14 @@ public interface IArtworkService : IDisposable
 
     /// <summary>Je Ersatzbild-Art ein echtes Beispiel aus der Bibliothek (Einstellungen „Erzeugte Bilder“).</summary>
     Task<IReadOnlyList<FallbackExample>> GetFallbackExamplesAsync(IReadOnlyList<GameConfig> games, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Alles zu einem Spiel im Speicher vergessen und <see cref="Changed"/> melden, etwa nach „Symbol ändern…“ (die Datei
+    /// behält beim erneuten Ändern ihren Namen). Standard: nichts.
+    /// </summary>
+    void Forget(string gameKey)
+    {
+    }
 
     /// <summary>Ein Fenster zeigt Bilder: Speicher und Beobachtung der Cache-Ordner bis zum Freigeben der Rückgabe.</summary>
     IDisposable Acquire();

@@ -42,7 +42,7 @@ public sealed class AutoHdrLayoutTests
 
         if (ratio is not null)
         {
-            context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = ratio);
+            context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = ratio);
         }
 
         var model = new LibraryViewModel(context, new FakeDialogs());

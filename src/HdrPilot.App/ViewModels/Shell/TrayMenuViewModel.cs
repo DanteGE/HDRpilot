@@ -107,29 +107,32 @@ public sealed class TrayMenuViewModel : ObservableObject
         ? ShellStrings.TrayMenuAutoHdrUnknown
         : _autoHdrHeld ? ShellStrings.TrayMenuAutoHdrHeld : ShellStrings.TrayMenuAutoHdrHint;
 
-    public string StatusTitle => _state.HdrOn ? ShellStrings.TrayStatusHdrOn : ShellStrings.TrayStatusHdrOff;
+    public string StatusTitle => TitleOf(_state);
 
-    public string StatusDetail
+    public string StatusDetail => DetailOf(_state);
+
+    /// <summary>„HDR an“ / „HDR aus“ im Kopf (auch für die Vorschau in den Einstellungen).</summary>
+    public static string TitleOf(TrayState state) => state.HdrOn ? ShellStrings.TrayStatusHdrOn : ShellStrings.TrayStatusHdrOff;
+
+    /// <summary>„Automatik aktiv“, „Automatik pausiert“, „Cyberpunk 2077 läuft“ … im Kopf (auch für die Vorschau).</summary>
+    public static string DetailOf(TrayState state)
     {
-        get
+        if (!state.HdrSupported && !state.HdrOn)
         {
-            if (!HdrSupported)
-            {
-                return ShellStrings.TrayStatusNoHdr;
-            }
-
-            if (_state.ActiveGames.Count == 1)
-            {
-                return string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayStatusGame, _state.ActiveGames[0]);
-            }
-
-            if (_state.ActiveGames.Count > 1)
-            {
-                return string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayStatusGames, _state.ActiveGames.Count);
-            }
-
-            return _state.Paused ? ShellStrings.TrayStatusPaused : ShellStrings.TrayStatusActive;
+            return ShellStrings.TrayStatusNoHdr;
         }
+
+        if (state.ActiveGames.Count == 1)
+        {
+            return string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayStatusGame, state.ActiveGames[0]);
+        }
+
+        if (state.ActiveGames.Count > 1)
+        {
+            return string.Format(CultureInfo.CurrentCulture, ShellStrings.TrayStatusGames, state.ActiveGames.Count);
+        }
+
+        return state.Paused ? ShellStrings.TrayStatusPaused : ShellStrings.TrayStatusActive;
     }
 
     public string ToggleHdrText => _state.HdrOn ? ShellStrings.TrayMenuToggleHdrOff : ShellStrings.TrayMenuToggleHdrOn;

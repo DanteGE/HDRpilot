@@ -97,7 +97,13 @@ public sealed class ShowcaseIntegrationTests
         var hero = await HeroFor(vm, withHero.Key);
         Assert.Equal(ArtworkOrigin.Launcher, hero.Artwork!.Hero!.Origin);
         Assert.False(hero.IsGenerated);
-        Assert.NotNull(hero.Artwork.HeroBoost); // helle HDR-Fassung für den HDR-Moment
+
+        // Helle HDR-Fassung nur, wenn sie zu sehen ist: HDR aus → keine; vor dem HDR-Moment wird sie geholt.
+        Assert.Null(hero.Artwork.HeroBoost);
+        Assert.False(Directory.Exists(Path.Combine(art.ArtDirectory, "boost")));
+        await vm.EnsureHeroBoostAsync(force: true);
+        Assert.NotNull(hero.Artwork!.HeroBoost);
+        Assert.True(Directory.Exists(Path.Combine(art.ArtDirectory, "boost")));
 
         vm.SelectedGame = vm.Games.Single(g => g.Key == withoutHero.Key);
         context.Dispatcher.RunDelayed();

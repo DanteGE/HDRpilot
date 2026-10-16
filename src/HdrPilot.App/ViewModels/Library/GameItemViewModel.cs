@@ -345,9 +345,12 @@ public sealed class GameItemViewModel : ObservableObject
             ReloadIcon(); // etwa neue Symbol-Hinweise nach dem Einlesen oder ein eigenes Symbol
         }
 
-        if (!ReferenceEquals(previous, config) && !SameArtworkChoice(previous.Artwork, config.Artwork))
+        if (!ReferenceEquals(previous, config)
+            && (!SameArtworkChoice(previous.Artwork, config.Artwork) || !SameIconInputs(previous, config) || !string.Equals(previous.Name, config.Name, StringComparison.Ordinal)))
         {
-            ReloadArtwork(); // „Bild wählen…“: eigenes Bild, erzeugtes oder wieder automatisch
+            // „Bild wählen…“ (eigenes Bild, erzeugtes oder wieder automatisch), anderes Symbol oder anderer Name: Vorschaubild
+            // und Cover neu anfragen (ohne Titelbild entstehen sie aus Symbol und Name).
+            ReloadArtwork();
         }
 
         if (!string.Equals(_name, config.Name, StringComparison.Ordinal))

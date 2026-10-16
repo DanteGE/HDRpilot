@@ -159,7 +159,9 @@ public sealed class HeroStage : Grid
         var shownFallback = _slots[_current].Generated is not null;
         if (string.Equals(key, _shownKey, StringComparison.Ordinal) && ReferenceEquals(image, _shownImage) && (image is not null || shownFallback || hero is null))
         {
-            return; // schon zu sehen (dasselbe Bild oder dasselbe Ersatzbild)
+            // Schon zu sehen (dasselbe Bild oder dasselbe Ersatzbild); nur die helle Fassung kann nachkommen (HDR an, Moment).
+            _slots[_current].SetBoost(artwork?.HeroBoost?.Image, ActualWidth + 96, ActualHeight + 72, _view);
+            return;
         }
 
         _shownKey = key;
@@ -291,9 +293,15 @@ public sealed class HeroStage : Grid
         controller.Register("Bokeh", this, CreateBokeh);
     }
 
-    /// <summary>Elemente des HDR-Moments (der leuchtende Rand gehört dem Fenster).</summary>
+    /// <summary>Elemente des HDR-Moments (der leuchtende Rand gehört dem Fenster; die helle Fassung erst beim Abspielen).</summary>
     public HdrMomentParts MomentParts(FrameworkElement edgeGlow) =>
-        new(this, _sweepBand, _sweepLine, _flash, edgeGlow, _particles, _slots[_current].Boost.Background is null ? null : _slots[_current].Boost);
+        new(this, _sweepBand, _sweepLine, _flash, edgeGlow, _particles, CurrentBoostLayer);
+
+    /// <summary>Ebene der hellen Fassung im sichtbaren Bildplatz (null, solange der Platz nichts zeigt).</summary>
+    public FrameworkElement? CurrentBoostLayer() => _slots[_current].Boost.Background is null ? null : _slots[_current].Boost;
+
+    /// <summary>Gerade gezeigte helle Fassung (null: keine, dann nur warmes Licht über dem Bild).</summary>
+    public ImageSource? ShownBoost => _slots[_current].BoostImage;
 
     /// <summary>Lage und Farben für den nächsten HDR-Moment.</summary>
     public HdrMomentScene MomentScene(IReadOnlyList<Color> particleColors)
@@ -600,6 +608,9 @@ public sealed class HeroStage : Grid
 
         public Grid? Generated { get; private set; }
 
+        /// <summary>Vorab berechnete helle Fassung in diesem Platz (null: warmes Licht statt ihrer).</summary>
+        public ImageSource? BoostImage { get; private set; }
+
         private ImageSource? Image { get; set; }
 
         public void Fill(HeroViewModel? hero, GameArtwork? artwork, double height, LibraryViewMode view)
@@ -609,7 +620,8 @@ public sealed class HeroStage : Grid
             if (Image is not null)
             {
                 Art.Background = new ImageBrush(Image) { Stretch = Stretch.Fill };
-                Boost.Background = artwork?.HeroBoost?.Image is { } boost ? new ImageBrush(boost) { Stretch = Stretch.Fill } : Lift;
+                BoostImage = artwork?.HeroBoost?.Image;
+                Boost.Background = BoostImage is { } boost ? new ImageBrush(boost) { Stretch = Stretch.Fill } : Lift;
                 return;
             }
 
@@ -649,10 +661,27 @@ public sealed class HeroStage : Grid
             Boost.Background = Lift;
         }
 
+        /// <summary>
+        /// Helle Fassung nachträglich einsetzen (kommt erst, wenn HDR an ist oder der Moment spielt); die Deckkraft der Ebene
+        /// bleibt, wie Übergang oder Moment sie gerade führen. Ohne Titelbild (Ersatzbild) oder ohne neue Fassung: nichts.
+        /// </summary>
+        public void SetBoost(ImageSource? boost, double width, double height, LibraryViewMode view)
+        {
+            if (boost is null || Image is null || ReferenceEquals(boost, BoostImage))
+            {
+                return;
+            }
+
+            BoostImage = boost;
+            Boost.Background = new ImageBrush(boost) { Stretch = Stretch.Fill };
+            Layout(width, height, view);
+        }
+
         public void Clear()
         {
             Art.Background = null;
             Boost.Background = null;
+            BoostImage = null;
             Image = null;
             if (Generated is not null)
             {

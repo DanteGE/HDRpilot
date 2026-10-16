@@ -73,7 +73,7 @@ public sealed class LibraryLayoutTests
         Assert.Equal(0.381, vm.DetailsRatio);
         context.Dispatcher.RunDelayed();
         Assert.Equal(updates + 1, context.Updates);
-        Assert.Equal(0.381, context.Config.Settings.LibraryDetailsRatio);
+        Assert.Equal(0.381, context.Config.Settings.LibraryPaneRatio);
 
         // Gleicher Wert: nichts zu tun.
         vm.SetDetailsRatio(0.381);
@@ -82,7 +82,7 @@ public sealed class LibraryLayoutTests
         // Doppelklick (Standard) und gleich danach schließen: wird beim Schließen noch gespeichert.
         vm.SetDetailsRatio(null);
         vm.Dispose();
-        Assert.Null(context.Config.Settings.LibraryDetailsRatio);
+        Assert.Null(context.Config.Settings.LibraryPaneRatio);
         Assert.Equal(0, context.Dispatcher.PendingDelays);
     });
 
@@ -90,9 +90,25 @@ public sealed class LibraryLayoutTests
     public void Details_ratio_is_read_from_the_configuration() => Sta.Run(() =>
     {
         var context = SampleContext();
-        context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = 0.44);
+        context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = 0.44);
         using var vm = new LibraryViewModel(context, new FakeDialogs());
 
         Assert.Equal(0.44, vm.DetailsRatio);
+    });
+
+    [Fact]
+    public void Details_ratio_of_the_old_design_is_ignored_and_kept() => Sta.Run(() =>
+    {
+        // Gespeicherter Wert aus dem alten Design (0,42). Im neuen Design gilt die Standardbreite des Prototyps,
+        // bis der Trenner gezogen wird; der alte Wert bleibt für ältere Versionen stehen.
+        var context = SampleContext();
+        context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = 0.42);
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+
+        Assert.Null(vm.DetailsRatio);
+        vm.SetDetailsRatio(0.3);
+        vm.Dispose();
+        Assert.Equal(0.3, context.Config.Settings.LibraryPaneRatio);
+        Assert.Equal(0.42, context.Config.Settings.LibraryDetailsRatio);
     });
 }

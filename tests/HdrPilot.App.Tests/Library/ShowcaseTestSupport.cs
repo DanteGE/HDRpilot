@@ -35,6 +35,15 @@ public sealed class FakeArtworkService : IArtworkService
     /// <summary>Spiele mit Titelbild aus einer Quelle (sonst: Ersatzbild).</summary>
     public HashSet<string> WithHero { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Spiele mit Logo (sonst steht der Name in der Titelschrift).</summary>
+    public HashSet<string> WithLogo { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Angefragte helle Fassungen (Spielschlüssel).</summary>
+    public List<string> BoostRequests { get; } = [];
+
+    /// <summary>Vergessene Spiele (<see cref="Forget"/>).</summary>
+    public List<string> Forgotten { get; } = [];
+
     /// <summary>Kandidaten je Art (ohne Eintrag: keine; „Automatisch“ ergänzt der Dialog selbst).</summary>
     public Dictionary<ArtworkKind, List<ArtworkCandidate>> Candidates { get; } = [];
 
@@ -78,8 +87,26 @@ public sealed class FakeArtworkService : IArtworkService
         var hero = WithHero.Contains(game.Key)
             ? new ArtworkImage(Solid(32, 9, Colors.DarkOrange), ArtworkKind.Hero, ArtworkOrigin.Launcher, 3840, 1240, "Steam")
             : new ArtworkImage(Solid(32, 9, Colors.DimGray), ArtworkKind.Hero, ArtworkOrigin.Generated, 32, 9, "erzeugt");
-        var summary = new ArtworkSummary(hero.Origin, ArtworkOrigin.None, ArtworkOrigin.Generated, ArtworkOrigin.None, LogoIsName: true, CoverFromSmear: false, "Testbilder");
-        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, null, null, null, AmbientColors.FromName(game.Name), summary));
+        var logo = WithLogo.Contains(game.Key)
+            ? new ArtworkImage(Solid(40, 12, Colors.Gold), ArtworkKind.Logo, ArtworkOrigin.Launcher, 40, 12, "Steam")
+            : null;
+        var summary = new ArtworkSummary(hero.Origin, logo?.Origin ?? ArtworkOrigin.None, ArtworkOrigin.Generated, ArtworkOrigin.None, LogoIsName: logo is null, CoverFromSmear: false, "Testbilder");
+        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientColors.FromName(game.Name), summary));
+    }
+
+    /// <summary>Helle Fassung (nur für Spiele mit Titelbild aus einer Quelle), je Anfrage ein neues Bild.</summary>
+    public Task<ArtworkImage?> GetHeroBoostAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
+    {
+        BoostRequests.Add(game.Key);
+        return Task.FromResult(WithHero.Contains(game.Key)
+            ? new ArtworkImage(Solid(32, 9, Colors.Moccasin), ArtworkKind.Hero, ArtworkOrigin.Launcher, 3840, 1240, "Steam")
+            : null);
+    }
+
+    public void Forget(string gameKey)
+    {
+        Forgotten.Add(gameKey);
+        Raise(gameKey);
     }
 
     public Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default) =>

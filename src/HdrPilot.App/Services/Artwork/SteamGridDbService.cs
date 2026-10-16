@@ -33,6 +33,11 @@ public interface ISteamGridDbArtwork
     void StoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when);
 
     void FlushIndex();
+
+    /// <summary>Schalter umgelegt: Spiele mit Bildern von SteamGridDB neu ermitteln und melden (aus: lokale Bilder). Standard: nichts.</summary>
+    void SteamGridDbSwitched(bool enabled)
+    {
+    }
 }
 
 /// <summary>Einstellungen des SteamGridDB-Dienstes.</summary>
@@ -96,6 +101,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
     private readonly CancellationTokenSource _lifetime = new();
     private readonly object _gate = new();
     private Task? _running;
+    private CancellationTokenSource? _runCancel;
     private Timer? _startupTimer;
     private SteamGridDbKeyState? _keyState;
     private DateTimeOffset? _lastRun;
@@ -165,6 +171,12 @@ public sealed class SteamGridDbService : ISteamGridDbService
     {
         _options.Update(c => c.Settings.Artwork.SteamGridDb = enabled);
         _logger.LogInformation("SteamGridDB {State}.", enabled ? "eingeschaltet" : "ausgeschaltet");
+        if (!enabled)
+        {
+            CancelRun(); // aus heißt sofort keine Anfrage mehr, auch mitten in einem Lauf
+        }
+
+        _options.Artwork.SteamGridDbSwitched(enabled);
         RaiseChanged();
         if (enabled && KeyState() == SteamGridDbKeyState.Stored)
         {
@@ -228,6 +240,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
 
     public void RemoveKey()
     {
+        CancelRun();
         _keys.Delete();
         lock (_gate)
         {
@@ -242,6 +255,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
     public Task RunNowAsync(CancellationToken cancellationToken = default)
     {
         Task task;
+        CancellationTokenSource cancel;
         lock (_gate)
         {
             if (_disposed)
@@ -254,12 +268,31 @@ public sealed class SteamGridDbService : ISteamGridDbService
                 return running;
             }
 
-            task = RunOnWorker(() => Run(cancellationToken));
+            // Eigener Abbruch je Lauf: Ausschalten, Schlüssel entfernen und Beenden der App halten ihn an.
+            cancel = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, cancellationToken);
+            _runCancel = cancel;
+            task = RunOnWorker(() => Run(cancel.Token));
             _running = task;
         }
 
         RaiseChanged();
-        _ = task.ContinueWith(_ => RaiseChanged(), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        _ = task.ContinueWith(
+            _ =>
+            {
+                lock (_gate)
+                {
+                    if (ReferenceEquals(_runCancel, cancel))
+                    {
+                        _runCancel = null;
+                    }
+                }
+
+                cancel.Dispose();
+                RaiseChanged();
+            },
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
         return task;
     }
 
@@ -296,8 +329,34 @@ public sealed class SteamGridDbService : ISteamGridDbService
             _startupTimer = null;
         }
 
+        CancelRun();
         _lifetime.Cancel();
     }
+
+    /// <summary>Hält einen laufenden Lauf an (die laufende Anfrage endet, keine weitere beginnt).</summary>
+    private void CancelRun()
+    {
+        CancellationTokenSource? cancel;
+        lock (_gate)
+        {
+            cancel = _runCancel;
+        }
+
+        try
+        {
+            cancel?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Lauf eben zu Ende.
+        }
+    }
+
+    /// <summary>Darf der Lauf weitermachen? Nur eingeschaltet, ohne laufendes Spiel und ohne Abbruch.</summary>
+    private bool MayContinue(CancellationToken cancellationToken) =>
+        !cancellationToken.IsCancellationRequested
+        && _options.Current().Settings.Artwork?.SteamGridDb == true
+        && !_options.GameRunning();
 
     private SteamGridDbKeyState KeyState()
     {
@@ -371,12 +430,27 @@ public sealed class SteamGridDbService : ISteamGridDbService
         }
     }
 
-    /// <summary>Ein Lauf: fehlende Bilder abfragen und laden (eigener Thread). Ohne Schalter oder Schlüssel: nichts.</summary>
+    /// <summary>
+    /// Ein Lauf: fehlende Bilder abfragen und laden (eigener Thread). Ohne Schalter oder Schlüssel: nichts. Läuft ein Spiel,
+    /// beginnt er nicht; vor jedem Spiel und jeder Bildart wird geprüft, ob er weitermachen darf (eingeschaltet, kein Spiel,
+    /// nicht abgebrochen), sonst endet er sofort.
+    /// </summary>
     private void Run(CancellationToken cancellationToken)
     {
         var config = _options.Current();
         if (config.Settings.Artwork?.SteamGridDb != true)
         {
+            return;
+        }
+
+        if (_options.GameRunning())
+        {
+            _logger.LogInformation("SteamGridDB: Lauf übersprungen, ein Spiel läuft.");
+            lock (_gate)
+            {
+                _lastError = ArtworkStrings.SteamGridDb_Error_GameRunning;
+            }
+
             return;
         }
 
@@ -409,6 +483,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
         var filled = 0;
         string? error = null;
         var requests = 0;
+        var stopped = false;
         if (work.Count > 0)
         {
             using var client = CreateClient(key);
@@ -416,7 +491,12 @@ public sealed class SteamGridDbService : ISteamGridDbService
             {
                 foreach (var (game, kinds) in work)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!MayContinue(cancellationToken))
+                    {
+                        stopped = true;
+                        break;
+                    }
+
                     try
                     {
                         filled += Fill(client, game, kinds, now, cancellationToken);
@@ -437,10 +517,31 @@ public sealed class SteamGridDbService : ISteamGridDbService
                 _logger.LogWarning("SteamGridDB: Lauf beendet ({Kind}) nach {Requests} Anfragen.", ex.Kind, client.RequestCount);
                 error = Message(ex.Kind);
             }
+            catch (OperationCanceledException)
+            {
+                stopped = true;
+            }
             finally
             {
                 requests = client.RequestCount;
             }
+        }
+
+        if (stopped)
+        {
+            // Ausgeschaltet, Schlüssel entfernt, Spiel gestartet oder App beendet: kein „heute gelaufen“, der nächste Lauf
+            // macht weiter.
+            var gameRunning = _options.GameRunning();
+            _options.Artwork.FlushIndex();
+            lock (_gate)
+            {
+                _lastRequests = requests;
+                _lastFilled = filled;
+                _lastError = gameRunning ? ArtworkStrings.SteamGridDb_Error_GameRunning : null;
+            }
+
+            _logger.LogInformation("SteamGridDB: Lauf angehalten nach {Requests} Anfragen, {Filled} Bilder geladen.", requests, filled);
+            return;
         }
 
         _options.Artwork.SteamGridDbLastRun = now;
@@ -481,6 +582,12 @@ public sealed class SteamGridDbService : ISteamGridDbService
         var filled = 0;
         foreach (var kind in kinds)
         {
+            if (!MayContinue(cancellationToken))
+            {
+                // Ausgeschaltet oder Spiel gestartet: Abbruch des ganzen Laufs (wie ein Abbruch von außen).
+                throw new OperationCanceledException();
+            }
+
             var assetKind = kind switch
             {
                 ArtworkKind.Hero => SteamGridDbAssetKind.Hero,
@@ -561,12 +668,14 @@ public sealed class SteamGridDbService : ISteamGridDbService
     private SteamGridDbClient CreateClient(string key)
     {
         HandlersCreated++;
+
+        // Keine Weiterleitungen: Bilder nur von der geprüften Adresse unter steamgriddb.com (eine Weiterleitung auf einen
+        // anderen Rechner umginge die Prüfung); der Client prüft zusätzlich die Adresse der Antwort.
         var handler = _options.HandlerFactory?.Invoke() ?? new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
             UseCookies = false,
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 3,
+            AllowAutoRedirect = false,
         };
         return new SteamGridDbClient(handler, _options.Clock, key, UserAgent, _options.MaxRequests, _pacer);
     }

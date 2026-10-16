@@ -837,18 +837,22 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 120 bis
   660 px hoch ist; die Bibliothek zeigt das Symbol (höchstens 1,5-fach vergrößert) links vom Namen. Ein Xbox-Kachelbild
   wird dagegen rechts der Mitte eingezeichnet. Zusätzlich gibt es ein erzeugtes Kopfbild (460×215) als Vorschaubild der
-  Liste. Die helle Fassung entsteht beim ersten Zeigen eines Titelbilds in Stufenbreiten bis 2560 px (JPEG, `art\boost`,
-  höchstens 300 MB); dekodierte Bilder im Speicher höchstens 192 MB. Kennung je Spiel per SHA-256 (gekürzt) über Wahl,
+  Liste. Die helle Fassung entsteht nur, wenn sie zu sehen ist (HDR an, HDR-Moment, HDR-Vorschau), in Stufenbreiten bis
+  2560 px (JPEG, `art\boost`, höchstens 300 MB); dekodierte Bilder im Speicher höchstens 192 MB, die Bildsätze des
+  Titelbereichs (höchstens sieben) eingerechnet. Kennung je Spiel per SHA-256 (gekürzt) über Wahl,
   Symbol-Hinweise, Installationsordner sowie Pfad, Größe und Änderungszeit jeder gefundenen Datei. Ein zweites eigenes
   Bild derselben Art ersetzt das erste unter demselben Namen; scheitert das Speichern der Konfiguration, bleibt jede
   Datei liegen, auf die sie noch zeigt. Gemessen an einer Kopie der Bibliothek (651 Spiele): Steam Titelbild 631/636,
   Logo 628, Cover 628 genutzt plus 3 verschmierte Kapseln (Blue Estate, Dustforce, Homesick), GOG 5/5, Ubisoft
   vollständig, Xbox Kachelbild 2/2, Epic und EA Symbol aus der EXE; erster Lauf 10,4 s, danach unter 1 s.
 - SteamGridDB: Schlüsselanteil der DPAPI `HDRpilot.SteamGridDB.v1`; gefragt wird nur nach unbewegten Bildern ohne
-  NSFW- oder Spaß-Markierung, eine verschmierte Kapsel zählt als fehlendes Cover.
+  NSFW- oder Spaß-Markierung, eine verschmierte Kapsel zählt als fehlendes Cover. Ausschalten, „Schlüssel entfernen“
+  und ein Spielstart halten auch einen laufenden Lauf sofort an; ausgeschaltet gelten seine Bilder nicht (die Dateien
+  bleiben für ein erneutes Einschalten). Keine Weiterleitungen; die Namenssuche nimmt nur einen Treffer mit gleichem
+  Namen. In den Einstellungen gibt es „Fehlende Bilder jetzt laden“ und „Schlüssel entfernen“.
 - Bildschirmwerte: Nach `Invalidate` liest HDRpilot DXGI nur, wenn sich Bildschirme, HDR-Zustand oder Zielbildschirm
-  wirklich geändert haben. Meldet DXGI 0 nits (etwa bei ausgeschaltetem Bildschirm), gilt der Wert als unbekannt („—“)
-  und überschreibt keine gemerkte Spitze.
+  wirklich geändert haben. Meldet DXGI 0 nits (etwa bei ausgeschaltetem Bildschirm), gilt der Wert als unbekannt („—“),
+  überschreibt keine gemerkte Spitze und wird beim nächsten Öffnen oder Melden erneut gelesen.
 - Einstellungen: eine scrollende Seite mit Navigation; Raster je Gruppe mit Bereichen höchstens 760 px breit, Spalten
   mindestens 520 px, Abstand 24 px, höchstens drei Spalten (1280×800 eine, 1920×1080 zwei, 3440×1440 drei Spalten).
   „Abbrechen“ nimmt Änderungen der Darstellung nicht zurück. Farbwechsel blenden bei offenem Fenster 0,9 s über
@@ -856,9 +860,10 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
 - Symbole: „HDR aus“ ist die Sonne als Linie im Verlauf Akzent → Atmosphäre ohne Kachel (je Taskleiste auf 3:1
   gebracht), „HDR an“ die gefüllte Kachel, „Automatik pausiert“ mit gelbem und „Spiel läuft“ mit grünem Abzeichen
   (Pause geht vor); unter 24 px eine am Pixelraster ausgerichtete, vereinfachte Glyphe.
-- Bibliothek: Der Detailbereich behält den Trenner, ist aber höchstens 560 px breit (Doppelklick: 23 %); der
-  Titelbereich im Regal ist höchstens Fensterhöhe − 462 px hoch (in sehr hohen Fenstern genau so hoch, damit unter der
-  Kachelreihe kein leeres Band bleibt) und gibt in niedrigen Fenstern bis 440 px nach (Logo
+- Bibliothek: Der Detailbereich behält den Trenner, ist aber höchstens 560 px breit (Doppelklick: 23 %); gemerkt wird
+  die Aufteilung erst nach dem Ziehen (`settings.libraryPaneRatio`), die der alten Oberfläche (`libraryDetailsRatio`)
+  gilt nicht mehr. Der Titelbereich im Regal ist mindestens Fensterhöhe − 462 px hoch (in sehr hohen Fenstern genau so
+  hoch, damit unter der Kachelreihe kein leeres Band bleibt) und gibt in niedrigen Fenstern bis 440 px nach (Logo
   bzw. Name werden dann kleiner), damit die Kachelreihe ganz über der Statuszeile und die Werkzeugleiste unter der
   Automatik-Karte steht; erst unter 712 px Fensterhöhe werden die Kacheln kleiner als 200 px (höchstens bis 100 px).
   Die Werkzeugleiste faltet in Stufen, die Filter zuletzt. Der Startknopf heißt sichtbar „Starten“, für Bildschirmleser
@@ -875,3 +880,14 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Lichtlinie des HDR-Moments hat einen weichen Schein und verglimmt rasch. Für Bildschirmfotos bei ausgeschaltetem
   Monitor setzt `--snapshot-display "Name;Spitze;Vollbild;Minimum;Bit"` feste Bildschirmwerte ein; die Zustände
   `nativ-hdr` und `kontextmenue` (das Menü wird ohne Popup über das Fenster gezeichnet) kamen dazu.
+- Nach der unabhängigen Prüfung (G10.10): Die Effektstufe gilt auch für Einstellungen, Dialoge und Tray-Menü („Aus“:
+  keine Bewegung), Kacheln und Hinweise der Bibliothek folgen der wirksamen Stufe statt nur der Windows-Option. Dauer-
+  Effekte laufen nur, solange etwas sie zeigt (Auswahlring nur in Raster und Regal, Glanz nur über dem Namen, die
+  Vorschau der Einstellungen nur im sichtbaren Teil); im Hintergrund halten sie ihre Werte und geben ihre Uhren frei (ein
+  nur angehaltenes Storyboard ließ WPF weiter takten, gemessen etwa 1 % eines Kerns). Die Partikel des HDR-Moments
+  takten über eine Zeitleiste mit 60 Bildern pro Sekunde statt über CompositionTarget.Rendering (sonst in der
+  Bildwiederholrate des Bildschirms); der Moment sucht die Ebene der hellen Fassung erst beim Abspielen. Nach dem
+  Schließen räumt der Bilddienst Bilder und Einträge von Spielen auf, die nicht mehr in der Bibliothek stehen; „Symbol
+  ändern…“ erneuert auch die Bilder. Eigene Bilder bis 32 MB und 100 Megapixel (beim Dekodieren verkleinert), größere
+  melden „zu groß“. Die Werte der Bildschirm-Kapsel nennen für Bildschirmleser, was sie sind („Spitze in Nits: 456“);
+  die Ansichten haben die Linien-Symbole des Prototyps; die Vorschau des Tray-Menüs gleicht dem echten Menü.

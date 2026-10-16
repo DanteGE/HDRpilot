@@ -20,6 +20,7 @@ public sealed class HdrMomentTests
 
     private static (HdrMomentPlayer Player, HdrMomentParts Parts, FakeFrameClock Clock, FakeEffectTime Time) Create()
     {
+        var boost = new Border { Opacity = 0 };
         var parts = new HdrMomentParts(
             new Grid(),
             new Border { RenderTransform = new TranslateTransform() },
@@ -27,7 +28,7 @@ public sealed class HdrMomentTests
             new Border(),
             new Border(),
             new ParticleLayer(),
-            new Border { Opacity = 0 });
+            () => boost);
         var clock = new FakeFrameClock();
         var time = new FakeEffectTime();
         return (new HdrMomentPlayer(parts, clock, time, () => 17), parts, clock, time);
@@ -106,7 +107,7 @@ public sealed class HdrMomentTests
 
             var board = Assert.IsType<Storyboard>(player.Board);
             var fade = Assert.IsType<DoubleAnimationUsingKeyFrames>(Assert.Single(board.Children));
-            Assert.Same(parts.Boost, Storyboard.GetTarget(fade));
+            Assert.Same(parts.Boost(), Storyboard.GetTarget(fade));
             Assert.Equal(EffectPolicy.ReducedTransition, fade.KeyFrames[0].KeyTime.TimeSpan); // Einblenden höchstens 0,3 s
             player.Dispose();
         });

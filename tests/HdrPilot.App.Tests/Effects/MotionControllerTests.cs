@@ -133,6 +133,40 @@ public sealed class MotionControllerTests
     }
 
     [Fact]
+    public void Motion_paused_effect_holds_its_values_without_a_running_clock_and_resumes_there()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Angehaltene Storyboards ließen ihre Uhren laufen, und WPF taktete weiter (Kosten im Hintergrund). Deshalb:
+            // Werte halten, Uhren weg, an der Stelle fortsetzen.
+            var (motion, _, target) = Create();
+            var effect = motion.Register("KenBurns", target, () => Spin(target));
+            Open(motion);
+            effect.Board!.SeekAlignedToLastTick(target, TimeSpan.FromSeconds(1), TimeSeekOrigin.BeginTime);
+            Assert.Equal(0.6, target.Opacity, 3);
+
+            motion.SetWindowState(visible: true, minimized: false, active: false);
+
+            Assert.True(effect.IsPaused);
+            Assert.False(DependencyPropertyHelper.GetValueSource(target, UIElement.OpacityProperty).IsAnimated); // keine Uhr mehr
+            Assert.Equal(0.6, target.Opacity, 3); // kein Sprung im sichtbaren Fenster
+
+            Open(motion);
+            Assert.True(DependencyPropertyHelper.GetValueSource(target, UIElement.OpacityProperty).IsAnimated);
+            Assert.Equal(TimeSpan.FromSeconds(1), effect.Board!.GetCurrentTime(target));
+            Assert.Equal(0.6, target.Opacity, 3);
+
+            // Minimiert: entfernt, der ursprüngliche Grundwert gilt wieder (auch nach einem Anhalten).
+            motion.SetWindowState(visible: true, minimized: false, active: false);
+            motion.SetWindowState(visible: true, minimized: true, active: false);
+            Assert.False(DependencyPropertyHelper.GetValueSource(target, UIElement.OpacityProperty).IsAnimated);
+            Assert.Equal(1, target.Opacity);
+            Assert.Equal(DependencyProperty.UnsetValue, target.ReadLocalValue(UIElement.OpacityProperty));
+            motion.Dispose();
+        });
+    }
+
+    [Fact]
     public void Motion_minimized_window_removes_the_storyboard_and_restarts_fresh()
     {
         WpfTestHost.Run(() =>

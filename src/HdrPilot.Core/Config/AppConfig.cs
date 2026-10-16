@@ -78,10 +78,18 @@ public sealed class AppSettings
     public string? LibrarySortOrder { get; set; }
 
     /// <summary>
-    /// Anteil des Detailbereichs an der Breite beider Spalten der Spielebibliothek (0 bis 1). Null: Standard.
-    /// Die Oberfläche begrenzt ihn beim Öffnen auf die aktuelle Fenstergröße.
+    /// Anteil des Detailbereichs im alten Design der Spielebibliothek (vor E89). Wird nicht mehr gelesen: Im neuen Design hat
+    /// der Detailbereich eine andere Standardbreite, eine alte Aufteilung verschöbe Raster und Kopfzeile
+    /// (<see cref="LibraryPaneRatio"/>). Bleibt nur erhalten, damit ältere Versionen ihre Aufteilung behalten.
     /// </summary>
     public double? LibraryDetailsRatio { get; set; }
+
+    /// <summary>
+    /// Anteil des Detailbereichs an der Breite beider Spalten der Spielebibliothek im Design „Showcase Hero“ (0 bis 1),
+    /// gemerkt erst, wenn der Trenner gezogen wurde. Null: Standardbreite des Prototyps. Die Oberfläche begrenzt ihn beim
+    /// Öffnen auf die aktuelle Fenstergröße.
+    /// </summary>
+    public double? LibraryPaneRatio { get; set; }
 
     /// <summary>
     /// Gemerkte Ansicht der Spielebibliothek (E89): "List" (Standard), "Grid" (Raster) oder "Shelf" (Regal). Text statt

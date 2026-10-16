@@ -128,8 +128,11 @@ try {
     [void](Wait-Until { $p = Find-Id $win 'NitsPeak' 500; $p -and $p.Current.Name -match '\d' } 4000)
     $peakEl = Find-Id $win 'NitsPeak' 3000
     $peakText = if ($peakEl) { [string]$peakEl.Current.Name } else { '' }
+    # Der Name für Bildschirmleser nennt die Größe mit („Spitze in Nits: 456“), die Zahl steht dahinter
+    Check ($peakText -match '^Spitze in Nits: ') ('Kapsel nennt für Bildschirmleser, was die Zahl ist („{0}“)' -f $peakText)
+    $peakNumber = [regex]::Match($peakText, '\d+(?:[.,]\d+)?').Value
     $peakValue = 0.0
-    if ([double]::TryParse(($peakText -replace ',', '.'), [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$peakValue) -and $peakValue -gt 0) {
+    if ([double]::TryParse(($peakNumber -replace ',', '.'), [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$peakValue) -and $peakValue -gt 0) {
         $scale = Find-Id $win 'NitsScale' 3000
         $range = $null
         if ($scale -and $scale.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range)) {

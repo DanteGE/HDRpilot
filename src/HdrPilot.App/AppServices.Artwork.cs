@@ -22,6 +22,8 @@ public sealed partial class AppServices
         FileSystem = FileSystem,
         Roots = () => ArtworkRoots.Resolve(FileSystem, Registry, Environment, LoggerFactory.CreateLogger("Bilder")),
         HelperPatterns = () => Config.Current.Settings.HelperExecutablePatterns,
+        SteamGridDbEnabled = () => Config.Current.Settings.Artwork?.SteamGridDb == true,
+        LibraryKeys = () => Config.Current.Games.Select(g => g.Key).ToList(),
         PostToUi = action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action),
         Logger = LoggerFactory.CreateLogger("Bilder"),
     });

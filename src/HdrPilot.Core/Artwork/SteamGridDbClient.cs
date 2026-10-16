@@ -120,9 +120,18 @@ public sealed class SteamGridDbClient : IDisposable
         }
     }
 
-    /// <summary>ID des ersten Treffers der Suche nach einem Namen; null ohne Treffer.</summary>
+    /// <summary>
+    /// ID des ersten Treffers der Suche, dessen Name dem gesuchten entspricht (<see cref="NormalizeName"/>); null ohne
+    /// passenden Treffer. Die Suche ergänzt Namen nur: Ein allgemeiner Name oder ein EXE-Name träfe sonst ein anderes Spiel.
+    /// </summary>
     public long? SearchGameId(string name, CancellationToken cancellationToken)
     {
+        var wanted = NormalizeName(name);
+        if (wanted.Length == 0)
+        {
+            return null;
+        }
+
         using var doc = GetJsonOrNotFound("search/autocomplete/" + Uri.EscapeDataString(name.Trim()), cancellationToken);
         if (doc is null || !doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
         {
@@ -131,13 +140,39 @@ public sealed class SteamGridDbClient : IDisposable
 
         foreach (var item in data.EnumerateArray())
         {
-            if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty("id", out var id) && id.TryGetInt64(out var value) && value > 0)
+            if (item.ValueKind == JsonValueKind.Object
+                && item.TryGetProperty("id", out var id) && id.TryGetInt64(out var value) && value > 0
+                && item.TryGetProperty("name", out var found) && found.ValueKind == JsonValueKind.String
+                && NormalizeName(found.GetString()) == wanted)
             {
                 return value;
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Name zum Vergleichen: Kleinbuchstaben, nur Buchstaben und Ziffern (Satzzeichen, Leerzeichen, ™ und ® fallen weg),
+    /// Akzente entfernt. „Baldur's Gate 3“ und „Baldurs Gate 3“ sind gleich, „Gate“ und „Baldur's Gate 3“ nicht.
+    /// </summary>
+    public static string NormalizeName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder(name.Length);
+        foreach (var c in name.Normalize(System.Text.NormalizationForm.FormD))
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                builder.Append(char.ToLowerInvariant(c));
+            }
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
@@ -191,6 +226,13 @@ public sealed class SteamGridDbClient : IDisposable
 
         using var request = new HttpRequestMessage(HttpMethod.Get, asset.Url);
         using var response = Send(request, cancellationToken);
+
+        // Hat ein Handler Weiterleitungen befolgt, zählt die Adresse, von der die Antwort kam.
+        if (response.RequestMessage?.RequestUri is { } final && !IsAllowedImageUrl(final.AbsoluteUri))
+        {
+            throw new SteamGridDbException(SteamGridDbErrorKind.Blocked, "Bild über eine Weiterleitung außerhalb von steamgriddb.com.");
+        }
+
         if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
         {
             throw new SteamGridDbException(SteamGridDbErrorKind.Blocked, "Bild zu groß.");

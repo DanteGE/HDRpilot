@@ -57,6 +57,34 @@ public sealed class SettingsMotionTests
     }
 
     [Fact]
+    public void Settings_motion_runs_only_while_preview_or_demo_card_is_scrolled_into_view()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var appearance = new StaticAppearanceService();
+            var context = new MotionContext(WindowVisible: true, Minimized: false, Active: true, GameRunning: false, PauseInBackground: true, PauseWhilePlaying: true);
+            var inView = false;
+            var calls = new List<string>();
+            var window = new Window();
+            var motion = new SettingsMotion(window, () => appearance.Current, null, () => calls.Add("start"), () => calls.Add("stop"), () => context, () => inView);
+
+            // Aktiv und „Voll“, aber „Darstellung“ liegt außerhalb des sichtbaren Teils: nichts läuft.
+            Assert.False(motion.IsRunning);
+
+            inView = true; // hereingescrollt (das Fenster ruft Update beim Bildlauf)
+            motion.Update();
+            Assert.True(motion.IsRunning);
+
+            inView = false;
+            motion.Update();
+            Assert.False(motion.IsRunning);
+            Assert.Equal(["start", "stop"], calls);
+            motion.Dispose();
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void Settings_motion_stops_and_unsubscribes_when_disposed()
     {
         WpfTestHost.Run(() =>

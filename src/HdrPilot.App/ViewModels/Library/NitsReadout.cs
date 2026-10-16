@@ -42,6 +42,13 @@ public sealed class NitsReadout : ObservableObject
 
     public string MinimumText => HasValues ? NitScale.Format(_display!.MinNits) : LibraryStrings.Nits_Unknown;
 
+    /// <summary>Name für Bildschirmleser: „Spitze in Nits: 456“ („…: unbekannt“ ohne Werte), nicht nur die Zahl.</summary>
+    public string PeakName => ValueName(LibraryStrings.Nits_PeakName, PeakText);
+
+    public string FullFrameName => ValueName(LibraryStrings.Nits_FullFrameName, FullFrameText);
+
+    public string MinimumName => ValueName(LibraryStrings.Nits_MinimumName, MinimumText);
+
     /// <summary>Höchster Wert der Skala = Spitze bei eingeschaltetem HDR; 0 ohne Werte.</summary>
     public double ScaleMaximum => _display is { } d ? NitScale.Maximum(d) : 0;
 
@@ -58,6 +65,9 @@ public sealed class NitsReadout : ObservableObject
 
     /// <summary>Spitze noch nie mit eingeschaltetem HDR gemessen: Hinweis im Tooltip.</summary>
     public bool PeakMeasuredWithHdr => _display?.PeakMeasuredWithHdr == true;
+
+    private static string ValueName(string label, string value) =>
+        LibraryText.Format(LibraryStrings.Nits_ValueName, label, value == LibraryStrings.Nits_Unknown ? LibraryStrings.Nits_ValueUnknown : value);
 
     /// <summary>Neue Werte übernehmen (nur bei Änderung wird gemeldet).</summary>
     internal void Update(DisplayNits? display, string fallbackName)

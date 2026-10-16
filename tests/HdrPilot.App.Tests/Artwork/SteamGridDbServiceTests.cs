@@ -143,6 +143,86 @@ public sealed class SteamGridDbServiceTests
     }
 
     [Fact]
+    public async Task Switching_off_or_removing_the_key_stops_a_running_run_at_once()
+    {
+        foreach (var stop in new[] { "aus", "schluessel" })
+        {
+            _config.Games.Clear();
+            for (var i = 1; i <= 6; i++)
+            {
+                _config.Games.Add(Steam(i.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                _artwork.Missing["Steam:" + i] = [ArtworkKind.Hero];
+            }
+
+            _handlers.Clear();
+            _config.Settings.Artwork.SteamGridDb = true;
+            SteamGridDbService? running = null;
+            var requests = 0;
+            using var service = Service(onRequest: () =>
+            {
+                // Der Nutzer greift nach der ersten Anfrage ein (wie in der Prüfung: danach liefen noch 11 Anfragen).
+                if (Interlocked.Increment(ref requests) == 1)
+                {
+                    if (stop == "aus")
+                    {
+                        running!.SetEnabled(false);
+                    }
+                    else
+                    {
+                        running!.RemoveKey();
+                    }
+                }
+            });
+            running = service;
+            service.SaveKey(Key);
+            _artwork.Stored.Clear();
+
+            try
+            {
+                await service.RunNowAsync(Ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // Angehalten: auch das ist ein Ende des Laufs.
+            }
+
+            await WaitIdle(service);
+            Assert.Equal(1, _handlers.Sum(h => h.Requests.Count));
+            Assert.Empty(_artwork.Stored);
+            Assert.Null(_artwork.SteamGridDbLastRun); // kein „heute gelaufen“: der nächste Lauf macht weiter
+        }
+    }
+
+    [Fact]
+    public async Task Game_start_stops_a_run_and_no_run_starts_while_a_game_is_running()
+    {
+        for (var i = 1; i <= 6; i++)
+        {
+            _config.Games.Add(Steam(i.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            _artwork.Missing["Steam:" + i] = [ArtworkKind.Hero];
+        }
+
+        _config.Settings.Artwork.SteamGridDb = true;
+        _gameRunning = true;
+        using var service = Service(onRequest: () => _gameRunning = true);
+        service.SaveKey(Key);
+
+        // Läuft schon ein Spiel, beginnt kein Lauf (auch nicht nach dem Speichern des Schlüssels).
+        await service.RunNowAsync(Ct);
+        Assert.Equal(0, service.HandlersCreated);
+        Assert.Equal("Übersprungen: Ein Spiel läuft", service.Status.LastError);
+
+        // Spielstart mitten im Lauf: nach der laufenden Bildart ist Schluss.
+        _gameRunning = false;
+        await service.RunNowAsync(Ct);
+        await WaitIdle(service);
+        var requests = _handlers.Sum(h => h.Requests.Count);
+        Assert.InRange(requests, 1, 2); // die erste Abfrage und höchstens ihr Download
+        Assert.Equal("Übersprungen: Ein Spiel läuft", service.Status.LastError);
+        Assert.True(_artwork.Stored.Count <= 1);
+    }
+
+    [Fact]
     public async Task Rejected_key_stops_the_run_with_a_message()
     {
         _config.Games.Add(Steam("1"));
@@ -230,7 +310,7 @@ public sealed class SteamGridDbServiceTests
 
     private static GameConfig Steam(string id) => new() { Source = GameSource.Steam, SourceId = id, Name = "Spiel " + id };
 
-    private SteamGridDbService Service(HttpStatusCode status = HttpStatusCode.OK, bool empty = false) => new(new SteamGridDbServiceOptions
+    private SteamGridDbService Service(HttpStatusCode status = HttpStatusCode.OK, bool empty = false, Action? onRequest = null) => new(new SteamGridDbServiceOptions
     {
         Artwork = _artwork,
         Current = () => _config,
@@ -242,7 +322,11 @@ public sealed class SteamGridDbServiceTests
         GameRunning = () => _gameRunning,
         HandlerFactory = () =>
         {
-            var handler = new CountingHandler(request => Respond(request, status, empty));
+            var handler = new CountingHandler(request =>
+            {
+                onRequest?.Invoke();
+                return Respond(request, status, empty);
+            });
             lock (_handlers)
             {
                 _handlers.Add(handler);
@@ -271,7 +355,7 @@ public sealed class SteamGridDbServiceTests
         }
 
         var json = uri.AbsolutePath.Contains("/search/", StringComparison.Ordinal)
-            ? "{\"success\":true,\"data\":[{\"id\":5247826,\"name\":\"x\"}]}"
+            ? "{\"success\":true,\"data\":[{\"id\":5247826,\"name\":" + System.Text.Json.JsonSerializer.Serialize(Uri.UnescapeDataString(uri.AbsolutePath.Split('/')[^1])) + "}]}"
             : empty
                 ? "{\"success\":true,\"data\":[]}"
                 : "{\"success\":true,\"data\":[{\"id\":1,\"url\":\"https://cdn2.steamgriddb.com/logo/a.png\",\"width\":1,\"height\":1,\"mime\":\"image/png\"}]}";

@@ -72,6 +72,41 @@ public sealed class SteamGridDbClientTests
     }
 
     [Fact]
+    public void Image_that_came_through_a_redirect_to_another_host_is_blocked()
+    {
+        // Ein Handler, der Weiterleitungen befolgt hat, meldet die Adresse der Antwort in RequestMessage.
+        var handler = new SgdbHandler(request =>
+        {
+            var response = SgdbHandler.Bytes([1, 2, 3], "image/png");
+            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, request.RequestUri!.AbsolutePath.Contains("umweg", StringComparison.Ordinal)
+                ? "https://evil.example/a.png"
+                : request.RequestUri.AbsoluteUri);
+            return response;
+        });
+        using var client = NewClient(handler);
+
+        var error = Assert.Throws<SteamGridDbException>(() => client.Download(new SteamGridDbAsset(1, "https://cdn2.steamgriddb.com/umweg.png", 1, 1, null), CancellationToken.None));
+        Assert.Equal(SteamGridDbErrorKind.Blocked, error.Kind);
+
+        // Gegenprobe: ohne Weiterleitung wird geladen.
+        Assert.Equal(new byte[] { 1, 2, 3 }, client.Download(new SteamGridDbAsset(2, "https://cdn2.steamgriddb.com/direkt.png", 1, 1, null), CancellationToken.None).Data);
+    }
+
+    [Theory]
+    [InlineData("Baldur's Gate 3", "[{\"id\":1,\"name\":\"Gate\"},{\"id\":5247826,\"name\":\"Baldur’s Gate 3\"}]", 5247826L)]
+    [InlineData("Pokémon™ Legends", "[{\"id\":9,\"name\":\"Pokemon Legends\"}]", 9L)]
+    [InlineData("Launcher", "[{\"id\":4,\"name\":\"Launcher Simulator 2024\"},{\"id\":5,\"name\":\"The Launcher\"}]", null)]
+    [InlineData("game", "[{\"id\":6,\"name\":\"Game Dev Tycoon\"}]", null)]
+    public void Name_search_accepts_only_a_hit_with_the_same_name(string name, string hits, long? expected)
+    {
+        var handler = new SgdbHandler(_ => SgdbHandler.Json("{\"success\":true,\"data\":" + hits + "}"));
+        using var client = NewClient(handler);
+
+        Assert.Equal(expected, client.SearchGameId(name, CancellationToken.None));
+        Assert.Equal(SteamGridDbClient.NormalizeName("Baldurs Gate 3"), SteamGridDbClient.NormalizeName("Baldur's  Gate: 3"));
+    }
+
+    [Fact]
     public void Errors_are_classified_and_unknown_games_are_empty()
     {
         var status = HttpStatusCode.Unauthorized;

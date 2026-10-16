@@ -76,7 +76,7 @@
     <value>Automatik pausiert</value>
   </data>
   <data name="Pause_Tooltip" xml:space="preserve">
-    <value>Solange pausiert, schaltet ein erkannter Spielstart HDR nicht ein. „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Laufende Spiele enden normal und werden zurückgestellt.</value>
+    <value>Solange pausiert, schaltet ein erkannter Spielstart HDR nicht ein. „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Laufende Spiele enden normal und werden zurückgestellt.</value>
   </data>
   <data name="Settings_Name" xml:space="preserve">
     <value>Einstellungen</value>
@@ -350,7 +350,7 @@
     <value>Wirkt nur, wenn das Spiel über HDRpilot startet (Starten, Verknüpfung, Steam-Startoption): HDRpilot schaltet Auto HDR in Windows direkt davor ein und nach dem Spiel wieder zurück.</value>
   </data>
   <data name="Details_AutoHdrNeedsHdr" xml:space="preserve">
-    <value>„HDR automatisch“ ist für dieses Spiel aus: Auto HDR wirkt nur, wenn Windows-HDR schon vor dem Spielstart an ist. „Mit HDR starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten HDR mit ein; sonst HDR vorher selbst einschalten.</value>
+    <value>„HDR automatisch“ ist für dieses Spiel aus: Auto HDR wirkt nur, wenn Windows-HDR schon vor dem Spielstart an ist. „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten HDR mit ein; sonst HDR vorher selbst einschalten.</value>
   </data>
   <data name="Details_AutoHdrNative" xml:space="preserve">
     <value>Dieses Spiel hat laut PCGamingWiki eigenes HDR – besser im Spiel einschalten.</value>
@@ -932,6 +932,12 @@
   <data name="Nits_MinimumName" xml:space="preserve">
     <value>Minimum in Nits</value>
   </data>
+  <data name="Nits_ValueName" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Nits_ValueUnknown" xml:space="preserve">
+    <value>unbekannt</value>
+  </data>
   <data name="Nits_Tooltip" xml:space="preserve">
     <value>Werte des Bildschirms laut Windows (DXGI): Spitze {0} nits · Vollbild {1} nits · Minimum {2} nits · {3} Bit pro Farbe. Die Skala reicht bis zur Spitze bei eingeschaltetem HDR (Fähigkeit des Bildschirms, keine Messung).</value>
     <comment>{0} = Spitze, {1} = Vollbild, {2} = Minimum, {3} = Bit je Farbe</comment>
@@ -1137,7 +1143,7 @@
     <value>Eigene Datei…</value>
   </data>
   <data name="Picker_PickFileHint" xml:space="preserve">
-    <value>PNG, JPG oder WebP von diesem PC</value>
+    <value>PNG, JPG, WebP oder BMP von diesem PC</value>
   </data>
   <data name="Picker_OwnFile" xml:space="preserve">
     <value>Eigene Datei: {0}</value>
@@ -1168,6 +1174,9 @@
   </data>
   <data name="Picker_NotAnImage" xml:space="preserve">
     <value>Aus dieser Datei lässt sich kein Bild lesen. Wähle ein PNG, JPG, WebP oder BMP.</value>
+  </data>
+  <data name="Picker_TooLarge" xml:space="preserve">
+    <value>Das Bild ist zu groß (höchstens 32 MB und 100 Megapixel). Wähle eine kleinere Fassung.</value>
   </data>
   <data name="Picker_SaveFailed" xml:space="preserve">
     <value>Das Bild konnte nicht gespeichert werden: {0}</value>

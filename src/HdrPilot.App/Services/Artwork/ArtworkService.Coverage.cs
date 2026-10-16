@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Windows.Media.Imaging;
 using HdrPilot.App.Resources;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Artwork;
@@ -146,12 +145,8 @@ public sealed partial class ArtworkService
     {
         try
         {
-            using var stream = new MemoryStream(data, writable: false);
-            var frame = BitmapDecoder.Create(stream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnLoad).Frames[0];
-            if (frame.PixelWidth <= 0 || frame.PixelHeight <= 0 || (long)frame.PixelWidth * frame.PixelHeight > ArtworkImaging.MaxPixels)
-            {
-                throw new InvalidDataException("Bild ohne gültige Größe.");
-            }
+            // Größe aus dem Kopf vor dem Dekodieren (höchstens 36 MP), dann nur ein kleines Vorschaubild.
+            ArtworkImaging.Validate(data, ArtworkImaging.MaxPixels);
         }
         catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex) && ex is not InvalidDataException)
         {
@@ -172,8 +167,29 @@ public sealed partial class ArtworkService
             sgdb.Files[NameOf(kind)] = file;
             sgdb.Checked[NameOf(kind)] = when;
         });
-        Forget(game.Key);
+        ForgetInMemory(game.Key);
         Raise(game.Key);
+    }
+
+    /// <summary>
+    /// SteamGridDB ein- oder ausgeschaltet: Spiele mit gespeicherten Bildern von dort vergessen und melden, damit sie gleich
+    /// mit den nun geltenden Bildern erscheinen (aus: wieder lokal bzw. erzeugt).
+    /// </summary>
+    public void SteamGridDbSwitched(bool enabled)
+    {
+        List<string> keys;
+        lock (_indexGate)
+        {
+            keys = (_index ??= _indexFile.Load()).Games
+                .Where(g => g.Value.SteamGridDb?.Files is { Count: > 0 })
+                .Select(g => g.Key)
+                .ToList();
+        }
+
+        foreach (var key in keys)
+        {
+            Forget(key);
+        }
     }
 
     // ---- intern ------------------------------------------------------------------------------------------------------

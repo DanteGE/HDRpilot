@@ -7,10 +7,11 @@ using HdrPilot.App.Theming;
 namespace HdrPilot.App.Views.Library;
 
 /// <summary>
-/// Ob Animationen laufen dürfen: Windows-Einstellung „Animationseffekte“ (SystemParameters.ClientAreaAnimation),
-/// Hardware-Darstellung (über Remotedesktop oder ohne Grafikbeschleunigung keine Animationen) und die Effektstufe der
-/// Darstellung (E89, vom Bibliotheksfenster gesetzt). XAML-Trigger binden an <see cref="IsEnabled"/> (kurze Übergänge:
-/// Stufe „Voll“ oder „Reduziert“) bzw. <see cref="IsFull"/> (Anheben der Kacheln, Glanz: nur „Voll“); Code fragt
+/// Ob Animationen laufen dürfen: die wirksame Effektstufe der Darstellung (E89, vom Bibliotheksfenster gesetzt; ob die
+/// Windows-Einstellung „Animationseffekte“ beachtet wird, steckt schon darin) und die Hardware-Darstellung (über
+/// Remotedesktop oder ohne Grafikbeschleunigung keine Animationen). So gelten für Anheben, Glanz, Einblenden und Hinweise
+/// dieselben Regeln wie für Zoom und HDR-Moment. XAML-Trigger binden an <see cref="IsEnabled"/> (kurze Übergänge: Stufe
+/// „Voll“ oder „Reduziert“) bzw. <see cref="IsFull"/> (Anheben der Kacheln, Glanz: nur „Voll“); Code fragt
 /// <see cref="Enabled"/>.
 /// </summary>
 public sealed class LibraryMotion : INotifyPropertyChanged
@@ -19,24 +20,17 @@ public sealed class LibraryMotion : INotifyPropertyChanged
 
     private LibraryMotion()
     {
-        SystemParameters.StaticPropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(SystemParameters.ClientAreaAnimation))
-            {
-                Raise();
-            }
-        };
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public static LibraryMotion Instance { get; } = new();
 
-    /// <summary>Kurze Übergänge erlaubt (Windows und Effektstufe).</summary>
-    public static bool Enabled => SystemEnabled && Instance._level != EffectLevel.Off;
+    /// <summary>Kurze Übergänge erlaubt (Effektstufe nicht „Aus“, Hardware-Darstellung).</summary>
+    public static bool Enabled => HardwareRendering && Instance._level != EffectLevel.Off;
 
-    /// <summary>Windows-Animationseffekte an und Hardware-Darstellung.</summary>
-    public static bool SystemEnabled => SystemParameters.ClientAreaAnimation && (RenderCapability.Tier >> 16) > 0;
+    /// <summary>Die Grafikkarte zeichnet (sonst keine Animationen, wie bei der wirksamen Stufe „Aus“).</summary>
+    public static bool HardwareRendering => (RenderCapability.Tier >> 16) > 0;
 
     public bool IsEnabled => Enabled;
 

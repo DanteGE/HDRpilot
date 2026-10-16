@@ -115,7 +115,7 @@ public sealed partial class ArtworkService
             var customIcon = CustomIconPath(game);
             var sgdb = SteamGridDbFiles(game.Key);
             var extra = custom.Values.Concat(sgdb.Values).Append(customIcon).OfType<string>().ToList();
-            var signature = ArtworkIndex.Signature(game, located, _stamp, extra);
+            var signature = ArtworkIndex.Signature(game, located, _stamp, extra, _options.HelperPatterns());
             ResetIfStale(game.Key, signature);
             RecordLocated(game.Key, located);
 
@@ -229,10 +229,18 @@ public sealed partial class ArtworkService
         return _fileSystem.FileExists(path) ? path : null;
     }
 
-    /// <summary>Gespeicherte Bilder von SteamGridDB je Bildart (nur vorhandene Dateien).</summary>
+    /// <summary>
+    /// Gespeicherte Bilder von SteamGridDB je Bildart (nur vorhandene Dateien), nur solange SteamGridDB eingeschaltet ist:
+    /// ausgeschaltet gelten wieder die lokalen bzw. erzeugten Bilder; die Dateien bleiben für ein erneutes Einschalten.
+    /// </summary>
     private Dictionary<ArtworkKind, string> SteamGridDbFiles(string gameKey)
     {
         var files = new Dictionary<ArtworkKind, string>();
+        if (!_options.SteamGridDbEnabled())
+        {
+            return files;
+        }
+
         var stored = Entry(gameKey, e => e.SteamGridDb?.Files is { } f ? new Dictionary<string, string>(f) : null);
         foreach (var (name, file) in stored ?? [])
         {
@@ -554,13 +562,14 @@ public sealed partial class ArtworkService
         {
             description = Format(ArtworkStrings.Summary_XboxTile, icon.Px);
         }
+        else if (game.Source == GameSource.Steam && icon.Path is not null)
+        {
+            // Steam hat einen Bildcache, nur kein Titelbild für dieses Spiel (auch wenn das Symbol aus der EXE kommt).
+            description = ArtworkStrings.Summary_SteamNoHero;
+        }
         else if (icon.Kind == "exe" && icon.Path is { } exe)
         {
             description = Format(ArtworkStrings.Summary_ExeIcon, source, Path.GetFileName(exe), icon.Px);
-        }
-        else if (game.Source == GameSource.Steam && icon.Path is not null)
-        {
-            description = ArtworkStrings.Summary_SteamNoHero;
         }
         else
         {
@@ -674,21 +683,7 @@ public sealed partial class ArtworkService
                 return false;
             }
 
-            foreach (var file in e.Generated?.Values ?? Enumerable.Empty<string>())
-            {
-                stale.Add(Path.Combine(_options.ArtDirectory, ArtworkFiles.GeneratedFolder, file));
-            }
-
-            foreach (var file in e.Boost?.Values ?? Enumerable.Empty<string>())
-            {
-                stale.Add(Path.Combine(_options.ArtDirectory, ArtworkFiles.BoostFolder, file));
-            }
-
-            if (e.Logo is { } logo)
-            {
-                stale.Add(Path.Combine(_options.ArtDirectory, ArtworkFiles.LogoFolder, logo));
-            }
-
+            stale.AddRange(DerivedFiles(e));
             e.ResetDerived(signature);
             return true;
         });
@@ -698,14 +693,112 @@ public sealed partial class ArtworkService
         }
 
         MarkDirty();
-        foreach (var file in stale)
+        DeleteQuietly(stale);
+    }
+
+    /// <summary>
+    /// Abgeleitete Dateien eines Eintrags (erzeugt, helle Fassungen, zugeschnittenes Logo) in ihren Ordnern unter art. Nur
+    /// schlichte Dateinamen zählen, geprüft vor dem Zusammensetzen: Ein von Hand geändertes index.json mit absolutem Pfad oder
+    /// „..“ kann so nie eine Datei außerhalb von art treffen.
+    /// </summary>
+    private List<string> DerivedFiles(ArtworkIndexEntry entry)
+    {
+        var files = new List<string>();
+        void Add(string folder, string? name)
+        {
+            if (ArtworkOverride.IsPlainImageName(name))
+            {
+                files.Add(Path.Combine(_options.ArtDirectory, folder, name!));
+            }
+        }
+
+        foreach (var name in entry.Generated?.Values ?? Enumerable.Empty<string>())
+        {
+            Add(ArtworkFiles.GeneratedFolder, name);
+        }
+
+        foreach (var name in entry.Boost?.Values ?? Enumerable.Empty<string>())
+        {
+            Add(ArtworkFiles.BoostFolder, name);
+        }
+
+        Add(ArtworkFiles.LogoFolder, entry.Logo);
+        return files;
+    }
+
+    /// <summary>
+    /// Räumt Bilder von Spielen auf, die nicht mehr in der Bibliothek stehen: ihre Einträge in index.json und alle Dateien mit
+    /// ihrem Stamm (<see cref="ArtworkFiles.StemOf"/>) in art (erzeugt, Logos, helle Fassungen, eigene Bilder, SteamGridDB).
+    /// Nur mit bekannter, nicht leerer Bibliothek: Eine unlesbare Konfiguration löscht nichts. Läuft nach dem Schließen des
+    /// letzten Fensters im Hintergrund; liefert die Zahl gelöschter Dateien. Wirft nicht.
+    /// </summary>
+    public int PruneRemovedGames()
+    {
+        IReadOnlyCollection<string>? keys;
+        try
+        {
+            keys = _options.LibraryKeys?.Invoke();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        {
+            _logger.LogDebug("Bilder: Bibliothek zum Aufräumen nicht lesbar: {Message}", ex.Message);
+            return 0;
+        }
+
+        if (keys is not { Count: > 0 })
+        {
+            return 0;
+        }
+
+        var library = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
+        var stems = new HashSet<string>(keys.Select(ArtworkFiles.Stem), StringComparer.OrdinalIgnoreCase);
+        int removed;
+        lock (_indexGate)
+        {
+            var index = _index ??= _indexFile.Load();
+            var gone = index.Games.Keys.Where(k => !library.Contains(k)).ToList();
+            foreach (var key in gone)
+            {
+                index.Games.Remove(key);
+            }
+
+            removed = gone.Count;
+            _indexDirty |= removed > 0;
+        }
+
+        var stale = new List<string>();
+        foreach (var folder in new[] { ArtworkFiles.GeneratedFolder, ArtworkFiles.LogoFolder, ArtworkFiles.BoostFolder, ArtworkFiles.CustomFolder, ArtworkFiles.SteamGridDbFolder })
+        {
+            var directory = Path.Combine(_options.ArtDirectory, folder);
+            try
+            {
+                if (_fileSystem.DirectoryExists(directory))
+                {
+                    stale.AddRange(_fileSystem.EnumerateFiles(directory).Where(f => ArtworkFiles.StemOf(Path.GetFileName(f)) is { } stem && !stems.Contains(stem)));
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogDebug("Bilder: Ordner {Folder} nicht aufgeräumt: {Message}", folder, ex.Message);
+            }
+        }
+
+        DeleteQuietly(stale);
+        if (removed > 0 || stale.Count > 0)
+        {
+            _logger.LogInformation("Bilder: {Games} entfernte Spiele aus dem Verzeichnis genommen, {Files} Dateien gelöscht.", removed, stale.Count);
+        }
+
+        return stale.Count;
+    }
+
+    private void DeleteQuietly(IEnumerable<string> files)
+    {
+        foreach (var file in files)
         {
             try
             {
-                if (ArtworkOverride.IsPlainImageName(Path.GetFileName(file)))
-                {
-                    _fileSystem.DeleteFile(file);
-                }
+                _fileSystem.DeleteFile(file);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

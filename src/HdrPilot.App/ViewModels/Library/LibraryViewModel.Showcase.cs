@@ -383,6 +383,22 @@ public sealed partial class LibraryViewModel
         OnPropertyChanged(nameof(HdrShortText));
         OnPropertyChanged(nameof(HdrToggleText));
         UpdateAutomationState();
+        _ = EnsureHeroBoostAsync(force: false);
+    }
+
+    /// <summary>
+    /// Helle Fassung des gewählten Titelbilds holen, wenn sie zu sehen ist (HDR an oder in der Vorschau) oder
+    /// <paramref name="force"/> (der HDR-Moment spielt gleich, auch ohne HDR). Nur dann: Sie kostet Rechenzeit und Speicher.
+    /// Fertig, sobald sie im Titelbereich steht oder es keine gibt.
+    /// </summary>
+    public Task EnsureHeroBoostAsync(bool force)
+    {
+        if (_disposed || (!force && !ShowsHdrOn) || _hero is not { Artwork: { Hero: not null, HeroBoost: null } artwork } hero)
+        {
+            return Task.CompletedTask;
+        }
+
+        return LoadHeroBoostAsync(hero, artwork);
     }
 
     /// <summary>HDR an oder in der Vorschau an (Kapsel, Titelbild, Kacheln).</summary>
@@ -569,12 +585,43 @@ public sealed partial class LibraryViewModel
     {
         if (_hero is { } hero && ReferenceEquals(hero.Item, item))
         {
+            // Dasselbe Titelbild neu geliefert: eine schon geholte helle Fassung bleibt.
+            if (artwork.HeroBoost is null && hero.Artwork is { HeroBoost: { } boost } shown && ReferenceEquals(shown.Hero?.Image, artwork.Hero?.Image))
+            {
+                artwork = artwork with { HeroBoost = boost };
+            }
+
             hero.Artwork = artwork;
         }
 
         if (_details is { } details && ReferenceEquals(details.Item, item))
         {
             details.SetArtwork(artwork);
+        }
+
+        _ = EnsureHeroBoostAsync(force: false);
+    }
+
+    private async Task LoadHeroBoostAsync(HeroViewModel hero, GameArtwork artwork)
+    {
+        ArtworkImage? boost;
+        try
+        {
+            boost = await _context.Artwork.GetHeroBoostAsync(hero.Item.Config, _heroDecodeWidth, _lifetime.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or System.Runtime.InteropServices.ExternalException)
+        {
+            return; // ohne helle Fassung legt der Titelbereich warmes Licht über das Bild
+        }
+
+        // Nur für den Satz, der noch zu sehen ist (inzwischen gewechselt oder neu geladen: nichts).
+        if (boost is not null && !_disposed && ReferenceEquals(_hero, hero) && ReferenceEquals(hero.Artwork, artwork))
+        {
+            hero.Artwork = artwork with { HeroBoost = boost };
         }
     }
 
@@ -652,6 +699,9 @@ public sealed partial class LibraryViewModel
     private void OnHdrStateRefreshed(bool wasOn)
     {
         UpdateAutomationState();
+
+        // HDR an: die helle Fassung des Titelbilds wird jetzt gebraucht (der Moment blendet sie ein, sobald sie da ist).
+        _ = EnsureHeroBoostAsync(force: false);
         if (!_showcaseReady || _disposed || wasOn || !_isHdrOn)
         {
             return;

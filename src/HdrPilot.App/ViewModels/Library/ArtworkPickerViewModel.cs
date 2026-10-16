@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services.Artwork;
@@ -253,6 +252,12 @@ public sealed class ArtworkPickerViewModel : ObservableObject
                     token = await Task.Run(() => artwork.SaveCustomImage(config, kind, file));
                     saved.Add(token);
                 }
+                catch (ImageTooLargeException)
+                {
+                    DeleteQuietly(Unreferenced(saved, before));
+                    _owner.ShowStatus(LibraryStrings.Picker_TooLarge, StatusKind.Error);
+                    return false;
+                }
                 catch (Exception ex) when (ex is InvalidDataException or NotSupportedException or FormatException or ArgumentException or System.Runtime.InteropServices.ExternalException)
                 {
                     DeleteQuietly(Unreferenced(saved, before));
@@ -397,7 +402,12 @@ public sealed class ArtworkPickerViewModel : ObservableObject
         {
             (preview, width, height) = await Task.Run(() => LoadPreview(file));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or InvalidOperationException or ArgumentException or FileFormatException or System.Runtime.InteropServices.ExternalException)
+        catch (ImageTooLargeException)
+        {
+            Message = LibraryStrings.Picker_TooLarge;
+            return;
+        }
+        catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex))
         {
             Message = LibraryStrings.Picker_NotAnImage;
             return;
@@ -410,17 +420,16 @@ public sealed class ArtworkPickerViewModel : ObservableObject
         Show(list);
     }
 
-    /// <summary>Kleine Vorschau einer gewählten Datei (nie größer als 320 px, nur gelesen).</summary>
+    /// <summary>
+    /// Kleine Vorschau einer gewählten Datei (nie größer als 320 px, nur gelesen). Die Größe kommt aus dem Kopf der Datei; zu
+    /// große Dateien werden vor dem Dekodieren abgelehnt (<see cref="ImageTooLargeException"/>), alle anderen schon beim
+    /// Dekodieren verkleinert.
+    /// </summary>
     private static (ImageSource Preview, int Width, int Height) LoadPreview(string path)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnLoad);
-        var frame = decoder.Frames[0];
-        var scale = Math.Min(1.0, LibraryArt.PreviewWidth / (double)Math.Max(1, frame.PixelWidth));
-        BitmapSource preview = scale < 1 ? new TransformedBitmap(frame, new ScaleTransform(scale, scale)) : frame;
-        var copy = new WriteableBitmap(preview);
-        copy.Freeze();
-        return (copy, frame.PixelWidth, frame.PixelHeight);
+        var (width, height) = ArtworkImaging.Measure(path);
+        var preview = ArtworkImaging.Decode(path, LibraryArt.PreviewWidth);
+        return (preview, width, height);
     }
 
     private void DeleteQuietly(IEnumerable<string> tokens)

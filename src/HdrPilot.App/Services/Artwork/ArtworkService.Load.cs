@@ -31,21 +31,14 @@ public sealed partial class ArtworkService
         return LoadSpec(state, spec, width) ?? LoadFallback(game, kind, width);
     }
 
-    /// <summary>Satz für den Titelbereich: Titelbild samt heller Fassung, Farbfeld, Logo, Cover, Symbol und Farben.</summary>
+    /// <summary>
+    /// Satz für den Titelbereich: Titelbild, Farbfeld, Logo, Cover, Symbol und Farben, ohne helle Fassung (die gibt es nur auf
+    /// Anfrage, <see cref="GetHeroBoostAsync"/>). Der Satz zählt zum Speicherbudget (<see cref="StoreSet"/>).
+    /// </summary>
     private GameArtwork LoadArtwork(GameConfig game, int heroWidth)
     {
         var state = Resolve(game, full: true);
         var hero = LoadSpec(state, state.Hero, heroWidth) ?? LoadFallback(game, ArtworkKind.Hero, heroWidth);
-        ImageSource? boost = null;
-        try
-        {
-            boost = LoadBoost(state, heroWidth);
-        }
-        catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex))
-        {
-            _logger.LogDebug("Bilder: helle Fassung von {Game} nicht berechnet: {Error}", game.Key, ex.GetType().Name);
-        }
-
         var field = LoadSpec(state, state.Field, NormalizeWidth(ArtworkKind.Field, 64)) ?? LoadFallback(game, ArtworkKind.Field, 64);
         var logo = LoadSpec(state, state.Logo, Math.Clamp(heroWidth / 3, 256, 1280));
         var cover = LoadSpec(state, state.Cover, ArtworkCoverWidth) ?? LoadFallback(game, ArtworkKind.Cover, ArtworkCoverWidth);
@@ -53,16 +46,45 @@ public sealed partial class ArtworkService
         var artwork = new GameArtwork(
             game.Key,
             Wrap(hero, state.Hero),
-            boost is null ? null : Wrap(boost, state.Hero with { Kind = ArtworkKind.Hero }),
+            null,
             Wrap(field, state.Field),
             Wrap(logo, state.Logo),
             Wrap(cover, state.Cover),
             Wrap(icon, state.IconSpec),
             (state.Ambient ?? NameAmbient(game.Name)).ToColors(),
             state.Summary);
-        _artwork[game.Key] = new CachedArtwork(state.ConfigStamp, heroWidth, artwork);
+        StoreSet(game.Key, new CachedArtwork(state.ConfigStamp, heroWidth, artwork));
         return artwork;
     }
+
+    /// <summary>Helle Fassung des Titelbilds in der Breite des Satzes (Arbeits-Thread); null, wenn sie sich nicht berechnen lässt.</summary>
+    private ArtworkImage? LoadHeroBoost(GameConfig game, int heroWidth)
+    {
+        var state = Resolve(game, full: true);
+        var key = BoostKey(state, heroWidth);
+        if (_memory.TryGetValue(key, out var known) && known is ArtworkImage cached)
+        {
+            return cached;
+        }
+
+        try
+        {
+            if (Wrap(LoadBoost(state, heroWidth), state.Hero) is not { } boost)
+            {
+                return null;
+            }
+
+            _memory.Set(key, boost, ImageMemoryCache.SizeOf(boost.Image));
+            return boost;
+        }
+        catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex))
+        {
+            _logger.LogDebug("Bilder: helle Fassung von {Game} nicht berechnet: {Error}", game.Key, ex.GetType().Name);
+            return null;
+        }
+    }
+
+    private static string BoostKey(GameState state, int width) => ImageKey(state, ArtworkKind.Hero, width) + "|boost";
 
     private static ArtworkImage? Wrap(ImageSource? image, ArtSpec spec) => image is BitmapSource bitmap
         ? new ArtworkImage(bitmap, spec.Kind, spec.Origin, bitmap.PixelWidth, bitmap.PixelHeight, spec.Label)
@@ -282,22 +304,17 @@ public sealed partial class ArtworkService
 
     /// <summary>
     /// Helle „HDR“-Fassung des Titelbilds (<see cref="PixelAnalysis.Boost"/>) in Stufenbreite bis 2560 px, einmal berechnet und
-    /// als JPEG in art\boost gespeichert (nur für gezeigte Titelbilder, nie für die ganze Bibliothek). Die Dateien sind auf
-    /// <see cref="ArtworkServiceOptions.BoostBudget"/> begrenzt; die am längsten nicht benutzten fallen heraus.
+    /// als JPEG in art\boost gespeichert (nur für Titelbilder, die mit HDR an oder im HDR-Moment zu sehen sind, nie für die
+    /// ganze Bibliothek). Die Dateien sind auf <see cref="ArtworkServiceOptions.BoostBudget"/> begrenzt; die am längsten nicht
+    /// benutzten fallen heraus.
     /// </summary>
-    private ImageSource? LoadBoost(GameState state, int width)
+    private ImageSource LoadBoost(GameState state, int width)
     {
         var heroPath = state.Hero.File ?? EnsureGenerated(state, Generator.Hero);
         var (nativeWidth, _) = ArtworkImaging.Measure(heroPath);
         var target = Math.Min(Math.Min(ArtworkFiles.WidthStep(width), MaxBoostWidth), nativeWidth > 0 ? nativeWidth : MaxBoostWidth);
         var file = ArtworkFiles.BoostFileName(state.Key, target);
         var path = Path.Combine(_options.ArtDirectory, ArtworkFiles.BoostFolder, file);
-        var key = ImageKey(state, ArtworkKind.Hero, width) + "|boost";
-        if (_memory.TryGet(key, out var cached))
-        {
-            return cached;
-        }
-
         ImageSource result;
         var widthKey = target.ToString(System.Globalization.CultureInfo.InvariantCulture);
         if (Entry(state.Key, e => e.Boost is { } b && b.TryGetValue(widthKey, out var f) && f == file) && File.Exists(path))
@@ -320,7 +337,6 @@ public sealed partial class ArtworkService
             result = width < boosted.PixelWidth ? ArtworkImaging.Decode(path, width) : boosted;
         }
 
-        _memory.Set(key, result);
         return result;
     }
 

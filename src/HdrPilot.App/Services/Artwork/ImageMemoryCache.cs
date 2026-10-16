@@ -5,7 +5,9 @@ namespace HdrPilot.App.Services.Artwork;
 
 /// <summary>
 /// Dekodierte Bilder im Speicher, begrenzt auf <see cref="Budget"/> Byte (Breite × Höhe × 4): Beim Überschreiten fallen die am
-/// längsten nicht benutzten heraus (sie werden bei Bedarf von der Platte neu dekodiert). Threadsicher.
+/// längsten nicht benutzten heraus (sie werden bei Bedarf von der Platte neu dekodiert). Auch Bildsätze für den Titelbereich
+/// liegen hier, mit der Größe aller Bilder, die sie halten: So zählt jedes Bild, auf das der Speicher verweist, mindestens
+/// einmal, und mehr als das Budget bleibt nie erreichbar. Threadsicher.
 /// </summary>
 public sealed class ImageMemoryCache(long budget)
 {
@@ -43,22 +45,38 @@ public sealed class ImageMemoryCache(long budget)
 
     public bool TryGet(string key, out ImageSource? image)
     {
-        lock (_gate)
+        if (TryGetValue(key, out var value))
         {
-            if (_entries.TryGetValue(key, out var node))
-            {
-                _order.Remove(node);
-                _order.AddFirst(node);
-                image = node.Value.Image;
-                return true;
-            }
+            image = value as ImageSource;
+            return true;
         }
 
         image = null;
         return false;
     }
 
-    public void Set(string key, ImageSource? image)
+    /// <summary>Beliebiger Eintrag (etwa ein Bildsatz) unter diesem Schlüssel; zählt als benutzt.</summary>
+    public bool TryGetValue(string key, out object? value)
+    {
+        lock (_gate)
+        {
+            if (_entries.TryGetValue(key, out var node))
+            {
+                _order.Remove(node);
+                _order.AddFirst(node);
+                value = node.Value.Value;
+                return true;
+            }
+        }
+
+        value = null;
+        return false;
+    }
+
+    public void Set(string key, ImageSource? image) => Set(key, image, SizeOf(image));
+
+    /// <summary>Eintrag mit eigener Größe (Bildsatz: Summe seiner Bilder), mindestens 1 Byte.</summary>
+    public void Set(string key, object? value, long bytes)
     {
         lock (_gate)
         {
@@ -68,7 +86,7 @@ public sealed class ImageMemoryCache(long budget)
                 _bytes -= old.Value.Bytes;
             }
 
-            var node = new LinkedListNode<Entry>(new Entry(key, image, SizeOf(image)));
+            var node = new LinkedListNode<Entry>(new Entry(key, value, Math.Max(1, bytes)));
             _order.AddFirst(node);
             _entries[key] = node;
             _bytes += node.Value.Bytes;
@@ -77,6 +95,19 @@ public sealed class ImageMemoryCache(long budget)
                 _order.RemoveLast();
                 _entries.Remove(last.Value.Key);
                 _bytes -= last.Value.Bytes;
+            }
+        }
+    }
+
+    /// <summary>Entfernt einen Eintrag (etwa den ältesten Bildsatz über der Höchstzahl).</summary>
+    public void Remove(string key)
+    {
+        lock (_gate)
+        {
+            if (_entries.Remove(key, out var node))
+            {
+                _order.Remove(node);
+                _bytes -= node.Value.Bytes;
             }
         }
     }
@@ -106,5 +137,5 @@ public sealed class ImageMemoryCache(long budget)
         }
     }
 
-    private sealed record Entry(string Key, ImageSource? Image, long Bytes);
+    private sealed record Entry(string Key, object? Value, long Bytes);
 }

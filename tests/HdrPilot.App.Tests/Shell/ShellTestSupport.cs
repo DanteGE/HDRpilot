@@ -268,8 +268,10 @@ internal sealed class ThrowingTrayHost : ITrayHost
 
 /// <summary>
 /// Tests, die allein laufen müssen: Sie setzen <see cref="HdrPilot.App.Views.Shell.ShellMotion.Override"/> (DoEvents
-/// pumpt verschachtelt und ließe sonst einen parallelen Test den Schalter mitten im Test zurücksetzen) oder zählen
-/// GDI-/USER-Objekte des ganzen Testprozesses (parallele Tests würden mitzählen).
+/// pumpt verschachtelt und ließe sonst einen parallelen Test den Schalter mitten im Test zurücksetzen), zählen
+/// GDI-/USER-Objekte des ganzen Testprozesses (parallele Tests würden mitzählen) oder hören mit dem
+/// <see cref="BindingErrorRecorder"/> die prozessweite Bindungs-Ablaufverfolgung ab (Bindungsfehler paralleler Tests
+/// landeten sonst im falschen Test).
 /// </summary>
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class ShellSerialCollection

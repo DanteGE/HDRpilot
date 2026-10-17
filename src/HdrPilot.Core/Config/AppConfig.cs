@@ -107,6 +107,13 @@ public sealed class AppSettings
     /// <summary>Vorschau in den Zeilen der Liste: "Image" (Standard, Bild) oder "Icon" (Symbol).</summary>
     public string? LibraryThumbnail { get; set; }
 
+    /// <summary>
+    /// Werkzeugleiste der Spielebibliothek eingeklappt (Kapsel auf der Bildkante statt Leiste, Wunsch des Nutzers 2026-10-17).
+    /// Ein Zustand für alle drei Ansichten, gespeichert beim Umschalten, beim Öffnen ohne Animation hergestellt. Standard
+    /// (auch für ältere Konfigurationen): ausgeklappt.
+    /// </summary>
+    public bool LibraryToolbarCollapsed { get; set; }
+
     /// <summary>Darstellung: Farbschema, Thema, Effekte (E89). Ältere Konfigurationen: Standardwerte.</summary>
     public AppearanceSettings Appearance { get; set; } = new();
 

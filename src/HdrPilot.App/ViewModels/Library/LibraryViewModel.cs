@@ -1024,6 +1024,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsLibraryEmpty));
         OnPropertyChanged(nameof(ViewSummaryText));
         OnPropertyChanged(nameof(ListHeaderText));
+        RaiseToolbarTexts();
     }
 
     private int InsertIndex(GameItemViewModel item)
@@ -1099,6 +1100,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
             index++;
         }
+
+        RaiseToolbarTexts();
     }
 
     private void ApplyRunningFlags()

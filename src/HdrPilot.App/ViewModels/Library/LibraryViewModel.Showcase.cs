@@ -233,7 +233,13 @@ public sealed partial class LibraryViewModel
     public int HdrCapableCount
     {
         get => _hdrCapableCount;
-        private set => SetProperty(ref _hdrCapableCount, value);
+        private set
+        {
+            if (SetProperty(ref _hdrCapableCount, value))
+            {
+                RaiseToolbarTexts();
+            }
+        }
     }
 
     /// <summary>Kopf der Spalte „Spiel“: „SPIEL · 651“.</summary>
@@ -529,6 +535,7 @@ public sealed partial class LibraryViewModel
         _viewMode = LibraryViewModes.Parse(settings.LibraryView);
         _thumbnail = LibraryViewModes.ParseThumbnail(settings.LibraryThumbnail);
         _effectLevel = _context.Appearance.Current.EffectLevel;
+        InitializeToolbar(settings);
         ShowViewCommand = new RelayCommand(p => ViewMode = p switch
         {
             LibraryViewMode mode => mode,

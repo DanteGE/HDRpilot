@@ -113,6 +113,32 @@ public sealed class ShowcaseConfigTests
     }
 
     [Fact]
+    public void Toolbar_state_is_expanded_in_old_configs_and_survives_saving_without_touching_other_settings()
+    {
+        // Ältere Konfiguration ohne den Zustand der Werkzeugleiste: ausgeklappt, alles andere bleibt, wie es war.
+        var files = new InMemoryFileSystem();
+        files.AddFile(Path, """
+            { "version": 1, "settings": { "libraryView": "Grid", "libraryHeroRatio": 0.4, "libraryPaneRatio": 0.3, "librarySortOrder": "LastPlayed",
+              "appearance": { "effectLevel": "Reduced" } }, "games": [] }
+            """);
+        var store = Store(files);
+        var config = store.Load().Config;
+        Assert.False(config.Settings.LibraryToolbarCollapsed);
+
+        // Eingeklappt gespeichert und wieder geladen: der Zustand und alle übrigen Werte.
+        config.Settings.LibraryToolbarCollapsed = true;
+        store.Save(config);
+        var loaded = Store(files).Load().Config.Settings;
+        Assert.True(loaded.LibraryToolbarCollapsed);
+        Assert.Equal("Grid", loaded.LibraryView);
+        Assert.Equal(0.4, loaded.LibraryHeroRatio);
+        Assert.Equal(0.3, loaded.LibraryPaneRatio);
+        Assert.Equal("LastPlayed", loaded.LibrarySortOrder);
+        Assert.Equal("Reduced", loaded.Appearance.EffectLevel);
+        Assert.Contains("\"libraryToolbarCollapsed\": true", files.ReadAllText(Path), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Null_sections_are_repaired()
     {
         var files = new InMemoryFileSystem();

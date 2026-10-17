@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
@@ -10,8 +9,10 @@ namespace HdrPilot.App.Tests.Shell;
 /// <summary>
 /// Bindungsfehler (falscher Pfad, falscher Typ) melden sich in WPF nur in der Ablaufverfolgung. Diese Tests hören
 /// dort mit, bauen Einstellungen und Tray-Menü vollständig auf (Layout, Vorlagen, Listenzeilen, ohne Anzeige) und
-/// verlangen eine leere Fehlerliste.
+/// verlangen eine leere Fehlerliste. Laufen allein, weil der Mitschreiber prozessweit mithört (siehe
+/// <see cref="BindingErrorRecorder"/>) und ein Test hier absichtlich einen Bindungsfehler erzeugt.
 /// </summary>
+[Collection(ShellSerialCollection.Name)]
 public sealed class ShellBindingTests
 {
     [Fact]
@@ -75,56 +76,5 @@ public sealed class ShellBindingTests
         });
 
         Assert.Empty(errors);
-    }
-
-    /// <summary>Sammelt Meldungen der WPF-Bindungs-Ablaufverfolgung (Warnung und Fehler).</summary>
-    private sealed class BindingErrorRecorder : TraceListener
-    {
-        private readonly SourceLevels _previousLevel;
-        private readonly List<string> _messages = [];
-
-        public BindingErrorRecorder()
-        {
-            // Ohne Debugger schreibt WPF erst nach Refresh in die Ablaufverfolgung.
-            PresentationTraceSources.Refresh();
-            var source = PresentationTraceSources.DataBindingSource;
-            _previousLevel = source.Switch.Level;
-            source.Switch.Level = SourceLevels.Warning;
-            source.Listeners.Add(this);
-        }
-
-        public IReadOnlyList<string> Messages
-        {
-            get
-            {
-                lock (_messages)
-                {
-                    return [.. _messages];
-                }
-            }
-        }
-
-        public override void Write(string? message)
-        {
-        }
-
-        public override void WriteLine(string? message)
-        {
-            if (!string.IsNullOrWhiteSpace(message))
-            {
-                lock (_messages)
-                {
-                    _messages.Add(message);
-                }
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            var source = PresentationTraceSources.DataBindingSource;
-            source.Listeners.Remove(this);
-            source.Switch.Level = _previousLevel;
-            base.Dispose(disposing);
-        }
     }
 }

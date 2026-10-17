@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
@@ -27,8 +26,10 @@ namespace HdrPilot.App.Tests.Library;
 /// der Reihenfolge Liste, Raster, Regal; nur die aktive Ansicht hat Daten; das Raster verteilt gleich große Kacheln über
 /// die ganze Breite und erzeugt nur sichtbare; der Titelbereich der Liste ist ein Drittel hoch und per Ziehgriff einstellbar
 /// (Ziehen, UI-Automation, gemerkt, kein Einklappen beim Scrollen); Tastenkürzel, Kontextmenü, Nit-Anzeige und keine
-/// Bindungsfehler.
+/// Bindungsfehler. Läuft allein, weil die Prüfung auf Bindungsfehler prozessweit mithört (siehe
+/// <see cref="BindingErrorRecorder"/>).
 /// </summary>
+[Collection(ShellSerialCollection.Name)]
 public sealed class ShowcaseViewsTests
 {
     private static GameConfig[] ManyGames(int count) =>
@@ -1047,55 +1048,5 @@ public sealed class ShowcaseViewsTests
         });
 
         Assert.Empty(errors);
-    }
-
-    /// <summary>Hört in der Ablaufverfolgung der Bindungen mit (wie ShellBindingTests).</summary>
-    private sealed class BindingErrorRecorder : TraceListener
-    {
-        private readonly SourceLevels _previousLevel;
-        private readonly List<string> _messages = [];
-
-        public BindingErrorRecorder()
-        {
-            PresentationTraceSources.Refresh();
-            var source = PresentationTraceSources.DataBindingSource;
-            _previousLevel = source.Switch.Level;
-            source.Switch.Level = SourceLevels.Warning;
-            source.Listeners.Add(this);
-        }
-
-        public IReadOnlyList<string> Messages
-        {
-            get
-            {
-                lock (_messages)
-                {
-                    return [.. _messages];
-                }
-            }
-        }
-
-        public override void Write(string? message)
-        {
-        }
-
-        public override void WriteLine(string? message)
-        {
-            if (!string.IsNullOrWhiteSpace(message))
-            {
-                lock (_messages)
-                {
-                    _messages.Add(message);
-                }
-            }
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            var source = PresentationTraceSources.DataBindingSource;
-            source.Listeners.Remove(this);
-            source.Switch.Level = _previousLevel;
-            base.Dispose(disposing);
-        }
     }
 }

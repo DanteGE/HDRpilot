@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Werkzeugleiste – Vorschau</title>
+<meta name="description" content="Vorschau der Werkzeugleiste „Fließleiste mit Lichtnaht“ über der Spieleliste von HDRpilot (nur Entwurf).">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="leiste.css">
+</head>
+<body>
+<header class="panel" id="panel">
+  <div class="ph">
+    <h1>Werkzeugleiste · Vorschau</h1>
+    <span class="sub"><b>Fließleiste mit Lichtnaht</b> · Symbol-Filter mit Zähler · nur Entwurf, in der App ist nichts davon gebaut</span>
+  </div>
+  <div class="prow">
+    <div class="pg">
+      <span class="lb">Fenster</span>
+      <div class="wr"><input type="range" id="wRange" min="1000" max="3440" step="1" value="1745" aria-label="Fensterbreite in DIP"><output id="wOut">1745 × 982 DIP</output></div>
+      <div class="presets" id="presets"></div>
+    </div>
+  </div>
+  <div class="prow" style="margin-top:9px">
+    <div class="pg"><span class="lb">Thema</span><div class="pseg" id="pTheme"><button data-v="dunkel">Dunkel</button><button data-v="hell">Hell</button></div></div>
+    <div class="pg"><span class="lb">Effekte</span><div class="pseg" id="pFx"><button data-v="voll">Voll</button><button data-v="reduziert">Reduziert</button><button data-v="aus">Aus</button></div></div>
+    <div class="pg"><span class="lb">Ansicht</span><div class="pseg" id="pView"><button data-v="liste">Liste</button><button data-v="raster">Raster</button></div></div>
+    <div class="pg"><span class="lb">Maßstab</span><div class="pseg" id="pFit"><button data-v="fit">Einpassen</button><button data-v="1">1 : 1</button></div></div>
+    <div class="pg"><span class="lb">Tempo</span><div class="pseg" id="pSpd"><button data-v="1">1×</button><button data-v="0.25">¼×</button></div></div>
+  </div>
+  <div class="prow" style="margin-top:9px">
+    <div class="pg">
+      <span class="lb">Leiste</span>
+      <button class="pbtn main" id="pToggle">Leiste ein-/ausklappen <kbd>Strg+Umschalt+F</kbd></button>
+      <button class="pbtn" id="pFind">Suchen <kbd>Strg+F</kbd></button>
+    </div>
+    <div class="pg">
+      <span class="lb">Filter</span>
+      <button class="pbtn" id="pAuto" aria-pressed="false">Automatik <kbd>Alt+A</kbd></button>
+      <button class="pbtn" id="pNew" aria-pressed="false">Neu <kbd>Alt+N</kbd></button>
+      <button class="pbtn" id="pHdr" aria-pressed="false">HDR-fähig <kbd>Alt+H</kbd></button>
+      <input class="pin" id="pQ" placeholder="Suchbegriff …" aria-label="Suchbegriff">
+      <select class="pin" id="pSrc" aria-label="Quelle"></select>
+    </div>
+  </div>
+  <div class="readout" id="readout"></div>
+  <div class="hint">Fensterbreite mit dem Regler <b>ziehen</b> (oder am Griff rechts neben dem Fenster): nur dann laufen die Schritte animiert und mit Hysterese, wie beim Ziehen des Fensterrands. Voreinstellungen springen sofort in den Endzustand. Tastenkürzel wirken auf der ganzen Seite: <kbd>Strg+Umschalt+F</kbd> <kbd>Strg+F</kbd> <kbd>Alt+A</kbd> <kbd>Alt+N</kbd> <kbd>Alt+H</kbd> <kbd>Esc</kbd>; Rechtsklick auf Lasche, Kapsel oder freie Fläche der Leiste öffnet das Menü.</div>
+</header>
+
+<main class="stagewrap" id="stageWrap">
+  <div class="stagebox" id="stageBox">
+    <div class="stage" id="stage">
+      <div class="win dark fx-voll" id="win" role="application" aria-label="HDRpilot – Spielebibliothek (Vorschau)">
+        <div class="amb" aria-hidden="true"></div>
+        <section class="hero" id="hero" aria-label="Ausgewähltes Spiel">
+          <img class="art" id="art" alt="">
+          <div class="sc sc-t"></div><div class="sc sc-l"></div><div class="sc sc-r"></div><div class="sc sc-b"></div><div class="sc sc-e"></div>
+        </section>
+        <div class="tbar" aria-hidden="true">
+          <svg class="wico" viewBox="0 0 24 24"><defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8A3D"/><stop offset="1" stop-color="#FF3D7F"/></linearGradient></defs><path d="M2.5 17.5h19M6 17.5a6 6 0 0 1 12 0M12 4.5v3.6" fill="none" stroke="url(#wg)" stroke-width="3" stroke-linecap="round"/></svg>
+          <span>HDRpilot – Spielebibliothek</span><span class="sp"></span>
+          <span class="cap">&#xE921;</span><span class="cap">&#xE922;</span><span class="cap">&#xE8BB;</span>
+        </div>
+        <div class="head" id="head">
+          <div class="brand">
+            <div class="btile"><svg viewBox="0 0 24 24"><path d="M4 17h16M7 17a5 5 0 0 1 10 0M12 6.5v2.2M6.4 9.4l1.5 1.5M17.6 9.4l-1.5 1.5"/></svg></div>
+            <div class="hd-t"><div class="t">Spielebibliothek</div><div class="st" id="hdStats"></div></div>
+          </div>
+          <span class="sp"></span>
+          <div class="cps">
+            <span class="dot"></span>
+            <div class="nm"><small>MAG 341C OLED · 10 BIT</small><b>HDR AUS</b></div>
+            <span class="div"></span>
+            <div class="rd"><div><small>SPITZE</small><b>456<em>nits</em></b></div><div><small>VOLLBILD</small><b>254<em>nits</em></b></div><div><small>MINIMUM</small><b>0,0000<em>nits</em></b></div></div>
+            <div class="scl"><div class="tr"><i></i><b></b></div><div class="ax"><span>0</span><span>456 nits</span></div></div>
+            <span class="hbtn"><span class="gl">&#xE706;</span>HDR einschalten</span>
+          </div>
+          <span class="gbtn"><span class="gl">&#xE769;</span>Automatik pausieren</span>
+          <span class="gbtn ic"><span class="gl">&#xE713;</span></span>
+        </div>
+        <div class="hc" id="hc"></div>
+        <aside class="pane" id="pane" aria-label="Spieldetails"></aside>
+
+        <div class="grip" id="grip" title="Höhe des Titelbereichs ziehen"><i class="ln" id="gripLine"></i><i class="rest"></i><i class="hov"></i></div>
+
+        <div class="tb" id="tb" role="toolbar" aria-label="Werkzeugleiste"></div>
+
+        <div class="seam" id="seam" aria-hidden="true"><i class="glow"></i><i class="core"></i></div>
+        <div class="streak" id="streak" aria-hidden="true"><i class="g"></i><i class="c"></i></div>
+        <div class="tabw" id="tabw">
+          <i class="chalo" id="chalo"></i><i class="chalo2" id="chalo2"></i><i class="hit" id="tabHit" aria-hidden="true"></i>
+          <button class="pill" id="pill" aria-expanded="true" aria-label="Werkzeugleiste" aria-keyshortcuts="Control+Shift+F">
+            <span class="cpc" id="cpc"></span>
+            <span class="hint" id="pillHint">Leiste ausblenden <span class="kbd">Strg+Umschalt+F</span></span>
+            <span class="cdv" id="cdv"></span>
+            <span class="ar" id="pillAr">&#xE70E;</span>
+          </button>
+          <button class="cx" id="cx" aria-label="Suche und Filter zurücksetzen" tabindex="-1">&#xE711;</button>
+        </div>
+
+        <div class="lclip" id="lclip"><div class="lc-bg" id="lcbg"></div><div class="lc-in" id="lcin"></div></div>
+        <div class="grid" id="grid" hidden><div class="gin" id="gin"></div></div>
+
+        <footer class="status" id="status"></footer>
+        <div class="tip" id="tip" role="tooltip"></div>
+        <div class="menu" id="menu" role="menu" hidden></div>
+      </div>
+    </div>
+    <div class="sizer" id="sizer" title="Fensterbreite ziehen"></div>
+  </div>
+</main>
+<script src="leiste.js"></script>
+</body>
+</html>

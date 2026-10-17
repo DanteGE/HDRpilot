@@ -130,7 +130,17 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   das große Symbol in den Details: **Symbol ändern…** nimmt ein Bild (PNG, JPG, WebP, BMP, GIF, ICO) oder eine EXE,
   **Symbol zurücksetzen** zeigt wieder das automatische Symbol. Das eigene Symbol hat Vorrang vor allen anderen
   Quellen; die gewählte Datei bleibt unverändert, HDRpilot legt eine verkleinerte Kopie (96 px) in seinem Datenordner ab.
-- Suche (Strg+F), Filter nach Quelle sowie die Filter **HDR automatisch**, **Neu** und **HDR-fähig**.
+- Die Werkzeugleiste über der Liste: Suche (Strg+F), Filter nach Quelle, Sortierung, die Filter **HDR automatisch**,
+  **Neu** und **HDR-fähig** als Symbol-Schalter mit ihrer Zahl (auch Alt+A, Alt+N, Alt+H), rechts Ansicht, **Neu
+  einlesen**, **Alle als gesehen markieren** und **Spiel hinzufügen**. Zeigst du eine Sekunde auf ein Element, erklärt
+  ein Tooltip es samt Kürzel. In schmaleren Fenstern werden Suche, Quelle und Sortierung schmaler, dann zeigt die
+  Sortierung nur ihr Symbol; erst wenn auch das nicht passt, verteilt sich die Leiste auf zwei Zeilen.
+- Die Werkzeugleiste lässt sich ausblenden: über die kleine Lasche rechts über der Leiste, mit Strg+Umschalt+F oder
+  Strg+F1 oder per Rechtsklick auf eine freie Stelle der Leiste (auch Umschalt+F10) › **Leiste ausblenden**. Dann
+  steht an der Unterkante des Titelbilds nur eine Kapsel, die die Suche bzw. die aktiven Filter samt Anzahl zeigt;
+  gefiltert leuchtet die Kante, und das Kreuz in der Kapsel setzt alle Filter zurück. Ein Klick auf die Kapsel,
+  dasselbe Kürzel oder Strg+F (sucht dann gleich) blendet die Leiste wieder ein. HDRpilot merkt sich, ob sie aus- oder
+  eingeblendet ist.
 - Sortierung nach **Name**, **Zuletzt gespielt** oder **HDR-Unterstützung**; die Wahl bleibt gespeichert. „Zuletzt
   gespielt“ kennt Steam-Spiele aus Steams eigenen Daten und alle Spiele, die HDRpilot laufen sieht.
 - Neu gefundene Spiele tragen die Markierung „NEU“. Sie verschwindet, sobald du das Spiel anklickst oder seinen

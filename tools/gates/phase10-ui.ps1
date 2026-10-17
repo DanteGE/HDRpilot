@@ -1,15 +1,21 @@
 ﻿# Gate G10.5: Bibliothek „Showcase Hero“ per UI-Automation an einer eigenen Testinstanz (eigene Ablage, echte Bibliothek
 # eingelesen und alle Spiele auf „HDR automatisch“ aus, nur Fenster dieser Prozess-ID, keine Maus- oder Tastatureingaben)
-# und Bildschirmfotos der drei Ansichten und der gescrollten Liste bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
+# und Bildschirmfotos der drei Ansichten, der gescrollten Liste und der eingeklappten Leiste bei 1280×800, 1920×1080 und
+# 3440×1440, hell und dunkel.
 #   - Ansichten in der Reihenfolge Liste, Raster, Regal; Liste ist der Standard, die Wahl wird gemerkt (auch nach Neustart)
 #   - Liste: virtualisiert, nach Spalten sortierbar (gespeichert), Schalter „HDR automatisch“ je Zeile, Vorschau Bild/Symbol
 #   - Liste: Höhe des Titelbereichs per Ziehgriff HeroSplitter (Wunsch des Nutzers 2026-10-16): Standard ein Drittel der
 #     Fensterhöhe, per UI-Automation gesetzt (RangeValue, keine echte Eingabe), gemerkt (auch nach Neustart), Auslösen
 #     (Invoke, wie Doppelklick) setzt zurück; Raster und Regal ohne Griff und mit ihrer bisherigen Höhe
-#   - Werkzeugleiste (Wunsch des Nutzers 2026-10-16): immer ganz ausgeschrieben (Suche mit Strg+F, Quelle, Sortierung,
-#     drei Chips, Ansichten mit Beschriftung, „Spiel hinzufügen“ mit Text, kein „Filter“-Menü); passt sie nicht, bricht
-#     sie in gefüllte Zeilen um, jede links und rechts bündig mit der Liste, 8 px Abstand. Geprüft bei 1600×1000 und im
-#     schmalen Fenster (1000×700); Titelbereich, Griff und Regal rechnen mit ihrer tatsächlichen Höhe
+#   - Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17): Suche, Quelle, Sortierung, drei Filter
+#     als Symbole mit Zahl (Toggle, Zahl im ItemStatus), Ansicht und Aktionen als Symbole, kein „Filter“-Menü; sie gibt
+#     stufenlos nach und bricht erst in der schmalen Liste an der Gruppengrenze in zwei Zeilen um, bündig mit der Liste,
+#     8 px Abstand. Geprüft bei 1600×1000 (eine Zeile) und im schmalen Fenster (1000×700, zwei Zeilen); Titelbereich, Griff
+#     und Regal rechnen mit ihrer tatsächlichen Höhe
+#   - Lasche ToolbarToggle (ExpandCollapse): Leiste aus- und einblenden, Zustand gemerkt (libraryToolbarCollapsed, auch nach
+#     Neustart); eingeklappt ist die Leiste nicht mehr im Automationsbaum, die Kapsel sitzt mittig auf der Bildkante 10 px
+#     über der Liste (der Titelbereich springt nicht) bzw. im Regal in der früheren Leistenzeile unter der Automatik-Karte,
+#     nennt die Filter („Gefiltert: …“) und setzt sie zurück
 #   - Raster: gleich große Kacheln über die ganze Breite, keine leere Spalte rechts, nichts ragt hinaus, bei jeder Größe
 #   - Regal: Kachelreihe mit Blättern, Karte „Automatik“, Details als Schublade (öffnen und schließen)
 #   - Detailbereich mit allen bisherigen Funktionen und „BILDER“; Kontextmenü des Spiels; „Bild wählen…“ mit eigener Datei
@@ -88,9 +94,14 @@ function Check-Grid($win, [string]$label) {
     Check (($g.Right - $right) -lt $tileW) "$label`: rechts keine leere Spalte (frei $([math]::Round($g.Right - $right)) px < Kachel $([math]::Round($tileW)) px)"
 }
 
-# Werkzeugleiste prüfen (Wunsch des Nutzers 2026-10-16): alle Elemente sichtbar, im Fenster und ausgeschrieben, kein
-# „Filter“-Menü; jede Zeile links und rechts bündig mit der Leiste und diese mit der Liste, 8 px zwischen Elementen und
-# Zeilen (Bildschirmpixel, je 2 px Spielraum für die Rundung). Die Zahl der Zeilen steht danach in $script:BarRows.
+# Werkzeugleiste prüfen (Wunsch des Nutzers 2026-10-17, „Fließleiste mit Lichtnaht“): alle zehn Elemente sichtbar und im
+# Fenster, kein „Filter“-Menü; Filter, Neu einlesen, gesehen und hinzufügen als Symbole 40 px breit, die Ansicht 122 px,
+# alles 40 px hoch; Suche, Quelle und Sortierung nie schmaler als 168/136/160 (die Sortierung als Symbol 60). Eine Zeile:
+# links und rechts bündig mit der Leiste und diese mit der Liste, 8 px zwischen den Elementen, vor der Ansicht der freie
+# Platz (mindestens 24, mit der Sortierung als Symbol 16 px). Zwei Zeilen (Umbruch an der Gruppengrenze): oben Suche, Quelle
+# und Sortierung bündig gefüllt, unten links die Filter, rechts bündig die Aktionen; drei Zeilen nur in der schmalsten
+# Liste (Filter, dann Aktionen). 8 px zwischen den Zeilen (Bildschirmpixel, je 2 px Spielraum für die Rundung). Die Zahl
+# der Zeilen steht danach in $script:BarRows.
 function Check-Toolbar($win, [string]$label, [double]$scale) {
     $script:BarRows = 0
     $bar = Find-Id $win 'LibraryToolbar' 3000
@@ -105,13 +116,18 @@ function Check-Toolbar($win, [string]$label, [double]$scale) {
     $outside = @(for ($i = 0; $i -lt $ids.Count; $i++) { $r = $boxes[$i]; if ($r.Left -lt $w.Left - 1 -or $r.Right -gt $w.Right + 1 -or $r.Bottom -gt $w.Bottom + 1) { $ids[$i] } })
     Check ($outside.Count -eq 0) ("$label`: alles im Fenster" + $(if ($outside.Count) { " (ragt hinaus: $($outside -join ', '))" } else { '' }))
 
-    # Ausgeschrieben: Suche, Quelle und Sortierung mindestens so breit wie bisher, die Ansichten mit Beschriftung (ohne
-    # waren es 120 px), „Spiel hinzufügen“ mit Text (ohne 40 px); die Symbol-Schaltflächen bleiben 40 px.
-    $min = [ordered]@{ SearchBox = 236; SourceFilter = 188; SortOrder = 196; ViewSegment = 200; AddGameButton = 120 }
-    $narrow = @($min.Keys | Where-Object { $boxes[[array]::IndexOf($ids, $_)].Width / $scale -lt $min[$_] - 1 })
-    Check ($narrow.Count -eq 0) ("$label`: ausgeschrieben (" + (($min.Keys | ForEach-Object { '{0} {1:N0}' -f $_, ($boxes[[array]::IndexOf($ids, $_)].Width / $scale) }) -join ', ') + ')')
-    $fixed = @(7, 8 | ForEach-Object { [math]::Round($boxes[$_].Width / $scale) })
-    Check (@($fixed | Where-Object { [math]::Abs($_ - 40) -gt 1 }).Count -eq 0) ("$label`: Neu einlesen und gesehen bleiben 40 px ({0})" -f ($fixed -join '/'))
+    # Größen: Symbole 40, Ansicht 122, alles 40 hoch; die Felder nie unter ihrem Minimum (unter 480 px Liste teilen sich
+    # Suche und Quelle den Rest, dort nicht geprüft)
+    $dip = @($boxes | ForEach-Object { [math]::Round($_.Width / $scale, 1) })
+    $icons = @(3, 4, 5, 7, 8, 9 | Where-Object { [math]::Abs($dip[$_] - 40) -gt 1 } | ForEach-Object { $ids[$_] })
+    Check ($icons.Count -eq 0) ("$label`: Filter und Aktionen als Symbole 40 px ({0})" -f ((3, 4, 5, 7, 8, 9 | ForEach-Object { $dip[$_] }) -join '/'))
+    Check ([math]::Abs($dip[6] - 122) -le 1) ("$label`: Ansicht 122 px ({0})" -f $dip[6])
+    $tall = @(for ($i = 0; $i -lt $ids.Count; $i++) { if ([math]::Abs($boxes[$i].Height / $scale - 40) -gt 1) { $ids[$i] } })
+    Check ($tall.Count -eq 0) ("$label`: alle Elemente 40 px hoch" + $(if ($tall.Count) { " (abweichend: $($tall -join ', '))" } else { '' }))
+    $sortIcon = [math]::Abs($dip[2] - 60) -le 1
+    if ($b.Width / $scale -ge 480) {
+        Check ($dip[0] -ge 167 -and $dip[1] -ge 135 -and ($sortIcon -or $dip[2] -ge 159)) ("$label`: Suche {0}, Quelle {1}, Sortierung {2} px (mindestens 168/136/160, Sortierung als Symbol 60)" -f $dip[0], $dip[1], $dip[2])
+    }
     Check ($null -eq (Find-Id $win 'FilterMenuButton' 300)) ($label + ': kein „Filter“-Menü')
 
     # Zeilen: nach der Oberkante gruppiert, in der Reihenfolge der Oberfläche
@@ -122,13 +138,22 @@ function Check-Toolbar($win, [string]$label, [double]$scale) {
     }
     $gap = 8 * $scale
     $flush = $true; $gaps = $true; $order = $true
+    # Erwartete Zeilen: eine (alle zehn), zwei (Felder | Filter und Aktionen) oder drei (Felder | Filter | Aktionen)
+    $shape = (($rows | ForEach-Object { $_.Count }) -join '+')
+    if ($shape -notin '10', '3+7', '3+3+4') { $order = $false }
     foreach ($row in $rows) {
-        if ([math]::Abs($boxes[$row[0]].Left - $b.Left) -gt 2 -or [math]::Abs($boxes[$row[$row.Count - 1]].Right - $b.Right) -gt 2) { $flush = $false }
+        $first = $ids[$row[0]]; $last = $ids[$row[$row.Count - 1]]
+        # Links bündig beginnt jede Zeile außer der dritten (nur Aktionen), rechts bündig endet jede außer der der Filter
+        if ($first -ne 'ViewSegment' -and [math]::Abs($boxes[$row[0]].Left - $b.Left) -gt 2) { $flush = $false }
+        if ($last -ne 'OnlyHdrCapableToggle' -and [math]::Abs($boxes[$row[$row.Count - 1]].Right - $b.Right) -gt 2) { $flush = $false }
         for ($k = 1; $k -lt $row.Count; $k++) {
             $d = $boxes[$row[$k]].Left - $boxes[$row[$k - 1]].Right
             if ($d -lt 0) { $order = $false }
-            # in einer einzigen Zeile liegt vor der Ansicht der freie Platz
-            if ([math]::Abs($d - $gap) -gt 2 -and -not ($rows.Count -eq 1 -and $ids[$row[$k]] -eq 'ViewSegment' -and $d -ge $gap - 2)) { $gaps = $false }
+            # vor der Ansicht liegt der freie Platz (eine Zeile: Gruppenabstand)
+            if ($ids[$row[$k]] -eq 'ViewSegment') {
+                $least = if ($rows.Count -eq 1) { $(if ($sortIcon) { 16 } else { 24 }) * $scale } else { $gap }
+                if ($d -lt $least - 2) { $gaps = $false }
+            } elseif ([math]::Abs($d - $gap) -gt 2) { $gaps = $false }
         }
     }
     for ($r = 1; $r -lt $rows.Count; $r++) {
@@ -143,8 +168,8 @@ function Check-Toolbar($win, [string]$label, [double]$scale) {
         $alignedWithList = [math]::Abs($l.Left - $b.Left) -le $scale + 2 -and [math]::Abs($l.Right - $b.Right) -le $scale + 2
     }
     Note ("{0}: Werkzeugleiste {1:N0} x {2:N0} px, {3} Zeile(n): {4}" -f $label, $b.Width, $b.Height, $rows.Count, (($rows | ForEach-Object { ($_ | ForEach-Object { $ids[$_] }) -join ' ' }) -join ' | '))
-    Check ($flush -and $order) "$label`: jede Zeile links und rechts bündig mit der Leiste, Reihenfolge wie in der Oberfläche"
-    Check $gaps "$label`: 8 px zwischen den Elementen und zwischen den Zeilen"
+    Check ($flush -and $order) "$label`: Zeilen bündig mit der Leiste (Felder links und rechts, Filter links, Aktionen rechts), Reihenfolge wie in der Oberfläche ($shape)"
+    Check $gaps "$label`: 8 px zwischen den Elementen und zwischen den Zeilen, vor der Ansicht der Gruppenabstand"
     Check $alignedWithList "$label`: Werkzeugleiste so breit wie die Liste"
     Check ([math]::Abs($b.Height / $scale - (($rows.Count * 48) - 8)) -le 1.5) ("$label`: Höhe {0:N1} px für {1} Zeile(n)" -f ($b.Height / $scale), $rows.Count)
     $script:BarRows = $rows.Count
@@ -282,13 +307,14 @@ try {
         $barOffset = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - ($heroSet + 10)
     } else { Check $false 'Ziehgriff mit Wertebereich (RangeValue)' }
 
-    # --- Werkzeugleiste: ausgeschrieben und in gefüllten Zeilen, auch im schmalen Fenster (Wunsch des Nutzers 2026-10-16) ---
+    # --- Werkzeugleiste: eine Zeile im Startfenster, im schmalen Fenster zwei (Wunsch des Nutzers 2026-10-17) ---
     Check-Toolbar $win 'Fenster 1600x1000' $scale
     $wideRows = $BarRows
+    Check ($wideRows -eq 1) ("Fenster 1600x1000: eine Zeile ({0})" -f $wideRows)
     if (Resize-Window $win 1000 700) {
         Check-Toolbar $win 'Schmales Fenster' $scale
         $narrowRows = $BarRows
-        Check ($narrowRows -gt $wideRows -and $narrowRows -ge 3) ("Schmales Fenster: mehr Zeilen statt gefalteter Elemente ({0} statt {1})" -f $narrowRows, $wideRows)
+        Check ($narrowRows -gt $wideRows -and $narrowRows -ge 2) ("Schmales Fenster: mehr Zeilen statt gefalteter Elemente ({0} statt {1})" -f $narrowRows, $wideRows)
         $grip1 = Find-Id $win 'HeroSplitter' 2000
         $range1 = $null
         if ($grip1 -and $grip1.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range1)) {
@@ -301,6 +327,54 @@ try {
     [void](Resize-Window $win 1600 1000)
     Check-Toolbar $win 'Wieder 1600x1000' $scale
     Check ($BarRows -eq $wideRows) ('Wieder breit: dieselbe Zahl Zeilen wie vorher ({0})' -f $BarRows)
+
+    # --- Werkzeugleiste aus- und einblenden über die Lasche (ExpandCollapse, keine Eingabe), Filter als Symbole ---
+    $toggle = Find-Id $win 'ToolbarToggle' 3000
+    $expand = $null
+    Check ($toggle -and $toggle.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$expand)) 'Lasche ToolbarToggle mit Aus- und Einklappen (ExpandCollapse)'
+    if ($toggle -and $expand) {
+        Check ($toggle.Current.Name -eq 'Werkzeugleiste' -and $expand.Current.ExpandCollapseState -eq 'Expanded' -and $toggle.Current.ItemStatus -eq 'Keine Filter') ('Lasche: Name „{0}“, {1}, Status „{2}“' -f $toggle.Current.Name, $expand.Current.ExpandCollapseState, $toggle.Current.ItemStatus)
+        Check ($null -eq (Read-Config $cfg).settings.libraryToolbarCollapsed -or -not (Read-Config $cfg).settings.libraryToolbarCollapsed) 'Standard: ausgeklappt'
+
+        # Filter „Neu“ als Symbol-Schalter: Zahl im ItemStatus, an und die Lasche nennt ihn
+        $newFilter = Find-Id $win 'OnlyNewToggle' 2000
+        $newStatus = if ($newFilter) { [string]$newFilter.Current.ItemStatus } else { '' }
+        Check ($newStatus -match '\d') ('Filter „Neu“ nennt seine Zahl („{0}“)' -f $newStatus)
+        $state = if ($newFilter) { Toggle-El $newFilter } else { $null }
+        Check ($state -eq 'On' -and (Wait-Until { (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -match '^Gefiltert: ' } 3000)) ('Filter „Neu“ an, die Lasche nennt ihn („{0}“)' -f (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus)
+
+        $barBefore = Rect (Find-Id $win 'LibraryToolbar' 2000)
+        $listBefore = (Rect (Find-Id $win 'GameList' 2000)).Top
+        $gripBefore = (Rect (Find-Id $win 'HeroSplitter' 2000)).Top
+        $expand.Collapse()
+        Check (Wait-Until { $expand.Current.ExpandCollapseState -eq 'Collapsed' }) ('Eingeklappt (Lasche meldet {0})' -f $expand.Current.ExpandCollapseState)
+        Check (Wait-Until { (Read-Config $cfg).settings.libraryToolbarCollapsed -eq $true }) ('Gemerkt (libraryToolbarCollapsed {0})' -f (Read-Config $cfg).settings.libraryToolbarCollapsed)
+        Start-Sleep -Milliseconds 1200
+        Check ($null -eq (Find-Id $win 'LibraryToolbar' 600) -and $null -eq (Find-Id $win 'SearchBox' 300) -and $null -eq (Find-Id $win 'OnlyNewToggle' 300)) 'Eingeklappt: Leiste und ihre Elemente nicht mehr im Automationsbaum'
+        $cap = Rect (Find-Id $win 'ToolbarToggle' 2000)
+        $edge = $barBefore.Top - 10 * $scale
+        $rise = ($listBefore - (Rect (Find-Id $win 'GameList' 2000)).Top) / $scale
+        $grip = (Rect (Find-Id $win 'HeroSplitter' 2000)).Top
+        Note ("Eingeklappt: Kapsel {0:N0} x {1:N0} px, Mitte {2:N1} px zur Bildkante, Liste {3:N1} px höher, Griff {4:N1} px verschoben" -f $cap.Width, $cap.Height, ((($cap.Top + $cap.Bottom) / 2 - $edge) / $scale), $rise, (($grip - $gripBefore) / $scale))
+        Check ([math]::Abs($cap.Height / $scale - 24) -le 1 -and [math]::Abs(($cap.Top + $cap.Bottom) / 2 - $edge) -le 2 -and [math]::Abs($cap.Right - $barBefore.Right) -le 2) 'Kapsel 24 px hoch, mittig auf der Bildkante, rechtsbündig mit der Liste'
+        Check ([math]::Abs($rise - ($barBefore.Height / $scale - 2)) -le 1.5) ("Liste rückt um die Leiste nach oben ({0:N1} px, erwartet {1:N0}), 10 px unter der Kapsel" -f $rise, ($barBefore.Height / $scale - 2))
+        Check ([math]::Abs($grip - $gripBefore) -le 1.5) 'Titelbereich und Griff springen nicht'
+        Check ((Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -match '^Gefiltert: ') 'Kapsel nennt die Filter'
+        $reset = Find-Id $win 'ToolbarResetButton' 2000
+        Check ($null -ne $reset) 'Kapsel mit „Filter zurücksetzen“'
+        if ($reset) {
+            Invoke-El $reset
+            Check (Wait-Until { (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -eq 'Keine Filter' } 3000) 'Zurücksetzen in der Kapsel: keine Filter mehr'
+        }
+
+        $expand.Expand()
+        Check (Wait-Until { $expand.Current.ExpandCollapseState -eq 'Expanded' -and -not (Read-Config $cfg).settings.libraryToolbarCollapsed } 4000) 'Wieder ausgeklappt und gemerkt'
+        Start-Sleep -Milliseconds 1000
+        $newFilter = Find-Id $win 'OnlyNewToggle' 2000
+        $off = $null
+        Check ($newFilter -and $newFilter.TryGetCurrentPattern([Windows.Automation.TogglePattern]::Pattern, [ref]$off) -and $off.Current.ToggleState -eq 'Off') 'Ausgeklappt: Leiste wieder da, Filter „Neu“ aus'
+        Check ([math]::Abs((Rect (Find-Id $win 'GameList' 2000)).Top - $listBefore) -le 1.5) 'Liste wieder an ihrem Platz'
+    }
 
     # --- Detailbereich: alle bisherigen Funktionen und „BILDER“ ---
     foreach ($id in 'DetailsPanel', 'DetailName', 'LaunchButton', 'CreateDesktopShortcutButton', 'CreateStartMenuShortcutButton', 'DetailHdrAuto', 'DetailRestore', 'DetailDisplay', 'DetailAutoHdr', 'AddExeButton', 'RemoveExeButton', 'RelearnExeButton', 'ChooseArtworkButton', 'ArtworkTileHero', 'ArtworkTileLogo', 'ArtworkTileCover', 'DetailIconButton', 'LibrarySplitter', 'ProfileMenuButton') {
@@ -408,12 +482,40 @@ try {
     $drawer = Find-Id $win 'DetailsPanel' 800
     Check ($null -eq $drawer -or $drawer.Current.IsOffscreen -or (Rect $drawer).Left -ge (Rect $win).Right - 2) 'Schublade geschlossen'
 
-    # --- Neustart: Ansicht gemerkt ---
+    # Regal eingeklappt: die Kachelreihe bleibt, die Kapsel steht mittig in der früheren Leistenzeile, rechtsbündig, mindestens
+    # 16 px unter der Automatik-Karte. Eingeklappt bleibt die Leiste für den Neustart.
+    $toggle = Find-Id $win 'ToolbarToggle' 2000
+    $expand = $null
+    if ($toggle -and $toggle.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$expand)) {
+        $shelfTop = (Rect (Find-Id $win 'GameShelf' 2000)).Top
+        $expand.Collapse()
+        Check (Wait-Until { (Read-Config $cfg).settings.libraryToolbarCollapsed -eq $true } 4000) 'Regal: eingeklappt und gemerkt'
+        Start-Sleep -Milliseconds 1200
+        $cap = Rect (Find-Id $win 'ToolbarToggle' 2000)
+        Note ("Regal eingeklappt: Kapsel {0:N1} px unter der Karte, Mitte {1:N1} px zur Mitte der früheren Leiste" -f $(if ($card) { ($cap.Top - (Rect $card).Bottom) / $scale } else { 0 }), ((($cap.Top + $cap.Bottom) - ($shelfBar.Top + $shelfBar.Bottom)) / 2 / $scale))
+        Check ([math]::Abs(($cap.Top + $cap.Bottom) - ($shelfBar.Top + $shelfBar.Bottom)) / 2 -le 2 -and [math]::Abs($cap.Right - $shelfBar.Right) -le 2) 'Regal: Kapsel mittig in der früheren Leistenzeile, rechtsbündig'
+        if ($card) { Check ($cap.Top - (Rect $card).Bottom -ge 16 * $scale - 2) 'Regal: Kapsel mindestens 16 px unter der Automatik-Karte' }
+        Check ([math]::Abs((Rect (Find-Id $win 'GameShelf' 2000)).Top - $shelfTop) -le 1.5) 'Regal: die Kachelreihe bleibt, wo sie ist'
+    } else { Check $false 'Regal: Lasche ToolbarToggle mit ExpandCollapse' }
+
+    # --- Neustart: Ansicht und eingeklappte Leiste gemerkt ---
     Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null
     Check ($app.WaitForExit(10000)) 'Testinstanz beendet'
     $app2 = Start-App $cfg @('--show')
     $win2 = Find-Window 'MainWindow' $app2.Id
-    Check ($win2 -and (Is-Selected (Find-Id $win2 'ViewShelfButton' 8000))) 'Nach Neustart wieder Regal'
+    # Eingeklappt sind die Ansicht-Knöpfe nicht im Automationsbaum: erst die Leiste prüfen und ausklappen
+    if ($win2) {
+        $toggle2 = Find-Id $win2 'ToolbarToggle' 8000
+        $expand2 = $null
+        $collapsed2 = $toggle2 -and $toggle2.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$expand2) -and $expand2.Current.ExpandCollapseState -eq 'Collapsed'
+        Check ($collapsed2 -and $null -eq (Find-Id $win2 'LibraryToolbar' 600)) 'Nach Neustart wieder eingeklappt (ohne Bewegung, Leiste nicht im Automationsbaum)'
+        if ($expand2) {
+            $expand2.Expand()
+            Check (Wait-Until { -not (Read-Config $cfg).settings.libraryToolbarCollapsed -and $null -ne (Find-Id $win2 'LibraryToolbar' 300) } 4000) 'Wieder ausgeklappt: Leiste da, libraryToolbarCollapsed aus'
+        }
+    }
+    $shelfButton2 = if ($win2) { Find-Id $win2 'ViewShelfButton' 8000 } else { $null }
+    Check ($shelfButton2 -and (Is-Selected $shelfButton2)) 'Nach Neustart wieder Regal'
     if ($win2) {
         Select-El (Find-Id $win2 'ViewListButton')
         Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryView }) 'Zurück zur Liste: Standard, nichts gespeichert'
@@ -437,11 +539,12 @@ try {
     Check ($app2.WaitForExit(10000)) 'Testinstanz beendet'
     Check (@((Read-Config $cfg).games | Where-Object { $_.hdrAuto -or $_.autoHdr }).Count -eq 0) 'Am Ende hat kein Spiel „HDR automatisch“ oder „Windows Auto HDR“ an'
 
-    # --- Bildschirmfotos: drei Ansichten und die gescrollte Liste, drei Größen, hell und dunkel ---
+    # --- Bildschirmfotos: drei Ansichten, die gescrollte Liste und die eingeklappte Leiste (gefiltert, mit Lichtnaht), drei
+    #     Größen, hell und dunkel ---
     $shots = Join-Path $ShotsDir ('lauf-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
+    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal,hauptfenster-liste-eingeklappt-gefiltert,hauptfenster-raster-eingeklappt,hauptfenster-regal-eingeklappt-gefiltert', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
     Check ($snap.ExitCode -eq 0) "Bildschirmfotos gerendert (Exit-Code $($snap.ExitCode))"
-    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal') {
+    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal', 'liste-eingeklappt-gefiltert', 'raster-eingeklappt', 'regal-eingeklappt-gefiltert') {
         foreach ($size in '1280x800', '1920x1080', '3440x1440') {
             foreach ($theme in 'dunkel', 'hell') {
                 $file = Join-Path $shots "hauptfenster-$view-$size-$theme.png"

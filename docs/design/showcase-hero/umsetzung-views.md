@@ -44,7 +44,9 @@ Stand: 2026-10-16, Zweig `feature/showcase-views`. Grundlage: genehmigter Protot
 2. **Werkzeugleiste**: Stufen wie `fitToolbar`, aber die Filter-Chips falten zuletzt (Stufe 6, nach der Sortierung in
    Stufe 5), damit sie bei der Standardgröße direkt schaltbar bleiben (phase4-ui); Stufe 7 (zwei Zeilen) für Fenster um
    1000 px, die der Prototyp nicht hatte. Seit 2026-10-16 ersetzt (Wunsch des Nutzers): keine Stufen mehr, alles bleibt
-   ausgeschrieben, die Leiste bricht in gefüllte, an beiden Rändern bündige Zeilen um (`ToolbarFlowPanel`, E89).
+   ausgeschrieben, die Leiste bricht in gefüllte, an beiden Rändern bündige Zeilen um (E89). Seit 2026-10-17 ersetzt
+   durch die „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers): Symbol-Filter, stufenlose Anpassung, zwei Zeilen erst
+   unter 806 px Listenbreite, ein- und ausblendbar (`ToolbarLayout`, `ToolbarPanel`, `MainWindow.Toolbar.cs`, E89).
 3. **Detailbereich mit Trenner** wie bisher, aber höchstens 560 px breit (Prototyp 340–396 px). Gemerkt wird die
    Aufteilung erst, wenn der Trenner im neuen Design gezogen wird (`settings.libraryPaneRatio`); eine Aufteilung der
    bisherigen Oberfläche (`libraryDetailsRatio`, beim Nutzer gesetzt) gilt nicht mehr, sonst hätte das Raster bei

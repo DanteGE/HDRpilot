@@ -414,9 +414,11 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
     - der Griff liegt genau auf der Grenze zwischen Titelbild und Liste (Wunsch 2026-10-16).
   - Werkzeugleiste über der Liste (Wünsche des Nutzers 2026-10-16):
     - über der Leiste (bis zur Unterkante des Titelbilds) so viel Luft wie darunter (Liste 10 px, Raster 22 px bis zur ersten Kachelreihe);
-    - Filter „Automatik“, „Neu“ und „HDR-fähig“ so klein wie „Neu einlesen“, Erklärung nach 1–2 s Mouse-Over;
-    - die Leiste lässt sich aus- und einblenden, „cool und zeitgemäß“ (Lösung noch vom Nutzer zu wählen);
-    - einzeilig hat Vorrang; nur in schmalen Fenstern bei Bedarf zweizeilig; die Anpassung an schmale Fenster ist fließend und optisch sauber.
+    - Filter „Automatik“, „Neu“ und „HDR-fähig“ so klein wie „Neu einlesen“ (40×40, eindeutige Symbole), Zähler-Plakette innerhalb des Knopfs, aktiver Zustand nicht nur über die Farbe, Erklärung nach 1 s Mouse-Over;
+    - Ansicht-Umschaltung und „Spiel hinzufügen“ nur als Symbol mit Tooltip;
+    - einzeilig hat Vorrang: Suche, Quelle und Sortierung geben stufenlos nach, dann zeigt die Sortierung nur ihr Symbol; erst darunter zwei Zeilen, getrennt an den Gruppengrenzen, mit sauberem Übergang; die Anpassung an schmale Fenster ist fließend und optisch sauber (kein Nachhinken, gleiche Abstände, bündige Kanten);
+    - Aus- und Einblenden nach der abgenommenen Vorschau „Fließleiste mit Lichtnaht“ (`docs/design/showcase-hero/prototyp/leiste.html`, Wunsch des Nutzers 2026-10-17): Lasche rechts, ihre Unterkante 8 px über der Leiste (wie der Abstand der Knöpfe); eingeklappt eine Kapsel auf der Bildkante mit aktiven Filtern, Suchbegriff, Anzahl und Zurücksetzen; gefiltert die Lichtnaht; Strg+Umschalt+F schaltet um, Strg+F klappt dauerhaft aus und setzt den Cursor in die Suche, Alt+A/N/H schalten die Filter; Animation nach Effektstufe (Voll, Reduziert, Aus); der Zustand wird gemerkt;
+    - der Inhalt des Titelbereichs sitzt 22 px über der Bildkante (Platz für Lasche und Kapsel).
   - Raster: skaliert bei jeder Fenstergröße sauber, auch im Vollbild bei 3440×1440: Spaltenzahl und Kachelgröße folgen der Breite, nichts gestreckt oder abgeschnitten.
   - Regal: Titelbild und Kachelreihe.
   - Detailbereich mit allen bisherigen Funktionen (STARTEN, AUTOMATIK, BILD, EXE-DATEIEN, Bilder); alle bisherigen Funktionen und Tastenkürzel bleiben.

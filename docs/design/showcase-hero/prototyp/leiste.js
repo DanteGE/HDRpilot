@@ -593,7 +593,10 @@ function layout(o = {}) {
   apply();
 }
 /* Lasche/Kapsel ohne laufende Bewegung auf den Endwert setzen */
-const TAB_TY = -3;   // Lasche 3 px höher als die Kapsel: −15 bis +3 um die Bildkante (Kapsel −12 bis +12)
+/* Lasche: Unterkante 8 px über der Werkzeugleiste, so viel Luft wie zwischen den Knöpfen (Wunsch des Nutzers 2026-10-17;
+   Liste −16 bis +2, Raster −4 bis +14 um die Bildkante). Kapsel eingeklappt −12 bis +12. */
+const TAB_GAP = 8;
+const tabTy = () => G ? G.tbTop - G.heroH - TAB_GAP - 6 : -3;
 function settleTab() {
   const busy = ['pill:w', 'pill:h', 'pill:r', 'pill:ty'].some(k => AN.has(k));
   if (busy) { if (S.collapsed && AN.has('pill:w')) AN.get('pill:w').to = capState.w; return; }
@@ -615,7 +618,7 @@ function settleTab() {
     }
   } else {
     if (!hoverTab) set('pill:w', 36);
-    set('pill:h', 18); set('pill:ty', TAB_TY); set('pill:r', 0); set('cdv:o', 0);
+    set('pill:h', 18); set('pill:ty', tabTy()); set('pill:r', 0); set('cdv:o', 0);
     for (let i = 0; i < 12; i++) { set('ci:' + i + ':o', 0); set('ci:' + i + ':x', -6); }
     set('cx:o', 0); if (!AN.has('halo2:o')) set('halo2:o', 0);
     if (!AN.has('seam:sx')) { set('seam:sx', 0); set('seam:o', 0); }
@@ -664,7 +667,7 @@ function apply() {
     tb.style.transform = off ? `translateY(${-off}px)` : '';
   }
   // Lasche/Kapsel
-  const pw = val('pill:w', 36), ph = val('pill:h', 18), pty = val('pill:ty', S.collapsed ? 0 : TAB_TY);
+  const pw = val('pill:w', 36), ph = val('pill:h', 18), pty = val('pill:ty', S.collapsed ? 0 : tabTy());
   pill.style.width = Math.round(pw * 10) / 10 + 'px'; pill.style.height = Math.round(ph * 10) / 10 + 'px';
   pill.style.borderRadius = (ph / 2) + 'px';
   pill.style.transform = pty ? `translateY(${Math.round(pty * 10) / 10}px)` : '';
@@ -761,7 +764,7 @@ function expandVoll(dy, fromSearch) {
   for (let i = 0; i < 12; i++) { anim('ci:' + i + ':o', 0, { dur: 90 }); anim('ci:' + i + ':x', -6, { dur: 120 }); }
   anim('cx:o', 0, { dur: 80 }); anim('cdv:o', 0, { dur: 100 });
   anim('pill:w', 36, { delay: 60, dur: 200, ease: E.cubicOut });
-  anim('pill:h', 18, { delay: 60, dur: 200, ease: E.spring }); anim('pill:ty', TAB_TY, { delay: 60, dur: 200, ease: E.spring });
+  anim('pill:h', 18, { delay: 60, dur: 200, ease: E.spring }); anim('pill:ty', tabTy(), { delay: 60, dur: 200, ease: E.spring });
   anim('pill:r', 0, { delay: 60, dur: 220, ease: E.cubicOut });
   anim('halo2:o', 0, { dur: 200 }); anim('halo:o', 0, { dur: 120 });
   (fromSearch ? order() : order().reverse()).forEach((id, i) => {
@@ -792,7 +795,7 @@ function expandRed(dy) {
   set('streak:o', 0);
 }
 function finalsTab(c) {
-  set('pill:w', c ? capState.w : 36); set('pill:h', c ? 24 : 18); set('pill:ty', c ? 0 : TAB_TY); set('pill:r', c ? 180 : 0); set('cdv:o', c ? 1 : 0); set('hint:o', 0);
+  set('pill:w', c ? capState.w : 36); set('pill:h', c ? 24 : 18); set('pill:ty', c ? 0 : tabTy()); set('pill:r', c ? 180 : 0); set('cdv:o', c ? 1 : 0); set('hint:o', 0);
   for (let i = 0; i < 12; i++) { set('ci:' + i + ':o', c ? 1 : 0); set('ci:' + i + ':x', c ? 0 : -6); }
   set('cx:o', c && capState.x ? 1 : 0); set('halo2:o', c && capState.flt ? 0.35 : 0); set('halo:o', 0);
 }

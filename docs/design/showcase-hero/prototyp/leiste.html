@@ -44,7 +44,7 @@
     </div>
   </div>
   <div class="readout" id="readout"></div>
-  <div class="hint">Fensterbreite mit dem Regler <b>ziehen</b> (oder am Griff rechts neben dem Fenster): nur dann laufen die Schritte animiert und mit Hysterese, wie beim Ziehen des Fensterrands. Voreinstellungen springen sofort in den Endzustand. Tastenkürzel wirken auf der ganzen Seite: <kbd>Strg+Umschalt+F</kbd> <kbd>Strg+F</kbd> <kbd>Alt+A</kbd> <kbd>Alt+N</kbd> <kbd>Alt+H</kbd> <kbd>Esc</kbd>; Rechtsklick auf Lasche, Kapsel oder freie Fläche der Leiste öffnet das Menü.</div>
+  <div class="phint">Fensterbreite mit dem Regler <b>ziehen</b> (oder am Griff rechts neben dem Fenster): nur dann laufen die Schritte animiert und mit Hysterese, wie beim Ziehen des Fensterrands. Voreinstellungen springen sofort in den Endzustand. Tastenkürzel wirken auf der ganzen Seite: <kbd>Strg+Umschalt+F</kbd> <kbd>Strg+F</kbd> <kbd>Alt+A</kbd> <kbd>Alt+N</kbd> <kbd>Alt+H</kbd> <kbd>Esc</kbd>; Rechtsklick auf Lasche, Kapsel oder freie Fläche der Leiste öffnet das Menü.</div>
 </header>
 
 <main class="stagewrap" id="stageWrap">
@@ -81,11 +81,10 @@
         <div class="hc" id="hc"></div>
         <aside class="pane" id="pane" aria-label="Spieldetails"></aside>
 
-        <div class="grip" id="grip" title="Höhe des Titelbereichs ziehen"><i class="ln" id="gripLine"></i><i class="rest"></i><i class="hov"></i></div>
+        <!-- Tab-Reihenfolge wie in der Spezifikation: Griff → Lasche/Kapsel (→ ✕) → Suche … → Liste -->
+        <div class="grip" id="grip" role="separator" aria-orientation="horizontal" aria-label="Höhe des Titelbereichs" tabindex="0" title="Höhe des Titelbereichs ziehen"><i class="ln" id="gripLine"></i><i class="rest"></i><i class="hov"></i></div>
 
-        <div class="tb" id="tb" role="toolbar" aria-label="Werkzeugleiste"></div>
-
-        <div class="seam" id="seam" aria-hidden="true"><i class="glow"></i><i class="core"></i></div>
+        <div class="seamw" id="seamw" aria-hidden="true"><div class="seam" id="seam"><i class="glow"></i><i class="core"></i></div></div>
         <div class="streak" id="streak" aria-hidden="true"><i class="g"></i><i class="c"></i></div>
         <div class="tabw" id="tabw">
           <i class="chalo" id="chalo"></i><i class="chalo2" id="chalo2"></i><i class="hit" id="tabHit" aria-hidden="true"></i>
@@ -93,10 +92,13 @@
             <span class="cpc" id="cpc"></span>
             <span class="hint" id="pillHint">Leiste ausblenden <span class="kbd">Strg+Umschalt+F</span></span>
             <span class="cdv" id="cdv"></span>
-            <span class="ar" id="pillAr">&#xE70E;</span>
+            <span class="ar" id="pillAr"><svg viewBox="0 0 10 6" aria-hidden="true"><path d="M1.2 5 5 1.2 8.8 5"/></svg></span>
           </button>
           <button class="cx" id="cx" aria-label="Suche und Filter zurücksetzen" tabindex="-1">&#xE711;</button>
         </div>
+
+        <!-- Die Leiste liegt in einer Klammer, deren Unterkante der Oberkante der Liste folgt: was die Liste überdeckt, ist nie sichtbar -->
+        <div class="tbclip" id="tbclip"><div class="tb" id="tb" role="toolbar" aria-label="Werkzeugleiste"></div></div>
 
         <div class="lclip" id="lclip"><div class="lc-bg" id="lcbg"></div><div class="lc-in" id="lcin"></div></div>
         <div class="grid" id="grid" hidden><div class="gin" id="gin"></div></div>

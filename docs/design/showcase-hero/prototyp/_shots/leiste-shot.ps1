@@ -9,7 +9,8 @@
   [switch]$Edge,
   [switch]$Panel,                                # ganze Seite mit Bedienfeld (ohne shot=1), Browserfenster -VW × -VH
   [int]$VW = 1600, [int]$VH = 1000,
-  [int]$RealTime = 0                             # > 0: echte Zeit in ms statt virtueller Zeit (live laufende Bewegung, requestAnimationFrame)
+  [int]$RealTime = 0,                            # > 0: echte Zeit in ms statt virtueller Zeit (live laufende Bewegung, requestAnimationFrame)
+  [string]$Prof = ''                             # eigenes Chrome-Profil (Standard: $Out\prof)
 )
 # Bildschirmfoto einer Seite des Prototyps mit headless Chrome/Edge; eigenes Profil unter $Out\prof.
 # Ohne -Panel bekommt die Seite shot=1 (nur das Fenster, 1:1) sowie w und h; sie schreibt „MESS {…}“ in die Konsole.
@@ -17,7 +18,7 @@
 $ErrorActionPreference = 'Stop'
 $exe = if ($Edge) { 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' } else { 'C:\Program Files\Google\Chrome\Application\chrome.exe' }
 New-Item -ItemType Directory -Force $Out | Out-Null
-$prof = Join-Path $Out 'prof'
+$prof = if ($Prof) { $Prof } else { Join-Path $Out 'prof' }
 $png = Join-Path $Out "$Name.png"
 $log = Join-Path $Out "$Name.log"
 $url = "http://127.0.0.1:$Port/$Page#" + $(if ($Panel) { "w=$W&h=$H" } else { "shot=1&w=$W&h=$H" }) + $(if ($Hash) { '&' + $Hash } else { '' })

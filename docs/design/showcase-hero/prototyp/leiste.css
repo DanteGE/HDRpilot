@@ -61,8 +61,8 @@ select.pin option{background:var(--pg2);color:var(--pgText)}
 .readout .ok{color:#3DDC84}
 .readout .bad{color:#FF6B6B}
 :root[data-theme="light"] .readout .ok{color:#147042}
-.hint{margin-top:6px;color:var(--pgMuted);font-size:11.5px}
-.hint kbd{padding:1px 4px;border-radius:4px;background:var(--pgChip);border-bottom:1px solid var(--pgLineS);color:var(--pgText2)}
+.phint{margin-top:6px;color:var(--pgMuted);font-size:11.5px}
+.phint kbd{padding:1px 4px;border-radius:4px;background:var(--pgChip);border-bottom:1px solid var(--pgLineS);color:var(--pgText2)}
 
 /* ================= Bühne: das Fenster, eingepasst ================= */
 .stagewrap{padding:18px 16px 40px;overflow-x:auto}
@@ -73,6 +73,8 @@ select.pin option{background:var(--pg2);color:var(--pgText)}
 .sizer:hover::after,.sizer.on::after{background:#FF6A55}
 body.shot .panel,body.shot .sizer{display:none}
 body.shot .stagewrap{padding:0;overflow:hidden}
+/* Bildschirmfotos zeigen immer den Endzustand der kleinen CSS-Übergänge (Bewegungen laufen über die eigene Uhr) */
+body.shot .win,body.shot .win *{transition:none !important}
 
 /* ================= Fenster (Mock der App) ================= */
 .win{position:relative;overflow:hidden;border:1px solid #3B2F38;background:var(--bg);color:var(--text);font:600 13px/1.25 var(--ft);
@@ -84,8 +86,9 @@ body.shot .stagewrap{padding:0;overflow:hidden}
   --line:rgba(255,255,255,.09); --lineS:rgba(255,255,255,.16);
   --text:#F4F5FA; --text2:#AEB3C6; --muted:#80859B;
   --accSoft:rgba(255,138,61,.22); --accStrong:rgba(255,138,61,.62); --focus:#FF8A3D;
-  --menu:rgba(16,17,24,.98); --glass:rgba(12,13,19,.66); --glassH:rgba(255,255,255,.11);
+  --menu:#101118; --glass:rgba(12,13,19,.66); --glassH:rgba(255,255,255,.11);
   --hdroff:rgba(255,255,255,.14); --togOff:#C9CCD8; --togOn:linear-gradient(100deg,#FF8A3D,#FF3D7F);
+  --fltOn:linear-gradient(100deg,#FF8A3D,#FF3D7F); --fltOnFg:#0B0C12; --bdgOn:#F4F5FA; --bdgOnFg:#0B0C12;
   --listcard:color-mix(in srgb,var(--bg) 55%,transparent); --panel:linear-gradient(rgba(19,20,28,.93),rgba(10,11,16,.95));
   --rowsel:linear-gradient(90deg,color-mix(in srgb,var(--gc,#FF8A3D) 26%,transparent),color-mix(in srgb,var(--gc,#FF8A3D) 6%,transparent) 70%);
   --newBg:#F4F5FA; --newFg:#0A0B10; --bdg:rgba(255,255,255,.15); --bdgFg:#C9CDDB; --bdgLine:transparent;
@@ -97,8 +100,9 @@ body.shot .stagewrap{padding:0;overflow:hidden}
   --line:rgba(17,19,32,.10); --lineS:rgba(17,19,32,.18);
   --text:#12131A; --text2:#4C5268; --muted:#5C6274;
   --accSoft:rgba(255,138,61,.22); --accStrong:rgba(255,138,61,.62); --focus:#BB652D;
-  --menu:rgba(255,255,255,.99); --glass:rgba(255,255,255,.8); --glassH:#FFFFFF;
+  --menu:#FFFFFF; --glass:rgba(255,255,255,.8); --glassH:#FFFFFF;
   --hdroff:rgba(17,19,32,.14); --togOff:#FFFFFF; --togOn:linear-gradient(100deg,#BB652D,#E63773);
+  --fltOn:linear-gradient(100deg,#BB652D,#E63773); --fltOnFg:#FFFFFF; --bdgOn:#12131A; --bdgOnFg:#FFFFFF;
   --listcard:rgba(255,255,255,.62); --panel:linear-gradient(rgba(255,255,255,.95),rgba(247,248,251,.97));
   --rowsel:rgba(255,138,61,.14);
   --newBg:#12131A; --newFg:#FFFFFF; --bdg:#FFFFFF; --bdgFg:#3E4458; --bdgLine:rgba(17,19,32,.2);
@@ -232,11 +236,15 @@ body.shot .stagewrap{padding:0;overflow:hidden}
 .grip .rest{position:absolute;left:50%;top:8px;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--lineS)}
 .grip .hov{position:absolute;left:50%;top:8px;width:52px;height:4px;margin-left:-26px;border-radius:2px;background:linear-gradient(100deg,#FF8A3D,#FF3D7F);opacity:0;transition:opacity calc(160ms / var(--spd))}
 .grip .ln{position:absolute;left:18px;top:9.5px;height:1px;background:var(--lineS);opacity:0;transition:opacity calc(160ms / var(--spd))}
-.grip:hover .hov,.grip.hover .hov{opacity:1}.grip:hover .ln,.grip.hover .ln{opacity:.8}
+.grip:hover .hov,.grip.hover .hov,.grip:focus-visible .hov,.grip.kfocus .hov{opacity:1}.grip:hover .ln,.grip.hover .ln{opacity:.8}
 .win.dark .grip .rest{background:rgba(255,255,255,.2)}
+.grip{outline:none}
+.grip:focus-visible::after,.grip.kfocus::after{content:"";position:absolute;left:50%;top:3px;width:66px;height:14px;margin-left:-33px;border-radius:7px;box-shadow:0 0 0 2px var(--focus)}
 
 /* ================= Werkzeugleiste ================= */
-.tb{position:absolute;z-index:10}
+/* Klammer: Unterkante = Oberkante der Liste (wird nur verschoben, Inhalt gegenverschoben; nur Transform) */
+.tbclip{position:absolute;z-index:10;overflow:hidden;pointer-events:none}
+.tb{position:absolute;pointer-events:auto}
 .tb.gone{visibility:hidden}
 .te{position:absolute;top:0;height:40px;will-change:auto}
 .fr{position:absolute;inset:0;border-radius:12px;background:var(--glass);border:1px solid var(--line);transition:background-color calc(120ms / var(--spd))}
@@ -285,34 +293,34 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 .f-flt .on{position:absolute;inset:0;border-radius:12px;background:rgba(255,138,61,.18);border:1px solid var(--accStrong);opacity:0;pointer-events:none;transition:opacity calc(var(--fxOn,200ms) / var(--spd))}
 .f-flt[aria-pressed="true"] .halo{opacity:.55}
 .f-flt[aria-pressed="true"] .on{opacity:1}
-.f-flt .ib{position:absolute;left:7px;top:16px;width:26px;height:18px;display:grid;place-items:center;pointer-events:none}
+/* Symbol 2 px unter der Zeilenmitte (Mitte bei y = 22), damit die Zähler-Plakette darüber Platz hat */
+.f-flt .ib{position:absolute;left:5px;top:13px;width:30px;height:18px;display:grid;place-items:center;pointer-events:none}
 .f-flt:active>.fr,.f-flt:active>.on,.f-flt:active>.ib{transform:scale(.96)}
 /* Mini-Schalter (wie Spalte „HDR AUTOMATISCH“): Spur 18×10, Kontur 1,6, Knopf 6 */
 .msw{position:relative;width:18px;height:10px}
 .msw .tk{position:absolute;inset:0;border-radius:5px;box-shadow:inset 0 0 0 1.6px var(--text2)}
-.msw .tf{position:absolute;inset:0;border-radius:5px;background:var(--togOn);opacity:0;transition:opacity calc(var(--fxOn,200ms) / var(--spd))}
+.msw .tf{position:absolute;inset:0;border-radius:5px;background:var(--fltOn);opacity:0;transition:opacity calc(var(--fxOn,200ms) / var(--spd))}
 .msw .kn{position:absolute;left:2px;top:2px;width:6px;height:6px;border-radius:50%;background:var(--text2);transition:transform calc(var(--fxKnob,220ms) / var(--spd)) var(--knobEase,cubic-bezier(.3,1.45,.55,1)),background-color calc(var(--fxOn,200ms) / var(--spd))}
 .f-flt[aria-pressed="true"] .msw .tf,.cpi .msw .tf{opacity:1}
 .f-flt[aria-pressed="true"] .msw .kn,.cpi .msw .kn{transform:translateX(8px);background:#fff}
 .f-flt[aria-pressed="true"] .msw .tk,.cpi .msw .tk{box-shadow:none}
-/* Plaketten NEU / HDR: 22×13, Radius 4, 8,5 Bold; aus als Kontur, an gefüllt */
-.plq{position:relative;width:22px;height:13px;border-radius:4px;display:grid;place-items:center;font:700 8.5px/1 var(--ft);letter-spacing:.03em;color:var(--text2);box-shadow:inset 0 0 0 1px var(--text2)}
-.plq::before{content:"";position:absolute;inset:0;border-radius:4px;background:linear-gradient(100deg,#FF8A3D,#FF3D7F);opacity:0;transition:opacity calc(var(--fxOn,200ms) / var(--spd))}
-.plq b{position:relative;font-weight:700;padding-left:.03em}
-.f-flt[aria-pressed="true"] .plq,.cpi .plq{box-shadow:none;color:#0B0C12}
+/* Plaketten NEU / HDR: 26×13 (Spezifikation 22×13 war zu eng: „R“ berührte die Kontur), Radius 4, 8,5 Bold; aus als Kontur, an gefüllt */
+.plq{position:relative;width:26px;height:13px;border-radius:4px;display:grid;place-items:center;font:700 8.5px/1 var(--ft);letter-spacing:.04em;color:var(--text2);box-shadow:inset 0 0 0 1px var(--text2)}
+.plq::before{content:"";position:absolute;inset:0;border-radius:4px;background:var(--fltOn);opacity:0;transition:opacity calc(var(--fxOn,200ms) / var(--spd))}
+.plq b{position:relative;font-weight:700;padding-left:.04em}
+.f-flt[aria-pressed="true"] .plq,.cpi .plq{box-shadow:none;color:var(--fltOnFg)}
 .f-flt[aria-pressed="true"] .plq::before,.cpi .plq::before{opacity:1}
 .f-flt:hover .plq,.f-flt:hover .msw .tk{--text2:var(--text)}
 .f-flt:hover .msw .kn{background:var(--text)}
 .f-flt[aria-pressed="true"]:hover .msw .kn{background:#fff}
-/* Zähler-Plakette: innen oben rechts (3 px Abstand), bleibt in 40×40 */
-.bdg{position:absolute;right:3px;top:3px;min-width:14px;height:13px;padding:0 3.5px;border-radius:6.5px;display:grid;place-items:center;font:700 9px/1 var(--ft);font-variant-numeric:tabular-nums;letter-spacing:.01em;
-  color:var(--bdgFg);background:var(--bdg);box-shadow:inset 0 0 0 1px var(--bdgLine);pointer-events:none;overflow:hidden}
-.bdg span{position:relative;top:-.2px}
-.bdg::before{content:"";position:absolute;inset:0;background:linear-gradient(100deg,#FF8A3D,#FF3D7F);opacity:0;transition:opacity calc(var(--fxOn,200ms) / var(--spd))}
+/* Zähler-Plakette: innen oben rechts (2 px Abstand), 12 hoch, bleibt in 40×40.
+   Filter an: neutrale Plakette (hell im dunklen Thema, dunkel im hellen), damit sie sich vom gefüllten Symbol abhebt */
+.bdg{position:absolute;right:2px;top:2px;min-width:13px;height:12px;padding:0 3.5px;border-radius:6px;display:grid;place-items:center;font:700 9px/1 var(--ft);font-variant-numeric:tabular-nums;letter-spacing:.01em;
+  color:var(--bdgFg);background:var(--bdg);box-shadow:inset 0 0 0 1px var(--bdgLine);pointer-events:none;overflow:hidden;transition:background-color calc(var(--fxOn,200ms) / var(--spd)),color calc(var(--fxOn,200ms) / var(--spd))}
+.bdg span{position:relative;top:-.3px}
 .bdg.nw{background:#FF94B9;color:#14070C;box-shadow:none}
 .bdg.zero{color:var(--muted)}
-.f-flt[aria-pressed="true"] .bdg{color:#0B0C12;box-shadow:none}
-.f-flt[aria-pressed="true"] .bdg::before{opacity:1}
+.f-flt[aria-pressed="true"] .bdg{background:var(--bdgOn);color:var(--bdgOnFg);box-shadow:none}
 
 /* Ansicht: nur Symbole, gewählte Fläche gleitet */
 .f-seg{width:122px}
@@ -332,8 +340,8 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 /* ================= Lasche / Kapsel ================= */
 .tabw{position:absolute;z-index:16;height:24px;pointer-events:none}
 .tabw .pill,.tabw .cx.live{pointer-events:auto}
-/* Trefferfläche der Lasche 44 × 24 (sichtbar 36 × 18, −12 bis +6 um die Kante) */
-.tabw .hit{position:absolute;right:-4px;top:-3px;width:44px;height:24px;cursor:pointer;pointer-events:auto}
+/* Trefferfläche der Lasche 44 × 24 (sichtbar 36 × 18, −15 bis +3 um die Kante: je 7 px Luft zum Inhalt des Titelbilds und zur Leiste) */
+.tabw .hit{position:absolute;right:-4px;top:-6px;width:44px;height:24px;cursor:pointer;pointer-events:auto}
 .tabw.col .hit{display:none}
 .tabw .chalo{position:absolute;right:-10px;top:-8px;height:40px;border-radius:22px;pointer-events:none;opacity:0;
   background:radial-gradient(60% 70% at 50% 50%,color-mix(in srgb,#FF3D7F 55%,transparent),color-mix(in srgb,#FF8A3D 22%,transparent) 55%,transparent 75%)}
@@ -343,7 +351,9 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 .win.light .pill{background:rgba(255,255,255,.92);border-color:rgba(17,19,32,.16)}
 .pill:hover{border-color:var(--lineS)}
 .win .pill.flt{border-color:var(--accStrong)}
-.pill .ar{position:absolute;left:13px;top:0;bottom:0;width:10px;display:grid;place-items:center;font:400 9px/1 var(--fi);color:var(--text)}
+/* Pfeil: Chevron 10 × 6 mit 1,7 px Strich in Textfarbe (die 9-px-Glyphe war zu dünn) */
+.pill .ar{position:absolute;left:13px;top:0;bottom:0;width:10px;display:grid;place-items:center;color:var(--text)}
+.pill .ar svg{display:block;width:10px;height:6px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .pill .hint{position:absolute;left:28px;top:0;bottom:0;display:flex;align-items:center;gap:7px;white-space:nowrap;font:600 11px/1 var(--ft);color:var(--text);opacity:0;pointer-events:none}
 .pill .hint .kbd{height:14px;font-size:9.5px;padding:0 4px;border-radius:4px}
 .pill .cpc{position:absolute;left:30px;top:0;bottom:0;display:flex;align-items:center;white-space:nowrap;pointer-events:none}
@@ -358,6 +368,7 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 .cpi.ct{gap:0;font:600 11px/1 var(--fm);color:var(--text2)}
 .cpi.ct b{color:var(--text);font-weight:600}
 .cpi.more{height:16px;padding:0 5px;border-radius:5px;background:var(--s2);font:700 10px/1 var(--ft);color:var(--text2)}
+.win.light .cpi.more{background:rgba(17,19,32,.08)}
 .cpi.sep{width:3px;height:3px;border-radius:50%;background:var(--muted);margin-left:8px;opacity:.8}
 .cpi .msw{transform:scale(.9)}
 .cpi .plq{height:13px}
@@ -368,7 +379,9 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 .cx:focus-visible{outline:none;box-shadow:0 0 0 2px var(--focus)}
 
 /* Lichtnaht und Lichtstreif (statisch bzw. nur Transform/Opacity) */
-.seam{position:absolute;z-index:13;height:9px;pointer-events:none;transform-origin:100% 50%;opacity:0}
+/* Klammer der Naht: ruhende Maske mit einer Lücke um den Ziehgriff (Griff wird nie durchgestrichen) */
+.seamw{position:absolute;z-index:13;height:9px;pointer-events:none}
+.seam{position:absolute;left:0;top:0;height:9px;pointer-events:none;transform-origin:100% 50%;opacity:0}
 .seam .core{position:absolute;left:0;right:0;top:4px;height:1px;background:linear-gradient(90deg,rgba(255,138,61,0),rgba(255,138,61,.6) 30%,rgba(255,92,100,.85) 65%,rgba(255,61,127,.95))}
 .seam .glow{position:absolute;left:0;right:0;top:0;height:9px;opacity:1;background:linear-gradient(90deg,rgba(255,61,127,0),rgba(255,61,127,.16) 40%,rgba(255,61,127,.42));
   -webkit-mask:linear-gradient(transparent,#000 45%,#000 55%,transparent);mask:linear-gradient(transparent,#000 45%,#000 55%,transparent)}
@@ -378,6 +391,11 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 .streak .g{position:absolute;left:10%;right:0;top:0;height:14px;border-radius:7px;background:radial-gradient(50% 50% at 72% 50%,rgba(255,61,127,.8),rgba(255,138,61,.28) 60%,transparent)}
 .streak.rev .c{background:linear-gradient(270deg,rgba(255,148,185,0),#FFD1E0 55%,#fff 78%,rgba(255,138,61,0))}
 .streak.rev .g{background:radial-gradient(50% 50% at 28% 50%,rgba(255,61,127,.8),rgba(255,138,61,.28) 60%,transparent);left:0;right:10%}
+/* Helles Thema: Kern im Akzentverlauf statt Weiß (Weiß verschwand auf dem hellen Grund), Hof kräftiger */
+.win.light .streak .c{height:2px;background:linear-gradient(90deg,rgba(230,55,115,0),#FF8A3D 45%,#E63773 80%,rgba(230,55,115,0))}
+.win.light .streak .g{background:radial-gradient(50% 50% at 72% 50%,rgba(230,55,115,.62),rgba(255,138,61,.34) 60%,transparent)}
+.win.light .streak.rev .c{background:linear-gradient(270deg,rgba(230,55,115,0),#FF8A3D 45%,#E63773 80%,rgba(230,55,115,0))}
+.win.light .streak.rev .g{background:radial-gradient(50% 50% at 28% 50%,rgba(230,55,115,.62),rgba(255,138,61,.34) 60%,transparent)}
 
 /* ================= Liste ================= */
 .lclip{position:absolute;z-index:11;overflow:hidden;border-radius:0 0 20px 20px;pointer-events:none}
@@ -467,6 +485,7 @@ button.te{border:0;padding:0;background:transparent;cursor:pointer;color:var(--t
 /* Effektstufen: Dauer der kleinen Übergänge */
 .win.fx-voll{--fxOn:200ms;--fxKnob:220ms;--fxTip:140ms;--fxSeg:240ms}
 .win.fx-red{--fxOn:150ms;--fxKnob:0ms;--fxTip:100ms;--fxSeg:150ms}
+.win.fx-red .f-seg .sgo{transition:none}   /* Reduziert: kein Versatz, die gewählte Fläche wird überblendet (leiste.js) */
 .win.fx-red .tip.vis{transform:none}
 .win.fx-red .tip{transform:none}
 .win.fx-aus{--fxOn:0ms;--fxKnob:0ms;--fxTip:0ms;--fxSeg:0ms}

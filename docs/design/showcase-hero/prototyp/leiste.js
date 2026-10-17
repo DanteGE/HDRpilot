@@ -6,7 +6,10 @@
     3. Strg+F bei eingeklappter Leiste klappt sie dauerhaft aus und setzt den Fokus in die Suche.
   Rechnet in DIP bei der gewählten Fensterbreite; die Bühne wird nur zum Einpassen skaliert.
   Bewegung: eigene Zeitleiste (Kanäle) mit einstellbarer Uhr, damit sich Zwischenbilder per #t=<ms> einfrieren lassen.
-  Debug: Hash-Parameter (siehe HASH unten) und window.leiste.
+  Debug: Hash-Parameter (siehe HASH unten) und window.leiste (u. a. running(), lastEnd() für die laufenden Uhren).
+  Nach der Prüfung (2026-10-17): Bewegung beim Ziehen nur bei Zeilenwechsel und Sortier-Schritt; Zeilen-Morph mit Achsen nacheinander;
+  Leiste in einer Klammer, die an der Oberkante der Liste endet; Gruppenabstand ≥ 24 (Schwellen +16); Einfalten ≤ 740 ms;
+  Lasche −15…+3, Inhalt des Titelbereichs 22 über der Kante; Naht hängt an der Kapsel und spart den Griff aus.
 */
 'use strict';
 (() => {
@@ -96,7 +99,7 @@ const HDRL = { Native: ['Nativ', 'nat', 'NATIVES HDR'], Limited: ['Teilweise', '
 const win = $('#win'), tb = $('#tb'), hero = $('#hero'), art = $('#art'), hc = $('#hc'), pane = $('#pane'), grip = $('#grip');
 const tabw = $('#tabw'), pill = $('#pill'), cpc = $('#cpc'), cx = $('#cx'), seam = $('#seam'), streak = $('#streak');
 const lclip = $('#lclip'), lcbg = $('#lcbg'), lcin = $('#lcin'), gridEl = $('#grid'), gin = $('#gin'), tip = $('#tip'), menu = $('#menu');
-const stage = $('#stage'), stageBox = $('#stageBox'), sizer = $('#sizer');
+const stage = $('#stage'), stageBox = $('#stageBox'), sizer = $('#sizer'), tbclip = $('#tbclip'), seamw = $('#seamw');
 const TE = {};
 
 /* ================= Daten ================= */
@@ -173,19 +176,25 @@ function readPalette(img) {
 
 /* ================= Geometrie (DIP) ================= */
 const PAD = 32, GAP = 8;
+/* Abstand zwischen Filtergruppe und Ansicht: mindestens 24 (sonst verschmelzen die Gruppen zu einem Band, Prüfung 2026-10-17).
+   Dadurch geben die Felder 16 DIP früher nach als in der Tabelle des Dokuments (1138/1054/898 → 1154/1070/914).
+   Nur in der Stufe „Sortierung nur Symbol“ darf er bis 16 sinken; darunter zwei Zeilen (798 → 806). */
+const GROUP = 24, GROUP_MIN = 16;
+const TH = { comfy: 1138 + GROUP - GAP, search: 1054 + GROUP - GAP, step: 898 + GROUP - GAP, two: 798 + GROUP_MIN - GAP };
+TH.stepBack = TH.step + 24; TH.oneBack = TH.two + 32;            // Hysterese beim Ziehen: Beschriftung +24, eine Zeile +32
 /* Werkzeugleiste: Leiter der Anpassung (Tabelle „Wie die Leiste in schmalen Fenstern nachgibt“) */
 function layoutToolbar(L) {
   // Hysterese nur beim Ziehen; der erreichte Zustand bleibt, bis sich die Breite ohne Ziehen ändert
   const hy = S.hy, drag = S.dragging || (TL && TL.L === L);
-  let two = drag ? (hy.two ? L < 830 : L < 798) : L < 798;
+  let two = drag && hy.two ? L < TH.oneBack : L < TH.two;
   const P = {};
   let ws, wsrc, wsort, sortIcon = false, stage, free = 0;
   if (!two) {
-    sortIcon = drag ? (hy.sortIcon ? L < 922 : L < 898) : L < 898;
+    sortIcon = drag && hy.sortIcon ? L < TH.stepBack : L < TH.step;
     if (sortIcon) { ws = 168; wsrc = 136; wsort = 60; stage = 'Sortierung nur Symbol (60), Felder am Minimum'; }
-    else if (L >= 1138) { ws = 320; wsrc = 188; wsort = 196; stage = 'bequem: Suche 320, Rest wird Freiraum'; }
-    else if (L >= 1054) { ws = 236 + (L - 1054); wsrc = 188; wsort = 196; stage = 'Suche gibt nach (320 → 236)'; }
-    else { const d = Math.min(156, 1054 - L); ws = 236 - d * 68 / 156; wsrc = 188 - d * 52 / 156; wsort = 196 - d * 36 / 156; stage = 'Felder geben nach (68 : 52 : 36)'; }
+    else if (L >= TH.comfy) { ws = 320; wsrc = 188; wsort = 196; stage = 'bequem: Suche 320, Rest wird Freiraum'; }
+    else if (L >= TH.search) { ws = 236 + (L - TH.search); wsrc = 188; wsort = 196; stage = 'Suche gibt nach (320 → 236)'; }
+    else { const d = Math.min(156, TH.search - L); ws = 236 - d * 68 / 156; wsrc = 188 - d * 52 / 156; wsort = 196 - d * 36 / 156; stage = 'Felder geben nach (68 : 52 : 36)'; }
     const ws_ = [['search', ws], ['source', wsrc], ['sort', wsort], ['fAuto', 40], ['fNew', 40], ['fHdr', 40]];
     let acc = 0;
     for (const [id, w] of ws_) { const x0 = Math.round(acc); acc += w; P[id] = { x: x0, y: 0, w: Math.round(acc) - x0 }; acc += GAP; }
@@ -195,7 +204,11 @@ function layoutToolbar(L) {
   } else {
     stage = 'zwei Zeilen, Umbruch an der Gruppengrenze';
     const avail = L - 2 * GAP;
-    if (avail >= 620) { const x = avail - 620; ws = 236 + x * 4 / 8; wsrc = 188 + x * 2 / 8; wsort = 196 + x * 2 / 8; }
+    if (avail >= 620) {
+      // Zeile gefüllt; die Suche höchstens 320 (Maximum der Leiter), der Rest geht an Quelle und Sortierung
+      const x = avail - 620; ws = 236 + x * 4 / 8; wsrc = 188 + x * 2 / 8; wsort = 196 + x * 2 / 8;
+      if (ws > 320) { const ex = ws - 320; ws = 320; wsrc += ex / 2; wsort += ex / 2; }
+    }
     else { const d = Math.min(156, 620 - avail); ws = 236 - d * 68 / 156; wsrc = 188 - d * 52 / 156; wsort = 196 - d * 36 / 156; }
     let acc = 0;
     for (const [id, w] of [['search', ws], ['source', wsrc], ['sort', wsort]]) { const x0 = Math.round(acc); acc += w; P[id] = { x: x0, y: 0, w: Math.round(acc) - x0 }; acc += GAP; }
@@ -331,8 +344,8 @@ function renderBody() {
     gin.innerHTML = list.slice(0, cols * 6).map(g => `<div class="tile${g === S.sel ? ' sel' : ''}">${g.img.cover ? `<img loading="lazy" src="${esc(g.img.cover)}" alt="">` : ''}<b>${esc(g.n)}</b></div>`).join('');
     return list.length;
   }
-  const lastCur = S.sort === 'lp', nameCur = S.sort === 'name', hdrCur = S.sort === 'hdr';
-  const head = `<div class="lhead"><span class="tsw"><span class="on"></span><span></span></span><span class="ov nm${nameCur ? ' cur' : ''}">SPIEL · ${list.length}</span><span class="ov c-src">QUELLE</span><span class="ov c-lp${lastCur ? ' cur' : ''}">ZULETZT GESPIELT</span><span class="ov c-hd${hdrCur ? ' cur' : ''}">HDR</span><span class="ov ar" style="width:118px">HDR AUTOMATISCH</span></div>`;
+  // Spaltenköpfe wie in der App: alle gedämpft, ohne Sortierpfeil
+  const head = `<div class="lhead"><span class="tsw"><span class="on"></span><span></span></span><span class="ov nm">SPIEL · ${list.length}</span><span class="ov c-src">QUELLE</span><span class="ov c-lp">ZULETZT GESPIELT</span><span class="ov c-hd">HDR</span><span class="ov ar" style="width:118px">HDR AUTOMATISCH</span></div>`;
   let rows;
   if (!list.length) {
     rows = `<div class="nomatch"><span class="gl"></span><div class="t"><b>Keine Spiele für diese Auswahl</b><span>Suche, Quelle und Filter schließen alle Spiele aus.</span></div><button id="nmReset">Filter zurücksetzen</button></div>`;
@@ -368,8 +381,17 @@ function syncToolbar() {
   const q = $('#q'); if (q.value !== S.q) q.value = S.q;
   TE.search.classList.toggle('has', !!S.q);
   const vi = S.view === 'raster' ? 1 : 0;
-  TE.view.querySelectorAll('.sb').forEach((b, i) => { b.classList.toggle('cur', i === vi); b.setAttribute('aria-checked', String(i === vi)); });
-  $('#sgo').style.transform = `translateX(${vi * 38}px)`;
+  // Optionsgruppe: ein Tab-Halt (die gewählte Ansicht), Pfeiltasten wechseln (roving tabindex)
+  TE.view.querySelectorAll('.sb').forEach((b, i) => { b.classList.toggle('cur', i === vi); b.setAttribute('aria-checked', String(i === vi)); b.tabIndex = i === vi ? 0 : -1; });
+  const sgo = $('#sgo'), was = sgo.dataset.vi;
+  if (was != null && +was !== vi && S.fx === 'reduziert' && Clock.frozen == null && !S.shot) {
+    // Reduziert: kein Versatz, die gewählte Fläche wird in 150 ms überblendet
+    const old = sgo.cloneNode(true); old.removeAttribute('id'); sgo.after(old);
+    old.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150 / S.speed, fill: 'forwards' }).onfinish = () => old.remove();
+    sgo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 / S.speed });
+  }
+  sgo.dataset.vi = vi;
+  sgo.style.transform = `translateX(${vi * 38}px)`;
   // Bedienfeld
   $('#pAuto').setAttribute('aria-pressed', String(S.fAuto)); $('#pNew').setAttribute('aria-pressed', String(S.fNew)); $('#pHdr').setAttribute('aria-pressed', String(S.fHdr));
   if ($('#pQ').value !== S.q) $('#pQ').value = S.q;
@@ -417,11 +439,46 @@ function buildCapsule() {
   html = capHtml(use);
   const key = html + '|' + x;
   cpc.innerHTML = html;
-  cpc.style.left = '30px';
+  const mw = measureW(html), cw = Math.round(base + mw);
+  // Inhalt rechtsbündig verankert: er steht still, während die Kapsel nach links aufgeht (kein Nachrutschen)
+  cpc.style.left = 'auto'; cpc.style.right = (cw - 30 - mw) + 'px';
   cx.style.right = '0px';
-  capState = { w: Math.round(base + measureW(html)), items: use.length, x, key, flt: isFiltered() };
+  capState = { w: cw, items: use.length, x, key, flt: isFiltered() };
   pill.classList.toggle('flt', S.collapsed && capState.flt);
   return capState;
+}
+
+/* ================= Zeilenwechsel (Morph, Stufe Voll) =================
+  Die Achsen laufen nacheinander, damit sich nichts kreuzt oder überholt (Prüfung 2026-10-17):
+  1 → 2  erst fallen die Zeilenwechsler zusammen mit der Liste (je 12 ms versetzt, sie bleiben hinter der Liste zurück),
+         dann gleiten die Filter in Zeile 2 nach links (der vorderste zuerst) und die Felder der Zeile 1 wachsen.
+  2 → 1  erst geben die Felder nach und die Filter gleiten in Zeile 2 nach rechts (der vorderste zuerst),
+         dann steigen alle Zeilenwechsler gemeinsam, die Liste steigt im selben Takt mit (nie über ein Element).
+  Gesamtdauer etwa 320 bzw. 350 ms (Spezifikation 300 ms). Kurve überall ExponentialEase Out, Exponent 6. */
+const HERO_INSET = 22;
+const FIELDS = ['search', 'source', 'sort'], FILTERS = ['fAuto', 'fNew', 'fHdr'], RIGHT = ['view', 'rescan', 'seen', 'add'];
+const MORPH = {
+  toTwo: { drop: 240, dropStep: 12, slideAt: 80, slide: 200, slideStep: 12, growAt: 96, grow: 220 },
+  toOne: { shrink: 150, slide: 120, slideStep: 16, riseAt: 150, rise: 200 },
+};
+function morph(moved, toTwo) {
+  const M = {}; for (const m of moved) M[m.id] = m;
+  const ex = E.expoOut6;
+  const go = (k, from, o) => { if (Math.abs(from) < 0.01) { set(k, 0); return; } set(k, from); anim(k, 0, Object.assign({ ease: ex }, o)); };
+  for (const id of RIGHT) { set('m:' + id + ':x', 0); set('m:' + id + ':w', 0); }       // die rechte Gruppe hängt am Fensterrand
+  for (const id of FILTERS) set('m:' + id + ':w', 0);
+  for (const id of FIELDS) set('m:' + id + ':y', 0);
+  if (toTwo) {
+    const T = MORPH.toTwo;
+    [...FILTERS, ...RIGHT].forEach((id, i) => go('m:' + id + ':y', M[id].dy, { delay: T.dropStep * i, dur: T.drop }));
+    FILTERS.forEach((id, j) => go('m:' + id + ':x', M[id].dx, { delay: T.slideAt + T.slideStep * j, dur: T.slide }));   // nach links: „Automatik“ führt
+    for (const id of FIELDS) { go('m:' + id + ':x', M[id].dx, { delay: T.growAt, dur: T.grow }); go('m:' + id + ':w', M[id].dw, { delay: T.growAt, dur: T.grow }); }
+  } else {
+    const T = MORPH.toOne;
+    for (const id of FIELDS) { go('m:' + id + ':x', M[id].dx, { dur: T.shrink }); go('m:' + id + ':w', M[id].dw, { dur: T.shrink }); }
+    FILTERS.slice().reverse().forEach((id, j) => go('m:' + id + ':x', M[id].dx, { delay: T.slideStep * j, dur: T.slide }));   // nach rechts: „HDR“ führt
+    for (const id of [...FILTERS, ...RIGHT]) go('m:' + id + ':y', M[id].dy, { delay: T.riseAt, dur: T.rise });
+  }
 }
 
 /* ================= Anordnen (Layout, einmal je Änderung) ================= */
@@ -438,68 +495,73 @@ function layout(o = {}) {
   win.classList.toggle('dark', S.theme === 'dunkel'); win.classList.toggle('light', S.theme === 'hell');
   win.classList.remove('fx-voll', 'fx-red', 'fx-aus'); win.classList.add(S.fx === 'voll' ? 'fx-voll' : S.fx === 'reduziert' ? 'fx-red' : 'fx-aus');
   document.documentElement.dataset.theme = S.theme === 'hell' ? 'light' : 'dark';
-  // Titelbild, Kopf, Inhalt des Titelbereichs
+  // Titelbild, Kopf, Inhalt des Titelbereichs (unterer Innenabstand 22 statt 16: 10 px Luft über Kapsel und Lasche, Bildhöhe unverändert)
   hero.style.height = G.heroH + 'px';
   $('#head').classList.toggle('compact', S.W < 1366);
-  Object.assign(hc.style, { top: '98px', height: (G.heroH - 98 - 16) + 'px', width: G.L + 'px' });
+  Object.assign(hc.style, { top: '98px', height: (G.heroH - 98 - HERO_INSET) + 'px', width: G.L + 'px' });
   hc.classList.toggle('narrow', G.L < 1080);
   Object.assign(pane.style, { left: G.paneX + 'px', width: G.paneW + 'px', height: (G.bodyBottom - 104) + 'px' });
   // Ziehgriff: Mitte genau auf der Unterkante des Titelbilds (nur Liste)
   grip.style.display = S.view === 'raster' ? 'none' : '';
   Object.assign(grip.style, { left: PAD + 'px', width: G.L + 'px', top: (G.edge - 10) + 'px' });
-  // Werkzeugleiste
-  Object.assign(tb.style, { left: PAD + 'px', top: G.tbTop + 'px', width: G.L + 'px', height: G.th + 'px' });
+  // Werkzeugleiste in ihrer Klammer: Oberkante 100 über der Bildkante, Unterkante = Oberkante der ausgeklappten Liste
+  const clipTop = G.edge - 100, clipX = 24;
+  Object.assign(tbclip.style, { left: (PAD - clipX) + 'px', top: clipTop + 'px', width: (G.L + 2 * clipX) + 'px', height: (G.bodyTopExp - clipTop) + 'px' });
+  Object.assign(tb.style, { left: clipX + 'px', top: (G.tbTop - clipTop) + 'px', width: G.L + 'px', height: G.th + 'px' });
+  // Bewegt wird nur bei einem Zeilenwechsel oder beim Sortier-Schritt; sonst folgt alles dem Fensterrand direkt
+  const rowChange = !!(anim_ && prevTL.rows !== TL.rows);
+  const stepChange = !!(anim_ && !rowChange && prevTL.sortIcon !== TL.sortIcon);
   const moved = [];
   for (const id of IDS) {
     const p = TL.P[id], el = TE[id];
-    if (anim_ && prevTL) {
+    if (rowChange || stepChange) {
       const q = prevTL.P[id];
       const ox = q.x + val('m:' + id + ':x'), oy = q.y + val('m:' + id + ':y') + (prev ? prev.tbTop - G.tbTop : 0);
       const ow = (id === 'sort' ? val('sortW', q.w) : q.w) + val('m:' + id + ':w');
-      if (ox !== p.x || oy !== p.y || Math.abs(ow - p.w) > 0.5) moved.push({ id, dx: ox - p.x, dy: oy - p.y, dw: ow - p.w, row: q.y !== p.y });
+      moved.push({ id, dx: ox - p.x, dy: oy - p.y, dw: ow - p.w });
     }
     el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
   }
-  // Sortierung: Breite (bei Schritt animiert)
-  const sortW = TL.P.sort.w;
-  if (anim_ && prevTL && prevTL.sortIcon !== TL.sortIcon) {
-    const fromW = val('sortW', prevTL.P.sort.w);
-    if (S.fx === 'voll') {
-      if (prevTL.rows !== TL.rows) set('sortW', sortW);           // beim Zeilenwechsel übernimmt der Morph die Breite
-      else anim('sortW', sortW, { from: fromW, dur: 160, ease: E.cubicOut });
-      if (TL.sortIcon) { anim('sortL:o', 0, { dur: 90, ease: E.cubicOut }); anim('sortL:x', -4, { dur: 160, ease: E.cubicOut }); }
-      else { anim('sortL:o', 1, { delay: 40, dur: 120, ease: E.cubicOut }); anim('sortL:x', 0, { dur: 160, ease: E.cubicOut }); }
-    } else { set('sortW', sortW); anim('sortL:o', TL.sortIcon ? 0 : 1, { dur: 150, ease: E.lin }); set('sortL:x', TL.sortIcon ? -4 : 0); }
-  } else if (!AN.has('sortW')) { set('sortW', sortW); set('sortL:o', TL.sortIcon ? 0 : 1); set('sortL:x', TL.sortIcon ? -4 : 0); }
+  // Sortierung: Breite und Beschriftung
+  const sortW = TL.P.sort.w, lab = TL.sortIcon ? 0 : 1, labX = TL.sortIcon ? -4 : 0, labChange = !!(prevTL && prevTL.sortIcon !== TL.sortIcon);
+  if (stepChange && S.fx === 'voll') {
+    anim('sortW', sortW, { from: val('sortW', prevTL.P.sort.w), dur: 160, ease: E.cubicOut });
+    if (TL.sortIcon) { anim('sortL:o', 0, { dur: 90, ease: E.cubicOut }); anim('sortL:x', -4, { dur: 160, ease: E.cubicOut }); }
+    else { anim('sortL:o', 1, { delay: 40, dur: 120, ease: E.cubicOut }); anim('sortL:x', 0, { dur: 160, ease: E.cubicOut }); }
+  } else if ((stepChange || rowChange) && S.fx === 'reduziert') {
+    set('sortW', sortW); set('sortL:x', labX);
+    if (stepChange) anim('sortL:o', lab, { dur: 150, ease: E.lin }); else set('sortL:o', lab);
+  } else if (rowChange) {                                   // Voll: der Morph übernimmt die Breite (m:sort:w)
+    set('sortW', sortW);
+    if (labChange && TL.sortIcon) { anim('sortL:o', 0, { dur: 90, ease: E.cubicOut }); anim('sortL:x', -4, { dur: 160, ease: E.cubicOut }); }
+    else if (labChange) { anim('sortL:o', 1, { delay: MORPH.toTwo.growAt + 40, dur: 140, ease: E.cubicOut }); anim('sortL:x', 0, { delay: MORPH.toTwo.growAt, dur: 160, ease: E.cubicOut }); }
+  } else if (AN.has('sortW')) AN.get('sortW').to = sortW;   // laufender Schritt: das Ziel folgt dem Fensterrand
+  else { set('sortW', sortW); if (!AN.has('sortL:o')) { set('sortL:o', lab); set('sortL:x', labX); } }
   // Tastenkappe „Strg+F“ (blendet in 120 ms)
-  if (anim_ && prevTL && prevTL.key !== TL.key) anim('key:o', TL.key ? 1 : 0, { dur: 120, ease: E.cubicOut });
+  if (anim_ && prevTL.key !== TL.key) anim('key:o', TL.key ? 1 : 0, { dur: 120, ease: E.cubicOut });
   else if (!AN.has('key:o')) set('key:o', TL.key ? 1 : 0);
   $('#q').style.paddingRight = (TL.key && !S.q ? 70 : 36) + 'px';
-  // Verschieben (FLIP) beim Zeilenwechsel bzw. Sortier-Schritt
-  if (anim_ && moved.length && !S.collapsed) {
-    const rowChange = prevTL.rows !== TL.rows;
-    if (rowChange && S.fx === 'reduziert') {
-      ghost(tb, 150); anim('tb:o', 1, { from: 0, dur: 150, ease: E.lin });
-      for (const m of moved) { set('m:' + m.id + ':x', 0); set('m:' + m.id + ':y', 0); set('m:' + m.id + ':w', 0); }
-    } else {
-      // Das Panel ordnet von der alten in die neue Lage an (Felder in ihrer Zeile auch mit der Breite), Zeilenwechsler 16 ms versetzt
-      const dur = rowChange ? 300 : 160, ease = rowChange ? E.expoOut6 : E.cubicOut;
-      let k = 0;
-      for (const m of moved) {
-        set('m:' + m.id + ':x', m.dx); set('m:' + m.id + ':y', m.dy);
-        // Zeilenwechsler je 16 ms versetzt; die Felder ihrer Zeile wachsen 40 ms später nach, wenn die Zeile frei wird
-        const delay = rowChange ? (m.row ? 16 * k++ : (TL.rows === 2 ? 40 : 0)) : 0;
-        anim('m:' + m.id + ':x', 0, { delay, dur, ease }); anim('m:' + m.id + ':y', 0, { delay, dur, ease });
-        if (rowChange && m.dw && !m.row) { set('m:' + m.id + ':w', m.dw); anim('m:' + m.id + ':w', 0, { delay, dur, ease }); }
-      }
+  // Verschieben (FLIP)
+  const zeroM = id => { set('m:' + id + ':x', 0); set('m:' + id + ':y', 0); set('m:' + id + ':w', 0); };
+  if (rowChange && !S.collapsed && S.fx === 'voll') morph(moved, TL.rows === 2);
+  else if (rowChange && !S.collapsed && S.fx === 'reduziert') { ghost(tb, 150); anim('tb:o', 1, { from: 0, dur: 150, ease: E.lin }); IDS.forEach(zeroM); }
+  else if (stepChange && !S.collapsed && S.fx === 'voll') {
+    // Sortier-Schritt: nur die linke Gruppe rückt nach (Breite 160 ms CubicEase Out); die rechte Gruppe hängt am Fensterrand
+    for (const m of moved) {
+      if (RIGHT.includes(m.id)) continue;
+      const k = 'm:' + m.id;
+      if (Math.abs(m.dx) > 0.5) { set(k + ':x', m.dx); anim(k + ':x', 0, { dur: 160, ease: E.cubicOut }); }
+      if (m.id !== 'sort' && Math.abs(m.dw) > 0.5) { set(k + ':w', m.dw); anim(k + ':w', 0, { dur: 160, ease: E.cubicOut }); }
     }
-  } else if (!anim_) { for (const id of IDS) { set('m:' + id + ':x', 0); set('m:' + id + ':y', 0); set('m:' + id + ':w', 0); } }
-  // Liste bzw. Raster
+  } else if (!anim_ || ((rowChange || stepChange) && (S.collapsed || S.fx !== 'voll'))) IDS.forEach(zeroM);
+  // Liste bzw. Raster: beim Zeilenwechsel mitgeführt (FLIP), gekoppelt an die Zeilenwechsler
   const bodyH = G.bodyBottom - G.bodyTop;
-  if (prev && anim_ && !S.collapsed && prev.bodyTop !== G.bodyTop && !o.noListFlip) {
+  if (rowChange && !S.collapsed && prev.bodyTop !== G.bodyTop) {
     const oldVis = prev.bodyTop + val('list:dy');
-    if (S.fx === 'voll') { set('list:dy', oldVis - G.bodyTop); anim('list:dy', 0, { dur: 300, ease: E.expoOut6 }); }
-    else set('list:dy', 0);
+    if (S.fx === 'voll') {
+      set('list:dy', oldVis - G.bodyTop);
+      anim('list:dy', 0, TL.rows === 2 ? { dur: MORPH.toTwo.drop, ease: E.expoOut6 } : { delay: MORPH.toOne.riseAt, dur: MORPH.toOne.rise, ease: E.expoOut6 });
+    } else set('list:dy', 0);
   } else if (prev && prev.bodyTop !== G.bodyTop && !o.keepListDy && !AN.has('list:dy')) set('list:dy', 0);
   const isList = S.view !== 'raster';
   lclip.style.display = isList ? '' : 'none'; gridEl.hidden = isList;
@@ -516,7 +578,12 @@ function layout(o = {}) {
   buildCapsule();
   Object.assign(tabw.style, { right: (G.Wi - G.R) + 'px', top: (G.edge - 12) + 'px', width: Math.max(capState.w, 36) + 'px' });
   const capL = G.R - capState.w;
-  Object.assign(seam.style, { left: PAD + 'px', width: Math.max(0, capL - PAD) + 'px', top: (G.edge - 5) + 'px' });
+  // Naht: Klammer über die ganze Listenbreite mit ruhender Lücke um den Griff; die Naht selbst endet immer an der Lasche bzw. Kapsel (apply)
+  Object.assign(seamw.style, { left: PAD + 'px', width: G.L + 'px', top: (G.edge - 5) + 'px' });
+  seam.style.width = Math.max(0, G.L - 36) + 'px';
+  const gc = G.gripC - PAD;
+  const mask = S.view === 'raster' ? '' : `linear-gradient(90deg,#000 0,#000 ${gc - 34}px,transparent ${gc - 26}px,transparent ${gc + 26}px,#000 ${gc + 34}px,#000 100%)`;
+  seamw.style.webkitMaskImage = mask; seamw.style.maskImage = mask;
   Object.assign(streak.style, { top: (G.edge - 6) + 'px' });
   const tabL = S.collapsed ? capL : G.R - 36;   // Leuchtlinie des Griffs endet 12 px vor Lasche bzw. Kapsel
   $('#gripLine').style.width = Math.max(0, tabL - 12 - PAD - 18) + 'px';
@@ -526,13 +593,14 @@ function layout(o = {}) {
   apply();
 }
 /* Lasche/Kapsel ohne laufende Bewegung auf den Endwert setzen */
+const TAB_TY = -3;   // Lasche 3 px höher als die Kapsel: −15 bis +3 um die Bildkante (Kapsel −12 bis +12)
 function settleTab() {
-  const busy = ['pill:w', 'pill:h', 'pill:r'].some(k => AN.has(k));
-  if (busy) { if (S.collapsed && AN.has('pill:w')) anim('pill:w', capState.w, { dur: 160, ease: E.cubicOut }); return; }
+  const busy = ['pill:w', 'pill:h', 'pill:r', 'pill:ty'].some(k => AN.has(k));
+  if (busy) { if (S.collapsed && AN.has('pill:w')) AN.get('pill:w').to = capState.w; return; }
   if (S.collapsed) {
     if (val('pill:w', 0) !== capState.w && S.fx !== 'aus' && CH['pill:w'] != null && val('pill:h') === 24) anim('pill:w', capState.w, { dur: 160, ease: E.cubicOut });
     else set('pill:w', capState.w);
-    set('pill:h', 24); set('pill:r', 180); set('cdv:o', 1); set('hint:o', 0);
+    set('pill:h', 24); set('pill:ty', 0); set('pill:r', 180); set('cdv:o', 1); set('hint:o', 0);
     for (let i = 0; i < 12; i++) { if (!AN.has('ci:' + i + ':o')) set('ci:' + i + ':o', 1); if (!AN.has('ci:' + i + ':x')) set('ci:' + i + ':x', 0); }
     if (!AN.has('cx:o')) set('cx:o', capState.x ? 1 : 0);
     const rest2 = capState.flt ? 0.35 : 0;
@@ -541,13 +609,13 @@ function settleTab() {
       const want = capState.flt ? 1 : 0;
       if (S.fx === 'voll' && val('seam:sx') !== want) {
         if (want) { set('seam:o', 1); anim('seam:sx', 1, { from: val('seam:sx'), dur: 400, ease: E.spline }); }
-        else anim('seam:sx', 0, { dur: 200, ease: E.cubicIn });
+        else anim('seam:sx', 0, { dur: 200, ease: E.cubicOut });
       } else if (S.fx === 'reduziert' && val('seam:o') !== want) { set('seam:sx', 1); anim('seam:o', want, { dur: 150, ease: E.lin }); }
       else if (S.fx === 'aus') { set('seam:sx', want); set('seam:o', want); }
     }
   } else {
     if (!hoverTab) set('pill:w', 36);
-    set('pill:h', 18); set('pill:r', 0); set('cdv:o', 0);
+    set('pill:h', 18); set('pill:ty', TAB_TY); set('pill:r', 0); set('cdv:o', 0);
     for (let i = 0; i < 12; i++) { set('ci:' + i + ':o', 0); set('ci:' + i + ':x', -6); }
     set('cx:o', 0); if (!AN.has('halo2:o')) set('halo2:o', 0);
     if (!AN.has('seam:sx')) { set('seam:sx', 0); set('seam:o', 0); }
@@ -584,21 +652,25 @@ function apply() {
     TE.sort.style.setProperty('--lx', val('sortL:x') + 'px');
     const k = $('#qKey'); if (k) k.style.opacity = String(val('key:o', 1));
   }
-  // Liste/Raster: Inhalt verschoben, Fläche von unten skaliert (unterer Rand bleibt)
   if (G) {
+    // Liste/Raster: Inhalt verschoben, Fläche von unten skaliert (unterer Rand bleibt)
     const dy = val('list:dy'), bodyH = G.bodyBottom - G.bodyTop;
     lcin.style.transform = dy ? `translateY(${dy}px)` : '';
     lcbg.style.transform = dy ? `scaleY(${(bodyH - dy) / bodyH})` : '';
     gin.style.transform = dy ? `translateY(${dy}px)` : '';
+    // Klammer der Leiste: Unterkante genau auf der aktuellen Oberkante der Liste, Inhalt gegenverschoben (steht still)
+    const off = G.bodyTop + dy - G.bodyTopExp;
+    tbclip.style.transform = off ? `translateY(${off}px)` : '';
+    tb.style.transform = off ? `translateY(${-off}px)` : '';
   }
   // Lasche/Kapsel
-  const pw = val('pill:w', 36), ph = val('pill:h', 18);
+  const pw = val('pill:w', 36), ph = val('pill:h', 18), pty = val('pill:ty', S.collapsed ? 0 : TAB_TY);
   pill.style.width = Math.round(pw * 10) / 10 + 'px'; pill.style.height = Math.round(ph * 10) / 10 + 'px';
   pill.style.borderRadius = (ph / 2) + 'px';
-  const ar = $('#pillAr');
-  ar.style.transform = `rotate(${val('pill:r')}deg)`;
- $('#cdv').style.opacity = String(val('cdv:o'));
- const hint = $('#pillHint'); hint.style.opacity = String(val('hint:o'));
+  pill.style.transform = pty ? `translateY(${Math.round(pty * 10) / 10}px)` : '';
+  $('#pillAr').style.transform = `rotate(${val('pill:r')}deg)`;
+  $('#cdv').style.opacity = String(val('cdv:o'));
+  $('#pillHint').style.opacity = String(val('hint:o'));
   cpc.querySelectorAll('.cpi').forEach((n, i) => { const o = val('ci:' + i + ':o'), x = val('ci:' + i + ':x'); n.style.opacity = String(o); n.style.transform = x ? `translateX(${x}px)` : ''; });
   const cxo = val('cx:o'); cx.style.opacity = String(cxo); cx.classList.toggle('live', S.collapsed && cxo > 0.5); cx.tabIndex = S.collapsed && capState.x ? 0 : -1;
   tabw.style.opacity = String(val('tabw:o', 1));
@@ -609,8 +681,12 @@ function apply() {
   pill.setAttribute('aria-expanded', String(!S.collapsed));
   tabw.classList.toggle('col', S.collapsed);
   pill.setAttribute('aria-label', S.collapsed ? 'Werkzeugleiste einblenden' : 'Werkzeugleiste ausblenden');
-  // Naht und Streif
-  seam.style.opacity = String(val('seam:o')); seam.style.transform = `scaleX(${val('seam:sx')})`;
+  // Naht: das rechte Ende liegt immer an der linken Kante von Lasche bzw. Kapsel (auch während diese wächst oder schrumpft)
+  seam.style.opacity = String(val('seam:o'));
+  if (G) {
+    const W0 = Math.max(1, G.L - 36), k = val('seam:sx') * Math.max(0, G.R - pw - PAD) / W0;
+    seam.style.transform = `translateX(${Math.round((36 - pw) * 10) / 10}px) scaleX(${k})`;
+  }
   const so = val('streak:o');
   streak.style.opacity = String(so);
   if (G && so > 0) {
@@ -627,11 +703,9 @@ const order = () => IDS.slice().sort((a, b) => (TL.P[a].x - TL.P[b].x) || (TL.P[
 function finals(collapsed) {
   for (const id of IDS) { set('w:' + id + ':o', collapsed ? 0 : 1); set('w:' + id + ':x', collapsed ? 16 : 0); set('w:' + id + ':y', collapsed ? -6 : 0); set('w:' + id + ':s', collapsed ? 0.94 : 1); }
   set('tb:o', 1); set('list:dy', 0); set('streak:o', 0); set('halo:o', 0); set('tabw:o', 1);
-  set('pill:w', collapsed ? capState.w : 36); set('pill:h', collapsed ? 24 : 18); set('pill:r', collapsed ? 180 : 0); set('hint:o', 0);
-  set('cdv:o', collapsed ? 1 : 0); set('cx:o', collapsed && capState.x ? 1 : 0);
-  for (let i = 0; i < 12; i++) { set('ci:' + i + ':o', collapsed ? 1 : 0); set('ci:' + i + ':x', collapsed ? 0 : -6); }
+  finalsTab(collapsed);
   const f = collapsed && capState.flt;
-  set('halo2:o', f ? 0.35 : 0); set('seam:sx', f ? 1 : 0); set('seam:o', f ? 1 : 0);
+  set('seam:sx', f ? 1 : 0); set('seam:o', f ? 1 : 0);
 }
 function setCollapsed(c, opt = {}) {
   if (S.collapsed === c) return;
@@ -643,12 +717,13 @@ function setCollapsed(c, opt = {}) {
   const dy = oldVis - G.bodyTop;
   const fx = opt.instant ? 'aus' : S.fx;
   if (fx === 'aus') { finals(c); apply(); }
-  else if (fx === 'voll') (c ? collapseVoll : expandVoll)(dy);
+  else if (fx === 'voll') { if (c) collapseVoll(dy); else expandVoll(dy, !!opt.fromSearch); }
   else (c ? collapseRed : expandRed)(dy);
   if (c && hadFocus) pill.focus({ preventScroll: true });
   readout();
   if (Clock.frozen == null) kick(); else { step(); apply(); }
 }
+/* Einfalten, Voll: alles endet spätestens nach 740 ms (danach laufen keine Uhren mehr) */
 function collapseVoll(dy) {
   set('list:dy', dy); anim('list:dy', 0, { delay: 40, dur: 380, ease: E.expoOut6 });
   set('tb:o', 1);
@@ -657,60 +732,67 @@ function collapseVoll(dy) {
     anim('w:' + id + ':o', 0, o); anim('w:' + id + ':x', 16, o); anim('w:' + id + ':y', -6, o); anim('w:' + id + ':s', 0.94, o);
   });
   anim('hint:o', 0, { dur: 80 });
-  anim('pill:w', capState.w, { delay: 120, dur: 260, ease: E.spring }); anim('pill:h', 24, { delay: 120, dur: 260, ease: E.spring });
+  // Lasche wird Kapsel: Breite ohne Überschwingen (CubicEase Out), nur Höhe und Lage federn (höchstens 0,4 px)
+  anim('pill:w', capState.w, { delay: 120, dur: 260, ease: E.cubicOut });
+  anim('pill:h', 24, { delay: 120, dur: 260, ease: E.spring }); anim('pill:ty', 0, { delay: 120, dur: 260, ease: E.spring });
   anim('pill:r', 180, { delay: 120, dur: 220, ease: E.cubicOut });
   anim('cdv:o', 1, { delay: 260, dur: 120 });
   for (let i = 0; i < capState.items * 2; i++) { set('ci:' + i + ':o', 0); set('ci:' + i + ':x', -6); anim('ci:' + i + ':o', 1, { delay: 300 + i * 15, dur: 120, ease: E.cubicOut }); anim('ci:' + i + ':x', 0, { delay: 300 + i * 15, dur: 150, ease: E.cubicOut }); }
   if (capState.x) { set('cx:o', 0); anim('cx:o', 1, { delay: 300 + capState.items * 30, dur: 120 }); }
-  // „Zündung“: Lichtstreif auf der Kante zur Kapsel, danach leuchtet der Hof kurz auf
+  // „Zündung“: Lichtstreif läuft 340–640 auf der Kante zur Kapsel und verglüht dort bis 740;
+  // der Hof blitzt 460–740 auf (Spitze bei 614, wenn der Streif ankommt), der große Schein 540–740
   streak.classList.remove('rev');
-  set('streak:p', 0); anim('streak:p', 1, { delay: 340, dur: 400, ease: E.sineInOut });
-  anim('streak:o', 0, { delay: 340, dur: 400, ease: E.lin, kf: [[0, 0], [0.45, 0.95], [0.8, 0.9], [1, 0]] });
+  set('streak:p', 0); anim('streak:p', 1, { delay: 340, dur: 300, ease: E.sineInOut });
+  anim('streak:o', 0, { delay: 340, dur: 400, ease: E.lin, kf: [[0, 0], [0.3, 0.95], [0.72, 0.9], [1, 0]] });
   const rest = capState.flt ? 0.35 : 0;
-  anim('halo2:o', rest, { delay: 600, dur: 280, ease: E.lin, kf: [[0, null], [0.35, 0.8], [1, rest]] });
-  anim('halo:o', 0, { delay: 600, dur: 360, ease: E.lin, kf: [[0, 0], [0.3, 1], [1, 0]] });
+  anim('halo2:o', rest, { delay: 460, dur: 280, ease: E.lin, kf: [[0, null], [0.55, 0.8], [1, rest]] });
+  anim('halo:o', 0, { delay: 540, dur: 200, ease: E.lin, kf: [[0, 0], [0.4, 1], [1, 0]] });
   if (capState.flt) { set('seam:o', 1); set('seam:sx', val('seam:sx')); anim('seam:sx', 1, { delay: 340, dur: 400, ease: E.spline }); }
 }
-function expandVoll(dy) {
+/* Ausfalten, Voll (≤ 620 ms). fromSearch (Strg+F): die Elemente entfalten sich von der Suche aus statt von der Lasche */
+function expandVoll(dy, fromSearch) {
   set('list:dy', dy); anim('list:dy', 0, { dur: 380, ease: E.expoOut6 });
   set('tb:o', 1);
-  // Naht zieht sich in die Kapsel zurück (ersetzt auch eine noch wartende Naht-Bewegung des Einklappens)
-  if (val('seam:sx') > 0) anim('seam:sx', 0, { dur: 200, ease: E.cubicIn }); else set('seam:sx', 0);
+  // Naht zieht sich in die Kapsel zurück; ihr rechtes Ende bleibt an der schrumpfenden Kapsel (apply)
+  if (val('seam:sx') > 0) anim('seam:sx', 0, { dur: 200, ease: E.cubicOut }); else set('seam:sx', 0);
   streak.classList.add('rev');
   set('streak:p', 0); anim('streak:p', 1, { dur: 320, ease: E.sineInOut });
   anim('streak:o', 0, { dur: 320, ease: E.lin, kf: [[0, 0], [0.3, 0.9], [1, 0]] });
   for (let i = 0; i < 12; i++) { anim('ci:' + i + ':o', 0, { dur: 90 }); anim('ci:' + i + ':x', -6, { dur: 120 }); }
   anim('cx:o', 0, { dur: 80 }); anim('cdv:o', 0, { dur: 100 });
-  anim('pill:w', 36, { delay: 60, dur: 200, ease: E.spring }); anim('pill:h', 18, { delay: 60, dur: 200, ease: E.spring });
+  anim('pill:w', 36, { delay: 60, dur: 200, ease: E.cubicOut });
+  anim('pill:h', 18, { delay: 60, dur: 200, ease: E.spring }); anim('pill:ty', TAB_TY, { delay: 60, dur: 200, ease: E.spring });
   anim('pill:r', 0, { delay: 60, dur: 220, ease: E.cubicOut });
   anim('halo2:o', 0, { dur: 200 }); anim('halo:o', 0, { dur: 120 });
-  order().reverse().forEach((id, i) => {
+  (fromSearch ? order() : order().reverse()).forEach((id, i) => {
     const d = 120 + i * 16;
     anim('w:' + id + ':o', 1, { delay: d, dur: 180, ease: E.cubicOut });
     anim('w:' + id + ':x', 0, { delay: d, dur: 300, ease: E.spring }); anim('w:' + id + ':y', 0, { delay: d, dur: 300, ease: E.spring }); anim('w:' + id + ':s', 1, { delay: d, dur: 300, ease: E.spring });
   });
 }
+/* Reduziert (≤ 300 ms): Lasche und Kapsel nacheinander überblendet (alt 0–90, neu 60–150), damit sich Pfeil und Zahl nicht mischen */
 function collapseRed(dy) {
   set('list:dy', dy); anim('list:dy', 0, { dur: 200, ease: E.cubicOut });
   for (const id of IDS) {
     anim('w:' + id + ':o', 0, { dur: 120, ease: E.cubicOut });
     for (const [p, v] of [['x', 16], ['y', -6], ['s', 0.94]]) anim('w:' + id + ':' + p, v, { delay: 120, dur: 1 });
   }
-  ghost(tabw, 150);
-  finalsTab(true); set('tabw:o', 0); anim('tabw:o', 1, { dur: 150, ease: E.lin });
+  ghost(tabw, 90);
+  finalsTab(true); set('tabw:o', 0); anim('tabw:o', 1, { delay: 60, dur: 90, ease: E.lin });
   if (capState.flt) { set('seam:sx', 1); set('seam:o', 0); anim('seam:o', 1, { dur: 150, ease: E.lin }); }
   set('streak:o', 0);
 }
 function expandRed(dy) {
   set('list:dy', dy); anim('list:dy', 0, { dur: 200, ease: E.cubicOut });
-  for (const id of IDS) { for (const [p, v] of [['x', 0], ['y', 0], ['s', 1]]) set('w:' + id + ':' + p, v); anim('w:' + id + ':o', 1, { dur: 120, ease: E.cubicOut }); }
-  ghost(tabw, 150);
-  finalsTab(false); set('tabw:o', 0); anim('tabw:o', 1, { dur: 150, ease: E.lin });
+  // Leiste blendet erst ab 60 ms ein, wenn die Liste schon Platz gemacht hat
+  for (const id of IDS) { for (const [p, v] of [['x', 0], ['y', 0], ['s', 1]]) set('w:' + id + ':' + p, v); anim('w:' + id + ':o', 1, { delay: 60, dur: 120, ease: E.cubicOut }); }
+  ghost(tabw, 90);
+  finalsTab(false); set('tabw:o', 0); anim('tabw:o', 1, { delay: 60, dur: 90, ease: E.lin });
   if (val('seam:o') > 0) anim('seam:o', 0, { dur: 150, ease: E.lin }); else set('seam:o', 0);
   set('streak:o', 0);
 }
 function finalsTab(c) {
-  set('pill:w', c ? capState.w : 36); set('pill:h', c ? 24 : 18); set('pill:r', c ? 180 : 0); set('cdv:o', c ? 1 : 0); set('hint:o', 0);
+  set('pill:w', c ? capState.w : 36); set('pill:h', c ? 24 : 18); set('pill:ty', c ? 0 : TAB_TY); set('pill:r', c ? 180 : 0); set('cdv:o', c ? 1 : 0); set('hint:o', 0);
   for (let i = 0; i < 12; i++) { set('ci:' + i + ':o', c ? 1 : 0); set('ci:' + i + ':x', c ? 0 : -6); }
   set('cx:o', c && capState.x ? 1 : 0); set('halo2:o', c && capState.flt ? 0.35 : 0); set('halo:o', 0);
 }
@@ -719,7 +801,7 @@ function toggleCollapsed() { setCollapsed(!S.collapsed); }
 /* Lasche: beim Überfahren wächst sie nach links zu „Leiste ausblenden · Strg+Umschalt+F“ (160 ms) */
 let hoverTab = false;
 function tabHover(on) {
-  if (S.collapsed || ['pill:h', 'pill:r'].some(k => AN.has(k)) && on) return;
+  if (S.collapsed || ['pill:h', 'pill:r', 'pill:ty'].some(k => AN.has(k)) && on) return;
   hoverTab = on;
   const hw = 28 + measureHint() + 12;
   const w = on ? hw : 36;
@@ -762,7 +844,7 @@ function refresh() {
   if (tipFor) showTip(tipFor, true);
 }
 function focusSearch() {
-  if (S.collapsed) setCollapsed(false);         // Entscheidung 3: Strg+F klappt dauerhaft aus
+  if (S.collapsed) setCollapsed(false, { fromSearch: true });   // Entscheidung 3: Strg+F klappt dauerhaft aus; die Suche entfaltet sich zuerst
   const q = $('#q'); noFocusTip = true; q.focus({ preventScroll: true }); q.select(); noFocusTip = false;
 }
 let noFocusTip = false;                          // nach Strg+F kein Tooltip an der Suche (das Kürzel ist ja bekannt)
@@ -833,12 +915,13 @@ win.addEventListener('focusout', () => hideTip());
 
 /* ================= Menüs (Kontextmenü, Auswahllisten) ================= */
 let menuFor = null;
-function openMenu(items, x, y, owner) {
+/* alignRight: x ist die rechte Kante (Menü rechtsbündig an Lasche bzw. Kapsel) */
+function openMenu(items, x, y, owner, alignRight) {
   menuFor = owner || null;
   menu.innerHTML = items.map((it, i) => it === '-' ? '<div class="msep"></div>' : `<div class="mi${it.cur ? ' cur' : ''}" data-i="${i}" role="menuitem">${it.ck !== undefined ? `<span class="ck gl">${it.ck ? '' : ''}</span>` : ''}${it.dot ? `<i class="sd" style="background:${it.dot}"></i>` : ''}<span>${it.t}</span><span class="sp"></span>${it.n != null ? `<span class="n">${it.n}</span>` : ''}${it.k ? `<span class="kbd">${it.k}</span>` : ''}</div>`).join('');
   menu.hidden = false;
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
-  menu.style.left = clamp(Math.round(x), 8, G.Wi - mw - 8) + 'px'; menu.style.top = clamp(Math.round(y), 40, G.Hi - mh - 8) + 'px';
+  menu.style.left = clamp(Math.round(alignRight ? x - mw : x), 8, G.Wi - mw - 8) + 'px'; menu.style.top = clamp(Math.round(y), 40, G.Hi - mh - 8) + 'px';
   menu.querySelectorAll('.mi').forEach(n => n.onclick = ev => { ev.stopPropagation(); const it = items[+n.dataset.i]; closeMenu(); it.do && it.do(); });
   if (owner) owner.classList.add('open');
   hideTip(true);
@@ -887,6 +970,14 @@ function wireWindow() {
   TE.fNew.onclick = () => toggleFilter('fNew');
   TE.fHdr.onclick = () => toggleFilter('fHdr');
   TE.view.querySelectorAll('.sb').forEach(b => b.onclick = () => setView(b.dataset.v));
+  // Optionsgruppe Ansicht: Pfeiltasten, Pos1, Ende (ein Tab-Halt)
+  TE.view.addEventListener('keydown', e => {
+    const bs = [...TE.view.querySelectorAll('.sb')], i = bs.indexOf(document.activeElement);
+    if (i < 0) return;
+    const j = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: bs.length - 1 }[e.key];
+    if (j == null) return;
+    e.preventDefault(); const b = bs[(j + bs.length) % bs.length]; b.focus(); b.click();
+  });
   TE.rescan.onclick = () => { const g = TE.rescan.querySelector('.gi'); if (S.fx !== 'aus') g.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(360deg)' }], { duration: 700 / S.speed, easing: 'cubic-bezier(.4,0,.2,1)' }); };
   TE.seen.onclick = () => showNote('In der Vorschau ohne Wirkung.');
   TE.add.onclick = () => showNote('In der Vorschau ohne Wirkung.');
@@ -912,7 +1003,7 @@ document.addEventListener('keydown', e => {
   if (e.altKey && !ctrl && ['a', 'n', 'h'].includes(k)) { e.preventDefault(); toggleFilter(k === 'a' ? 'fAuto' : k === 'n' ? 'fNew' : 'fHdr'); return; }
   if (ctrl && (k === '1' || k === '2')) { e.preventDefault(); setView(k === '1' ? 'liste' : 'raster'); return; }
   if (e.key === 'Escape') { if (!menu.hidden) { closeMenu(); return; } hideTip(true); }
-  if (e.shiftKey && e.key === 'F10' && (document.activeElement === pill || tb.contains(document.activeElement))) { e.preventDefault(); const r = rectInWin(pill); openMenu(ctxItems(), r.x, r.y + r.h + 6); }
+  if (e.shiftKey && e.key === 'F10' && (document.activeElement === pill || tb.contains(document.activeElement))) { e.preventDefault(); const r = rectInWin(pill); openMenu(ctxItems(), r.x + r.w, r.y + r.h + 6, null, true); }
 });
 
 /* ================= Bühne einpassen ================= */
@@ -928,7 +1019,12 @@ function fitStage() {
 window.addEventListener('resize', () => { fitStage(); });
 
 /* ================= Bedienfeld ================= */
-const PRESETS = [[1000, 620, '1000×620'], [1164, 727, '1280×800 @110 %'], [1280, 800, '1280×800'], [1366, 768, '1366×768'], [1600, 1000, '1600×1000'], [1745, 982, '1920×1080 @110 %'], [3127, 1309, '3440×1440 @110 %'], [3440, 1440, '3440×1440']];
+/* Voreinstellungen wie die Zeilen der Breitentabelle im Dokument (Bildschirm @ Skalierung → Fenster in DIP); 100 % ausdrücklich markiert */
+const PRESETS = [
+  [1000, 620, '1000×620 kleinstes'], [1164, 727, '1280×800 @110 %'], [1242, 698, '1366×768 @110 %'], [1280, 800, '1280×800 @100 %'],
+  [1366, 768, '1366×768 @100 %'], [1455, 909, '1600×1000 @110 %'], [1536, 864, '1920×1080 @125 %'], [1600, 1000, 'Startfenster 1600×1000'],
+  [1745, 982, '1920×1080 @110 %'], [3127, 1309, '3440×1440 @110 %'], [3440, 1440, '3440×1440 @100 %'],
+];
 function seg(id, cur) { document.querySelectorAll('#' + id + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === cur))); }
 function syncPanel() {
   $('#wRange').value = S.W;
@@ -938,7 +1034,8 @@ function syncPanel() {
   $('#pAuto').setAttribute('aria-pressed', String(S.fAuto)); $('#pNew').setAttribute('aria-pressed', String(S.fNew)); $('#pHdr').setAttribute('aria-pressed', String(S.fHdr));
 }
 function wirePanel() {
-  $('#presets').innerHTML = PRESETS.map(p => `<button data-w="${p[0]}" data-h="${p[1]}" title="${p[0]} × ${p[1]} DIP">${p[2]}</button>`).join('');
+  const Lof = w => (w - 2) - 88 - Math.round(clamp(0.23 * (w - 2), 340, 396));
+  $('#presets').innerHTML = PRESETS.map(p => `<button data-w="${p[0]}" data-h="${p[1]}" title="${p[0]} × ${p[1]} DIP · Liste L ${Lof(p[0])}">${p[2]}</button>`).join('');
   $('#presets').onclick = e => { const b = e.target.closest('button'); if (!b) return; S.dragging = false; S.W = +b.dataset.w; S.H = +b.dataset.h; layout({ animate: false }); syncPanel(); };
   const r = $('#wRange');
   r.addEventListener('pointerdown', () => { S.dragging = true; });
@@ -978,7 +1075,7 @@ function measure() {
   const listT = G.bodyTop + (S.view === 'raster' ? 12 : 0);
   return {
     W: S.W, H: S.H, L: G.L, pane: G.paneW, rows: TL.rows, stage: TL.stage, sortIcon: TL.sortIcon, keycap: TL.key,
-    search: TL.P.search.w, source: TL.P.source.w, sort: Math.round(val('sortW', TL.P.sort.w)), free: TL.free,
+    search: TL.P.search.w, source: TL.P.source.w, sort: Math.round(val('sortW', TL.P.sort.w)), free: TL.free, groupGap: TL.rows === 1 ? TL.P.view.x - (TL.P.fHdr.x + 40) : null,
     edge, toolbarTop: tbT, toolbarBottom: tbB, bodyTop: listT,
     airAbove: S.collapsed ? null : tbT - edge, airBelow: S.collapsed ? null : listT - tbB,
     collapsed: S.collapsed, capsule: S.collapsed ? { w: capState.w, top: G.edge - 12, bottom: G.edge + 12, airBelow: listT - (G.edge + 12) } : null,
@@ -992,7 +1089,7 @@ function readout() {
   $('#readout').innerHTML = [
     `Liste L <b>${m.L}</b> DIP · Detailbereich ${m.pane}`,
     `Leiste: <b>${m.rows === 1 ? 'eine Zeile' : 'zwei Zeilen'}</b> · ${m.stage}`,
-    `Suche ${m.search} · Quelle ${m.source} · Sortierung ${m.sort}${m.rows === 1 ? ` · Freiraum ${m.free}` : ''}${m.keycap ? '' : ' · ohne Strg+F-Kappe'}`,
+    `Suche ${m.search} · Quelle ${m.source} · Sortierung ${m.sort}${m.rows === 1 ? ` · Abstand Filter–Ansicht ${m.groupGap}` : ''}${m.keycap ? '' : ' · ohne Strg+F-Kappe'}`,
     S.collapsed ? `eingeklappt: Kapsel ${m.capsule.w} breit, Luft darunter ${ok(m.capsule.airBelow)}` : `Luft über der Leiste (zur Bildkante) ${ok(m.airAbove)} · darunter ${ok(m.airBelow)}`,
     S.dragging ? '<b>ziehen</b> (Hysterese aktiv)' : '',
   ].filter(Boolean).map(t => `<span>${t}</span>`).join('');
@@ -1010,7 +1107,7 @@ function readout() {
   anim=collapse|expand|drag   t=<ms>  Bewegung starten und bei t einfrieren (ohne t: live abspielen)
   from=<w>        bei anim=drag: Ausgangsbreite (gezogen wird nach w, mit Hysterese und Morph)
   tip=<id>        Tooltip sofort zeigen: search source sort fAuto fNew fHdr vList vGrid vShelf rescan seen add pill cx
-  hover=tab|grip|<id>   Zustand „Maus darüber“      focus=search|<id>   Tastaturfokus
+  hover=tab|grip|<id>   Zustand „Maus darüber“      focus=search|grip|pill|<id>   Tastaturfokus
   ctx=1           Kontextmenü an der Lasche/Kapsel      menu=source|sort   Auswahlliste offen
   do=ctrlf|toggle|alta|altn|alth|reset   Bedienung auslösen (mehrere mit Komma; „aktion@ms“ später), z. B.
                   collapsed=1&do=ctrlf&t=200   oder   do=toggle,toggle@250&t=400 (Einklappen nach 250 ms umgekehrt)
@@ -1070,12 +1167,15 @@ function applyHash() {
     else if (h.hover === 'grip') grip.classList.add('hover');
     else if (TE[h.hover]) TE[h.hover].classList.add('hover');
   }
-  if (h.focus) { const el = h.focus === 'search' ? $('#q') : (TE[h.focus] || null); if (el) { el.focus({ preventScroll: true }); if (TE[h.focus]) TE[h.focus].classList.add('kfocus'); } }
+  if (h.focus) {
+    const el = h.focus === 'search' ? $('#q') : h.focus === 'grip' ? grip : h.focus === 'pill' ? pill : (TE[h.focus] || null);
+    if (el) { el.focus({ preventScroll: true }); (TE[h.focus] || el).classList.add('kfocus'); }
+  }
   if (h.tip) {
     const el = h.tip === 'pill' ? pill : h.tip === 'cx' ? cx : (TE[h.tip] || win.querySelector(`[data-tip="${h.tip}"]`));
     if (el) { if (TE[h.tip]) TE[h.tip].classList.add('hover'); showTip(el, true); }
   }
-  if (h.ctx === '1') { const r = rectInWin(pill); openMenu(ctxItems(), r.x + r.w - 236, r.y + r.h + 6); }
+  if (h.ctx === '1') { const r = rectInWin(pill); openMenu(ctxItems(), r.x + r.w, r.y + r.h + 6, null, true); }
   if (h.menu === 'source' || h.menu === 'sort') comboMenu(h.menu);
   if (S.shot) {
     const m = measure();
@@ -1095,6 +1195,8 @@ function applyHash() {
 window.leiste = {
   S, CH, get G() { return G; }, get TL() { return TL; }, measure, layout, setCollapsed, toggleCollapsed, toggleFilter, focusSearch, resetFilters,
   freeze(ms) { Clock.frozen = ms; step(); apply(); }, unfreeze() { Clock.frozen = null; Clock.setSpeed(S.speed); kick(); },
+  running() { return [...AN.keys()]; },          // Kanäle mit laufender (oder noch wartender) Bewegung
+  lastEnd() { let e = 0; for (const a of AN.values()) e = Math.max(e, a.t0 + a.dur); return e; },   // Zeitpunkt, an dem die letzte Uhr endet
   setWidth(w, drag = false) { S.dragging = drag; S.W = w; layout(); syncPanel(); }, last: null,
 };
 (async () => {

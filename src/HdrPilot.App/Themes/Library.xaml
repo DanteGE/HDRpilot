@@ -387,12 +387,7 @@
         </Setter>
     </Style>
 
-    <!-- Auswahlliste der Werkzeugleiste (Quelle, Sortierung): Glasfläche, Pfeil, Rahmen beim Öffnen -->
-    <!-- Gefaltete Auswahl (Werkzeugleiste, Tag „Compact“): nur das Zeichen des gewählten Eintrags, etwa der Sortierung -->
-    <DataTemplate x:Key="Lib.GlyphOnly">
-        <TextBlock Style="{StaticResource Lib.Glyph}" Text="{Binding Glyph}" FontSize="13" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
-    </DataTemplate>
-
+    <!-- Auswahlliste der Werkzeugleiste (Quelle, Sortierung): Glasfläche, Pfeil am rechten Ende, Rahmen beim Öffnen -->
     <Style x:Key="Lib.ComboBox" TargetType="ComboBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
@@ -454,10 +449,6 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="Tag" Value="Compact">
-                            <Setter TargetName="ContentSite" Property="ContentTemplate" Value="{StaticResource Lib.GlyphOnly}" />
-                            <Setter TargetName="ContentSite" Property="Margin" Value="10,0,26,0" />
-                        </Trigger>
                         <DataTrigger Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True">
                             <Setter TargetName="PART_Popup" Property="PopupAnimation" Value="Fade" />
                         </DataTrigger>
@@ -478,7 +469,8 @@
 
     <!--
         Filter-Chip (ToggleButton, Prototyp .ch): Glasfläche; eingeschaltet Akzent 18 % mit Rahmen und leuchtendem Hof,
-        der Zähler wird zum Verlauf. Die Vorlage legt Symbol, Text und Zähler aus Tag (Zähler) und Content an.
+        der Zähler wird zum Verlauf. Der Inhalt füllt den Chip (Werkzeugleiste: Symbol und Text links, Zähler rechts), auch
+        wenn die Leiste ihn streckt.
     -->
     <Style x:Key="Lib.Chip" TargetType="ToggleButton">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
@@ -487,6 +479,7 @@
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Height" Value="40" />
         <Setter Property="Padding" Value="11,0,10,0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
@@ -500,7 +493,7 @@
                                 <SolidColorBrush Color="{DynamicResource Hp.Color.C1}" Opacity="0.18" />
                             </Border.Background>
                         </Border>
-                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Center" RecognizesAccessKey="True" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" RecognizesAccessKey="True" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -1614,6 +1607,51 @@
                         <Border x:Name="Rest" Width="4" Height="36" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Background="{DynamicResource Hp.Brush.LineStrong}" />
                         <Border x:Name="Grip" Width="4" Height="52" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Ziehgriff unter dem Titelbereich der Liste (lib:HeroSplitter): wie Lib.Splitter, nur waagerecht. In Ruhe ein dezenter
+        Griff in der Mitte der Liste, beim Überfahren, Ziehen oder mit Tastaturfokus leuchtet er in der Akzentfarbe, dazu eine
+        feine Linie über die Breite der Liste. Mit Tastatur bedienbar (Pfeiltasten oben/unten, siehe HeroSplitter).
+    -->
+    <Style x:Key="Lib.HeroSplitter" TargetType="lib:HeroSplitter">
+        <Setter Property="Height" Value="{x:Static lib:ShowcaseLayout.HeroSplitterHeight}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Cursor" Value="SizeNS" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:HeroSplitter">
+                    <!-- Griff und Linie in der Mitte: genau auf der Unterkante des Titelbilds (ShowcaseLayout.HeroSplitterOverlap) -->
+                    <Grid Background="{TemplateBinding Background}">
+                        <Border x:Name="Line" Height="1" VerticalAlignment="Center" Margin="18,0" Background="{DynamicResource Hp.Brush.LineStrong}" Opacity="0" />
+                        <Border x:Name="Rest" Width="36" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource Hp.Brush.LineStrong}" />
+                        <Border x:Name="Grip" Width="52" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                     </Grid>
                     <ControlTemplate.Triggers>

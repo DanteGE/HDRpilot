@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -284,47 +285,221 @@ public sealed class MainWindowLayoutTests
     }
 
     [Fact]
-    public void Toolbar_never_overflows_and_folds_in_stages_when_narrow()
+    public void Hero_handle_moves_with_the_keyboard_in_steps_and_enter_restores_the_standard()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, context, model) = Open(SteamGame());
+            var splitter = (HeroSplitter)window.FindName("HeroSplitter");
+            var size = new Size(1745, 982);
+            WpfTestHost.Layout(window, size);
+            var root = ((FrameworkElement)window.FindName("Root")).ActualHeight;
+            var start = window.HeroHeight;
+            Assert.Equal(Math.Round(root / 3), start);
+
+            // Pfeiltasten: Schritte von 24 px (Pfeil nach unten: Titelbereich höher), Bild ab: 96 px; sofort angewandt.
+            Press(window, splitter, Key.Down, size);
+            Press(window, splitter, Key.Down, size);
+            Assert.Equal(start + (2 * HeroSplitter.SmallStep), window.HeroHeight);
+            Press(window, splitter, Key.Up, size);
+            Assert.Equal(start + HeroSplitter.SmallStep, window.HeroHeight);
+            Press(window, splitter, Key.PageDown, size);
+            Assert.Equal(start + HeroSplitter.SmallStep + HeroSplitter.LargeStep, window.HeroHeight);
+            Assert.Equal(window.HeroHeight - ShowcaseLayout.HeroSplitterOverlap, splitter.TransformToAncestor((Visual)window.FindName("Root")).Transform(default).Y, 0.5);
+            Assert.Null(context.Config.Settings.LibraryHeroRatio); // gesammelt, noch nicht gespeichert
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(Math.Round(window.HeroHeight / root, 4), context.Config.Settings.LibraryHeroRatio);
+
+            // Ende und Pos1: größte und kleinste Höhe; darüber hinaus geschieht nichts.
+            Press(window, splitter, Key.End, size);
+            Assert.Equal(root - 416, window.HeroHeight);
+            Press(window, splitter, Key.PageDown, size);
+            Assert.Equal(root - 416, window.HeroHeight);
+            Press(window, splitter, Key.Home, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+            Press(window, splitter, Key.Up, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+
+            // Eingabetaste wie Doppelklick: Standardhöhe, nichts mehr gemerkt.
+            Press(window, splitter, Key.Enter, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            window.Close();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        });
+    }
+
+    /// <summary>Elemente der Werkzeugleiste in ihrer Reihenfolge (AutomationId bzw. Name).</summary>
+    private static readonly string[] ToolbarItems =
+        ["SearchHost", "SourceFilter", "SortOrder", "OnlySelectedToggle", "OnlyNewToggle", "OnlyHdrCapableToggle", "ViewSegment", "RescanButton", "MarkAllSeenButton", "AddGameButton"];
+
+    [Theory]
+    [InlineData(1164, 727, null, 3)] // 1280×800 bei 110 %
+    [InlineData(1280, 800, null, 2)]
+    [InlineData(1366, 768, null, 2)]
+    [InlineData(1600, 1000, null, 2)]
+    [InlineData(1920, 1080, null, 2)]
+    [InlineData(3440, 1440, null, 1)]
+    [InlineData(1280, 800, LibraryLayout.MaxDetailsRatio, 3)] // Detailbereich am breitesten (gemerkt)
+    [InlineData(1000, 620, null, 4)] // kleinstes Fenster
+    [InlineData(1000, 700, LibraryLayout.MaxDetailsRatio, 5)] // kleinstes Fenster, schmalste Liste
+    public void Toolbar_wraps_into_flush_rows_and_keeps_every_item_with_its_text(double width, double height, double? ratio, int rows)
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _) = Open(SteamGame(), ratio);
+            var size = new Size(width, height);
+            WpfTestHost.Layout(window, size);
+            window.FitDetailsColumn();
+            WpfTestHost.Layout(window, size);
+            var toolbar = (ToolbarFlowPanel)window.FindName("ToolbarArea");
+            var ids = Ids(window);
+            var items = ToolbarItems.Select(id => ids.TryGetValue(id, out var e) ? e : (FrameworkElement)window.FindName(id)).ToList();
+
+            // Kein „Filter“-Menü mehr: alles steht ausgeschrieben in der Leiste, in der Reihenfolge der Oberfläche.
+            Assert.Null(window.FindName("FilterMenuButton"));
+            Assert.False(ids.ContainsKey("FilterMenuButton"));
+            Assert.Equal(items, toolbar.Children.Cast<FrameworkElement>());
+            Assert.Equal(rows, window.ToolbarRows);
+            Assert.Equal(rows, toolbar.Rows);
+
+            // Jedes Element sichtbar und vollständig: Suche mit „Strg+F“, Quelle und Sortierung in voller Breite, drei Chips,
+            // Ansichten mit Beschriftung, „Spiel hinzufügen“ mit Text.
+            foreach (var item in items)
+            {
+                Assert.Equal(Visibility.Visible, item.Visibility);
+                Assert.True(item.ActualWidth > 0 && item.ActualHeight == 40, $"{item.Name}: {item.ActualWidth}×{item.ActualHeight}");
+            }
+
+            foreach (var name in new[] { "SearchKey", "ViewListLabel", "ViewGridLabel", "ViewShelfLabel", "AddGameLabel" })
+            {
+                var label = (FrameworkElement)window.FindName(name);
+                Assert.True(Shown(label, toolbar), $"{name} bei {width}×{height} nicht zu sehen");
+            }
+
+            Assert.True(items[0].ActualWidth >= 236 && items[1].ActualWidth >= 188 && items[2].ActualWidth >= 196, "Suche, Quelle, Sortierung in voller Breite");
+            Assert.Equal(40, ((FrameworkElement)window.FindName("RescanButton")).ActualWidth); // feste Symbol-Schaltflächen
+            Assert.Equal(40, ((FrameworkElement)window.FindName("MarkAllSeenButton")).ActualWidth);
+
+            // Zeilen: Breite der Liste, links und rechts bündig (±0,5), 8 px zwischen den Elementen und zwischen den Zeilen;
+            // in einer Zeile links die Filter, rechts Ansicht und Aktionen.
+            var boxes = items.Select(i => i.TransformToAncestor(toolbar).TransformBounds(new Rect(i.RenderSize))).ToList();
+            var tops = boxes.Select(b => b.Top).Distinct().Order().ToList();
+            Assert.Equal(rows, tops.Count);
+            Assert.Equal(((FrameworkElement)window.FindName("ListCard")).ActualWidth, toolbar.ActualWidth, 0.5);
+            for (var r = 0; r < tops.Count; r++)
+            {
+                var row = boxes.Where(b => b.Top == tops[r]).OrderBy(b => b.Left).ToList();
+                Assert.Equal(0, row[0].Left, 0.5);
+                Assert.Equal(toolbar.ActualWidth, row[^1].Right, 0.5);
+                for (var k = 1; k < row.Count; k++)
+                {
+                    var gap = row[k].Left - row[k - 1].Right;
+                    Assert.True(rows == 1 && k == 6 ? gap >= 8 : Math.Abs(gap - 8) <= 0.5, $"Zeile {r}: Abstand {gap:0.0} vor Element {k}");
+                }
+
+                Assert.Equal(r * 48, tops[r], 0.5);
+            }
+
+            // Tab-Reihenfolge wie sichtbar: Zeile für Zeile von links nach rechts in der Reihenfolge des Codes, ohne eigene.
+            for (var i = 1; i < boxes.Count; i++)
+            {
+                Assert.True(boxes[i].Top > boxes[i - 1].Top || boxes[i].Left > boxes[i - 1].Left, $"Element {i} steht vor Element {i - 1}");
+            }
+
+            Assert.All(items, i => Assert.Equal(int.MaxValue, KeyboardNavigation.GetTabIndex(i)));
+
+            // Höhe der Leiste nach ihren Zeilen; darunter 10 px bis zur Liste, und dort beginnt auch der Trenner zum
+            // Detailbereich (nach der tatsächlichen Höhe der Leiste, nicht nach einer Zeile).
+            Assert.Equal((rows * 40) + ((rows - 1) * 8), toolbar.ActualHeight, 0.5);
+            var card = (FrameworkElement)window.FindName("ListCard");
+            var cardTop = card.TransformToAncestor(window).Transform(default).Y;
+            Assert.Equal(toolbar.TransformToAncestor(window).Transform(default).Y + toolbar.ActualHeight + ShowcaseLayout.ToolbarGap, cardTop, 0.5);
+            Assert.Equal(cardTop, ((FrameworkElement)window.FindName("LibrarySplitter")).TransformToAncestor(window).Transform(default).Y, 0.5);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Hero_handle_drag_is_canceled_with_escape_like_the_column_splitter()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Esc beim Ziehen tat nichts, die gezogene Höhe wurde beim Loslassen gemerkt. Der Trenner der
+            // Spalten (GridSplitter) bricht mit Esc ab und stellt die Breite davor wieder her; der Griff jetzt ebenso.
+            var (window, context, model) = Open(SteamGame());
+            var splitter = (HeroSplitter)window.FindName("HeroSplitter");
+            var size = new Size(1745, 982);
+            WpfTestHost.Layout(window, size);
+            var start = window.HeroHeight;
+            var delays = context.Dispatcher.PendingDelays;
+
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 60));
+            Assert.Equal(start + 60, window.HeroHeight);
+            Press(window, splitter, Key.Escape, size);
+            Assert.Equal(start, window.HeroHeight); // sofort zurück
+            Assert.Equal(start, splitter.Value);
+
+            // Ohne echte Maus beendet erst das Loslassen das Ziehen (in der App schon Esc): nichts gemerkt.
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 60, false));
+            WpfTestHost.Layout(window, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Maus verloren (Ziehen als abgebrochen gemeldet): ebenso zurück, nichts gemerkt.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -48));
+            Assert.Equal(start - 48, window.HeroHeight);
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, -48, true));
+            WpfTestHost.Layout(window, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Esc ohne Ziehen gehört nicht dem Griff (das Fenster leert damit die Suche bzw. schließt die Schublade).
+            var escape = new KeyEventArgs(Keyboard.PrimaryDevice, new TestPresentationSource(), Environment.TickCount, Key.Escape) { RoutedEvent = Keyboard.KeyDownEvent };
+            splitter.RaiseEvent(escape);
+            Assert.False(escape.Handled);
+            context.Dispatcher.RunDelayed();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Toolbar_keeps_focus_and_order_while_it_wraps_and_the_one_row_look_when_wide()
     {
         WpfTestHost.Run(() =>
         {
             var (window, _, _) = Open(SteamGame());
-            var toolbar = (FrameworkElement)window.FindName("ToolbarArea");
-            var filters = (FrameworkElement)window.FindName("FilterGroup");
-            var actions = (FrameworkElement)window.FindName("ActionGroup");
-            var stages = new Dictionary<double, int>();
-            var standard = window.Width;
+            var toolbar = (ToolbarFlowPanel)window.FindName("ToolbarArea");
+            var chip = (FrameworkElement)Ids(window)["OnlyHdrCapableToggle"];
+            var children = toolbar.Children.Cast<UIElement>().ToList();
+            FocusManager.SetFocusedElement(window, chip);
 
-            foreach (var width in new[] { 2560.0, 1920, standard, 1366, 1280, 1150, 1000, 2560 })
+            // Breiter, schmaler, wieder breit: dieselben Elemente, nie ausgeblendet, der Fokus bleibt auf dem Chip.
+            foreach (var (width, rows) in new[] { (3440.0, 1), (1280.0, 2), (1000.0, 4), (1600.0, 2), (3440.0, 1) })
             {
                 var size = new Size(width, 900);
                 WpfTestHost.Layout(window, size);
                 window.FitDetailsColumn();
                 WpfTestHost.Layout(window, size);
-                window.UpdateToolbarLayout();
-                WpfTestHost.Layout(window, size);
-                stages[width] = window.ToolbarStage;
-
-                var f = filters.TransformToAncestor(toolbar).TransformBounds(new Rect(filters.RenderSize));
-                var a = actions.TransformToAncestor(toolbar).TransformBounds(new Rect(actions.RenderSize));
-                foreach (var (name, bounds) in new[] { ("Filter", f), ("Aktionen", a) })
-                {
-                    Assert.True(bounds.Left >= -0.5 && bounds.Right <= toolbar.ActualWidth + 0.5, $"{name} ragt bei {width} px hinaus: {bounds} in {toolbar.ActualWidth:0} (Stufe {window.ToolbarStage})");
-                }
-
-                Assert.False(f.IntersectsWith(a) && f.Width > 0 && a.Width > 0 && Rect.Intersect(f, a).Width > 0.5, $"Filter und Aktionen überlappen bei {width} px (Stufe {window.ToolbarStage})");
-                Assert.True(((FrameworkElement)window.FindName("SearchBox")).ActualWidth >= 140, $"Suche bleibt bei {width} px benutzbar");
+                Assert.Equal(rows, window.ToolbarRows);
+                Assert.Equal(children, toolbar.Children.Cast<UIElement>());
+                Assert.All(children, c => Assert.Equal(Visibility.Visible, c.Visibility));
+                Assert.Same(chip, FocusManager.GetFocusedElement(window));
             }
 
-            // Je schmaler, desto mehr gefaltet; breit wieder alles ausgeschrieben.
-            Assert.Equal(0, stages[2560]);
-            Assert.True(stages[2560] <= stages[1920] && stages[1920] <= stages[standard] && stages[standard] <= stages[1366]
-                && stages[1366] <= stages[1280] && stages[1280] <= stages[1150] && stages[1150] <= stages[1000], string.Join(", ", stages.Select(s => $"{s.Key}: {s.Value}")));
-
-            // Standardgröße: die Filter-Chips bleiben sichtbar (phase4-ui.ps1 schaltet sie direkt).
-            Assert.True(stages[standard] < 6, "Stufe bei Standardgröße: " + stages[standard]);
-            Assert.Equal(Visibility.Visible, ((FrameworkElement)window.FindName("ChipGroup")).Visibility);
-            Assert.Equal(Dock.Right, DockPanel.GetDock(actions)); // wieder breit: eine Zeile
+            // Eine Zeile bei 3440 px: Filter links wie bisher, die Suche nur bis 320 px, Ansicht und Aktionen rechtsbündig,
+            // der freie Platz dazwischen; nichts sonst wird gestreckt.
+            Assert.Equal(320, ((FrameworkElement)window.FindName("SearchHost")).ActualWidth, 0.5);
+            Assert.Equal(188, ((FrameworkElement)window.FindName("SourceFilter")).ActualWidth, 0.5);
+            Assert.Equal(196, ((FrameworkElement)window.FindName("SortOrder")).ActualWidth, 0.5);
+            var add = (FrameworkElement)window.FindName("AddGameButton");
+            Assert.Equal(toolbar.ActualWidth, add.TransformToAncestor(toolbar).Transform(new Point(add.ActualWidth, 0)).X, 0.5);
+            Assert.True(add.ActualWidth < 160, "Spiel hinzufügen in natürlicher Breite: " + add.ActualWidth);
             window.Close();
         });
     }
@@ -375,8 +550,6 @@ public sealed class MainWindowLayoutTests
                         model.Details!.CopySteamLaunchOptionCommand.Execute(null);
                         WpfTestHost.Layout(window, new Size(width, height));
                         window.FitDetailsColumn();
-                        WpfTestHost.Layout(window, new Size(width, height));
-                        window.UpdateToolbarLayout();
                         WpfTestHost.Layout(window, new Size(width, height));
 
                         var bitmap = Render(window);

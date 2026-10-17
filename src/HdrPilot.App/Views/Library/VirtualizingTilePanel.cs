@@ -180,7 +180,8 @@ public sealed class VirtualizingTilePanel : VirtualizingPanel, IScrollInfo
         }
         else if (top + _tileHeight > _offset.Y + _viewport.Height - Padding.Bottom)
         {
-            SetVerticalOffset(top + _tileHeight + Padding.Bottom - _viewport.Height);
+            // Höher als der sichtbare Bereich (niedriges Fenster mit mehrzeiliger Werkzeugleiste): ihr oberes Ende zeigen.
+            SetVerticalOffset(Math.Min(top - Padding.Top, top + _tileHeight + Padding.Bottom - _viewport.Height));
         }
     }
 

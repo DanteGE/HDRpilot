@@ -138,6 +138,15 @@
   <data name="Splitter_Tooltip" xml:space="preserve">
     <value>Ziehen oder Pfeiltasten: Breite ändern · Doppelklick: Standardbreite</value>
   </data>
+  <data name="HeroSplitter_Name" xml:space="preserve">
+    <value>Höhe des Titelbereichs</value>
+  </data>
+  <data name="HeroSplitter_Tooltip" xml:space="preserve">
+    <value>Ziehen oder Pfeiltasten: Höhe ändern · Doppelklick: Standardhöhe</value>
+  </data>
+  <data name="HeroSplitter_Help" xml:space="preserve">
+    <value>Pfeiltasten oben und unten: Höhe ändern, Bild auf und ab: große Schritte, Pos1 und Ende: kleinste und größte Höhe, Eingabetaste: Standardhöhe</value>
+  </data>
   <data name="MarkAllSeen_Name" xml:space="preserve">
     <value>Alle als gesehen markieren</value>
   </data>
@@ -945,11 +954,8 @@
   <data name="Nits_TooltipUnknown" xml:space="preserve">
     <value>Die Helligkeitswerte des Bildschirms sind noch nicht bekannt. HDRpilot liest sie bei einem HDR- oder Bildschirmwechsel.</value>
   </data>
-  <data name="Toolbar_Filter" xml:space="preserve">
-    <value>Filter</value>
-  </data>
-  <data name="Toolbar_FilterName" xml:space="preserve">
-    <value>Filter (Automatik, Neu, HDR-fähig)</value>
+  <data name="Toolbar_Name" xml:space="preserve">
+    <value>Werkzeugleiste der Bibliothek</value>
   </data>
   <data name="Chip_HdrAuto" xml:space="preserve">
     <value>Automatik</value>

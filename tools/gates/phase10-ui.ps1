@@ -1,8 +1,15 @@
 ﻿# Gate G10.5: Bibliothek „Showcase Hero“ per UI-Automation an einer eigenen Testinstanz (eigene Ablage, echte Bibliothek
 # eingelesen und alle Spiele auf „HDR automatisch“ aus, nur Fenster dieser Prozess-ID, keine Maus- oder Tastatureingaben)
-# und Bildschirmfotos der drei Ansichten bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
+# und Bildschirmfotos der drei Ansichten und der gescrollten Liste bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
 #   - Ansichten in der Reihenfolge Liste, Raster, Regal; Liste ist der Standard, die Wahl wird gemerkt (auch nach Neustart)
 #   - Liste: virtualisiert, nach Spalten sortierbar (gespeichert), Schalter „HDR automatisch“ je Zeile, Vorschau Bild/Symbol
+#   - Liste: Höhe des Titelbereichs per Ziehgriff HeroSplitter (Wunsch des Nutzers 2026-10-16): Standard ein Drittel der
+#     Fensterhöhe, per UI-Automation gesetzt (RangeValue, keine echte Eingabe), gemerkt (auch nach Neustart), Auslösen
+#     (Invoke, wie Doppelklick) setzt zurück; Raster und Regal ohne Griff und mit ihrer bisherigen Höhe
+#   - Werkzeugleiste (Wunsch des Nutzers 2026-10-16): immer ganz ausgeschrieben (Suche mit Strg+F, Quelle, Sortierung,
+#     drei Chips, Ansichten mit Beschriftung, „Spiel hinzufügen“ mit Text, kein „Filter“-Menü); passt sie nicht, bricht
+#     sie in gefüllte Zeilen um, jede links und rechts bündig mit der Liste, 8 px Abstand. Geprüft bei 1600×1000 und im
+#     schmalen Fenster (1000×700); Titelbereich, Griff und Regal rechnen mit ihrer tatsächlichen Höhe
 #   - Raster: gleich große Kacheln über die ganze Breite, keine leere Spalte rechts, nichts ragt hinaus, bei jeder Größe
 #   - Regal: Kachelreihe mit Blättern, Karte „Automatik“, Details als Schublade (öffnen und schließen)
 #   - Detailbereich mit allen bisherigen Funktionen und „BILDER“; Kontextmenü des Spiels; „Bild wählen…“ mit eigener Datei
@@ -15,6 +22,8 @@ Add-Type -AssemblyName System.Drawing, PresentationCore
 $ok = $true
 function Check([bool]$cond, [string]$what) { if ($cond) { Note "ok   $what" } else { Note "FEHLER $what"; $script:ok = $false } }
 function Rect($el) { $el.Current.BoundingRectangle }
+# Skalierung des Bildschirms aus der DPI des Testfensters (nur lesend)
+Add-Type -Namespace HdrPilotGate -Name Dpi -MemberDefinition '[DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);'
 
 # Elemente in eigenen Fenstern derselben Prozess-ID (Kontextmenü, Dialog „Bild wählen…“)
 function Find-Top([int]$processId, [string]$automationId, [int]$timeoutMs = 5000) {
@@ -77,6 +86,68 @@ function Check-Grid($win, [string]$label) {
     Check ($tileW -gt 0 -and [math]::Abs((Rect $tiles[0]).Height / $tileW - 1.5) -lt 0.03) "$label`: Seitenverhältnis 2:3"
     Check ($right -le $g.Right + 1 -and $left -ge $g.Left - 1) "$label`: keine Kachel ragt aus dem Raster"
     Check (($g.Right - $right) -lt $tileW) "$label`: rechts keine leere Spalte (frei $([math]::Round($g.Right - $right)) px < Kachel $([math]::Round($tileW)) px)"
+}
+
+# Werkzeugleiste prüfen (Wunsch des Nutzers 2026-10-16): alle Elemente sichtbar, im Fenster und ausgeschrieben, kein
+# „Filter“-Menü; jede Zeile links und rechts bündig mit der Leiste und diese mit der Liste, 8 px zwischen Elementen und
+# Zeilen (Bildschirmpixel, je 2 px Spielraum für die Rundung). Die Zahl der Zeilen steht danach in $script:BarRows.
+function Check-Toolbar($win, [string]$label, [double]$scale) {
+    $script:BarRows = 0
+    $bar = Find-Id $win 'LibraryToolbar' 3000
+    if (-not $bar) { Check $false "$label`: Werkzeugleiste LibraryToolbar vorhanden"; return }
+    $b = Rect $bar; $w = Rect $win
+    $ids = @('SearchBox', 'SourceFilter', 'SortOrder', 'OnlySelectedToggle', 'OnlyNewToggle', 'OnlyHdrCapableToggle', 'ViewSegment', 'RescanButton', 'MarkAllSeenButton', 'AddGameButton')
+    $items = @($ids | ForEach-Object { Find-Id $bar $_ 2000 })
+    $missing = @(for ($i = 0; $i -lt $ids.Count; $i++) { if (-not $items[$i] -or $items[$i].Current.IsOffscreen -or (Rect $items[$i]).Width -le 0) { $ids[$i] } })
+    Check ($missing.Count -eq 0) ("$label`: alle zehn Elemente in der Werkzeugleiste sichtbar" + $(if ($missing.Count) { " (fehlt: $($missing -join ', '))" } else { '' }))
+    if ($missing.Count) { return }
+    $boxes = @($items | ForEach-Object { Rect $_ })
+    $outside = @(for ($i = 0; $i -lt $ids.Count; $i++) { $r = $boxes[$i]; if ($r.Left -lt $w.Left - 1 -or $r.Right -gt $w.Right + 1 -or $r.Bottom -gt $w.Bottom + 1) { $ids[$i] } })
+    Check ($outside.Count -eq 0) ("$label`: alles im Fenster" + $(if ($outside.Count) { " (ragt hinaus: $($outside -join ', '))" } else { '' }))
+
+    # Ausgeschrieben: Suche, Quelle und Sortierung mindestens so breit wie bisher, die Ansichten mit Beschriftung (ohne
+    # waren es 120 px), „Spiel hinzufügen“ mit Text (ohne 40 px); die Symbol-Schaltflächen bleiben 40 px.
+    $min = [ordered]@{ SearchBox = 236; SourceFilter = 188; SortOrder = 196; ViewSegment = 200; AddGameButton = 120 }
+    $narrow = @($min.Keys | Where-Object { $boxes[[array]::IndexOf($ids, $_)].Width / $scale -lt $min[$_] - 1 })
+    Check ($narrow.Count -eq 0) ("$label`: ausgeschrieben (" + (($min.Keys | ForEach-Object { '{0} {1:N0}' -f $_, ($boxes[[array]::IndexOf($ids, $_)].Width / $scale) }) -join ', ') + ')')
+    $fixed = @(7, 8 | ForEach-Object { [math]::Round($boxes[$_].Width / $scale) })
+    Check (@($fixed | Where-Object { [math]::Abs($_ - 40) -gt 1 }).Count -eq 0) ("$label`: Neu einlesen und gesehen bleiben 40 px ({0})" -f ($fixed -join '/'))
+    Check ($null -eq (Find-Id $win 'FilterMenuButton' 300)) ($label + ': kein „Filter“-Menü')
+
+    # Zeilen: nach der Oberkante gruppiert, in der Reihenfolge der Oberfläche
+    $rows = New-Object System.Collections.ArrayList
+    for ($i = 0; $i -lt $ids.Count; $i++) {
+        if ($rows.Count -eq 0 -or [math]::Abs($boxes[$i].Top - $boxes[$rows[$rows.Count - 1][0]].Top) -gt 3) { [void]$rows.Add((New-Object System.Collections.ArrayList)) }
+        [void]$rows[$rows.Count - 1].Add($i)
+    }
+    $gap = 8 * $scale
+    $flush = $true; $gaps = $true; $order = $true
+    foreach ($row in $rows) {
+        if ([math]::Abs($boxes[$row[0]].Left - $b.Left) -gt 2 -or [math]::Abs($boxes[$row[$row.Count - 1]].Right - $b.Right) -gt 2) { $flush = $false }
+        for ($k = 1; $k -lt $row.Count; $k++) {
+            $d = $boxes[$row[$k]].Left - $boxes[$row[$k - 1]].Right
+            if ($d -lt 0) { $order = $false }
+            # in einer einzigen Zeile liegt vor der Ansicht der freie Platz
+            if ([math]::Abs($d - $gap) -gt 2 -and -not ($rows.Count -eq 1 -and $ids[$row[$k]] -eq 'ViewSegment' -and $d -ge $gap - 2)) { $gaps = $false }
+        }
+    }
+    for ($r = 1; $r -lt $rows.Count; $r++) {
+        $d = $boxes[$rows[$r][0]].Top - $boxes[$rows[$r - 1][0]].Bottom
+        if ([math]::Abs($d - $gap) -gt 2) { $gaps = $false }
+    }
+    $list = Find-Id $win 'GameList' 1000
+    $alignedWithList = $true
+    if ($list -and -not $list.Current.IsOffscreen) {
+        $l = Rect $list
+        # Die Liste liegt im Rahmen ihrer Karte (1 px): Leiste und Karte haben dieselben Kanten
+        $alignedWithList = [math]::Abs($l.Left - $b.Left) -le $scale + 2 -and [math]::Abs($l.Right - $b.Right) -le $scale + 2
+    }
+    Note ("{0}: Werkzeugleiste {1:N0} x {2:N0} px, {3} Zeile(n): {4}" -f $label, $b.Width, $b.Height, $rows.Count, (($rows | ForEach-Object { ($_ | ForEach-Object { $ids[$_] }) -join ' ' }) -join ' | '))
+    Check ($flush -and $order) "$label`: jede Zeile links und rechts bündig mit der Leiste, Reihenfolge wie in der Oberfläche"
+    Check $gaps "$label`: 8 px zwischen den Elementen und zwischen den Zeilen"
+    Check $alignedWithList "$label`: Werkzeugleiste so breit wie die Liste"
+    Check ([math]::Abs($b.Height / $scale - (($rows.Count * 48) - 8)) -le 1.5) ("$label`: Höhe {0:N1} px für {1} Zeile(n)" -f ($b.Height / $scale), $rows.Count)
+    $script:BarRows = $rows.Count
 }
 
 $cfg = New-TestConfig 'phase10-ui' -Import
@@ -175,6 +246,62 @@ try {
     Select-El (Find-Id $win 'ThumbnailImageButton')
     Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryThumbnail }) 'Vorschau „Bild“ (Standard) gespeichert'
 
+    # --- Liste: Höhe des Titelbereichs per Ziehgriff, nur über UI-Automation (RangeValue, keine Maus- oder Tastatureingabe) ---
+    # Werte des Griffs in geräteunabhängigen Pixeln. Die Skalierung kommt aus der DPI des Fensters (aus den 20 px des Griffs
+    # wäre sie wegen der Rundung der Bildschirmkoordinaten bis 5 % ungenau, nur ersatzweise); die Höhe des Fensterinhalts
+    # ist sein größter Wert + 328 + Höhe der Werkzeugleiste (Luft, Kopf, fünf Zeilen, Statuszeile darunter; die Leiste in
+    # ihrer tatsächlichen Höhe, eine bis drei Zeilen) und muss zur gemessenen Fensterhöhe passen (Rahmen und Ränder höchstens
+    # 12 px). Lagen werden nur relativ verglichen, so zählen Rahmen und Rundung der Bildschirmkoordinaten nicht.
+    $grip = Find-Id $win 'HeroSplitter' 3000
+    Check ($null -ne $grip) 'Ziehgriff HeroSplitter in der Liste vorhanden'
+    $scale = 1.0; $rootDip = 0.0; $heroSet = 0.0; $barOffset = 0.0
+    $gripRange = $null
+    if ($grip -and $grip.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$gripRange)) {
+        $dpi = [HdrPilotGate.Dpi]::GetDpiForWindow([IntPtr]$win.Current.NativeWindowHandle)
+        $scale = if ($dpi -gt 0) { $dpi / 96.0 } else { (Rect $grip).Height / 20 }
+        $value = $gripRange.Current.Value
+        $barDip = [math]::Round((Rect (Find-Id $win 'LibraryToolbar' 3000)).Height / $scale)
+        $rootDip = $gripRange.Current.Maximum + 328 + $barDip
+        $chrome = (Rect $win).Height / $scale - $rootDip
+        Note ("Ziehgriff: Wert {0}, Bereich {1}–{2}, Werkzeugleiste {3} px hoch, Fensterinhalt {4} px hoch (Fenster {5:N1}), Skalierung {6:N2}" -f $value, $gripRange.Current.Minimum, $gripRange.Current.Maximum, $barDip, $rootDip, ((Rect $win).Height / $scale), $scale)
+        Check ($grip.Current.Name -eq 'Höhe des Titelbereichs' -and $grip.Current.IsKeyboardFocusable) ('Ziehgriff benannt und mit Tastatur erreichbar („{0}“)' -f $grip.Current.Name)
+        Check ($gripRange.Current.Minimum -eq 186 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 186 px (Symbol-Kachel ganz), höchstens Fensterinhalt − 328 − Werkzeugleiste ({0} px; Rahmen {1:N1} px)" -f $barDip, $chrome)
+        Check ([math]::Abs($value - [math]::Round($rootDip / 3)) -le 1) ('Standard: ein Drittel der Fensterhöhe ({0} von {1} px)' -f $value, $rootDip)
+        Check ($null -eq (Read-Config $cfg).settings.libraryHeroRatio) 'Standardhöhe wird nicht gespeichert (libraryHeroRatio fehlt)'
+        $gripTop = (Rect $grip).Top
+        $listTop = (Rect (Find-Id $win 'GameList')).Top
+        $heroSet = [math]::Round($gripRange.Current.Minimum + ($gripRange.Current.Maximum - $gripRange.Current.Minimum) * 0.6)
+        $gripRange.SetValue($heroSet)
+        # Griff und Liste rücken um genau die Änderung nach unten: Der Titelbereich ist so viel höher.
+        $moved = { (((Rect $grip).Top - $gripTop) / $scale) - ($heroSet - $value) }
+        $listMoved = { (((Rect (Find-Id $win 'GameList')).Top - $listTop) / $scale) - ($heroSet - $value) }
+        Check (Wait-Until { [math]::Abs($gripRange.Current.Value - $heroSet) -lt 0.5 -and [math]::Abs((& $moved)) -le 1.5 -and [math]::Abs((& $listMoved)) -le 1.5 } 4000) ("Per UI-Automation von {0} auf {1} px gesetzt, Griff und Liste folgen (Abweichung {2:N1} / {3:N1} px)" -f $value, $heroSet, (& $moved), (& $listMoved))
+        Check (Wait-Until { $r = (Read-Config $cfg).settings.libraryHeroRatio; $null -ne $r -and [math]::Abs([double]$r - $heroSet / $rootDip) -lt 0.0005 }) ("In der Konfiguration gemerkt (libraryHeroRatio {0}, erwartet {1:N4})" -f (Read-Config $cfg).settings.libraryHeroRatio, ($heroSet / $rootDip))
+        Check ((Shown-Items (Find-Id $win 'GameList')).Count -ge 5) ("Darunter weiter Zeilen der Liste ({0})" -f (Shown-Items (Find-Id $win 'GameList')).Count)
+        # Lage der Werkzeugleiste zum Fenster (in der Liste 10 px unter dem Titelbild): misst unten Raster und Regal
+        $barOffset = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - ($heroSet + 10)
+    } else { Check $false 'Ziehgriff mit Wertebereich (RangeValue)' }
+
+    # --- Werkzeugleiste: ausgeschrieben und in gefüllten Zeilen, auch im schmalen Fenster (Wunsch des Nutzers 2026-10-16) ---
+    Check-Toolbar $win 'Fenster 1600x1000' $scale
+    $wideRows = $BarRows
+    if (Resize-Window $win 1000 700) {
+        Check-Toolbar $win 'Schmales Fenster' $scale
+        $narrowRows = $BarRows
+        Check ($narrowRows -gt $wideRows -and $narrowRows -ge 3) ("Schmales Fenster: mehr Zeilen statt gefalteter Elemente ({0} statt {1})" -f $narrowRows, $wideRows)
+        $grip1 = Find-Id $win 'HeroSplitter' 2000
+        $range1 = $null
+        if ($grip1 -and $grip1.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range1)) {
+            # Größter Titelbereich im schmalen Fenster nach der tatsächlichen Höhe der Leiste: Fensterinhalt − 328 − Leiste
+            $bar1 = [math]::Round((Rect (Find-Id $win 'LibraryToolbar')).Height / $scale)
+            $content1 = (Rect $win).Height / $scale - $range1.Current.Maximum - 328 - $bar1
+            Check ($range1.Current.Maximum -eq 186 -or ($content1 -ge 0 -and $content1 -le 12)) ("Schmales Fenster: Bereich des Griffs bis {0} px bei {1} px hoher Werkzeugleiste (Rahmen {2:N1} px)" -f $range1.Current.Maximum, $bar1, $content1)
+        }
+    } else { Check $false 'Fenster lässt sich per UI-Automation in der Größe ändern' }
+    [void](Resize-Window $win 1600 1000)
+    Check-Toolbar $win 'Wieder 1600x1000' $scale
+    Check ($BarRows -eq $wideRows) ('Wieder breit: dieselbe Zahl Zeilen wie vorher ({0})' -f $BarRows)
+
     # --- Detailbereich: alle bisherigen Funktionen und „BILDER“ ---
     foreach ($id in 'DetailsPanel', 'DetailName', 'LaunchButton', 'CreateDesktopShortcutButton', 'CreateStartMenuShortcutButton', 'DetailHdrAuto', 'DetailRestore', 'DetailDisplay', 'DetailAutoHdr', 'AddExeButton', 'RemoveExeButton', 'RelearnExeButton', 'ChooseArtworkButton', 'ArtworkTileHero', 'ArtworkTileLogo', 'ArtworkTileCover', 'DetailIconButton', 'LibrarySplitter', 'ProfileMenuButton') {
         Check ($null -ne (Find-Id $win $id 3000)) "Detail-Element $id vorhanden"
@@ -221,6 +348,15 @@ try {
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Grid' }) 'Raster gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
     Check ((Find-Id $win 'GameList' 500) -eq $null -or (Find-Id $win 'GameList' 500).Current.IsOffscreen) 'Liste ausgeblendet'
+    # Raster: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste (weniger nur in
+    # niedrigen Fenstern, bis die erste Kachelreihe ganz zu sehen ist), Werkzeugleiste 22 px unter dem Titelbild (so viel
+    # Luft wie darunter bis zur ersten Kachelreihe)
+    Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Raster ohne Ziehgriff'
+    if ($rootDip -gt 0) {
+        $rasterHero = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - $barOffset - 22
+        $rasterExpected = [math]::Round([math]::Min(260, [math]::Max(196, $rootDip * 0.24)))
+        Check ([math]::Abs($rasterHero - $rasterExpected) -le 1.5) ("Raster: Titelbereich wie bisher ({0:N1} px, erwartet {1})" -f $rasterHero, $rasterExpected)
+    }
     $gridTiles = @(Get-ListItems (Find-Id $win 'GameGrid') | Where-Object { -not (Rect $_).IsEmpty }).Count
     Check ($total -lt 120 -or $gridTiles -lt $total / 2) "Raster virtualisiert ($gridTiles von $total Kacheln erzeugt)"
     foreach ($size in @(@(1600, 1000), @(1280, 800), @(1920, 1080), @(1000, 700))) {
@@ -238,6 +374,19 @@ try {
     Select-El $views[2]
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Shelf' }) 'Regal gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
+    # Regal wie bisher: ohne Ziehgriff, Werkzeugleiste 50 px über dem unteren Rand des großen Titelbereichs; umgebrochen
+    # wächst sie nach oben (je weitere Zeile 48 px) und bleibt unter der Automatik-Karte, nie darauf
+    Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Regal ohne Ziehgriff'
+    Check-Toolbar $win 'Regal 1600x1000' $scale
+    $shelfBar = Rect (Find-Id $win 'LibraryToolbar')
+    $card = Find-Id $win 'AutomationCard' 2000
+    if ($card) { $c = Rect $card; Check ($shelfBar.Top -ge $c.Bottom - 1 -or $shelfBar.Right -le $c.Left + 1) 'Regal: Werkzeugleiste unter oder neben der Automatik-Karte, nicht darauf' }
+    if ($rootDip -gt 0) {
+        $extra = [math]::Max(0, [math]::Round($shelfBar.Height / $scale) - 40)
+        $shelfHero = ((($shelfBar.Top - (Rect $win).Top) / $scale) - $barOffset) + 50 + $extra
+        $shelfExpected = [math]::Round([math]::Min([math]::Max([math]::Min([math]::Max($rootDip * 0.62, 500), 660), $rootDip - 462), [math]::Max(440 + $extra, $rootDip - 38 - 34 - 200)))
+        Check ([math]::Abs($shelfHero - $shelfExpected) -le 1.5) ("Regal: Titelbereich wie bisher ({0:N1} px, erwartet {1}; Werkzeugleiste {2} px höher)" -f $shelfHero, $shelfExpected, $extra)
+    }
     $shelf = Find-Id $win 'GameShelf' 3000
     Check ($null -ne $shelf -and (Shown-Items $shelf).Count -ge 3) "Regal zeigt eine Kachelreihe ($(if ($shelf) { (Shown-Items $shelf).Count }) Kacheln)"
     foreach ($id in 'CardHdrAuto', 'CardRestore', 'CardAutoHdr', 'DetailsDrawerButton', 'ShelfNextButton', 'ShelfPrevButton', 'ShelfPosition', 'HeroLaunchButton', 'HeroDesktopButton', 'HeroStartMenuButton') {
@@ -268,16 +417,31 @@ try {
     if ($win2) {
         Select-El (Find-Id $win2 'ViewListButton')
         Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryView }) 'Zurück zur Liste: Standard, nichts gespeichert'
+
+        # Gemerkte Höhe des Titelbereichs nach dem Neustart (gleiche Fenstergröße), dann Auslösen wie Doppelklick: Standard
+        [void](Resize-Window $win2 1600 1000)
+        $grip2 = Find-Id $win2 'HeroSplitter' 5000
+        $range2 = $null
+        if ($grip2 -and $heroSet -gt 0 -and $grip2.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range2)) {
+            Check (Wait-Until { [math]::Abs($range2.Current.Value - $heroSet) -le 1 } 4000) ("Nach Neustart wieder {0} px hoch (Griff {1})" -f $heroSet, $range2.Current.Value)
+            $invoke2 = $null
+            if ($grip2.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$invoke2)) {
+                $invoke2.Invoke()
+                $root2 = $range2.Current.Maximum + 328 + [math]::Round((Rect (Find-Id $win2 'LibraryToolbar' 3000)).Height / $scale)
+                Check (Wait-Until { [math]::Abs($range2.Current.Value - $root2 / 3) -le 1.5 } 4000) ("Auslösen (wie Doppelklick) setzt auf ein Drittel zurück ({0} von {1:N0} px)" -f $range2.Current.Value, $root2)
+                Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryHeroRatio }) 'Zurückgesetzt: libraryHeroRatio entfällt in der Konfiguration'
+            } else { Check $false 'Ziehgriff lässt sich auslösen (Invoke)' }
+        } else { Check $false 'Ziehgriff nach Neustart vorhanden' }
     }
     Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null
     Check ($app2.WaitForExit(10000)) 'Testinstanz beendet'
     Check (@((Read-Config $cfg).games | Where-Object { $_.hdrAuto -or $_.autoHdr }).Count -eq 0) 'Am Ende hat kein Spiel „HDR automatisch“ oder „Windows Auto HDR“ an'
 
-    # --- Bildschirmfotos: drei Ansichten, drei Größen, hell und dunkel ---
+    # --- Bildschirmfotos: drei Ansichten und die gescrollte Liste, drei Größen, hell und dunkel ---
     $shots = Join-Path $ShotsDir ('lauf-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-raster,hauptfenster-regal', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
+    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
     Check ($snap.ExitCode -eq 0) "Bildschirmfotos gerendert (Exit-Code $($snap.ExitCode))"
-    foreach ($view in 'liste', 'raster', 'regal') {
+    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal') {
         foreach ($size in '1280x800', '1920x1080', '3440x1440') {
             foreach ($theme in 'dunkel', 'hell') {
                 $file = Join-Path $shots "hauptfenster-$view-$size-$theme.png"

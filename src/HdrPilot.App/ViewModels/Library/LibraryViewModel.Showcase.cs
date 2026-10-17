@@ -236,9 +236,6 @@ public sealed partial class LibraryViewModel
         private set => SetProperty(ref _hdrCapableCount, value);
     }
 
-    /// <summary>Eingeschaltete Filter-Chips (zusammengefaltet: „Filter (n)“).</summary>
-    public int ActiveFilterCount => (_onlySelected ? 1 : 0) + (_onlyNew ? 1 : 0) + (_onlyHdrCapable ? 1 : 0);
-
     /// <summary>Kopf der Spalte „Spiel“: „SPIEL · 651“.</summary>
     public string ListHeaderText => LibraryText.Format(LibraryStrings.List_ColumnGame, VisibleCount).ToUpper(System.Globalization.CultureInfo.CurrentCulture);
 

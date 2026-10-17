@@ -12,8 +12,11 @@ Stand: 2026-10-16, Zweig `feature/showcase-views`. Grundlage: genehmigter Protot
   `settings.libraryView` (Liste: nichts gespeichert), die Vorschau der Liste in `settings.libraryThumbnail`.
   Strg+1/2/3 wechseln, nur die aktive Ansicht hat Daten und eine Auswahl-Bindung.
 - **Liste**: virtualisiert, Spalten Spiel/Quelle/Zuletzt gespielt/HDR/HDR automatisch, sortierbar über die Kopfzeile
-  (gleiche Speicherung wie das Feld „Sortierung“), Schalter „HDR automatisch“ je Zeile, schlanker Titelbereich
-  (180–240 px, beim Scrollen 120 px). Spalten fallen bei Platzmangel weg: erst Quelle, dann HDR, dann Zuletzt gespielt.
+  (gleiche Speicherung wie das Feld „Sortierung“), Schalter „HDR automatisch“ je Zeile. Titelbereich per Ziehgriff
+  `HeroSplitter` einstellbar (Wunsch des Nutzers 2026-10-16, E89): Standard ein Drittel der Fensterhöhe, 186 px bis
+  H − 416, mit Hinweisen über der Liste um deren Höhe weniger (fünf ganze Zeilen bleiben), gemerkt in
+  `settings.libraryHeroRatio`, beim Scrollen unverändert. Spalten fallen bei Platzmangel weg: erst Quelle, dann HDR,
+  dann Zuletzt gespielt.
 - **Raster**: eigenes `VirtualizingTilePanel`; Spaltenzahl und Kachelgröße aus `RasterLayout` (Kachel 150–220 px,
   gerade Pixel, 2:3, links bündig, rechts nur Rundungsrest). Bei 3440 × 1440 vierzehn bis siebzehn Spalten je nach
   Detailbereich, keine gestreckten Kacheln.
@@ -40,7 +43,8 @@ Stand: 2026-10-16, Zweig `feature/showcase-views`. Grundlage: genehmigter Protot
    1440 px Höhe ganz sichtbar bleibt und unten anliegt (kein leeres Band darunter).
 2. **Werkzeugleiste**: Stufen wie `fitToolbar`, aber die Filter-Chips falten zuletzt (Stufe 6, nach der Sortierung in
    Stufe 5), damit sie bei der Standardgröße direkt schaltbar bleiben (phase4-ui); Stufe 7 (zwei Zeilen) für Fenster um
-   1000 px, die der Prototyp nicht hatte.
+   1000 px, die der Prototyp nicht hatte. Seit 2026-10-16 ersetzt (Wunsch des Nutzers): keine Stufen mehr, alles bleibt
+   ausgeschrieben, die Leiste bricht in gefüllte, an beiden Rändern bündige Zeilen um (`ToolbarFlowPanel`, E89).
 3. **Detailbereich mit Trenner** wie bisher, aber höchstens 560 px breit (Prototyp 340–396 px). Gemerkt wird die
    Aufteilung erst, wenn der Trenner im neuen Design gezogen wird (`settings.libraryPaneRatio`); eine Aufteilung der
    bisherigen Oberfläche (`libraryDetailsRatio`, beim Nutzer gesetzt) gilt nicht mehr, sonst hätte das Raster bei

@@ -58,14 +58,16 @@ public sealed partial class AppServices
     }
 
     /// <summary>
-    /// Zustände der Bibliothek für Bildschirmfotos (E89, G10.5): die drei Ansichten, das Regal mit offener Schublade, der
-    /// HDR-Moment bei 35 % (ohne HDR-Schaltung), ein Spiel mit erzeugtem Titelbild, ein Spiel mit eigenem HDR, das
-    /// Kontextmenü eines Spiels und „Bild wählen…“. Ansicht und Auswahl werden nur im ViewModel gesetzt, ohne Schreiben in
-    /// die Konfiguration.
+    /// Zustände der Bibliothek für Bildschirmfotos (E89, G10.5): die drei Ansichten, die Liste weit nach unten gescrollt
+    /// (der Titelbereich behält seine Höhe), das Regal mit offener Schublade, der HDR-Moment bei 35 % (ohne HDR-Schaltung),
+    /// ein Spiel mit erzeugtem Titelbild, ein Spiel mit eigenem HDR, das Kontextmenü eines Spiels und „Bild wählen…“. Ansicht
+    /// und Auswahl werden nur im ViewModel gesetzt, ohne Schreiben in die Konfiguration; eine gemerkte Höhe des Titelbereichs
+    /// (settings.libraryHeroRatio der Ablage) gilt wie beim Öffnen.
     /// </summary>
     partial void AddLibrarySnapshotScenes(List<SnapshotScene> scenes)
     {
         scenes.Add(new SnapshotScene("hauptfenster", "liste", () => LibraryScene(LibraryViewMode.List)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-gescrollt", () => LibraryScene(LibraryViewMode.List), ScrollListAsync) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "raster", () => LibraryScene(LibraryViewMode.Grid)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal", () => LibraryScene(LibraryViewMode.Shelf)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal-details", () => LibraryScene(LibraryViewMode.Shelf), OpenDrawerAsync) { Settle = LibrarySettle });
@@ -114,6 +116,16 @@ public sealed partial class AppServices
         var window = (MainWindow)CreateMainWindow();
         window.ViewModel?.SetViewMode(view, persist: false);
         return window;
+    }
+
+    /// <summary>Liste um 14 Zeilen nach unten scrollen und die Vorschaubilder der neuen Zeilen laden lassen.</summary>
+    private static async Task ScrollListAsync(Window window)
+    {
+        if (window is MainWindow main)
+        {
+            main.ScrollListBy(14);
+            await Task.Delay(1500);
+        }
     }
 
     private static async Task OpenDrawerAsync(Window window)

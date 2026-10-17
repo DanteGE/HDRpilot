@@ -49,8 +49,19 @@ Seine Anmerkungen (2026-10-16, wörtlich):
    schmalen Fenstern zweizeilig werden, aber der Fokus muss auf einzeilig liegen.“
 
 Vorschläge einer Entwurfsrunde liegen in `docs/design/showcase-hero/werkzeugleiste-vorschlaege.md`: vier Konzepte
-(Bewegung, Bedienung, Platz, fließende Anpassung) und eine Bewertung mit Empfehlung. **Sie sind dem Nutzer noch nicht
-vorgelegt.**
+(Bewegung, Bedienung, Platz, fließende Anpassung) und eine Bewertung mit Empfehlung („Fließleiste mit Lichtnaht“).
+
+**Entscheidungen des Nutzers am 2026-10-17:**
+- **Vorgehen:** Erst eine interaktive Vorschau ansehen, dann entscheiden. Die Vorschau liegt neben dem Prototyp,
+  `docs/design/showcase-hero/prototyp/leiste.html`. Sie ist nur ein Entwurf, der App-Code bleibt unverändert.
+- **Ansicht-Umschaltung und „Spiel hinzufügen“:** nur als Symbol.
+- **Zahlen der Filter:** als Zähler-Plakette am Knopf, nicht nur im Tooltip. Die Plakette bleibt innerhalb der 40×40,
+  damit die Luft über der Leiste gleich bleibt.
+- **Strg+F bei eingeklappter Leiste:** klappt sie dauerhaft aus.
+
+Der Zweig `claude/modest-thompson-62a15c` (87699e4) stammt aus der Sitzung des Nutzers zum Wackeltest. Er lässt die
+Bindungsfehler-Prüfungen allein laufen (`ShellSerialCollection`, `BindingErrorRecorder`) und baut auf 5731db1 auf.
+Beim Zusammenführen mitnehmen.
 
 **Nächste Schritte, in dieser Reihenfolge:**
 1. **Vorschläge vorlegen,** am besten mit einer Vorschau. Die Wahl des Nutzers abholen.

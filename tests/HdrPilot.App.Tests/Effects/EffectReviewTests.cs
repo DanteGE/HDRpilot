@@ -25,7 +25,11 @@ namespace HdrPilot.App.Tests.Effects;
 /// Ebene dem HDR-Zustand und blendet dabei weich über (auch nach dem Spielwechsel, bei mehrfacher Meldung und wenn der
 /// Zustand im selben Bild kippt), Partikel takten mit höchstens 60 Bildern pro Sekunde über eine Zeitleiste, Dauer-Effekte
 /// laufen nur, wenn etwas sie zeigt, und die Stufe gilt auch für Einstellungen und Tray-Menü.
+/// Läuft allein: Die Prüfungen messen Übergänge über die Zeit und setzen <see cref="ShellMotion.Level"/>, und DoEvents pumpt
+/// den gemeinsamen Dispatcher verschachtelt; ein paralleler Test liefe sonst mitten in einer Messung (eine Überblendung war
+/// dann schon fertig, ein Moment schon vorbei).
 /// </summary>
+[Collection(ShellSerialCollection.Name)]
 public sealed class EffectReviewTests
 {
     private static readonly MotionContext Shown = new(WindowVisible: true, Minimized: false, Active: true, GameRunning: false, PauseInBackground: true, PauseWhilePlaying: true);

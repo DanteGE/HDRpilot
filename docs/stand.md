@@ -66,6 +66,33 @@ G10.5. Seit 2026-10-17 wird sie umgesetzt:
 - **Hineingeführt:** `feature/toolbar-wrap` mit `feature/hero-height` und der Wackeltest-Zweig.
 - **Danach:** Prüfung aus drei Blickwinkeln, Korrektur und Gegenprüfung.
 
+**Pausiert am 2026-10-17 auf Wunsch des Nutzers.** Stand auf `feature/library-toolbar`
+(d043930, Arbeitsordner sauber):
+- **Zusammenführung fertig:**
+  - 117e05b: toolbar-wrap mit hero-height.
+  - ae6a7ef: Wackeltest-Zweig.
+  - 04dd8fb: EffectReviewTests laufen allein.
+  - Ohne Textkonflikte; `_scrimEdge` und alle Überblend-Korrekturen sind erhalten.
+- **Umsetzung fertig:** ac5fe53, a6d35d4, 1cf6cec, d043930.
+  - Neue Dateien: ToolbarLayout, MotionChannels, ToolbarChoreography, ToolbarPanel, ToolbarToggle, ToolbarTip,
+    FilterToggle, FilterGlyph, `MainWindow.Toolbar.cs` und `LibraryViewModel.Toolbar.cs`, dazu Tests.
+  - ToolbarFlowPanel ist entfernt.
+  - Mutationsprüfung: 17 von 17 erkannt.
+  - Alle erlaubten Gates gaben Exit 0, `phase10-ui` misst am echten Bildschirm.
+  - **Ausnahme:** `test.ps1` scheitert gelegentlich an zeitabhängigen Tests, die mit der Leiste nichts zu tun haben.
+    Laut Zusammenführung tritt das auch auf 09824b7 auf. Klären, bevor 1.5.0 gebaut wird.
+- **Abweichungen laut Bericht:**
+  - Im Regal sinken Logo und Knöpfe eingeklappt um 32 statt 40 px.
+  - Eine Zeile kommt beim Ziehen bei 838 zurück, wie in der Vorschau.
+  - „Reduziert“ blendet zwischen Lasche und Kapsel über ein Bitmap über.
+  - Die Abstände betragen bei 110 % 9 Gerätepixel, also 8,15 DIP.
+  - Die Automatik-Karte ist jetzt eine UIA-Gruppe.
+  - Die Verweise in E89 und der README auf `leiste.html` und `werkzeugleiste-vorschlaege.md` stimmen erst nach dem
+    Zusammenführen mit phase5/release.
+- **Noch offen:** Die Prüfung aus drei Blickwinkeln (Funktion, Aussehen und Bewegung, Treue zur Vorschau) wurde beim
+  Anhalten abgebrochen. Neu starten, danach Korrektur und Gegenprüfung. Dann geht es weiter mit „Nächste Schritte“
+  ab Punkt 3, wobei `feature/library-toolbar` an die Stelle von `feature/showcase` tritt.
+
 Der Zweig `claude/modest-thompson-62a15c` (87699e4) stammt aus der Sitzung des Nutzers zum Wackeltest. Er lässt die
 Bindungsfehler-Prüfungen allein laufen (`ShellSerialCollection`, `BindingErrorRecorder`) und baut auf 5731db1 auf.
 Beim Zusammenführen mitnehmen.

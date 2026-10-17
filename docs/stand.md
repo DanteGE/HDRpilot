@@ -59,6 +59,13 @@ Vorschläge einer Entwurfsrunde liegen in `docs/design/showcase-hero/werkzeuglei
   damit die Luft über der Leiste gleich bleibt.
 - **Strg+F bei eingeklappter Leiste:** klappt sie dauerhaft aus.
 
+**Abgenommen am 2026-10-17:** „Ansonsten gefällt es mir gut und kann so umgesetzt werden“. Vorher kam eine Korrektur
+dazu: Die Lasche sitzt 8 px über der Leiste, so viel wie der Abstand der Knöpfe (8ddfdb2). Die Kriterien stehen in
+G10.5. Seit 2026-10-17 wird sie umgesetzt:
+- **Zweig und Ordner:** `feature/library-toolbar` in `.worktrees/s12-bar`, ausgehend von `feature/showcase` 09824b7.
+- **Hineingeführt:** `feature/toolbar-wrap` mit `feature/hero-height` und der Wackeltest-Zweig.
+- **Danach:** Prüfung aus drei Blickwinkeln, Korrektur und Gegenprüfung.
+
 Der Zweig `claude/modest-thompson-62a15c` (87699e4) stammt aus der Sitzung des Nutzers zum Wackeltest. Er lässt die
 Bindungsfehler-Prüfungen allein laufen (`ShellSerialCollection`, `BindingErrorRecorder`) und baut auf 5731db1 auf.
 Beim Zusammenführen mitnehmen.

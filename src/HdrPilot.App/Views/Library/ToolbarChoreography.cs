@@ -200,12 +200,15 @@ public sealed class ToolbarChoreography(MotionChannels channels)
     /// </summary>
     public void CapsuleChanged(ToolbarMotionLevel level, TabTarget target)
     {
-        var wasWidth = channels.Get(PillWidth, target.CapsuleWidth);
-        if (channels.IsRunning(PillWidth))
+        // Die Lasche wird gerade zur Kapsel (oder zurück): nur das Ziel der Breite nachführen, den Rest macht die Bewegung.
+        if (channels.IsRunning(PillWidth) || channels.IsRunning(PillHeight) || channels.IsRunning(PillTy) || channels.IsRunning(PillTurn))
         {
             channels.Retarget(PillWidth, target.CapsuleWidth);
+            return;
         }
-        else if (Math.Abs(wasWidth - target.CapsuleWidth) > 0.01 && level != ToolbarMotionLevel.Instant)
+
+        var wasWidth = channels.Get(PillWidth, target.CapsuleWidth);
+        if (Math.Abs(wasWidth - target.CapsuleWidth) > 0.01 && level != ToolbarMotionLevel.Instant && Math.Abs(channels.Get(PillHeight) - CapsuleHeight) < 0.01)
         {
             channels.Animate(PillWidth, target.CapsuleWidth, 160, ToolbarEase.CubicOut);
         }
@@ -214,22 +217,34 @@ public sealed class ToolbarChoreography(MotionChannels channels)
             channels.Set(PillWidth, target.CapsuleWidth);
         }
 
+        channels.Set(PillHeight, CapsuleHeight);
+        channels.Set(PillTy, 0);
+        channels.Set(PillTurn, 180);
+        channels.Set(Divider, 1);
+        channels.Set(Hint, 0);
         for (var i = 0; i < CapsuleSlots; i++)
         {
-            channels.Set(CapsuleItem(i, 'o'), 1);
-            channels.Set(CapsuleItem(i, 'x'), 0);
+            SetUnlessRunning(CapsuleItem(i, 'o'), 1);
+            SetUnlessRunning(CapsuleItem(i, 'x'), 0);
         }
 
-        channels.Set(Divider, 1);
-        channels.Set(Reset, target.HasReset ? 1 : 0);
+        SetUnlessRunning(Reset, target.HasReset ? 1 : 0);
         var rest = target.Filtered ? FilteredHalo : 0;
-        if (level == ToolbarMotionLevel.Instant)
+        if (!channels.IsRunning(RestHalo))
         {
-            channels.Set(RestHalo, rest);
+            if (level == ToolbarMotionLevel.Instant)
+            {
+                channels.Set(RestHalo, rest);
+            }
+            else
+            {
+                channels.Animate(RestHalo, rest, 200);
+            }
         }
-        else
+
+        if (channels.IsRunning(SeamScale) || channels.IsRunning(SeamOpacity))
         {
-            channels.Animate(RestHalo, rest, 200);
+            return;
         }
 
         var want = target.Filtered ? 1 : 0;
@@ -243,11 +258,11 @@ public sealed class ToolbarChoreography(MotionChannels channels)
                 }
                 else
                 {
-                    channels.Animate(SeamScale, 0, 200, ToolbarEase.CubicIn);
+                    channels.Animate(SeamScale, 0, 200, ToolbarEase.CubicOut);
                 }
 
                 break;
-            case ToolbarMotionLevel.Reduced:
+            case ToolbarMotionLevel.Reduced when Math.Abs(channels.Get(SeamOpacity) - want) > 0.001:
                 channels.Set(SeamScale, 1);
                 channels.Animate(SeamOpacity, want, 150, ToolbarEase.Linear);
                 break;
@@ -255,6 +270,14 @@ public sealed class ToolbarChoreography(MotionChannels channels)
                 channels.Set(SeamScale, want);
                 channels.Set(SeamOpacity, want);
                 break;
+        }
+    }
+
+    private void SetUnlessRunning(string key, double value)
+    {
+        if (!channels.IsRunning(key))
+        {
+            channels.Set(key, value);
         }
     }
 

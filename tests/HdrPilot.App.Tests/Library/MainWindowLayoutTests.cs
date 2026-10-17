@@ -117,7 +117,7 @@ public sealed class MainWindowLayoutTests
                 Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(ids[id])), "Name fehlt: " + id);
             }
 
-            var hdrChip = Assert.IsType<System.Windows.Controls.Primitives.ToggleButton>(ids["OnlyHdrCapableToggle"]);
+            var hdrChip = Assert.IsAssignableFrom<System.Windows.Controls.Primitives.ToggleButton>(ids["OnlyHdrCapableToggle"]);
             hdrChip.IsChecked = true;
             Assert.True(model.OnlyHdrCapable);
             hdrChip.IsChecked = false;
@@ -312,9 +312,9 @@ public sealed class MainWindowLayoutTests
 
             // Ende und Pos1: größte und kleinste Höhe; darüber hinaus geschieht nichts.
             Press(window, splitter, Key.End, size);
-            Assert.Equal(root - 416, window.HeroHeight);
+            Assert.Equal(root - 368, window.HeroHeight); // eine Zeile Werkzeugleiste
             Press(window, splitter, Key.PageDown, size);
-            Assert.Equal(root - 416, window.HeroHeight);
+            Assert.Equal(root - 368, window.HeroHeight); // eine Zeile Werkzeugleiste
             Press(window, splitter, Key.Home, size);
             Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
             Press(window, splitter, Key.Up, size);
@@ -326,97 +326,6 @@ public sealed class MainWindowLayoutTests
             Assert.Null(model.HeroRatio);
             window.Close();
             Assert.Null(context.Config.Settings.LibraryHeroRatio);
-        });
-    }
-
-    /// <summary>Elemente der Werkzeugleiste in ihrer Reihenfolge (AutomationId bzw. Name).</summary>
-    private static readonly string[] ToolbarItems =
-        ["SearchHost", "SourceFilter", "SortOrder", "OnlySelectedToggle", "OnlyNewToggle", "OnlyHdrCapableToggle", "ViewSegment", "RescanButton", "MarkAllSeenButton", "AddGameButton"];
-
-    [Theory]
-    [InlineData(1164, 727, null, 3)] // 1280×800 bei 110 %
-    [InlineData(1280, 800, null, 2)]
-    [InlineData(1366, 768, null, 2)]
-    [InlineData(1600, 1000, null, 2)]
-    [InlineData(1920, 1080, null, 2)]
-    [InlineData(3440, 1440, null, 1)]
-    [InlineData(1280, 800, LibraryLayout.MaxDetailsRatio, 3)] // Detailbereich am breitesten (gemerkt)
-    [InlineData(1000, 620, null, 4)] // kleinstes Fenster
-    [InlineData(1000, 700, LibraryLayout.MaxDetailsRatio, 5)] // kleinstes Fenster, schmalste Liste
-    public void Toolbar_wraps_into_flush_rows_and_keeps_every_item_with_its_text(double width, double height, double? ratio, int rows)
-    {
-        WpfTestHost.Run(() =>
-        {
-            var (window, _, _) = Open(SteamGame(), ratio);
-            var size = new Size(width, height);
-            WpfTestHost.Layout(window, size);
-            window.FitDetailsColumn();
-            WpfTestHost.Layout(window, size);
-            var toolbar = (ToolbarFlowPanel)window.FindName("ToolbarArea");
-            var ids = Ids(window);
-            var items = ToolbarItems.Select(id => ids.TryGetValue(id, out var e) ? e : (FrameworkElement)window.FindName(id)).ToList();
-
-            // Kein „Filter“-Menü mehr: alles steht ausgeschrieben in der Leiste, in der Reihenfolge der Oberfläche.
-            Assert.Null(window.FindName("FilterMenuButton"));
-            Assert.False(ids.ContainsKey("FilterMenuButton"));
-            Assert.Equal(items, toolbar.Children.Cast<FrameworkElement>());
-            Assert.Equal(rows, window.ToolbarRows);
-            Assert.Equal(rows, toolbar.Rows);
-
-            // Jedes Element sichtbar und vollständig: Suche mit „Strg+F“, Quelle und Sortierung in voller Breite, drei Chips,
-            // Ansichten mit Beschriftung, „Spiel hinzufügen“ mit Text.
-            foreach (var item in items)
-            {
-                Assert.Equal(Visibility.Visible, item.Visibility);
-                Assert.True(item.ActualWidth > 0 && item.ActualHeight == 40, $"{item.Name}: {item.ActualWidth}×{item.ActualHeight}");
-            }
-
-            foreach (var name in new[] { "SearchKey", "ViewListLabel", "ViewGridLabel", "ViewShelfLabel", "AddGameLabel" })
-            {
-                var label = (FrameworkElement)window.FindName(name);
-                Assert.True(Shown(label, toolbar), $"{name} bei {width}×{height} nicht zu sehen");
-            }
-
-            Assert.True(items[0].ActualWidth >= 236 && items[1].ActualWidth >= 188 && items[2].ActualWidth >= 196, "Suche, Quelle, Sortierung in voller Breite");
-            Assert.Equal(40, ((FrameworkElement)window.FindName("RescanButton")).ActualWidth); // feste Symbol-Schaltflächen
-            Assert.Equal(40, ((FrameworkElement)window.FindName("MarkAllSeenButton")).ActualWidth);
-
-            // Zeilen: Breite der Liste, links und rechts bündig (±0,5), 8 px zwischen den Elementen und zwischen den Zeilen;
-            // in einer Zeile links die Filter, rechts Ansicht und Aktionen.
-            var boxes = items.Select(i => i.TransformToAncestor(toolbar).TransformBounds(new Rect(i.RenderSize))).ToList();
-            var tops = boxes.Select(b => b.Top).Distinct().Order().ToList();
-            Assert.Equal(rows, tops.Count);
-            Assert.Equal(((FrameworkElement)window.FindName("ListCard")).ActualWidth, toolbar.ActualWidth, 0.5);
-            for (var r = 0; r < tops.Count; r++)
-            {
-                var row = boxes.Where(b => b.Top == tops[r]).OrderBy(b => b.Left).ToList();
-                Assert.Equal(0, row[0].Left, 0.5);
-                Assert.Equal(toolbar.ActualWidth, row[^1].Right, 0.5);
-                for (var k = 1; k < row.Count; k++)
-                {
-                    var gap = row[k].Left - row[k - 1].Right;
-                    Assert.True(rows == 1 && k == 6 ? gap >= 8 : Math.Abs(gap - 8) <= 0.5, $"Zeile {r}: Abstand {gap:0.0} vor Element {k}");
-                }
-
-                Assert.Equal(r * 48, tops[r], 0.5);
-            }
-
-            // Tab-Reihenfolge wie sichtbar: Zeile für Zeile von links nach rechts in der Reihenfolge des Codes, ohne eigene.
-            for (var i = 1; i < boxes.Count; i++)
-            {
-                Assert.True(boxes[i].Top > boxes[i - 1].Top || boxes[i].Left > boxes[i - 1].Left, $"Element {i} steht vor Element {i - 1}");
-            }
-
-            Assert.All(items, i => Assert.Equal(int.MaxValue, KeyboardNavigation.GetTabIndex(i)));
-
-            // Höhe der Leiste nach ihren Zeilen; darunter 10 px bis zur Liste, und dort beginnt auch der Trenner zum
-            // Detailbereich (nach der tatsächlichen Höhe der Leiste, nicht nach einer Zeile).
-            Assert.Equal((rows * 40) + ((rows - 1) * 8), toolbar.ActualHeight, 0.5);
-            var card = (FrameworkElement)window.FindName("ListCard");
-            var cardTop = card.TransformToAncestor(window).Transform(default).Y;
-            Assert.Equal(toolbar.TransformToAncestor(window).Transform(default).Y + toolbar.ActualHeight + ShowcaseLayout.ToolbarGap, cardTop, 0.5);
-            Assert.Equal(cardTop, ((FrameworkElement)window.FindName("LibrarySplitter")).TransformToAncestor(window).Transform(default).Y, 0.5);
-            window.Close();
         });
     }
 
@@ -464,42 +373,6 @@ public sealed class MainWindowLayoutTests
             Assert.False(escape.Handled);
             context.Dispatcher.RunDelayed();
             Assert.Null(context.Config.Settings.LibraryHeroRatio);
-            window.Close();
-        });
-    }
-
-    [Fact]
-    public void Toolbar_keeps_focus_and_order_while_it_wraps_and_the_one_row_look_when_wide()
-    {
-        WpfTestHost.Run(() =>
-        {
-            var (window, _, _) = Open(SteamGame());
-            var toolbar = (ToolbarFlowPanel)window.FindName("ToolbarArea");
-            var chip = (FrameworkElement)Ids(window)["OnlyHdrCapableToggle"];
-            var children = toolbar.Children.Cast<UIElement>().ToList();
-            FocusManager.SetFocusedElement(window, chip);
-
-            // Breiter, schmaler, wieder breit: dieselben Elemente, nie ausgeblendet, der Fokus bleibt auf dem Chip.
-            foreach (var (width, rows) in new[] { (3440.0, 1), (1280.0, 2), (1000.0, 4), (1600.0, 2), (3440.0, 1) })
-            {
-                var size = new Size(width, 900);
-                WpfTestHost.Layout(window, size);
-                window.FitDetailsColumn();
-                WpfTestHost.Layout(window, size);
-                Assert.Equal(rows, window.ToolbarRows);
-                Assert.Equal(children, toolbar.Children.Cast<UIElement>());
-                Assert.All(children, c => Assert.Equal(Visibility.Visible, c.Visibility));
-                Assert.Same(chip, FocusManager.GetFocusedElement(window));
-            }
-
-            // Eine Zeile bei 3440 px: Filter links wie bisher, die Suche nur bis 320 px, Ansicht und Aktionen rechtsbündig,
-            // der freie Platz dazwischen; nichts sonst wird gestreckt.
-            Assert.Equal(320, ((FrameworkElement)window.FindName("SearchHost")).ActualWidth, 0.5);
-            Assert.Equal(188, ((FrameworkElement)window.FindName("SourceFilter")).ActualWidth, 0.5);
-            Assert.Equal(196, ((FrameworkElement)window.FindName("SortOrder")).ActualWidth, 0.5);
-            var add = (FrameworkElement)window.FindName("AddGameButton");
-            Assert.Equal(toolbar.ActualWidth, add.TransformToAncestor(toolbar).Transform(new Point(add.ActualWidth, 0)).X, 0.5);
-            Assert.True(add.ActualWidth < 160, "Spiel hinzufügen in natürlicher Breite: " + add.ActualWidth);
             window.Close();
         });
     }

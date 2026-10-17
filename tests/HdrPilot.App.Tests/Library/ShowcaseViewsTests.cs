@@ -311,12 +311,12 @@ public sealed class ShowcaseViewsTests
     }
 
     [Theory]
-    [InlineData(1000, 620, 3)] // kleinstes Fenster: Werkzeugleiste neben der Karte
-    [InlineData(1178, 633, 3)] // Startgröße auf 1920×1080 bei 150 %: neben der Karte
-    [InlineData(1164, 727, 2)] // 1280×800 bei 110 % Skalierung
-    [InlineData(1280, 720, 2)]
-    [InlineData(1280, 800, 2)]
-    [InlineData(1366, 768, 2)]
+    [InlineData(1000, 620, 1)] // kleinstes Fenster: die Leiste ist im Regal immer einzeilig
+    [InlineData(1178, 633, 1)] // Startgröße auf 1920×1080 bei 150 %
+    [InlineData(1164, 727, 1)] // 1280×800 bei 110 % Skalierung
+    [InlineData(1280, 720, 1)]
+    [InlineData(1280, 800, 1)]
+    [InlineData(1366, 768, 1)]
     [InlineData(1600, 1000, 1)]
     [InlineData(1745, 982, 1)] // 1920×1080 bei 110 %
     [InlineData(1920, 1080, 1)]
@@ -355,8 +355,8 @@ public sealed class ShowcaseViewsTests
             var headerBottom = header.TransformToAncestor(window).Transform(new Point(0, header.ActualHeight)).Y;
             Assert.True(heroTop >= headerBottom, $"{width}×{height}: Titelinhalt beginnt bei {heroTop:0}, Kopf endet bei {headerBottom:0}");
 
-            // Die Werkzeugleiste liegt unter der Automatik-Karte oder (umgebrochen in niedrigen Fenstern) links daneben, nie
-            // darauf; die Knöpfe des Titelbereichs bleiben 24 px über ihr, auch wenn sie umgebrochen nach oben wächst.
+            // Die Werkzeugleiste (im Regal bei jeder Größe einzeilig) liegt unter der Automatik-Karte, nie darauf; die Knöpfe
+            // des Titelbereichs bleiben 24 px über ihr.
             var card = Named<FrameworkElement>(window, "AutomationCard");
             var cardBounds = card.TransformToAncestor(window).TransformBounds(new Rect(card.RenderSize));
             var toolbar = Named<FrameworkElement>(window, "ToolbarArea");
@@ -425,10 +425,10 @@ public sealed class ShowcaseViewsTests
     }
 
     [Theory]
-    [InlineData(1164, 727, 3)] // 1280×800 bei 110 % (Werkzeugleiste dreizeilig)
-    [InlineData(1280, 800, 2)]
-    [InlineData(1745, 982, 2)] // 1920×1080 bei 110 %
-    [InlineData(1920, 1080, 2)]
+    [InlineData(1164, 727, 2)] // 1280×800 bei 110 % (Werkzeugleiste zweizeilig)
+    [InlineData(1280, 800, 1)] // Sortierung nur als Symbol
+    [InlineData(1745, 982, 1)] // 1920×1080 bei 110 %
+    [InlineData(1920, 1080, 1)]
     [InlineData(3127, 1309, 1)] // 3440×1440 bei 110 %
     [InlineData(3440, 1440, 1)]
     public void List_hero_is_a_third_high_by_default_with_its_handle_between_hero_and_toolbar(double width, double height, int rows)
@@ -546,7 +546,7 @@ public sealed class ShowcaseViewsTests
             // Über den Rand hinaus: Der Griff bleibt am größten Wert stehen.
             splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
             splitter.RaiseEvent(new DragDeltaEventArgs(0, 5000));
-            Assert.Equal(rootHeight - 416, window.HeroHeight);
+            Assert.Equal(rootHeight - 368, window.HeroHeight);
             splitter.RaiseEvent(new DragDeltaEventArgs(0, -9000));
             Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
             splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
@@ -613,13 +613,13 @@ public sealed class ShowcaseViewsTests
             Arrange(window, large);
             Assert.Equal(600, window.HeroHeight);
 
-            // Kleineres Fenster: begrenzt (fünf Zeilen unter der hier dreizeiligen Werkzeugleiste gehen vor), der gemerkte
+            // Kleineres Fenster: begrenzt (fünf Zeilen unter der hier zweizeiligen Werkzeugleiste gehen vor), der gemerkte
             // Anteil bleibt; groß wieder 600 px.
             Arrange(window, new Size(1164, 727));
             var smallRoot = Named<FrameworkElement>(window, "Root").ActualHeight;
-            Assert.Equal(3, window.ToolbarRows);
-            Assert.Equal(smallRoot - 464, window.HeroHeight);
-            Assert.Equal(smallRoot - 464, HeroRange(Named<HeroSplitter>(window, "HeroSplitter")).Maximum);
+            Assert.Equal(2, window.ToolbarRows);
+            Assert.Equal(smallRoot - 416, window.HeroHeight);
+            Assert.Equal(smallRoot - 416, HeroRange(Named<HeroSplitter>(window, "HeroSplitter")).Maximum);
             Arrange(window, large);
             Assert.Equal(600, window.HeroHeight);
             Assert.Equal(stored, model.HeroRatio);
@@ -735,15 +735,15 @@ public sealed class ShowcaseViewsTests
             var (window, model, _) = Open(context, size: small);
             var splitter = Named<HeroSplitter>(window, "HeroSplitter");
             var smallRoot = Named<FrameworkElement>(window, "Root").ActualHeight;
-            Assert.Equal(3, window.ToolbarRows);
-            Assert.Equal(smallRoot - 464, window.HeroHeight); // fünf Zeilen unter der dreizeiligen Werkzeugleiste
+            Assert.Equal(2, window.ToolbarRows);
+            Assert.Equal(smallRoot - 416, window.HeroHeight); // fünf Zeilen unter der zweizeiligen Werkzeugleiste
 
             splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
             splitter.RaiseEvent(new DragDeltaEventArgs(0, -40));
             splitter.RaiseEvent(new DragDeltaEventArgs(0, 40));
             splitter.RaiseEvent(new DragCompletedEventArgs(0, 0, false));
             Arrange(window, small);
-            Assert.Equal(smallRoot - 464, window.HeroHeight);
+            Assert.Equal(smallRoot - 416, window.HeroHeight);
             Assert.Equal(0.6, model.HeroRatio);
 
             Arrange(window, large);
@@ -803,7 +803,7 @@ public sealed class ShowcaseViewsTests
             var (window, model, _) = Open(new TestLibraryContext(ManyGames(80)), size: size);
             var splitter = Named<HeroSplitter>(window, "HeroSplitter");
             var root = Named<FrameworkElement>(window, "Root").ActualHeight;
-            HeroRange(splitter).SetValue(root - 416);
+            HeroRange(splitter).SetValue(root - 368);
             Arrange(window, size);
             var chosen = model.HeroRatio;
             Assert.True(WholeRows(window) >= ShowcaseLayout.MinListRows);
@@ -813,12 +813,12 @@ public sealed class ShowcaseViewsTests
                 var notice = new Border { Height = notices - 10, Margin = new Thickness(0, 10, 0, 0) };
                 Named<StackPanel>(window, "NoticeArea").Children.Add(notice);
                 Arrange(window, size);
-                Assert.Equal(root - 416 - notices, window.HeroHeight);
-                Assert.Equal(root - 416 - notices, HeroRange(splitter).Maximum);
+                Assert.Equal(root - 368 - notices, window.HeroHeight);
+                Assert.Equal(root - 368 - notices, HeroRange(splitter).Maximum);
                 Assert.True(WholeRows(window) >= ShowcaseLayout.MinListRows, $"mit {notices} px Hinweisen: {WholeRows(window)} ganze Zeilen");
                 Named<StackPanel>(window, "NoticeArea").Children.Remove(notice);
                 Arrange(window, size);
-                Assert.Equal(root - 416, window.HeroHeight); // gewählte Höhe wieder, ohne dass sie neu gemerkt wurde
+                Assert.Equal(root - 368, window.HeroHeight); // gewählte Höhe wieder, ohne dass sie neu gemerkt wurde
                 Assert.Equal(chosen, model.HeroRatio);
             }
 
@@ -859,10 +859,10 @@ public sealed class ShowcaseViewsTests
     }
 
     [Theory]
-    [InlineData(1000, 620, 4)] // kleinstes Fenster
-    [InlineData(1178, 620, 3)] // Startgröße auf 1920×1080 bei 150 % und auf 1280×720
-    [InlineData(1164, 727, 3)] // 1280×800 bei 110 %
-    [InlineData(1745, 982, 2)] // 1920×1080 bei 110 %
+    [InlineData(1000, 620, 2)] // kleinstes Fenster
+    [InlineData(1178, 620, 2)] // Startgröße auf 1920×1080 bei 150 % und auf 1280×720
+    [InlineData(1164, 727, 2)] // 1280×800 bei 110 %
+    [InlineData(1745, 982, 1)] // 1920×1080 bei 110 %
     public void Grid_shows_its_first_tile_row_whole_with_as_much_air_above_the_toolbar_as_below(double width, double height, int rows)
     {
         WpfTestHost.Run(() =>
@@ -881,8 +881,7 @@ public sealed class ShowcaseViewsTests
             var heroStage = Named<FrameworkElement>(window, "Hero");
             var tile = (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(0);
             var gridBottom = Bottom(window, grid);
-            // Mit drei oder vier Zeilen der ganz ausgeschriebenen Werkzeugleiste passt die Reihe unter 680 px Höhe nicht mehr
-            // ganz: Dann ist der Titelbereich am kleinsten, das Raster scrollt.
+            // Passt die Reihe in sehr niedrigen Fenstern nicht mehr ganz, ist der Titelbereich am kleinsten, das Raster scrollt.
             Assert.True(window.HeroHeight == ShowcaseLayout.MinListHero || Bottom(window, tile) <= gridBottom + 0.5, $"{width}×{height}: Kachel endet bei {Bottom(window, tile):0}, Raster bei {gridBottom:0}");
             Assert.True(Top(window, tile) >= Top(window, grid) - 0.5);
             var above = Top(window, toolbar) - Bottom(window, heroStage);
@@ -905,7 +904,7 @@ public sealed class ShowcaseViewsTests
             var size = new Size(1178, 620);
             var (window, model, _) = Open(new TestLibraryContext(ManyGames(80)), size: size);
             Arrange(window, size);
-            Assert.Equal(3, window.ToolbarRows); // schon in der Liste dreizeilig
+            Assert.Equal(2, window.ToolbarRows); // schon in der Liste zweizeilig
 
             model.ViewMode = LibraryViewMode.Grid;
             Arrange(window, size);

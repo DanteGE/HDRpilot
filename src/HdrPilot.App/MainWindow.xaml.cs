@@ -20,7 +20,7 @@ namespace HdrPilot.App;
 
 /// <summary>
 /// Hauptfenster „Spielebibliothek“ im Stil „Showcase Hero“ (E89). Die Ansicht ordnet an (Titelbereich je Ansicht, in der Liste
-/// per Ziehgriff in der Höhe einstellbar; Werkzeugleiste, die in gefüllte Zeilen umbricht, Liste/Raster/Regal, Detailbereich
+/// per Ziehgriff in der Höhe einstellbar; Werkzeugleiste „Fließleiste mit Lichtnaht“ (MainWindow.Toolbar.cs), Liste/Raster/Regal, Detailbereich
 /// bzw. Schublade, Statuszeile), überträgt Umgebungsfarben und Titelbild auf <see cref="AmbientBackdrop"/> und
 /// <see cref="HeroStage"/> und führt die Effekte über einen
 /// <see cref="MotionController"/>: Dauer-Effekte nur bei Stufe „Voll“, sichtbarem, aktivem Fenster und ohne laufendes Spiel,
@@ -100,6 +100,7 @@ public partial class MainWindow : ChromeWindow
             RelativeTransform = _sheenShift,
         };
         InitializeComponent();
+        InitializeToolbar();
         FitToWorkArea();
         ApplyDetailsRatio(LibraryLayout.DefaultDetailsRatio);
         Loaded += OnLoaded;
@@ -118,8 +119,9 @@ public partial class MainWindow : ChromeWindow
             }
         };
 
-        // Werkzeugleiste in einer anderen Zahl von Zeilen (Fensterbreite, Trenner, Wechsel der Ansicht): Titelbereich, Griff,
-        // Trenner und im Regal ihre eigene Lage nach ihrer neuen Höhe. Nur bei einer Änderung, nie im Leerlauf.
+        // Werkzeugleiste in einer anderen Zahl von Zeilen (Fensterbreite, Trenner, Wechsel der Ansicht) oder ein- bzw.
+        // ausgeklappt: Titelbereich, Griff, Trenner und im Regal ihre eigene Lage nach ihrer neuen Höhe. Nur bei einer
+        // Änderung, nie im Leerlauf.
         ToolbarArea.SizeChanged += (_, e) =>
         {
             if (e.HeightChanged)
@@ -162,9 +164,6 @@ public partial class MainWindow : ChromeWindow
 
     /// <summary>Maske des Glanzes über dem Namen: ein schmales Band, das „TitleSheen“ verschiebt (aus demselben Grund im Code).</summary>
     public Brush SheenMask { get; }
-
-    /// <summary>Zeilen der Werkzeugleiste, wie zuletzt angeordnet (Tests, Prüfung).</summary>
-    public int ToolbarRows => ToolbarArea.Rows;
 
     /// <summary>Titelbereich (für Tests und Bildschirmfotos).</summary>
     public HeroStage HeroStage => Hero;
@@ -218,7 +217,9 @@ public partial class MainWindow : ChromeWindow
         _heroRatio = viewModel.HeroRatio;
         viewModel.SelectInitial();
         ReadTheme();
+        _shownCollapsed = viewModel.IsToolbarCollapsed;
         ApplyView(viewModel.ViewMode, animate: false);
+        AttachToolbar(viewModel);
         UpdateHero(instant: true);
         ApplyHdrState(instant: true);
     }
@@ -324,9 +325,11 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Tastenkürzel der Bibliothek: Strg+F Suche, Strg+1/2/3 Liste/Raster/Regal, Esc leert die Suche bzw. schließt die
-    /// Schublade, auf einer Zeile oder Kachel Enter starten, Leertaste „HDR automatisch“, I Details (Regal), Pfeile im Raster
-    /// und Regal. Modifikatoren und Fokus kommen als Werte (Tests: ohne angezeigtes Fenster gibt es keinen Tastaturfokus).
+    /// Tastenkürzel der Bibliothek: Strg+F Suche (klappt eine eingeklappte Werkzeugleiste dauerhaft aus), Strg+Umschalt+F und
+    /// Strg+F1 Werkzeugleiste aus- bzw. einblenden, Alt+A/N/H die Filter (auch bei eingeklappter Leiste), Strg+1/2/3
+    /// Liste/Raster/Regal, Esc leert die Suche bzw. schließt die Schublade, auf einer Zeile oder Kachel Enter starten,
+    /// Leertaste „HDR automatisch“, I Details (Regal), Pfeile im Raster und Regal. Modifikatoren und Fokus kommen als Werte
+    /// (Tests: ohne angezeigtes Fenster gibt es keinen Tastaturfokus).
     /// </summary>
     /// <returns>true, wenn die Taste erledigt ist.</returns>
     public bool HandleKey(Key key, ModifierKeys modifiers, IInputElement? focused)
@@ -338,10 +341,29 @@ public partial class MainWindow : ChromeWindow
 
         var ctrl = modifiers == ModifierKeys.Control;
         var inSearch = ReferenceEquals(focused, SearchBox);
+        if ((key == Key.F && modifiers == (ModifierKeys.Control | ModifierKeys.Shift)) || (key == Key.F1 && ctrl))
+        {
+            vm.IsToolbarCollapsed = !vm.IsToolbarCollapsed;
+            return true;
+        }
+
         if (key == Key.F && ctrl)
         {
+            // Eingeklappt: dauerhaft ausklappen (gemerkt), die Elemente entfalten sich von der Suche aus.
+            if (vm.IsToolbarCollapsed)
+            {
+                _expandFromSearch = true;
+                vm.IsToolbarCollapsed = false;
+            }
+
             SearchBox.Focus();
             SearchBox.SelectAll();
+            return true;
+        }
+
+        if (modifiers == ModifierKeys.Alt && key is Key.A or Key.N or Key.H)
+        {
+            vm.ToggleFilter(key switch { Key.A => ToolbarFilter.HdrAuto, Key.N => ToolbarFilter.New, _ => ToolbarFilter.HdrCapable });
             return true;
         }
 
@@ -545,8 +567,12 @@ public partial class MainWindow : ChromeWindow
             ApplyDetailsRatio(_appliedDetailsRatio);
         }
 
+        ApplyToolbarChrome();
         ApplyLayout(animate);
         ApplyDrawer(instant: true);
+        MoveViewSelection(view, animate && changed);
+        _toolbarMotion.Set(ToolbarChoreography.LargeDy, LargeSink(_shownCollapsed));
+        _toolbarMotion.Apply();
         if (changed)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
@@ -651,19 +677,7 @@ public partial class MainWindow : ChromeWindow
     /// </summary>
     private double HeroTarget(LibraryViewMode view, double height) =>
         ShowcaseLayout.HeroHeight(
-            view, height, _heroRatio, NoticeArea.ActualHeight, view == LibraryViewMode.Grid ? GridRow() : 0, ToolbarHeight(), ToolbarBesideCard(view));
-
-    /// <summary>
-    /// Regal: Die Werkzeugleiste endet links neben der Automatik-Karte, wenn sie umgebrochen in voller Breite nicht mehr
-    /// unter die Karte passt (<see cref="ShowcaseLayout.ShelfToolbarBesideCard"/>; die Kacheln bleiben ganz).
-    /// </summary>
-    private bool ToolbarBesideCard(LibraryViewMode view)
-    {
-        var width = Root.ActualWidth > 0 ? Root.ActualWidth : Width;
-        var height = Root.ActualHeight > 0 ? Root.ActualHeight : Height;
-        return view == LibraryViewMode.Shelf
-            && ShowcaseLayout.ShelfToolbarBesideCard(height, ToolbarArea.HeightFor(width - (2 * ShowcaseLayout.Pad)));
-    }
+            view, height, _heroRatio, NoticeArea.ActualHeight, view == LibraryViewMode.Grid ? GridRow() : 0, ToolbarHeight());
 
     private static void Activate(ListBox list, bool active, LibraryViewModel vm)
     {
@@ -708,11 +722,8 @@ public partial class MainWindow : ChromeWindow
             ? new Thickness(0, ShowcaseLayout.HeaderTop, 0, ShowcaseLayout.PaneBottom)
             : new Thickness(ShowcaseLayout.Pad, ShowcaseLayout.PaneTop, ShowcaseLayout.Pad, ShowcaseLayout.PaneBottom);
 
-        // Regal: Werkzeugleiste über die ganze Breite; in niedrigen Fenstern, wo sie umgebrochen nicht unter die
-        // Automatik-Karte passt, endet sie links neben ihr (die Kacheln bleiben ganz).
-        ToolbarArea.Margin = shelf
-            ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad + (ToolbarBesideCard(view) ? ShowcaseLayout.ShelfCardBeside : 0), 0)
-            : default;
+        // Regal: Werkzeugleiste über die ganze Breite (einzeilig bei jeder erlaubten Fenstergröße, ToolbarLayout).
+        ToolbarArea.Margin = shelf ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad, 0) : default;
         NoticeArea.Margin = shelf ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad, 0) : default;
         if (shelf)
         {
@@ -755,8 +766,14 @@ public partial class MainWindow : ChromeWindow
         QueueCompactHero();
     }
 
-    /// <summary>Höhe der Werkzeugleiste, wie angeordnet (eine oder mehr Zeilen); vor dem ersten Anordnen eine Zeile.</summary>
-    private double ToolbarHeight() => Math.Max(ToolbarArea.ActualHeight, ShowcaseLayout.ToolbarHeight);
+    /// <summary>
+    /// Höhe der ausgeklappten Werkzeugleiste (eine oder zwei Zeilen), auch während sie eingeklappt ist: Titelbereich (Bereich
+    /// des Griffs, Raster) rechnet immer damit, damit nichts springt, wenn sie ein- oder ausklappt.
+    /// </summary>
+    private double ToolbarHeight() =>
+        ToolbarArea.Visibility == Visibility.Visible && ToolbarArea.Arrangement is { } arrangement
+            ? arrangement.Height
+            : ToolbarArea.ArrangeFor(ToolbarWidth()).Height;
 
     /// <summary>Senkrechte Anordnung nach der (animierten) Höhe des Titelbereichs und der Höhe der Werkzeugleiste.</summary>
     private void ApplyVerticalLayout()
@@ -773,8 +790,26 @@ public partial class MainWindow : ChromeWindow
         var toolbar = ToolbarHeight();
         var toolbarTop = ShowcaseLayout.ToolbarTop(view, hero, toolbar);
         var columnsTop = shelf ? ShowcaseLayout.HeaderTop : ShowcaseLayout.PaneTop;
-        ListArea.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop), 0, 0);
-        LibrarySplitter.Margin = new Thickness(0, Math.Max(0, toolbarTop - columnsTop + toolbar + ShowcaseLayout.ToolbarGap), 0, 0);
+
+        // Eingeklappt (Liste, Raster): Die Leiste meldet keine Höhe, der Inhalt beginnt 22 unter der Bildkante (10 unter der
+        // Kapsel); die Leiste selbst bleibt, wo sie ausgeklappt steht, solange sie noch ausblendet.
+        var collapsed = _shownCollapsed && !shelf;
+        var listTop = collapsed ? ShowcaseLayout.BodyTop(view, hero, toolbar, collapsed: true) - ShowcaseLayout.ToolbarGap : toolbarTop;
+        ListArea.Margin = new Thickness(0, Math.Max(0, listTop - columnsTop), 0, 0);
+
+        // Regal: Die Zeile der Leiste bleibt auch eingeklappt (die Kapsel steht darin), die Kachelreihe rückt nicht.
+        var row = shelf && _shownCollapsed ? new GridLength(toolbar) : GridLength.Auto;
+        if (ListArea.RowDefinitions[0].Height != row)
+        {
+            ListArea.RowDefinitions[0].Height = row;
+        }
+
+        if (ToolbarArea.RenderTransform is TranslateTransform panelShift)
+        {
+            panelShift.Y = toolbarTop - listTop;
+        }
+
+        LibrarySplitter.Margin = new Thickness(0, Math.Max(0, ShowcaseLayout.BodyTop(view, hero, toolbar, collapsed) - columnsTop), 0, 0);
         HeroSplitter.Margin = new Thickness(0, Math.Max(0, hero - ShowcaseLayout.HeroSplitterOverlap - columnsTop), 0, 0);
 
         // Text im Titelbereich: Liste/Raster links vom Detailbereich, Regal links von der Automatik-Karte.
@@ -795,6 +830,7 @@ public partial class MainWindow : ChromeWindow
         LargeMeta.Visibility = meta ? Visibility.Visible : Visibility.Collapsed;
         room += meta ? 0 : 46;
         LargeTitle.MaxHeight = room >= ShowcaseLayout.LargeTitleHeight ? double.PositiveInfinity : Math.Max(48, Math.Floor(room));
+        PlaceToolbarOverlay(view, hero, toolbar, columnsTop);
     }
 
     private void ApplyListColumns()
@@ -1212,6 +1248,18 @@ public partial class MainWindow : ChromeWindow
             case nameof(LibraryViewModel.Nits):
                 ApplyLayout(animate: false);
                 break;
+            case nameof(LibraryViewModel.IsToolbarCollapsed):
+                ApplyToolbarState();
+                break;
+            case nameof(LibraryViewModel.ToolbarSummary):
+                UpdateCapsule(ToolbarLevel());
+                break;
+            case nameof(LibraryViewModel.HasSearchText):
+                UpdateSearchPadding();
+                break;
+            case nameof(LibraryViewModel.SortTipCompactText) when ToolbarArea.Arrangement is { SortIconOnly: true }:
+                SortTip.Text = vm.SortTipCompactText;
+                break;
         }
     }
 
@@ -1331,6 +1379,24 @@ public partial class MainWindow : ChromeWindow
             Resources["Lib.Brush.CardSecondary"] = Frozen(new SolidColorBrush(Color.FromRgb(0x4C, 0x52, 0x68)));
             Resources["Lib.Brush.CardMuted"] = Frozen(new SolidColorBrush(Color.FromRgb(0x66, 0x6C, 0x80)));
         }
+
+        // Lasche/Kapsel und Zähler der Filter: hell weißes Glas mit dunkler Linie, Zähler weiß mit feiner Kontur (Vorschau).
+        if (_dark)
+        {
+            Resources.Remove("Lib.Brush.TabGlass");
+            Resources.Remove("Lib.Brush.TabLine");
+            Resources.Remove("Lib.Brush.CountBadge");
+            Resources.Remove("Lib.Brush.CountBadgeLine");
+        }
+        else
+        {
+            Resources["Lib.Brush.TabGlass"] = Frozen(new SolidColorBrush(Color.FromArgb(0xEB, 0xFF, 0xFF, 0xFF)));
+            Resources["Lib.Brush.TabLine"] = Frozen(new SolidColorBrush(Color.FromArgb(0x29, 0x11, 0x13, 0x20)));
+            Resources["Lib.Brush.CountBadge"] = Frozen(new SolidColorBrush(Colors.White));
+            Resources["Lib.Brush.CountBadgeLine"] = Frozen(new SolidColorBrush(Color.FromArgb(0x33, 0x11, 0x13, 0x20)));
+        }
+
+        ApplyToolbarBrushes();
 
         // Fensterkante: Puls in den Spielfarben (HDR-Moment), feine Linie in der Leuchtfarbe bei HDR an.
         EdgeGlow.BorderBrush = Frozen(new LinearGradientBrush(
@@ -1498,10 +1564,25 @@ public partial class MainWindow : ChromeWindow
         {
             ResetPointer();
         }
+
+        if (ToolbarLevel() == ToolbarMotionLevel.Instant && _toolbarMotion.Running > 0)
+        {
+            _toolbarMotion.Finish(); // Stufe „Aus“, Spiel läuft: die Leiste steht sofort im Endzustand
+        }
     }
 
-    /// <summary>Sichtbar, minimiert oder aktiv geändert: nur ein aktives Fenster rechnet die helle Fassung (ViewModel).</summary>
-    private void OnMotionWindowChanged(object? sender, EventArgs e) => _viewModel?.SetWindowActive(_motion?.WindowActive == true);
+    /// <summary>
+    /// Sichtbar, minimiert oder aktiv geändert: nur ein aktives Fenster rechnet die helle Fassung (ViewModel). Minimiert
+    /// mitten in einer Bewegung der Werkzeugleiste springt diese an ihr Ende (danach kein Bildtakt mehr).
+    /// </summary>
+    private void OnMotionWindowChanged(object? sender, EventArgs e)
+    {
+        _viewModel?.SetWindowActive(_motion?.WindowActive == true);
+        if (_motion is { OneShotAllowed: false } && _toolbarMotion.Running > 0)
+        {
+            _toolbarMotion.Finish();
+        }
+    }
 
     /// <summary>
     /// HDR ging bei offenem Fenster an. Die helle Fassung liegt meist schon vorab bereit; lädt sie noch, wartet der Moment
@@ -1687,6 +1768,7 @@ public partial class MainWindow : ChromeWindow
     private void OnClosed(object? sender, EventArgs e)
     {
         ThemeManager.ThemeChanged -= OnThemeChanged;
+        DetachToolbar();
         _moment?.Dispose();
         _motion?.Dispose();
         _moment = null;

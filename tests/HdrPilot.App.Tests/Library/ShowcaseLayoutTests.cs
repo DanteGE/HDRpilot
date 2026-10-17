@@ -306,7 +306,6 @@ public sealed class ShowcaseLayoutTests
     {
         // Zwei Zeilen in voller Breite: Die Leiste wächst nach oben, bleibt aber unter der Automatik-Karte (oberste Zeile ab
         // 390 px wie die einzeilige); die Kachelreihe bleibt, wo sie mit einer Zeile wäre, solange das geht.
-        Assert.False(ShowcaseLayout.ShelfToolbarBesideCard(height, 88));
         var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, toolbarHeight: 88);
         var row = height - hero - ShowcaseLayout.BodyBottom;
         var tile = ShowcaseLayout.Shelf(1600, row).TileHeight;
@@ -315,23 +314,6 @@ public sealed class ShowcaseLayoutTests
         Assert.True(tile + ShowcaseLayout.ShelfPadding <= row, $"H {height}: Titelbereich {hero}, Reihe {row}, Kachel {tile}");
         Assert.True(tile >= ShowcaseLayout.TinyShelfTile, $"H {height}: Kachel {tile}");
         Assert.True(hero == ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height) || hero == ShowcaseLayout.MinShelfHero + 48, $"H {height}: Titelbereich {hero}");
-    }
-
-    [Theory]
-    [InlineData(618)] // kleinstes Fenster
-    [InlineData(631)] // Startgröße auf 1920×1080 bei 150 %
-    [InlineData(659)]
-    public void Shelf_too_low_for_a_wrapped_toolbar_under_the_card_puts_it_beside_the_card(double height)
-    {
-        // Unter dem Kärtchen wäre für zwei Zeilen und ganze Kacheln (100 px) kein Platz mehr: Die Leiste endet links neben
-        // der Karte, der Titelbereich bekommt alles bis auf eine Reihe von 100-px-Kacheln.
-        Assert.True(ShowcaseLayout.ShelfToolbarBesideCard(height, 88));
-        Assert.False(ShowcaseLayout.ShelfToolbarBesideCard(height, 40)); // eine Zeile passt immer darunter
-        Assert.False(ShowcaseLayout.ShelfToolbarBesideCard(660, 88));
-        var hero = ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, toolbarHeight: 136, besideCard: true);
-        Assert.Equal(height - ShowcaseLayout.BodyBottom - ShowcaseLayout.ShelfPadding - ShowcaseLayout.TinyShelfTile, hero);
-        Assert.Equal(ShowcaseLayout.TinyShelfTile, ShowcaseLayout.Shelf(1000, height - hero - ShowcaseLayout.BodyBottom).TileHeight);
-        Assert.True(hero >= ShowcaseLayout.MinShelfHero);
     }
 
     [Fact]

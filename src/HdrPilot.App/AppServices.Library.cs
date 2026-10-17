@@ -81,6 +81,77 @@ public sealed partial class AppServices
             Overlays = window => window is MainWindow main && main.CreateContextMenuPreview() is { } menu ? [menu] : [],
         });
         scenes.Add(new SnapshotScene("hauptfenster", "bildwahl", CreatePickerScene) { Settle = TimeSpan.FromSeconds(2), Resizable = false });
+
+        // Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17): Filter an, eingeklappt (Kapsel), eingeklappt
+        // und gefiltert (Lichtnaht), in allen Ansichten; Tooltip eines Filters, Lasche beim Überfahren, Menü der Leiste. Zwei
+        // Zeilen zeigen die schmalen Größen (etwa 1000x620, 1280x800 bei 110 %).
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-gefiltert", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: false, filtered: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-eingeklappt", () => LibraryScene(LibraryViewMode.Grid), w => ToolbarStateAsync(w, collapsed: true, filtered: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-eingeklappt-gefiltert", () => LibraryScene(LibraryViewMode.Grid), w => ToolbarStateAsync(w, collapsed: true, filtered: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-eingeklappt", () => LibraryScene(LibraryViewMode.Shelf), w => ToolbarStateAsync(w, collapsed: true, filtered: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-eingeklappt-gefiltert", () => LibraryScene(LibraryViewMode.Shelf), w => ToolbarStateAsync(w, collapsed: true, filtered: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-tooltip", () => LibraryScene(LibraryViewMode.List))
+        {
+            Settle = LibrarySettle,
+            Overlays = window => window is MainWindow main && main.CreateToolTipPreview("OnlyHdrCapableToggle") is { } tip ? [tip] : [],
+        });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-lasche", () => LibraryScene(LibraryViewMode.List), HoverTabAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-einklappen-t120", () => LibraryScene(LibraryViewMode.List), w => FreezeToolbarAsync(w, collapse: true, 120)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-einklappen-t600", () => LibraryScene(LibraryViewMode.List), w => FreezeToolbarAsync(w, collapse: true, 600)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-ausklappen-t140", () => LibraryScene(LibraryViewMode.List), w => FreezeToolbarAsync(w, collapse: false, 140)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-menue-leiste", () => LibraryScene(LibraryViewMode.List))
+        {
+            Settle = LibrarySettle,
+            Overlays = window => window is MainWindow main && main.CreateToolbarMenuPreview() is { } menu ? [menu] : [],
+        });
+    }
+
+    /// <summary>
+    /// Werkzeugleiste für ein Bildschirmfoto: gefiltert wie in der Vorschau (Suche „gears“, „Neu“, „HDR-fähig“) und ein- bzw.
+    /// ausgeklappt, nur im ViewModel (nichts wird gespeichert); danach laufen die Übergänge zu Ende.
+    /// </summary>
+    private static async Task ToolbarStateAsync(Window window, bool collapsed, bool filtered)
+    {
+        if (window is not MainWindow { ViewModel: { } vm })
+        {
+            return;
+        }
+
+        if (filtered)
+        {
+            // „HDR-fähig“ nur, wenn die Ablage HDR-Angaben hat (sonst bliebe die Liste leer).
+            vm.SearchText = collapsed ? "gears" : string.Empty;
+            vm.ApplySearch();
+            vm.OnlyNew = true;
+            vm.OnlyHdrCapable = vm.HdrCapableCount > 0;
+        }
+
+        vm.SetToolbarCollapsed(collapsed, persist: false);
+        await Task.Delay(1400);
+    }
+
+    /// <summary>Ein- bzw. Ausklappen der Werkzeugleiste, angehalten nach einigen Millisekunden (wie #t= der Vorschau).</summary>
+    private static async Task FreezeToolbarAsync(Window window, bool collapse, double milliseconds)
+    {
+        if (window is MainWindow main)
+        {
+            main.FreezeToolbarMotion(collapse, milliseconds);
+        }
+
+        await Task.Delay(400);
+    }
+
+    /// <summary>Lasche, wie sie beim Überfahren nach links zu „Leiste ausblenden · Strg+Umschalt+F“ gewachsen ist.</summary>
+    private static async Task HoverTabAsync(Window window)
+    {
+        if (window is MainWindow main)
+        {
+            main.PreviewTabHover();
+        }
+
+        await Task.Delay(400);
     }
 
     /// <summary>Prüfung (G10.9): HDR-Moment im offenen Hauptfenster abspielen (mit heller Fassung), ohne HDR zu schalten.</summary>

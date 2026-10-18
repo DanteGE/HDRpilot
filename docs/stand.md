@@ -1,7 +1,27 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-16. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-18. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Neue Wünsche des Nutzers (2026-10-18), noch nicht begonnen
+Der Nutzer will sie beim nächsten Mal angehen, aber erst auf sein Zeichen. Vorher die Arbeit an der Werkzeugleiste
+(unten) abschließen oder mit ihm die Reihenfolge klären.
+1. **Deinstallierte Spiele:**
+   - Bei deinstallierten Spielen soll man die Einstellungen des Spiels mit entfernen können. Das geht über das
+     Kontextmenü und ganz unten im Detailbereich.
+   - In den Einstellungen gibt es eine Option, deinstallierte Spiele auszublenden.
+   - Entfernen heißt hier: die Einstellungen löschen, die HDRpilot für das Spiel gespeichert hat. Es wird nichts am
+     Spiel oder am Launcher angefasst.
+   - Vorher klären:
+     - Wie erkennt HDRpilot „deinstalliert“ heute? Gibt es dafür schon einen Zustand im Scanner bzw. in der Bibliothek?
+     - Muss das Entfernen eigens bestätigt werden?
+     - Bleiben eigene Bilder und Symbole erhalten oder gehen sie mit?
+2. **Quiver Launcher:**
+   - Spiele des „Quiver Launchers“ sollen eingebunden werden, also erkannt, gestartet und mit HDR automatisch versehen.
+   - Noch nicht recherchiert: wo der Launcher Installationen ablegt, ob es ein Manifest oder eine Datenbank gibt, und
+     wie Spiele gestartet werden (URI oder EXE).
+   - Erst recherchieren, nur lesend am Rechner des Nutzers, dann wie die anderen Launcher-Scanner aus Phase 2 umsetzen.
+   - Grenzen: keine GPL-Abhängigkeiten, kein Netzwerk.
 
 ## Pausiert am 2026-10-16: Umsetzung „Showcase Hero“ (Phase 10)
 Auf Wunsch des Nutzers gesichert. Alles ist committet, nichts läuft.

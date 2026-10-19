@@ -151,6 +151,8 @@
                             AutomationProperties.AutomationId="NavAutomation" Content="{x:Static res:ShellStrings.NavAutomation}" Click="OnNavigate" />
                     <Button x:Name="NavSearchFolders" Style="{StaticResource Hp.Shell.NavButton}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Folder}"
                             AutomationProperties.AutomationId="NavSearchFolders" Content="{x:Static res:ShellStrings.NavSearchFolders}" Click="OnNavigate" />
+                    <Button x:Name="NavLibrary" Style="{StaticResource Hp.Shell.NavButton}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Library}"
+                            AutomationProperties.AutomationId="NavLibrary" Content="{x:Static res:ShellStrings.NavLibrary}" Click="OnNavigate" />
                     <Button x:Name="NavHelpers" Style="{StaticResource Hp.Shell.NavButton}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Filter}"
                             AutomationProperties.AutomationId="NavHelpers" Content="{x:Static res:ShellStrings.NavHelpers}" Click="OnNavigate" />
                     <Button x:Name="NavAppearance" Style="{StaticResource Hp.Shell.NavButton}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Palette}"
@@ -439,6 +441,62 @@
                                         </StackPanel>
                                     </Button>
                                 </WrapPanel>
+                            </StackPanel>
+                        </views:SettingsCard>
+
+                        <!--
+                            Bibliothek (E90): nicht installierte Spiele ausblenden (mit „Speichern“, daneben wie viele es zurzeit
+                            sind) und die Einstellungen aller nicht installierten Launcher-Spiele entfernen (sofort, nach einer
+                            Rückfrage mit allen Namen).
+                        -->
+                        <views:SettingsCard x:Name="LibrarySection" Style="{StaticResource Hp.Shell.Section}" Header="{x:Static res:ShellStrings.SectionLibrary}"
+                                                AutomationProperties.AutomationId="LibrarySection" AutomationProperties.Name="{x:Static res:ShellStrings.SectionLibrary}"
+                                                views:SettingsSection.Description="{x:Static res:ShellStrings.SectionLibraryHint}" views:SettingsSection.Icon="{StaticResource Hp.Icon.Library}">
+                            <StackPanel>
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}">
+                                    <DockPanel>
+                                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
+                                                  Style="{StaticResource Hp.ToggleSwitch}"
+                                                  AutomationProperties.AutomationId="HideUninstalledToggle"
+                                                  AutomationProperties.Name="{x:Static res:ShellStrings.HideUninstalledLabel}"
+                                                  AutomationProperties.HelpText="{x:Static res:ShellStrings.HideUninstalledHint}"
+                                                  IsChecked="{Binding HideUninstalledGames, Mode=TwoWay}" />
+                                        <Border DockPanel.Dock="Right" Style="{StaticResource Hp.Shell.ValuePill}" VerticalAlignment="Center" Margin="12,0,0,0">
+                                            <TextBlock Style="{StaticResource Hp.Shell.ValueText}" Text="{Binding UninstalledCountText}"
+                                                       AutomationProperties.AutomationId="UninstalledCount" AutomationProperties.Name="{Binding UninstalledCountName}" />
+                                        </Border>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.HideUninstalledLabel}" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.HideUninstalledHint}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,6,0,12" Text="{x:Static res:ShellStrings.RemoveUninstalledHint}" />
+                                <Button Style="{StaticResource Hp.GhostButton}" HorizontalAlignment="Left" Foreground="{DynamicResource Hp.Brush.Danger}"
+                                        AutomationProperties.AutomationId="RemoveUninstalledButton"
+                                        AutomationProperties.Name="{x:Static res:ShellStrings.RemoveUninstalledButton}"
+                                        Command="{Binding RemoveUninstalledCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE74D;" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{x:Static res:ShellStrings.RemoveUninstalledButton}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="2,10,0,0" Text="{x:Static res:ShellStrings.RemoveUninstalledNone}"
+                                           AutomationProperties.AutomationId="RemoveUninstalledNone"
+                                           Visibility="{Binding HasRemovable, Converter={StaticResource Hp.Shell.InverseBoolToVisibility}}" />
+                                <TextBlock Margin="2,10,0,0" FontSize="12.5" Text="{Binding LibraryMessage}"
+                                           AutomationProperties.AutomationId="LibraryMessage"
+                                           Visibility="{Binding HasLibraryMessage, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Caption}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding LibraryMessageIsError}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Warning}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </StackPanel>
                         </views:SettingsCard>
 

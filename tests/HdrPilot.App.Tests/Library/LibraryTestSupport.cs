@@ -196,6 +196,22 @@ public sealed class FakeDialogs : ILibraryDialogs
         return Answers.Count > 0 && Answers.Dequeue();
     }
 
+    /// <summary>Rückfragen mit Aufzählung und Häkchen (E90), in der Reihenfolge des Öffnens.</summary>
+    public List<ConfirmRequest> Requests { get; } = [];
+
+    /// <summary>Ob das Häkchen gesetzt wird (je Rückfrage mit Häkchen; leer: nicht gesetzt).</summary>
+    public Queue<bool> OptionAnswers { get; } = new();
+
+    public ConfirmAnswer Confirm(ConfirmRequest request)
+    {
+        Requests.Add(request);
+        Confirms.Add((request.Title, request.Message));
+        WhileConfirmOpen?.Invoke();
+        var confirmed = Answers.Count > 0 && Answers.Dequeue();
+        var option = request.OptionText is not null && OptionAnswers.Count > 0 && OptionAnswers.Dequeue();
+        return new ConfirmAnswer(confirmed, confirmed && option);
+    }
+
     public bool ShowAddGame(AddGameViewModel viewModel) => OnAddGame?.Invoke(viewModel) ?? false;
 
     /// <summary>Antworten für „Bild wählen…“ → „Eigene Datei…“ (null: abgebrochen).</summary>
@@ -247,6 +263,17 @@ public sealed class FakeIcons : IGameIconService
 
     public void Forget(string gameKey) => Forgotten.Add(gameKey);
 
+    /// <summary>Spiele, deren Symbol samt Eintrag in icon-cache.json vergessen wurde (E90).</summary>
+    public List<string> ForgottenGames { get; } = [];
+
+    public void ForgetGame(string gameKey)
+    {
+        lock (ForgottenGames)
+        {
+            ForgottenGames.Add(gameKey);
+        }
+    }
+
     public string SaveCustomIcon(GameConfig game, string sourcePath)
     {
         if (SaveFailure is not null)
@@ -275,6 +302,31 @@ public sealed class FakeShortcuts : IShortcutService
     public string CreateDesktopShortcut(GameConfig game) => Create("Desktop", game);
 
     public string CreateStartMenuShortcut(GameConfig game) => Create("Startmenü", game);
+
+    /// <summary>Vorhandene HDRpilot-Verknüpfungen je Spielschlüssel (E90; die Attrappe liest nie die echte Platte).</summary>
+    public Dictionary<string, List<GameShortcut>> Existing { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Gelöschte Verknüpfungen.</summary>
+    public List<GameShortcut> Deleted { get; } = [];
+
+    public IReadOnlyList<GameShortcut> FindFor(string gameKey)
+    {
+        lock (Existing)
+        {
+            return Existing.TryGetValue(gameKey, out var list) ? list.ToList() : [];
+        }
+    }
+
+    public IReadOnlyList<GameShortcut> Delete(string gameKey, IReadOnlyCollection<GameShortcut> shortcuts)
+    {
+        lock (Existing)
+        {
+            var list = Existing.TryGetValue(gameKey, out var found) ? found : [];
+            var gone = shortcuts.Where(s => list.Remove(s)).ToList();
+            Deleted.AddRange(gone);
+            return gone;
+        }
+    }
 
     private string Create(string kind, GameConfig game)
     {
@@ -439,6 +491,15 @@ public sealed class TestLibraryContext : ILibraryContext
     public IAppearanceService Appearance { get; set; } = new StaticAppearanceService();
 
     public IShortcutService Shortcuts => FakeShortcuts;
+
+    /// <summary>Ordner der eigenen Symbole in der Ablage im Speicher (E90).</summary>
+    public const string IconDirectory = @"C:\Data\icons";
+
+    /// <summary>Ordner der eigenen Bilder in der Ablage im Speicher (E90).</summary>
+    public const string CustomArtDirectory = @"C:\Data\art\custom";
+
+    /// <summary>Aufräumen über die Ablage im Speicher und die Attrappen (E90).</summary>
+    public UninstalledGameCleanup Cleanup => new(Files, IconDirectory, CustomArtDirectory, FakeIcons, Artwork, FakeShortcuts);
 
     public IUiDispatcher Ui => Dispatcher;
 

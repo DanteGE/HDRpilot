@@ -14,6 +14,10 @@ public static class LibraryText
     public static string Games(int count) =>
         count == 1 ? LibraryStrings.Count_GamesOne : Format(LibraryStrings.Count_GamesMany, count);
 
+    /// <summary>„1 nicht installiertes Spiel“, „5 nicht installierte Spiele“ (ausgeblendet, E90).</summary>
+    public static string HiddenGames(int count) =>
+        count == 1 ? LibraryStrings.Count_HiddenOne : Format(LibraryStrings.Count_HiddenMany, count);
+
     /// <summary>HDR laut PCGamingWiki in Worten (Titelbereich, Karte, Detailbereich); nie „SDR“.</summary>
     public static string HdrKindLabel(HdrSupportStatus status) => status switch
     {

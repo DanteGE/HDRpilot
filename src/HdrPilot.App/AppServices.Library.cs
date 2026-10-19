@@ -53,8 +53,23 @@ public sealed partial class AppServices
         var testArtFile = testing ? System.Environment.GetEnvironmentVariable(TestArtFileVariable) : null;
         window.Attach(new LibraryViewModel(
             new AppLibraryContext(this),
-            new LibraryDialogs(window, string.IsNullOrWhiteSpace(testIconFile) ? null : testIconFile, string.IsNullOrWhiteSpace(testArtFile) ? null : testArtFile)));
+            new LibraryDialogs(window, string.IsNullOrWhiteSpace(testIconFile) ? null : testIconFile, string.IsNullOrWhiteSpace(testArtFile) ? null : testArtFile, TestLog())));
         return window;
+    }
+
+    /// <summary>
+    /// Nur in Prüfläufen mit eigener Ablage (--config-dir): Zeilen „Prüfung: …“ ins Protokoll, etwa wohin der Fokus einer
+    /// offenen Rückfrage zeigt (phase11-uninstalled-ui.ps1, E90). Sonst null.
+    /// </summary>
+    private Action<string>? TestLog()
+    {
+        if (ConfigDirArgument() is null)
+        {
+            return null;
+        }
+
+        var logger = LoggerFactory.CreateLogger("Prüfung");
+        return message => logger.LogInformation("{Message}", message);
     }
 
     /// <summary>

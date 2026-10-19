@@ -3,55 +3,137 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using HdrPilot.App.Resources;
+using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
+using HdrPilot.Core.Util;
 
 namespace HdrPilot.App.Services;
 
 /// <summary>Inhalt einer Verknüpfung (.lnk), gelesen über IShellLinkW.</summary>
 public sealed record ShortcutInfo(string TargetPath, string Arguments, string WorkingDirectory, string IconPath, int IconIndex, string Description);
 
+/// <summary>HDRpilot-Verknüpfung eines Spiels (E90): Pfad der .lnk und die Symboldatei, die sie zeigt.</summary>
+public sealed record GameShortcut(string Path, string IconPath);
+
 /// <summary>
 /// Legt Verknüpfungen „HdrPilot.exe --run "&lt;Quelle:ID&gt;"“ an: auf dem Desktop und im Startmenü unter
 /// Programme\HdrPilot. Symbol ist das der Bibliothek, soweit eine Verknüpfung es zeigen kann (.ico oder .exe), sonst die
-/// EXE des Spiels. Über die Windows-Shell (IShellLinkW, COM), ohne Fremdbibliothek.
-/// Die Zielordner lassen sich für Tests umlenken.
+/// EXE des Spiels. Über die Windows-Shell (IShellLinkW, COM), ohne Fremdbibliothek. Findet und löscht für „Einstellungen
+/// entfernen…“ (E90) nur genau solche Verknüpfungen (<see cref="FindFor"/>, <see cref="Delete"/>).
+/// Die Zielordner lassen sich für Tests umlenken, ebenso Dateizugriff und Lesen der Verknüpfungen.
 /// </summary>
 public sealed class ShortcutService : IShortcutService
 {
     public const string StartMenuFolderName = "HDRpilot";
+
+    /// <summary>Dateiname des Ziels einer HDRpilot-Verknüpfung: Nur solche findet und löscht <see cref="FindFor"/> (E90).</summary>
+    public const string ExecutableName = "HDRpilot.exe";
 
     private readonly string _desktopDirectory;
     private readonly string _programsDirectory;
     private readonly Func<string?> _targetPath;
     private readonly Func<GameConfig, string?> _iconPath;
     private readonly string? _extraArguments;
+    private readonly IFileSystem _fileSystem;
+    private readonly Func<string, ShortcutInfo> _read;
 
     /// <param name="desktopDirectory">Zielordner für Desktop-Verknüpfungen (Standard: Desktop des Benutzers).</param>
     /// <param name="programsDirectory">Startmenü-Ordner „Programme“ (Standard: der des Benutzers); darin entsteht „HdrPilot“.</param>
     /// <param name="targetPath">Ziel der Verknüpfung (Standard: <see cref="Environment.ProcessPath"/>).</param>
     /// <param name="iconPath">EXE oder .ico, deren Symbol die Verknüpfung zeigt (null: Symbol von HdrPilot).</param>
     /// <param name="extraArguments">Zusätzliche Argumente nach „--run“, etwa „--config-dir“ einer Testablage.</param>
+    /// <param name="fileSystem">Auflisten und Löschen für <see cref="FindFor"/> und <see cref="Delete"/> (Standard: echte Platte).</param>
+    /// <param name="read">Verknüpfung lesen (Standard: <see cref="Read"/> über die Windows-Shell).</param>
     public ShortcutService(
         string? desktopDirectory = null,
         string? programsDirectory = null,
         Func<string?>? targetPath = null,
         Func<GameConfig, string?>? iconPath = null,
-        string? extraArguments = null)
+        string? extraArguments = null,
+        IFileSystem? fileSystem = null,
+        Func<string, ShortcutInfo>? read = null)
     {
         _desktopDirectory = desktopDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         _programsDirectory = programsDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.Programs);
         _targetPath = targetPath ?? (() => Environment.ProcessPath);
         _iconPath = iconPath ?? (_ => null);
         _extraArguments = string.IsNullOrWhiteSpace(extraArguments) ? null : extraArguments.Trim();
+        _fileSystem = fileSystem ?? PhysicalFileSystem.Instance;
+        _read = read ?? Read;
     }
 
     public string CreateDesktopShortcut(GameConfig game) => Create(_desktopDirectory, game);
 
     public string CreateStartMenuShortcut(GameConfig game) => Create(Path.Combine(_programsDirectory, StartMenuFolderName), game);
 
+    /// <summary>
+    /// HDRpilot-Verknüpfungen eines Spiels (E90): .lnk direkt auf dem Desktop und im Startmenü-Ordner „HDRpilot“ mit Ziel
+    /// <see cref="ExecutableName"/> und genau den Argumenten, die dieser Dienst schreibt (<c>--run "&lt;Schlüssel&gt;"</c>, in
+    /// einer Testinstanz samt „--config-dir“). Liest nur; nicht lesbare Verknüpfungen zählen nicht. Nicht auf dem UI-Thread.
+    /// </summary>
+    public IReadOnlyList<GameShortcut> FindFor(string gameKey)
+    {
+        var found = new List<GameShortcut>();
+        foreach (var directory in ShortcutDirectories())
+        {
+            List<string> files;
+            try
+            {
+                files = _fileSystem.EnumerateFiles(directory, "*.lnk").ToList();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                continue;
+            }
+
+            foreach (var file in files)
+            {
+                if (Match(file, gameKey) is { } shortcut)
+                {
+                    found.Add(shortcut);
+                }
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Löscht die Verknüpfungen, die beim Löschen noch genau zu diesem Spiel passen (erneut gelesen, nur in den Ordnern von
+    /// <see cref="FindFor"/>); eine inzwischen geänderte oder ersetzte bleibt. Liefert die gelöschten. Andere Dateien löscht
+    /// er nie, auch nicht die Symboldatei einer Verknüpfung.
+    /// </summary>
+    public IReadOnlyList<GameShortcut> Delete(string gameKey, IReadOnlyCollection<GameShortcut> shortcuts)
+    {
+        var deleted = new List<GameShortcut>();
+        foreach (var shortcut in shortcuts)
+        {
+            var folder = Path.GetDirectoryName(shortcut.Path);
+            if (folder is null || !ShortcutDirectories().Any(d => PathUtil.PathEquals(d, folder)) || Match(shortcut.Path, gameKey) is not { } current)
+            {
+                continue;
+            }
+
+            try
+            {
+                _fileSystem.DeleteFile(current.Path);
+                deleted.Add(current);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Gesperrt (etwa gerade geöffnet): bleibt liegen, der Aufrufer meldet es.
+            }
+        }
+
+        return deleted;
+    }
+
     /// <summary>Argumente für den Start eines Spiels über HdrPilot.</summary>
-    public static string ArgumentsFor(GameConfig game, string? extraArguments = null) =>
-        "--run \"" + game.Key + "\"" + (string.IsNullOrWhiteSpace(extraArguments) ? string.Empty : " " + extraArguments.Trim());
+    public static string ArgumentsFor(GameConfig game, string? extraArguments = null) => ArgumentsFor(game.Key, extraArguments);
+
+    /// <inheritdoc cref="ArgumentsFor(GameConfig, string?)"/>
+    public static string ArgumentsFor(string gameKey, string? extraArguments) =>
+        "--run \"" + gameKey + "\"" + (string.IsNullOrWhiteSpace(extraArguments) ? string.Empty : " " + extraArguments.Trim());
 
     /// <summary>Dateiname ohne Endung: „Name (HDR)“, ungültige Zeichen ersetzt.</summary>
     public static string FileNameFor(GameConfig game)
@@ -137,6 +219,37 @@ public sealed class ShortcutService : IShortcutService
         {
             Marshal.FinalReleaseComObject(link);
         }
+    }
+
+    /// <summary>Desktop und Startmenü-Ordner „HDRpilot“: nur dort legt HDRpilot Verknüpfungen an.</summary>
+    private IEnumerable<string> ShortcutDirectories() => [_desktopDirectory, Path.Combine(_programsDirectory, StartMenuFolderName)];
+
+    /// <summary>
+    /// Die Verknüpfung, wenn sie eine HDRpilot-Verknüpfung genau dieses Spiels ist: Endung .lnk, Ziel <see cref="ExecutableName"/>
+    /// und Argumente genau wie von <see cref="ArgumentsFor(string, string?)"/> (Groß- und Kleinschreibung egal wie beim
+    /// Schlüssel); sonst oder nicht lesbar null.
+    /// </summary>
+    private GameShortcut? Match(string path, string gameKey)
+    {
+        if (!path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        ShortcutInfo info;
+        try
+        {
+            info = _read(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or ArgumentException)
+        {
+            return null;
+        }
+
+        return string.Equals(Path.GetFileName(info.TargetPath), ExecutableName, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(info.Arguments, ArgumentsFor(gameKey, _extraArguments), StringComparison.OrdinalIgnoreCase)
+                ? new GameShortcut(path, info.IconPath)
+                : null;
     }
 
     private string Create(string directory, GameConfig game)

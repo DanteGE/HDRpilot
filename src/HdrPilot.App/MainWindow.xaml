@@ -181,6 +181,17 @@
                     <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE838;" FontSize="14" />
                 </MenuItem.Icon>
             </MenuItem>
+            <!-- Nur bei nicht installierten Launcher-Spielen (E90); während einer Sitzung gesperrt -->
+            <Separator Style="{StaticResource Lib.MenuSeparator}" Visibility="{Binding SelectedGame.IsRemovable, Converter={StaticResource Lib.BoolToVisibility}, FallbackValue=Collapsed}" />
+            <MenuItem Style="{StaticResource Lib.MenuItem}" Header="{x:Static res:LibraryStrings.RemoveSettings_Button}" Command="{Binding RemoveSettingsCommand}"
+                      InputGestureText="{x:Static res:LibraryStrings.Key_Delete}" Foreground="{DynamicResource Hp.Brush.Danger}"
+                      Visibility="{Binding SelectedGame.IsRemovable, Converter={StaticResource Lib.BoolToVisibility}, FallbackValue=Collapsed}"
+                      AutomationProperties.AutomationId="ContextRemoveSettings" AutomationProperties.Name="{x:Static res:LibraryStrings.RemoveSettings_Button}"
+                      AutomationProperties.HelpText="{x:Static res:LibraryStrings.RemoveSettings_Tooltip}">
+                <MenuItem.Icon>
+                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE74D;" FontSize="14" Foreground="{DynamicResource Hp.Brush.Danger}" />
+                </MenuItem.Icon>
+            </MenuItem>
         </ContextMenu>
 
         <!--
@@ -1458,8 +1469,11 @@
                     <StackPanel x:Name="EmptyLibrary" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="360"
                                 Visibility="{Binding IsLibraryEmpty, Converter={StaticResource Lib.BoolToVisibility}}">
                         <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE7FC;" FontSize="44" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.AccentText}" />
-                        <TextBlock Style="{StaticResource Hp.Text.Subtitle}" Text="{x:Static res:LibraryStrings.List_EmptyTitle}" HorizontalAlignment="Center" Margin="0,14,0,6" />
-                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.List_EmptyText}" TextAlignment="Center" />
+                        <!-- Sind alle Spiele ausgeblendet (nicht installiert, E90), sagt der Text, wie viele und wo sie sich einblenden lassen -->
+                        <TextBlock Style="{StaticResource Hp.Text.Subtitle}" Text="{Binding EmptyTitle}" HorizontalAlignment="Center" Margin="0,14,0,6"
+                                   AutomationProperties.AutomationId="EmptyLibraryTitle" />
+                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding EmptyText}" TextAlignment="Center"
+                                   AutomationProperties.AutomationId="EmptyLibraryText" />
                     </StackPanel>
 
                     <!-- Keine Treffer (dann ist kein Spiel gewählt, Titelbereich und Details sind leer) -->
@@ -1561,7 +1575,8 @@
                                         <Border Style="{StaticResource Lib.StatusTint}" Tag="{x:Static vm:StatusKind.Warning}" />
                                         <DockPanel Margin="12,9">
                                             <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Warning}" Margin="0,0,10,0" VerticalAlignment="Top" />
-                                            <TextBlock Text="{x:Static res:LibraryStrings.Details_NotInstalled}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                            <TextBlock Text="{Binding NotInstalledText}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Hp.Brush.Text}"
+                                                       AutomationProperties.AutomationId="DetailNotInstalled" />
                                         </DockPanel>
                                     </Grid>
 
@@ -1900,6 +1915,17 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE74D;" FontSize="12" Margin="0,0,7,0" />
                                             <TextBlock Text="{x:Static res:LibraryStrings.RemoveGame_Button}" />
+                                        </StackPanel>
+                                    </Button>
+                                    <!-- Nicht installiertes Launcher-Spiel (E90): HDRpilot-Daten entfernen, nach einer Rückfrage; während einer Sitzung gesperrt -->
+                                    <Button x:Name="RemoveSettingsButton" Style="{StaticResource Lib.DangerButton}" HorizontalAlignment="Left" Margin="0,8,0,0" Command="{Binding RemoveSettingsCommand}"
+                                            Visibility="{Binding CanRemoveSettings, Converter={StaticResource Lib.BoolToVisibility}}"
+                                            ToolTip="{x:Static res:LibraryStrings.RemoveSettings_Tooltip}" ToolTipService.ShowOnDisabled="True" ToolTipService.InitialShowDelay="900"
+                                            AutomationProperties.AutomationId="RemoveSettingsButton" AutomationProperties.Name="{x:Static res:LibraryStrings.RemoveSettings_Button}"
+                                            AutomationProperties.HelpText="{x:Static res:LibraryStrings.RemoveSettings_Tooltip}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE74D;" FontSize="12" Margin="0,0,7,0" />
+                                            <TextBlock Text="{x:Static res:LibraryStrings.RemoveSettings_Button}" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>

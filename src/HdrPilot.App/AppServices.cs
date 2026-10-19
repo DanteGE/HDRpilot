@@ -53,6 +53,7 @@ public sealed partial class AppServices : IAsyncDisposable
         SteamGridDb = CreateSteamGridDbService();
         Luminance = CreateDisplayLuminanceService();
         Shortcuts = CreateShortcutService();
+        GameCleanup = new UninstalledGameCleanup(FileSystem, Paths.IconDirectory, Paths.CustomArtDirectory, Icons, Artwork, Shortcuts, LoggerFactory.CreateLogger("Bibliothek"));
         Autostart = CreateAutostartService();
         DisplayEvents = CreateDisplayEventsService();
         Tray = CreateTrayService();
@@ -102,6 +103,9 @@ public sealed partial class AppServices : IAsyncDisposable
     public IDisplayLuminanceService Luminance { get; private set; }
 
     public IShortcutService Shortcuts { get; }
+
+    /// <summary>Aufräumen nach „Einstellungen entfernen…“ nicht installierter Spiele (E90), für Bibliothek und Einstellungen.</summary>
+    public UninstalledGameCleanup GameCleanup { get; }
 
     public IAutostartService Autostart { get; }
 

@@ -17,7 +17,8 @@ namespace HdrPilot.App;
 /// <item>Nur für Entwicklung und Prüfskripte, nur mit <c>--config-dir</c> (E54, E89): <c>--snapshot &lt;ordner&gt;</c> mit
 /// <c>--snapshot-sizes</c>, <c>--snapshot-scenes</c>, <c>--snapshot-themes</c> und <c>--snapshot-display</c> (siehe
 /// <see cref="Infrastructure.SnapshotPlan"/>),
-/// <c>--artwork-report &lt;datei&gt;</c>, <c>--test-hdr-moment</c> und <c>--test-toolbar-search</c> (beide werden weitergereicht).</item>
+/// <c>--artwork-report &lt;datei&gt;</c>, <c>--settings-probe &lt;datei&gt;</c> (E90), <c>--test-hdr-moment</c> und
+/// <c>--test-toolbar-search</c> (die letzten beiden werden weitergereicht).</item>
 /// <item><c>--</c> beendet die Befehle: alles danach (der Spielbefehl) wird nie als Befehl von HdrPilot gelesen.</item>
 /// </list>
 /// </summary>
@@ -76,6 +77,13 @@ public sealed record AppArguments
     /// Nur mit eigener Ablage (--config-dir); liest die Launcher-Caches nur.
     /// </summary>
     public string? ArtworkReport { get; init; }
+
+    /// <summary>
+    /// Prüfung (E90, G11.3): die Konfiguration der eigenen Ablage wie die Einstellungen laden, einmal unverändert und einmal
+    /// mit umgeschaltetem „Nicht installierte Spiele ausblenden“ speichern und einen Bericht als JSON in diese Datei schreiben,
+    /// dann beenden. Nur mit eigener Ablage (--config-dir); ohne Automatik, ohne Einlesen, ohne Fenster.
+    /// </summary>
+    public string? SettingsProbe { get; init; }
 
     /// <summary>
     /// Prüfung (E89, G10.9): den HDR-Moment in der Bibliothek abspielen, ohne HDR zu schalten. Wirkt nur in einer Instanz
@@ -145,6 +153,9 @@ public sealed record AppArguments
                     break;
                 case "--artwork-report" when i + 1 < args.Count:
                     result = result with { ArtworkReport = args[++i] };
+                    break;
+                case "--settings-probe" when i + 1 < args.Count:
+                    result = result with { SettingsProbe = args[++i] };
                     break;
                 case "--test-hdr-moment":
                     result = result with { TestHdrMoment = true };

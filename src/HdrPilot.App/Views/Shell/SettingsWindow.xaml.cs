@@ -45,6 +45,7 @@ public partial class SettingsWindow : ChromeWindow
             (NavDisplays, DisplaysSection),
             (NavAutomation, AutomationSection),
             (NavSearchFolders, SearchSection),
+            (NavLibrary, LibrarySection),
             (NavHelpers, HelpersSection),
             (NavAppearance, GroupAppearance),
             (NavAppearanceColors, SectionPalette),

@@ -72,6 +72,12 @@ public partial class App : Application
             return;
         }
 
+        if (args.SettingsProbe is { } settingsProbe)
+        {
+            await RunSettingsProbeModeAsync(args, settingsProbe);
+            return;
+        }
+
         var instanceId = SingleInstance.IdFor(args.ConfigDir);
         var instance = SingleInstance.TryAcquire(instanceId);
         if (instance is null)
@@ -191,6 +197,38 @@ public partial class App : Application
 
         await _services.DisposeAsync();
         Shutdown(0);
+    }
+
+    /// <summary>
+    /// Prüfung (E90, G11.3): Konfiguration der eigenen Ablage laden, wie die Einstellungen speichern (unverändert, dann mit
+    /// umgeschaltetem „Nicht installierte Spiele ausblenden“), Bericht schreiben, beenden. Nie gegen die echte Konfiguration;
+    /// ohne Automatik, Einlesen und Fenster (wie die Bildschirmfotos).
+    /// </summary>
+    private async Task RunSettingsProbeModeAsync(AppArguments args, string reportFile)
+    {
+        if (args.ConfigDir is null)
+        {
+            Shutdown(2); // nie gegen die echte Konfiguration
+            return;
+        }
+
+        ThemeManager.Initialize(this);
+        var paths = AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir));
+        _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
+        _services = new AppServices(_host, Dispatcher, instance: null);
+        int code;
+        try
+        {
+            code = _services.WriteSettingsProbe(System.IO.Path.GetFullPath(reportFile)) ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+            code = 1;
+        }
+
+        await _services.DisposeAsync();
+        Shutdown(code);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

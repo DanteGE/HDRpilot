@@ -74,6 +74,14 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
 
     public List<string> OpenedPages { get; } = [];
 
+    /// <summary>Aufräumen des Sammel-Entfernens (E90); Standard: keins.</summary>
+    public UninstalledGameCleanup? Cleanup { get; set; }
+
+    /// <summary>Laufende und vorbereitete Sitzungen (E90: deren Spiele bleiben beim Sammel-Entfernen).</summary>
+    public List<HdrPilot.Core.Sessions.SessionInfo> SessionList { get; } = [];
+
+    public IReadOnlyList<HdrPilot.Core.Sessions.SessionInfo> Sessions => SessionList;
+
     /// <summary>Wenn gesetzt, scheitert das Öffnen einer Webseite damit.</summary>
     public Exception? OpenWebPageFailure { get; set; }
 

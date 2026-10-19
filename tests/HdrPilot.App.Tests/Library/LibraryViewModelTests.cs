@@ -273,9 +273,10 @@ public sealed class LibraryViewModelTests
         Assert.Equal("Epic:Crow", vm.SelectedGame?.Key);
         Assert.Contains(vm.SourceOptions, o => o.Source == GameSource.Gog);
 
+        // Das gewählte Spiel verschwindet: Sein Nachbar in der Liste ist gewählt (E90; vorher keins).
         context.ConfigService.Update(c => c.Games.RemoveAll(g => g.Key == "Epic:Crow"));
-        Assert.Null(vm.SelectedGame);
-        Assert.Null(vm.Details);
+        Assert.Equal("Eigenes Spiel", vm.SelectedGame?.Name);
+        Assert.Same(vm.SelectedGame, vm.Details?.Item);
         Assert.DoesNotContain(vm.SourceOptions, o => o.Source == GameSource.Epic);
     });
 

@@ -557,7 +557,7 @@
     <value>Spielebibliothek öffnen</value>
   </data>
   <data name="GroupGeneralHint" xml:space="preserve">
-    <value>Start, Bildschirme, Automatik und Suche. Übernommen mit „Speichern“.</value>
+    <value>Start, Bildschirme, Automatik, Suche und Bibliothek. Übernommen mit „Speichern“.</value>
   </data>
   <data name="GroupAppearanceHint" xml:space="preserve">
     <value>Farben, Thema, Effekte und Bilder. Wirkt auf Oberfläche, Tray-Symbol und Fenstersymbol.</value>
@@ -1150,5 +1150,38 @@
   </data>
   <data name="RelativeDate" xml:space="preserve">
     <value>{0:d. MMM yyyy}</value>
+  </data>
+  <data name="NavLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="SectionLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+    <comment>Karte mit „Nicht installierte Spiele ausblenden“ und dem Sammel-Entfernen (E90)</comment>
+  </data>
+  <data name="SectionLibraryHint" xml:space="preserve">
+    <value>Nicht installierte Spiele ausblenden oder ihre Einstellungen entfernen</value>
+  </data>
+  <data name="HideUninstalledLabel" xml:space="preserve">
+    <value>Nicht installierte Spiele ausblenden</value>
+  </data>
+  <data name="HideUninstalledHint" xml:space="preserve">
+    <value>Sie zählen dann in der Bibliothek nicht mit. „HDR automatisch“ wirkt für sie weiter.</value>
+  </data>
+  <data name="UninstalledCount" xml:space="preserve">
+    <value>zurzeit {0}</value>
+    <comment>{0} = Zahl der nicht installierten Spiele</comment>
+  </data>
+  <data name="UninstalledCountName" xml:space="preserve">
+    <value>Nicht installierte Spiele zurzeit: {0}</value>
+    <comment>Für Bildschirmleser; {0} = Anzahl</comment>
+  </data>
+  <data name="RemoveUninstalledButton" xml:space="preserve">
+    <value>Einstellungen aller nicht installierten Spiele entfernen…</value>
+  </data>
+  <data name="RemoveUninstalledHint" xml:space="preserve">
+    <value>Entfernt nach einer Rückfrage, was HDRpilot zu diesen Spielen gespeichert hat, sofort und unabhängig von „Speichern“. An Spielen und Launchern ändert sich nichts; selbst hinzugefügte Spiele bleiben.</value>
+  </data>
+  <data name="RemoveUninstalledNone" xml:space="preserve">
+    <value>Zurzeit gibt es keine nicht installierten Spiele aus Launchern.</value>
   </data>
 </root>

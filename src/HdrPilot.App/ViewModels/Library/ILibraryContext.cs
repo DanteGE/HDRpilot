@@ -39,6 +39,9 @@ public interface ILibraryContext : IDisposable
 
     IShortcutService Shortcuts { get; }
 
+    /// <summary>Aufräumen nach „Einstellungen entfernen…“ (E90): eigene Symbole, Bilder, Verknüpfungen und Prüfungen davor.</summary>
+    UninstalledGameCleanup Cleanup { get; }
+
     IUiDispatcher Ui { get; }
 
     /// <summary>Zwischenablage (in Tests eine Attrappe).</summary>
@@ -117,6 +120,38 @@ public interface IUiDispatcher
     IDisposable Delay(TimeSpan delay, Action action);
 }
 
+/// <summary>
+/// Rückfrage mit Aufzählung, Warnung und Häkchen (E90, „Einstellungen entfernen…“): Was verloren geht bzw. welche Spiele
+/// betroffen sind, eine Warnung in eigener Fläche und ein Häkchen für etwas Zusätzliches (ohne <see cref="OptionText"/>
+/// keins, sonst anfangs nicht gesetzt). Der Fokus liegt immer auf „Abbrechen“.
+/// </summary>
+public sealed record ConfirmRequest(string Title, string Message, string ConfirmText, bool IsDanger)
+{
+    /// <summary>Überschrift über der Aufzählung, etwa „Verloren geht“; null ohne Überschrift.</summary>
+    public string? DetailsHeader { get; init; }
+
+    /// <summary>Aufzählung (je Eintrag eine Zeile); leer: keine.</summary>
+    public IReadOnlyList<string> Details { get; init; } = [];
+
+    /// <summary>Warnung in eigener Fläche, etwa „Laufwerk F: ist nicht verbunden …“; null: keine.</summary>
+    public string? Warning { get; init; }
+
+    /// <summary>Text des Häkchens, etwa „Auch die 2 HDRpilot-Verknüpfungen löschen“; null: kein Häkchen.</summary>
+    public string? OptionText { get; init; }
+
+    /// <summary>Erklärung unter dem Text des Häkchens; null: keine.</summary>
+    public string? OptionHint { get; init; }
+}
+
+/// <summary>Antwort auf eine <see cref="ConfirmRequest"/>: bestätigt, und ob das Häkchen gesetzt war.</summary>
+public readonly record struct ConfirmAnswer(bool Confirmed, bool OptionChecked);
+
+/// <summary>Rückfragen mit Aufzählung und Häkchen (Bibliothek und Einstellungen; in Tests ersetzbar).</summary>
+public interface IConfirmDialogs
+{
+    ConfirmAnswer Confirm(ConfirmRequest request);
+}
+
 /// <summary>Rückfragen und Dateiauswahl der Spielebibliothek (in Tests ersetzbar).</summary>
 public interface ILibraryDialogs
 {
@@ -128,6 +163,11 @@ public interface ILibraryDialogs
     string? PickIconFile(string? initialDirectory);
 
     bool Confirm(string title, string message, string confirmText, bool isDanger);
+
+    /// <summary>
+    /// Rückfrage mit Aufzählung, Warnung und Häkchen (E90). Standard: einfache Rückfrage ohne Aufzählung und Häkchen.
+    /// </summary>
+    ConfirmAnswer Confirm(ConfirmRequest request) => new(Confirm(request.Title, request.Message, request.ConfirmText, request.IsDanger), false);
 
     /// <summary>Zeigt den Dialog „Spiel hinzufügen“. True, wenn bestätigt (Ergebnis in <see cref="AddGameViewModel.Result"/>).</summary>
     bool ShowAddGame(AddGameViewModel viewModel);

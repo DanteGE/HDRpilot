@@ -383,8 +383,9 @@ public sealed class CustomIconTests : IDisposable
             // Showcase Hero: das ganze Kontextmenü des Spiels (Prototyp), darin „Symbol ändern…“ und „Symbol zurücksetzen“.
             var items = menu.Items.OfType<MenuItem>().ToDictionary(i => AutomationProperties.GetAutomationId(i));
             Assert.Equal(
-                ["ContextLaunch", "ContextHdrAuto", "ContextRestore", "ContextAutoHdr", "ChooseArtworkMenuItem", "ChangeIconMenuItem", "ResetIconMenuItem", "ContextDesktopShortcut", "ContextStartMenuShortcut", "ContextOpenFolder"],
+                ["ContextLaunch", "ContextHdrAuto", "ContextRestore", "ContextAutoHdr", "ChooseArtworkMenuItem", "ChangeIconMenuItem", "ResetIconMenuItem", "ContextDesktopShortcut", "ContextStartMenuShortcut", "ContextOpenFolder", "ContextRemoveSettings"],
                 items.Keys);
+            Assert.Equal(Visibility.Collapsed, items["ContextRemoveSettings"].Visibility); // installiert: nur bei nicht installierten (E90)
             Assert.Same(model.ChangeIconCommand, items["ChangeIconMenuItem"].Command);
             Assert.Same(model.ResetIconCommand, items["ResetIconMenuItem"].Command);
             Assert.True(items["ResetIconMenuItem"].IsEnabled); // eigenes Symbol gesetzt: „Symbol zurücksetzen“ frei

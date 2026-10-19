@@ -1379,4 +1379,174 @@
   <data name="Tip_AddText" xml:space="preserve">
     <value>Ein Spiel von Hand aufnehmen (EXE oder Verknüpfung).</value>
   </data>
+  <data name="RemoveSettings_Button" xml:space="preserve">
+    <value>Einstellungen entfernen…</value>
+    <comment>Kontextmenü und Knopf ganz unten im Detailbereich, nur bei nicht installierten Launcher-Spielen (E90)</comment>
+  </data>
+  <data name="RemoveSettings_Tooltip" xml:space="preserve">
+    <value>Entfernt, was HDRpilot zu diesem Spiel gespeichert hat. Am Spiel und am Launcher ändert sich nichts.</value>
+  </data>
+  <data name="RemoveSettings_ConfirmTitle" xml:space="preserve">
+    <value>Einstellungen von „{0}“ entfernen?</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="RemoveSettings_ConfirmText" xml:space="preserve">
+    <value>HDRpilot vergisst, was es zu diesem Spiel gespeichert hat, samt eigenem Symbol und eigenen Bildern. Am Spiel und am Launcher ändert sich nichts. Installierst du es wieder, erscheint es beim nächsten Einlesen als neu, mit „HDR automatisch“ aus.</value>
+  </data>
+  <data name="RemoveSettings_LossHeader" xml:space="preserve">
+    <value>VERLOREN GEHT</value>
+  </data>
+  <data name="RemoveSettings_LossHdrAuto" xml:space="preserve">
+    <value>„HDR automatisch“ ist an</value>
+  </data>
+  <data name="RemoveSettings_LossAutoHdr" xml:space="preserve">
+    <value>„Windows Auto HDR“ ist an</value>
+  </data>
+  <data name="RemoveSettings_LossDisplay" xml:space="preserve">
+    <value>Eigener Bildschirm statt der globalen Einstellung</value>
+  </data>
+  <data name="RemoveSettings_LossNoRestore" xml:space="preserve">
+    <value>„Nach dem Spiel zurückstellen“ ist aus</value>
+  </data>
+  <data name="RemoveSettings_LossDetectedOne" xml:space="preserve">
+    <value>1 gemerkte EXE-Datei</value>
+  </data>
+  <data name="RemoveSettings_LossDetectedMany" xml:space="preserve">
+    <value>{0} gemerkte EXE-Dateien</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveSettings_LossExtraOne" xml:space="preserve">
+    <value>1 hinzugefügte EXE-Datei</value>
+  </data>
+  <data name="RemoveSettings_LossExtraMany" xml:space="preserve">
+    <value>{0} hinzugefügte EXE-Dateien</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveSettings_LossExcludedOne" xml:space="preserve">
+    <value>1 ausgeschlossene EXE-Datei</value>
+  </data>
+  <data name="RemoveSettings_LossExcludedMany" xml:space="preserve">
+    <value>{0} ausgeschlossene EXE-Dateien</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveSettings_LossCustomIcon" xml:space="preserve">
+    <value>Eigenes Symbol</value>
+  </data>
+  <data name="RemoveSettings_LossImagesOne" xml:space="preserve">
+    <value>1 eigenes Bild</value>
+  </data>
+  <data name="RemoveSettings_LossImagesMany" xml:space="preserve">
+    <value>{0} eigene Bilder</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveSettings_LossLastPlayed" xml:space="preserve">
+    <value>Zuletzt gespielt am {0}</value>
+    <comment>{0} = Datum</comment>
+  </data>
+  <data name="RemoveSettings_LossNothing" xml:space="preserve">
+    <value>Nur der Eintrag in der Bibliothek, keine eigenen Einstellungen</value>
+  </data>
+  <data name="RemoveSettings_DriveMissing" xml:space="preserve">
+    <value>Laufwerk {0} ist nicht verbunden. Das Spiel ist vielleicht noch installiert.</value>
+    <comment>{0} = Laufwerk, etwa „F:“</comment>
+  </data>
+  <data name="RemoveSettings_ShortcutOne" xml:space="preserve">
+    <value>Auch die HDRpilot-Verknüpfung löschen</value>
+  </data>
+  <data name="RemoveSettings_ShortcutMany" xml:space="preserve">
+    <value>Auch die {0} HDRpilot-Verknüpfungen löschen</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveSettings_ShortcutHint" xml:space="preserve">
+    <value>Auf dem Desktop bzw. im Startmenü. Ohne Häkchen bleiben sie liegen, starten das Spiel aber nicht mehr.</value>
+  </data>
+  <data name="RemoveSettings_Confirm" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="RemoveSettings_Done" xml:space="preserve">
+    <value>Einstellungen von „{0}“ entfernt.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="RemoveSettings_DoneShortcutOne" xml:space="preserve">
+    <value>Einstellungen von „{0}“ und eine Verknüpfung entfernt.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="RemoveSettings_DoneShortcutsMany" xml:space="preserve">
+    <value>Einstellungen von „{0}“ und {1} Verknüpfungen entfernt.</value>
+    <comment>{0} = Spielname, {1} = Anzahl</comment>
+  </data>
+  <data name="RemoveSettings_FilesFailed" xml:space="preserve">
+    <value>{0} Dateien ließen sich nicht löschen (siehe Protokoll).</value>
+    <comment>{0} = Anzahl; folgt auf die Meldung „entfernt“</comment>
+  </data>
+  <data name="RemoveSettings_Kept" xml:space="preserve">
+    <value>„{0}“ ist inzwischen wieder installiert oder läuft. Nichts entfernt.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="RemoveSettings_Running" xml:space="preserve">
+    <value>„{0}“ läuft gerade. Entfernen geht nach dem Spiel.</value>
+    <comment>{0} = Spielname</comment>
+  </data>
+  <data name="Details_NotInstalledRemovable" xml:space="preserve">
+    <value>Dieses Spiel wurde beim letzten Einlesen nicht mehr gefunden. Die Einstellungen bleiben erhalten; ganz unten kannst du sie entfernen.</value>
+  </data>
+  <data name="Key_Delete" xml:space="preserve">
+    <value>Entf</value>
+  </data>
+  <data name="RemoveAll_ConfirmTitleOne" xml:space="preserve">
+    <value>Einstellungen eines nicht installierten Spiels entfernen?</value>
+  </data>
+  <data name="RemoveAll_ConfirmTitleMany" xml:space="preserve">
+    <value>Einstellungen von {0} nicht installierten Spielen entfernen?</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveAll_ConfirmText" xml:space="preserve">
+    <value>HDRpilot vergisst, was es zu diesen Spielen gespeichert hat, samt eigenen Symbolen und Bildern. An den Spielen und Launchern ändert sich nichts. Wird eines wieder installiert, erscheint es beim nächsten Einlesen als neu, mit „HDR automatisch“ aus.</value>
+  </data>
+  <data name="RemoveAll_DetailsHeader" xml:space="preserve">
+    <value>BETROFFEN</value>
+  </data>
+  <data name="RemoveAll_GameWithLoss" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} = Spielname, {1} = was verloren geht (durch Kommas getrennt)</comment>
+  </data>
+  <data name="RemoveAll_DrivesMissing" xml:space="preserve">
+    <value>Nicht verbunden: {0}. Spiele dort sind vielleicht noch installiert.</value>
+    <comment>{0} = Laufwerke, etwa „F:, G:“</comment>
+  </data>
+  <data name="RemoveAll_DoneOne" xml:space="preserve">
+    <value>Einstellungen eines Spiels entfernt.</value>
+  </data>
+  <data name="RemoveAll_DoneMany" xml:space="preserve">
+    <value>Einstellungen von {0} Spielen entfernt.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveAll_KeptOne" xml:space="preserve">
+    <value>Ein Spiel ist inzwischen wieder installiert oder läuft und bleibt.</value>
+  </data>
+  <data name="RemoveAll_KeptMany" xml:space="preserve">
+    <value>{0} Spiele sind inzwischen wieder installiert oder laufen und bleiben.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Count_HiddenOne" xml:space="preserve">
+    <value>1 nicht installiertes Spiel</value>
+  </data>
+  <data name="Count_HiddenMany" xml:space="preserve">
+    <value>{0} nicht installierte Spiele</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Toolbar_ResetTipHidden" xml:space="preserve">
+    <value>Zeigt wieder alle {0}. Ausgeblendet bleiben {1} (Einstellungen › Bibliothek).</value>
+    <comment>{0} = „651 Spiele“, {1} = „5 nicht installierte Spiele“</comment>
+  </data>
+  <data name="List_EmptyHiddenTitle" xml:space="preserve">
+    <value>Nur nicht installierte Spiele</value>
+  </data>
+  <data name="List_EmptyHiddenTextOne" xml:space="preserve">
+    <value>Ein nicht installiertes Spiel ist ausgeblendet. Einblenden kannst du es unter Einstellungen › Allgemein › Bibliothek.</value>
+  </data>
+  <data name="List_EmptyHiddenTextMany" xml:space="preserve">
+    <value>{0} nicht installierte Spiele sind ausgeblendet. Einblenden kannst du sie unter Einstellungen › Allgemein › Bibliothek.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
 </root>

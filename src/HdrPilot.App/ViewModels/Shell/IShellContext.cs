@@ -5,6 +5,7 @@ using HdrPilot.App.Theming;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.HdrSupport;
+using HdrPilot.Core.Sessions;
 
 namespace HdrPilot.App.ViewModels.Shell;
 
@@ -55,6 +56,15 @@ public interface IShellContext
 
     /// <summary>Stand wie im Kopf des echten Tray-Menüs (HDR, Pause, laufende Spiele) für dessen Vorschau. Standard: null.</summary>
     TrayState? QueryTrayState() => null;
+
+    /// <summary>
+    /// Aufräumen nach „Einstellungen aller nicht installierten Spiele entfernen…“ (E90): eigene Symbole, Bilder,
+    /// Verknüpfungen und die Prüfungen davor. Standard: keins (dann gibt es kein Sammel-Entfernen).
+    /// </summary>
+    UninstalledGameCleanup? Cleanup => null;
+
+    /// <summary>Laufende und vorbereitete Sitzungen: Deren Spiele lässt das Sammel-Entfernen aus (E90). Standard: keine.</summary>
+    IReadOnlyList<SessionInfo> Sessions => [];
 }
 
 /// <summary>Ordnerauswahl (Dialog). In Tests eine Attrappe.</summary>

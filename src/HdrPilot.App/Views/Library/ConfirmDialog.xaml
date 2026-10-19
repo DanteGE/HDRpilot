@@ -3,6 +3,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
                     xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Library"
                     AutomationProperties.AutomationId="ConfirmDialog"
                     Width="480" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
                     WindowStartupLocation="CenterOwner">
@@ -20,9 +21,51 @@
             <TextBlock x:Name="TitleText" Grid.Column="1" Style="{StaticResource Hp.Text.Subtitle}" Margin="16,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
                        AutomationProperties.AutomationId="ConfirmTitle" />
         </Grid>
-        <TextBlock x:Name="MessageText" Style="{StaticResource Hp.Text.Body}" Margin="60,10,0,24" LineHeight="21"
+        <TextBlock x:Name="MessageText" Style="{StaticResource Hp.Text.Body}" Margin="60,10,0,0" LineHeight="21"
                    Foreground="{DynamicResource Hp.Brush.TextSecondary}" AutomationProperties.AutomationId="ConfirmMessage" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+
+        <!-- Aufzählung (E90): was verloren geht bzw. welche Spiele betroffen sind; lange Listen scrollen -->
+        <StackPanel x:Name="DetailsArea" Margin="60,16,0,0" Visibility="Collapsed">
+            <DockPanel x:Name="DetailsHeaderRow" Margin="0,0,0,6">
+                <TextBlock x:Name="DetailsHeader" Style="{StaticResource Lib.SectionTitle}" />
+                <Border Style="{StaticResource Lib.SectionLine}" Margin="10,0,0,0" />
+            </DockPanel>
+            <ScrollViewer MaxHeight="216" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <ItemsControl x:Name="DetailsList" Focusable="False" IsTabStop="False"
+                              AutomationProperties.AutomationId="ConfirmDetails">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,3,0,3">
+                                <Ellipse Width="5" Height="5" Margin="2,8,11,0" VerticalAlignment="Top" Fill="{DynamicResource Hp.Brush.AccentText}" />
+                                <TextBlock Text="{Binding}" FontSize="13" LineHeight="19" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.Text}"
+                                           AutomationProperties.Name="{Binding}" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </StackPanel>
+
+        <!-- Warnung, etwa Laufwerk nicht verbunden (E90) -->
+        <Grid x:Name="WarningArea" Margin="60,16,0,0" Visibility="Collapsed">
+            <Border Style="{StaticResource Lib.StatusTint}" Tag="{x:Static vm:StatusKind.Warning}" />
+            <DockPanel Margin="12,9">
+                <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Warning}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                <TextBlock x:Name="WarningText" TextWrapping="Wrap" FontSize="12.5" LineHeight="18" Foreground="{DynamicResource Hp.Brush.Text}"
+                           AutomationProperties.AutomationId="ConfirmWarning" />
+            </DockPanel>
+        </Grid>
+
+        <!-- Häkchen für etwas Zusätzliches (E90: HDRpilot-Verknüpfungen), anfangs nicht gesetzt -->
+        <CheckBox x:Name="OptionBox" Style="{StaticResource Hp.Shell.CheckCard}" Margin="60,16,0,0" Visibility="Collapsed"
+                  AutomationProperties.AutomationId="ConfirmOption">
+            <StackPanel>
+                <TextBlock x:Name="OptionText" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.Text}" />
+                <TextBlock x:Name="OptionHint" Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Visibility="Collapsed" />
+            </StackPanel>
+        </CheckBox>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
             <Button x:Name="CancelButton" Style="{StaticResource Hp.GhostButton}" IsCancel="True" MinWidth="110"
                     Content="{x:Static res:LibraryStrings.Dialog_Cancel}"
                     AutomationProperties.AutomationId="ConfirmCancel" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}" />

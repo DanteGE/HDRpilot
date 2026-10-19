@@ -68,6 +68,8 @@ public sealed class AppLibraryContext : ILibraryContext
 
     public IShortcutService Shortcuts => _services.Shortcuts;
 
+    public UninstalledGameCleanup Cleanup => _services.GameCleanup;
+
     public IUiDispatcher Ui { get; }
 
     public IClipboard Clipboard { get; } = new WpfClipboard();

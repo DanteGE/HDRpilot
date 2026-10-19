@@ -339,9 +339,11 @@ public sealed class SelectionFollowsFilterTests
         AssertShown(vm, baldur);
         Assert.Equal(2, follows);
 
-        // Ein entferntes gewähltes Spiel hinterlässt wie bisher keine Auswahl (ohne Filter: nichts zu folgen).
+        // Ein entferntes gewähltes Spiel: Sein Nachbar ist gewählt (E90, vorher blieb der Titelbereich leer), leise.
+        var deadIsland = Item(vm, DeadIsland);
         context.ConfigService.Update(c => c.Games.RemoveAll(g => g.Key == "Gog:1"));
-        AssertShown(vm, null);
-        Assert.Equal(2, follows);
+        AssertShown(vm, deadIsland);
+        Assert.True(deadIsland.IsNew);
+        Assert.Equal(3, follows);
     });
 }

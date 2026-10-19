@@ -28,8 +28,9 @@ public enum DetailMessageArea
 
 /// <summary>
 /// Detailbereich des gewählten Spiels: Start über HdrPilot, Verknüpfungen, Steam-Startoption (nur Steam), Automatik,
-/// Bildschirm, Zurückstellen, Bild („Windows Auto HDR“, E88), EXE-Dateien (mit Herkunft) und Entfernen (nur manuelle
-/// Spiele). Änderungen gehen sofort in die Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
+/// Bildschirm, Zurückstellen, Bild („Windows Auto HDR“, E88), EXE-Dateien (mit Herkunft) und ganz unten Entfernen (manuelle
+/// Spiele) bzw. „Einstellungen entfernen…“ (nicht installierte Launcher-Spiele, E90). Änderungen gehen sofort in die
+/// Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
 /// </summary>
 public sealed class GameDetailsViewModel : ObservableObject
 {
@@ -66,6 +67,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         CreateStartMenuShortcutCommand = new AsyncRelayCommand(() => CreateShortcutAsync(desktop: false), () => CanLaunchGame);
         CopySteamLaunchOptionCommand = new RelayCommand(CopySteamLaunchOption, () => IsSteam);
         RemoveGameCommand = new AsyncRelayCommand(RemoveGameAsync, () => Item.IsManual);
+        RemoveSettingsCommand = new AsyncRelayCommand(() => _owner.RemoveSettingsAsync(Item), () => Item.IsRemovable && !Item.IsRunning);
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
         _artworkTiles = ArtworkTileViewModel.For(item, null);
@@ -357,6 +359,18 @@ public sealed class GameDetailsViewModel : ObservableObject
 
     public AsyncRelayCommand RemoveGameCommand { get; }
 
+    /// <summary>
+    /// „Einstellungen entfernen…“ ganz unten (E90): nur nicht installierte Launcher-Spiele, gesperrt während einer Sitzung
+    /// (<see cref="LibraryViewModel.RemoveSettingsAsync"/>).
+    /// </summary>
+    public AsyncRelayCommand RemoveSettingsCommand { get; }
+
+    /// <summary>Der Knopf „Einstellungen entfernen…“ erscheint (nicht installiertes Launcher-Spiel).</summary>
+    public bool CanRemoveSettings => Item.IsRemovable;
+
+    /// <summary>Hinweis „Nicht mehr gefunden“; bei Launcher-Spielen mit dem Hinweis, dass sich die Einstellungen ganz unten entfernen lassen.</summary>
+    public string NotInstalledText => Item.IsRemovable ? LibraryStrings.Details_NotInstalledRemovable : LibraryStrings.Details_NotInstalled;
+
     /// <summary>Ausschlussliste für Hilfsprozesse aus der Konfiguration (null: Standardliste).</summary>
     private IReadOnlyList<string>? HelperPatterns => _owner.Context.Config.Settings.HelperExecutablePatterns;
 
@@ -489,6 +503,14 @@ public sealed class GameDetailsViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsAutoHdrSubdued));
                 OnPropertyChanged(nameof(ShowAutoHdrNativeHint));
                 OnPropertyChanged(nameof(AutoHdrNativeHint));
+                break;
+            case nameof(GameItemViewModel.IsRemovable):
+                OnPropertyChanged(nameof(CanRemoveSettings));
+                OnPropertyChanged(nameof(NotInstalledText));
+                RemoveSettingsCommand.RaiseCanExecuteChanged();
+                break;
+            case nameof(GameItemViewModel.IsRunning):
+                RemoveSettingsCommand.RaiseCanExecuteChanged();
                 break;
         }
     }

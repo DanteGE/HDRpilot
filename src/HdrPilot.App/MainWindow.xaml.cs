@@ -316,6 +316,13 @@ public partial class MainWindow : ChromeWindow
         return new SnapshotOverlay(menu, new Point(x, y));
     }
 
+    /// <summary>Bildschirmfoto (E90): Detailbereich ganz nach unten, wo „Einstellungen entfernen…“ steht.</summary>
+    public void ScrollDetailsToEnd()
+    {
+        DetailsPanel.UpdateLayout();
+        DetailsPanel.ScrollToEnd();
+    }
+
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         base.OnPreviewKeyDown(e);
@@ -329,8 +336,8 @@ public partial class MainWindow : ChromeWindow
     /// Tastenkürzel der Bibliothek: Strg+F Suche (klappt eine eingeklappte Werkzeugleiste dauerhaft aus), Strg+Umschalt+F und
     /// Strg+F1 Werkzeugleiste aus- bzw. einblenden, Alt+A/N/H die Filter (auch bei eingeklappter Leiste), Strg+1/2/3
     /// Liste/Raster/Regal, Esc leert die Suche bzw. schließt die Schublade, auf einer Zeile oder Kachel Enter starten,
-    /// Leertaste „HDR automatisch“, I Details (Regal), Pfeile im Raster und Regal. Modifikatoren und Fokus kommen als Werte
-    /// (Tests: ohne angezeigtes Fenster gibt es keinen Tastaturfokus).
+    /// Leertaste „HDR automatisch“, Entf entfernen (mit Rückfrage), I Details (Regal), Pfeile im Raster und Regal.
+    /// Modifikatoren und Fokus kommen als Werte (Tests: ohne angezeigtes Fenster gibt es keinen Tastaturfokus).
     /// </summary>
     /// <returns>true, wenn die Taste erledigt ist.</returns>
     public bool HandleKey(Key key, ModifierKeys modifiers, IInputElement? focused)
@@ -408,7 +415,10 @@ public partial class MainWindow : ChromeWindow
         return false;
     }
 
-    /// <summary>Tasten auf einer Zeile oder Kachel: Enter startet, Leertaste schaltet „HDR automatisch“, Pfeile im Raster und Regal.</summary>
+    /// <summary>
+    /// Tasten auf einer Zeile oder Kachel: Enter startet, Leertaste schaltet „HDR automatisch“, Entf entfernt nach einer
+    /// Rückfrage (E90), Pfeile im Raster und Regal.
+    /// </summary>
     private bool HandleGameKey(LibraryViewModel vm, Key key, ListBoxItem item)
     {
         switch (key)
@@ -430,6 +440,22 @@ public partial class MainWindow : ChromeWindow
             case Key.I when vm.IsShelfView:
                 vm.IsDetailsDrawerOpen = !vm.IsDetailsDrawerOpen;
                 return true;
+            case Key.Delete:
+                // Entf nur mit Rückfrage (E90): nicht installierte Launcher-Spiele „Einstellungen entfernen…“, selbst
+                // hinzugefügte „Aus der Bibliothek entfernen“; sonst nichts.
+                if (vm.RemoveSettingsCommand.CanExecute(null))
+                {
+                    vm.RemoveSettingsCommand.Execute(null);
+                    return true;
+                }
+
+                if (vm.SelectedGame is { IsManual: true } && vm.Details?.RemoveGameCommand is { } remove && remove.CanExecute(null))
+                {
+                    remove.Execute(null);
+                    return true;
+                }
+
+                return false;
         }
 
         if (ItemsControl.ItemsControlFromItemContainer(item) is not ListBox list || ReferenceEquals(list, GameList))

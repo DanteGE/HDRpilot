@@ -109,8 +109,20 @@ public sealed class GameItemViewModel : ObservableObject
     public bool IsInstalled
     {
         get => _isInstalled;
-        private set => SetProperty(ref _isInstalled, value);
+        private set
+        {
+            if (SetProperty(ref _isInstalled, value))
+            {
+                OnPropertyChanged(nameof(IsRemovable));
+            }
+        }
     }
+
+    /// <summary>
+    /// Nicht installiertes Spiel eines Launchers: „Einstellungen entfernen…“ wird angeboten (E90). Selbst hinzugefügte Spiele
+    /// haben „Aus der Bibliothek entfernen“.
+    /// </summary>
+    public bool IsRemovable => !IsManual && !_isInstalled;
 
     /// <summary>Gerade eine Sitzung aktiv (HDR für dieses Spiel geschaltet).</summary>
     public bool IsRunning

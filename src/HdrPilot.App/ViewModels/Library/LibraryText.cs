@@ -18,6 +18,10 @@ public static class LibraryText
     public static string HiddenGames(int count) =>
         count == 1 ? LibraryStrings.Count_HiddenOne : Format(LibraryStrings.Count_HiddenMany, count);
 
+    /// <summary>„Eine Datei ließ sich nicht löschen …“, „3 Dateien ließen sich nicht löschen …“ (nach „Einstellungen entfernen…“, E90).</summary>
+    public static string FilesFailed(int count) =>
+        count == 1 ? LibraryStrings.RemoveSettings_FilesFailedOne : Format(LibraryStrings.RemoveSettings_FilesFailed, count);
+
     /// <summary>HDR laut PCGamingWiki in Worten (Titelbereich, Karte, Detailbereich); nie „SDR“.</summary>
     public static string HdrKindLabel(HdrSupportStatus status) => status switch
     {

@@ -150,6 +150,80 @@ public sealed class UninstalledLibraryTests
     });
 
     [Fact]
+    public void Uninstalled_hiding_the_selected_game_of_a_vanishing_source_selects_a_neighbour_in_all_games() => Sta.Run(() =>
+    {
+        // Gefiltert nach „Eigene Spiele“ mit nur dem gewählten (Ordner fehlt): Beim Ausblenden fällt die Quelle weg, die
+        // Liste zeigt wieder alle, und gewählt ist das Spiel, das nach dem ausgeblendeten käme, statt keines.
+        var context = SampleContext();
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        var follows = 0;
+        vm.SelectionFollowedFilter += (_, _) => follows++;
+        vm.SelectedSource = vm.SourceOptions.Single(o => o.Source == GameSource.Manual);
+        vm.SelectedGame = vm.Games.Single(g => g.Name == "Eigenes Spiel");
+        context.Dispatcher.RunDelayed();
+        follows = 0;
+
+        Hide(context, true);
+
+        Assert.Null(vm.SelectedSource?.Source);
+        Assert.Equal(["Dead Island 2", "HELLDIVERS 2"], Visible(vm));
+        Assert.Equal("HELLDIVERS 2", vm.SelectedGame?.Name);
+        Assert.Same(vm.SelectedGame, vm.Details?.Item);
+        Assert.Equal(1, follows);
+    });
+
+    [Fact]
+    public void Uninstalled_no_match_names_hidden_games_that_would_match() => Sta.Run(() =>
+    {
+        // Ausgeblendet und gesucht: „Keine Spiele für diese Auswahl“ sagt, dass ausgeblendete Spiele passen würden und wo sie
+        // sich einblenden lassen; die Zahl im Kopf bleibt ohne sie (Entscheidung des Nutzers).
+        var context = SampleContext();
+        Hide(context, true);
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+
+        vm.SearchText = "Outlast";
+        vm.ApplySearch();
+        Assert.True(vm.IsFilterEmpty);
+        Assert.Equal(LibraryStrings.List_NoMatchHiddenOne, vm.NoMatchText);
+
+        // „Neu“ und „Steam“: Gelistet passt keins (HELLDIVERS 2 ist nicht neu), ausgeblendet Outlast und VEIN Demo.
+        vm.OnlyNew = true;
+        vm.SearchText = "Steam";
+        vm.ApplySearch();
+        Assert.True(vm.IsFilterEmpty);
+        Assert.Equal(LibraryText.Format(LibraryStrings.List_NoMatchHiddenMany, 2), vm.NoMatchText);
+        Assert.Equal(2, vm.TotalCount);
+
+        vm.SearchText = "xqz";
+        vm.ApplySearch();
+        Assert.Equal(LibraryStrings.List_NoMatchText, vm.NoMatchText);
+
+        vm.SearchText = "Steam";
+        vm.ApplySearch();
+        Hide(context, false);
+        Assert.False(vm.IsFilterEmpty);
+        Assert.Equal(LibraryStrings.List_NoMatchText, vm.NoMatchText);
+    });
+
+    [Fact]
+    public void Uninstalled_reset_tip_names_a_single_hidden_game_in_the_singular() => Sta.Run(() =>
+    {
+        var context = new TestLibraryContext(
+            Game(GameSource.Epic, "Crow", "Dead Island 2", isNew: false),
+            Game(GameSource.Steam, "553850", "HELLDIVERS 2", isNew: false),
+            Game(GameSource.Steam, "990050", "Hogwarts Legacy", isNew: false),
+            Game(GameSource.Steam, "1304930", "The Outlast Trials", installed: false));
+        Hide(context, true);
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+
+        Assert.Equal(1, vm.HiddenCount);
+        Assert.Equal("Zeigt wieder alle 3 Spiele. Ausgeblendet bleibt 1 nicht installiertes Spiel (Einstellungen › Bibliothek).", vm.ResetTipText);
+
+        context.ConfigService.Update(c => c.FindGame("Steam:990050")!.IsInstalled = false);
+        Assert.Equal("Zeigt wieder alle 2 Spiele. Ausgeblendet bleiben 2 nicht installierte Spiele (Einstellungen › Bibliothek).", vm.ResetTipText);
+    });
+
+    [Fact]
     public void Uninstalled_hidden_game_cannot_be_selected_by_its_key() => Sta.Run(() =>
     {
         var context = SampleContext();

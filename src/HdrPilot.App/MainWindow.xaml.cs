@@ -521,6 +521,13 @@ public partial class MainWindow : ChromeWindow
         }
     }
 
+    /// <summary>
+    /// Automatik-Karte des Regals nur mit gewähltem Spiel: Ohne Spiel (Suche ohne Treffer, leere Bibliothek) stünden dort ein
+    /// leerer Titel und Schalter, die zwar umschalten, aber nichts speichern.
+    /// </summary>
+    private void ApplyAutomationCard() =>
+        AutomationCard.Visibility = _appliedView == LibraryViewMode.Shelf && _viewModel?.SelectedGame is not null ? Visibility.Visible : Visibility.Collapsed;
+
     /// <summary>Fenstergröße des Prototyps (1600 × 1000), auf kleineren Bildschirmen auf 92 % der Arbeitsfläche begrenzt.</summary>
     private void FitToWorkArea()
     {
@@ -549,7 +556,7 @@ public partial class MainWindow : ChromeWindow
         var shelf = view == LibraryViewMode.Shelf;
         HeroCompact.Visibility = shelf ? Visibility.Collapsed : Visibility.Visible;
         HeroLarge.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
-        AutomationCard.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
+        ApplyAutomationCard();
         DrawerCloseButton.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
         HeroSplitter.Visibility = view == LibraryViewMode.List ? Visibility.Visible : Visibility.Collapsed;
 
@@ -1298,6 +1305,9 @@ public partial class MainWindow : ChromeWindow
                 break;
             case nameof(LibraryViewModel.Hero):
                 UpdateHero(instant: false);
+                break;
+            case nameof(LibraryViewModel.SelectedGame):
+                ApplyAutomationCard();
                 break;
             case nameof(LibraryViewModel.IsHdrOn):
             case nameof(LibraryViewModel.ShowsHdrOn):

@@ -97,8 +97,8 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     genauso wie im kleinen Fenster; nichts wird gestreckt oder abgeschnitten. Der Schalter „HDR automatisch“ erscheint
     an der gewählten Kachel und beim Zeigen mit der Maus.
   - **Regal**: großes Titelbild mit **Starten**, **Desktop** und **Startmenü**, darunter eine Reihe Cover zum Blättern
-    und rechts die Karte „AUTOMATIK“ mit den wichtigsten Schaltern. **Details** (oder die Taste I) öffnet alle Details
-    als Schublade, Esc schließt sie.
+    und rechts die Karte „AUTOMATIK“ mit den wichtigsten Schaltern (nur, wenn ein Spiel gewählt ist). **Details** (oder
+    die Taste I) öffnet alle Details als Schublade, Esc schließt sie.
 - In Liste und Raster stehen rechts die Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit
   den Pfeiltasten verschieben, per Doppelklick zurücksetzen); die Breite merkt sich HDRpilot, höchstens 560 px.
 - Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR
@@ -147,7 +147,8 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“.
   Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen der Filter, ist es wieder gewählt.
   Verschwindet das gewählte Spiel ganz aus der Liste (entfernt oder ausgeblendet), ist das nächste gewählt, am Ende der
-  Liste das vorige.
+  Liste das vorige; fällt damit auch die gewählte Quelle weg, zeigt die Liste wieder alle Spiele, und gewählt ist das,
+  das dort auf das verschwundene folgt.
 - Sortierung nach **Name**, **Zuletzt gespielt** oder **HDR-Unterstützung**; die Wahl bleibt gespeichert. „Zuletzt
   gespielt“ kennt Steam-Spiele aus Steams eigenen Daten und alle Spiele, die HDRpilot laufen sieht.
 - Neu gefundene Spiele tragen die Markierung „NEU“. Sie verschwindet, sobald du das Spiel anklickst oder seinen
@@ -193,13 +194,15 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   - **Aus der Bibliothek entfernen**: nur für selbst hinzugefügte Spiele.
   - **Einstellungen entfernen…** (ganz unten, rot): nur für nicht installierte Spiele aus Launchern, auch per
     Rechtsklick oder Entf. Nach einer Rückfrage vergisst HDRpilot, was es zu dem Spiel gespeichert hat: den Eintrag
-    samt Schaltern und gemerkten EXE-Dateien, das eigene Symbol und die eigenen Bilder. Die Rückfrage nennt, was
-    verloren geht (etwa dass „HDR automatisch“ an ist oder „2 gemerkte EXE-Dateien“), warnt, wenn das Laufwerk des
-    Spiels nicht verbunden ist (dann ist es vielleicht noch installiert), und hat den Fokus auf **Abbrechen**. Gibt es
-    „(HDR)“-Verknüpfungen des Spiels auf dem Desktop oder im Startmenü, löscht ein Häkchen sie samt ihrer ICO-Datei
-    mit; ohne Häkchen bleiben sie liegen, starten das Spiel aber nicht mehr. Am Spiel, am Launcher und an anderen
-    Verknüpfungen ändert sich nichts. Danach ist das nächste Spiel der Liste gewählt. Installierst du das Spiel wieder,
-    erscheint es beim nächsten Einlesen als neu, mit „HDR automatisch“ aus. Solange das Spiel läuft, geht es nicht.
+    samt Schaltern, gemerkten EXE-Dateien und Bildwahl, das eigene Symbol und die eigenen Bilder. Die Rückfrage nennt,
+    was verloren geht (etwa dass „HDR automatisch“ an ist oder „2 gemerkte EXE-Dateien“), warnt, wenn das Spiel
+    vielleicht noch installiert ist (sein Laufwerk ist nicht verbunden, oder sein Ordner ist noch da, etwa mitten in
+    einem Update), und hat den Fokus auf **Abbrechen**. Gibt es „(HDR)“-Verknüpfungen des Spiels auf dem Desktop oder
+    im Startmenü, löscht ein Häkchen sie mit, ihre ICO-Datei nur, wenn keine andere Verknüpfung sie mehr zeigt; ohne
+    Häkchen bleiben sie liegen und starten das Spiel erst wieder, wenn es installiert und neu eingelesen ist. Am Spiel,
+    am Launcher und an anderen Verknüpfungen ändert sich nichts. Danach ist das nächste Spiel der Liste gewählt.
+    Installierst du das Spiel wieder, erscheint es beim nächsten Einlesen als neu, mit „HDR automatisch“ aus. Solange
+    das Spiel läuft, geht es nicht.
 
 ### Infobereich
 
@@ -264,8 +267,9 @@ speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert
 
 Im Bereich **Bibliothek** entfernt **Einstellungen aller nicht installierten Spiele entfernen…** auf einmal, was
 **Einstellungen entfernen…** bei jedem einzelnen nicht installierten Spiel aus einem Launcher entfernen würde. Die
-Rückfrage nennt alle betroffenen Spiele, je mit dem, was verloren geht, und warnt bei nicht verbundenen Laufwerken.
-Das gilt sofort und unabhängig von **Speichern**; selbst hinzugefügte und gerade laufende Spiele bleiben.
+Rückfrage nennt alle betroffenen Spiele, unter jedem, was verloren geht, und warnt bei nicht verbundenen Laufwerken
+und noch vorhandenen Ordnern. Das gilt sofort und unabhängig von **Speichern**; selbst hinzugefügte und gerade laufende
+Spiele bleiben (laufen alle, sagt die Karte das).
 
 Links führt eine Navigation durch die Bereiche (**Allgemein**, **Bildschirme**, **Automatik**, **Suchordner**,
 **Bibliothek**, **Hilfsprozesse**, **Darstellung** mit **Farben**, **Bilder** und **Symbole und Tray**, **Erweitert**,
@@ -761,10 +765,12 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
 - **Ein Spiel fehlt in der Liste:** „Neu einlesen“ drücken; fehlt es weiter, über „Spiel hinzufügen“ eintragen oder
   seinen übergeordneten Ordner als Suchordner angeben. Fehler einzelner Launcher stehen in der Bibliothek und im
   Protokoll. Ist unter „Einstellungen“ › „Bibliothek“ der Schalter „Nicht installierte Spiele ausblenden“ an, stehen
-  nicht installierte Spiele nicht in der Liste; ist sie deshalb leer, sagt sie das.
+  nicht installierte Spiele nicht in der Liste; ist sie deshalb leer, sagt sie das, und findet die Suche nur
+  ausgeblendete Spiele, sagt es der Hinweis „Keine Spiele für diese Auswahl“.
 - **Ein installiertes Spiel heißt „Nicht installiert“:** Liegt es auf einem Laufwerk, das gerade nicht verbunden ist,
-  oder steckt es im Launcher mitten in einem Update? Dann nicht „Einstellungen entfernen…“ wählen: Nach dem Verbinden
-  bzw. dem Update und „Neu einlesen“ gelten seine Einstellungen wieder.
+  steckt es im Launcher mitten in einem Update, oder hat das Einlesen den Launcher nicht gefunden (siehe Protokoll)?
+  Dann nicht „Einstellungen entfernen…“ wählen (die Rückfrage warnt, wenn Laufwerk fehlt oder Ordner noch da ist):
+  Nach dem Verbinden bzw. dem Update und „Neu einlesen“ gelten seine Einstellungen wieder.
 - **Protokoll:** Infobereich → „Protokollordner öffnen“. Für mehr Einzelheiten unter Einstellungen → Erweitert die
   Protokollstufe auf „Ausführlich“ stellen. Jede Schaltung steht dort mit Auslöser, Bildschirm, Zustand vorher und
   nachher.

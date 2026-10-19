@@ -165,6 +165,45 @@ public sealed class DenyingFileSystem(IFileSystem inner, params string[] deniedD
     private bool IsDenied(string directory) => deniedDirectories.Any(d => HdrPilot.Core.Util.PathUtil.PathEquals(d, directory));
 }
 
+/// <summary>
+/// Dateisystem, dessen Prüfung bestimmter Ordner (DirectoryExists) hängt, bis <see cref="Release"/> aufgerufen ist, längstens
+/// 30 s: ein getrenntes Netzlaufwerk oder eine anlaufende Platte (E90, Prüfung vor „Einstellungen entfernen…“).
+/// </summary>
+public sealed class HangingFileSystem(IFileSystem inner, params string[] hanging) : IFileSystem
+{
+    private readonly ManualResetEventSlim _released = new();
+
+    public void Release() => _released.Set();
+
+    public bool FileExists(string path) => inner.FileExists(path);
+
+    public bool DirectoryExists(string path)
+    {
+        if (hanging.Any(h => HdrPilot.Core.Util.PathUtil.PathEquals(h, path)))
+        {
+            _released.Wait(TimeSpan.FromSeconds(30));
+        }
+
+        return inner.DirectoryExists(path);
+    }
+
+    public string ReadAllText(string path) => inner.ReadAllText(path);
+
+    public byte[] ReadAllBytes(string path) => inner.ReadAllBytes(path);
+
+    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false) => inner.EnumerateFiles(directory, searchPattern, recursive);
+
+    public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) => inner.EnumerateDirectories(directory, searchPattern, recursive);
+
+    public void CreateDirectory(string path) => inner.CreateDirectory(path);
+
+    public void WriteAllTextAtomic(string path, string contents) => inner.WriteAllTextAtomic(path, contents);
+
+    public void DeleteFile(string path) => inner.DeleteFile(path);
+
+    public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
+}
+
 public sealed class FakeDialogs : ILibraryDialogs
 {
     public Queue<string?> Executables { get; } = new();
@@ -499,7 +538,10 @@ public sealed class TestLibraryContext : ILibraryContext
     public const string CustomArtDirectory = @"C:\Data\art\custom";
 
     /// <summary>Aufräumen über die Ablage im Speicher und die Attrappen (E90).</summary>
-    public UninstalledGameCleanup Cleanup => new(Files, IconDirectory, CustomArtDirectory, FakeIcons, Artwork, FakeShortcuts);
+    public UninstalledGameCleanup Cleanup => new(CleanupFiles ?? Files, IconDirectory, CustomArtDirectory, FakeIcons, Artwork, FakeShortcuts);
+
+    /// <summary>Dateisystem nur für das Aufräumen und die Prüfung davor (etwa ein hängendes Laufwerk); null: <see cref="Files"/>.</summary>
+    public IFileSystem? CleanupFiles { get; set; }
 
     public IUiDispatcher Ui => Dispatcher;
 

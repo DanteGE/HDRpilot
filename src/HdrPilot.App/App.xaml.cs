@@ -130,9 +130,9 @@ public partial class App : Application
     /// </summary>
     private async Task RunSnapshotModeAsync(AppArguments args, string snapshotDir)
     {
-        if (args.ConfigDir is null)
+        if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
         {
-            Shutdown(2); // nie gegen die echte Konfiguration
+            Shutdown(2); // nie gegen die echte Konfiguration oder den echten Datenordner
             return;
         }
 
@@ -173,9 +173,9 @@ public partial class App : Application
     /// </summary>
     private async Task RunArtworkReportModeAsync(AppArguments args, string reportFile)
     {
-        if (args.ConfigDir is null)
+        if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
         {
-            Shutdown(2); // nie gegen die echte Konfiguration
+            Shutdown(2); // nie gegen die echte Konfiguration oder den echten Datenordner
             return;
         }
 
@@ -206,9 +206,9 @@ public partial class App : Application
     /// </summary>
     private async Task RunSettingsProbeModeAsync(AppArguments args, string reportFile)
     {
-        if (args.ConfigDir is null)
+        if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
         {
-            Shutdown(2); // nie gegen die echte Konfiguration
+            Shutdown(2); // nie gegen die echte Konfiguration oder den echten Datenordner
             return;
         }
 

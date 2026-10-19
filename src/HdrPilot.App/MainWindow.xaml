@@ -1487,7 +1487,8 @@
                                     Content="{x:Static res:LibraryStrings.List_ResetFilters}" />
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock Text="{x:Static res:LibraryStrings.List_NoMatchTitle}" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}" />
-                                <TextBlock Text="{x:Static res:LibraryStrings.List_NoMatchText}" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                                <TextBlock Text="{Binding NoMatchText}" FontSize="13" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
+                                           AutomationProperties.AutomationId="NoMatchText" />
                             </StackPanel>
                         </DockPanel>
                     </Border>

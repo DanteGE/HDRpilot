@@ -10,6 +10,7 @@
         Windows-Animationseffekte).
     -->
     <lib:BoolToVisibilityConverter x:Key="Lib.BoolToVisibility" />
+    <lib:IsVisibleConverter x:Key="Lib.IsVisible" />
     <lib:ScaleConverter x:Key="Lib.Scale" />
 
     <!-- Titelschrift (gleich Hp.Font.Display der Darstellung: Bahnschrift, mitgeliefert mit Windows) -->

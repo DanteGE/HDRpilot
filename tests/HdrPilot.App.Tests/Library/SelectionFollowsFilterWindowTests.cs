@@ -200,4 +200,38 @@ public sealed class SelectionFollowsFilterWindowTests
             window.Close();
         });
     }
+
+    [Fact]
+    public void In_the_shelf_the_automation_card_hides_without_a_selected_game()
+    {
+        // Regal, Suche ohne Treffer: Ohne Spiel stünden auf der Karte ein leerer Titel und Schalter, die umschalten, aber nichts
+        // speichern. Sie verschwindet und kehrt mit dem Spiel zurück; in Liste und Raster gibt es sie nie.
+        WpfTestHost.Run(() =>
+        {
+            var (window, model) = Open(LibraryViewMode.Shelf);
+            var card = Named<FrameworkElement>(window, "AutomationCard");
+            Assert.Equal(Visibility.Visible, card.Visibility);
+
+            model.SearchText = "xqz";
+            model.ApplySearch();
+            Arrange(window);
+            Assert.Null(model.SelectedGame);
+            Assert.Equal(Visibility.Collapsed, card.Visibility);
+
+            model.ClearFiltersCommand.Execute(null);
+            Arrange(window);
+            Assert.Same(ByName(model, "Spiel 001"), model.SelectedGame);
+            Assert.Equal(Visibility.Visible, card.Visibility);
+
+            model.ViewMode = LibraryViewMode.Grid;
+            Arrange(window);
+            Assert.Equal(Visibility.Collapsed, card.Visibility);
+            model.SearchText = "xqz";
+            model.ApplySearch();
+            model.ViewMode = LibraryViewMode.Shelf;
+            Arrange(window);
+            Assert.Equal(Visibility.Collapsed, card.Visibility); // auch beim Wechsel ins Regal ohne Spiel
+            window.Close();
+        });
+    }
 }

@@ -104,6 +104,33 @@ public sealed record AppArguments
     public bool HasCommand => RunGameKey is not null || PrepareGameKey is not null || ReadyEvent is not null
         || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings || TestHdrMoment || TestToolbarSearch;
 
+    /// <summary>
+    /// Eine eigene Ablage, wie sie die Entwicklerschalter brauchen (<c>--snapshot</c>, <c>--artwork-report</c>,
+    /// <c>--settings-probe</c>): <see cref="ConfigDir"/> ist gesetzt und weder der echte Konfigurationsordner noch der echte
+    /// Datenordner (<paramref name="defaults"/>), auch nicht in anderer Schreibweise. Sonst schrieben sie in die echte
+    /// Konfiguration, womöglich neben der laufenden App.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.MemberNotNullWhen(true, nameof(ConfigDir))]
+    public bool HasOwnConfigDir(Core.Config.AppPaths defaults)
+    {
+        if (string.IsNullOrWhiteSpace(ConfigDir))
+        {
+            return false;
+        }
+
+        string full;
+        try
+        {
+            full = System.IO.Path.GetFullPath(ConfigDir);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.IO.PathTooLongException or System.Security.SecurityException)
+        {
+            return false;
+        }
+
+        return !Core.Util.PathUtil.PathEquals(full, defaults.ConfigDirectory) && !Core.Util.PathUtil.PathEquals(full, defaults.DataDirectory);
+    }
+
     public static AppArguments Parse(IReadOnlyList<string> args)
     {
         var result = new AppArguments();

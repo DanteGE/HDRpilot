@@ -173,4 +173,25 @@ public sealed class AppArgumentsTests
         Assert.False(AppArguments.Parse(["--", "--test-toolbar-search"]).TestToolbarSearch);
         Assert.False(AppArguments.Parse(["--test-hdr-moment"]).TestToolbarSearch);
     }
+
+    [Theory]
+    [InlineData(@"C:\Temp\hdrpilot-probe", true)]
+    [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot\Kopie", true)] // Unterordner: eigene config.json
+    [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot", false)] // die echte Konfiguration
+    [InlineData(@"c:\users\test\appdata\roaming\hdrpilot\", false)] // dieselbe, anders geschrieben
+    [InlineData(@"C:/Users/Test/AppData/Roaming/HDRpilot", false)]
+    [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot\Kopie\..", false)]
+    [InlineData(@"C:\Users\Test\AppData\Local\HDRpilot", false)] // der echte Datenordner (Protokolle, Symbole, Bilder)
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    public void Developer_modes_run_only_with_an_own_config_dir(string? configDir, bool own)
+    {
+        // E90, Prüfung: --settings-probe (wie --snapshot und --artwork-report) speichert die Konfiguration seiner Ablage; gegen
+        // die echte Ablage oder den echten Datenordner beendet sich die App mit Exit-Code 2, statt sie zu verändern.
+        var defaults = new HdrPilot.Core.Config.AppPaths(@"C:\Users\Test\AppData\Roaming\HDRpilot", @"C:\Users\Test\AppData\Local\HDRpilot");
+        var args = AppArguments.Parse(configDir is null ? ["--settings-probe", @"C:\Temp\bericht.json"] : ["--settings-probe", @"C:\Temp\bericht.json", "--config-dir", configDir]);
+
+        Assert.Equal(@"C:\Temp\bericht.json", args.SettingsProbe);
+        Assert.Equal(own, args.HasOwnConfigDir(defaults));
+    }
 }

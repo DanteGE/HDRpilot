@@ -100,10 +100,11 @@ public sealed class RemoveSettingsTests
 
         var request = Assert.Single(dialogs.Requests);
         Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_ConfirmTitle, "The Outlast Trials"), request.Title);
-        Assert.Equal(["„HDR automatisch“ ist an", "2 gemerkte EXE-Dateien"], request.Details);
+        Assert.Equal([new ConfirmDetail("„HDR automatisch“ ist an"), new ConfirmDetail("2 gemerkte EXE-Dateien")], request.Details);
         Assert.Equal(LibraryStrings.RemoveSettings_LossHeader, request.DetailsHeader);
         Assert.Equal("Laufwerk Q: ist nicht verbunden. Das Spiel ist vielleicht noch installiert.", request.Warning);
         Assert.Equal("Auch die 2 HDRpilot-Verknüpfungen löschen", request.OptionText);
+        Assert.Equal(LibraryStrings.RemoveSettings_ShortcutHint, request.OptionHint);
         Assert.Equal(LibraryStrings.RemoveSettings_Confirm, request.ConfirmText);
         Assert.True(request.IsDanger);
         Assert.Contains("ändert sich nichts", request.Message, StringComparison.Ordinal);
@@ -120,7 +121,7 @@ public sealed class RemoveSettingsTests
         var request = Assert.Single(dialogs.Requests);
         Assert.Null(request.Warning);
         Assert.Null(request.OptionText);
-        Assert.Equal([LibraryStrings.RemoveSettings_LossNothing], request.Details);
+        Assert.Equal([new ConfirmDetail(LibraryStrings.RemoveSettings_LossNothing)], request.Details);
     });
 
     [Fact]
@@ -128,15 +129,20 @@ public sealed class RemoveSettingsTests
     {
         var outlast = Game(GameSource.Steam, "1304930", "The Outlast Trials", hdrAuto: true, isNew: false, installed: false);
         var klippe = Game(GameSource.Steam, "9990140", "KLIPPE Demo", installed: false);
+        var rolla = Game(GameSource.Steam, "3975830", "ROLLA", installed: false);
 
-        var request = RemoveSettingsText.ForGames([outlast, klippe], ["F:", "G:"], shortcuts: 3);
+        var request = RemoveSettingsText.ForGames([outlast, klippe, rolla], [new("G:", false), InstallTrace.None, new("F:", false)], shortcuts: 3);
 
-        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, 2), request.Title);
-        Assert.Equal(["The Outlast Trials · „HDR automatisch“ ist an", "KLIPPE Demo"], request.Details);
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, 3), request.Title);
+        Assert.Equal(
+            [new ConfirmDetail("The Outlast Trials", "Laufwerk G: nicht verbunden · „HDR automatisch“ ist an"), new ConfirmDetail("KLIPPE Demo"), new ConfirmDetail("ROLLA", "Laufwerk F: nicht verbunden")],
+            request.Details);
         Assert.Equal("Laufwerke F:, G: sind nicht verbunden. Spiele dort sind vielleicht noch installiert.", request.Warning);
         Assert.Equal("Auch die 3 HDRpilot-Verknüpfungen löschen", request.OptionText);
+        Assert.Equal(LibraryStrings.RemoveSettings_ShortcutHint, request.OptionHint);
         Assert.True(request.IsDanger);
-        Assert.Null(RemoveSettingsText.ForGames([klippe], [], shortcuts: 0).Warning);
+        Assert.Null(RemoveSettingsText.ForGames([klippe], [InstallTrace.None], shortcuts: 0).Warning);
+        Assert.Equal(LibraryStrings.RemoveSettings_ShortcutHintOne, RemoveSettingsText.ForGames([klippe], [InstallTrace.None], shortcuts: 1).OptionHint);
     }
 
     [Fact]
@@ -314,4 +320,174 @@ public sealed class RemoveSettingsTests
         Assert.True(back.IsInstalled);
         Assert.Empty(context.Config.FindGame(Outlast)!.DetectedExecutables);
     });
+
+    [Fact]
+    public void RemoveSettings_warns_when_the_game_folder_is_still_there() => Sta.Run(async () =>
+    {
+        // Prüfung (E90): Steam nicht gefunden oder ein Update ohne „vollständig installiert“ macht ein installiertes Spiel zu
+        // „nicht installiert“; sein Ordner ist dann noch da. Die Rückfrage sagt das, statt still alles zu entfernen.
+        var context = SampleContext();
+        context.Files.AddFile(@"C:\Program Files (x86)\Steam\steamapps\common\KlippeDemo\Klippe.exe", "exe");
+        var dialogs = new FakeDialogs();
+        using var vm = new LibraryViewModel(context, dialogs);
+
+        await Remove(vm, Klippe);
+
+        Assert.Equal(LibraryStrings.RemoveSettings_FolderPresent, Assert.Single(dialogs.Requests).Warning);
+        Assert.NotNull(context.Config.FindGame(Klippe)); // abgebrochen
+    });
+
+    [Fact]
+    public void RemoveSettings_failed_save_after_the_change_deletes_nothing() => Sta.Run(async () =>
+    {
+        // Das Lambda nimmt das Spiel schon heraus, erst das Schreiben scheitert (Platte voll): Dann darf keine Datei fallen.
+        var context = SampleContext();
+        context.FakeShortcuts.Existing[Outlast] = [Shortcut("The Outlast Trials (HDR)")];
+        var dialogs = new FakeDialogs();
+        dialogs.Answers.Enqueue(true);
+        dialogs.OptionAnswers.Enqueue(true);
+        dialogs.WhileConfirmOpen = () => context.Files.FailWriting(ConfigPath, new IOException("Datenträger voll"));
+        using var vm = new LibraryViewModel(context, dialogs);
+
+        await Remove(vm, Outlast);
+
+        Assert.NotNull(context.Config.FindGame(Outlast));
+        Assert.True(context.Files.FileExists(OwnIcon(Outlast)));
+        Assert.Empty(context.FakeIcons.ForgottenGames);
+        Assert.Empty(context.FakeShortcuts.Deleted);
+        Assert.Equal(StatusKind.Error, vm.StatusKind);
+        Assert.Same(Item(vm, Outlast), vm.SelectedGame);
+    });
+
+    [Fact]
+    public void RemoveSettings_of_the_last_game_of_a_source_selects_its_neighbour_in_all_games() => Sta.Run(async () =>
+    {
+        // Gefiltert nach „GOG“ mit nur diesem Spiel: Danach gibt es die Quelle nicht mehr, die Liste zeigt wieder alle, und
+        // gewählt ist das Spiel, das in der Reihenfolge der Liste auf das entfernte folgt (nicht ein leerer Titelbereich).
+        var context = new TestLibraryContext(
+            Game(GameSource.Steam, "553850", "HELLDIVERS 2", isNew: false),
+            Game(GameSource.Gog, "1207658924", "Monkey Island 2", isNew: false, installed: false),
+            Game(GameSource.Steam, "9990140", "KLIPPE Demo", isNew: false),
+            Game(GameSource.Epic, "Crow", "Dead Island 2", isNew: false));
+        var dialogs = new FakeDialogs();
+        dialogs.Answers.Enqueue(true);
+        using var vm = new LibraryViewModel(context, dialogs);
+        vm.SelectedSource = vm.SourceOptions.Single(o => o.Source == GameSource.Gog);
+        vm.SelectedGame = Item(vm, "Gog:1207658924");
+        var follows = 0;
+        vm.SelectionFollowedFilter += (_, _) => follows++;
+
+        vm.RemoveSettingsCommand.Execute(null);
+        await Sta.Finished(vm.RemoveSettingsCommand);
+
+        Assert.Null(context.Config.FindGame("Gog:1207658924"));
+        Assert.Null(vm.SelectedSource?.Source);
+        Assert.Equal(3, vm.VisibleCount);
+        Assert.Equal("KLIPPE Demo", vm.SelectedGame?.Name); // nach „Monkey Island 2“
+        Assert.Same(vm.SelectedGame, vm.Details?.Item);
+        Assert.Same(vm.SelectedGame, vm.Hero?.Item);
+        Assert.Equal(1, follows); // das Fenster holt den Fokus einmal nach
+    });
+
+    [Fact]
+    public void RemoveSettings_says_that_it_is_checking_while_the_drive_answers_slowly() => Sta.Run(async () =>
+    {
+        // Ein getrenntes Netzlaufwerk antwortet erst nach der Wartezeit: Bis zur Rückfrage steht in der Hinweiszeile, dass
+        // geprüft wird; beim Öffnen der Rückfrage ist der Hinweis weg.
+        var context = SampleContext();
+        var slow = new HangingFileSystem(context.Files, @"Q:\");
+        context.CleanupFiles = slow;
+        var dialogs = new FakeDialogs();
+        string? statusWhileAsking = "nicht gefragt";
+        LibraryViewModel? asking = null;
+        dialogs.WhileConfirmOpen = () => statusWhileAsking = asking!.StatusMessage;
+        using var vm = new LibraryViewModel(context, dialogs);
+        asking = vm;
+        var shown = new List<string?>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LibraryViewModel.StatusMessage))
+            {
+                shown.Add(vm.StatusMessage);
+            }
+        };
+
+        try
+        {
+            vm.SelectedGame = Item(vm, Outlast);
+            vm.RemoveSettingsCommand.Execute(null);
+            await Task.Delay(LibraryViewModel.CheckingDelay * 3);
+            Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_Checking, "The Outlast Trials"), vm.StatusMessage);
+            Assert.Empty(dialogs.Requests);
+            await Sta.Finished(vm.RemoveSettingsCommand);
+        }
+        finally
+        {
+            slow.Release();
+        }
+
+        Assert.Null(statusWhileAsking);
+        Assert.Equal("Laufwerk Q: ist nicht verbunden. Das Spiel ist vielleicht noch installiert.", Assert.Single(dialogs.Requests).Warning);
+        Assert.Contains(LibraryText.Format(LibraryStrings.RemoveSettings_Checking, "The Outlast Trials"), shown);
+    });
+
+    [Fact]
+    public void RemoveSettings_without_delay_shows_no_checking_hint() => Sta.Run(async () =>
+    {
+        var context = SampleContext();
+        var dialogs = new FakeDialogs();
+        using var vm = new LibraryViewModel(context, dialogs);
+        var shown = new List<string?>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LibraryViewModel.StatusMessage))
+            {
+                shown.Add(vm.StatusMessage);
+            }
+        };
+
+        await Remove(vm, Klippe);
+
+        Assert.Single(dialogs.Requests);
+        Assert.Empty(shown); // schnell geprüft: kein Flackern in der Hinweiszeile
+    });
+
+    [Fact]
+    public void RemoveSettings_reports_a_single_file_that_could_not_be_deleted_in_the_singular() => Sta.Run(async () =>
+    {
+        var context = SampleContext();
+        context.Files.FailDeleting(OwnIcon(Outlast), new IOException("gesperrt"));
+        var dialogs = new FakeDialogs();
+        dialogs.Answers.Enqueue(true);
+        using var vm = new LibraryViewModel(context, dialogs);
+
+        await Remove(vm, Outlast);
+
+        Assert.Null(context.Config.FindGame(Outlast));
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_Done, "The Outlast Trials") + " " + LibraryStrings.RemoveSettings_FilesFailedOne, vm.StatusMessage);
+        Assert.Equal(StatusKind.Warning, vm.StatusKind);
+        Assert.Equal("Eine Datei ließ sich nicht löschen (siehe Protokoll).", LibraryText.FilesFailed(1));
+        Assert.Equal("2 Dateien ließen sich nicht löschen (siehe Protokoll).", LibraryText.FilesFailed(2));
+    });
+
+    [Fact]
+    public void RemoveSettings_losses_name_chosen_images_and_the_date_as_in_the_list()
+    {
+        // Eine Bildwahl ohne eigene Datei (anderes Launcher-Bild, erzeugtes) geht mit dem Eintrag verloren und wird genannt;
+        // das Datum steht wie in Liste und Titelbereich.
+        var game = Game(GameSource.Steam, "1304930", "The Outlast Trials", installed: false);
+        game.Artwork = new GameArtworkChoice { Hero = "alt:library_hero_2.jpg", Logo = "gen" };
+        var played = new DateTimeOffset(2026, 9, 12, 18, 15, 0, TimeSpan.Zero);
+        game.LastPlayed = played;
+
+        var request = RemoveSettingsText.ForGame(game, InstallTrace.None, 0);
+
+        Assert.Equal(
+            [new ConfirmDetail(LibraryText.Format(LibraryStrings.RemoveSettings_LossChosenMany, 2)), new ConfirmDetail(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime())))],
+            request.Details);
+        game.Artwork = new GameArtworkChoice { Cover = "alt:cover.png" };
+        game.LastPlayed = null;
+        Assert.Equal([new ConfirmDetail(LibraryStrings.RemoveSettings_LossChosenOne)], RemoveSettingsText.ForGame(game, InstallTrace.None, 0).Details);
+        Assert.False(LibraryCleanup.LossOf(game).IsEmpty);
+    }
 }

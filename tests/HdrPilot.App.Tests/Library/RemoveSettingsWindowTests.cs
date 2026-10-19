@@ -3,6 +3,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using HdrPilot.App.Resources;
+using HdrPilot.App.Services;
 using HdrPilot.App.Tests.Shell;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
@@ -205,12 +206,12 @@ public sealed class RemoveSettingsWindowTests
             EnsureLibraryResources();
             var game = Game(GameSource.Steam, "1304930", "The Outlast Trials", hdrAuto: true, installed: false, installDir: @"Q:\Spiele\Outlast");
             game.DetectedExecutables = [@"Q:\Spiele\Outlast\a.exe", @"Q:\Spiele\Outlast\b.exe"];
-            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(game, "Q:", 2));
+            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(game, new InstallTrace("Q:", false), 2));
             WpfTestHost.Layout(dialog, new Size(ConfirmDialog.WideWidth, 900));
 
             Assert.Equal(ConfirmDialog.WideWidth, dialog.Width);
             var details = (ItemsControl)dialog.FindName("DetailsList");
-            Assert.Equal(["„HDR automatisch“ ist an", "2 gemerkte EXE-Dateien"], details.Items.Cast<string>());
+            Assert.Equal(["„HDR automatisch“ ist an", "2 gemerkte EXE-Dateien"], details.Items.Cast<ConfirmDetail>().Select(d => d.Text));
             Assert.Equal(Visibility.Visible, ((FrameworkElement)dialog.FindName("WarningArea")).Visibility);
             Assert.Equal("Laufwerk Q: ist nicht verbunden. Das Spiel ist vielleicht noch installiert.", ((TextBlock)dialog.FindName("WarningText")).Text);
             var option = (CheckBox)dialog.FindName("OptionBox");
@@ -230,6 +231,159 @@ public sealed class RemoveSettingsWindowTests
             Assert.Equal(Visibility.Collapsed, ((FrameworkElement)simple.FindName("OptionBox")).Visibility);
             Assert.Same(simple.FindName("CancelButton"), FocusManager.GetFocusedElement(simple));
             simple.Close();
+        });
+    }
+
+    /// <summary>Ein Spiel, bei dem alles verloren ginge, was die Rückfrage nennen kann (elf Punkte), mit langem Namen.</summary>
+    private static GameConfig EverythingGame()
+    {
+        var game = Game(GameSource.Steam, "990002001", "Aaa Antivirus Survivors 2003 Professional Demo: The Ultimate Collector's Edition with Extra Long Subtitle Remastered", hdrAuto: true, installed: false, installDir: @"Q:\SteamLibrary\steamapps\common\Antivirus");
+        game.AutoHdr = true;
+        game.Display = @"\\?\DISPLAY#TEST#1";
+        game.RestoreAfter = false;
+        game.DetectedExecutables = [@"Q:\a\x.exe", @"Q:\a\y.exe", @"Q:\a\z.exe"];
+        game.ExtraExecutables = [@"Q:\a\e1.exe", @"Q:\a\e2.exe"];
+        game.ExcludedExecutables = ["helper.exe"];
+        game.CustomIcon = HdrPilot.Core.Games.CustomIcons.FileNameFor(game.Key);
+        game.Artwork = new GameArtworkChoice { Hero = "custom:Steam_990002001-hero.jpg", Cover = "custom:Steam_990002001-cover.jpg", Logo = "alt:logo2.png" };
+        game.LastPlayed = new DateTimeOffset(2026, 9, 12, 18, 15, 0, TimeSpan.Zero);
+        return game;
+    }
+
+    /// <summary>18 nicht installierte Spiele mit langen Namen auf einem nicht verbundenen Laufwerk, jedes dritte mit „HDR automatisch“.</summary>
+    private static ConfirmRequest EighteenGames()
+    {
+        var games = Enumerable.Range(1, 18).Select(i =>
+        {
+            var game = Game(GameSource.Steam, "99000" + i, $"Zusatzspiel Nummer {i:00} mit einem recht langen Namen zum Umbrechen", hdrAuto: i % 3 == 0, installed: false, installDir: @"R:\Games\Z" + i);
+            game.DetectedExecutables = [@"R:\Games\Z" + i + @"\Spiel.exe"];
+            return game;
+        }).ToList();
+        return RemoveSettingsText.ForGames(games, [.. games.Select(_ => new InstallTrace("R:", false))], 3);
+    }
+
+    private static ScrollViewer DetailsScroll(ConfirmDialog dialog) => (ScrollViewer)dialog.FindName("DetailsScroll");
+
+    /// <summary>Ordnet die Rückfrage in dieser Höhe an (wie das Fenster, das nicht höher als die Arbeitsfläche wird) und lässt die Bildlaufleiste nachziehen.</summary>
+    private static FrameworkElement LayoutDialog(ConfirmDialog dialog, double height)
+    {
+        WpfTestHost.Layout(dialog, new Size(dialog.Width, height));
+        dialog.UpdateLayout();
+        WpfTestHost.DoEvents();
+        WpfTestHost.Layout(dialog, new Size(dialog.Width, height));
+        WpfTestHost.DoEvents();
+        return (FrameworkElement)System.Windows.Media.VisualTreeHelper.GetChild(dialog, 0);
+    }
+
+    [Fact]
+    public void RemoveSettings_dialog_shows_every_loss_of_one_game_without_cutting_or_scrolling()
+    {
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(EverythingGame(), new InstallTrace("Q:", false), 2));
+            LayoutDialog(dialog, double.PositiveInfinity);
+
+            var details = (ItemsControl)dialog.FindName("DetailsList");
+            Assert.Equal(11, details.Items.Count);
+            Assert.Contains(details.Items.Cast<ConfirmDetail>(), d => d.Text.StartsWith("Zuletzt gespielt am ", StringComparison.Ordinal));
+            var scroll = DetailsScroll(dialog);
+            Assert.True(scroll.ScrollableHeight < 0.5, "gescrollt: " + scroll.ScrollableHeight);
+            Assert.False(scroll.Focusable || scroll.IsTabStop); // nichts zu scrollen: kein zusätzlicher Halt für die Tabulatortaste
+            dialog.Close();
+        });
+    }
+
+    [Fact]
+    public void RemoveSettings_long_bulk_list_scrolls_by_keyboard_and_keeps_room_for_the_scroll_bar()
+    {
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var dialog = new ConfirmDialog(EighteenGames());
+            LayoutDialog(dialog, double.PositiveInfinity);
+
+            var scroll = DetailsScroll(dialog);
+            var list = (ItemsControl)dialog.FindName("DetailsList");
+            Assert.Equal(ConfirmDialog.DetailsMaxHeight, scroll.ActualHeight, 1);
+            Assert.True(scroll.ScrollableHeight > 100, "scrollt nicht: " + scroll.ScrollableHeight);
+            Assert.True(scroll.Focusable && scroll.IsTabStop, $"per Tastatur nicht erreichbar: Focusable={scroll.Focusable} IsTabStop={scroll.IsTabStop}");
+            Assert.True(ConfirmDialog.SwallowsInDetails(Key.Enter)); // Enter in der Liste löst nicht „Entfernen“ aus
+            Assert.False(ConfirmDialog.SwallowsInDetails(Key.Down)); // die Pfeiltasten scrollen
+            Assert.Equal(Visibility.Collapsed, ((FrameworkElement)dialog.FindName("DetailsFocus")).Visibility); // Fokusrahmen erst mit dem Fokus
+
+            // Rechts bleibt Platz für die Bildlaufleiste, die im Fluent-Stil der App über dem Inhalt liegt (dort reicht der
+            // sichtbare Bereich bis zum Rand): Der Text endet mindestens 14 px vor dem Rand des sichtbaren Bereichs.
+            Assert.True(scroll.ViewportWidth - list.ActualWidth >= 14, "Abstand zur Bildlaufleiste: " + (scroll.ViewportWidth - list.ActualWidth));
+
+            // Punkte des Sammel-Entfernens: der Name, darunter gedämpft, was verloren geht.
+            var third = list.Items.Cast<ConfirmDetail>().ElementAt(2);
+            Assert.Equal("Zusatzspiel Nummer 03 mit einem recht langen Namen zum Umbrechen", third.Text);
+            Assert.Equal("Laufwerk R: nicht verbunden · „HDR automatisch“ ist an · 1 gemerkte EXE-Datei", third.Note);
+            dialog.Close();
+        });
+    }
+
+    [Fact]
+    public void RemoveSettings_dialog_never_grows_beyond_the_work_area_and_keeps_its_buttons_visible()
+    {
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            foreach (var request in new[] { RemoveSettingsText.ForGame(EverythingGame(), new InstallTrace("Q:", false), 2), EighteenGames() })
+            {
+                var dialog = new ConfirmDialog(request);
+                Assert.True(dialog.MaxHeight <= SystemParameters.WorkArea.Height, "höher als die Arbeitsfläche: " + dialog.MaxHeight);
+
+                // Etwa 1280×800 bei 125 % ohne Taskleiste: Die Aufzählung gibt nach, die Knöpfe stehen ganz im Fenster.
+                const double Height = 560;
+                var root = LayoutDialog(dialog, Height);
+                foreach (var name in new[] { "ConfirmButton", "CancelButton" })
+                {
+                    var button = (FrameworkElement)dialog.FindName(name);
+                    var bottom = button.TranslatePoint(new Point(0, button.ActualHeight), root).Y;
+                    Assert.InRange(bottom, button.ActualHeight, Height);
+                }
+
+                var scroll = DetailsScroll(dialog);
+                Assert.True(scroll.ScrollableHeight > 0 && scroll.Focusable && scroll.IsTabStop, "Aufzählung gibt nicht nach");
+                dialog.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void RemoveSettings_dialog_tells_screen_readers_the_message_the_warning_and_the_losses()
+    {
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var game = Game(GameSource.Steam, "1304930", "The Outlast Trials", hdrAuto: true, installed: false);
+            var request = RemoveSettingsText.ForGame(game, new InstallTrace(null, true), 0);
+            var dialog = new ConfirmDialog(request);
+
+            var help = AutomationProperties.GetHelpText(dialog);
+            Assert.Equal(request.Message + " " + LibraryStrings.RemoveSettings_FolderPresent + " " + LibraryStrings.RemoveSettings_LossHeader + ": „HDR automatisch“ ist an", help);
+            Assert.Equal(help, AutomationProperties.GetHelpText((DependencyObject)dialog.FindName("CancelButton"))); // hier liegt der Fokus
+            Assert.Equal(LibraryStrings.RemoveSettings_LossHeader, AutomationProperties.GetName(DetailsScroll(dialog)));
+            dialog.Close();
+        });
+    }
+
+    [Fact]
+    public void RemoveUninstalled_button_in_the_settings_explains_itself_to_screen_readers()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var config = ShellTestFactory.NewConfig(new HdrPilot.Tests.TestSupport.InMemoryFileSystem());
+            var context = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new ConfigOnlyAutostartService(config));
+            var window = new HdrPilot.App.Views.Shell.SettingsWindow();
+            window.Attach(new HdrPilot.App.ViewModels.Shell.SettingsViewModel(context, new FakeFolderPicker()));
+            WpfTestHost.Layout(window, new Size(1280, 860));
+
+            var button = WpfTestHost.Visuals(window).OfType<Button>().Single(b => AutomationProperties.GetAutomationId(b) == "RemoveUninstalledButton");
+            Assert.Equal(ShellStrings.RemoveUninstalledHint, AutomationProperties.GetHelpText(button));
+            window.Close();
         });
     }
 }

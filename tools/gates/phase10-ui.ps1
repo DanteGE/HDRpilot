@@ -634,11 +634,11 @@ try {
     Check (@((Read-Config $cfg).games | Where-Object { $_.hdrAuto -or $_.autoHdr }).Count -eq 0) 'Am Ende hat kein Spiel „HDR automatisch“ oder „Windows Auto HDR“ an'
 
     # --- Bildschirmfotos: drei Ansichten, die gescrollte Liste, die eingeklappte Leiste (gefiltert, mit Lichtnaht; Titelbereich
-    #     und Details beim ersten Treffer) und die Liste ohne Treffer, drei Größen, hell und dunkel ---
+    #     und Details beim ersten Treffer) und Liste und Regal ohne Treffer (ohne Automatik-Karte), drei Größen, hell und dunkel ---
     $shots = Join-Path $ShotsDir ('lauf-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal,hauptfenster-liste-eingeklappt-gefiltert,hauptfenster-raster-eingeklappt,hauptfenster-regal-eingeklappt-gefiltert,hauptfenster-liste-ohne-treffer', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
+    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal,hauptfenster-liste-eingeklappt-gefiltert,hauptfenster-raster-eingeklappt,hauptfenster-regal-eingeklappt-gefiltert,hauptfenster-liste-ohne-treffer,hauptfenster-regal-ohne-treffer', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
     Check ($snap.ExitCode -eq 0) "Bildschirmfotos gerendert (Exit-Code $($snap.ExitCode))"
-    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal', 'liste-eingeklappt-gefiltert', 'raster-eingeklappt', 'regal-eingeklappt-gefiltert', 'liste-ohne-treffer') {
+    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal', 'liste-eingeklappt-gefiltert', 'raster-eingeklappt', 'regal-eingeklappt-gefiltert', 'liste-ohne-treffer', 'regal-ohne-treffer') {
         foreach ($size in '1280x800', '1920x1080', '3440x1440') {
             foreach ($theme in 'dunkel', 'hell') {
                 $file = Join-Path $shots "hauptfenster-$view-$size-$theme.png"

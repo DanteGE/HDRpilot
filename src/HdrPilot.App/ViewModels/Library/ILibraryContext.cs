@@ -130,8 +130,8 @@ public sealed record ConfirmRequest(string Title, string Message, string Confirm
     /// <summary>Überschrift über der Aufzählung, etwa „Verloren geht“; null ohne Überschrift.</summary>
     public string? DetailsHeader { get; init; }
 
-    /// <summary>Aufzählung (je Eintrag eine Zeile); leer: keine.</summary>
-    public IReadOnlyList<string> Details { get; init; } = [];
+    /// <summary>Aufzählung (je Eintrag ein Punkt, auf Wunsch mit einer Zeile darunter); leer: keine.</summary>
+    public IReadOnlyList<ConfirmDetail> Details { get; init; } = [];
 
     /// <summary>Warnung in eigener Fläche, etwa „Laufwerk F: ist nicht verbunden …“; null: keine.</summary>
     public string? Warning { get; init; }
@@ -141,6 +141,18 @@ public sealed record ConfirmRequest(string Title, string Message, string Confirm
 
     /// <summary>Erklärung unter dem Text des Häkchens; null: keine.</summary>
     public string? OptionHint { get; init; }
+}
+
+/// <summary>
+/// Punkt der Aufzählung einer <see cref="ConfirmRequest"/>: der Text und darunter, kleiner und gedämpft, eine Ergänzung
+/// (beim Sammel-Entfernen der Name des Spiels und was bei ihm verloren geht); ohne <see cref="Note"/> nur der Text.
+/// </summary>
+public sealed record ConfirmDetail(string Text, string? Note = null)
+{
+    /// <summary>Für Bildschirmleser: Text und Ergänzung in einem.</summary>
+    public string Spoken => Note is null ? Text : Text + ": " + Note;
+
+    public override string ToString() => Spoken;
 }
 
 /// <summary>Antwort auf eine <see cref="ConfirmRequest"/>: bestätigt, und ob das Häkchen gesetzt war.</summary>

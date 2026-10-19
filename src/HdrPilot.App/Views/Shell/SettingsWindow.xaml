@@ -475,6 +475,7 @@
                                 <Button Style="{StaticResource Hp.GhostButton}" HorizontalAlignment="Left" Foreground="{DynamicResource Hp.Brush.Danger}"
                                         AutomationProperties.AutomationId="RemoveUninstalledButton"
                                         AutomationProperties.Name="{x:Static res:ShellStrings.RemoveUninstalledButton}"
+                                        AutomationProperties.HelpText="{x:Static res:ShellStrings.RemoveUninstalledHint}"
                                         Command="{Binding RemoveUninstalledCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE74D;" FontSize="13" Margin="0,0,8,0" VerticalAlignment="Center" />

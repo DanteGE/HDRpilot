@@ -15,6 +15,7 @@ namespace HdrPilot.Core.Config;
 /// <param name="ExcludedExecutables">Vom Nutzer ausgeschlossene EXE-Dateien.</param>
 /// <param name="CustomIcon">Ein eigenes Symbol ist gesetzt.</param>
 /// <param name="CustomImages">Eigene Bilder („Bild wählen…“ → „Eigene Datei…“).</param>
+/// <param name="ChosenImages">Per „Bild wählen…“ festgelegte Bilder ohne eigene Datei (ein anderes Launcher-Bild oder das erzeugte).</param>
 /// <param name="LastPlayed">Zuletzt gespielt, wie HDRpilot es sich gemerkt hat (null: nie).</param>
 public sealed record SettingsLoss(
     bool HdrAuto,
@@ -26,10 +27,11 @@ public sealed record SettingsLoss(
     int ExcludedExecutables,
     bool CustomIcon,
     int CustomImages,
+    int ChosenImages,
     DateTimeOffset? LastPlayed)
 {
     public bool IsEmpty => !HdrAuto && !AutoHdr && !OwnDisplay && !NoRestore && DetectedExecutables == 0 && ExtraExecutables == 0
-        && ExcludedExecutables == 0 && !CustomIcon && CustomImages == 0 && LastPlayed is null;
+        && ExcludedExecutables == 0 && !CustomIcon && CustomImages == 0 && ChosenImages == 0 && LastPlayed is null;
 }
 
 /// <summary>
@@ -87,8 +89,13 @@ public static class LibraryCleanup
         Count(game.ExtraExecutables),
         Count(game.ExcludedExecutables),
         !string.IsNullOrWhiteSpace(game.CustomIcon),
-        new[] { game.Artwork?.Hero, game.Artwork?.Logo, game.Artwork?.Cover }.Count(t => ArtworkOverride.KindOf(t) == ArtworkOverrideKind.Custom),
+        Images(game, ArtworkOverrideKind.Custom),
+        Images(game, ArtworkOverrideKind.Alternative) + Images(game, ArtworkOverrideKind.Generated),
         game.LastPlayed);
 
     private static int Count(IEnumerable<string> entries) => entries.Count(e => !string.IsNullOrWhiteSpace(e));
+
+    /// <summary>Titelbild, Logo und Cover mit dieser Art der eigenen Bildwahl.</summary>
+    private static int Images(GameConfig game, ArtworkOverrideKind kind) =>
+        new[] { game.Artwork?.Hero, game.Artwork?.Logo, game.Artwork?.Cover }.Count(t => ArtworkOverride.KindOf(t) == kind);
 }

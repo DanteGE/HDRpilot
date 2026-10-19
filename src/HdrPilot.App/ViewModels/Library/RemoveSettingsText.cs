@@ -1,51 +1,75 @@
-using System.Globalization;
 using HdrPilot.App.Resources;
+using HdrPilot.App.Services;
 using HdrPilot.Core.Config;
 
 namespace HdrPilot.App.ViewModels.Library;
 
 /// <summary>
 /// Rückfragen von „Einstellungen entfernen…“ (E90), je Spiel zusammengesetzt: was verloren geht (etwa „„HDR automatisch“
-/// ist an“, „2 gemerkte EXE-Dateien“), eine Warnung, wenn das Laufwerk des Spiels nicht verbunden ist („vielleicht noch
-/// installiert“), und ein Häkchen für die HDRpilot-Verknüpfungen, nur wenn es welche gibt. Für das Sammel-Entfernen in den
-/// Einstellungen die Namen aller betroffenen Spiele, je mit dem, was verloren geht.
+/// ist an“, „2 gemerkte EXE-Dateien“), eine Warnung, wenn das Spiel vielleicht noch installiert ist (Laufwerk nicht
+/// verbunden oder Ordner noch da, <see cref="InstallTrace"/>), und ein Häkchen für die HDRpilot-Verknüpfungen, nur wenn es
+/// welche gibt. Für das Sammel-Entfernen in den Einstellungen je betroffenes Spiel ein Punkt: der Name und darunter, was
+/// verloren geht, angeführt von der Spur einer Installation.
 /// </summary>
 public static class RemoveSettingsText
 {
+    /// <summary>
+    /// Trenner der Angaben unter dem Namen eines Spiels (Sammel-Entfernen); geschütztes Leerzeichen davor, damit keine Zeile
+    /// mit dem Punkt beginnt.
+    /// </summary>
+    public const string NoteSeparator = " · ";
+
     /// <summary>Rückfrage für ein Spiel.</summary>
-    /// <param name="missingDrive">Laufwerk des Spiels, wenn es nicht verbunden ist („F:“); sonst null.</param>
+    /// <param name="trace">Spuren einer Installation (<see cref="UninstalledGameCleanup.CheckInstallAsync"/>).</param>
     /// <param name="shortcuts">Zahl der gefundenen HDRpilot-Verknüpfungen (0: kein Häkchen).</param>
-    public static ConfirmRequest ForGame(GameConfig game, string? missingDrive, int shortcuts) =>
+    public static ConfirmRequest ForGame(GameConfig game, InstallTrace trace, int shortcuts) =>
         new(LibraryText.Format(LibraryStrings.RemoveSettings_ConfirmTitle, game.Name), LibraryStrings.RemoveSettings_ConfirmText, LibraryStrings.RemoveSettings_Confirm, IsDanger: true)
         {
             DetailsHeader = LibraryStrings.RemoveSettings_LossHeader,
-            Details = Losses(LibraryCleanup.LossOf(game)),
-            Warning = missingDrive is null ? null : LibraryText.Format(LibraryStrings.RemoveSettings_DriveMissing, missingDrive),
+            Details = [.. Losses(LibraryCleanup.LossOf(game)).Select(l => new ConfirmDetail(l))],
+            Warning = trace switch
+            {
+                { MissingDrive: { } drive } => LibraryText.Format(LibraryStrings.RemoveSettings_DriveMissing, drive),
+                { FolderPresent: true } => LibraryStrings.RemoveSettings_FolderPresent,
+                _ => null,
+            },
             OptionText = ShortcutOption(shortcuts),
-            OptionHint = shortcuts > 0 ? LibraryStrings.RemoveSettings_ShortcutHint : null,
+            OptionHint = ShortcutHint(shortcuts),
         };
 
     /// <summary>Rückfrage für mehrere Spiele (Sammel-Entfernen): je Spiel Name und was verloren geht.</summary>
-    /// <param name="missingDrives">Nicht verbundene Laufwerke der Spiele („F:“), ohne Doppelte; leer: keine Warnung.</param>
+    /// <param name="traces">Spuren einer Installation je Spiel, in derselben Reihenfolge wie <paramref name="games"/>.</param>
     /// <param name="shortcuts">Zahl der gefundenen HDRpilot-Verknüpfungen aller Spiele (0: kein Häkchen).</param>
-    public static ConfirmRequest ForGames(IReadOnlyList<GameConfig> games, IReadOnlyList<string> missingDrives, int shortcuts) =>
-        new(
+    public static ConfirmRequest ForGames(IReadOnlyList<GameConfig> games, IReadOnlyList<InstallTrace> traces, int shortcuts)
+    {
+        var drives = traces.Select(t => t.MissingDrive).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        var folders = traces.Count(t => t.FolderPresent);
+        var warnings = new List<string>();
+        if (drives.Count > 0)
+        {
+            warnings.Add(drives.Count == 1
+                ? LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingOne, drives[0])
+                : LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingMany, string.Join(", ", drives)));
+        }
+
+        if (folders > 0)
+        {
+            warnings.Add(folders == 1 ? LibraryStrings.RemoveAll_FoldersPresentOne : LibraryText.Format(LibraryStrings.RemoveAll_FoldersPresentMany, folders));
+        }
+
+        return new(
             games.Count == 1 ? LibraryStrings.RemoveAll_ConfirmTitleOne : LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, games.Count),
             LibraryStrings.RemoveAll_ConfirmText,
             LibraryStrings.RemoveSettings_Confirm,
             IsDanger: true)
         {
             DetailsHeader = LibraryStrings.RemoveAll_DetailsHeader,
-            Details = games.Select(GameLine).ToList(),
-            Warning = missingDrives.Count switch
-            {
-                0 => null,
-                1 => LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingOne, missingDrives[0]),
-                _ => LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingMany, string.Join(", ", missingDrives)),
-            },
+            Details = [.. games.Select((g, i) => GameLine(g, i < traces.Count ? traces[i] : InstallTrace.None))],
+            Warning = warnings.Count == 0 ? null : string.Join(" ", warnings),
             OptionText = ShortcutOption(shortcuts),
-            OptionHint = shortcuts > 0 ? LibraryStrings.RemoveSettings_ShortcutHint : null,
+            OptionHint = ShortcutHint(shortcuts),
         };
+    }
 
     /// <summary>Was verloren geht, in der Reihenfolge der Details; ohne eigene Einstellungen ein Satz, der das sagt.</summary>
     public static IReadOnlyList<string> Losses(SettingsLoss loss)
@@ -80,9 +104,11 @@ public static class RemoveSettingsText
         }
 
         AddCount(list, loss.CustomImages, LibraryStrings.RemoveSettings_LossImagesOne, LibraryStrings.RemoveSettings_LossImagesMany);
+        AddCount(list, loss.ChosenImages, LibraryStrings.RemoveSettings_LossChosenOne, LibraryStrings.RemoveSettings_LossChosenMany);
         if (loss.LastPlayed is { } played)
         {
-            list.Add(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, played.ToLocalTime().ToString("d", CultureInfo.CurrentCulture)));
+            // Datum wie in Liste und Titelbereich („12. Sept. 2026“).
+            list.Add(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime())));
         }
 
         if (list.Count == 0)
@@ -93,11 +119,29 @@ public static class RemoveSettingsText
         return list;
     }
 
-    /// <summary>Zeile des Sammel-Entfernens: „Name · was verloren geht“, ohne eigene Einstellungen nur der Name.</summary>
-    private static string GameLine(GameConfig game)
+    /// <summary>
+    /// Punkt des Sammel-Entfernens: der Name, darunter (durch „ · “ getrennt) die Spur einer Installation und was verloren
+    /// geht; ohne beides nur der Name.
+    /// </summary>
+    private static ConfirmDetail GameLine(GameConfig game, InstallTrace trace)
     {
+        var notes = new List<string>();
+        if (trace.MissingDrive is { } drive)
+        {
+            notes.Add(LibraryText.Format(LibraryStrings.RemoveAll_MarkDriveMissing, drive));
+        }
+        else if (trace.FolderPresent)
+        {
+            notes.Add(LibraryStrings.RemoveAll_MarkFolderPresent);
+        }
+
         var loss = LibraryCleanup.LossOf(game);
-        return loss.IsEmpty ? game.Name : LibraryText.Format(LibraryStrings.RemoveAll_GameWithLoss, game.Name, string.Join(", ", Losses(loss)));
+        if (!loss.IsEmpty)
+        {
+            notes.AddRange(Losses(loss));
+        }
+
+        return new ConfirmDetail(game.Name, notes.Count == 0 ? null : string.Join(NoteSeparator, notes));
     }
 
     private static string? ShortcutOption(int shortcuts) => shortcuts switch
@@ -105,6 +149,13 @@ public static class RemoveSettingsText
         <= 0 => null,
         1 => LibraryStrings.RemoveSettings_ShortcutOne,
         _ => LibraryText.Format(LibraryStrings.RemoveSettings_ShortcutMany, shortcuts),
+    };
+
+    private static string? ShortcutHint(int shortcuts) => shortcuts switch
+    {
+        <= 0 => null,
+        1 => LibraryStrings.RemoveSettings_ShortcutHintOne,
+        _ => LibraryStrings.RemoveSettings_ShortcutHint,
     };
 
     private static void AddCount(List<string> list, int count, string one, string many)

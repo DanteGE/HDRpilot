@@ -149,7 +149,20 @@ public sealed class LibraryCleanupTests
 
         var loss = LibraryCleanup.LossOf(game);
 
-        Assert.Equal(new SettingsLoss(true, true, true, true, 2, 1, 3, true, 2, game.LastPlayed), loss);
+        Assert.Equal(new SettingsLoss(true, true, true, true, 2, 1, 3, true, 2, 1, game.LastPlayed), loss);
+        Assert.False(loss.IsEmpty);
+    }
+
+    [Fact]
+    public void LibraryCleanup_loss_of_a_game_with_only_a_chosen_image_is_not_empty()
+    {
+        // Ein anderes Launcher-Bild per „Bild wählen…“ ist eine eigene Wahl ohne eigene Datei: Sie geht mit dem Eintrag verloren.
+        var game = Game(GameSource.Steam, "2", "Nur Bildwahl", installed: false);
+        game.Artwork = new GameArtworkChoice { Hero = "alt:library_hero_2.jpg" };
+
+        var loss = LibraryCleanup.LossOf(game);
+
+        Assert.Equal((0, 1), (loss.CustomImages, loss.ChosenImages));
         Assert.False(loss.IsEmpty);
     }
 
@@ -159,7 +172,7 @@ public sealed class LibraryCleanupTests
         var loss = LibraryCleanup.LossOf(Game(GameSource.Steam, "4320630", "Antivirus Survivors 2003 Professional Demo", installed: false));
 
         Assert.True(loss.IsEmpty);
-        Assert.Equal(new SettingsLoss(false, false, false, false, 0, 0, 0, false, 0, null), loss);
+        Assert.Equal(new SettingsLoss(false, false, false, false, 0, 0, 0, false, 0, 0, null), loss);
     }
 
     [Fact]

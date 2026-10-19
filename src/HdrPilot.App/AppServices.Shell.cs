@@ -97,10 +97,9 @@ public sealed partial class AppServices
             return new Window();
         }
 
-        var drives = games.Select(g => UninstalledGameCleanup.DriveOf(g.InstallDir)).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(d => GameCleanup.MissingDriveAsync(d + "\\").GetAwaiter().GetResult()).OfType<string>().ToList();
+        var traces = GameCleanup.CheckInstallsAsync([.. games.Select(g => g.InstallDir)]).GetAwaiter().GetResult();
         var shortcuts = games.Sum(g => GameCleanup.FindShortcuts(g.Key).Count);
-        return new ConfirmDialog(RemoveSettingsText.ForGames(games, drives, shortcuts));
+        return new ConfirmDialog(RemoveSettingsText.ForGames(games, traces, shortcuts));
     }
 
     /// <summary>

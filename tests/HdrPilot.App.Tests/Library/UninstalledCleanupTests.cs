@@ -24,6 +24,8 @@ public sealed class UninstalledCleanupTests
     private const string Programs = @"C:\Users\Test\AppData\Roaming\Microsoft\Windows\Start Menu\Programs";
     private const string StartMenu = Programs + @"\HDRpilot";
     private const string HdrPilotExe = @"C:\Users\Test\AppData\Local\Programs\HDRpilot\HDRpilot.exe";
+    private const string PublicDesktop = @"C:\Users\Public\Desktop";
+    private const string QuickLaunch = @"C:\Users\Test\AppData\Roaming\Microsoft\Internet Explorer\Quick Launch";
     private const string GameDir = @"C:\Program Files (x86)\Steam\steamapps\common\Nachtprobe";
 
     private readonly RecordingFileSystem _fs = new();
@@ -83,6 +85,22 @@ public sealed class UninstalledCleanupTests
 
     private static GameConfig Game() => new() { Source = GameSource.Steam, SourceId = "9990160", Name = "NACHTPROBE", InstallDir = GameDir, IsInstalled = false, HdrAuto = true };
 
+    /// <summary>Die Konfiguration nach dem Entfernen: das andere Spiel mit eigenem Symbol und eigenem Titelbild.</summary>
+    private static AppConfig Remaining(params GameConfig[] extra)
+    {
+        var other = new GameConfig
+        {
+            Source = GameSource.Steam,
+            SourceId = "9990110",
+            Name = "STERNENWACHT 2",
+            InstallDir = @"C:\Spiele\Sternenwacht 2",
+            IsInstalled = true,
+            CustomIcon = CustomIcons.FileNameFor(OtherKey),
+            Artwork = new GameArtworkChoice { Hero = ArtworkOverride.Custom(ArtworkFiles.CustomFileName(OtherKey, ArtworkKind.Hero)) },
+        };
+        return new AppConfig { Games = [other, .. extra] };
+    }
+
     /// <summary>Verknüpfung auf der Attrappe anlegen (Datei und gelesener Inhalt).</summary>
     private void AddLink(string path, string arguments, string icon)
     {
@@ -90,14 +108,20 @@ public sealed class UninstalledCleanupTests
         _links[path] = Link(arguments, icon);
     }
 
-    private ShortcutService Shortcuts() => new(Desktop, Programs, () => HdrPilotExe, fileSystem: _fs, read: path => _links.TryGetValue(path, out var info) && _fs.FileExists(path) ? info : throw new FileNotFoundException(path));
+    private ShortcutService Shortcuts() => new(
+        Desktop,
+        Programs,
+        () => HdrPilotExe,
+        fileSystem: _fs,
+        read: path => _links.TryGetValue(path, out var info) && _fs.FileExists(path) ? info : throw new FileNotFoundException(path),
+        otherShortcutDirectories: [PublicDesktop, QuickLaunch]);
 
     private UninstalledGameCleanup Cleanup(ShortcutService? shortcuts = null) => new(_fs, Icons, CustomArt, _icons, _artwork, shortcuts ?? Shortcuts());
 
     [Fact]
     public void Uninstalled_cleanup_deletes_only_the_own_icon_and_images_and_forgets_the_cache_entry()
     {
-        var result = Cleanup().DeleteData(Game(), []);
+        var result = Cleanup().DeleteData(Game(), [], Remaining());
 
         Assert.Equal(OwnFiles.Order(StringComparer.OrdinalIgnoreCase), _fs.Deleted.Order(StringComparer.OrdinalIgnoreCase));
         Assert.Equal(OwnFiles.Length, result.Deleted.Count);
@@ -114,12 +138,12 @@ public sealed class UninstalledCleanupTests
         AddLink(Desktop + @"\NACHTPROBE (HDR).lnk", "--run \"" + Key + "\"", OwnIco);
         AddLink(StartMenu + @"\NACHTPROBE (HDR).lnk", "--run \"" + Key + "\"", OwnIco);
         AddLink(Desktop + @"\Nachtprobe mit Spielsymbol.lnk", "--run \"" + Key + "\"", GameDir + @"\Nachtprobe.ico"); // Symbol im Spielordner
-        AddLink(Desktop + @"\Nachtprobe Test.lnk", "--run \"" + Key + "\" --config-dir \"D:\\Test\"", OwnIco); // Testablage: nicht genau
+        AddLink(Desktop + @"\Nachtprobe Test.lnk", "--run \"" + Key + "\" --config-dir \"D:\\Test\"", HdrPilotExe); // Testablage: nicht genau
         var shortcuts = Shortcuts();
         var found = shortcuts.FindFor(Key);
         Assert.Equal(3, found.Count);
 
-        var result = Cleanup(shortcuts).DeleteData(Game(), found);
+        var result = Cleanup(shortcuts).DeleteData(Game(), found, Remaining());
 
         string[] expected = [.. OwnFiles, OwnIco, Desktop + @"\NACHTPROBE (HDR).lnk", StartMenu + @"\NACHTPROBE (HDR).lnk", Desktop + @"\Nachtprobe mit Spielsymbol.lnk"];
         Assert.Equal(expected.Order(StringComparer.OrdinalIgnoreCase), _fs.Deleted.Order(StringComparer.OrdinalIgnoreCase));
@@ -137,7 +161,7 @@ public sealed class UninstalledCleanupTests
         _fs.Inner.FailDeleting(StartMenu + @"\NACHTPROBE (HDR).lnk", new IOException("gesperrt"));
         var shortcuts = Shortcuts();
 
-        var result = Cleanup(shortcuts).DeleteData(Game(), shortcuts.FindFor(Key));
+        var result = Cleanup(shortcuts).DeleteData(Game(), shortcuts.FindFor(Key), Remaining());
 
         Assert.Equal(1, result.DeletedShortcuts);
         Assert.Equal([StartMenu + @"\NACHTPROBE (HDR).lnk"], result.Failed);
@@ -149,7 +173,7 @@ public sealed class UninstalledCleanupTests
     {
         AddLink(Desktop + @"\NACHTPROBE (HDR).lnk", "--run \"" + Key + "\"", OwnIco);
 
-        var result = Cleanup().DeleteData(Game(), []);
+        var result = Cleanup().DeleteData(Game(), [], Remaining());
 
         Assert.Equal(0, result.DeletedShortcuts);
         Assert.True(_fs.FileExists(Desktop + @"\NACHTPROBE (HDR).lnk"));
@@ -169,7 +193,7 @@ public sealed class UninstalledCleanupTests
         game.CustomIcon = CustomIcons.FileNameFor(OtherKey);
         game.Artwork = new GameArtworkChoice { Hero = ArtworkOverride.Custom(ArtworkFiles.CustomFileName(OtherKey, ArtworkKind.Hero)) };
 
-        var result = Cleanup().DeleteData(game, []);
+        var result = Cleanup().DeleteData(game, [], Remaining());
 
         Assert.Empty(result.Deleted);
         Assert.Empty(_fs.Deleted);
@@ -226,6 +250,105 @@ public sealed class UninstalledCleanupTests
         Assert.Null(reread.Get(Key));
         Assert.NotNull(reread.Get(OtherKey));
         Assert.Empty(_fs.Deleted); // nur der Eintrag, keine Datei
+    }
+
+    [Theory]
+    [InlineData("Unterordner")]
+    [InlineData("Gemeinsamer Desktop")]
+    [InlineData("Taskleiste")]
+    [InlineData("Testinstanz")]
+    public void Uninstalled_cleanup_keeps_the_ico_while_a_shortcut_elsewhere_still_shows_it(string place)
+    {
+        // Eine Verknüpfung, die „Einstellungen entfernen…“ nicht löscht (nicht direkt auf dem Desktop oder im Startmenü-Ordner
+        // „HDRpilot“, oder nicht genau die Argumente), zeigt dieselbe .ico: Sie bleibt, sonst stünde dort ein leeres Symbol.
+        AddLink(Desktop + @"\NACHTPROBE (HDR).lnk", "--run \"" + Key + "\"", OwnIco);
+        var elsewhere = place switch
+        {
+            "Gemeinsamer Desktop" => PublicDesktop + @"\NACHTPROBE (HDR).lnk",
+            "Taskleiste" => QuickLaunch + @"\User Pinned\TaskBar\NACHTPROBE (HDR).lnk",
+            "Testinstanz" => Desktop + @"\Nachtprobe Test.lnk",
+            _ => Desktop + @"\Spiele\NACHTPROBE (HDR).lnk",
+        };
+        AddLink(elsewhere, "--run \"" + Key + "\"" + (place == "Testinstanz" ? " --config-dir \"D:\\Test\"" : string.Empty), OwnIco);
+        var shortcuts = Shortcuts();
+        var found = shortcuts.FindFor(Key);
+        Assert.Equal([Desktop + @"\NACHTPROBE (HDR).lnk"], found.Select(f => f.Path));
+
+        var result = Cleanup(shortcuts).DeleteData(Game(), found, Remaining());
+
+        Assert.Equal(1, result.DeletedShortcuts);
+        Assert.Empty(result.Failed);
+        Assert.True(_fs.FileExists(elsewhere));
+        Assert.True(_fs.FileExists(OwnIco));
+        Assert.DoesNotContain(OwnIco, _fs.Deleted, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Uninstalled_cleanup_keeps_own_files_that_a_remaining_entry_still_names()
+    {
+        // Von Hand geänderte config.json: Ein verbliebenes Spiel zeigt Symbol und Titelbild des entfernten als seine. Die
+        // beiden Dateien bleiben; Logo und Cover nennt niemand mehr, sie fallen.
+        var borrower = new GameConfig
+        {
+            Source = GameSource.Epic,
+            SourceId = "leiht",
+            Name = "Leiht sich Bilder",
+            InstallDir = @"C:\Spiele\Leiht",
+            IsInstalled = true,
+            CustomIcon = CustomIcons.FileNameFor(Key),
+            Artwork = new GameArtworkChoice { Hero = ArtworkOverride.Custom(ArtworkFiles.CustomFileName(Key, ArtworkKind.Hero)) },
+        };
+
+        var result = Cleanup().DeleteData(Game(), [], Remaining(borrower));
+
+        Assert.True(_fs.FileExists(OwnPng));
+        Assert.True(_fs.FileExists(OwnFiles[1]));
+        Assert.Equal(new[] { OwnFiles[2], OwnFiles[3] }.Order(StringComparer.OrdinalIgnoreCase), result.Deleted.Order(StringComparer.OrdinalIgnoreCase));
+        Assert.Empty(result.Failed);
+        Assert.Equal([Key], _icons.ForgottenGames); // vergessen wird trotzdem: Der Eintrag ist weg
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_names_missing_drives_and_folders_that_are_still_there()
+    {
+        _fs.Inner.AddDirectory(@"C:\");
+        _fs.Inner.AddFile(@"C:\Spiele\Noch da\Spiel.exe", "x"); // Ordner noch da: vielleicht noch installiert
+        _fs.Inner.AddDirectory(@"C:\Spiele\Leer"); // nur ein leerer Ordner blieb: deinstalliert
+        _fs.Inner.AddFile(@"\\nas\spiele\Netz\Spiel.exe", "x");
+
+        var traces = await Cleanup().CheckInstallsAsync(
+            [@"Q:\Spiele\Weg", @"C:\Spiele\Noch da", @"C:\Spiele\Leer", @"C:\Spiele\Fehlt", @"\\nas\spiele\Netz", @"\\nas\spiele\Fehlt", string.Empty, null, @"Spiele\relativ", @"q:\Anderes"]);
+
+        Assert.Equal(
+            [
+                new InstallTrace("Q:", false), new InstallTrace(null, true), InstallTrace.None, InstallTrace.None, new InstallTrace(null, true),
+                InstallTrace.None, InstallTrace.None, InstallTrace.None, InstallTrace.None, new InstallTrace("Q:", false),
+            ],
+            traces);
+        Assert.Equal(new InstallTrace(null, true), await Cleanup().CheckInstallAsync(@"C:\Spiele\Noch da"));
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_waits_for_slow_drives_at_the_same_time_and_only_so_long()
+    {
+        // Zwei Netzlaufwerke antworten nicht: Beide gelten nach höchstens einer Wartezeit als nicht verbunden (gleichzeitig
+        // geprüft, nicht nacheinander), ein Ordner, der nicht antwortet, als ohne Spur.
+        var slow = new HangingFileSystem(_fs.Inner, @"M:\", @"N:\", @"C:\Spiele\Hängt");
+        _fs.Inner.AddDirectory(@"C:\").AddDirectory(@"M:\").AddDirectory(@"N:\").AddFile(@"C:\Spiele\Hängt\Spiel.exe", "x");
+        var cleanup = new UninstalledGameCleanup(slow, Icons, CustomArt, _icons, _artwork, Shortcuts());
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var traces = await cleanup.CheckInstallsAsync([@"M:\Spiele\A", @"N:\Spiele\B", @"C:\Spiele\Hängt"]);
+            watch.Stop();
+
+            Assert.Equal([new InstallTrace("M:", false), new InstallTrace("N:", false), InstallTrace.None], traces);
+            Assert.InRange(watch.Elapsed, UninstalledGameCleanup.DriveCheckTimeout * 0.9, UninstalledGameCleanup.DriveCheckTimeout * 1.75);
+        }
+        finally
+        {
+            slow.Release();
+        }
     }
 
     /// <summary>Attrappen-Dateisystem, das Löschen und Schreiben mitschreibt.</summary>

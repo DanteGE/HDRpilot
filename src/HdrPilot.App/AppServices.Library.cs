@@ -123,8 +123,10 @@ public sealed partial class AppServices
         });
 
         // Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19): Gefiltert zeigen Titelbereich und Details den ersten
-        // Treffer (siehe die Zustände „-gefiltert“), ohne Treffer kein Spiel und den Hinweis in der Liste.
+        // Treffer (siehe die Zustände „-gefiltert“), ohne Treffer kein Spiel und den Hinweis in der Liste; im Regal dann auch
+        // keine Automatik-Karte.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-ohne-treffer", () => LibraryScene(LibraryViewMode.List), NoMatchAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-ohne-treffer", () => LibraryScene(LibraryViewMode.Shelf), NoMatchAsync) { Settle = LibrarySettle });
 
         // Nicht installierte Spiele (E90): Knopf „Einstellungen entfernen…“ ganz unten im Detailbereich, das Kontextmenü mit dem
         // Eintrag und die Rückfrage für das erste entfernbare Spiel der Ablage, einmal mit den Verknüpfungen, die es wirklich
@@ -217,9 +219,9 @@ public sealed partial class AppServices
             return new Window();
         }
 
-        var drive = GameCleanup.MissingDriveAsync(game.InstallDir).GetAwaiter().GetResult();
+        var trace = GameCleanup.CheckInstallAsync(game.InstallDir).GetAwaiter().GetResult();
         var shortcuts = previewShortcuts > 0 ? previewShortcuts : GameCleanup.FindShortcuts(game.Key).Count;
-        return new ConfirmDialog(RemoveSettingsText.ForGame(game, drive, shortcuts));
+        return new ConfirmDialog(RemoveSettingsText.ForGame(game, trace, shortcuts));
     }
 
     /// <summary>Ein- bzw. Ausklappen der Werkzeugleiste, angehalten nach einigen Millisekunden (wie #t= der Vorschau).</summary>

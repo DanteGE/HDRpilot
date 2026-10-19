@@ -226,6 +226,13 @@
   <data name="List_NoMatchTitle" xml:space="preserve">
     <value>Keine Spiele für diese Auswahl</value>
   </data>
+  <data name="List_NoMatchHiddenOne" xml:space="preserve">
+    <value>Suche, Quelle und Filter schließen alle Spiele aus. Ein ausgeblendetes nicht installiertes Spiel würde passen; einblenden kannst du es unter Einstellungen › Allgemein › Bibliothek.</value>
+  </data>
+  <data name="List_NoMatchHiddenMany" xml:space="preserve">
+    <value>Suche, Quelle und Filter schließen alle Spiele aus. {0} ausgeblendete nicht installierte Spiele würden passen; einblenden kannst du sie unter Einstellungen › Allgemein › Bibliothek.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
   <data name="List_NoMatchText" xml:space="preserve">
     <value>Suche, Quelle und Filter schließen alle Spiele aus.</value>
   </data>
@@ -1439,9 +1446,17 @@
     <value>{0} eigene Bilder</value>
     <comment>{0} = Anzahl</comment>
   </data>
+  <data name="RemoveSettings_LossChosenOne" xml:space="preserve">
+    <value>1 gewähltes Bild</value>
+    <comment>Per „Bild wählen…“ festgelegt, ohne eigene Datei (anderes Launcher-Bild oder das erzeugte)</comment>
+  </data>
+  <data name="RemoveSettings_LossChosenMany" xml:space="preserve">
+    <value>{0} gewählte Bilder</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
   <data name="RemoveSettings_LossLastPlayed" xml:space="preserve">
     <value>Zuletzt gespielt am {0}</value>
-    <comment>{0} = Datum</comment>
+    <comment>{0} = Datum wie in der Liste („12. Sept. 2026“)</comment>
   </data>
   <data name="RemoveSettings_LossNothing" xml:space="preserve">
     <value>Nur der Eintrag in der Bibliothek, keine eigenen Einstellungen</value>
@@ -1450,6 +1465,13 @@
     <value>Laufwerk {0} ist nicht verbunden. Das Spiel ist vielleicht noch installiert.</value>
     <comment>{0} = Laufwerk, etwa „F:“</comment>
   </data>
+  <data name="RemoveSettings_FolderPresent" xml:space="preserve">
+    <value>Der Ordner des Spiels ist noch da. Vielleicht ist es noch installiert und wurde beim Einlesen nur nicht erkannt, etwa mitten in einem Update.</value>
+  </data>
+  <data name="RemoveSettings_Checking" xml:space="preserve">
+    <value>Prüfe Laufwerk und Verknüpfungen von „{0}“ …</value>
+    <comment>{0} = Spielname; erscheint, wenn die Prüfung vor der Rückfrage dauert</comment>
+  </data>
   <data name="RemoveSettings_ShortcutOne" xml:space="preserve">
     <value>Auch die HDRpilot-Verknüpfung löschen</value>
   </data>
@@ -1457,8 +1479,11 @@
     <value>Auch die {0} HDRpilot-Verknüpfungen löschen</value>
     <comment>{0} = Anzahl</comment>
   </data>
+  <data name="RemoveSettings_ShortcutHintOne" xml:space="preserve">
+    <value>Ohne Häkchen bleibt die Verknüpfung auf dem Desktop bzw. im Startmenü und startet das Spiel erst wieder, wenn es installiert und neu eingelesen ist.</value>
+  </data>
   <data name="RemoveSettings_ShortcutHint" xml:space="preserve">
-    <value>Auf dem Desktop bzw. im Startmenü. Ohne Häkchen bleiben sie liegen, starten das Spiel aber nicht mehr.</value>
+    <value>Ohne Häkchen bleiben die Verknüpfungen auf dem Desktop bzw. im Startmenü und starten ihr Spiel erst wieder, wenn es installiert und neu eingelesen ist.</value>
   </data>
   <data name="RemoveSettings_Confirm" xml:space="preserve">
     <value>Entfernen</value>
@@ -1475,9 +1500,13 @@
     <value>Einstellungen von „{0}“ und {1} Verknüpfungen entfernt.</value>
     <comment>{0} = Spielname, {1} = Anzahl</comment>
   </data>
+  <data name="RemoveSettings_FilesFailedOne" xml:space="preserve">
+    <value>Eine Datei ließ sich nicht löschen (siehe Protokoll).</value>
+    <comment>Folgt auf die Meldung „entfernt“</comment>
+  </data>
   <data name="RemoveSettings_FilesFailed" xml:space="preserve">
     <value>{0} Dateien ließen sich nicht löschen (siehe Protokoll).</value>
-    <comment>{0} = Anzahl; folgt auf die Meldung „entfernt“</comment>
+    <comment>{0} = Anzahl (ab 2); folgt auf die Meldung „entfernt“</comment>
   </data>
   <data name="RemoveSettings_Kept" xml:space="preserve">
     <value>„{0}“ ist inzwischen wieder installiert oder läuft. Nichts entfernt.</value>
@@ -1506,9 +1535,13 @@
   <data name="RemoveAll_DetailsHeader" xml:space="preserve">
     <value>BETROFFEN</value>
   </data>
-  <data name="RemoveAll_GameWithLoss" xml:space="preserve">
-    <value>{0} · {1}</value>
-    <comment>{0} = Spielname, {1} = was verloren geht (durch Kommas getrennt)</comment>
+  <data name="RemoveAll_MarkDriveMissing" xml:space="preserve">
+    <value>Laufwerk {0} nicht verbunden</value>
+    <comment>Unter dem Namen eines Spiels, vor dem, was verloren geht; {0} = Laufwerk, etwa „F:“</comment>
+  </data>
+  <data name="RemoveAll_MarkFolderPresent" xml:space="preserve">
+    <value>Ordner noch da</value>
+    <comment>Unter dem Namen eines Spiels, vor dem, was verloren geht</comment>
   </data>
   <data name="RemoveAll_DrivesMissingOne" xml:space="preserve">
     <value>Laufwerk {0} ist nicht verbunden. Spiele dort sind vielleicht noch installiert.</value>
@@ -1517,6 +1550,21 @@
   <data name="RemoveAll_DrivesMissingMany" xml:space="preserve">
     <value>Laufwerke {0} sind nicht verbunden. Spiele dort sind vielleicht noch installiert.</value>
     <comment>{0} = Laufwerke, etwa „F:, G:“</comment>
+  </data>
+  <data name="RemoveAll_FoldersPresentOne" xml:space="preserve">
+    <value>Bei einem Spiel ist der Ordner noch da; es ist vielleicht noch installiert.</value>
+  </data>
+  <data name="RemoveAll_FoldersPresentMany" xml:space="preserve">
+    <value>Bei {0} Spielen ist der Ordner noch da; sie sind vielleicht noch installiert.</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="RemoveAll_Checking" xml:space="preserve">
+    <value>Prüfe Laufwerke und Verknüpfungen …</value>
+    <comment>Erscheint, wenn die Prüfung vor der Rückfrage dauert</comment>
+  </data>
+  <data name="RemoveAll_RunningMany" xml:space="preserve">
+    <value>{0} nicht installierte Spiele laufen gerade. Entfernen geht, sobald sie beendet sind.</value>
+    <comment>{0} = Anzahl; alle entfernbaren Spiele laufen (bei einem: RemoveSettings_Running)</comment>
   </data>
   <data name="RemoveAll_DoneOne" xml:space="preserve">
     <value>Einstellungen eines Spiels entfernt.</value>
@@ -1538,6 +1586,10 @@
   <data name="Count_HiddenMany" xml:space="preserve">
     <value>{0} nicht installierte Spiele</value>
     <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Toolbar_ResetTipHiddenOne" xml:space="preserve">
+    <value>Zeigt wieder alle {0}. Ausgeblendet bleibt {1} (Einstellungen › Bibliothek).</value>
+    <comment>{0} = „655 Spiele“, {1} = „1 nicht installiertes Spiel“</comment>
   </data>
   <data name="Toolbar_ResetTipHidden" xml:space="preserve">
     <value>Zeigt wieder alle {0}. Ausgeblendet bleiben {1} (Einstellungen › Bibliothek).</value>

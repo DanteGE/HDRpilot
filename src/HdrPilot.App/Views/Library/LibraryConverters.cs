@@ -33,6 +33,18 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 }
 
 /// <summary>
+/// Visibility → bool: nur <see cref="Visibility.Visible"/> ist true. Etwa: Eine Liste ist nur dann ein Halt für die
+/// Tabulatortaste, wenn ihre Bildlaufleiste zu sehen ist (die Rückfrage von „Einstellungen entfernen…“, E90).
+/// </summary>
+public sealed class IsVisibleConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is Visibility.Visible;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>
 /// Zahl skalieren und begrenzen, etwa die Schriftgröße eines erzeugten Covers nach der Kachelbreite. Parameter
 /// „Faktor;Minimum;Maximum“ (invariante Schreibweise), zum Beispiel „0.105;9;22“.
 /// </summary>

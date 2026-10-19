@@ -33,6 +33,13 @@ public interface IShortcutService
     /// nie. Standard: keine.
     /// </summary>
     IReadOnlyList<GameShortcut> Delete(string gameKey, IReadOnlyCollection<GameShortcut> shortcuts) => [];
+
+    /// <summary>
+    /// Zeigt noch eine Verknüpfung diese Symboldatei (E90, bevor die .ico gelöschter Verknüpfungen fällt)? Liest nur, auch
+    /// in Unterordnern, im gemeinsamen Desktop und Startmenü und bei den angehefteten Verknüpfungen der Taskleiste. Nicht
+    /// auf dem UI-Thread. Standard: nein.
+    /// </summary>
+    bool IsIconInUse(string iconPath) => false;
 }
 
 /// <summary>

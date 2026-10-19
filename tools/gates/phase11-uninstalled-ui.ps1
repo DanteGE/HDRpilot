@@ -318,7 +318,10 @@ try {
             $title = [string](Find-Id $dlg 'ConfirmTitle' 2000).Current.Name
             $details = Texts (Find-Id $dlg 'ConfirmDetails' 2000)
             Check ($title -eq 'Einstellungen von 2 nicht installierten Spielen entfernen?') "Titel: $title"
-            Check ($details.Count -eq 2 -and $details[0] -like "$nameA · *" -and $details[1] -eq $nameB) ('Nennt genau die beiden Spiele: ' + ($details -join ' | '))
+            # Je Spiel ein Punkt: der Name, darunter (nur wenn es etwas zu sagen gibt) Laufwerk und was verloren geht
+            # (Trenner mit geschütztem Leerzeichen davor, damit keine Zeile mit dem Punkt beginnt)
+            $noteA = 'Laufwerk {0}: nicht verbunden{1}· „HDR automatisch“ ist an{1}· 2 gemerkte EXE-Dateien' -f $letter, [char]0xA0
+            Check ($details.Count -eq 3 -and $details[0] -eq $nameA -and $details[1] -eq $noteA -and $details[2] -eq $nameB) ('Nennt genau die beiden Spiele: ' + ($details -join ' | '))
             $warning = Find-Id $dlg 'ConfirmWarning' 2000
             Check ($warning -and $warning.Current.Name -like "Laufwerk $($letter): ist nicht verbunden.*") ('Warnung: ' + $(if ($warning) { $warning.Current.Name }))
             Invoke-El (Find-Id $dlg 'ConfirmOk' 2000)

@@ -36,6 +36,7 @@ public sealed class ShortcutService : IShortcutService
     private readonly string? _extraArguments;
     private readonly IFileSystem _fileSystem;
     private readonly Func<string, ShortcutInfo> _read;
+    private readonly IReadOnlyList<string> _otherShortcutDirectories;
 
     /// <param name="desktopDirectory">Zielordner für Desktop-Verknüpfungen (Standard: Desktop des Benutzers).</param>
     /// <param name="programsDirectory">Startmenü-Ordner „Programme“ (Standard: der des Benutzers); darin entsteht „HdrPilot“.</param>
@@ -44,6 +45,10 @@ public sealed class ShortcutService : IShortcutService
     /// <param name="extraArguments">Zusätzliche Argumente nach „--run“, etwa „--config-dir“ einer Testablage.</param>
     /// <param name="fileSystem">Auflisten und Löschen für <see cref="FindFor"/> und <see cref="Delete"/> (Standard: echte Platte).</param>
     /// <param name="read">Verknüpfung lesen (Standard: <see cref="Read"/> über die Windows-Shell).</param>
+    /// <param name="otherShortcutDirectories">
+    /// Weitere Orte mit Verknüpfungen für <see cref="IsIconInUse"/> (Standard: gemeinsamer Desktop, gemeinsames Startmenü und
+    /// „Quick Launch“ mit den angehefteten Verknüpfungen der Taskleiste).
+    /// </param>
     public ShortcutService(
         string? desktopDirectory = null,
         string? programsDirectory = null,
@@ -51,7 +56,8 @@ public sealed class ShortcutService : IShortcutService
         Func<GameConfig, string?>? iconPath = null,
         string? extraArguments = null,
         IFileSystem? fileSystem = null,
-        Func<string, ShortcutInfo>? read = null)
+        Func<string, ShortcutInfo>? read = null,
+        IReadOnlyList<string>? otherShortcutDirectories = null)
     {
         _desktopDirectory = desktopDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         _programsDirectory = programsDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.Programs);
@@ -60,6 +66,12 @@ public sealed class ShortcutService : IShortcutService
         _extraArguments = string.IsNullOrWhiteSpace(extraArguments) ? null : extraArguments.Trim();
         _fileSystem = fileSystem ?? PhysicalFileSystem.Instance;
         _read = read ?? Read;
+        _otherShortcutDirectories = otherShortcutDirectories ??
+        [
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonDesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Microsoft", "Internet Explorer", "Quick Launch"),
+        ];
     }
 
     public string CreateDesktopShortcut(GameConfig game) => Create(_desktopDirectory, game);
@@ -126,6 +138,44 @@ public sealed class ShortcutService : IShortcutService
         }
 
         return deleted;
+    }
+
+    /// <summary>
+    /// Zeigt noch eine Verknüpfung diese Symboldatei? Liest (nur lesend) alle .lnk auf dem Desktop und im Startmenü samt
+    /// Unterordnern und in den weiteren Orten (gemeinsamer Desktop und gemeinsames Startmenü, angeheftete Verknüpfungen der
+    /// Taskleiste), egal wohin sie zeigen; nicht lesbare zählen nicht. Nicht auf dem UI-Thread.
+    /// </summary>
+    public bool IsIconInUse(string iconPath)
+    {
+        foreach (var directory in new[] { _desktopDirectory, _programsDirectory }.Concat(_otherShortcutDirectories).Where(d => !string.IsNullOrWhiteSpace(d)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            List<string> files;
+            try
+            {
+                files = _fileSystem.EnumerateFiles(directory, "*.lnk", recursive: true).ToList();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                continue;
+            }
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    if (PathUtil.PathEquals(_read(file).IconPath, iconPath))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or ArgumentException)
+                {
+                    // Nicht lesbar: zählt nicht.
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Argumente für den Start eines Spiels über HdrPilot.</summary>

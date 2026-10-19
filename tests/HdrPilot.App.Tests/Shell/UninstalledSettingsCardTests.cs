@@ -97,7 +97,7 @@ public sealed class UninstalledSettingsCardTests
 
         var request = Assert.Single(_confirm.Requests);
         Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, 2), request.Title);
-        Assert.Equal(["ROLLA", "The Outlast Trials · „HDR automatisch“ ist an"], request.Details);
+        Assert.Equal([new ConfirmDetail("ROLLA", "Laufwerk F: nicht verbunden"), new ConfirmDetail("The Outlast Trials", "Laufwerk F: nicht verbunden · „HDR automatisch“ ist an")], request.Details);
         Assert.Equal("Laufwerk F: ist nicht verbunden. Spiele dort sind vielleicht noch installiert.", request.Warning);
         Assert.Null(request.OptionText);
         Assert.Equal(["Manual:m1", "Steam:553850"], context.Config.Current.Games.Select(g => g.Key));
@@ -156,7 +156,7 @@ public sealed class UninstalledSettingsCardTests
         vm.RemoveUninstalledCommand.Execute(null);
         await Sta.Finished(vm.RemoveUninstalledCommand);
 
-        Assert.Equal(["ROLLA"], Assert.Single(_confirm.Requests).Details);
+        Assert.Equal([new ConfirmDetail("ROLLA", "Laufwerk F: nicht verbunden")], Assert.Single(_confirm.Requests).Details);
         Assert.Equal(LibraryStrings.RemoveAll_ConfirmTitleOne, _confirm.Requests[0].Title);
         Assert.NotNull(context.Config.Current.FindGame(Outlast));
         Assert.Null(context.Config.Current.FindGame(Rolla));
@@ -173,6 +173,166 @@ public sealed class UninstalledSettingsCardTests
         Assert.True(vm.RemoveUninstalledCommand.CanExecute(null));
         Assert.True(vm.HasRemovable);
     }
+
+    [Fact]
+    public void Uninstalled_bulk_removal_keeps_a_game_whose_session_starts_while_confirming() => Sta.Run(async () =>
+    {
+        // Geprüft wird beim Schreiben: Startet The Outlast Trials, während die Rückfrage offen ist, bleibt es samt Dateien.
+        var (vm, context) = Create();
+        _confirm.Answers.Enqueue(new ConfirmAnswer(true, false));
+        _confirm.WhileOpen = () => context.SessionList.Add(new SessionInfo(Outlast, "The Outlast Trials", SessionPhase.Running, SessionTrigger.ProcessDetected, DateTimeOffset.UnixEpoch, [], [9]));
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        Assert.Equal(2, Assert.Single(_confirm.Requests).Details.Count); // beim Fragen lief es noch nicht
+        Assert.True(context.Config.Current.FindGame(Outlast)!.HdrAuto);
+        Assert.Null(context.Config.Current.FindGame(Rolla));
+        Assert.Equal([Rolla], _icons.ForgottenGames);
+        Assert.Equal(LibraryStrings.RemoveAll_DoneOne + " " + LibraryStrings.RemoveAll_KeptOne, vm.LibraryMessage);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_says_so_when_every_removable_game_is_running() => Sta.Run(async () =>
+    {
+        var (vm, context) = Create();
+        context.SessionList.Add(new SessionInfo(Outlast, "The Outlast Trials", SessionPhase.Running, SessionTrigger.ProcessDetected, DateTimeOffset.UnixEpoch, [], [9]));
+        context.SessionList.Add(new SessionInfo(Rolla, "ROLLA", SessionPhase.Launching, SessionTrigger.SteamLaunchOption, DateTimeOffset.UnixEpoch, [], []));
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        Assert.Empty(_confirm.Requests);
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_RunningMany, 2), vm.LibraryMessage);
+        Assert.True(vm.LibraryMessageIsError);
+        Assert.Equal(2, context.Config.Current.Games.Count(g => !g.IsInstalled && !g.IsManual));
+
+        context.SessionList.RemoveAt(1);
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+        Assert.Single(_confirm.Requests); // ROLLA läuft nicht mehr: gefragt wird nach ihm allein
+        context.SessionList.Add(new SessionInfo(Rolla, "ROLLA", SessionPhase.Running, SessionTrigger.ProcessDetected, DateTimeOffset.UnixEpoch, [], [3]));
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+        Assert.Single(_confirm.Requests);
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_RunningMany, 2), vm.LibraryMessage);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_says_which_game_runs_when_it_is_the_only_one() => Sta.Run(async () =>
+    {
+        var (vm, context) = Create();
+        context.Config.Update(c => c.Games.RemoveAll(g => g.Key == Rolla));
+        context.SessionList.Add(new SessionInfo(Outlast, "The Outlast Trials", SessionPhase.Running, SessionTrigger.ProcessDetected, DateTimeOffset.UnixEpoch, [], [9]));
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        Assert.Empty(_confirm.Requests);
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_Running, "The Outlast Trials"), vm.LibraryMessage);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_counts_the_library_again() => Sta.Run(async () =>
+    {
+        // Die Zahl unten in der Navigation („4 Spiele · 2 mit HDR automatisch“) folgt dem Sammel-Entfernen sofort.
+        var (vm, _) = Create();
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        _confirm.Answers.Enqueue(new ConfirmAnswer(true, false));
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        Assert.Equal(string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummary, 2, 1), vm.LibrarySummary);
+        Assert.Contains(nameof(SettingsViewModel.LibrarySummary), changed);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_failed_save_after_the_change_deletes_nothing() => Sta.Run(async () =>
+    {
+        var (vm, context) = Create();
+        _fs.AddFile(@"C:\Data\icons\" + CustomIcons.FileNameFor(Outlast), "png");
+        _shortcuts.Existing[Outlast] = [new GameShortcut(@"C:\Users\Test\Desktop\Outlast (HDR).lnk", @"C:\Data\icons\x.ico")];
+        _confirm.Answers.Enqueue(new ConfirmAnswer(true, true));
+        _confirm.WhileOpen = () => _fs.FailWriting(ShellTestFactory.ConfigPath, new IOException("Datenträger voll")); // das Lambda läuft, Speichern scheitert
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        Assert.NotNull(context.Config.Current.FindGame(Outlast));
+        Assert.NotNull(context.Config.Current.FindGame(Rolla));
+        Assert.True(_fs.FileExists(@"C:\Data\icons\" + CustomIcons.FileNameFor(Outlast)));
+        Assert.Empty(_icons.ForgottenGames);
+        Assert.Empty(_shortcuts.Deleted);
+        Assert.True(vm.LibraryMessageIsError);
+        Assert.Equal(2, vm.RemovableCount);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_with_nothing_removed_only_says_that_the_games_stay() => Sta.Run(async () =>
+    {
+        // Beide Spiele findet ein Einlesen während der Rückfrage wieder: nicht „Einstellungen von 0 Spielen entfernt“.
+        var (vm, context) = Create();
+        _confirm.Answers.Enqueue(new ConfirmAnswer(true, false));
+        _confirm.WhileOpen = () => context.Config.Update(c =>
+        {
+            c.FindGame(Outlast)!.IsInstalled = true;
+            c.FindGame(Rolla)!.IsInstalled = true;
+        });
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_KeptMany, 2), vm.LibraryMessage);
+        Assert.True(vm.LibraryMessageIsError);
+        Assert.Empty(_icons.ForgottenGames);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_marks_games_whose_folder_is_still_there() => Sta.Run(async () =>
+    {
+        // Steam nicht gefunden: Seine Spiele gelten als nicht installiert, ihre Ordner sind aber da. Die Rückfrage nennt bei
+        // jedem, dass der Ordner noch da ist, und warnt; die übrigen bleiben ohne Hinweis.
+        var (vm, context) = Create();
+        context.Config.Update(c => c.FindGame(Rolla)!.InstallDir = @"C:\SteamLibrary\steamapps\common\ROLLA");
+        context.Config.Update(c => c.FindGame(Outlast)!.InstallDir = @"C:\SteamLibrary\steamapps\common\Nachtprobe");
+        _fs.AddFile(@"C:\SteamLibrary\steamapps\common\ROLLA\ROLLA.exe", "exe");
+        _fs.AddDirectory(@"C:\SteamLibrary\steamapps\common\Nachtprobe"); // leer: deinstalliert
+
+        vm.RemoveUninstalledCommand.Execute(null);
+        await Sta.Finished(vm.RemoveUninstalledCommand);
+
+        var request = Assert.Single(_confirm.Requests);
+        Assert.Equal([new ConfirmDetail("ROLLA", "Ordner noch da"), new ConfirmDetail("The Outlast Trials", "„HDR automatisch“ ist an")], request.Details);
+        Assert.Equal(LibraryStrings.RemoveAll_FoldersPresentOne, request.Warning);
+    });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_says_that_it_is_checking_while_a_drive_answers_slowly() => Sta.Run(async () =>
+    {
+        var (vm, context) = Create();
+        var slow = new HangingFileSystem(_fs, @"F:\");
+        context.Cleanup = new UninstalledGameCleanup(slow, @"C:\Data\icons", @"C:\Data\art\custom", _icons, HdrPilot.App.Services.Artwork.NullArtworkService.Instance, _shortcuts);
+        string? messageWhileAsking = "nicht gefragt";
+        _confirm.WhileOpen = () => messageWhileAsking = vm.LibraryMessage;
+        try
+        {
+            vm.RemoveUninstalledCommand.Execute(null);
+            await Task.Delay(LibraryViewModel.CheckingDelay * 3);
+            Assert.Equal(LibraryStrings.RemoveAll_Checking, vm.LibraryMessage);
+            Assert.False(vm.LibraryMessageIsError);
+            Assert.False(vm.RemoveUninstalledCommand.CanExecute(null));
+            await Sta.Finished(vm.RemoveUninstalledCommand);
+        }
+        finally
+        {
+            slow.Release();
+        }
+
+        Assert.Null(messageWhileAsking);
+        Assert.Equal("Laufwerk F: ist nicht verbunden. Spiele dort sind vielleicht noch installiert.", Assert.Single(_confirm.Requests).Warning);
+    });
 
     /// <summary>Rückfrage zum Mitlesen: Antworten der Reihe nach, sonst „Abbrechen“.</summary>
     private sealed class FakeConfirm : IConfirmDialogs

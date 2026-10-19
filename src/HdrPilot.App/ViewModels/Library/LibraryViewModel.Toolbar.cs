@@ -109,9 +109,12 @@ public sealed partial class LibraryViewModel
     /// Tooltip von „Zurücksetzen“: „Zeigt wieder alle 651 Spiele.“; mit ausgeblendeten nicht installierten Spielen (E90)
     /// auch, wie viele ausgeblendet bleiben (sonst nennt sie nur die Einstellungskarte).
     /// </summary>
-    public string ResetTipText => HiddenCount > 0
-        ? LibraryText.Format(LibraryStrings.Toolbar_ResetTipHidden, LibraryText.Games(TotalCount), LibraryText.HiddenGames(HiddenCount))
-        : LibraryText.Format(LibraryStrings.Toolbar_ResetTip, LibraryText.Games(TotalCount));
+    public string ResetTipText => HiddenCount switch
+    {
+        0 => LibraryText.Format(LibraryStrings.Toolbar_ResetTip, LibraryText.Games(TotalCount)),
+        1 => LibraryText.Format(LibraryStrings.Toolbar_ResetTipHiddenOne, LibraryText.Games(TotalCount), LibraryText.HiddenGames(1)),
+        var hidden => LibraryText.Format(LibraryStrings.Toolbar_ResetTipHidden, LibraryText.Games(TotalCount), LibraryText.HiddenGames(hidden)),
+    };
 
     /// <summary>Umschalten; <paramref name="persist"/> false nur für Bildschirmfotos und Prüfungen ohne Schreiben.</summary>
     public void SetToolbarCollapsed(bool collapsed, bool persist)

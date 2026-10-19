@@ -364,12 +364,7 @@ public sealed partial class LibraryViewModel
             return;
         }
 
-        _selectedGame = first;
-        OnPropertyChanged(nameof(SelectedGame));
-        ChangeIconCommand.RaiseCanExecuteChanged();
-        ResetIconCommand.RaiseCanExecuteChanged();
-        Details = new GameDetailsViewModel(this, first);
-        OnSelectionChanged(first);
+        ShowSelection(first);
     }
 
     /// <summary>Spiel wählen, ohne es als gesehen zu speichern (Bildschirmfotos, Prüfungen: keine Schreibvorgänge).</summary>
@@ -380,12 +375,8 @@ public sealed partial class LibraryViewModel
             return;
         }
 
-        _selectedGame = item;
-        OnPropertyChanged(nameof(SelectedGame));
-        ChangeIconCommand.RaiseCanExecuteChanged();
-        ResetIconCommand.RaiseCanExecuteChanged();
-        Details = new GameDetailsViewModel(this, item);
-        OnSelectionChanged(item);
+        _displacedGame = null; // gewählt wie mit der Maus
+        ShowSelection(item);
         RevealRequested?.Invoke(this, item);
     }
 

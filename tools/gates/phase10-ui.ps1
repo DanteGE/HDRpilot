@@ -1,7 +1,7 @@
 ﻿# Gate G10.5: Bibliothek „Showcase Hero“ per UI-Automation an einer eigenen Testinstanz (eigene Ablage, echte Bibliothek
 # eingelesen und alle Spiele auf „HDR automatisch“ aus, nur Fenster dieser Prozess-ID, keine Maus- oder Tastatureingaben)
-# und Bildschirmfotos der drei Ansichten, der gescrollten Liste und der eingeklappten Leiste bei 1280×800, 1920×1080 und
-# 3440×1440, hell und dunkel.
+# und Bildschirmfotos der drei Ansichten, der gescrollten Liste, der eingeklappten Leiste und der Liste ohne Treffer bei
+# 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
 #   - Ansichten in der Reihenfolge Liste, Raster, Regal; Liste ist der Standard, die Wahl wird gemerkt (auch nach Neustart)
 #   - Liste: virtualisiert, nach Spalten sortierbar (gespeichert), Schalter „HDR automatisch“ je Zeile, Vorschau Bild/Symbol
 #   - Liste: Höhe des Titelbereichs per Ziehgriff HeroSplitter (Wunsch des Nutzers 2026-10-16): Standard ein Drittel der
@@ -18,6 +18,9 @@
 #     nennt die Filter („Gefiltert: …“) und setzt sie zurück; ausgeklappt gibt es kein unsichtbares „zurücksetzen“
 #   - Strg+F bei eingeklappter Leiste über die Testinstanz (--test-toolbar-search, keine Tastatureingabe): dauerhaft
 #     ausgeklappt, gemerkt, Fokus auf der Suche (Prüfung 2026-10-19)
+#   - Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19): Fällt das gewählte Spiel mit „Neu“ heraus, zeigen Liste
+#     und Details leise den ersten Treffer (bleibt neu, nichts gespeichert); eine Suche ohne Treffer lässt kein Spiel
+#     gewählt und zeigt „Keine Spiele für diese Auswahl“; nach dem Zurücksetzen in der Kapsel ist das Spiel wieder gewählt
 #   - Pixelraster und Schwellen (Prüfung 2026-10-19): Symbolknöpfe und Abstände genau round(40 bzw. 8 · Skalierung)
 #     Bildschirmpixel, Zahl der Zeilen nach der Listenbreite (806/410) bei jeder Skalierung, auch bei 1366×768
 #   - Raster: gleich große Kacheln über die ganze Breite, keine leere Spalte rechts, nichts ragt hinaus, bei jeder Größe
@@ -61,6 +64,21 @@ function Wait-Until([scriptblock]$condition, [int]$timeoutMs = 8000) {
 }
 
 function Is-Selected($el) { $p = $null; return $el.TryGetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern, [ref]$p) -and $p.Current.IsSelected }
+
+# Name des gewählten Spiels im Detailbereich (null: keins gewählt) und die gewählten Zeilen der Liste (eine Zeile, die
+# gerade neu angeordnet wird, zählt beim nächsten Versuch)
+function Detail-Name($win) { try { $d = Find-Id $win 'DetailName' 500; if ($d) { [string]$d.Current.Name } else { $null } } catch { $null } }
+function Selected-Rows($win) { try { @(Get-ListItems (Find-Id $win 'GameList' 2000) | Where-Object { Is-Selected $_ } | ForEach-Object { [string]$_.Current.Name }) } catch { @() } }
+function Find-Name($parent, [string]$name, [int]$timeoutMs = 2000) {
+    $cond = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::NameProperty, $name)
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+        $e = $parent.FindFirst([Windows.Automation.TreeScope]::Descendants, $cond)
+        if ($e) { return $e }
+        Start-Sleep -Milliseconds 100
+    }
+    return $null
+}
 
 # Sichtbare, angeordnete Einträge einer Liste (virtualisierte haben kein Rechteck)
 function Shown-Items($list) {
@@ -362,13 +380,36 @@ try {
         Check ($toggle.Current.Name -eq 'Werkzeugleiste' -and $expand.Current.ExpandCollapseState -eq 'Expanded' -and $toggle.Current.ItemStatus -eq 'Keine Filter') ('Lasche: Name „{0}“, {1}, Status „{2}“' -f $toggle.Current.Name, $expand.Current.ExpandCollapseState, $toggle.Current.ItemStatus)
         Check ($null -eq (Read-Config $cfg).settings.libraryToolbarCollapsed -or -not (Read-Config $cfg).settings.libraryToolbarCollapsed) 'Standard: ausgeklappt'
 
-        # Filter „Neu“ als Symbol-Schalter: Zahl im ItemStatus, an und die Lasche nennt ihn
+        # Filter „Neu“ als Symbol-Schalter: Zahl im ItemStatus, an und die Lasche nennt ihn. Gewählt ist das Spiel, das oben
+        # in der Liste gewählt wurde (damit angesehen, also nicht mehr neu).
+        $chosen = Detail-Name $win
+        $newBefore = @((Read-Config $cfg).games | Where-Object { $_.isNew }).Count
         $newFilter = Find-Id $win 'OnlyNewToggle' 2000
         $newStatus = if ($newFilter) { [string]$newFilter.Current.ItemStatus } else { '' }
         Check ($newStatus -match '\d') ('Filter „Neu“ nennt seine Zahl („{0}“)' -f $newStatus)
         $state = if ($newFilter) { Toggle-El $newFilter } else { $null }
         Check ($state -eq 'On' -and (Wait-Until { (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -match '^Gefiltert: ' } 3000)) ('Filter „Neu“ an, die Lasche nennt ihn („{0}“)' -f (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus)
         Check ($null -eq (Find-Id $win 'ToolbarResetButton' 600)) 'Ausgeklappt und gefiltert: kein unsichtbares „Suche und Filter zurücksetzen“ im Automationsbaum'
+
+        # Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19): Das gewählte Spiel ist herausgefallen, Liste und Details
+        # zeigen leise den ersten Treffer, der neu bleibt (gesammeltes Speichern von „angesehen“ nach 400 ms abgewartet).
+        $followed = Wait-Until { try { $top = @(Shown-Items (Find-Id $win 'GameList' 1000)); $top.Count -gt 0 -and (Detail-Name $win) -eq [string]$top[0].Current.Name } catch { $false } } 3000
+        $firstNew = [string]@(Shown-Items (Find-Id $win 'GameList' 1000))[0].Current.Name
+        Check ($followed -and $chosen -and $firstNew -ne $chosen) ('Auswahl folgt dem Filter: „{0}“ fällt heraus, Details zeigen den ersten Treffer „{1}“' -f $chosen, (Detail-Name $win))
+        $rows = @(Selected-Rows $win)
+        Check ($rows.Count -eq 1 -and $rows[0] -eq $firstNew) ('In der Liste gewählt: der erste Treffer („{0}“)' -f ($rows -join ', '))
+        Start-Sleep -Milliseconds 900
+        $firstConfig = @((Read-Config $cfg).games | Where-Object { $_.name -eq $firstNew }) | Select-Object -First 1
+        Check ($firstConfig -and $firstConfig.isNew) ('Leise: „{0}“ bleibt neu, nichts als angesehen gespeichert' -f $firstNew)
+
+        # Suche ohne Treffer (über die Suche per UI-Automation, keine Tastatureingabe): kein Spiel, der Hinweis mit „Filter
+        # zurücksetzen“; Suche geleert: wieder der erste Treffer, solange „Neu“ gilt.
+        $search = Find-Id $win 'SearchBox' 2000
+        Set-Text $search 'xqz kein Spiel'
+        Check (Wait-Until { $null -eq (Detail-Name $win) -and $null -ne (Find-Id $win 'ResetFiltersButton' 300) } 3000) ('Ohne Treffer kein Spiel gewählt (Details: „{0}“), „Filter zurücksetzen“ da' -f (Detail-Name $win))
+        Check ((Selected-Rows $win).Count -eq 0 -and $null -ne (Find-Name $win 'Keine Spiele für diese Auswahl')) 'Ohne Treffer: keine Zeile gewählt, Hinweis „Keine Spiele für diese Auswahl“'
+        Set-Text $search ''
+        Check (Wait-Until { (Detail-Name $win) -eq $firstNew -and $null -eq (Find-Id $win 'ResetFiltersButton' 300) } 3000) ('Suche geleert: wieder „{0}“ („{1}“)' -f $firstNew, (Detail-Name $win))
 
         $barBefore = Rect (Find-Id $win 'LibraryToolbar' 2000)
         $listBefore = (Rect (Find-Id $win 'GameList' 2000)).Top
@@ -392,10 +433,12 @@ try {
         if ($reset) {
             Invoke-El $reset
             Check (Wait-Until { (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -eq 'Keine Filter' } 3000) 'Zurücksetzen in der Kapsel: keine Filter mehr'
+            Check (Wait-Until { (Detail-Name $win) -eq $chosen -and (@(Selected-Rows $win) -join '|') -eq $chosen } 3000) ('Zurückgesetzt: „{0}“ ist wieder gewählt und in der Liste zu sehen („{1}“, Zeile „{2}“)' -f $chosen, (Detail-Name $win), (@(Selected-Rows $win) -join ', '))
         }
 
         $expand.Expand()
         Check (Wait-Until { $expand.Current.ExpandCollapseState -eq 'Expanded' -and -not (Read-Config $cfg).settings.libraryToolbarCollapsed } 4000) 'Wieder ausgeklappt und gemerkt'
+        Check (@((Read-Config $cfg).games | Where-Object { $_.isNew }).Count -eq $newBefore) ("Filtern hat kein Spiel als angesehen gespeichert ({0} neu)" -f $newBefore)
         Start-Sleep -Milliseconds 1000
         $newFilter = Find-Id $win 'OnlyNewToggle' 2000
         $off = $null
@@ -435,11 +478,15 @@ try {
     Check ($missing.Count -eq 0) ("Kontextmenü mit allen Einträgen" + $(if ($missing.Count) { " (fehlt: $($missing -join ', '))" } else { '' }))
     $hdrItem = Find-Top $app.Id 'ContextHdrAuto' 1500
     if ($hdrItem) {
+        # Gelesen wird erst, wenn die App fertig geschrieben hat (liest das Gate, während sie die Datei ersetzt, scheitert ihr
+        # Speichern mit „Zugriff verweigert“ und der Schalter springt zurück; so am 2026-10-19 beim Ausschalten geschehen).
         Invoke-El $hdrItem
+        Start-Sleep -Milliseconds 800
         Check (Wait-Until { @((Read-Config $cfg).games | Where-Object { $_.hdrAuto }).Count -eq 1 }) 'Kontextmenü „HDR automatisch“ wirkt auf das gewählte Spiel'
         Invoke-El (Find-Id $win 'ProfileMenuButton')
         $hdrItem = Find-Top $app.Id 'ContextHdrAuto' 2000
         if ($hdrItem) { Invoke-El $hdrItem }
+        Start-Sleep -Milliseconds 800
         Check (Wait-Until { @((Read-Config $cfg).games | Where-Object { $_.hdrAuto }).Count -eq 0 }) 'Kontextmenü „HDR automatisch“ wieder aus'
     }
 
@@ -586,12 +633,12 @@ try {
     Check ($app2.WaitForExit(10000)) 'Testinstanz beendet'
     Check (@((Read-Config $cfg).games | Where-Object { $_.hdrAuto -or $_.autoHdr }).Count -eq 0) 'Am Ende hat kein Spiel „HDR automatisch“ oder „Windows Auto HDR“ an'
 
-    # --- Bildschirmfotos: drei Ansichten, die gescrollte Liste und die eingeklappte Leiste (gefiltert, mit Lichtnaht), drei
-    #     Größen, hell und dunkel ---
+    # --- Bildschirmfotos: drei Ansichten, die gescrollte Liste, die eingeklappte Leiste (gefiltert, mit Lichtnaht; Titelbereich
+    #     und Details beim ersten Treffer) und die Liste ohne Treffer, drei Größen, hell und dunkel ---
     $shots = Join-Path $ShotsDir ('lauf-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal,hauptfenster-liste-eingeklappt-gefiltert,hauptfenster-raster-eingeklappt,hauptfenster-regal-eingeklappt-gefiltert', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
+    $snap = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--snapshot', "`"$shots`"", '--snapshot-sizes', 'review', '--snapshot-scenes', 'hauptfenster-liste,hauptfenster-liste-gescrollt,hauptfenster-raster,hauptfenster-regal,hauptfenster-liste-eingeklappt-gefiltert,hauptfenster-raster-eingeklappt,hauptfenster-regal-eingeklappt-gefiltert,hauptfenster-liste-ohne-treffer', '--snapshot-themes', 'dunkel,hell') -PassThru -Wait
     Check ($snap.ExitCode -eq 0) "Bildschirmfotos gerendert (Exit-Code $($snap.ExitCode))"
-    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal', 'liste-eingeklappt-gefiltert', 'raster-eingeklappt', 'regal-eingeklappt-gefiltert') {
+    foreach ($view in 'liste', 'liste-gescrollt', 'raster', 'regal', 'liste-eingeklappt-gefiltert', 'raster-eingeklappt', 'regal-eingeklappt-gefiltert', 'liste-ohne-treffer') {
         foreach ($size in '1280x800', '1920x1080', '3440x1440') {
             foreach ($theme in 'dunkel', 'hell') {
                 $file = Join-Path $shots "hauptfenster-$view-$size-$theme.png"

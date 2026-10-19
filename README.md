@@ -141,6 +141,9 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   gefiltert leuchtet die Kante, und das Kreuz in der Kapsel setzt alle Filter zurück. Ein Klick auf die Kapsel,
   dasselbe Kürzel oder Strg+F (sucht dann gleich) blendet die Leiste wieder ein. HDRpilot merkt sich, ob sie aus- oder
   eingeblendet ist.
+- Fällt das gewählte Spiel durch Suche oder Filter aus der Liste, zeigen Titelbild und Details den ersten Treffer (er
+  bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“.
+  Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen der Filter, ist es wieder gewählt.
 - Sortierung nach **Name**, **Zuletzt gespielt** oder **HDR-Unterstützung**; die Wahl bleibt gespeichert. „Zuletzt
   gespielt“ kennt Steam-Spiele aus Steams eigenen Daten und alle Spiele, die HDRpilot laufen sieht.
 - Neu gefundene Spiele tragen die Markierung „NEU“. Sie verschwindet, sobald du das Spiel anklickst oder seinen

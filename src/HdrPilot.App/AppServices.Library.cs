@@ -107,6 +107,10 @@ public sealed partial class AppServices
             Overlays = window => window is MainWindow main && main.CreateToolbarMenuPreview() is { } menu ? [menu] : [],
         });
 
+        // Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19): Gefiltert zeigen Titelbereich und Details den ersten
+        // Treffer (siehe die Zustände „-gefiltert“), ohne Treffer kein Spiel und den Hinweis in der Liste.
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-ohne-treffer", () => LibraryScene(LibraryViewMode.List), NoMatchAsync) { Settle = LibrarySettle });
+
         // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
@@ -140,6 +144,17 @@ public sealed partial class AppServices
 
         vm.SetToolbarCollapsed(collapsed, persist: false);
         await Task.Delay(1400);
+    }
+
+    /// <summary>Suche ohne Treffer, nur im ViewModel (nichts wird gespeichert); danach laufen die Überblendungen zu Ende.</summary>
+    private static async Task NoMatchAsync(Window window)
+    {
+        if (window is MainWindow { ViewModel: { } vm })
+        {
+            vm.SearchText = "xqz";
+            vm.ApplySearch();
+            await Task.Delay(1400);
+        }
     }
 
     /// <summary>Ein- bzw. Ausklappen der Werkzeugleiste, angehalten nach einigen Millisekunden (wie #t= der Vorschau).</summary>

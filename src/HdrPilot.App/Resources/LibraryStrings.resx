@@ -224,10 +224,10 @@
     <value>Lies deine Launcher mit „Neu einlesen“ ein oder füge ein Spiel von Hand hinzu.</value>
   </data>
   <data name="List_NoMatchTitle" xml:space="preserve">
-    <value>Keine Treffer</value>
+    <value>Keine Spiele für diese Auswahl</value>
   </data>
   <data name="List_NoMatchText" xml:space="preserve">
-    <value>Kein Spiel passt zur Suche und zu den Filtern.</value>
+    <value>Suche, Quelle und Filter schließen alle Spiele aus.</value>
   </data>
   <data name="List_ResetFilters" xml:space="preserve">
     <value>Filter zurücksetzen</value>

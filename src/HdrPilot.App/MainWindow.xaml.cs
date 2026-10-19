@@ -192,6 +192,7 @@ public partial class MainWindow : ChromeWindow
         DataContext = viewModel;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         viewModel.RevealRequested += OnRevealRequested;
+        viewModel.SelectionFollowedFilter += OnSelectionFollowedFilter;
         viewModel.HdrMomentRequested += OnHdrMomentRequested;
         viewModel.CloseRequested += OnCloseRequested;
 
@@ -298,7 +299,7 @@ public partial class MainWindow : ChromeWindow
     /// </summary>
     public SnapshotOverlay? CreateContextMenuPreview()
     {
-        var list = _appliedView switch { LibraryViewMode.Grid => GameGrid, LibraryViewMode.Shelf => GameShelf, _ => GameList };
+        var list = ActiveGames();
         if (_viewModel?.SelectedGame is not { } item
             || list.ItemContainerGenerator.ContainerFromItem(item) is not ListBoxItem target
             || TryFindResource("GameContextMenu") is not ContextMenu menu)
@@ -1114,8 +1115,84 @@ public partial class MainWindow : ChromeWindow
 
     private void OnRevealRequested(object? sender, GameItemViewModel item) => RevealSelection(center: true);
 
-    /// <summary>Gewähltes Spiel in der aktiven Ansicht sichtbar machen (Liste: in die Mitte, damit der Hinweis es nicht verdeckt).</summary>
-    private void RevealSelection(bool center)
+    /// <summary>
+    /// Die Auswahl ist Suche oder Filtern gefolgt (erster Treffer, keiner oder die vorherige zurück): sichtbar machen, ohne
+    /// den Fokus aus Suche, Leiste oder Detailbereich zu nehmen. Lag er auf einem Spiel der Ansicht oder ist er mit dessen
+    /// Zeile bzw. Kachel verschwunden, folgt er der Auswahl (ohne Treffer auf „Filter zurücksetzen“) und geht nie verloren.
+    /// </summary>
+    private void OnSelectionFollowedFilter(object? sender, EventArgs e)
+    {
+        var focusFollows = FocusIsOnGames();
+        RevealSelection(center: true, focusRow: false);
+        if (focusFollows)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, FocusSelection);
+        }
+    }
+
+    /// <summary>Liste, Raster oder Regal: die Ansicht, die gerade die Spiele zeigt.</summary>
+    private ListBox ActiveGames() => _appliedView switch { LibraryViewMode.Grid => GameGrid, LibraryViewMode.Shelf => GameShelf, _ => GameList };
+
+    /// <summary>
+    /// Liegt der Fokus auf einem Spiel der aktiven Ansicht oder auf dem Hinweis ohne Treffer, oder ist er verloren (mit seiner
+    /// Zeile bzw. Kachel aus dem Fenster genommen; im aktiven Fenster beim Fenster selbst)? Gemeint ist im aktiven Fenster der
+    /// Tastaturfokus, sonst der Fokus, den das Fenster beim Aktivieren wiederherstellt. In Suche, Leiste, Detailbereich,
+    /// einem Menü oder einer aufgeklappten Auswahlliste bleibt er, wo er ist.
+    /// </summary>
+    private bool FocusIsOnGames()
+    {
+        var focused = (IsActive ? Keyboard.FocusedElement : FocusManager.GetFocusedElement(this)) as DependencyObject;
+        if (focused is null || ReferenceEquals(focused, this))
+        {
+            return IsActive;
+        }
+
+        var games = ActiveGames();
+        var inRow = false;
+        var top = focused;
+        for (DependencyObject? node = focused; node is not null; node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, games) || ReferenceEquals(node, NoMatch))
+            {
+                return true;
+            }
+
+            inRow |= node is ListBoxItem;
+            top = node;
+        }
+
+        // Außerhalb des Fensters: ohne Darstellung mit seiner Zeile herausgenommen, sonst in einem Popup (Menü, Auswahlliste).
+        return !ReferenceEquals(top, this) && inRow && PresentationSource.FromDependencyObject(top) is null;
+    }
+
+    /// <summary>Fokus auf das gewählte Spiel der Ansicht; ohne Treffer auf „Filter zurücksetzen“, sonst auf die Ansicht.</summary>
+    private void FocusSelection()
+    {
+        if (_viewModel is not { } vm)
+        {
+            return;
+        }
+
+        var games = ActiveGames();
+        if (vm.SelectedGame is { } item && games.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem row)
+        {
+            FocusInWindow(row);
+        }
+        else if (vm.IsFilterEmpty)
+        {
+            FocusInWindow(ResetFiltersButton);
+        }
+        else
+        {
+            FocusInWindow(games);
+        }
+    }
+
+    /// <summary>
+    /// Gewähltes Spiel in der aktiven Ansicht sichtbar machen (Liste: in die Mitte, damit der Hinweis es nicht verdeckt).
+    /// <paramref name="focusRow"/>: In der Liste bekommt die Zeile den Fokus, wenn er im Fenster und nicht in der Suche liegt.
+    /// </summary>
+    private void RevealSelection(bool center, bool focusRow = true)
     {
         if (_viewModel?.SelectedGame is not { } item)
         {
@@ -1135,7 +1212,7 @@ public partial class MainWindow : ChromeWindow
                             CenterInList(row);
                         }
 
-                        if (IsKeyboardFocusWithin && !SearchBox.IsKeyboardFocused)
+                        if (focusRow && IsKeyboardFocusWithin && !SearchBox.IsKeyboardFocused)
                         {
                             row.Focus();
                         }
@@ -1781,6 +1858,7 @@ public partial class MainWindow : ChromeWindow
         {
             vm.PropertyChanged -= OnViewModelPropertyChanged;
             vm.RevealRequested -= OnRevealRequested;
+            vm.SelectionFollowedFilter -= OnSelectionFollowedFilter;
             vm.HdrMomentRequested -= OnHdrMomentRequested;
             vm.CloseRequested -= OnCloseRequested;
             vm.Dispose();

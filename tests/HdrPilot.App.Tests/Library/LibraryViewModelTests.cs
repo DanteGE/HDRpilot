@@ -167,26 +167,41 @@ public sealed class LibraryViewModelTests
     });
 
     [Fact]
-    public void Refiltering_never_moves_the_selection_or_marks_games_seen() => Sta.Run(() =>
+    public void Refiltering_moves_a_hidden_selection_to_the_first_match_without_marking_it_seen() => Sta.Run(() =>
     {
+        // Entscheidung des Nutzers 2026-10-19 (ersetzt die Regel aus Phase 4, nach der Neufiltern die Auswahl nie verschob):
+        // Titelbereich und Details folgen der Liste, leise; mehr dazu in SelectionFollowsFilterTests.
         var context = SampleContext();
         using var vm = new LibraryViewModel(context, new FakeDialogs());
         var cyberpunk = vm.Games.Single(g => g.Key == "Steam:1091500");
         var pokemon = vm.Games.Single(g => g.Key == "Steam:123");
 
-        // Wie eine mit dem aktuellen Element verbundene Liste: Neufiltern setzt das aktuelle Element auf den ersten Treffer.
+        // Wie eine mit dem aktuellen Element verbundene Liste: Neufiltern setzt das aktuelle Element auf den ersten Treffer;
+        // diese Nebenwirkung ist keine Wahl.
         vm.GamesView.CurrentChanged += (_, _) => vm.SelectedGame = vm.GamesView.CurrentItem as GameItemViewModel;
         vm.GamesView.MoveCurrentTo(cyberpunk);
         Assert.Same(cyberpunk, vm.SelectedGame);
+        var updates = context.Updates;
 
         vm.SearchText = "pokemon";
         context.Dispatcher.RunDelayed();
 
-        Assert.Same(pokemon, vm.GamesView.CurrentItem); // die Sicht ist weitergerückt …
-        Assert.Same(cyberpunk, vm.SelectedGame);         // … die Auswahl nicht
+        Assert.Same(pokemon, vm.SelectedGame); // der einzige Treffer …
+        Assert.Same(pokemon, vm.Details?.Item);
+        Assert.Same(pokemon, vm.Hero?.Item);
+        context.Dispatcher.RunDelayed();
+        Assert.True(pokemon.IsNew);            // … nicht als angesehen markiert, nichts gespeichert
+        Assert.True(context.Config.FindGame("Steam:123")!.IsNew);
+        Assert.Equal(updates, context.Updates);
+
+        // Ohne Filter steht Cyberpunk wieder in der Liste und kehrt zurück (die Sicht bleibt bei Pokémon).
+        vm.SearchText = string.Empty;
+        context.Dispatcher.RunDelayed();
+        Assert.Same(pokemon, vm.GamesView.CurrentItem);
+        Assert.Same(cyberpunk, vm.SelectedGame);
         Assert.Same(cyberpunk, vm.Details?.Item);
         Assert.True(pokemon.IsNew);
-        Assert.True(context.Config.FindGame("Steam:123")!.IsNew);
+        Assert.Equal(updates, context.Updates);
     });
 
     [Fact]

@@ -74,6 +74,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private IReadOnlyDictionary<string, HdrSupportStatus> _hdrSupport = new Dictionary<string, HdrSupportStatus>();
     private int _hdrSupportRun;
     private GameItemViewModel? _selectedGame;
+    private GameItemViewModel? _displacedGame;
     private GameDetailsViewModel? _details;
 
     private int _totalCount;
@@ -137,6 +138,13 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     /// <summary>Das Fenster soll dieses Spiel in den sichtbaren Bereich holen (nach dem Hinzufügen).</summary>
     public event EventHandler<GameItemViewModel>? RevealRequested;
+
+    /// <summary>
+    /// Die Auswahl ist Suche oder Filtern gefolgt (erster Treffer, keiner oder die vorherige zurück, siehe
+    /// <see cref="SelectedGame"/>): Das Fenster holt sie in den sichtbaren Bereich, und lag der Fokus auf der verschwundenen
+    /// Zeile, folgt er ihr.
+    /// </summary>
+    public event EventHandler? SelectionFollowedFilter;
 
     public BulkObservableCollection<GameItemViewModel> Games { get; } = [];
 
@@ -337,24 +345,27 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     // ---------- Auswahl und Details ----------
 
+    /// <summary>
+    /// Gewähltes Spiel (Titelbereich und Details). Selbst gewählt gilt es als angesehen. Fällt es durch Suche oder Filter
+    /// aus der Liste, folgt die Auswahl leise der Liste (Entscheidung des Nutzers 2026-10-19, ersetzt die Regel aus Phase 4,
+    /// nach der Neufiltern die Auswahl nie verschob): erster Treffer, ohne Treffer keiner; steht das verdrängte Spiel
+    /// wieder in der Liste, kehrt es zurück (<see cref="FollowFilter"/>).
+    /// </summary>
     public GameItemViewModel? SelectedGame
     {
         get => _selectedGame;
         set
         {
             // Beim Neufiltern ändert die Liste die Auswahl nur als Nebenwirkung (null, oder bei einer mit dem
-            // aktuellen Element verbundenen Liste das erste Element): Details bleiben stehen, nichts gilt als angesehen.
+            // aktuellen Element verbundenen Liste das erste Element): Das ist keine Wahl, welches Spiel dann gilt, legt
+            // FollowFilter fest, und nichts gilt als angesehen.
             if (_refreshing || ReferenceEquals(value, _selectedGame))
             {
                 return;
             }
 
-            _selectedGame = value;
-            OnPropertyChanged();
-            ChangeIconCommand.RaiseCanExecuteChanged();
-            ResetIconCommand.RaiseCanExecuteChanged();
-            Details = value is null ? null : new GameDetailsViewModel(this, value);
-            OnSelectionChanged(value);
+            _displacedGame = null; // selbst gewählt: Das vom Filter verdrängte Spiel kehrt nicht mehr zurück.
+            ShowSelection(value);
             if (value is { IsNew: true })
             {
                 MarkSeen(value);
@@ -646,6 +657,17 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             _byKey.Remove(item.Key);
         }
 
+        // Aus der Bibliothek entfernt: vor dem Neufiltern, sonst gälte das Spiel als vom Filter verdrängt.
+        if (_selectedGame is not null && !_byKey.ContainsKey(_selectedGame.Key))
+        {
+            ShowSelection(null);
+        }
+
+        if (_displacedGame is not null && !_byKey.ContainsKey(_displacedGame.Key))
+        {
+            _displacedGame = null;
+        }
+
         // Nach „Zuletzt gespielt“ sortiert: ein geändertes Datum (Spiel beendet, Steam eingelesen) verschiebt die Zeile.
         var resort = lastPlayedChanged && SortOrder == GameSortOrder.LastPlayed;
         if (renamed || added.Count + removed.Count > 12)
@@ -664,6 +686,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
         else if (added.Count + removed.Count > 0 || resort)
         {
+            var followed = false;
             _refreshing = true;
             try
             {
@@ -676,6 +699,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                 {
                     Games.Insert(InsertIndex(item), item);
                 }
+
+                followed = !resort && FollowFilter(); // etwa ein neues Spiel, das zu Suche und Filtern passt, ohne andere Treffer
             }
             finally
             {
@@ -689,17 +714,14 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             else
             {
                 UpdateVisibleCount();
+                if (followed)
+                {
+                    SelectionFollowedFilter?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 
-        if (_selectedGame is not null && !_byKey.ContainsKey(_selectedGame.Key))
-        {
-            _selectedGame = null;
-            OnPropertyChanged(nameof(SelectedGame));
-            Details = null;
-            OnSelectionChanged(null);
-        }
-        else if (_selectedGame is not null)
+        if (_selectedGame is not null)
         {
             _details?.Apply(_selectedGame.Config);
             _hero?.Refresh(IsPaused);
@@ -828,6 +850,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         _details?.Detach();
         DisposeShowcase();
         RevealRequested = null;
+        SelectionFollowedFilter = null;
         _context.Dispose();
     }
 
@@ -952,11 +975,13 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     private void RefreshView()
     {
+        bool followed;
         _refreshing = true;
         try
         {
             GamesView.Refresh();
-            OnPropertyChanged(nameof(SelectedGame));
+            followed = FollowFilter();
+            OnPropertyChanged(nameof(SelectedGame)); // die Liste wieder auf die Auswahl setzen (Neufiltern hat ihre geändert)
         }
         finally
         {
@@ -964,6 +989,56 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         UpdateVisibleCount();
+        if (followed)
+        {
+            SelectionFollowedFilter?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Auswahl nach dem Neufiltern (Entscheidung des Nutzers 2026-10-19): Steht das vom Filter verdrängte Spiel wieder in der
+    /// Liste, kehrt es zurück. Sonst bleibt ein noch sichtbares gewähltes Spiel; fällt es heraus, gilt der erste Treffer in
+    /// der Reihenfolge der Liste, ohne Treffer keiner, und das Spiel wird als verdrängt gemerkt (ein schon verdrängtes bleibt
+    /// es). Leise: nichts gilt als angesehen, nichts wird gespeichert. Ohne Auswahl und ohne verdrängtes Spiel bleibt es so.
+    /// </summary>
+    /// <returns>true, wenn sich die Auswahl geändert hat.</returns>
+    private bool FollowFilter()
+    {
+        var current = _selectedGame;
+        GameItemViewModel? next;
+        if (_displacedGame is { } displaced && GamesView.Contains(displaced))
+        {
+            next = displaced;
+            _displacedGame = null;
+        }
+        else if (current is not null ? GamesView.Contains(current) : _displacedGame is null)
+        {
+            return false; // noch zu sehen, oder nichts gewählt und nichts verdrängt: bleibt
+        }
+        else
+        {
+            _displacedGame ??= current;
+            next = GamesView.Count > 0 ? GamesView.GetItemAt(0) as GameItemViewModel : null;
+        }
+
+        if (ReferenceEquals(next, current))
+        {
+            return false;
+        }
+
+        ShowSelection(next);
+        return true;
+    }
+
+    /// <summary>Spiel zeigen (Liste, Titelbereich, Details, Befehle), ohne es als angesehen zu markieren; null: keins.</summary>
+    private void ShowSelection(GameItemViewModel? item)
+    {
+        _selectedGame = item;
+        OnPropertyChanged(nameof(SelectedGame));
+        ChangeIconCommand.RaiseCanExecuteChanged();
+        ResetIconCommand.RaiseCanExecuteChanged();
+        Details = item is null ? null : new GameDetailsViewModel(this, item);
+        OnSelectionChanged(item);
     }
 
     /// <summary>

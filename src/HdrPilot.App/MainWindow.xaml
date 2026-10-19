@@ -1462,13 +1462,13 @@
                         <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.List_EmptyText}" TextAlignment="Center" />
                     </StackPanel>
 
-                    <!-- Keine Treffer -->
+                    <!-- Keine Treffer (dann ist kein Spiel gewählt, Titelbereich und Details sind leer) -->
                     <Border x:Name="NoMatch" VerticalAlignment="Top" Margin="24,58,24,0" CornerRadius="18" Padding="22,18" Background="{DynamicResource Hp.Brush.Surface1}"
                             BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1"
                             Visibility="{Binding IsFilterEmpty, Converter={StaticResource Lib.BoolToVisibility}}">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Left" Style="{StaticResource Lib.Glyph}" Text="&#xE721;" FontSize="30" Margin="0,0,18,0" Foreground="{DynamicResource Hp.Brush.AccentText}" />
-                            <Button DockPanel.Dock="Right" Style="{StaticResource Lib.PaneButton}" Margin="18,0,0,0" Command="{Binding ClearFiltersCommand}"
+                            <Button x:Name="ResetFiltersButton" DockPanel.Dock="Right" Style="{StaticResource Lib.PaneButton}" Margin="18,0,0,0" Command="{Binding ClearFiltersCommand}"
                                     AutomationProperties.AutomationId="ResetFiltersButton" AutomationProperties.Name="{x:Static res:LibraryStrings.List_ResetFilters}"
                                     Content="{x:Static res:LibraryStrings.List_ResetFilters}" />
                             <StackPanel VerticalAlignment="Center">

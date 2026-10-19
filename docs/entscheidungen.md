@@ -1007,3 +1007,16 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   `liste-gefiltert`, `liste-/raster-/regal-eingeklappt` (auch `-gefiltert`), `liste-tooltip`, `liste-lasche`,
   `liste-menue-leiste`, `liste-einklappen-t120`, `-t600`, `liste-ausklappen-t140` und im hohen Kontrast
   `liste-eingeklappt-kontrast` (auch `-gefiltert-kontrast`).
+- Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19, G10.5; ersetzt die Regel aus Phase 4, nach der Neufiltern
+  die Auswahl nie verschob, sodass Titelbereich und Details ein Spiel zeigen konnten, das nicht in der Liste stand):
+  Fällt das gewählte Spiel durch Suche, Quelle oder einen Filter aus der Liste, zeigen Liste, Titelbereich und Details
+  leise den ersten Treffer in der Reihenfolge der Liste (nicht als „gesehen“ markiert, nichts gespeichert); ohne Treffer
+  ist kein Spiel gewählt, und die Liste zeigt „Keine Spiele für diese Auswahl“ mit „Filter zurücksetzen“. Das verdrängte
+  Spiel kehrt zurück, sobald es wieder in der Liste steht (auch noch gefiltert, ebenso nach dem ✕ der Kapsel), und wird
+  dabei in den sichtbaren Bereich geholt; wählt der Nutzer selbst ein anderes Spiel oder verschwindet es aus der
+  Bibliothek, kehrt es nicht mehr zurück. Sortierung und Wechsel der Ansicht ändern die Auswahl nicht; findet ein
+  Einlesen bei leerer Liste ein passendes Spiel, wird es gezeigt. Der Fokus geht dabei nicht verloren: Lag er auf der
+  verschwundenen Zeile bzw. Kachel, folgt er der Auswahl (ohne Treffer auf „Filter zurücksetzen“); in Suche, Leiste,
+  Detailbereich und Menüs bleibt er. Prüfung: `test.ps1 -Filter "FullyQualifiedName~SelectionFollowsFilter"`,
+  `phase10-ui.ps1` (Filter „Neu“, Suche ohne Treffer, Zurücksetzen in der Kapsel); Zustand `liste-ohne-treffer` für
+  Bildschirmfotos.

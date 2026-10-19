@@ -17,7 +17,18 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   - Phase 11;
   - Prüfung aus Sicht von Funktion, Oberfläche und Datensicherheit;
   - Korrektur und Gegenprüfung.
-- **Lauf 2 danach:** Phase 12 Quiver.
+- **Lauf 1 fertig (2026-10-20):**
+  - 204fa09: Auswahl beim Filtern.
+  - 1065e88 bis 1d613a6: Phase 11.
+  - 50bf8b0: nach der Prüfung.
+  - Gates: alle grün, TESTS_OK 3169, PHASE11_UI_OK, PHASE11_MIGRATION_OK (echte Ablage nur kopiert, Hash gleich).
+  - Gegenprüfung: 1 mittlerer Fund (Warnung „Ordner noch da“ bei reinen Restdateien, betrifft VEIN Demo) und 5 kleine.
+- **Lauf 2 (gestartet 2026-10-20):**
+  - Erst die Restfunde aus Phase 11, dazu ein Nebenfund: Liest ein anderer Prozess `config.json` beim Ersetzen, kann
+    eine Speicherung verloren gehen. Danach Gegenprüfung.
+  - Dann Phase 12 Quiver, Prüfung aus drei Blickwinkeln, Korrektur und Gegenprüfung.
+- **Danach:** Abschlussprüfung, Stand sichern. Zusammenführung, 1.5.0 und
+  Setup erst, nachdem der Nutzer die neuen Funktionen gesehen hat.
 - **Wunsch des Nutzers:** gründlich bleiben, Tempo ist zweitrangig.
 
 ## Neue Wünsche des Nutzers (2026-10-18)

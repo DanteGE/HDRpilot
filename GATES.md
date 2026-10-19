@@ -419,6 +419,7 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
     - einzeilig hat Vorrang: Suche, Quelle und Sortierung geben stufenlos nach, dann zeigt die Sortierung nur ihr Symbol; erst darunter zwei Zeilen, getrennt an den Gruppengrenzen, mit sauberem Übergang; die Anpassung an schmale Fenster ist fließend und optisch sauber (kein Nachhinken, gleiche Abstände, bündige Kanten);
     - Aus- und Einblenden nach der abgenommenen Vorschau „Fließleiste mit Lichtnaht“ (`docs/design/showcase-hero/prototyp/leiste.html`, Wunsch des Nutzers 2026-10-17): Lasche rechts, ihre Unterkante 8 px über der Leiste (wie der Abstand der Knöpfe); eingeklappt eine Kapsel auf der Bildkante mit aktiven Filtern, Suchbegriff, Anzahl und Zurücksetzen; gefiltert die Lichtnaht; Strg+Umschalt+F schaltet um, Strg+F klappt dauerhaft aus und setzt den Cursor in die Suche, Alt+A/N/H schalten die Filter; Animation nach Effektstufe (Voll, Reduziert, Aus); der Zustand wird gemerkt;
     - der Inhalt des Titelbereichs sitzt 22 px über der Bildkante (Platz für Lasche und Kapsel).
+  - Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19, ersetzt die Regel aus Phase 4): fällt das gewählte Spiel durch Suche oder Filter aus der Liste, springen Titelbereich und Details leise auf den ersten Treffer (nicht als „gesehen“ markiert, nichts gespeichert); ohne Treffer kein Spiel und der Hinweis „Keine Spiele für diese Auswahl“; nach dem Aufheben des Filters kehrt die vorherige Auswahl zurück, wenn sie wieder sichtbar ist.
   - Raster: skaliert bei jeder Fenstergröße sauber, auch im Vollbild bei 3440×1440: Spaltenzahl und Kachelgröße folgen der Breite, nichts gestreckt oder abgeschnitten.
   - Regal: Titelbild und Kachelreihe.
   - Detailbereich mit allen bisherigen Funktionen (STARTEN, AUTOMATIK, BILD, EXE-DATEIEN, Bilder); alle bisherigen Funktionen und Tastenkürzel bleiben.
@@ -461,4 +462,77 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
   EVIDENCE: pending
 
 - [ ] G10.11: Abnahme durch den Nutzer am echten System (Aussehen, Effekte, Bedienung, Vollbild bei 3440×1440)
+  EVIDENCE: pending
+
+## Phase 11: Nicht installierte Spiele (Wunsch des Nutzers 2026-10-18, E90)
+
+Scope: Bei nicht installierten Launcher-Spielen lassen sich die HDRpilot-Daten des Spiels entfernen (Kontextmenü und ganz unten im Detailbereich), und eine Einstellung blendet nicht installierte Spiele aus. Entscheidungen des Nutzers 2026-10-19: Entfernt werden Einstellungen, eigene Bilder und Symbole; HDRpilot-Verknüpfungen nur per Häkchen in der Rückfrage. Ausgeblendete Spiele zählen nicht mit (Kopf, Quellen, Kapsel), „HDR automatisch“ wirkt weiter; die Karte „Bibliothek“ in den Einstellungen zeigt die Anzahl und bietet „Einstellungen aller nicht installierten Spiele entfernen…“ mit Namensliste und Rückfrage. Spiel-, Launcher- und Steam-Dateien werden nie angefasst. Plan: `docs/uebergabe/wuensche-2026-10-18-plan.md`.
+
+- [ ] G11.1: Kern und Bibliothek, per Unit-Tests mit Gegenproben belegt:
+  - Entfernt wird nur bei nicht installiert, nicht manuell und ohne laufende oder vorbereitete Sitzung; geprüft wird erst beim Schreiben (findet ein Einlesen das Spiel dazwischen wieder, bleibt alles).
+  - Gelöscht werden nur der Eintrag, das eigene Symbol (PNG), der Eintrag im Symbol-Cache, die eigenen Bilder und, nur mit Häkchen, die exakt passenden HDRpilot-Verknüpfungen (Ziel HDRpilot.exe, genau `--run "<Schlüssel>"`) samt deren .ico; ein Attrappen-Dateisystem belegt, dass sonst nichts gelöscht wird.
+  - Nach einer Neuinstallation erscheint das Spiel als neu, „HDR automatisch“ ist aus.
+  - `hideUninstalledGames` fehlt: aus; Rundreise der Konfiguration stimmt, alte Konfigurationen laden unverändert, keine andere Einstellung geht verloren.
+  - Ausblenden: Zähler, Quellen, Kapsel und Leerzustand stimmen, „HDR automatisch“ ordnet ausgeblendete Spiele weiter zu, nach dem Entfernen wird der Nachbar gewählt.
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Uninstalled|FullyQualifiedName~RemoveSettings|FullyQualifiedName~LibraryCleanup" -MinTests 25
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G11.2: Oberfläche an einer Testinstanz (Testablage mit 2 nicht installierten Launcher-Spielen und 1 manuellem):
+  - Menüeintrag und Knopf erscheinen nur bei nicht installierten Launcher-Spielen; die Rückfrage nennt, was verloren geht (etwa „HDR automatisch ist an“), warnt bei fehlendem Laufwerk und hat den Fokus auf „Abbrechen“.
+  - „Abbrechen“ lässt die Testablage byteweise gleich, „Entfernen“ nimmt genau ein Spiel heraus.
+  - Ausblenden und Speichern senkt die Zählung um 2; das Sammel-Entfernen nennt beide Namen und entfernt nur sie.
+  - Bilder bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
+  CHECK: ps tools\gates\phase11-uninstalled-ui.ps1
+  EXPECT: PHASE11_UI_OK
+  EVIDENCE: pending
+
+- [ ] G11.3: Verträglichkeit an einer Kopie der echten Ablage (nur lesend kopiert): lädt ohne Warnung, zählt die nicht installierten Spiele; nach Umschalten und Speichern unterscheidet sich die Datei nur in `hideUninstalledGames`; die echte Ablage ist vorher und nachher gleich (Hash).
+  CHECK: ps tools\gates\phase11-migration.ps1
+  EXPECT: PHASE11_MIGRATION_OK
+  EVIDENCE: pending
+
+- [ ] G11.4: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und UI-Gates grün, README und E90 passen zu den Texten.
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: pending
+
+- [ ] G11.5: Abnahme durch den Nutzer am echten System
+  EVIDENCE: pending
+
+## Phase 12: Quiver Launcher (Wunsch des Nutzers 2026-10-18, E91)
+
+Scope: Spiele des Quiver Launchers (portabel, MIT, bei dem Nutzer v3.5.1 mit „Black“) werden als eigene Quelle „Quiver“ erkannt, mit Cover aus Quivers lokalem Cache, und mit „HDR automatisch“ versehen. Entscheidungen des Nutzers 2026-10-19: eigene Quelle, Quiver-Ordner selbst finden bzw. merken, sobald Quiver läuft; „Mit HDR starten“ startet die Spiel-EXE direkt wie Quiver selbst; kein PCGamingWiki-Abgleich für Quiver-Spiele. Nur lesend an Quiver-Dateien, kein Netzwerk, keine GPL-Abhängigkeiten. Unbekannte Quellen in der Konfiguration werden künftig tolerant gelesen. Plan: `docs/uebergabe/wuensche-2026-10-18-plan.md`.
+
+- [ ] G12.1: Scanner mit Beispieldateien (erfundene Pfade): Ordner gefunden über Velopack-Protokoll, Suchordner, Downloads und gelernten Ordner; ein fremdes Velopack-Programm ist kein Treffer; `AppsPath` und `installPath` beachtet; `selected_executable.txt` gewinnt, zeigt sie aus dem Spielordner heraus, wird sie ignoriert; mehrere EXE ohne Wahl ergeben keinen Start-Befehl; `folderName` mit `..` wird abgelehnt; Cover-Cache-Name stimmt; nichts geschrieben, kein Netzwerk.
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Quiver" -MinTests 30
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G12.2: Pflichttests je Scanner (fehlender Launcher ergibt leer ohne Fehler, defekte und unvollständige Daten).
+  CHECK: ps tools\gates\phase2-scanner-tests.ps1
+  EXPECT: PHASE2_SCANNER_TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G12.3: Verträglichkeit: eine Konfiguration mit unbekannter Quelle lädt, alle übrigen Spiele und Einstellungen bleiben, nichts wird als „defekt“ gesichert; Gegenprobe mit dem bisherigen Konverter schlägt fehl.
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~UnknownSource" -MinTests 3
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G12.4: Echtes System, nur lesend: `hdrpilot scan --source Quiver` liefert „Black“ mit der Spiel-EXE ohne Fehler; die Dateiliste des Quiver-Ordners (Größen, Zeitstempel) ist vorher und nachher gleich.
+  CHECK: ps tools\gates\phase12-quiver-scan.ps1
+  EXPECT: PHASE12_QUIVER_SCAN_OK
+  EVIDENCE: pending
+
+- [ ] G12.5: Testinstanz: Quelle „Quiver“ in Filter und Kapsel, Cover aus dem Cache der Beispieldateien, „Mit HDR starten“ startet ein harmloses Prüfprogramm direkt mit seinem Ordner als Arbeitsordner und die Sitzung erkennt es; Bilder bei drei Größen, hell und dunkel.
+  CHECK: ps tools\gates\phase12-quiver-ui.ps1
+  EXPECT: PHASE12_QUIVER_UI_OK
+  EVIDENCE: pending
+
+- [ ] G12.6: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und UI-Gates grün, README, E91 und `docs/scanner/quiver.md` passen zu den Texten.
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: pending
+
+- [ ] G12.7: Livetest mit „Black“ nur mit dem Nutzer: aus Quiver gestartet schaltet HDR ein, nach dem Ende wird zurückgestellt; danach Abnahme durch den Nutzer.
   EVIDENCE: pending

@@ -146,12 +146,25 @@ public sealed class RemoveSettingsWindowTests
             Assert.Same(vein, list.SelectedItem);
             Assert.Same(list.ItemContainerGenerator.ContainerFromItem(vein), FocusManager.GetFocusedElement(window));
 
+            // Auf einem selbst hinzugefügten Spiel fragt Entf, ob es aus der Bibliothek soll; abgelehnt bleibt es.
+            var own = ByName(model, "Eigenes Spiel");
+            model.SelectedGame = own;
+            Arrange(window);
+            var asked = dialogs.Confirms.Count;
+            dialogs.Answers.Enqueue(false);
+            Assert.True(window.HandleKey(Key.Delete, ModifierKeys.None, list.ItemContainerGenerator.ContainerFromItem(own) as ListBoxItem));
+            WaitFor(() => model.Details!.RemoveGameCommand.IsRunning);
+            Assert.Equal(asked + 1, dialogs.Confirms.Count);
+            Assert.Equal(LibraryStrings.RemoveGame_ConfirmTitle, dialogs.Confirms[^1].Title);
+            Assert.NotNull(context.Config.FindGame(own.Key));
+
             // Auf einem installierten Spiel tut Entf nichts.
             var helldivers = ByName(model, "HELLDIVERS 2");
             model.SelectedGame = helldivers;
             Arrange(window);
             Assert.False(window.HandleKey(Key.Delete, ModifierKeys.None, list.ItemContainerGenerator.ContainerFromItem(helldivers) as ListBoxItem));
             Assert.Equal(2, dialogs.Requests.Count);
+            Assert.Equal(asked + 1, dialogs.Confirms.Count);
             window.Close();
         });
     }

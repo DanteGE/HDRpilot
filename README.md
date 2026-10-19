@@ -102,10 +102,12 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - In Liste und Raster stehen rechts die Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit
   den Pfeiltasten verschieben, per Doppelklick zurücksetzen); die Breite merkt sich HDRpilot, höchstens 560 px.
 - Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR
-  automatisch“, Esc leert die Suche. Rechtsklick, Umschalt+F10 oder die Menütaste öffnen das Spielmenü mit **Starten**,
-  **HDR automatisch**, **Nach dem Spiel zurückstellen**, **Windows Auto HDR**, **Bild wählen…**, **Symbol ändern…**
-  bzw. **Symbol zurücksetzen**, **Desktop-Verknüpfung erstellen**, **Zum Startmenü hinzufügen** und
-  **Installationsordner öffnen**.
+  automatisch“, Esc leert die Suche, Entf fragt bei einem nicht installierten Spiel aus einem Launcher, ob seine
+  Einstellungen weg sollen, bei einem selbst hinzugefügten, ob es aus der Bibliothek soll (siehe unten). Rechtsklick,
+  Umschalt+F10 oder die Menütaste öffnen das Spielmenü mit **Starten**, **HDR automatisch**, **Nach dem Spiel
+  zurückstellen**, **Windows Auto HDR**, **Bild wählen…**, **Symbol ändern…** bzw. **Symbol zurücksetzen**,
+  **Desktop-Verknüpfung erstellen**, **Zum Startmenü hinzufügen**, **Installationsordner öffnen** und, nur bei nicht
+  installierten Spielen aus Launchern, **Einstellungen entfernen…**.
 - Titelbild, Logo und Cover kommen aus den Bild-Zwischenspeichern der Launcher auf dem PC (Steam, GOG Galaxy, Ubisoft
   Connect, Xbox-Paket), nur lesend, nie aus dem Netz. Fehlt eines, erzeugt HDRpilot ein Ersatzbild aus Symbol und Name;
   neue Bilder eines Launchers erscheinen von selbst (siehe „So funktioniert es“). Ein anderes Bild wählst du per
@@ -144,13 +146,16 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - Fällt das gewählte Spiel durch Suche oder Filter aus der Liste, zeigen Titelbild und Details den ersten Treffer (er
   bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“.
   Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen der Filter, ist es wieder gewählt.
+  Verschwindet das gewählte Spiel ganz aus der Liste (entfernt oder ausgeblendet), ist das nächste gewählt, am Ende der
+  Liste das vorige.
 - Sortierung nach **Name**, **Zuletzt gespielt** oder **HDR-Unterstützung**; die Wahl bleibt gespeichert. „Zuletzt
   gespielt“ kennt Steam-Spiele aus Steams eigenen Daten und alle Spiele, die HDRpilot laufen sieht.
 - Neu gefundene Spiele tragen die Markierung „NEU“. Sie verschwindet, sobald du das Spiel anklickst oder seinen
   Schalter änderst; das Augen-Symbol neben „Neu einlesen“ (**Alle als gesehen markieren**) entfernt sie bei allen.
 - **Neu einlesen** liest alle Launcher erneut ein. Das passiert auch bei jedem Start von HDRpilot im Hintergrund.
   Deinstallierte Spiele bleiben mit dem Hinweis „Nicht installiert“ samt Einstellungen in der Liste; nach einer
-  Neuinstallation gelten die Einstellungen wieder.
+  Neuinstallation gelten die Einstellungen wieder. Brauchst du sie nicht mehr, entfernst du sie mit **Einstellungen
+  entfernen…** (siehe unten); ausblenden lassen sich nicht installierte Spiele unter „Einstellungen“ › **Bibliothek**.
 - **Spiel hinzufügen**: Spiele ohne Launcher selbst eintragen. Wähle am besten die Start-EXE des Spiels. Wählst du einen
   Ordner, kann HDRpilot das Spiel nur dann selbst starten, wenn direkt darin genau eine EXE liegt; die Erkennung beim
   Spielen funktioniert in beiden Fällen.
@@ -186,6 +191,15 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     das Menü mit **Symbol ändern…**. Darunter steht, woher die Bilder kommen, etwa „Lokal aus dem Steam-Cache · nichts
     heruntergeladen“ oder „Eigene Datei · nur auf diesem PC“.
   - **Aus der Bibliothek entfernen**: nur für selbst hinzugefügte Spiele.
+  - **Einstellungen entfernen…** (ganz unten, rot): nur für nicht installierte Spiele aus Launchern, auch per
+    Rechtsklick oder Entf. Nach einer Rückfrage vergisst HDRpilot, was es zu dem Spiel gespeichert hat: den Eintrag
+    samt Schaltern und gemerkten EXE-Dateien, das eigene Symbol und die eigenen Bilder. Die Rückfrage nennt, was
+    verloren geht (etwa dass „HDR automatisch“ an ist oder „2 gemerkte EXE-Dateien“), warnt, wenn das Laufwerk des
+    Spiels nicht verbunden ist (dann ist es vielleicht noch installiert), und hat den Fokus auf **Abbrechen**. Gibt es
+    „(HDR)“-Verknüpfungen des Spiels auf dem Desktop oder im Startmenü, löscht ein Häkchen sie samt ihrer ICO-Datei
+    mit; ohne Häkchen bleiben sie liegen, starten das Spiel aber nicht mehr. Am Spiel, am Launcher und an anderen
+    Verknüpfungen ändert sich nichts. Danach ist das nächste Spiel der Liste gewählt. Installierst du das Spiel wieder,
+    erscheint es beim nächsten Einlesen als neu, mit „HDR automatisch“ aus. Solange das Spiel läuft, geht es nicht.
 
 ### Infobereich
 
@@ -224,6 +238,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Mit Windows starten | Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | aus |
 | Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
 | Suchordner | Ordner mit Spielen ohne Launcher; Unterordner mit EXE werden vorgeschlagen | keine |
+| Nicht installierte Spiele ausblenden | Nicht installierte Spiele stehen nicht in der Bibliothek und zählen dort nirgends mit (Zahl der Spiele, Quellen, Filter); wie viele es sind, steht daneben und im Tooltip zum Zurücksetzen der Filter. „HDR automatisch“ wirkt für sie weiter | aus |
 | Hilfsprozesse ausschließen | Programme, die nie als Spiel zählen (Absturzmelder, Installer und Laufzeitpakete, Anti-Cheat-Installer und -Dienste, reine Launcher-Fenster …) | Standardliste |
 | Farbschema | Duoton oder Tritonus, eine der acht Vorlagen oder eigene Farben; färbt Oberfläche, Tray- und Fenstersymbol | Abendrot, Duoton |
 | Textfarbe auf Akzentflächen automatisch | Dunkle Schrift oder Weiß auf Akzentflächen, je nachdem, was besser lesbar ist | an |
@@ -247,10 +262,16 @@ Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protok
 `true`; sie setzt für Spiele mit „Windows Auto HDR“ auch den Auto-HDR-Schalter vor dem Spiel). Den Neustart-Puffer
 speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der Standard von 1 Minute.
 
+Im Bereich **Bibliothek** entfernt **Einstellungen aller nicht installierten Spiele entfernen…** auf einmal, was
+**Einstellungen entfernen…** bei jedem einzelnen nicht installierten Spiel aus einem Launcher entfernen würde. Die
+Rückfrage nennt alle betroffenen Spiele, je mit dem, was verloren geht, und warnt bei nicht verbundenen Laufwerken.
+Das gilt sofort und unabhängig von **Speichern**; selbst hinzugefügte und gerade laufende Spiele bleiben.
+
 Links führt eine Navigation durch die Bereiche (**Allgemein**, **Bildschirme**, **Automatik**, **Suchordner**,
-**Hilfsprozesse**, **Darstellung** mit **Farben**, **Bilder** und **Symbole und Tray**, **Erweitert**, **Protokolle**);
-alle stehen untereinander auf einer Seite, ein Klick springt hin. Oben in der Navigation steht die Version von
-HDRpilot, dieselbe Nummer wie im Infobereich-Menü, unten die Zahl der Spiele und **Spielebibliothek öffnen**. In
+**Bibliothek**, **Hilfsprozesse**, **Darstellung** mit **Farben**, **Bilder** und **Symbole und Tray**, **Erweitert**,
+**Protokolle**); alle stehen untereinander auf einer Seite, ein Klick springt hin. Oben in der Navigation steht die
+Version von HDRpilot, dieselbe Nummer wie im Infobereich-Menü, unten die Zahl der Spiele (ohne ausgeblendete) und
+**Spielebibliothek öffnen**. In
 breiten Fenstern stehen die Bereiche in bis zu drei Spalten nebeneinander, jeder höchstens 760 px breit; im Vollbild
 bleibt der Rest frei, statt die Bereiche in die Länge zu ziehen.
 
@@ -739,7 +760,11 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   Verknüpfung starten, Setup-Dateien per Doppelklick im Explorer ausführen, Entfernen über „Installierte Apps“.
 - **Ein Spiel fehlt in der Liste:** „Neu einlesen“ drücken; fehlt es weiter, über „Spiel hinzufügen“ eintragen oder
   seinen übergeordneten Ordner als Suchordner angeben. Fehler einzelner Launcher stehen in der Bibliothek und im
-  Protokoll.
+  Protokoll. Ist unter „Einstellungen“ › „Bibliothek“ der Schalter „Nicht installierte Spiele ausblenden“ an, stehen
+  nicht installierte Spiele nicht in der Liste; ist sie deshalb leer, sagt sie das.
+- **Ein installiertes Spiel heißt „Nicht installiert“:** Liegt es auf einem Laufwerk, das gerade nicht verbunden ist,
+  oder steckt es im Launcher mitten in einem Update? Dann nicht „Einstellungen entfernen…“ wählen: Nach dem Verbinden
+  bzw. dem Update und „Neu einlesen“ gelten seine Einstellungen wieder.
 - **Protokoll:** Infobereich → „Protokollordner öffnen“. Für mehr Einzelheiten unter Einstellungen → Erweitert die
   Protokollstufe auf „Ausführlich“ stellen. Jede Schaltung steht dort mit Auslöser, Bildschirm, Zustand vorher und
   nachher.

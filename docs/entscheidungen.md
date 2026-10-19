@@ -1020,3 +1020,61 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Detailbereich und Menüs bleibt er. Prüfung: `test.ps1 -Filter "FullyQualifiedName~SelectionFollowsFilter"`,
   `phase10-ui.ps1` (Filter „Neu“, Suche ohne Treffer, Zurücksetzen in der Kapsel); Zustand `liste-ohne-treffer` für
   Bildschirmfotos.
+
+**E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
+2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und
+allen Einstellungen in der Bibliothek, und „HDR automatisch“ und Windows Auto HDR wirken für sie weiter (E38). Neu lässt
+sich gezielt entfernen, was HDRpilot zu einem solchen Spiel gespeichert hat, und nicht installierte Spiele lassen sich
+ausblenden. Von selbst entfernt HDRpilot nie etwas: „Nicht installiert“ kann auch ein nicht verbundenes Laufwerk oder ein
+Launcher mitten in einem Update sein.
+- „Einstellungen entfernen…“ gibt es nur bei nicht installierten Launcher-Spielen (`LibraryCleanup.IsRemovable`: nicht
+  installiert und nicht manuell): im Spielmenü nach „Installationsordner öffnen“ (rot, mit „Entf“) und als roter Knopf
+  ganz unten im Detailbereich, dessen Hinweis „Nicht installiert“ darauf verweist. Selbst hinzugefügte Spiele behalten
+  „Aus der Bibliothek entfernen“. Die Taste Entf öffnet nur die jeweilige Rückfrage. Die Rückfrage (`ConfirmDialog`, neu
+  mit Abschnitt „VERLOREN GEHT“, Warnung und optionalem Häkchen) nennt, was verloren geht („HDR automatisch“, Windows
+  Auto HDR, eigener Bildschirm, „Nach dem Spiel zurückstellen“ aus, gemerkte, hinzugefügte und ausgeschlossene
+  EXE-Dateien, eigenes Symbol, eigene Bilder, zuletzt gespielt; sonst „Nur der Eintrag in der Bibliothek, keine eigenen
+  Einstellungen“), warnt, wenn das Laufwerk des Installationsordners nicht erreichbar ist (Prüfung des
+  Laufwerksbuchstabens höchstens 2 s, danach als nicht verbunden gewertet; UNC-Pfade ohne Warnung), und hat den Fokus auf
+  „Abbrechen“.
+- Gelöscht werden nur: der Eintrag in `config.json` samt allen Schaltern, das eigene Symbol (`icons\<Stamm>.png` nach
+  `CustomIcons.FileNameFor`), der Eintrag im Symbol-Cache (`icon-cache.json`), die eigenen Bilder
+  (`art\custom\<Stamm>-hero.jpg`, `-logo.png`, `-cover.jpg`; Namen aus dem Schlüssel, nie aus `config.json`) und nur mit
+  Häkchen die HDRpilot-Verknüpfungen des Spiels samt ihrer .ico. Als solche gilt nur eine .lnk direkt auf dem Desktop
+  oder im Startmenü-Ordner „HDRpilot“ mit dem Ziel `HDRpilot.exe` (Dateiname) und genau den Argumenten, die
+  `ShortcutService` schreibt (`--run "<Schlüssel>"`, in Testinstanzen mit deren `--config-dir`; Groß- und Kleinschreibung
+  egal); vor dem Löschen wird jede erneut gelesen. Die .ico neben dem eigenen Symbol fällt nur, wenn eine gelöschte
+  Verknüpfung sie zeigte und keine verbliebene. Erzeugte Bilder (`gen`, `boost`, `logo`, `sgdb`, `index.json`) räumt wie
+  bisher das Aufräumen beim Schließen des Fensters ab, die HDR-Liste der nächste Abgleich. Dateien von Spielen, Launchern
+  und Steam fasst HDRpilot nie an. Ohne Häkchen bleiben Verknüpfungen liegen; `--run` meldet dann ein unbekanntes Spiel.
+- Wettläufe: Ob das Spiel noch nicht installiert ist und keine Sitzung läuft oder vorbereitet wird, prüft
+  `LibraryCleanup.RemoveNotInstalled` erst im Update-Lambda von `ConfigService.Update` (unter dessen Sperre). Findet ein
+  Einlesen das Spiel während der Rückfrage wieder oder beginnt eine Sitzung, bleibt alles („… ist inzwischen wieder
+  installiert oder läuft. Nichts entfernt.“); Dateien werden erst nach erfolgreichem Speichern gelöscht. Solange das Spiel
+  läuft, ist der Befehl gesperrt.
+- Auswahl danach: Verschwindet das gewählte Spiel aus der Liste, wird leise der Nachbar gewählt (das nächste Spiel in der
+  Reihenfolge der Liste, am Ende das vorige; nicht als gesehen markiert). Das gilt für jedes Verschwinden, auch beim
+  Entfernen eines selbst hinzugefügten Spiels und beim Ausblenden; vorher war danach kein Spiel gewählt und der
+  Titelbereich leer. Ein wieder installiertes Spiel kommt beim nächsten Einlesen als neu zurück, „HDR automatisch“ aus.
+- Ausblenden: `settings.hideUninstalledGames` (ohne Eintrag aus; ältere Versionen übergehen das unbekannte Feld), Schalter
+  „Nicht installierte Spiele ausblenden“ in der neuen Karte „Bibliothek“ der Einstellungen nach „Suchordner“ (Gruppe
+  Allgemein, übernommen mit „Speichern“), daneben „zurzeit n“. Ausgeblendet werden alle nicht installierten Spiele, auch
+  selbst hinzugefügte, deren Ordner fehlt. Sie fehlen in der Grundmenge der Liste (`Games`; `_byKey` behält alle) und
+  zählen damit nirgends mit: Zahl im Kopf, Quellen, Zahlen der Filter, Kapsel „x/y“, Zahl der Spiele in der Navigation
+  der Einstellungen. Ausblenden ist kein Filter (`IsFiltered` bleibt aus, keine Lichtnaht); die Zahl nennen nur die Karte
+  und der Tooltip von „Zurücksetzen“ (kein eigener Eintrag im Menü der Leiste). Sind alle Spiele ausgeblendet, zeigt die
+  Liste „Nur nicht installierte Spiele“ mit dem Weg zum Schalter. Die Sitzungslogik sieht weiter alle Spiele: „HDR
+  automatisch“ und Auto HDR wirken auch für ausgeblendete, ein laufendes steht in der Statuszeile.
+- Sammel-Entfernen in derselben Karte: „Einstellungen aller nicht installierten Spiele entfernen…“ (nur Launcher-Spiele,
+  ohne solche mit Sitzung), Rückfrage mit allen Namen, je mit dem, was verloren geht, den nicht verbundenen Laufwerken und
+  dem Häkchen für die Verknüpfungen. Es gilt sofort, unabhängig von „Speichern“; danach wird neu gezählt.
+- Prüfung: G11.1 (`test.ps1 -Filter
+  "FullyQualifiedName~Uninstalled|FullyQualifiedName~RemoveSettings|FullyQualifiedName~LibraryCleanup"`; ein
+  Attrappen-Dateisystem belegt, was gelöscht wird, echte .lnk in Temp-Ordnern den Abgleich der Verknüpfungen), G11.2
+  (`phase11-uninstalled-ui.ps1` an einer Testinstanz mit einem eigenen Spiel, einem Launcher-Spiel auf einem nicht
+  verbundenen Laufwerk und einem mit fehlendem Ordner; Testinstanzen protokollieren den Fokus offener Rückfragen unter
+  „Prüfung“; Zustände `hauptfenster-nicht-installiert`, `-kontextmenue-nicht-installiert`, `-rueckfrage-entfernen`,
+  `-rueckfrage-entfernen-verknuepfungen`, `einstellungen-bibliothek` und `-rueckfrage-alle` für Bildschirmfotos), G11.3
+  (`phase11-migration.ps1`: eine nur lesend kopierte echte Ablage, über den Entwicklerschalter `--settings-probe` ohne
+  Einlesen und Automatik zweimal wie in den Einstellungen gespeichert; nur `hideUninstalledGames` unterscheidet sich, der
+  Hash der echten Ablage bleibt gleich).

@@ -135,6 +135,10 @@ public sealed class UninstalledGameCleanup(
             deleted.AddRange(links.Select(l => l.Path));
             var kept = shortcutsToDelete.Where(s => !links.Any(l => PathUtil.PathEquals(l.Path, s.Path))).ToList();
             failed.AddRange(kept.Select(s => s.Path));
+            foreach (var link in kept)
+            {
+                _logger.LogWarning("Verknüpfung von {Game} nicht gelöscht (gesperrt, geändert oder nicht mehr da): {Path}", key, link.Path);
+            }
 
             // Die .ico entstand nur für die Verknüpfungen (neben der PNG des eigenen Symbols): weg, wenn keine mehr sie zeigt.
             var ownIco = Path.Combine(iconDirectory, Path.ChangeExtension(ownIcon, ".ico"));

@@ -114,6 +114,13 @@ public sealed class AppSettings
     /// </summary>
     public bool LibraryToolbarCollapsed { get; set; }
 
+    /// <summary>
+    /// Nicht installierte Spiele in der Bibliothek ausblenden (Wunsch des Nutzers 2026-10-18, E90). Ausgeblendete Spiele
+    /// zählen nirgends mit (Kopf, Quellen, Kapsel, Leerzustand), „HDR automatisch“ ordnet sie weiter zu. Eingestellt in den
+    /// Einstellungen (Karte „Bibliothek“), übernommen mit „Speichern“. Standard (auch für ältere Konfigurationen): aus.
+    /// </summary>
+    public bool HideUninstalledGames { get; set; }
+
     /// <summary>Darstellung: Farbschema, Thema, Effekte (E89). Ältere Konfigurationen: Standardwerte.</summary>
     public AppearanceSettings Appearance { get; set; } = new();
 

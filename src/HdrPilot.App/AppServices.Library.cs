@@ -106,17 +106,27 @@ public sealed partial class AppServices
             Settle = LibrarySettle,
             Overlays = window => window is MainWindow main && main.CreateToolbarMenuPreview() is { } menu ? [menu] : [],
         });
+
+        // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
     }
 
     /// <summary>
     /// Werkzeugleiste für ein Bildschirmfoto: gefiltert wie in der Vorschau (Suche „gears“, „Neu“, „HDR-fähig“) und ein- bzw.
-    /// ausgeklappt, nur im ViewModel (nichts wird gespeichert); danach laufen die Übergänge zu Ende.
+    /// ausgeklappt, nur im ViewModel (nichts wird gespeichert), auf Wunsch in hohem Kontrast; danach laufen die Übergänge zu
+    /// Ende.
     /// </summary>
-    private static async Task ToolbarStateAsync(Window window, bool collapsed, bool filtered)
+    private static async Task ToolbarStateAsync(Window window, bool collapsed, bool filtered, bool highContrast = false)
     {
-        if (window is not MainWindow { ViewModel: { } vm })
+        if (window is not MainWindow { ViewModel: { } vm } main)
         {
             return;
+        }
+
+        if (highContrast)
+        {
+            main.SetToolbarHighContrast(true);
         }
 
         if (filtered)
@@ -171,6 +181,31 @@ public sealed partial class AppServices
     {
         var kind = await window.PlayTestHdrMomentAsync();
         _logger.LogInformation("Prüfung: HDR-Moment gespielt ({Kind}, helle Fassung {Boost}).", kind, window.HeroStage.ShownBoost is null ? "fehlt" : "da");
+    }
+
+    /// <summary>
+    /// Prüfung (G10.5): Strg+F im offenen Hauptfenster wie gedrückt (MainWindow.HandleKey, ohne Tastatureingabe). Im
+    /// Protokoll stehen danach der Zustand der Werkzeugleiste und wohin der Fokus ging (in einem nicht aktiven Fenster der
+    /// Fokus, den es beim Aktivieren wiederherstellt; er wird niemandem genommen).
+    /// </summary>
+    partial void RunTestToolbarSearch()
+    {
+        if (_mainWindow is MainWindow { ViewModel: { } vm } window)
+        {
+            var handled = window.HandleKey(System.Windows.Input.Key.F, System.Windows.Input.ModifierKeys.Control, null);
+            var focused = System.Windows.Input.FocusManager.GetFocusedElement(window) is DependencyObject element
+                ? System.Windows.Automation.AutomationProperties.GetAutomationId(element)
+                : "keiner";
+            _logger.LogInformation(
+                "Prüfung: Strg+F ausgeführt ({Handled}), Werkzeugleiste {State}, Fokus {Focus}.",
+                handled ? "erledigt" : "nicht erledigt",
+                vm.IsToolbarCollapsed ? "eingeklappt" : "ausgeklappt",
+                string.IsNullOrEmpty(focused) ? "ohne Kennung" : focused);
+        }
+        else
+        {
+            _logger.LogInformation("Prüfung: Strg+F angefordert, aber kein Hauptfenster offen.");
+        }
     }
 
     /// <summary>Mit eigener Ablage (--config-dir) gestartet: Verknüpfungen sollen dieselbe Ablage benutzen.</summary>

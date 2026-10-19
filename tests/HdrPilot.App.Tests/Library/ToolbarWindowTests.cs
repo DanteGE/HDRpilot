@@ -77,6 +77,27 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
 
     private static FrameworkElement Item(MainWindow window, ToolbarSlot slot) => Named<ToolbarPanel>(window, "ToolbarArea").ItemAt(slot)!;
 
+    /// <summary>Wie gezeichnet im Fenster (mit RenderTransform), in geräteunabhängigen Pixeln ab dem Ursprung des Fensters.</summary>
+    private static Rect WindowBox(MainWindow window, FrameworkElement element) =>
+        element.TransformToAncestor(window).TransformBounds(new Rect(element.RenderSize));
+
+    /// <summary>Die zehn Elemente der Leiste zusammen, wie gezeichnet (relativ zu Root wie <see cref="Box"/>).</summary>
+    private static Rect ItemsBox(MainWindow window) =>
+        Slots.Select(s => Box(window, Item(window, s))).Aggregate(Rect.Union);
+
+    /// <summary>Alle vier Kanten liegen auf ganzen Gerätepixeln des Fensters.</summary>
+    private static void AssertWholePixels(MainWindow window, FrameworkElement element, double scale, string what)
+    {
+        var r = WindowBox(window, element);
+        foreach (var edge in new[] { r.Left, r.Top, r.Right, r.Bottom })
+        {
+            Assert.True(Math.Abs((edge * scale) - Math.Round(edge * scale)) < 0.02, FormattableString.Invariant($"{what}: Kante {edge * scale:0.###} px nicht auf einem ganzen Gerätepixel ({r})"));
+        }
+    }
+
+    /// <summary>Ein Gerätepixel: Spielraum, wo Leiste, Lasche oder Kapsel (auf ganzen Pixeln) an etwas grenzen, das es nicht ist.</summary>
+    private static double OnePixel(MainWindow window) => 1 / Scale(window) + 0.01;
+
     /// <summary>Zeit und Bildtakt der Leiste von Hand (Werte über die Zeit abtasten), Fenster als sichtbar und aktiv.</summary>
     private static (TestClock Clock, TestTime Time) HandClock(MainWindow window)
     {
@@ -97,14 +118,18 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
 
     [Theory]
     [InlineData(1000, 620)] // kleinstes Fenster
-    [InlineData(1164, 727)] // 1280×800 bei 110 %
-    [InlineData(1242, 698)] // 1366×768 bei 110 %
+    [InlineData(1164, 727)] // 1280×800 geteilt durch 1,1 (Abnahme)
+    [InlineData(1159, 725)] // 1280×800 bei 110 % (106 dpi)
+    [InlineData(1242, 698)] // 1366×768 geteilt durch 1,1 (Abnahme)
+    [InlineData(1237, 696)] // 1366×768 bei 110 % (106 dpi): Liste 807, einzeilig wie bei 100 %
     [InlineData(1280, 800)]
     [InlineData(1366, 768)]
     [InlineData(1600, 1000)] // Startfenster
-    [InlineData(1745, 982)] // 1920×1080 bei 110 %
+    [InlineData(1745, 982)] // 1920×1080 geteilt durch 1,1 (Abnahme)
+    [InlineData(1739, 978)] // 1920×1080 bei 110 % (106 dpi)
     [InlineData(1920, 1080)]
-    [InlineData(3127, 1309)] // 3440×1440 bei 110 %
+    [InlineData(3127, 1309)] // 3440×1440 geteilt durch 1,1 (Abnahme)
+    [InlineData(3116, 1304)] // 3440×1440 bei 110 % (106 dpi)
     [InlineData(3440, 1440)]
     public void List_toolbar_geometry_is_flush_with_even_gaps_and_air_and_the_tab_8_px_above(double width, double height)
     {
@@ -160,18 +185,25 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var grip = Box(window, Named<FrameworkElement>(window, "HeroSplitter"));
             Assert.Equal(edge, grip.Top + (grip.Height / 2), 0.5);
 
-            // Lasche rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen, Wunsch des Nutzers).
+            // Lasche rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen, Wunsch des Nutzers): genau
+            // round(8 · Skalierung) Gerätepixel über den Knöpfen, rechts bündig mit ihnen.
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
+            var knobs = ItemsBox(window);
             Assert.Equal(36, tab.Width, 0.5);
             Assert.Equal(18, tab.Height, 0.5);
             Assert.Equal(card.Right, tab.Right, 0.6);
-            Assert.Equal(8, bar.Top - tab.Bottom, 0.5);
+            Assert.Equal(knobs.Right, tab.Right, 3);
+            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, knobs.Top - tab.Bottom, 3);
+
+            // Kanten auf ganzen Gerätepixeln des Fensters (nicht nur der Leiste): Knöpfe, Felder und Lasche.
+            Assert.All(Slots, s => AssertWholePixels(window, Item(window, s), scale, s.ToString()));
+            AssertWholePixels(window, Named<FrameworkElement>(window, "ToolbarToggle"), scale, "Lasche");
 
             // Inhalt des Titelbereichs 22 px über der Bildkante (Platz für Lasche und Kapsel).
             var compact = Named<FrameworkElement>(window, "HeroCompact");
             Assert.Equal(22, compact.Margin.Bottom);
             output.WriteLine(FormattableString.Invariant(
-                $"Liste {width}x{height}: L {card.Width:0.##}, Skalierung {scale:0.###}, Zeilen {window.ToolbarRows}, Stufe {arrangement.Stage}, Suche {boxes[ToolbarSlot.Search].Width:0.##}, Quelle {boxes[ToolbarSlot.Source].Width:0.##}, Sortierung {boxes[ToolbarSlot.Sort].Width:0.##}, Abstände {string.Join('/', gaps.Select(g => g.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)).Distinct())}, Luft {above:0.##}/{below:0.##}, Lasche über Leiste {bar.Top - tab.Bottom:0.##}, Griffmitte − Kante {grip.Top + (grip.Height / 2) - edge:0.##}, Kante rechts {card.Right - boxes[ToolbarSlot.Add].Right:0.##}"));
+                $"Liste {width}x{height}: L {card.Width:0.##}, Skalierung {scale:0.###}, Zeilen {window.ToolbarRows}, Stufe {arrangement.Stage}, Suche {boxes[ToolbarSlot.Search].Width:0.##}, Quelle {boxes[ToolbarSlot.Source].Width:0.##}, Sortierung {boxes[ToolbarSlot.Sort].Width:0.##}, Abstände {string.Join('/', gaps.Select(g => g.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)).Distinct())}, Luft {above:0.##}/{below:0.##}, Lasche über Knöpfen {knobs.Top - tab.Bottom:0.##} ({(knobs.Top - tab.Bottom) * scale:0.##} px), Griffmitte − Kante {grip.Top + (grip.Height / 2) - edge:0.##}, Kante rechts {card.Right - boxes[ToolbarSlot.Add].Right:0.##}, Ausgleich {window.ToolbarPixelSnap.X * scale:0.##}/{window.ToolbarPixelSnap.Y * scale:0.##} px"));
             window.Close();
         });
     }
@@ -208,7 +240,10 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.Equal(24, capsule.Height, 0.5);
             Assert.Equal(edge - 12, capsule.Top, 0.5); // mittig auf der Kante
             Assert.Equal(card.Right, capsule.Right, 0.6); // rechtsbündig
-            Assert.Equal(10, card.Top - capsule.Bottom, 0.5); // 10 px darunter die Liste
+            AssertWholePixels(window, Named<FrameworkElement>(window, "ToolbarToggle"), Scale(window), "Kapsel");
+
+            // 10 px darunter die Liste; die Kapsel liegt auf ganzen Gerätepixeln, Bildkante und Liste nicht: ein Pixel Spielraum.
+            Assert.Equal(10, card.Top - capsule.Bottom, OnePixel(window));
             Assert.Equal(cardTop - card.Top, ToolbarLayout.HeightFor(rows) - 2, 0.5); // Gewinn: 38 bzw. 86
             var grip = Box(window, Named<FrameworkElement>(window, "HeroSplitter"));
             Assert.Equal(edge, grip.Top + (grip.Height / 2), 0.5);
@@ -239,7 +274,9 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.Equal(22, bar.Top - edge, 0.5);
             Assert.Equal(22, tile.Top - bar.Bottom, 0.5);
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
-            Assert.Equal(8, bar.Top - tab.Bottom, 0.5); // −4 … +14 um die Kante
+            var scale = Scale(window);
+            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, ItemsBox(window).Top - tab.Bottom, 3); // −4 … +14 um die Kante
+            Assert.Equal(8, bar.Top - tab.Bottom, OnePixel(window));
 
             model.IsToolbarCollapsed = true;
             Arrange(window, size);
@@ -247,7 +284,7 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var capsule = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             tile = Box(window, (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(0));
             Assert.Equal(edge - 12, capsule.Top, 0.5);
-            Assert.Equal(22, tile.Top - capsule.Bottom, 0.5);
+            Assert.Equal(22, tile.Top - capsule.Bottom, OnePixel(window));
             output.WriteLine(FormattableString.Invariant($"Raster {width}x{height}: Luft {bar.Top - edge:0.##}/22, Lasche {tab.Top - edge:0.##} … {tab.Bottom - edge:0.##}, eingeklappt Kachel {tile.Top - capsule.Bottom:0.##} unter der Kapsel"));
             window.Close();
         });
@@ -270,9 +307,14 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var edge = Box(window, Named<FrameworkElement>(window, "Hero")).Bottom;
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             var shelfTop = Box(window, Named<FrameworkElement>(window, "GameShelf")).Top;
-            Assert.Equal(2, tab.Top - bar.Bottom, 0.5); // Lasche in der Fuge zwischen Leiste und Kachelreihe
-            Assert.Equal(2, shelfTop + ShowcaseLayout.GridPaddingTop - tab.Bottom, 0.5);
+            var scale = Scale(window);
+
+            // Lasche in der Fuge zwischen Leiste und Kachelreihe: round(2 · Skalierung) Gerätepixel unter den Knöpfen.
+            Assert.Equal(Math.Round(2 * scale) / scale, tab.Top - ItemsBox(window).Bottom, 3);
+            Assert.Equal(2, tab.Top - bar.Bottom, OnePixel(window));
+            Assert.Equal(2, shelfTop + ShowcaseLayout.GridPaddingTop - tab.Bottom, OnePixel(window));
             Assert.Equal(bar.Right, tab.Right, 0.6);
+            Assert.Equal(ItemsBox(window).Right, tab.Right, 3);
 
             model.IsToolbarCollapsed = true;
             Arrange(window, size);
@@ -544,7 +586,7 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Arrange(window, size);
             At(window, time, 60);
             Assert.InRange(search.Opacity, 0.05, 0.5);
-            Assert.Equal(0, ((TranslateTransform)((TransformGroup)search.RenderTransform).Children[1]).X); // kein Versatz
+            Assert.Equal(window.ToolbarPixelSnap.X, ((TranslateTransform)((TransformGroup)search.RenderTransform).Children[1]).X, 6); // kein Versatz (nur der Ausgleich auf ganze Pixel)
             At(window, time, 300);
             Assert.Equal(0, window.ToolbarMotion.Running);
             Assert.Equal(0, clock.Subscribers);
@@ -642,7 +684,7 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.True(((TranslateTransform)((TransformGroup)filter.RenderTransform).Children[1]).Y < -40, "Filter zeigt noch die alte Zeile");
             At(window, time, 400);
             Assert.Equal(0, window.ToolbarMotion.Running);
-            Assert.Equal(0, ((TranslateTransform)((TransformGroup)filter.RenderTransform).Children[1]).Y);
+            Assert.Equal(window.ToolbarPixelSnap.Y, ((TranslateTransform)((TransformGroup)filter.RenderTransform).Children[1]).Y, 6);
 
             // Hysterese: etwas breiter bleibt es zweizeilig, erst 32 über der Schwelle wieder eine Zeile.
             var list = Named<FrameworkElement>(window, "ListCard");
@@ -652,6 +694,326 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Arrange(window, wide);
             Assert.Equal(1, window.ToolbarRows);
             Assert.Equal(0, clock.Subscribers);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Only_dragging_an_edge_counts_as_resizing_not_moving_or_restoring_a_maximized_window()
+    {
+        WpfTestHost.Run(() =>
+        {
+            const int enterSizeMove = 0x0231, sizing = 0x0214, exitSizeMove = 0x0232;
+            var wide = new Size(1366, 900);
+            var narrow = new Size(1164, 900);
+            var (window, _, _) = Open(wide);
+            HandClock(window);
+
+            // Schleife ohne WM_SIZING: Verschieben an der Titelleiste, dabei wird ein maximiertes Fenster wiederhergestellt (oder
+            // der Bildschirm wechselt): sofort der Endzustand, kein Morph, keine Hysterese.
+            window.OnSizeMoveMessage(enterSizeMove);
+            Assert.False(window.IsToolbarResizing);
+            Arrange(window, narrow);
+            Assert.Equal(2, window.ToolbarRows);
+            Assert.Equal(0, window.ToolbarMotion.Running);
+            window.OnSizeMoveMessage(exitSizeMove);
+            Arrange(window, wide);
+            Assert.Equal(1, window.ToolbarRows);
+
+            // Zug an der Kante (WM_SIZING): jetzt wird der Zeilenwechsel bewegt; WM_EXITSIZEMOVE beendet das Ziehen.
+            window.OnSizeMoveMessage(enterSizeMove);
+            window.OnSizeMoveMessage(sizing);
+            Assert.True(window.IsToolbarResizing);
+            Arrange(window, narrow);
+            Assert.True(window.ToolbarMotion.Running > 0);
+            window.OnSizeMoveMessage(exitSizeMove);
+            Assert.False(window.IsToolbarResizing);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Two_rows_kept_while_dragging_keep_their_height_when_collapsed_and_the_list_does_not_jump_when_expanding()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Zweizeilig, dann am Rand in die Hysterese gezogen (Liste 816: zwei Zeilen bleiben) und losgelassen.
+            var (window, model, _) = Open(new Size(1164, 900));
+            var (_, time) = HandClock(window);
+            var list = Named<FrameworkElement>(window, "ListCard");
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var band = new Size(1164 + (ToolbarLayout.OneRowWidth + 10 - list.ActualWidth), 900);
+            window.SetToolbarResizing(true);
+            Arrange(window, band);
+            window.SetToolbarResizing(false);
+            At(window, time, 1000);
+            Assert.Equal(2, window.ToolbarRows);
+            var range = splitter.Maximum;
+            var hero = window.HeroHeight;
+            var cardTop = Box(window, list).Top;
+
+            // Eingeklappt rechnet alles weiter mit den zwei Zeilen: Bereich des Griffs und Titelbereich bleiben, die Liste
+            // steigt um 86.
+            model.IsToolbarCollapsed = true;
+            Arrange(window, band);
+            At(window, time, 2000);
+            Assert.Equal(range, splitter.Maximum);
+            Assert.Equal(hero, window.HeroHeight);
+            Assert.Equal(ToolbarLayout.HeightFor(2) - 2, cardTop - Box(window, list).Top, 0.5);
+            var collapsedTop = Box(window, list).Top;
+
+            // Ausklappen: Im ersten Bild steht die Liste, wo sie eingeklappt stand (kein Sprung um 48), dann wieder zwei Zeilen.
+            var content = (TranslateTransform)Named<FrameworkElement>(window, "ListCardContent").RenderTransform;
+            model.IsToolbarCollapsed = false;
+            Arrange(window, band);
+            At(window, time, 2000);
+            Assert.Equal(collapsedTop, Box(window, list).Top + content.Y, 0.5);
+            At(window, time, 3000);
+            Assert.Equal(2, window.ToolbarRows);
+            Assert.Equal(cardTop, Box(window, list).Top, 0.5);
+            Assert.Equal(range, splitter.Maximum);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Focus_never_gets_lost_when_the_toolbar_or_the_reset_button_goes_away_and_ctrl_f_focuses_the_search()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Das Testfenster ist nie aktiv: Geprüft wird der Fokus, den es sich merkt und beim Aktivieren wiederherstellt (im
+            // aktiven Fenster ist das der Tastaturfokus).
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size);
+            var toggle = Named<ToolbarToggle>(window, "ToolbarToggle");
+            var reset = Named<Button>(window, "ToolbarResetButton");
+            var search = Named<TextBox>(window, "SearchBox");
+
+            // Fokus in der Leiste beim Einklappen: auf die Kapsel.
+            FocusManager.SetFocusedElement(window, search);
+            model.IsToolbarCollapsed = true;
+            Arrange(window, size);
+            Assert.Same(toggle, FocusManager.GetFocusedElement(window));
+
+            // ✕ mit Fokus verschwindet (Eingabetaste: Filter zurückgesetzt): Fokus auf die Kapsel, nicht ans Fenster.
+            Assert.True(window.HandleKey(Key.N, ModifierKeys.Alt, null));
+            Assert.Equal(Visibility.Visible, reset.Visibility);
+            Assert.True(reset.Focusable);
+            FocusManager.SetFocusedElement(window, reset);
+            reset.Command.Execute(null);
+            Assert.Equal(Visibility.Collapsed, reset.Visibility);
+            Assert.Same(toggle, FocusManager.GetFocusedElement(window));
+
+            // ✕ mit Fokus, dann Strg+Umschalt+F (ausklappen, das ✕ nimmt keinen Fokus mehr): ebenso.
+            Assert.True(window.HandleKey(Key.N, ModifierKeys.Alt, null));
+            FocusManager.SetFocusedElement(window, reset);
+            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control | ModifierKeys.Shift, null));
+            Assert.False(model.IsToolbarCollapsed);
+            Assert.False(reset.Focusable);
+            Assert.Same(toggle, FocusManager.GetFocusedElement(window));
+
+            // Strg+F bei eingeklappter Leiste: dauerhaft ausgeklappt, die Suche hat den Fokus.
+            model.IsToolbarCollapsed = true;
+            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, null));
+            Assert.False(model.IsToolbarCollapsed);
+            Assert.Same(search, FocusManager.GetFocusedElement(window));
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Reset_button_is_only_there_when_collapsed_and_filtered()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Unsichtbar heißt Collapsed: nicht in der Steueransicht von UI-Automation (Bildschirmleser), nicht auslösbar
+            // (phase10-ui.ps1 prüft das am echten Fenster), nicht treffbar und kein Tab-Halt.
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size);
+            var reset = Named<Button>(window, "ToolbarResetButton");
+
+            // Ausgeklappt und gefiltert: kein unsichtbarer Knopf.
+            model.ToggleFilter(ToolbarFilter.New);
+            Arrange(window, size);
+            Assert.Equal(Visibility.Collapsed, reset.Visibility);
+            Assert.False(reset.Focusable || reset.IsHitTestVisible);
+
+            // Eingeklappt und gefiltert: da, Tab-Halt.
+            model.IsToolbarCollapsed = true;
+            Arrange(window, size);
+            Assert.Equal(Visibility.Visible, reset.Visibility);
+            Assert.True(reset.Focusable && KeyboardNavigation.GetIsTabStop(reset));
+
+            // Eingeklappt ohne Filter und wieder ausgeklappt: weg.
+            model.ClearFiltersCommand.Execute(null);
+            Assert.Equal(Visibility.Collapsed, reset.Visibility);
+            model.ToggleFilter(ToolbarFilter.New);
+            model.IsToolbarCollapsed = false;
+            Arrange(window, size);
+            Assert.Equal(Visibility.Collapsed, reset.Visibility);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void High_contrast_draws_tab_capsule_and_reset_in_system_colors()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Dunkles Thema (helle Schrift) mit hohem Kontrast: Die Fläche wird Systemfarbe, also auch alles darauf.
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size, collapsed: true);
+            model.SearchText = "Spiel";
+            model.ApplySearch();
+            model.ToggleFilter(ToolbarFilter.New);
+            window.SetToolbarHighContrast(true);
+            Arrange(window, size);
+            var toggle = Named<ToolbarToggle>(window, "ToolbarToggle");
+            var reset = Named<Button>(window, "ToolbarResetButton");
+            var back = SystemColors.ControlColor;
+            var texts = WpfTestHost.Visuals(toggle).Concat(WpfTestHost.Visuals(reset)).OfType<TextBlock>().ToList();
+            Assert.True(texts.Count >= 6, "Hinweis, Tastenkappe, Suchbegriff, Zahl und ✕");
+            foreach (var text in texts)
+            {
+                foreach (var brush in new[] { text.Foreground }.Concat(text.Inlines.OfType<System.Windows.Documents.Run>().Select(r => r.Foreground)))
+                {
+                    var color = Assert.IsType<SolidColorBrush>(brush).Color;
+                    Assert.True(Contrast(color, back) >= 3, $"„{text.Text}“: {color} auf {back}, Kontrast {Contrast(color, back):0.0}");
+                }
+            }
+
+            Assert.All(WpfTestHost.Visuals(toggle).OfType<FilterGlyph>(), g => Assert.Equal(SystemColors.HighlightColor, Assert.IsType<SolidColorBrush>(g.Fill).Color));
+
+            // Aus: wieder die Farben des Themas (helle Schrift, die auf der Systemfläche nicht lesbar wäre).
+            window.SetToolbarHighContrast(false);
+            Assert.Contains(texts, t => Contrast(Assert.IsType<SolidColorBrush>(t.Foreground).Color, back) < 3);
+            window.Close();
+        });
+
+        static double Contrast(Color a, Color b)
+        {
+            static double Luminance(Color c)
+            {
+                static double Channel(byte v)
+                {
+                    var x = v / 255.0;
+                    return x <= 0.03928 ? x / 12.92 : Math.Pow((x + 0.055) / 1.055, 2.4);
+                }
+
+                return (0.2126 * Channel(c.R)) + (0.7152 * Channel(c.G)) + (0.0722 * Channel(c.B));
+            }
+
+            var (l1, l2) = (Luminance(a), Luminance(b));
+            return (Math.Max(l1, l2) + 0.05) / (Math.Min(l1, l2) + 0.05);
+        }
+    }
+
+    [Fact]
+    public void Sorting_while_collapsed_starts_no_motion_and_keeps_the_capsule_content()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size, collapsed: true);
+            var (clock, time) = HandClock(window);
+            model.ToggleFilter(ToolbarFilter.New);
+            At(window, time, 2000);
+            Assert.Equal(0, window.ToolbarMotion.Running);
+            var toggle = Named<ToolbarToggle>(window, "ToolbarToggle");
+            var items = toggle.CapsuleItems;
+
+            // Sortieren meldet die Zusammenfassung neu, ändert aber nichts an der Kapsel: kein Neubau, keine Bewegung, kein Takt.
+            model.SelectedSortOption = model.SortOptions.First(o => o != model.SelectedSortOption);
+            Assert.Equal(0, window.ToolbarMotion.Running);
+            Assert.Equal(0, clock.Subscribers);
+            Assert.Equal(items, toggle.CapsuleItems);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Reduced_reset_button_fades_in_with_the_capsule()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size, effects: "Reduced");
+            var (_, time) = HandClock(window);
+            model.ToggleFilter(ToolbarFilter.New);
+            model.IsToolbarCollapsed = true;
+            Arrange(window, size);
+            var reset = Named<Button>(window, "ToolbarResetButton");
+
+            // Die Kapsel blendet 60–150 ms ein, das ✕ mit ihr (Vorschau: #cx liegt in #tabw), nicht schon bei 0 ms.
+            At(window, time, 30);
+            Assert.Equal(0, reset.Opacity, 3);
+            At(window, time, 105);
+            Assert.InRange(reset.Opacity, 0.3, 0.7);
+            At(window, time, 300);
+            Assert.Equal(1, reset.Opacity, 3);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Reduced_ghost_shows_the_element_even_far_inside_its_parent()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Wie die Lasche im Canvas (1223/207): Das Bild zeigt das Element, nicht den leeren Platz an seinem Ursprung.
+            var element = new Border { Width = 40, Height = 20, Background = Brushes.White };
+            var canvas = new Canvas { Width = 1400, Height = 300 };
+            Canvas.SetLeft(element, 1223);
+            Canvas.SetTop(element, 207);
+            canvas.Children.Add(element);
+            WpfTestHost.Layout(canvas, new Size(1400, 300));
+            var dpi = new DpiScale(106.0 / 96, 106.0 / 96);
+            var (bitmap, bounds) = ElementBitmap.Render(element, dpi)!.Value;
+            Assert.Equal(new Rect(0, 0, 40, 20), bounds);
+            Assert.Equal(45, bitmap.PixelWidth);
+            Assert.Equal(23, bitmap.PixelHeight);
+            var pixels = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4];
+            bitmap.CopyPixels(pixels, bitmap.PixelWidth * 4, 0);
+            var center = (((bitmap.PixelHeight / 2) * bitmap.PixelWidth) + (bitmap.PixelWidth / 2)) * 4;
+            Assert.Equal(255, pixels[center + 3]); // deckend in der Mitte
+            Assert.True(Enumerable.Range(0, pixels.Length / 4).Count(i => pixels[(i * 4) + 3] == 255) > pixels.Length / 4 * 0.8, "Bild leer");
+            Assert.Null(ElementBitmap.Render(new Border(), dpi));
+        });
+    }
+
+    [Fact]
+    public void Unfiltered_capsule_keeps_11_px_between_search_and_its_key()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _) = Open(new Size(1745, 982), collapsed: true);
+            var row = Assert.IsAssignableFrom<Panel>(Named<ToolbarToggle>(window, "ToolbarToggle").CapsuleItems[0]);
+            var text = row.Children.OfType<TextBlock>().Last(); // „Suchen“
+            var key = row.Children.OfType<Border>().Single(); // „Strg+F“
+            var gap = key.TranslatePoint(default, row).X - text.TranslatePoint(new Point(text.ActualWidth, 0), row).X;
+            Assert.Equal(MainWindow.CapsuleKeyGap, gap, 0.5); // Vorschau: Abstand 5 und margin-left 6
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Grip_line_ends_12_px_before_the_tab_or_the_capsule()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size);
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var line = Assert.IsAssignableFrom<FrameworkElement>(splitter.Template.FindName("Line", splitter));
+            var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
+            Assert.Equal(tab.Left - MainWindow.GripLineGap, Box(window, line).Right, OnePixel(window));
+            Assert.Equal(Box(window, splitter).Left + HeroSplitter.LineInset, Box(window, line).Left, 0.5);
+
+            model.ToggleFilter(ToolbarFilter.New);
+            model.IsToolbarCollapsed = true;
+            Arrange(window, size);
+            var capsule = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
+            Assert.Equal(capsule.Left - MainWindow.GripLineGap, Box(window, line).Right, OnePixel(window));
             window.Close();
         });
     }

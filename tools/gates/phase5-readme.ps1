@@ -19,7 +19,8 @@ function Normalize([string]$s) { ($s -replace '\s+', ' ').Trim() }
 # --- Fakten aus dem Quelltext ---
 $appArgs = Read-Utf8 'src\HdrPilot.App\AppArguments.cs'
 $devOnlySwitches = @('--snapshot', '--prepare', '--ready-event', # Entwicklerwerkzeug (E54) und interne Absprache Wrapper/Instanz (E75)
-    '--snapshot-sizes', '--snapshot-scenes', '--snapshot-themes', '--snapshot-display', '--artwork-report', '--test-hdr-moment') # Bildschirmfotos, Messung und Prüfung der Neugestaltung (E89)
+    '--snapshot-sizes', '--snapshot-scenes', '--snapshot-themes', '--snapshot-display', '--artwork-report', '--test-hdr-moment', # Bildschirmfotos, Messung und Prüfung der Neugestaltung (E89)
+    '--test-toolbar-search') # Prüfung der Werkzeugleiste (G10.5): Strg+F ohne Tastatureingabe
 $appSwitches = @([regex]::Matches($appArgs, '"(--[a-z-]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Where-Object { $_ -notin $devOnlySwitches })
 
 $config = Read-Utf8 'src\HdrPilot.Core\Config\AppConfig.cs'

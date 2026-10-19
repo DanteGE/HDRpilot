@@ -50,6 +50,7 @@ public sealed class ToolbarPanel : Panel
     private readonly double[] _widthOffsets = new double[10];
     private ToolbarArrangement? _arrangement;
     private bool _reserves = true;
+    private double _originFraction;
 
     public ToolbarPanel()
     {
@@ -78,6 +79,23 @@ public sealed class ToolbarPanel : Panel
 
     /// <summary>Der Nutzer zieht gerade (Fensterrand, Trenner): Hysterese an, Schritte werden bewegt.</summary>
     public bool IsResizing { get; set; }
+
+    /// <summary>
+    /// Wo die Leiste im Pixelraster des Fensters beginnt: Bruchteil eines Gerätepixels (−0,5 … 0,5), gesetzt vom Fenster. Die
+    /// rechte Kante liegt dann auf dem Gerätepixel, das der rechten Kante der Liste am nächsten ist.
+    /// </summary>
+    public double OriginFraction
+    {
+        get => _originFraction;
+        set
+        {
+            if (Math.Abs(_originFraction - value) > 0.001)
+            {
+                _originFraction = value;
+                InvalidateMeasure();
+            }
+        }
+    }
 
     /// <summary>Höhe im Layout melden (ausgeklappt); eingeklappt 0, die Liste rückt nach oben.</summary>
     public bool ReservesHeight
@@ -127,17 +145,27 @@ public sealed class ToolbarPanel : Panel
         }
     }
 
-    /// <summary>Anordnung für eine andere Breite, ohne Gedächtnis (etwa die ausgeklappte Höhe, während die Leiste eingeklappt ist).</summary>
-    public ToolbarArrangement ArrangeFor(double width) => ToolbarLayout.Arrange(width, Scale());
+    /// <summary>
+    /// Anordnung für eine Breite, während die Leiste nicht misst (etwa ihre ausgeklappte Höhe, solange sie eingeklappt ist): bei
+    /// derselben Breite und Skalierung die zuletzt gerechnete (auch die beim Ziehen gemerkten zwei Zeilen; so misst sie beim
+    /// Ausklappen wieder), sonst ohne Gedächtnis wie nach dem Ziehen.
+    /// </summary>
+    public ToolbarArrangement ArrangeFor(double width)
+    {
+        var scale = Scale();
+        return _arrangement is { } last && last.Scale == scale && SameWidth(last, width)
+            ? last
+            : ToolbarLayout.Arrange(width, scale, originFraction: _originFraction);
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = availableSize.Width;
         var scale = Scale();
-        ToolbarMemory? memory = _arrangement is { } last && (IsResizing || Math.Abs(last.Width - Math.Round(width * scale) / scale) < 0.01) && last.Scale == scale
+        ToolbarMemory? memory = _arrangement is { } last && (IsResizing || SameWidth(last, width)) && last.Scale == scale
             ? last.Memory
             : null;
-        var next = ToolbarLayout.Arrange(width, scale, memory);
+        var next = ToolbarLayout.Arrange(width, scale, memory, _originFraction);
         var previous = _arrangement;
         _arrangement = next;
         if (previous is null || !Same(previous, next))
@@ -148,7 +176,7 @@ public sealed class ToolbarPanel : Panel
         foreach (UIElement child in InternalChildren)
         {
             var slot = next[GetSlot(child)];
-            child.Measure(new Size(Math.Max(0, slot.Width + _widthOffsets[(int)GetSlot(child)]), ToolbarLayout.ItemHeight));
+            child.Measure(new Size(Math.Max(0, slot.Width + _widthOffsets[(int)GetSlot(child)]), slot.Height));
         }
 
         return new Size(next.Width, _reserves ? next.Height : 0);
@@ -165,7 +193,7 @@ public sealed class ToolbarPanel : Panel
         {
             var index = (int)GetSlot(child);
             var slot = arrangement.Slots[index];
-            child.Arrange(new Rect(slot.X, slot.Y, Math.Max(0, slot.Width + _widthOffsets[index]), ToolbarLayout.ItemHeight));
+            child.Arrange(new Rect(slot.X, slot.Y, Math.Max(0, slot.Width + _widthOffsets[index]), slot.Height));
         }
 
         return finalSize;
@@ -176,6 +204,20 @@ public sealed class ToolbarPanel : Panel
 
     protected override AutomationPeer OnCreateAutomationPeer() =>
         string.IsNullOrEmpty(AutomationProperties.GetAutomationId(this)) ? base.OnCreateAutomationPeer() : new ToolbarPeer(this);
+
+    /// <summary>Elemente innen auf ganzen Gerätepixeln (Rahmen der Felder und Knöpfe 1 px statt 1,1 px bei 110 %).</summary>
+    protected override void OnVisualChildrenChanged(DependencyObject visualAdded, DependencyObject visualRemoved)
+    {
+        base.OnVisualChildrenChanged(visualAdded, visualRemoved);
+        if (visualAdded is FrameworkElement element)
+        {
+            element.UseLayoutRounding = true;
+        }
+    }
+
+    /// <summary>Dieselbe Breite (bis auf einen halben Gerätepixel), für die zuletzt gerechnet wurde.</summary>
+    private static bool SameWidth(ToolbarArrangement last, double width) =>
+        Math.Abs(last.RequestedWidth - width) * last.Scale < 0.5;
 
     private static bool Same(ToolbarArrangement a, ToolbarArrangement b) =>
         a.Rows == b.Rows && a.Stage == b.Stage && a.SearchKey == b.SearchKey && a.Scale == b.Scale && a.Slots.SequenceEqual(b.Slots);

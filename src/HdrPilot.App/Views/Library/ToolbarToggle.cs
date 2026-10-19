@@ -153,8 +153,9 @@ public sealed class ToolbarToggle : Grid
     /// </summary>
     public void ApplyMotion(double width, double height, double turn, double divider, double hint, double tabOpacity, double halo, double restHalo, Func<int, (double Opacity, double X)>? item)
     {
-        var w = Math.Max(1, Math.Round(width * 10) / 10);
-        var h = Math.Max(1, Math.Round(height * 10) / 10);
+        // Breite und Höhe kommen auf ganzen Gerätepixeln (das Fenster rundet).
+        var w = Math.Max(1, width);
+        var h = Math.Max(1, height);
         if (Math.Abs(Width - w) > 0.01)
         {
             Width = w;
@@ -261,11 +262,48 @@ public sealed class ToolbarToggle : Grid
         }
     }
 
-    /// <summary>Hoher Kontrast an oder aus: Systemfarben, kein Hof (gesetzt vom Fenster).</summary>
+    /// <summary>
+    /// Hoher Kontrast an oder aus (gesetzt vom Fenster): Fläche und Rahmen in Systemfarben, kein Hof, und alles darin (Pfeil,
+    /// Hinweis, Tastenkappen, Suchbegriff, Quelle, Mini-Symbole, „x/652“) in den passenden Systemfarben statt der des Themas,
+    /// sonst stünde helle Schrift des dunklen Themas auf der hellen Fläche eines hellen Kontrastthemas.
+    /// </summary>
     public void SetHighContrast(bool on)
     {
         _highContrast = on;
+        UseSystemColors(Resources, on);
         UpdateLook();
+    }
+
+    /// <summary>
+    /// Pinsel des Themas, die Lasche, Kapsel und ✕ benutzen, in <paramref name="resources"/> durch Systemfarben ersetzen
+    /// (hoher Kontrast) bzw. die Ersetzung wieder entfernen. Alles darin holt seine Farben als DynamicResource und folgt.
+    /// </summary>
+    public static void UseSystemColors(ResourceDictionary resources, bool on)
+    {
+        var map = new (string Key, Func<Brush> System)[]
+        {
+            (ThemeKeys.BrushText, () => SystemColors.ControlTextBrush),
+            (ThemeKeys.BrushTextSecondary, () => SystemColors.ControlTextBrush),
+            (ThemeKeys.BrushTextMuted, () => SystemColors.GrayTextBrush),
+            (ThemeKeys.BrushSurface2, () => SystemColors.ControlBrush),
+            (ThemeKeys.BrushLine, () => SystemColors.ControlTextBrush),
+            (ThemeKeys.BrushLineStrong, () => SystemColors.ControlTextBrush),
+            (ThemeKeys.BrushAccent, () => SystemColors.HighlightBrush),
+            (ThemeKeys.BrushAccentStrong, () => SystemColors.HighlightBrush),
+            (ThemeKeys.BrushTextOnAccent, () => SystemColors.HighlightTextBrush),
+            (ThemeKeys.BrushFocusRing, () => SystemColors.HighlightBrush),
+        };
+        foreach (var (key, system) in map)
+        {
+            if (on)
+            {
+                resources[key] = system();
+            }
+            else
+            {
+                resources.Remove(key);
+            }
+        }
     }
 
     internal void Request() => ToggleRequested?.Invoke(this, EventArgs.Empty);

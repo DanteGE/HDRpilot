@@ -106,10 +106,6 @@ public sealed class MotionChannels
     /// <summary>Am Bildtakt angemeldet (nur, solange etwas läuft).</summary>
     public bool IsHooked => _hooked;
 
-    /// <summary>Zeitpunkt, an dem die letzte Bewegung endet (relativ zu jetzt); null, wenn nichts läuft.</summary>
-    public TimeSpan? Remaining =>
-        _running.Count == 0 ? null : TimeSpan.FromMilliseconds(Math.Max(0, _running.Values.Max(m => m.Start + m.Duration) - Now));
-
     private double Now => _time.Now.TotalMilliseconds;
 
     /// <summary>
@@ -129,6 +125,9 @@ public sealed class MotionChannels
     public bool Has(string key) => _values.ContainsKey(key);
 
     public bool IsRunning(string key) => _running.ContainsKey(key);
+
+    /// <summary>Wohin ein Kanal geht: das Ende seiner laufenden Bewegung, sonst sein jetziger Wert.</summary>
+    public double Heading(string key, double fallback = 0) => _running.TryGetValue(key, out var motion) ? motion.End : Get(key, fallback);
 
     /// <summary>Wert sofort setzen; eine laufende Bewegung des Kanals endet.</summary>
     public void Set(string key, double value)

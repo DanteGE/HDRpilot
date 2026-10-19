@@ -6,11 +6,12 @@ namespace HdrPilot.App.Tests.Library;
 /// Anordnung der Werkzeugleiste als reine Rechnung (<see cref="ToolbarLayout.Arrange"/>, abgenommene Vorschau leiste.js,
 /// Wunsch des Nutzers 2026-10-17): Leiter der Stufen (Suche gibt nach, Felder geben anteilig nach, Sortierung nur als Symbol,
 /// erst unter 806 zwei Zeilen), Hysterese nur beim Ziehen, Zeilen an der Gruppengrenze, gefüllte erste Zeile, Kanten auf
-/// ganzen Gerätepixeln bei 100, 110, 125 und 150 %.
+/// ganzen Gerätepixeln bei 100, 110 (106 dpi), 125 und 150 %, Stufen bei jeder Skalierung bei denselben Breiten.
 /// </summary>
 public sealed class ToolbarLayoutTests
 {
-    private static readonly double[] Scales = [1, 1.1, 1.25, 1.5];
+    /// <summary>Skalierungen von Windows: 96, 106 (110 %), 120 und 144 dpi.</summary>
+    private static readonly double[] Scales = [1, 106.0 / 96, 120.0 / 96, 144.0 / 96];
 
     private static ToolbarSlotRect Slot(ToolbarArrangement a, ToolbarSlot slot) => a[slot];
 
@@ -198,13 +199,15 @@ public sealed class ToolbarLayoutTests
     }
 
     [Theory]
-    [InlineData(1)]
-    [InlineData(1.1)]
-    [InlineData(1.25)]
-    [InlineData(1.5)]
-    public void Every_edge_lies_on_a_whole_device_pixel_with_gaps_of_round_8_times_scale(double scale)
+    [InlineData(96)]
+    [InlineData(106)] // 110 %
+    [InlineData(120)]
+    [InlineData(144)]
+    public void Every_edge_lies_on_a_whole_device_pixel_with_gaps_of_round_8_times_scale(int dpi)
     {
+        var scale = dpi / 96.0;
         var gap = Math.Round(8 * scale, MidpointRounding.AwayFromZero);
+        var button = Math.Round(40 * scale, MidpointRounding.AwayFromZero);
         for (var width = 400.0; width <= 2700; width += 3.7)
         {
             var a = ToolbarLayout.Arrange(width, scale);
@@ -213,9 +216,14 @@ public sealed class ToolbarLayoutTests
             foreach (var slot in Enum.GetValues<ToolbarSlot>())
             {
                 var r = Slot(a, slot);
-                Assert.True(IsWhole(r.X * scale) && IsWhole(r.Right * scale) && IsWhole(r.Y * scale), $"{scale}: L {width} {slot} {r}");
+                Assert.True(IsWhole(r.X * scale) && IsWhole(r.Right * scale) && IsWhole(r.Y * scale) && IsWhole(r.Bottom * scale), $"{scale}: L {width} {slot} {r}");
                 Assert.True(r.X >= -0.001 && r.Right <= a.Width + 0.001, $"{scale}: L {width} {slot} ragt hinaus");
+                Assert.Equal(button, r.Height * scale, 6); // 44 statt 44,17 bei 110 %
             }
+
+            // Knöpfe auf ganzen Pixeln (bei 110 % 44 statt 44,17), die Ansicht aufgerundet.
+            Assert.All([ToolbarSlot.FilterAuto, ToolbarSlot.FilterNew, ToolbarSlot.FilterHdr, ToolbarSlot.Rescan, ToolbarSlot.Seen, ToolbarSlot.Add], s => Assert.Equal(button, Slot(a, s).Width * scale, 6));
+            Assert.Equal(Math.Ceiling((122 * scale) - 1e-6), Slot(a, ToolbarSlot.View).Width * scale, 6);
 
             // Nachbarn in einer Zeile mit genau round(8 · Skalierung) Gerätepixeln (bis auf den Freiraum vor der Ansicht).
             foreach (var row in Enum.GetValues<ToolbarSlot>().GroupBy(s => Slot(a, s).Y))
@@ -238,8 +246,64 @@ public sealed class ToolbarLayoutTests
             if (a.Rows > 1)
             {
                 Assert.Equal(right, Slot(a, ToolbarSlot.Sort).Right * scale, 3);
-                Assert.Equal(Math.Ceiling(40 * scale - 1e-6) + gap, Slot(a, ToolbarSlot.FilterAuto).Y * scale, 3);
+                Assert.Equal(button + gap, Slot(a, ToolbarSlot.FilterAuto).Y * scale, 3);
             }
+            else
+            {
+                // Was das Runden an einer Schwelle kostet, trägt der Freiraum vor der Ansicht: höchstens zwei Gerätepixel.
+                Assert.True(a.GroupGap * scale >= ((a.SortIconOnly ? 16 : 24) * scale) - 2.001, $"{scale}: L {width} Gruppenabstand {a.GroupGap * scale} px");
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(106)]
+    [InlineData(120)]
+    [InlineData(144)]
+    public void Stages_and_rows_follow_the_preview_thresholds_at_every_scale(int dpi)
+    {
+        // Die Schwellen gelten geräteunabhängig: bei 110 % (106 dpi) dieselben Breiten wie bei 100 % (Prüfung 2026-10-19: ein
+        // echtes Fenster 1366×768 bei 110 % hat eine Liste von 807 und war zweizeilig).
+        var scale = dpi / 96.0;
+        for (var width = 400.0; width <= 2700; width += 0.25)
+        {
+            var reference = ToolbarLayout.Arrange(width);
+            var a = ToolbarLayout.Arrange(width, scale);
+            Assert.True(reference.Rows == a.Rows && reference.Stage == a.Stage && reference.SortIconOnly == a.SortIconOnly, $"{dpi} dpi: L {width}: {a.Stage}/{a.Rows} statt {reference.Stage}/{reference.Rows}");
+        }
+
+        Assert.Equal(1, ToolbarLayout.Arrange(807.3, scale).Rows);
+        Assert.Equal(1, ToolbarLayout.Arrange(806, scale).Rows);
+        Assert.Equal(2, ToolbarLayout.Arrange(805.9, scale).Rows);
+        Assert.False(ToolbarLayout.Arrange(914, scale).SortIconOnly);
+        Assert.Equal(ToolbarStage.Comfortable, ToolbarLayout.Arrange(1154, scale).Stage);
+
+        // Hysterese beim Ziehen ebenso geräteunabhängig: die eine Zeile ab 838, die Beschriftung ab 938.
+        var two = ToolbarLayout.Arrange(800, scale).Memory;
+        Assert.Equal(2, ToolbarLayout.Arrange(837.9, scale, two).Rows);
+        Assert.Equal(1, ToolbarLayout.Arrange(838, scale, two).Rows);
+        var icon = ToolbarLayout.Arrange(900, scale).Memory;
+        Assert.True(ToolbarLayout.Arrange(937.9, scale, icon).SortIconOnly);
+        Assert.False(ToolbarLayout.Arrange(938, scale, icon).SortIconOnly);
+    }
+
+    [Theory]
+    [InlineData(-0.5)]
+    [InlineData(-0.2)]
+    [InlineData(0.44)]
+    public void Right_edge_lands_on_the_device_pixel_nearest_to_the_list_edge(double fraction)
+    {
+        // Beginnt die Leiste im Fenster einen Bruchteil neben dem Pixelraster (das Fenster rückt sie auf den nächsten Pixel),
+        // endet sie auf dem Pixel, der der rechten Kante der Liste am nächsten ist: höchstens einen halben Pixel daneben.
+        var scale = 106.0 / 96;
+        foreach (var width in new[] { 570.0, 807.3, 1142.6, 1434.5, 2848.2 })
+        {
+            var a = ToolbarLayout.Arrange(width, scale, originFraction: fraction);
+            var right = Slot(a, ToolbarSlot.Add).Right * scale;
+            Assert.True(IsWhole(right));
+            Assert.InRange(right - (fraction + (width * scale)), -0.5001, 0.5001);
+            Assert.Equal(0, Slot(a, ToolbarSlot.Search).X);
+            Assert.Equal(ToolbarLayout.Arrange(width, scale).Rows, a.Rows);
         }
     }
 

@@ -210,6 +210,12 @@ public sealed partial class AppServices : IAsyncDisposable
             {
                 PlayTestHdrMoment();
             }
+
+            // Prüfung (G10.5): Strg+F in der Bibliothek ohne Tastatureingabe, ebenso nur in Testinstanzen.
+            if (args.TestToolbarSearch && !UsesDefaultPaths)
+            {
+                RunTestToolbarSearch();
+            }
         }
         catch (Exception ex)
         {
@@ -553,4 +559,6 @@ public sealed partial class AppServices : IAsyncDisposable
 
     /// <summary>Prüfung: HDR-Moment im offenen Hauptfenster abspielen, ohne HDR zu schalten (AppServices.Library.cs).</summary>
     partial void PlayTestHdrMoment();
+
+    partial void RunTestToolbarSearch();
 }

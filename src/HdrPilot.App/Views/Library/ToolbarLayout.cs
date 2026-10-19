@@ -37,10 +37,15 @@ public enum ToolbarStage
     ThreeRows,
 }
 
-/// <summary>Lage eines Elements der Leiste in geräteunabhängigen Pixeln (Höhe immer <see cref="ToolbarLayout.ItemHeight"/>).</summary>
-public readonly record struct ToolbarSlotRect(double X, double Y, double Width)
+/// <summary>
+/// Lage eines Elements der Leiste in geräteunabhängigen Pixeln; hoch <see cref="ToolbarLayout.ItemHeight"/> in ganzen
+/// Gerätepixeln (bei 110 % 44 px, also 39,85).
+/// </summary>
+public readonly record struct ToolbarSlotRect(double X, double Y, double Width, double Height = ToolbarLayout.ItemHeight)
 {
     public double Right => X + Width;
+
+    public double Bottom => Y + Height;
 }
 
 /// <summary>
@@ -52,8 +57,9 @@ public readonly record struct ToolbarMemory(bool MultipleRows, bool SortIcon, bo
 /// <summary>Ergebnis von <see cref="ToolbarLayout.Arrange"/>: Zeilen, Stufe und die Lage jedes Elements.</summary>
 public sealed class ToolbarArrangement
 {
-    internal ToolbarArrangement(double width, double scale, int rows, ToolbarStage stage, bool searchKey, ToolbarSlotRect[] slots, double height)
+    internal ToolbarArrangement(double requestedWidth, double width, double scale, int rows, ToolbarStage stage, bool searchKey, ToolbarSlotRect[] slots, double height)
     {
+        RequestedWidth = requestedWidth;
         Width = width;
         Scale = scale;
         Rows = rows;
@@ -63,7 +69,10 @@ public sealed class ToolbarArrangement
         Height = height;
     }
 
-    /// <summary>Breite der Leiste (= Breite der Liste), für die gerechnet wurde.</summary>
+    /// <summary>Breite der Liste, für die gerechnet wurde.</summary>
+    public double RequestedWidth { get; }
+
+    /// <summary>Breite der Leiste auf ganzen Gerätepixeln: bis zu dem Pixel, der der rechten Kante der Liste am nächsten ist.</summary>
     public double Width { get; }
 
     /// <summary>Skalierung des Bildschirms (1 = 100 %), auf deren Gerätepixel die Kanten liegen.</summary>
@@ -76,7 +85,7 @@ public sealed class ToolbarArrangement
     /// <summary>
     /// Die Sortierung zeigt nur ihr Symbol: auf der Symbol-Stufe und in der schmalsten, mehrzeiligen Liste (unter 480).
     /// </summary>
-    public bool SortIconOnly => this[ToolbarSlot.Sort].Width <= ToolbarLayout.SortIconWidth + 0.5;
+    public bool SortIconOnly => this[ToolbarSlot.Sort].Width <= ToolbarLayout.SortIconWidth + 4; // Rundung auf Gerätepixel
 
     /// <summary>Die Tastenkappe „Strg+F“ in der Suche ist zu sehen.</summary>
     public bool SearchKey { get; }
@@ -104,9 +113,12 @@ public sealed class ToolbarArrangement
 /// Symbol-Stufe 16). Beim Ziehen gilt Hysterese: Die Beschriftung kommt erst 24 über der Schwelle zurück, die eine Zeile
 /// erst 32 darüber, die Tastenkappe „Strg+F“ weicht unter 204 Suchbreite und kommt ab 216 zurück.
 /// <para>
-/// Gerechnet wird in Gerätepixeln der Skalierung: Abstände round(8 · Skalierung), Knöpfe 40 · Skalierung, die Felder durch
-/// fortlaufendes Runden, sodass jede Kante (auch bei 110 und 125 %) auf einem ganzen Gerätepixel liegt und die rechte
-/// Gruppe bündig an der rechten Kante hängt.
+/// Stufe und Zeilen folgen den Schwellen der Vorschau in geräteunabhängigen Pixeln, bei jeder Skalierung bei denselben
+/// Breiten (1366×768 bei 110 %, Liste 807, ist einzeilig wie bei 100 %). Verteilt wird danach in Gerätepixeln der
+/// Skalierung: Abstände round(8 · Skalierung), Knöpfe und Höhe round(40 · Skalierung), die Ansicht aufgerundet, die Felder
+/// durch fortlaufendes Runden. So liegt jede Kante (auch bei 110 % mit 106 dpi und bei 125 %) auf einem ganzen Gerätepixel
+/// der Leiste, die rechte Gruppe hängt bündig an der rechten Kante. Was das Runden an einer Schwelle kostet (höchstens zwei
+/// Gerätepixel), trägt der Freiraum vor der Ansicht bzw. tragen die Felder.
 /// </para>
 /// </summary>
 public static class ToolbarLayout
@@ -160,6 +172,9 @@ public static class ToolbarLayout
     /// <summary>Linke Gruppe ohne die Felder: drei Filter und fünf Abstände.</summary>
     private const double LeftFixed = (3 * FilterWidth) + (5 * Gap);
 
+    /// <summary>Spielraum beim Vergleich mit den Schwellen (Rechenfehler, keine Pixel).</summary>
+    private const double Epsilon = 1e-6;
+
     /// <summary>Rechte Gruppe: Ansicht, drei Symbolknöpfe, drei Abstände (266).</summary>
     public const double RightGroup = ViewWidth + (3 * IconWidth) + (3 * Gap);
 
@@ -184,69 +199,69 @@ public static class ToolbarLayout
     /// <summary>
     /// Anordnung für eine Breite der Liste. <paramref name="memory"/> nur beim Ziehen (Hysterese, siehe oben), sonst null:
     /// Dann gilt sofort der Endzustand der Breite. Ohne gültige Breite (noch nicht angeordnet) die bequeme Zeile.
+    /// <paramref name="originFraction"/>: Bruchteil eines Gerätepixels, um den die Leiste im Fenster neben dem Pixelraster
+    /// beginnt (−0,5 … 0,5; das Fenster rückt sie auf den nächsten Pixel); die rechte Kante liegt dann auf dem Pixel, der der
+    /// rechten Kante der Liste am nächsten ist.
     /// </summary>
-    public static ToolbarArrangement Arrange(double width, double scale = 1, ToolbarMemory? memory = null)
+    public static ToolbarArrangement Arrange(double width, double scale = 1, ToolbarMemory? memory = null, double originFraction = 0)
     {
         var s = double.IsFinite(scale) && scale > 0 ? scale : 1;
         var w = double.IsFinite(width) && width > 0 ? width : ComfortableWidth;
+        var f = double.IsFinite(originFraction) ? Math.Clamp(originFraction, -0.5, 0.5) : 0;
         var px = new Pixels(s);
-        var right = px.Round(w);
+        var right = Math.Round(f + (w * s), MidpointRounding.AwayFromZero);
         var g = px.Gap;
-        var b = FilterWidth * s;
+        var b = px.Round(FilterWidth);
         var view = px.Fixed(ViewWidth);
         var rightGroup = view + (3 * b) + (3 * g);
         var leftFixed = (3 * b) + (5 * g);
 
-        // Platz für die drei Felder in einer Zeile (Gerätepixel), mit dem nötigen Gruppenabstand.
-        var fields = right - leftFixed - rightGroup - px.Size(GroupGap);
-        var fieldsIcon = right - leftFixed - rightGroup - px.Size(GroupGapIcon);
-        var sortIconFits = fieldsIcon >= px.Size(SearchMin + SourceMin + SortIconWidth) + (memory is { MultipleRows: true } ? px.Size(OneRowBack) : 0);
-        var labeledFits = fields >= px.Size(SearchMin + SourceMin + SortMin) + (memory is { SortIcon: true } ? px.Size(SortStepBack) : 0);
+        // Stufe nach den Schwellen der Vorschau (geräteunabhängig, beim Ziehen mit Hysterese).
+        var labeled = w >= SortStepWidth + (memory is { SortIcon: true } ? SortStepBack : 0) - Epsilon;
+        var oneRow = labeled || w >= OneRowWidth + (memory is { MultipleRows: true } ? OneRowBack : 0) - Epsilon;
 
         var slots = new ToolbarSlotRect[10];
         ToolbarStage stage;
         int rows;
         double searchWidth;
-        if (labeledFits || sortIconFits)
+        if (oneRow)
         {
             rows = 1;
-            double ws, wsrc, wsort;
-            if (!labeledFits)
+            stage = !labeled ? ToolbarStage.SortIcon
+                : w >= ComfortableWidth - Epsilon ? ToolbarStage.Comfortable
+                : w >= SearchYieldWidth - Epsilon ? ToolbarStage.SearchYields
+                : ToolbarStage.FieldsYield;
+            double ws, wsrc, wsort, total;
+            if (stage is ToolbarStage.SearchYields or ToolbarStage.FieldsYield)
             {
-                stage = ToolbarStage.SortIcon;
-                (ws, wsrc, wsort) = (SearchMin, SourceMin, SortIconWidth);
-            }
-            else if (fields >= px.Size(SearchMax + SourceBase + SortBase))
-            {
-                stage = ToolbarStage.Comfortable;
-                (ws, wsrc, wsort) = (SearchMax, SourceBase, SortBase);
-            }
-            else if (fields >= px.Size(SearchBase + SourceBase + SortBase))
-            {
-                stage = ToolbarStage.SearchYields;
-                (ws, wsrc, wsort) = ((fields / s) - SourceBase - SortBase, SourceBase, SortBase);
+                // Die Felder geben nach und füllen genau den Platz (Gerätepixel) bis zum Gruppenabstand: erst die Suche bis 236,
+                // dann alle drei anteilig.
+                total = right - leftFixed - rightGroup - px.Size(GroupGap);
+                var extra = (total / s) - (SearchBase + SourceBase + SortBase);
+                (ws, wsrc, wsort) = extra >= 0 ? (Math.Min(SearchMax, SearchBase + extra), SourceBase, SortBase) : Yield(-extra);
+                if (SearchBase + extra > SearchMax)
+                {
+                    total = px.Round(ws + wsrc + wsort);
+                }
             }
             else
             {
-                stage = ToolbarStage.FieldsYield;
-                var d = Math.Min(SearchBase - SearchMin + (SourceBase - SourceMin) + (SortBase - SortMin), (SearchBase + SourceBase + SortBase) - (fields / s));
-                (ws, wsrc, wsort) = Yield(d);
+                (ws, wsrc, wsort) = stage == ToolbarStage.Comfortable ? (SearchMax, SourceBase, SortBase) : (SearchMin, SourceMin, SortIconWidth);
+                total = px.Round(ws + wsrc + wsort);
             }
 
-            // Felder fortlaufend auf ganze Pixel (geben sie nach, füllen sie genau den Platz bis zum Gruppenabstand), danach
-            // die Filter; die rechte Gruppe hängt an der rechten Kante.
-            var total = stage is ToolbarStage.SearchYields or ToolbarStage.FieldsYield ? fields : px.Round(ws + wsrc + wsort);
-            var sizes = px.Fill([ws, wsrc, wsort], total);
+            // Felder fortlaufend auf ganze Pixel, danach die Filter; die rechte Gruppe hängt an der rechten Kante.
+            var sizes = px.Fill([ws, wsrc, wsort], Math.Max(3, total));
             var x = 0.0;
             for (var i = 0; i < 3; i++)
             {
-                slots[i] = px.Rect(x, 0, sizes[i]);
+                slots[i] = px.Rect(x, 0, sizes[i], b);
                 x += sizes[i] + g;
             }
 
             for (var i = 0; i < 3; i++)
             {
-                slots[(int)ToolbarSlot.FilterAuto + i] = px.Rect(x, 0, b);
+                slots[(int)ToolbarSlot.FilterAuto + i] = px.Rect(x, 0, b, b);
                 x += b + g;
             }
 
@@ -255,8 +270,9 @@ public static class ToolbarLayout
         }
         else
         {
-            // Zwei (oder drei) Zeilen: oben die Felder, die die Zeile genau füllen.
-            var avail = (right - (2 * g)) / s;
+            // Zwei (oder drei) Zeilen: oben die Felder, die die Zeile genau füllen (aufgeteilt nach der Breite in geräteunabhängigen
+            // Pixeln, verteilt auf die Gerätepixel der Zeile).
+            var avail = w - (2 * Gap);
             double ws, wsrc, wsort;
             if (avail >= SearchBase + SourceBase + SortBase)
             {
@@ -283,17 +299,17 @@ public static class ToolbarLayout
             var x = 0.0;
             for (var i = 0; i < 3; i++)
             {
-                slots[i] = px.Rect(x, 0, sizes[i]);
+                slots[i] = px.Rect(x, 0, sizes[i], b);
                 x += sizes[i] + g;
             }
 
             var pitch = b + g;
             for (var i = 0; i < 3; i++)
             {
-                slots[(int)ToolbarSlot.FilterAuto + i] = px.Rect(i * pitch, pitch, b);
+                slots[(int)ToolbarSlot.FilterAuto + i] = px.Rect(i * pitch, pitch, b, b);
             }
 
-            var three = (3 * b) + (3 * g) + rightGroup > right;
+            var three = w < SecondRowWidth - Epsilon;
             rows = three ? 3 : 2;
             stage = three ? ToolbarStage.ThreeRows : ToolbarStage.TwoRows;
             RightGroupAt(slots, px, right, three ? 2 * pitch : pitch, b, g, view);
@@ -302,7 +318,7 @@ public static class ToolbarLayout
 
         var key = memory is { SearchKey: false } ? searchWidth >= SearchKeyShow - 0.01 : searchWidth >= SearchKeyHide - 0.01;
         var height = HeightFor(rows);
-        return new ToolbarArrangement(right / s, s, rows, stage, key, slots, height);
+        return new ToolbarArrangement(w, right / s, s, rows, stage, key, slots, height);
     }
 
     /// <summary>Suche, Quelle und Sortierung geben anteilig nach (68 : 52 : 36), um <paramref name="d"/> zusammen.</summary>
@@ -318,11 +334,11 @@ public static class ToolbarLayout
         var x = right - b;
         foreach (var slot in new[] { ToolbarSlot.Add, ToolbarSlot.Seen, ToolbarSlot.Rescan })
         {
-            slots[(int)slot] = px.Rect(x, y, b);
+            slots[(int)slot] = px.Rect(x, y, b, b);
             x -= g + b;
         }
 
-        slots[(int)ToolbarSlot.View] = px.Rect(x + b - view, y, view);
+        slots[(int)ToolbarSlot.View] = px.Rect(x + b - view, y, view, b);
     }
 
     /// <summary>Rechnung in Gerätepixeln einer Skalierung.</summary>
@@ -330,19 +346,18 @@ public static class ToolbarLayout
     {
         public double Gap => Math.Round(ToolbarLayout.Gap * Scale, MidpointRounding.AwayFromZero);
 
-        /// <summary>Schwelle oder Abstand in ganzen Gerätepixeln.</summary>
+        /// <summary>Abstand in ganzen Gerätepixeln.</summary>
         public double Size(double dip) => Math.Round(dip * Scale, MidpointRounding.AwayFromZero);
 
         /// <summary>
         /// Breite der Ansicht (122) in ganzen Gerätepixeln, aufgerundet (bei 125 % 153 statt 152,5): Sie füllt ihren Platz und
-        /// wird nie kleiner als ihr Inhalt. Die Knöpfe (40) behalten ihre genaue Größe, bei den üblichen Skalierungen ganze
-        /// Pixel.
+        /// wird nie kleiner als ihr Inhalt. Knöpfe und Höhe (40) werden gerundet (bei 110 % 44 statt 44,17).
         /// </summary>
         public double Fixed(double dip) => Math.Ceiling((dip * Scale) - 1e-6);
 
         public double Round(double dip) => Math.Round(dip * Scale, MidpointRounding.AwayFromZero);
 
-        public ToolbarSlotRect Rect(double x, double y, double width) => new(x / Scale, y / Scale, width / Scale);
+        public ToolbarSlotRect Rect(double x, double y, double width, double height) => new(x / Scale, y / Scale, width / Scale, height / Scale);
 
         /// <summary>Breiten (geräteunabhängig) fortlaufend gerundet auf genau <paramref name="total"/> Gerätepixel.</summary>
         public double[] Fill(double[] dips, double total)

@@ -320,6 +320,63 @@ public sealed class ToolbarMotionTests
     }
 
     [Fact]
+    public void Capsule_change_retracts_the_seam_with_cubic_in_and_restarts_a_running_width_glide()
+    {
+        // Filter weg (Vorschau refresh): Die Naht zieht sich 200 ms mit CubicEase In zurück (bei 100 ms noch 7/8), Hof und ✕
+        // folgen.
+        var (choreo, ch, clock, time) = Create(collapsed: true, Filtered);
+        choreo.CapsuleChanged(ToolbarMotionLevel.Full, Plain);
+        At(time, ch, 100);
+        Assert.Equal(1 - ToolbarEase.CubicIn(0.5), ch.Get(SeamScale), 3);
+        Assert.Equal(0, ch.Get(Reset), 3);
+        At(time, ch, 200);
+        Assert.Equal(0, ch.Get(SeamScale), 3);
+        Assert.Equal(0, ch.Get(RestHalo), 3);
+        Assert.Equal(Plain.CapsuleWidth, ch.Get(PillWidth), 3);
+
+        // Ändert sich der Inhalt, während die Breite noch gleitet, gleitet sie vom jetzigen Wert neu (160 ms ab jetzt).
+        choreo.CapsuleChanged(ToolbarMotionLevel.Full, Filtered);
+        At(time, ch, 260);
+        var mid = ch.Get(PillWidth);
+        Assert.InRange(mid, Plain.CapsuleWidth + 1, Filtered.CapsuleWidth - 1);
+        choreo.CapsuleChanged(ToolbarMotionLevel.Full, Filtered with { CapsuleWidth = 300 });
+        At(time, ch, 360);
+        Assert.InRange(ch.Get(PillWidth), mid + 1, 299); // ein bloß neues Ziel wäre jetzt (360 ms) schon angekommen
+        At(time, ch, 420);
+        Assert.Equal(300, ch.Get(PillWidth), 3);
+        At(time, ch, 800);
+        Assert.Equal(0, clock.Subscribers);
+    }
+
+    [Fact]
+    public void Unchanged_capsule_starts_no_motion_and_no_frame_clock()
+    {
+        // Etwa nach dem Sortieren: gleiche Kapsel, keine Bewegung (vorher lief der Hof 200 ms von 0,35 nach 0,35).
+        var (choreo, ch, clock, _) = Create(collapsed: true, Filtered);
+        choreo.CapsuleChanged(ToolbarMotionLevel.Full, Filtered);
+        choreo.CapsuleChanged(ToolbarMotionLevel.Reduced, Filtered);
+        Assert.Equal(0, ch.Running);
+        Assert.Equal(0, clock.Subscribers);
+    }
+
+    [Fact]
+    public void Filters_cleared_while_the_seam_still_grows_retract_seam_halo_and_reset()
+    {
+        // Mitten im Einklappen (die Naht wächst 340–740, der Hof blitzt) werden die Filter aufgehoben: Am Ende leuchtet nichts.
+        var (choreo, ch, clock, time) = Create(collapsed: false, Filtered);
+        choreo.Collapse(ToolbarMotionLevel.Full, listDy: 38, Order, Filtered);
+        At(time, ch, 500);
+        Assert.InRange(ch.Get(SeamScale), 0.05, 0.99);
+        choreo.CapsuleChanged(ToolbarMotionLevel.Full, Plain);
+        At(time, ch, 1000);
+        Assert.Equal(0, ch.Get(SeamScale), 3);
+        Assert.Equal(0, ch.Get(RestHalo), 3);
+        Assert.Equal(0, ch.Get(Reset), 3);
+        Assert.Equal(Plain.CapsuleWidth, ch.Get(PillWidth), 3);
+        Assert.Equal(0, clock.Subscribers);
+    }
+
+    [Fact]
     public void Eases_match_wpf_and_the_preview()
     {
         Assert.Equal(0, ToolbarEase.ExpoOut6(0), 6);

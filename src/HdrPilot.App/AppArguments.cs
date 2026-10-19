@@ -17,7 +17,7 @@ namespace HdrPilot.App;
 /// <item>Nur für Entwicklung und Prüfskripte, nur mit <c>--config-dir</c> (E54, E89): <c>--snapshot &lt;ordner&gt;</c> mit
 /// <c>--snapshot-sizes</c>, <c>--snapshot-scenes</c>, <c>--snapshot-themes</c> und <c>--snapshot-display</c> (siehe
 /// <see cref="Infrastructure.SnapshotPlan"/>),
-/// <c>--artwork-report &lt;datei&gt;</c> und <c>--test-hdr-moment</c> (wird weitergereicht).</item>
+/// <c>--artwork-report &lt;datei&gt;</c>, <c>--test-hdr-moment</c> und <c>--test-toolbar-search</c> (beide werden weitergereicht).</item>
 /// <item><c>--</c> beendet die Befehle: alles danach (der Spielbefehl) wird nie als Befehl von HdrPilot gelesen.</item>
 /// </list>
 /// </summary>
@@ -83,11 +83,18 @@ public sealed record AppArguments
     /// </summary>
     public bool TestHdrMoment { get; init; }
 
+    /// <summary>
+    /// Prüfung (G10.5): in der Bibliothek Strg+F ausführen wie gedrückt (eine eingeklappte Werkzeugleiste klappt dauerhaft aus,
+    /// die Suche bekommt den Fokus), ohne Tastatureingabe. Wirkt nur in einer Instanz mit eigener Ablage (--config-dir) und
+    /// wird an sie weitergereicht.
+    /// </summary>
+    public bool TestToolbarSearch { get; init; }
+
     public IReadOnlyList<string> Unknown { get; init; } = [];
 
     /// <summary>True, wenn der Aufruf etwas tun soll außer die App zu starten.</summary>
     public bool HasCommand => RunGameKey is not null || PrepareGameKey is not null || ReadyEvent is not null
-        || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings || TestHdrMoment;
+        || Show || ToggleHdr || Pause is not null || Rescan || Exit || OpenSettings || TestHdrMoment || TestToolbarSearch;
 
     public static AppArguments Parse(IReadOnlyList<string> args)
     {
@@ -141,6 +148,9 @@ public sealed record AppArguments
                     break;
                 case "--test-hdr-moment":
                     result = result with { TestHdrMoment = true };
+                    break;
+                case "--test-toolbar-search":
+                    result = result with { TestToolbarSearch = true };
                     break;
                 case "--show":
                     result = result with { Show = true };
@@ -236,6 +246,11 @@ public sealed record AppArguments
         if (TestHdrMoment)
         {
             list.Add("--test-hdr-moment");
+        }
+
+        if (TestToolbarSearch)
+        {
+            list.Add("--test-toolbar-search");
         }
 
         return list;

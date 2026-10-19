@@ -25,9 +25,13 @@ namespace HdrPilot.App;
 /// <param name="SeamY">Linie von Lichtnaht und Lichtstreif (Bildkante, im Regal Mitte der Kapsel).</param>
 /// <param name="GripCenter">Mitte des Ziehgriffs (NaN ohne Griff: Raster, Regal).</param>
 /// <param name="CapsuleMax">Breiteste Kapsel (höchstens bis 32 px vor die Mitte des Griffs, im Regal neben dem Titelinhalt).</param>
-internal readonly record struct ToolbarOverlayGeometry(double Left, double Width, double CapsuleTop, double TabTy, double SeamY, double GripCenter, double CapsuleMax)
+/// <param name="ToolbarTop">Oberkante der ausgeklappten Leiste.</param>
+internal readonly record struct ToolbarOverlayGeometry(double Left, double Width, double CapsuleTop, double TabTy, double SeamY, double GripCenter, double CapsuleMax, double ToolbarTop)
 {
     public double Right => Left + Width;
+
+    /// <summary>Oberkante der Lasche (ausgeklappt).</summary>
+    public double TabTop => CapsuleTop + TabTy;
 }
 
 /// <summary>
@@ -40,6 +44,13 @@ internal readonly record struct ToolbarOverlayGeometry(double Left, double Width
 /// </summary>
 public partial class MainWindow
 {
+    /// <summary>Abstand der Tastenkappe „Strg+F“ zu „Suchen“ in der ungefilterten Kapsel.</summary>
+    public const double CapsuleKeyGap = 11;
+
+    /// <summary>Die Leuchtlinie des Ziehgriffs endet so weit vor Lasche bzw. Kapsel.</summary>
+    public const double GripLineGap = 12;
+
+    private const int WmSizing = 0x0214;
     private const int WmEnterSizeMove = 0x0231;
     private const int WmExitSizeMove = 0x0232;
 
@@ -48,13 +59,23 @@ public partial class MainWindow
     private ToolbarOverlayGeometry _overlay;
     private bool _shownCollapsed;
     private bool _expandFromSearch;
+    private bool _sizeMoveLoop;
     private bool _windowSizing;
     private bool _columnSizing;
     private bool _capsuleFiltered;
     private bool _capsuleReset;
+    private bool _highContrast;
     private double _capsuleWidth = ToolbarChoreography.TabWidth;
     private int _capsuleItems;
+    private string? _capsuleKey;
     private TextBlock? _sortLabel;
+
+    // Pixelraster: Ursprung von Leiste und Overlay in Gerätepixeln des Fensters (aus den Layout-Versätzen, ohne
+    // RenderTransform), die Verschiebung der Leiste auf ganze Pixel und ihre senkrechte Verschiebung beim Einklappen.
+    private Point _toolbarOriginPx;
+    private Point _overlayOriginPx;
+    private Vector _toolbarSnap;
+    private double _toolbarShiftY;
 
     /// <summary>Zeilen der Werkzeugleiste, wie zuletzt angeordnet (Tests, Prüfung).</summary>
     public int ToolbarRows => ToolbarArea.Rows;
@@ -68,11 +89,49 @@ public partial class MainWindow
     /// <summary>Der Nutzer zieht den Fensterrand oder den Trenner zum Detailbereich (Hysterese, Schritte werden bewegt).</summary>
     public bool IsToolbarResizing => ToolbarArea.IsResizing;
 
-    /// <summary>Ziehen beginnt bzw. endet (Fensterrand per WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE, Trenner, Tests).</summary>
+    /// <summary>Ausgleich der Elemente der Leiste auf ganze Gerätepixel (Teil ihrer RenderTransform; Tests).</summary>
+    public Vector ToolbarPixelSnap => _toolbarSnap;
+
+    /// <summary>Ziehen beginnt bzw. endet (Fensterrand per WM_SIZING/WM_EXITSIZEMOVE, Trenner, Tests).</summary>
     public void SetToolbarResizing(bool resizing)
     {
         _windowSizing = resizing;
         UpdateResizing();
+    }
+
+    /// <summary>
+    /// Nachricht der Größen- und Verschiebeschleife des Fensters (auch Tests): Als Ziehen zählt nur der Zug an einer Kante
+    /// (WM_SIZING innerhalb von WM_ENTERSIZEMOVE … WM_EXITSIZEMOVE). Verschieben an der Titelleiste, dabei das Wiederherstellen
+    /// eines maximierten Fensters und der DPI-Wechsel auf einem anderen Bildschirm gelten sofort, ohne Hysterese.
+    /// </summary>
+    public void OnSizeMoveMessage(int message)
+    {
+        switch (message)
+        {
+            case WmEnterSizeMove:
+                _sizeMoveLoop = true;
+                break;
+            case WmSizing when _sizeMoveLoop && !_windowSizing:
+                SetToolbarResizing(true);
+                break;
+            case WmExitSizeMove:
+                _sizeMoveLoop = false;
+                SetToolbarResizing(false);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Hoher Kontrast an oder aus (Systemeinstellung; Tests und Bildschirmfotos ohne Umstellung des Systems): Lasche, Kapsel
+    /// und ✕ in Systemfarben, Lichtnaht und Streif in der Markierungsfarbe ohne Schein.
+    /// </summary>
+    public void SetToolbarHighContrast(bool on)
+    {
+        _highContrast = on;
+        ToolbarToggle.SetHighContrast(on);
+        ToolbarToggle.UseSystemColors(ToolbarResetButton.Resources, on);
+        ApplyToolbarBrushes();
+        _toolbarMotion.Apply();
     }
 
     /// <summary>
@@ -202,7 +261,10 @@ public partial class MainWindow
         }
 
         ToolbarArea.RenderTransform = new TranslateTransform();
-        ToolbarToggle.SetHighContrast(SystemParameters.HighContrast);
+        ToolbarArea.LayoutUpdated += (_, _) => SnapToolbarToPixels();
+        _highContrast = SystemParameters.HighContrast;
+        ToolbarToggle.SetHighContrast(_highContrast);
+        ToolbarToggle.UseSystemColors(ToolbarResetButton.Resources, _highContrast);
         SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
         ApplyToolbarBrushes();
     }
@@ -268,7 +330,7 @@ public partial class MainWindow
         var hero = HeroHeight;
         var toolbar = ToolbarHeight();
         var before = ShowcaseLayout.BodyTop(view, hero, toolbar, _shownCollapsed) + _toolbarMotion.Get(ToolbarChoreography.ListDy);
-        var hadFocus = ToolbarArea.IsKeyboardFocusWithin;
+        var hadFocus = HasFocusWithin(ToolbarArea);
         _shownCollapsed = collapsed;
         ApplyToolbarChrome();
         ApplyVerticalLayout();
@@ -280,7 +342,7 @@ public partial class MainWindow
             _choreography.Collapse(level, dy, order, TabTarget(), LargeSink(true));
             if (hadFocus)
             {
-                ToolbarToggle.Focus();
+                FocusInWindow(ToolbarToggle);
             }
         }
         else
@@ -321,6 +383,21 @@ public partial class MainWindow
         }
 
         ToolTipService.SetIsEnabled(ToolbarToggle, _shownCollapsed);
+        UpdateGripLine();
+    }
+
+    /// <summary>
+    /// Leuchtlinie des Ziehgriffs (Liste): endet <see cref="GripLineGap"/> vor Lasche bzw. Kapsel (Vorschau gripLine), nach
+    /// deren Zielbreite; Lasche und Kapsel liegen rechtsbündig mit dem Griff.
+    /// </summary>
+    private void UpdateGripLine()
+    {
+        var pill = _shownCollapsed ? _capsuleWidth : ToolbarChoreography.TabWidth;
+        var margin = new Thickness(HeroSplitter.LineInset, 0, pill + GripLineGap, 0);
+        if (HeroSplitter.LineMargin != margin)
+        {
+            HeroSplitter.LineMargin = margin;
+        }
     }
 
     /// <summary>Nach der letzten Bewegung: eingeklappt ist die Leiste nicht mehr da (kein Tab-Halt, nicht im Automationsbaum).</summary>
@@ -335,6 +412,26 @@ public partial class MainWindow
         BodyArea.Clip = null;
         TabGhost.Source = null;
         ToolbarGhost.Source = null;
+    }
+
+    /// <summary>
+    /// Der Fokus liegt in <paramref name="element"/>: der Tastaturfokus oder, solange das Fenster nicht aktiv ist, der Fokus,
+    /// den es sich merkt und beim Aktivieren wiederherstellt.
+    /// </summary>
+    private bool HasFocusWithin(UIElement element) =>
+        element.IsKeyboardFocusWithin
+        || (FocusManager.GetFocusedElement(this) is Visual focused && (ReferenceEquals(focused, element) || element.IsAncestorOf(focused)));
+
+    /// <summary>
+    /// Fokus setzen, ohne ihn einem anderen Programm zu nehmen: im aktiven Fenster der Tastaturfokus, sonst der Fokus, den das
+    /// Fenster beim Aktivieren wiederherstellt. So geht er nie verloren, auch wenn sein Element verschwindet.
+    /// </summary>
+    private void FocusInWindow(UIElement element)
+    {
+        if (!element.Focus())
+        {
+            FocusManager.SetFocusedElement(this, element);
+        }
     }
 
     /// <summary>Ansage für Bildschirmleser über die Lasche/Kapsel (einmalig, wichtig, die jüngste gilt).</summary>
@@ -362,28 +459,21 @@ public partial class MainWindow
 
     private IntPtr OnWindowMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmEnterSizeMove)
-        {
-            SetToolbarResizing(true);
-        }
-        else if (msg == WmExitSizeMove)
-        {
-            SetToolbarResizing(false);
-        }
-
+        OnSizeMoveMessage(msg);
         return IntPtr.Zero;
     }
 
     /// <summary>
     /// Neue Anordnung der Leiste (im selben Layout-Durchgang wie die neue Breite): Nur beim Ziehen werden die Schritte
-    /// bewegt (Zeilenwechsel als Morph bzw. Überblenden, Sortier-Schritt, Tastenkappe), sonst gilt sofort der Endzustand.
-    /// Die Elemente stehen schon an ihrem neuen Platz; die Kanäle führen sie vom alten dorthin (FLIP).
+    /// bewegt (Zeilenwechsel als Morph bzw. Überblenden, Sortier-Schritt, Tastenkappe), sonst gilt sofort der Endzustand,
+    /// ebenso bei einer anderen Skalierung (DPI-Wechsel). Die Elemente stehen schon an ihrem neuen Platz; die Kanäle führen
+    /// sie vom alten dorthin (FLIP).
     /// </summary>
     private void OnToolbarArranged(object? sender, ToolbarArrangedEventArgs e)
     {
         var current = e.Current;
         var level = ToolbarLevel();
-        var animate = ToolbarArea.IsResizing && e.Previous is not null && !_shownCollapsed && level != ToolbarMotionLevel.Instant;
+        var animate = ToolbarArea.IsResizing && e.Previous is { } last && last.Scale == current.Scale && !_shownCollapsed && level != ToolbarMotionLevel.Instant;
         ToolbarPanel.SetIconOnly(SortOrder, current.SortIconOnly);
         SortTip.Text = current.SortIconOnly && _viewModel is { } vm ? vm.SortTipCompactText : LibraryStrings.Tip_SortText;
         if (e.Previous is { } previous && animate && (e.RowsChanged || e.SortStepChanged))
@@ -504,6 +594,7 @@ public partial class MainWindow
     /// (wenn nicht „Alle“), aktive Filter als Mini-Symbole und „x/652“; was nicht passt, wird zu „+2“ (zuerst der Suchbegriff,
     /// dann die Quelle, dann die Filter). Ist sie eingeklappt, gleitet ihre Breite (160 ms) und Hof und Lichtnaht folgen;
     /// ohne <paramref name="move"/> nur Inhalt und Zielbreite (beim Ein- und Ausklappen bewegt die Choreografie die Lasche).
+    /// Neu gebaut wird nur, wenn sich Inhalt oder Platz geändert haben (nicht bei jedem Sortieren oder Breitenschritt).
     /// </summary>
     private void UpdateCapsule(ToolbarMotionLevel level, bool move = true)
     {
@@ -513,10 +604,27 @@ public partial class MainWindow
         }
 
         var filtered = vm.IsFiltered;
+        var max = Math.Max(120, _overlay.CapsuleMax);
+        var key = string.Join(
+            '|',
+            filtered,
+            vm.AppliedSearchText,
+            vm.SelectedSource?.Source?.ToString(),
+            vm.OnlySelected,
+            vm.OnlyNew,
+            vm.OnlyHdrCapable,
+            vm.VisibleCount,
+            vm.TotalCount,
+            Math.Round(max));
+        if (key == _capsuleKey)
+        {
+            return;
+        }
+
+        _capsuleKey = key;
         var parts = CapsuleParts(vm);
         var reset = filtered;
         var chrome = 30 + 2 + (reset ? 26 : 12);
-        var max = Math.Max(120, _overlay.CapsuleMax);
         var dropped = 0;
         double content;
         while (true)
@@ -539,7 +647,7 @@ public partial class MainWindow
         _capsuleReset = reset;
         _capsuleFiltered = filtered;
         ToolbarToggle.IsFiltered = filtered;
-        ToolbarResetButton.Visibility = reset ? Visibility.Visible : Visibility.Collapsed;
+        UpdateGripLine();
         if (!move)
         {
             return;
@@ -559,7 +667,8 @@ public partial class MainWindow
         var parts = new List<CapsulePart>();
         if (!vm.IsFiltered)
         {
-            var search = Row(Glyph(""), Text(LibraryStrings.Toolbar_CapsuleSearch, ThemeKeys.BrushTextMuted), ToolbarToggle.Kbd(LibraryStrings.Key_CtrlF, small: false, new Thickness(1, 0, 0, 0)));
+            // Tastenkappe 11 px nach „Suchen“ (Vorschau: Abstand 5 und margin-left 6).
+            var search = Row(Glyph(""), Text(LibraryStrings.Toolbar_CapsuleSearch, ThemeKeys.BrushTextMuted), ToolbarToggle.Kbd(LibraryStrings.Key_CtrlF, small: false, new Thickness(CapsuleKeyGap, 0, 0, 0)));
             parts.Add(new CapsulePart(search, 0));
             return parts;
         }
@@ -720,7 +829,8 @@ public partial class MainWindow
         var grip = view == LibraryViewMode.List ? left + Math.Round(width / 2) : double.NaN;
         var center = left + Math.Round(width / 2);
         var max = shelf ? 380 - 16 : left + width - (center + 32);
-        var next = new ToolbarOverlayGeometry(left, width, capsuleTop, tabTop - capsuleTop, shelf ? capsuleTop + (ShowcaseLayout.CapsuleHeight / 2) : hero - columnsTop, grip, max);
+        var next = new ToolbarOverlayGeometry(
+            left, width, capsuleTop, tabTop - capsuleTop, shelf ? capsuleTop + (ShowcaseLayout.CapsuleHeight / 2) : hero - columnsTop, grip, max, ShowcaseLayout.ToolbarTop(view, hero, toolbar) - columnsTop);
         var changed = next != _overlay;
         var maxChanged = Math.Abs(next.CapsuleMax - _overlay.CapsuleMax) > 0.5;
         _overlay = next;
@@ -778,28 +888,91 @@ public partial class MainWindow
         return ListColumn.ActualWidth > 0 ? ListColumn.ActualWidth : ToolbarLayout.ComfortableWidth;
     }
 
-    /// <summary>Bild eines Teils festhalten (Reduziert: alt blendet aus, neu blendet ein).</summary>
-    private void CaptureGhost(FrameworkElement source, Image ghost)
+    // ---------- Pixelraster ----------
+
+    private double PixelScale()
     {
-        if (source.ActualWidth <= 0 || source.ActualHeight <= 0 || !source.IsVisible)
+        var dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+        return dpi > 0 ? dpi : 1;
+    }
+
+    /// <summary>Ursprung eines Elements in Gerätepixeln des Fensters, aus den Versätzen des Layouts (ohne RenderTransform).</summary>
+    private static Point LayoutOriginPx(Visual element, double scale)
+    {
+        var offset = default(Vector);
+        for (DependencyObject? v = element; v is Visual visual; v = VisualTreeHelper.GetParent(visual))
         {
-            ghost.Source = null;
+            offset += VisualTreeHelper.GetOffset(visual);
+        }
+
+        return new Point(offset.X * scale, offset.Y * scale);
+    }
+
+    /// <summary>
+    /// Nach jedem Layout-Durchgang (nur bei einer Änderung): Der Rahmen des Fensters (1 DIP) und der Rand der Spalten (32 DIP)
+    /// liegen bei 110 % neben dem Pixelraster (36,44 px), ebenso die Oberkante der Liste nach der Höhe des Titelbereichs. Die
+    /// Elemente der Leiste rücken um diesen Bruchteil auf ganze Gerätepixel (über ihre RenderTransform, die Leiste selbst und
+    /// alles um sie herum behalten ihre Lage), ihre rechte Kante auf den Pixel, der der Kante der Liste am nächsten ist;
+    /// Lasche, Kapsel und ✕ kommen auf dieselben Pixel. Ein neues Layout nur, wenn sich der Bruchteil waagerecht ändert
+    /// (Wechsel der Ansicht, Maximieren, DPI).
+    /// </summary>
+    private void SnapToolbarToPixels()
+    {
+        var s = PixelScale();
+        var list = LayoutOriginPx(ListArea, s);
+        var origin = new Point(list.X + (ToolbarArea.Margin.Left * s), list.Y);
+        var overlay = LayoutOriginPx(ToolbarOverlay, s);
+        if (origin == _toolbarOriginPx && overlay == _overlayOriginPx)
+        {
             return;
         }
 
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var bitmap = new RenderTargetBitmap(
-            (int)Math.Ceiling(source.ActualWidth * dpi.DpiScaleX),
-            (int)Math.Ceiling(source.ActualHeight * dpi.DpiScaleY),
-            dpi.PixelsPerInchX,
-            dpi.PixelsPerInchY,
-            PixelFormats.Pbgra32);
-        bitmap.Render(source);
-        bitmap.Freeze();
-        var at = source.TranslatePoint(default, ToolbarOverlay);
-        ghost.Source = bitmap;
-        ghost.Width = source.ActualWidth;
-        ghost.Height = source.ActualHeight;
+        _toolbarOriginPx = origin;
+        _overlayOriginPx = overlay;
+        var whole = new Point(Math.Round(origin.X, MidpointRounding.AwayFromZero), Math.Round(origin.Y, MidpointRounding.AwayFromZero));
+        _toolbarSnap = new Vector((whole.X - origin.X) / s, (whole.Y - origin.Y) / s);
+        ToolbarArea.OriginFraction = origin.X - whole.X;
+        _toolbarMotion.Apply();
+    }
+
+    /// <summary>Verschiebung der Leiste beim Einklappen: an ihrem ausgeklappten Platz, während die Liste schon darunter steht.</summary>
+    private void ApplyToolbarShift()
+    {
+        if (ToolbarArea.RenderTransform is TranslateTransform shift)
+        {
+            shift.Y = _toolbarShiftY;
+        }
+    }
+
+    /// <summary>Rechte Kante von Leiste, Lasche und Kapsel in Gerätepixeln des Fensters: der Pixel nächst der Kante der Liste.</summary>
+    private double OverlayRightPx(ToolbarOverlayGeometry g) => Math.Round(_toolbarOriginPx.X + (g.Width * PixelScale()), MidpointRounding.AwayFromZero);
+
+    /// <summary>
+    /// Oberkante der Lasche in Gerätepixeln: über der Leiste mit genau round(8 · Skalierung) Luft (Liste, Raster), im Regal
+    /// in der Fuge darunter, je an den Pixeln der Leiste ausgerichtet.
+    /// </summary>
+    private double TabTopPx(ToolbarOverlayGeometry g)
+    {
+        var s = PixelScale();
+        var toolbarTop = Math.Round(_toolbarOriginPx.Y + (_toolbarShiftY * s), MidpointRounding.AwayFromZero);
+        return _appliedView == LibraryViewMode.Shelf
+            ? toolbarTop + Math.Round(ToolbarLayout.ItemHeight * s, MidpointRounding.AwayFromZero) + Math.Round((g.TabTop - g.ToolbarTop - ToolbarLayout.ItemHeight) * s)
+            : toolbarTop - Math.Round(ShowcaseLayout.TabGap * s, MidpointRounding.AwayFromZero) - Math.Round(ShowcaseLayout.TabHeight * s);
+    }
+
+    /// <summary>Bild eines Teils festhalten (Reduziert: alt blendet aus, neu blendet ein).</summary>
+    private void CaptureGhost(FrameworkElement source, Image ghost)
+    {
+        var image = source.IsVisible ? ElementBitmap.Render(source, VisualTreeHelper.GetDpi(this)) : null;
+        ghost.Source = image?.Bitmap;
+        if (image is not { } shot)
+        {
+            return;
+        }
+
+        var at = source.TranslatePoint(shot.Bounds.TopLeft, ToolbarOverlay);
+        ghost.Width = shot.Bounds.Width;
+        ghost.Height = shot.Bounds.Height;
         Canvas.SetLeft(ghost, at.X);
         Canvas.SetTop(ghost, at.Y);
     }
@@ -825,10 +998,11 @@ public partial class MainWindow
 
             if (item.RenderTransform is TransformGroup { Children: [ScaleTransform scale, TranslateTransform shift] })
             {
+                // Bewegung und der Ausgleich auf ganze Gerätepixel (SnapToolbarToPixels).
                 var s = ch.Get(ToolbarChoreography.Item(slot, 's'), 1);
                 scale.ScaleX = scale.ScaleY = s;
-                shift.X = ch.Get(ToolbarChoreography.Item(slot, 'x')) + ch.Get(ToolbarChoreography.Morph(slot, 'x'));
-                shift.Y = ch.Get(ToolbarChoreography.Item(slot, 'y')) + ch.Get(ToolbarChoreography.Morph(slot, 'y'));
+                shift.X = ch.Get(ToolbarChoreography.Item(slot, 'x')) + ch.Get(ToolbarChoreography.Morph(slot, 'x')) + _toolbarSnap.X;
+                shift.Y = ch.Get(ToolbarChoreography.Item(slot, 'y')) + ch.Get(ToolbarChoreography.Morph(slot, 'y')) + _toolbarSnap.Y;
             }
 
             widths[(int)slot] = ch.Get(ToolbarChoreography.Morph(slot, 'w'));
@@ -932,28 +1106,54 @@ public partial class MainWindow
         var pw = ch.Get(ToolbarChoreography.PillWidth, ToolbarChoreography.TabWidth);
         var ph = ch.Get(ToolbarChoreography.PillHeight, ToolbarChoreography.TabHeight);
         var ty = ch.Get(ToolbarChoreography.PillTy, g.TabTy);
+        var tabOpacity = ch.Get(ToolbarChoreography.TabOpacity, 1);
+
+        // Lasche bzw. Kapsel auf ganzen Gerätepixeln des Fensters, die rechte Kante auf der der Leiste; senkrecht zwischen
+        // Kapsel (mittig auf der Bildkante) und Lasche (an den Pixeln der Leiste), wie weit die Bewegung ist.
+        var s = PixelScale();
+        var right = OverlayRightPx(g);
+        var width = Math.Max(1, Math.Round(pw * s));
+        var capsuleTop = Math.Round(_overlayOriginPx.Y + (g.CapsuleTop * s));
+        var way = Math.Abs(g.TabTy) > 0.001 ? ty / g.TabTy : 0;
+        var top = Math.Round(capsuleTop + ((TabTopPx(g) - capsuleTop) * way));
         ToolbarToggle.ApplyMotion(
-            pw,
-            ph,
+            width / s,
+            Math.Max(1, Math.Round(ph * s)) / s,
             ch.Get(ToolbarChoreography.PillTurn),
             ch.Get(ToolbarChoreography.Divider),
             ch.Get(ToolbarChoreography.Hint),
-            ch.Get(ToolbarChoreography.TabOpacity, 1),
+            tabOpacity,
             ch.Get(ToolbarChoreography.Halo),
             ch.Get(ToolbarChoreography.RestHalo),
             i => (ch.Get(ToolbarChoreography.CapsuleItem(i, 'o')), ch.Get(ToolbarChoreography.CapsuleItem(i, 'x'))));
-        Canvas.SetLeft(ToolbarToggle, Math.Round((g.Right - Math.Round(pw * 10) / 10) * 10) / 10);
-        Canvas.SetTop(ToolbarToggle, Math.Round((g.CapsuleTop + ty) * 10) / 10);
+        Canvas.SetLeft(ToolbarToggle, (right - width - _overlayOriginPx.X) / s);
+        Canvas.SetTop(ToolbarToggle, (top - _overlayOriginPx.Y) / s);
         TabGhost.Opacity = ch.Get(ToolbarChoreography.TabGhost);
 
-        var reset = ch.Get(ToolbarChoreography.Reset);
+        // ✕ der Kapsel: blendet mit ihr (Vorschau: #cx liegt in #tabw), nur eingeklappt und gefiltert da, sonst weder zu sehen
+        // noch im Automationsbaum. Verschwindet es oder nimmt keinen Fokus mehr, während es den Fokus hat, geht der auf die
+        // Kapsel.
+        var reset = ch.Get(ToolbarChoreography.Reset) * tabOpacity;
+        var live = _shownCollapsed && _capsuleReset;
+        var shown = _capsuleReset && (_shownCollapsed || reset > 0.001);
+        if (ToolbarResetButton.Focusable && (!live || !shown) && HasFocusWithin(ToolbarResetButton))
+        {
+            FocusInWindow(ToolbarToggle);
+        }
+
+        ToolbarResetButton.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
         ToolbarResetButton.Opacity = reset;
-        var live = _shownCollapsed && _capsuleReset && reset > 0.5;
-        ToolbarResetButton.IsHitTestVisible = live;
-        ToolbarResetButton.Focusable = _shownCollapsed && _capsuleReset;
-        KeyboardNavigation.SetIsTabStop(ToolbarResetButton, _shownCollapsed && _capsuleReset);
-        Canvas.SetLeft(ToolbarResetButton, g.Right - 24);
-        Canvas.SetTop(ToolbarResetButton, g.CapsuleTop);
+        ToolbarResetButton.IsHitTestVisible = live && reset > 0.5;
+        ToolbarResetButton.Focusable = live;
+        KeyboardNavigation.SetIsTabStop(ToolbarResetButton, live);
+        var resetSize = Math.Round(ToolbarChoreography.CapsuleHeight * s);
+        if (Math.Abs(ToolbarResetButton.Width - (resetSize / s)) > 0.001)
+        {
+            ToolbarResetButton.Width = ToolbarResetButton.Height = resetSize / s;
+        }
+
+        Canvas.SetLeft(ToolbarResetButton, (right - resetSize - _overlayOriginPx.X) / s);
+        Canvas.SetTop(ToolbarResetButton, (capsuleTop - _overlayOriginPx.Y) / s);
 
         // Lichtnaht: rechtes Ende immer an der linken Kante von Lasche bzw. Kapsel, auch während diese wächst.
         Seam.Opacity = ch.Get(ToolbarChoreography.SeamOpacity);
@@ -964,7 +1164,7 @@ public partial class MainWindow
         }
 
         var streak = ch.Get(ToolbarChoreography.StreakOpacity);
-        Streak.Opacity = SystemParameters.HighContrast ? 0 : streak;
+        Streak.Opacity = _highContrast ? 0 : streak;
         if (streak > 0 && Streak.RenderTransform is TranslateTransform streakShift)
         {
             var capsuleLeft = g.Right - _capsuleWidth;
@@ -993,7 +1193,7 @@ public partial class MainWindow
     /// <summary>Pinsel von Naht und Streif aus den Akzentfarben (Thema, Farbschema); hoher Kontrast: Systemfarbe, kein Schein.</summary>
     private void ApplyToolbarBrushes()
     {
-        if (SystemParameters.HighContrast)
+        if (_highContrast)
         {
             SeamCore.Fill = SystemColors.HighlightBrush;
             SeamGlow.Fill = null;
@@ -1021,7 +1221,7 @@ public partial class MainWindow
 
     private void ApplyStreakBrushes()
     {
-        if (SystemParameters.HighContrast)
+        if (_highContrast)
         {
             StreakCore.Background = SystemColors.HighlightBrush;
             StreakGlow.Background = null;
@@ -1052,8 +1252,7 @@ public partial class MainWindow
     {
         if (e.PropertyName == nameof(SystemParameters.HighContrast))
         {
-            ToolbarToggle.SetHighContrast(SystemParameters.HighContrast);
-            ApplyToolbarBrushes();
+            SetToolbarHighContrast(SystemParameters.HighContrast);
         }
     }
 

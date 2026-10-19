@@ -356,7 +356,7 @@ public partial class MainWindow : ChromeWindow
                 vm.IsToolbarCollapsed = false;
             }
 
-            SearchBox.Focus();
+            FocusInWindow(SearchBox);
             SearchBox.SelectAll();
             return true;
         }
@@ -804,10 +804,8 @@ public partial class MainWindow : ChromeWindow
             ListArea.RowDefinitions[0].Height = row;
         }
 
-        if (ToolbarArea.RenderTransform is TranslateTransform panelShift)
-        {
-            panelShift.Y = toolbarTop - listTop;
-        }
+        _toolbarShiftY = toolbarTop - listTop;
+        ApplyToolbarShift();
 
         LibrarySplitter.Margin = new Thickness(0, Math.Max(0, ShowcaseLayout.BodyTop(view, hero, toolbar, collapsed) - columnsTop), 0, 0);
         HeroSplitter.Margin = new Thickness(0, Math.Max(0, hero - ShowcaseLayout.HeroSplitterOverlap - columnsTop), 0, 0);

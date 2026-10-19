@@ -195,62 +195,67 @@ public sealed class ToolbarChoreography(MotionChannels channels)
     }
 
     /// <summary>
-    /// Inhalt der eingeklappten Kapsel geändert (Filter, Suche): Breite gleitet (160 ms), Hof und Lichtnaht folgen dem
-    /// Filterzustand (Naht wächst 400 ms bzw. zieht sich 200 ms zurück; Reduziert 150 ms Überblenden).
+    /// Inhalt der eingeklappten Kapsel geändert (Filter, Suche; Vorschau refresh): Die Breite gleitet vom jetzigen Wert neu
+    /// (160 ms), Hof und Lichtnaht folgen dem Filterzustand (Naht wächst 400 ms bzw. zieht sich 200 ms mit CubicEase In
+    /// zurück; Reduziert 150 ms Überblenden), auch mitten in einer Bewegung. Nur was sich ändert, bewegt sich: Gleicher
+    /// Inhalt (etwa nach dem Sortieren) startet keine Bewegung und keinen Bildtakt.
     /// </summary>
     public void CapsuleChanged(ToolbarMotionLevel level, TabTarget target)
     {
-        // Die Lasche wird gerade zur Kapsel (oder zurück): nur das Ziel der Breite nachführen, den Rest macht die Bewegung.
-        if (channels.IsRunning(PillWidth) || channels.IsRunning(PillHeight) || channels.IsRunning(PillTy) || channels.IsRunning(PillTurn))
+        // Die Lasche wird gerade zur Kapsel (Höhe, Lage, Pfeil): nur das Ziel der Breite nachführen, die Bewegung läuft weiter.
+        // Die Vorschau schnitte sie hier ab (abweichend, damit Alt+N mitten im Einklappen nichts springen lässt).
+        if (channels.IsRunning(PillHeight) || channels.IsRunning(PillTy) || channels.IsRunning(PillTurn))
         {
             channels.Retarget(PillWidth, target.CapsuleWidth);
-            return;
-        }
-
-        var wasWidth = channels.Get(PillWidth, target.CapsuleWidth);
-        if (Math.Abs(wasWidth - target.CapsuleWidth) > 0.01 && level != ToolbarMotionLevel.Instant && Math.Abs(channels.Get(PillHeight) - CapsuleHeight) < 0.01)
-        {
-            channels.Animate(PillWidth, target.CapsuleWidth, 160, ToolbarEase.CubicOut);
         }
         else
         {
-            channels.Set(PillWidth, target.CapsuleWidth);
+            if (Math.Abs(channels.Heading(PillWidth, target.CapsuleWidth) - target.CapsuleWidth) > 0.01 && level != ToolbarMotionLevel.Instant
+                && Math.Abs(channels.Get(PillHeight) - CapsuleHeight) < 0.01)
+            {
+                channels.Animate(PillWidth, target.CapsuleWidth, 160, ToolbarEase.CubicOut);
+            }
+            else if (!channels.IsRunning(PillWidth) || level == ToolbarMotionLevel.Instant)
+            {
+                channels.Set(PillWidth, target.CapsuleWidth);
+            }
+
+            channels.Set(PillHeight, CapsuleHeight);
+            channels.Set(PillTy, 0);
+            channels.Set(PillTurn, 180);
+            channels.Set(Divider, 1);
+            channels.Set(Hint, 0);
         }
 
-        channels.Set(PillHeight, CapsuleHeight);
-        channels.Set(PillTy, 0);
-        channels.Set(PillTurn, 180);
-        channels.Set(Divider, 1);
-        channels.Set(Hint, 0);
         for (var i = 0; i < CapsuleSlots; i++)
         {
             SetUnlessRunning(CapsuleItem(i, 'o'), 1);
             SetUnlessRunning(CapsuleItem(i, 'x'), 0);
         }
 
-        SetUnlessRunning(Reset, target.HasReset ? 1 : 0);
-        var rest = target.Filtered ? FilteredHalo : 0;
-        if (!channels.IsRunning(RestHalo))
+        if (target.HasReset)
         {
-            if (level == ToolbarMotionLevel.Instant)
-            {
-                channels.Set(RestHalo, rest);
-            }
-            else
-            {
-                channels.Animate(RestHalo, rest, 200);
-            }
+            SetUnlessRunning(Reset, 1);
+        }
+        else
+        {
+            channels.Set(Reset, 0);
         }
 
-        if (channels.IsRunning(SeamScale) || channels.IsRunning(SeamOpacity))
+        var rest = target.Filtered ? FilteredHalo : 0;
+        if (level == ToolbarMotionLevel.Instant)
         {
-            return;
+            channels.Set(RestHalo, rest);
+        }
+        else if (Math.Abs(channels.Heading(RestHalo) - rest) > 0.001)
+        {
+            channels.Animate(RestHalo, rest, 200);
         }
 
         var want = target.Filtered ? 1 : 0;
         switch (level)
         {
-            case ToolbarMotionLevel.Full when Math.Abs(channels.Get(SeamScale) - want) > 0.001:
+            case ToolbarMotionLevel.Full when Math.Abs(channels.Heading(SeamScale) - want) > 0.001:
                 if (want > 0)
                 {
                     channels.Set(SeamOpacity, 1);
@@ -258,11 +263,11 @@ public sealed class ToolbarChoreography(MotionChannels channels)
                 }
                 else
                 {
-                    channels.Animate(SeamScale, 0, 200, ToolbarEase.CubicOut);
+                    channels.Animate(SeamScale, 0, 200, ToolbarEase.CubicIn);
                 }
 
                 break;
-            case ToolbarMotionLevel.Reduced when Math.Abs(channels.Get(SeamOpacity) - want) > 0.001:
+            case ToolbarMotionLevel.Reduced when Math.Abs(channels.Heading(SeamOpacity) - want) > 0.001:
                 channels.Set(SeamScale, 1);
                 channels.Animate(SeamOpacity, want, 150, ToolbarEase.Linear);
                 break;

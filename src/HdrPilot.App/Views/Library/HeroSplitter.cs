@@ -28,6 +28,9 @@ public sealed class HeroSplitter : Thumb
     /// <summary>Schritt von Bild auf/ab.</summary>
     public const double LargeStep = 96;
 
+    /// <summary>Abstand der Leuchtlinie vom linken Rand der Liste (und ohne Werkzeugleiste vom rechten).</summary>
+    public const double LineInset = 18;
+
     public static readonly DependencyProperty MinimumProperty = DependencyProperty.Register(
         nameof(Minimum), typeof(double), typeof(HeroSplitter), new PropertyMetadata(0.0, OnRangeChanged));
 
@@ -36,6 +39,13 @@ public sealed class HeroSplitter : Thumb
 
     public static readonly DependencyProperty ValueProperty = DependencyProperty.Register(
         nameof(Value), typeof(double), typeof(HeroSplitter), new PropertyMetadata(0.0, OnValueChanged, CoerceValue));
+
+    /// <summary>
+    /// Ränder der Leuchtlinie (beim Überfahren, Ziehen, mit Fokus): links <see cref="LineInset"/>, rechts setzt das Fenster
+    /// sie 12 px vor Lasche bzw. Kapsel der Werkzeugleiste (Wunsch des Nutzers 2026-10-17).
+    /// </summary>
+    public static readonly DependencyProperty LineMarginProperty = DependencyProperty.Register(
+        nameof(LineMargin), typeof(Thickness), typeof(HeroSplitter), new PropertyMetadata(new Thickness(LineInset, 0, LineInset, 0)));
 
     private double _dragStart;
     private bool _dragging;
@@ -83,6 +93,12 @@ public sealed class HeroSplitter : Thumb
     {
         get => (double)GetValue(ValueProperty);
         set => SetValue(ValueProperty, value);
+    }
+
+    public Thickness LineMargin
+    {
+        get => (Thickness)GetValue(LineMarginProperty);
+        set => SetValue(LineMarginProperty, value);
     }
 
     /// <summary>

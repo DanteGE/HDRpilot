@@ -928,76 +928,82 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   dort sein Titelbereich nach, höchstens bis 186 px. Der dunkle Verlauf am unteren Rand des Titelbilds reicht 2 px über
   den Rand: Fällt die Unterkante nicht auf ganze Bildschirmpixel, stand dort sonst eine 1 px hohe helle Linie. Neuer
   Zustand `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.
-- Werkzeugleiste in gefüllten Zeilen (Wunsch des Nutzers 2026-10-16, gewählt „Blöcke, Zeilen gefüllt“): Sie faltet
-  nicht mehr in Stufen (Beschriftungen weg, Suche und Quelle schmal, Sortierung nur als Zeichen, Chips im Menü „Filter“,
-  zuletzt zwei Zeilen); alle zehn Elemente bleiben immer ganz ausgeschrieben, das Menü „Filter“ entfällt. Passt alles
-  in natürlicher Breite, steht es in einer Zeile wie bisher: links Suche, Quelle, Sortierung und die drei Chips,
-  rechtsbündig Ansicht, Neu einlesen, gesehen und „Spiel hinzufügen“, dazwischen der freie Platz; nur die Suche wächst
-  dort, höchstens auf 320 px (bei 3440 px wird nichts absurd breit). Sonst so wenige Zeilen wie möglich, die Elemente in
-  ihrer Reihenfolge so verteilt, dass die breiteste Zeile so schmal wie möglich ist (bei Gleichstand die gleichmäßigste
-  Verteilung), und jede Zeile genau auf die Breite der Liste gestreckt, links und rechts bündig mit ihrer Karte, 8 px
-  zwischen Elementen und Zeilen. Den Zuwachs bekommen die Elemente nach Anteilen: Suche 4, Quelle, Sortierung und Chips
-  je 2, Ansicht und „Spiel hinzufügen“ je 1; Neu einlesen und gesehen bleiben 40 px. Gestreckt bleibt der Inhalt
-  geordnet: Text links, Pfeil der Auswahllisten und Zähler der Chips am rechten Ende, die drei Ansichten teilen den Platz
-  gleichmäßig, „Spiel hinzufügen“ steht in der Mitte. Im Test (96 dpi, ohne gemerkte Aufteilung) hat sie bei 3440×1440
-  eine Zeile, 1920×1080, 1600×1000, 1366×768 und 1280×800 zwei, 1164×727 (1280×800 bei 110 %) drei, kleinstes Fenster
-  vier, schmalste Liste (400 px) fünf. Was von der Höhe der Leiste abhängt, nimmt ihre tatsächliche Höhe: größter
-  Titelbereich der Liste (siehe oben), Titelbereich des Rasters (erste Kachelreihe), Lage des Trenners, Zeile der Leiste
-  in der Liste; die Luft darüber und darunter bleibt (Liste 10 px, Raster 22 px), der Griff auf der Unterkante des
-  Titelbilds. Mit drei oder vier Zeilen passt die erste Kachelreihe des Rasters unter etwa 680 px Fensterhöhe nicht mehr
-  ganz (Titelbereich dann 186 px, das Raster scrollt). Im Regal wächst die umgebrochene
-  Leiste nach oben ins Titelbild, die Kachelreihe bleibt, wo sie ist; Kennzeile, Logo, Angaben und Knöpfe rücken mit
-  (24 px über der Leiste), und der kleinste Titelbereich wächst um die weiteren Zeilen (zwei Zeilen: 488 statt 440 px),
-  damit die Leiste unter der Automatik-Karte bleibt. In Fenstern unter etwa 660 px Höhe (kleinstes Fenster, Startgröße
-  auf 1920×1080 bei 150 %) passt das nicht mehr mit ganzen Kacheln: Dann endet die Leiste links neben der Karte, der
-  Titelbereich bekommt alles bis auf eine Reihe von 100-px-Kacheln, und Kennzeile bzw. Angaben weichen, wenn nötig.
-  Die Elemente werden nur angeordnet, nie aus- oder umgehängt: Die Tab-Reihenfolge folgt der sichtbaren (Zeile für Zeile
-  von links nach rechts), beim Umbrechen geht kein Fokus verloren. Gerechnet wird nur, wenn WPF neu misst (Größe oder
-  Inhalt geändert), nie im Leerlauf; die Rechnung ist eine reine Funktion (`ToolbarFlowPanel.Layout`). Prüfung:
-  `test.ps1 -Filter "FullyQualifiedName~ToolbarFlow|FullyQualifiedName~MainWindowLayout"`, `phase10-ui.ps1` (alle
-  Elemente ausgeschrieben und Zeilen bündig bei 1600×1000 und im schmalen Fenster).
 - Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17, abgenommene Vorschau
   `docs/design/showcase-hero/prototyp/leiste.html` mit der Lasche 8 px über der Leiste, Konzept
-  `werkzeugleiste-vorschlaege.md`): löst die gefüllten Zeilen (Punkt davor) ab. Die drei Filter sind Symbol-Schalter
-  40×40 (Mini-Schalter für „HDR automatisch“, Plaketten „NEU“ und „HDR“ 26×13) mit ihrer Zahl als Abzeichen im Knopf,
-  Alt+A/N/H; die Ansicht ist ein Symbol-Segment (122 px), „Spiel hinzufügen“ ein Symbolknopf (40 px). Jedes Element hat
-  einen Tooltip (Name, Kürzel, Erklärung, Zahl bzw. Zustand), 1 s Verzögerung, 400 ms zum Nachbarn, auch bei
-  Tastaturfokus, mittig 8 px darunter. Die Leiste passt sich stufenlos an die Breite der Liste an (`ToolbarLayout`, reine
-  Funktion, Kanten auf ganzen Gerätepixeln): ab 1154 px alles bequem (Suche 320, der Rest wird Abstand zwischen den
-  Gruppen), bis 1070 gibt die Suche nach (bis 236), bis 914 geben Suche, Quelle und Sortierung anteilig nach (68 : 52 : 36,
-  bis 168/136/160), bis 806 zeigt die Sortierung nur ihr Symbol (einziger Schritt, Abstand vor der Ansicht dann
-  mindestens 16 statt 24 px); darunter zwei Zeilen an der Gruppengrenze (oben Suche, Quelle und Sortierung gefüllt, unten
-  links die Filter, rechts die Aktionen), nur unter 410 px drei. Die Tastenkappe „Strg+F“ weicht unter 204 px Suchbreite.
-  Hysterese gilt nur, solange der Nutzer zieht (Fensterrand zwischen `WM_ENTERSIZEMOVE` und `WM_EXITSIZEMOVE` oder der
-  Trenner zum Detailbereich): eine Zeile erst wieder ab 838 (806 + 32), die Beschriftung der Sortierung ab 938, die
-  Tastenkappe ab 216. Nur dann werden die Schritte bewegt (Zeilenwechsel als Morph, Sortier-Schritt); alles andere folgt
-  dem Rand im selben Layout-Durchgang, und Maximieren, Einrasten, DPI-Wechsel und Start zeigen sofort den Endzustand.
+  `werkzeugleiste-vorschlaege.md`; Nachprüfung 2026-10-19): Sie ersetzt die gefüllten Zeilen vom 2026-10-16 (Elemente
+  immer ausgeschrieben, bis zu fünf Zeilen, `ToolbarFlowPanel`), die es nicht mehr gibt. Die drei Filter sind
+  Symbol-Schalter 40×40 (Mini-Schalter für „HDR automatisch“, Plaketten „NEU“ und „HDR“ 26×13) mit ihrer Zahl als
+  Abzeichen im Knopf, Alt+A/N/H; die Ansicht ist ein Symbol-Segment (122 px), „Spiel hinzufügen“ ein Symbolknopf (40 px).
+  Jedes Element hat einen Tooltip (Name, Kürzel, Erklärung, Zahl bzw. Zustand), 1 s Verzögerung, 400 ms zum Nachbarn,
+  auch bei Tastaturfokus, mittig 8 px darunter. Die Leiste passt sich stufenlos an die Breite der Liste an
+  (`ToolbarLayout`, reine Funktion): ab 1154 px alles bequem (Suche 320, der Rest wird Abstand zwischen den Gruppen), bis
+  1070 gibt die Suche nach (bis 236), bis 914 geben Suche, Quelle und Sortierung anteilig nach (68 : 52 : 36, bis
+  168/136/160), bis 806 zeigt die Sortierung nur ihr Symbol (einziger Schritt, Abstand vor der Ansicht dann mindestens
+  16 statt 24 px); darunter zwei Zeilen an der Gruppengrenze (oben Suche, Quelle und Sortierung gefüllt, unten links die
+  Filter, rechts die Aktionen), nur unter 410 px drei. Die Tastenkappe „Strg+F“ weicht unter 204 px Suchbreite. Die
+  Schwellen gelten geräteunabhängig, bei jeder Skalierung bei denselben Fenstergrößen (1366×768 bei 110 % hat eine Liste
+  von 807 und ist einzeilig wie bei 100 %; vorher verschoben sich die Schwellen dort um knapp 2 px). Erst danach wird auf
+  Gerätepixel verteilt: Abstände round(8 · Skalierung), Knöpfe und Höhe round(40 · Skalierung) (bei 110 %, 106 dpi, 44
+  statt 44,17 px), die Ansicht aufgerundet, die Felder durch fortlaufendes Runden; was das an einer Schwelle kostet
+  (höchstens zwei Pixel), trägt der Abstand vor der Ansicht. Weil Fensterrahmen (1 px) und Rand (32 px) bei 110 % neben
+  dem Pixelraster liegen (36,44 px) und die App kein Layout-Rounding nutzt (es fürs ganze Fenster einzuschalten verschob
+  Titelbereich, Spalten und Kacheln anderer Teile), rücken die Elemente über ihre RenderTransform um den Bruchteil auf
+  ganze Pixel des Fensters, die rechte Kante auf den Pixel nächst der Kante der Liste; Rahmen innen ganz (Layout-Rounding
+  nur in den Elementen). Lasche, Kapsel und ✕ liegen auf denselben Pixeln. Die Leiste selbst und alles um sie herum
+  behalten ihre Lage, die Luft (Liste 10, Raster 22) bleibt im Layout genau; gegen Bildkante und Liste, die nicht auf
+  ganzen Pixeln liegen, weicht das Gezeichnete höchstens einen halben Pixel ab.
+  Hysterese gilt nur, solange der Nutzer zieht: am Fensterrand (`WM_SIZING` zwischen `WM_ENTERSIZEMOVE` und
+  `WM_EXITSIZEMOVE`; Verschieben an der Titelleiste samt Wiederherstellen eines maximierten Fensters zählt nicht) oder am
+  Trenner zum Detailbereich: eine Zeile erst wieder ab 838 (806 + 32, wie `TH.oneBack` der Vorschau), die Beschriftung
+  der Sortierung ab 938, die Tastenkappe ab 216. Nur dann werden die Schritte bewegt (Zeilenwechsel als Morph,
+  Sortier-Schritt); alles andere folgt dem Rand im selben Layout-Durchgang, und Maximieren, Einrasten, DPI-Wechsel (auch
+  während des Ziehens) und Start zeigen sofort den Endzustand. Die beim Ziehen gemerkten zwei Zeilen gelten auch
+  eingeklappt weiter (sonst rechnete der Titelbereich eingeklappt mit einer Zeile und die Liste spränge beim Ausklappen
+  um 48 px). Die Elemente werden nur angeordnet, nie umgehängt: Die Tab-Reihenfolge folgt der sichtbaren, beim Umbrechen
+  geht kein Fokus verloren. Was von der Höhe der Leiste abhängt (größter Titelbereich der Liste, Titelbereich des
+  Rasters, Lage des Trenners), nimmt ihre ausgeklappte Höhe.
   Ein- und ausblenden: Lasche 36×18 rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen);
   beim Überfahren wächst sie zu „Leiste ausblenden · Strg+Umschalt+F“. Eingeklappt sitzt eine Kapsel (24 px hoch) mittig
-  auf der Bildkante, rechtsbündig mit der Liste (Liste 10 px, Raster 22 px darunter); sie zeigt „Suchen Strg+F“ oder
-  die aktiven Filter (Suchbegriff, Quelle, Mini-Symbole, „x/652“, was nicht passt als „+2“) mit „Filter zurücksetzen“,
-  gefiltert dazu die Lichtnaht entlang der Bildkante. Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel,
-  Strg+Umschalt+F, Strg+F1, Strg+F (blendet dauerhaft ein und sucht) und das Menü der Leiste (Rechtsklick auf freie
-  Fläche, Umschalt+F10 bzw. Menütaste: ein-/ausblenden, die drei Filter mit Zahl und Kürzel, alle zurücksetzen).
-  Gemerkt in `settings.libraryToolbarCollapsed` (ohne Eintrag ausgeklappt); beim Start ohne Bewegung. Der Titelbereich
-  springt nie: Höhe und Bereich des Griffs rechnen immer mit der ausgeklappten Leiste; die Liste gewinnt 38 bzw. 86 px.
-  Im Regal ist die Leiste immer einzeilig; eingeklappt steht die Kapsel mittig in der früheren Leistenzeile (mindestens
-  16 px unter der Automatik-Karte), die Kachelreihe bleibt, Logo und Knöpfe sinken 32 px (im Konzept 40: dann liefe die
-  Lichtnaht 4 px unter den Knöpfen wie eine Unterstreichung).
+  auf der Bildkante, rechtsbündig mit der Liste (Liste 10 px, Raster 22 px darunter); sie zeigt „Suchen Strg+F“ (11 px
+  zwischen Wort und Tastenkappe) oder die aktiven Filter (Suchbegriff, Quelle, Mini-Symbole, „x/652“, was nicht passt als
+  „+2“) mit „Suche und Filter zurücksetzen“ (✕, nur eingeklappt und gefiltert da, sonst auch nicht im Automationsbaum),
+  gefiltert dazu die Lichtnaht entlang der Bildkante. Die Leuchtlinie des Ziehgriffs endet 12 px vor Lasche bzw. Kapsel.
+  Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel, Strg+Umschalt+F, Strg+F1, Strg+F (blendet dauerhaft
+  ein und sucht) und das Menü der Leiste (Rechtsklick auf freie Fläche, Umschalt+F10 bzw. Menütaste: ein-/ausblenden,
+  die drei Filter mit Zahl und Kürzel, alle zurücksetzen). Gemerkt in `settings.libraryToolbarCollapsed` (ohne Eintrag
+  ausgeklappt); beim Start ohne Bewegung. Der Titelbereich springt nie: Höhe und Bereich des Griffs rechnen immer mit der
+  ausgeklappten Leiste; die Liste gewinnt 38 bzw. 86 px. Im Regal ist die Leiste immer einzeilig; die Lasche sitzt wie im
+  Konzept in der 22-px-Fuge zwischen Leiste und Kachelreihe (eine beim Überfahren angehobene Kachel gleitet so lange mit
+  ihrer Ecke unter die Lasche: über der Leiste stieße sie an die Automatik-Karte, unter den Kacheln wäre sie zum Teil
+  nicht mehr anklickbar); eingeklappt steht die Kapsel mittig in der früheren Leistenzeile (mindestens 16 px unter der
+  Automatik-Karte), die Kachelreihe bleibt, Logo und Knöpfe sinken 32 px (im Konzept 40: dann liefe die Lichtnaht 4 px
+  unter den Knöpfen wie eine Unterstreichung).
   Bewegung (`MotionChannels`, `ToolbarChoreography`, Zeiten aus `leiste.js`): Einfalten „Voll“ 740 ms (Welle der
   Elemente zur Lasche, Liste gleitet, Lasche wird Kapsel, Lichtstreif und Hof als „Zündung“), Ausfalten 620 ms (von der
-  Suche aus, wenn Strg+F es auslöst); „Reduziert“ höchstens 300 ms Überblenden ohne Wege; „Aus“, minimiert, unsichtbar
-  oder während eines Spiels sofort. Jede Bewegung lässt sich unterbrechen und läuft vom aktuellen Wert weiter. Die
-  Liste steht sofort an ihrem Endplatz und wird nur verschoben (FLIP: Inhalt per Verschiebung, Hintergrund der Karte per
-  Skalierung von unten); bewegt werden nur Deckkraft und Transformationen, dazu Breite und Höhe der Lasche. Der Bildtakt
-  ist nur angemeldet, solange etwas läuft (danach 0 Anmeldungen).
+  Suche aus, wenn Strg+F es auslöst); „Reduziert“ höchstens 300 ms Überblenden ohne Wege (das alte Bild über einen
+  `VisualBrush`, `ElementBitmap`; das ✕ blendet mit der Kapsel); „Aus“, minimiert, unsichtbar oder während eines Spiels
+  sofort. Jede Bewegung lässt sich unterbrechen und läuft vom aktuellen Wert weiter. Ändern sich eingeklappt die Filter
+  (Vorschau `refresh`), gleitet die Breite der Kapsel vom jetzigen Wert neu (160 ms), die Naht zieht sich mit CubicEase In
+  zurück, Hof und Naht folgen dem Filterzustand auch mitten in der Zündung; nur während die Lasche gerade zur Kapsel wird,
+  wird lediglich das Ziel der Breite nachgeführt (die Vorschau schnitte diese Bewegung ab). Gleicher Inhalt (etwa nach
+  dem Sortieren) baut nichts neu und bewegt nichts. Die Liste steht sofort an ihrem Endplatz und wird nur verschoben
+  (FLIP: Inhalt per Verschiebung, Hintergrund der Karte per Skalierung von unten); bewegt werden nur Deckkraft und
+  Transformationen, dazu Breite und Höhe der Lasche. Der Bildtakt ist nur angemeldet, solange etwas läuft (danach 0
+  Anmeldungen).
   Zugänglichkeit: Die Lasche ist ein Knopf mit Aus-/Einklappen (ExpandCollapse), Name „Werkzeugleiste“, ItemStatus
   „Keine Filter“ bzw. „Gefiltert: … – x von y“, Hilfetext mit den Kürzeln; der Wechsel wird als Mitteilung angesagt.
-  Lag der Fokus in der Leiste, geht er auf die Kapsel. Eingeklappt ist die Leiste weder in der Tab-Reihenfolge noch im
-  Automationsbaum; im Hochkontrast gelten die Systemfarben. Prüfung: `test.ps1 -Filter
-  "FullyQualifiedName~Toolbar|FullyQualifiedName~Showcase|FullyQualifiedName~MainWindowLayout"` (Leiter, Hysterese,
-  Kurven, Zustände, Peer, Geometrie bei zehn Fenstergrößen von 1000×620 bis 3440×1440), `phase10-ui.ps1` (eine Zeile bei
-  1600×1000, zwei im schmalen Fenster, Ein-/Ausklappen per UI-Automation, gemerkt auch nach Neustart, Kapsel und Liste in
-  Liste und Regal); neue Zustände für Bildschirmfotos `liste-gefiltert`, `liste-/raster-/regal-eingeklappt` (auch
-  `-gefiltert`), `liste-tooltip`, `liste-lasche`, `liste-menue-leiste`, `liste-einklappen-t120`, `-t600` und
-  `liste-ausklappen-t140`.
+  Der Fokus geht nie verloren: Lag er beim Einklappen in der Leiste, geht er auf die Kapsel, ebenso, wenn das ✕ mit dem
+  Fokus verschwindet (Filter zurückgesetzt) oder beim Ausklappen keinen Fokus mehr nimmt; in einem nicht aktiven Fenster
+  gilt das für den Fokus, den es beim Aktivieren wiederherstellt, niemandem wird er genommen. Eingeklappt ist die Leiste
+  weder in der Tab-Reihenfolge noch im Automationsbaum. Im hohen Kontrast sind Fläche, Rahmen und alles in Lasche,
+  Kapsel und ✕ in Systemfarben (Text, Tastenkappen, Mini-Symbole, Zahl), Naht und Streif in der Markierungsfarbe ohne
+  Schein. Prüfung: `test.ps1 -Filter
+  "FullyQualifiedName~Toolbar|FullyQualifiedName~Showcase|FullyQualifiedName~MainWindowLayout"` (Leiter und Schwellen
+  bei 96, 106, 120 und 144 dpi, Hysterese, Kurven, Zustände, Fokus, hoher Kontrast, Peer, Geometrie bei 14 Fenstergrößen
+  von 1000×620 bis 3440×1440 samt den echten Größen bei 110 %, Kanten auf ganzen Pixeln des Fensters), `phase10-ui.ps1`
+  (eine Zeile bei 1600×1000, zwei im schmalen Fenster, Zeilen nach der Schwelle auch bei 1366×768, Knöpfe und Abstände
+  genau im Pixelraster, Ein-/Ausklappen per UI-Automation, gemerkt auch nach Neustart, Kapsel und Liste in Liste und
+  Regal, kein unsichtbares ✕, Strg+F über `--test-toolbar-search` ohne Tastatureingabe); Zustände für Bildschirmfotos
+  `liste-gefiltert`, `liste-/raster-/regal-eingeklappt` (auch `-gefiltert`), `liste-tooltip`, `liste-lasche`,
+  `liste-menue-leiste`, `liste-einklappen-t120`, `-t600`, `liste-ausklappen-t140` und im hohen Kontrast
+  `liste-eingeklappt-kontrast` (auch `-gefiltert-kontrast`).

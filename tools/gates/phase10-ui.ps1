@@ -15,7 +15,11 @@
 #   - Lasche ToolbarToggle (ExpandCollapse): Leiste aus- und einblenden, Zustand gemerkt (libraryToolbarCollapsed, auch nach
 #     Neustart); eingeklappt ist die Leiste nicht mehr im Automationsbaum, die Kapsel sitzt mittig auf der Bildkante 10 px
 #     über der Liste (der Titelbereich springt nicht) bzw. im Regal in der früheren Leistenzeile unter der Automatik-Karte,
-#     nennt die Filter („Gefiltert: …“) und setzt sie zurück
+#     nennt die Filter („Gefiltert: …“) und setzt sie zurück; ausgeklappt gibt es kein unsichtbares „zurücksetzen“
+#   - Strg+F bei eingeklappter Leiste über die Testinstanz (--test-toolbar-search, keine Tastatureingabe): dauerhaft
+#     ausgeklappt, gemerkt, Fokus auf der Suche (Prüfung 2026-10-19)
+#   - Pixelraster und Schwellen (Prüfung 2026-10-19): Symbolknöpfe und Abstände genau round(40 bzw. 8 · Skalierung)
+#     Bildschirmpixel, Zahl der Zeilen nach der Listenbreite (806/410) bei jeder Skalierung, auch bei 1366×768
 #   - Raster: gleich große Kacheln über die ganze Breite, keine leere Spalte rechts, nichts ragt hinaus, bei jeder Größe
 #   - Regal: Kachelreihe mit Blättern, Karte „Automatik“, Details als Schublade (öffnen und schließen)
 #   - Detailbereich mit allen bisherigen Funktionen und „BILDER“; Kontextmenü des Spiels; „Bild wählen…“ mit eigener Datei
@@ -159,6 +163,26 @@ function Check-Toolbar($win, [string]$label, [double]$scale) {
     for ($r = 1; $r -lt $rows.Count; $r++) {
         $d = $boxes[$rows[$r][0]].Top - $boxes[$rows[$r - 1][0]].Bottom
         if ([math]::Abs($d - $gap) -gt 2) { $gaps = $false }
+    }
+    # Pixelraster (Prüfung 2026-10-19, auch bei 110 %): alle Symbolknöpfe genau round(40 · Skalierung) Bildschirmpixel breit
+    # (vorher 44 und 45 px), alle Abstände genau round(8 · Skalierung) (je höchstens ein halber Pixel Messrundung)
+    $buttonPx = [math]::Round(40 * $scale, [MidpointRounding]::AwayFromZero)
+    $gapPx = [math]::Round(8 * $scale, [MidpointRounding]::AwayFromZero)
+    $widths = @(3, 4, 5, 7, 8, 9 | ForEach-Object { $boxes[$_].Width })
+    $exact = @($widths | Where-Object { [math]::Abs($_ - $buttonPx) -gt 0.5 }).Count -eq 0
+    foreach ($row in $rows) {
+        for ($k = 1; $k -lt $row.Count; $k++) {
+            if ($ids[$row[$k]] -ne 'ViewSegment' -and [math]::Abs(($boxes[$row[$k]].Left - $boxes[$row[$k - 1]].Right) - $gapPx) -gt 0.5) { $exact = $false }
+        }
+    }
+    Check $exact ("$label`: Pixelraster: Symbolknöpfe {0} px ({1}), Abstände {2} px" -f $buttonPx, (($widths | ForEach-Object { [math]::Round($_, 2) }) -join '/'), $gapPx)
+    # Zeilen nach den Schwellen der Vorschau, geräteunabhängig und bei jeder Skalierung dieselben (Prüfung 2026-10-19: ein
+    # Fenster 1366×768 bei 110 % war zweizeilig): eine Zeile ab einer Listenbreite von 806, darunter zwei, unter 410 drei
+    # (ohne Ziehen, also ohne Hysterese; direkt an einer Schwelle nicht geprüft, dort entscheidet die Messrundung)
+    $listDip = $b.Width / $scale
+    $expectRows = if ($listDip -ge 806) { 1 } elseif ($listDip -ge 410) { 2 } else { 3 }
+    if ([math]::Abs($listDip - 806) -gt 1 -and [math]::Abs($listDip - 410) -gt 1) {
+        Check ($rows.Count -eq $expectRows) ("$label`: {0} Zeile(n) bei einer Listenbreite von {1:N1} px (Schwellen 806/410: {2})" -f $rows.Count, $listDip, $expectRows)
     }
     $list = Find-Id $win 'GameList' 1000
     $alignedWithList = $true
@@ -324,6 +348,8 @@ try {
             Check ($range1.Current.Maximum -eq 186 -or ($content1 -ge 0 -and $content1 -le 12)) ("Schmales Fenster: Bereich des Griffs bis {0} px bei {1} px hoher Werkzeugleiste (Rahmen {2:N1} px)" -f $range1.Current.Maximum, $bar1, $content1)
         }
     } else { Check $false 'Fenster lässt sich per UI-Automation in der Größe ändern' }
+    # 1366×768 Bildschirmpixel (bei 110 % 1237×696, Liste etwa 807): Zeilen nach der Schwelle wie bei 100 %
+    if (Resize-Window $win 1366 768) { Check-Toolbar $win 'Fenster 1366x768' $scale }
     [void](Resize-Window $win 1600 1000)
     Check-Toolbar $win 'Wieder 1600x1000' $scale
     Check ($BarRows -eq $wideRows) ('Wieder breit: dieselbe Zahl Zeilen wie vorher ({0})' -f $BarRows)
@@ -342,6 +368,7 @@ try {
         Check ($newStatus -match '\d') ('Filter „Neu“ nennt seine Zahl („{0}“)' -f $newStatus)
         $state = if ($newFilter) { Toggle-El $newFilter } else { $null }
         Check ($state -eq 'On' -and (Wait-Until { (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -match '^Gefiltert: ' } 3000)) ('Filter „Neu“ an, die Lasche nennt ihn („{0}“)' -f (Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus)
+        Check ($null -eq (Find-Id $win 'ToolbarResetButton' 600)) 'Ausgeklappt und gefiltert: kein unsichtbares „Suche und Filter zurücksetzen“ im Automationsbaum'
 
         $barBefore = Rect (Find-Id $win 'LibraryToolbar' 2000)
         $listBefore = (Rect (Find-Id $win 'GameList' 2000)).Top
@@ -374,6 +401,26 @@ try {
         $off = $null
         Check ($newFilter -and $newFilter.TryGetCurrentPattern([Windows.Automation.TogglePattern]::Pattern, [ref]$off) -and $off.Current.ToggleState -eq 'Off') 'Ausgeklappt: Leiste wieder da, Filter „Neu“ aus'
         Check ([math]::Abs((Rect (Find-Id $win 'GameList' 2000)).Top - $listBefore) -le 1.5) 'Liste wieder an ihrem Platz'
+
+        # Strg+F bei eingeklappter Leiste, ohne Tastatureingabe über die Testinstanz (--test-toolbar-search ruft dasselbe wie die
+        # Taste): dauerhaft ausgeklappt und gemerkt, der Fokus auf der Suche. Ist das Fenster nicht aktiv, ist das der Fokus,
+        # den es beim Aktivieren wiederherstellt; niemandem wird er genommen.
+        # (Die Ablage wird hier erst gelesen, wenn die App fertig geschrieben hat: Liest das Gate, während sie die Datei
+        # ersetzt, scheitert ihr Speichern mit „Zugriff verweigert“.)
+        $expand.Collapse()
+        Check (Wait-Until { $expand.Current.ExpandCollapseState -eq 'Collapsed' }) 'Für Strg+F wieder eingeklappt'
+        Start-Sleep -Milliseconds 1500
+        Check ((Read-Config $cfg).settings.libraryToolbarCollapsed -eq $true) 'Für Strg+F: eingeklappt gemerkt'
+        Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--test-toolbar-search') | Out-Null
+        $searchPattern = 'Prüfung: Strg\+F ausgeführt \((\S+)\), Werkzeugleiste (\S+), Fokus (\S+)\.'
+        $searchLog = Wait-Log $cfg $searchPattern 8000
+        $searchHit = if ($searchLog) { [regex]::Matches($searchLog, $searchPattern) | Select-Object -Last 1 } else { $null }
+        Check ($searchHit -and $searchHit.Groups[1].Value -eq 'erledigt' -and $searchHit.Groups[2].Value -eq 'ausgeklappt' -and $searchHit.Groups[3].Value -eq 'SearchBox') ('Strg+F: ausgeklappt, Fokus auf der Suche („{0}“)' -f $(if ($searchHit) { $searchHit.Value } else { 'nicht im Protokoll' }))
+        $searchExpanded = Wait-Until { $expand.Current.ExpandCollapseState -eq 'Expanded' } 4000
+        Start-Sleep -Milliseconds 1500
+        $searchStored = (Read-Config $cfg).settings.libraryToolbarCollapsed
+        Check ($searchExpanded -and -not $searchStored) ('Strg+F: dauerhaft ausgeklappt und gemerkt (libraryToolbarCollapsed {0})' -f $searchStored)
+        Check ($null -ne (Find-Id $win 'SearchBox' 3000)) 'Strg+F: Suche wieder im Automationsbaum'
     }
 
     # --- Detailbereich: alle bisherigen Funktionen und „BILDER“ ---

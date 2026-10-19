@@ -160,4 +160,17 @@ public sealed class AppArgumentsTests
         // Gegenprobe: nach "--" gehört es zum Spielbefehl.
         Assert.False(AppArguments.Parse(["--", "--test-hdr-moment"]).TestHdrMoment);
     }
+
+    [Fact]
+    public void Test_toolbar_search_is_a_command_and_forwarded_to_the_test_instance()
+    {
+        // G10.5: phase10-ui.ps1 lässt die laufende Testinstanz Strg+F ausführen, ohne eine Taste zu senden.
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--test-toolbar-search"]);
+        Assert.True(args.TestToolbarSearch);
+        Assert.True(args.HasCommand);
+        Assert.Equal(["--test-toolbar-search"], args.ToForwardedArgs());
+        Assert.True(AppArguments.Parse(args.ToForwardedArgs()).TestToolbarSearch);
+        Assert.False(AppArguments.Parse(["--", "--test-toolbar-search"]).TestToolbarSearch);
+        Assert.False(AppArguments.Parse(["--test-hdr-moment"]).TestToolbarSearch);
+    }
 }

@@ -112,6 +112,13 @@ G10.5. Seit 2026-10-17 wird sie umgesetzt:
 - **Noch offen:** Die Prüfung aus drei Blickwinkeln (Funktion, Aussehen und Bewegung, Treue zur Vorschau) wurde beim
   Anhalten abgebrochen. Neu starten, danach Korrektur und Gegenprüfung. Dann geht es weiter mit „Nächste Schritte“
   ab Punkt 3, wobei `feature/library-toolbar` an die Stelle von `feature/showcase` tritt.
+- **Regal, Lasche und angehobene Kachel:** Die Lasche liegt in der 22-px-Fuge zwischen Leiste und Kachelreihe. Beim
+  Überfahren hebt sich die rechte Kachel an, ihre obere rechte Ecke reicht dann unter die Lasche.
+  - **Entscheidung des Nutzers 2026-10-19:** „Den Vorschlag notieren, erstmal so lassen.“
+  - **Begründung der Korrektur:** Über der Leiste stieße die Lasche bei kleinem Titelbereich an die Automatik-Karte;
+    unter den Kacheln wäre sie schlecht anklickbar.
+  - **Falls es später stört:** Die angehobene Kachel könnte die Ecke unter der Lasche frei lassen. Die Lasche könnte
+    beim Überfahren der Kachel kurz ausblenden. Oder die Kachelreihe hebt sich nicht nach oben in die Fuge.
 
 Der Zweig `claude/modest-thompson-62a15c` (87699e4) stammt aus der Sitzung des Nutzers zum Wackeltest. Er lässt die
 Bindungsfehler-Prüfungen allein laufen (`ShellSerialCollection`, `BindingErrorRecorder`) und baut auf 5731db1 auf.

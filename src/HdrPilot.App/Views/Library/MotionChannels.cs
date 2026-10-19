@@ -129,6 +129,9 @@ public sealed class MotionChannels
     /// <summary>Wohin ein Kanal geht: das Ende seiner laufenden Bewegung, sonst sein jetziger Wert.</summary>
     public double Heading(string key, double fallback = 0) => _running.TryGetValue(key, out var motion) ? motion.End : Get(key, fallback);
 
+    /// <summary>Wie lange die Bewegung eines Kanals noch dauert (mit ihrer Wartezeit), in ms; 0, wenn keine läuft.</summary>
+    public double Remaining(string key) => _running.TryGetValue(key, out var motion) ? Math.Max(0, motion.Start + motion.Duration - Now) : 0;
+
     /// <summary>Wert sofort setzen; eine laufende Bewegung des Kanals endet.</summary>
     public void Set(string key, double value)
     {

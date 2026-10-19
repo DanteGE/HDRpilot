@@ -233,13 +233,23 @@ public sealed class ToolbarChoreography(MotionChannels channels)
             SetUnlessRunning(CapsuleItem(i, 'x'), 0);
         }
 
-        if (target.HasReset)
-        {
-            SetUnlessRunning(Reset, 1);
-        }
-        else
+        if (!target.HasReset)
         {
             channels.Set(Reset, 0);
+        }
+        else if (Math.Abs(channels.Heading(Reset) - 1) > 0.001)
+        {
+            // Mitten im Einklappen (Voll) gefiltert: Das ✕ blendet erst ein, wenn die Lasche Kapsel geworden ist (120 ms
+            // danach), sonst stünde es voll über der noch nicht verwandelten Lasche.
+            var morph = Math.Max(channels.Remaining(PillHeight), Math.Max(channels.Remaining(PillTy), channels.Remaining(PillTurn)));
+            if (morph > 0 && level != ToolbarMotionLevel.Instant)
+            {
+                channels.Animate(Reset, 1, 120, delayMs: morph);
+            }
+            else
+            {
+                channels.Set(Reset, 1);
+            }
         }
 
         var rest = target.Filtered ? FilteredHalo : 0;
@@ -569,7 +579,7 @@ public sealed class ToolbarChoreography(MotionChannels channels)
             channels.Animate(CapsuleItem(i, 'x'), -6, 120);
         }
 
-        channels.Animate(Reset, 0, 80);
+        FadeResetOut(ShownReset(), 80, ToolbarEase.CubicOut);
         channels.Animate(Divider, 0, 100);
         channels.Animate(PillWidth, TabWidth, 200, ToolbarEase.CubicOut, 60);
         channels.Animate(PillHeight, TabHeight, 200, ToolbarEase.Spring, 60);
@@ -631,10 +641,12 @@ public sealed class ToolbarChoreography(MotionChannels channels)
             channels.Animate(Item(slot, 'o'), 1, 120, ToolbarEase.CubicOut, 60);
         }
 
+        var reset = ShownReset();
         GhostTab();
         SettleTab(collapsed: false, target);
         channels.Set(TabOpacity, 0);
         channels.Animate(TabOpacity, 1, 90, ToolbarEase.Linear, 60);
+        FadeResetOut(reset, 90, ToolbarEase.Linear); // mit dem Bild der Kapsel (0–90), das ✕ ist nicht darin
         if (channels.Get(SeamOpacity) > 0)
         {
             channels.Animate(SeamOpacity, 0, 150, ToolbarEase.Linear);
@@ -645,6 +657,26 @@ public sealed class ToolbarChoreography(MotionChannels channels)
         }
 
         channels.Set(StreakOpacity, 0);
+    }
+
+    /// <summary>
+    /// Wie das ✕ der eingeklappten Kapsel gerade zu sehen ist: Es blendet mit ihr (<see cref="Reset"/> mal
+    /// <see cref="TabOpacity"/>). Ausgeklappt gilt nur <see cref="Reset"/>, <see cref="TabOpacity"/> gehört dann der neuen Lasche.
+    /// </summary>
+    private double ShownReset() => channels.Get(Reset) * channels.Get(TabOpacity, 1);
+
+    /// <summary>✕ beim Ausklappen ausblenden, von dem Wert aus, mit dem es zu sehen ist (kein Sprung).</summary>
+    private void FadeResetOut(double shown, double durationMs, Func<double, double> ease)
+    {
+        if (shown > 0.001)
+        {
+            channels.Set(Reset, shown);
+            channels.Animate(Reset, 0, durationMs, ease);
+        }
+        else
+        {
+            channels.Set(Reset, 0);
+        }
     }
 
     private void GhostTab()

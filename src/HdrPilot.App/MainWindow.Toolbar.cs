@@ -1131,9 +1131,10 @@ public partial class MainWindow
         TabGhost.Opacity = ch.Get(ToolbarChoreography.TabGhost);
 
         // ✕ der Kapsel: blendet mit ihr (Vorschau: #cx liegt in #tabw), nur eingeklappt und gefiltert da, sonst weder zu sehen
-        // noch im Automationsbaum. Verschwindet es oder nimmt keinen Fokus mehr, während es den Fokus hat, geht der auf die
-        // Kapsel.
-        var reset = ch.Get(ToolbarChoreography.Reset) * tabOpacity;
+        // noch im Automationsbaum. Beim Ausklappen blendet es für sich aus (Reduziert: mit dem Bild der Kapsel), die Deckkraft
+        // der Lasche gehört dann der neuen Lasche. Verschwindet es oder nimmt keinen Fokus mehr, während es den Fokus hat, geht
+        // der auf die Kapsel.
+        var reset = ch.Get(ToolbarChoreography.Reset) * (_shownCollapsed ? tabOpacity : 1);
         var live = _shownCollapsed && _capsuleReset;
         var shown = _capsuleReset && (_shownCollapsed || reset > 0.001);
         if (ToolbarResetButton.Focusable && (!live || !shown) && HasFocusWithin(ToolbarResetButton))

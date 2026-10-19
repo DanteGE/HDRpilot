@@ -177,6 +177,8 @@ public sealed class ToolbarMotionTests
         At(time, ch, 50);
         Assert.Equal(0, ch.Get(Item(ToolbarSlot.Search, 'o')), 3);
         Assert.Equal(1, ch.Get(Item(ToolbarSlot.Search, 's')), 3);
+        Assert.InRange(ch.Get(Reset), 0.3, 0.6); // das ✕ blendet mit dem Bild der Kapsel aus (0–90 ms)
+        Assert.Equal(ch.Get(TabGhost), ch.Get(Reset), 3);
         At(time, ch, 300);
         Assert.Equal(0, ch.Running);
         Assert.Equal(1, ch.Get(Item(ToolbarSlot.Search, 'o')), 3);
@@ -374,6 +376,39 @@ public sealed class ToolbarMotionTests
         Assert.Equal(0, ch.Get(Reset), 3);
         Assert.Equal(Plain.CapsuleWidth, ch.Get(PillWidth), 3);
         Assert.Equal(0, clock.Subscribers);
+    }
+
+    [Fact]
+    public void Filter_on_mid_collapse_fades_the_reset_in_only_after_the_tab_became_the_capsule()
+    {
+        // Ungefiltert eingeklappt, bei 100 ms kommt ein Filter dazu (Alt+N): Die Lasche wird noch bis 380 ms zur Kapsel. Das ✕
+        // bleibt so lange weg und blendet danach 120 ms ein, statt sofort voll über der Lasche zu stehen.
+        var (choreo, ch, clock, time) = Create(collapsed: false, Plain);
+        choreo.Collapse(ToolbarMotionLevel.Full, listDy: 38, Order, Plain);
+        At(time, ch, 100);
+        choreo.CapsuleChanged(ToolbarMotionLevel.Full, Filtered);
+        for (var ms = 100; ms < 380; ms += 10)
+        {
+            At(time, ch, ms);
+            Assert.True(ch.Get(Reset) < 0.001, FormattableString.Invariant($"{ms} ms, Höhe {ch.Get(PillHeight):0.##}: ✕ schon {ch.Get(Reset):0.###}"));
+            if (ms == 250)
+            {
+                choreo.CapsuleChanged(ToolbarMotionLevel.Full, Filtered with { CapsuleWidth = 260 }); // weiter getippt: wartet weiter
+            }
+        }
+
+        At(time, ch, 380);
+        Assert.Equal(CapsuleHeight, ch.Get(PillHeight), 3);
+        Assert.Equal(0, ch.Get(Reset), 3);
+        At(time, ch, 440);
+        Assert.InRange(ch.Get(Reset), 0.3, 0.95);
+        At(time, ch, 500);
+        Assert.Equal(1, ch.Get(Reset), 3);
+        At(time, ch, 800);
+        Assert.Equal(0, ch.Running);
+        Assert.Equal(0, clock.Subscribers);
+        Assert.Equal(1, ch.Get(Reset), 3);
+        Assert.Equal(260, ch.Get(PillWidth), 3);
     }
 
     [Fact]

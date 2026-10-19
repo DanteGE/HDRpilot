@@ -956,6 +956,38 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Reduced_reset_button_fades_out_with_the_capsule()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size, collapsed: true, effects: "Reduced");
+            var (_, time) = HandClock(window);
+            model.ToggleFilter(ToolbarFilter.New);
+            At(window, time, 1000);
+            var reset = Named<Button>(window, "ToolbarResetButton");
+            var ghost = Named<Image>(window, "TabGhost");
+            Assert.Equal(1, reset.Opacity, 3);
+            model.IsToolbarCollapsed = false;
+            Arrange(window, size);
+
+            // Die Kapsel blendet als Bild 0–90 ms aus, das ✕ mit ihr (es ist nicht im Bild), nicht schon bei 0 ms weg.
+            At(window, time, 1000);
+            Assert.Equal(Visibility.Visible, reset.Visibility);
+            Assert.Equal(1, reset.Opacity, 3);
+            At(window, time, 1045);
+            Assert.InRange(reset.Opacity, 0.3, 0.7);
+            Assert.Equal(ghost.Opacity, reset.Opacity, 3);
+            Assert.False(reset.IsHitTestVisible); // ausgeklappt nicht mehr zu bedienen, auch während es ausblendet
+            Assert.False(reset.Focusable);
+            At(window, time, 1300);
+            Assert.Equal(0, reset.Opacity, 3);
+            Assert.Equal(Visibility.Collapsed, reset.Visibility);
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void Reduced_ghost_shows_the_element_even_far_inside_its_parent()
     {
         WpfTestHost.Run(() =>

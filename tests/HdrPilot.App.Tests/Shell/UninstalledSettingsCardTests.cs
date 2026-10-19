@@ -98,7 +98,7 @@ public sealed class UninstalledSettingsCardTests
         var request = Assert.Single(_confirm.Requests);
         Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, 2), request.Title);
         Assert.Equal(["ROLLA", "The Outlast Trials · „HDR automatisch“ ist an"], request.Details);
-        Assert.Equal("Nicht verbunden: F:. Spiele dort sind vielleicht noch installiert.", request.Warning);
+        Assert.Equal("Laufwerk F: ist nicht verbunden. Spiele dort sind vielleicht noch installiert.", request.Warning);
         Assert.Null(request.OptionText);
         Assert.Equal(["Manual:m1", "Steam:553850"], context.Config.Current.Games.Select(g => g.Key));
         Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_DoneMany, 2), vm.LibraryMessage);

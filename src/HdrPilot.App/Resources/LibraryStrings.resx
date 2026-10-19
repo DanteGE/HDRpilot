@@ -1510,8 +1510,12 @@
     <value>{0} · {1}</value>
     <comment>{0} = Spielname, {1} = was verloren geht (durch Kommas getrennt)</comment>
   </data>
-  <data name="RemoveAll_DrivesMissing" xml:space="preserve">
-    <value>Nicht verbunden: {0}. Spiele dort sind vielleicht noch installiert.</value>
+  <data name="RemoveAll_DrivesMissingOne" xml:space="preserve">
+    <value>Laufwerk {0} ist nicht verbunden. Spiele dort sind vielleicht noch installiert.</value>
+    <comment>{0} = Laufwerk, etwa „F:“</comment>
+  </data>
+  <data name="RemoveAll_DrivesMissingMany" xml:space="preserve">
+    <value>Laufwerke {0} sind nicht verbunden. Spiele dort sind vielleicht noch installiert.</value>
     <comment>{0} = Laufwerke, etwa „F:, G:“</comment>
   </data>
   <data name="RemoveAll_DoneOne" xml:space="preserve">

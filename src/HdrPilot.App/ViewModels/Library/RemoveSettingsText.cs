@@ -37,7 +37,12 @@ public static class RemoveSettingsText
         {
             DetailsHeader = LibraryStrings.RemoveAll_DetailsHeader,
             Details = games.Select(GameLine).ToList(),
-            Warning = missingDrives.Count == 0 ? null : LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissing, string.Join(", ", missingDrives)),
+            Warning = missingDrives.Count switch
+            {
+                0 => null,
+                1 => LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingOne, missingDrives[0]),
+                _ => LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingMany, string.Join(", ", missingDrives)),
+            },
             OptionText = ShortcutOption(shortcuts),
             OptionHint = shortcuts > 0 ? LibraryStrings.RemoveSettings_ShortcutHint : null,
         };

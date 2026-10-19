@@ -124,6 +124,22 @@ public sealed class RemoveSettingsTests
     });
 
     [Fact]
+    public void RemoveSettings_bulk_confirmation_names_every_game_and_all_missing_drives()
+    {
+        var outlast = Game(GameSource.Steam, "1304930", "The Outlast Trials", hdrAuto: true, isNew: false, installed: false);
+        var klippe = Game(GameSource.Steam, "9990140", "KLIPPE Demo", installed: false);
+
+        var request = RemoveSettingsText.ForGames([outlast, klippe], ["F:", "G:"], shortcuts: 3);
+
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, 2), request.Title);
+        Assert.Equal(["The Outlast Trials · „HDR automatisch“ ist an", "KLIPPE Demo"], request.Details);
+        Assert.Equal("Laufwerke F:, G: sind nicht verbunden. Spiele dort sind vielleicht noch installiert.", request.Warning);
+        Assert.Equal("Auch die 3 HDRpilot-Verknüpfungen löschen", request.OptionText);
+        Assert.True(request.IsDanger);
+        Assert.Null(RemoveSettingsText.ForGames([klippe], [], shortcuts: 0).Warning);
+    }
+
+    [Fact]
     public void RemoveSettings_cancel_leaves_the_config_and_all_files_unchanged() => Sta.Run(async () =>
     {
         var context = SampleContext();

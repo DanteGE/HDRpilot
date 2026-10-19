@@ -308,6 +308,10 @@ public partial class MainWindow : ChromeWindow
         }
 
         menu.PlacementTarget = target; // Datenkontext über PlacementTarget.Tag wie beim echten Öffnen
+
+        // Bindungen erst übernehmen (Sichtbarkeit der Einträge hängt am Spiel, etwa „Einstellungen entfernen…“, E90), dann
+        // messen: sonst wäre das Menü höher als gemessen und unten abgeschnitten.
+        Dispatcher.Invoke(static () => { }, DispatcherPriority.Loaded);
         menu.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         var size = menu.DesiredSize;
         var at = target.TranslatePoint(new Point(Math.Min(260, target.ActualWidth * 0.5), target.ActualHeight * 0.6), Root);

@@ -157,6 +157,34 @@ public sealed class RemoveSettingsWindowTests
     }
 
     [Fact]
+    public void RemoveSettings_entry_fits_into_the_context_menu_preview_of_a_low_row()
+    {
+        // Bildschirmfoto des Kontextmenüs (E90): Das Menü eines tief stehenden nicht installierten Spiels wird so gesetzt,
+        // dass auch sein letzter Eintrag „Einstellungen entfernen…“ ganz im Fenster liegt (gemessen mit übernommenen Bindungen).
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var context = new TestLibraryContext([.. Enumerable.Range(1, 30).Select(i => Game(GameSource.Steam, "g" + i, $"Spiel {i:00}", isNew: false, installed: i != 10))]);
+            var model = new LibraryViewModel(context, new FakeDialogs());
+            var window = new MainWindow();
+            window.Attach(model);
+            Arrange(window);
+            model.SelectedGame = ByName(model, "Spiel 10");
+            Arrange(window);
+
+            var overlay = Assert.IsType<HdrPilot.App.Infrastructure.SnapshotOverlay>(window.CreateContextMenuPreview());
+            var menu = Assert.IsType<ContextMenu>(overlay.Element);
+            WpfTestHost.DoEvents();
+            menu.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var entry = menu.Items.OfType<MenuItem>().Single(i => AutomationProperties.GetAutomationId(i) == "ContextRemoveSettings");
+            Assert.Equal(Visibility.Visible, entry.Visibility);
+            var root = (FrameworkElement)window.FindName("Root");
+            Assert.InRange(overlay.Position.Y + menu.DesiredSize.Height, 0, root.ActualHeight);
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void RemoveSettings_dialog_shows_losses_warning_and_checkbox_with_the_focus_on_cancel()
     {
         WpfTestHost.Run(() =>

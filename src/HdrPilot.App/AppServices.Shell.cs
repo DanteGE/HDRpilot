@@ -5,6 +5,7 @@ using HdrPilot.App.Services;
 using HdrPilot.App.Services.Artwork;
 using HdrPilot.App.Services.Display;
 using HdrPilot.App.Theming;
+using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Library;
 using HdrPilot.App.Views.Shell;
@@ -81,6 +82,25 @@ public sealed partial class AppServices
         scenes.Add(SettingsScene("darstellung", "NavAppearance"));
         scenes.Add(SettingsScene("darstellung-bilder", "NavAppearanceArtwork"));
         scenes.Add(SettingsScene("darstellung-tray", "NavAppearanceTray"));
+
+        // Karte „Bibliothek“ (E90) und die Rückfrage des Sammel-Entfernens mit allen entfernbaren Spielen der Ablage.
+        scenes.Add(SettingsScene("bibliothek", "NavLibrary"));
+        scenes.Add(new SnapshotScene("einstellungen", "rueckfrage-alle", RemoveAllDialogScene) { Settle = TimeSpan.FromSeconds(1), Resizable = false });
+    }
+
+    /// <summary>Rückfrage des Sammel-Entfernens, wie die Einstellungen sie zusammensetzen; ohne entfernbares Spiel ein leeres Fenster.</summary>
+    private Window RemoveAllDialogScene()
+    {
+        var games = LibraryCleanup.Removable(Config.Current);
+        if (games.Count == 0)
+        {
+            return new Window();
+        }
+
+        var drives = games.Select(g => UninstalledGameCleanup.DriveOf(g.InstallDir)).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(d => GameCleanup.MissingDriveAsync(d + "\\").GetAwaiter().GetResult()).OfType<string>().ToList();
+        var shortcuts = games.Sum(g => GameCleanup.FindShortcuts(g.Key).Count);
+        return new ConfirmDialog(RemoveSettingsText.ForGames(games, drives, shortcuts));
     }
 
     /// <summary>

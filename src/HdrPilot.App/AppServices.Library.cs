@@ -126,6 +126,18 @@ public sealed partial class AppServices
         // Treffer (siehe die Zustände „-gefiltert“), ohne Treffer kein Spiel und den Hinweis in der Liste.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-ohne-treffer", () => LibraryScene(LibraryViewMode.List), NoMatchAsync) { Settle = LibrarySettle });
 
+        // Nicht installierte Spiele (E90): Knopf „Einstellungen entfernen…“ ganz unten im Detailbereich, das Kontextmenü mit dem
+        // Eintrag und die Rückfrage für das erste entfernbare Spiel der Ablage, einmal mit den Verknüpfungen, die es wirklich
+        // gibt, und einmal als Vorschau mit zwei (Häkchen), ohne etwas zu entfernen.
+        scenes.Add(new SnapshotScene("hauptfenster", "nicht-installiert", () => LibraryScene(LibraryViewMode.List), w => SelectRemovableAsync(w, scrollDetails: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "kontextmenue-nicht-installiert", () => LibraryScene(LibraryViewMode.List), w => SelectRemovableAsync(w, scrollDetails: false))
+        {
+            Settle = LibrarySettle,
+            Overlays = window => window is MainWindow main && main.CreateContextMenuPreview() is { } menu ? [menu] : [],
+        });
+        scenes.Add(new SnapshotScene("hauptfenster", "rueckfrage-entfernen", () => RemoveSettingsDialogScene(previewShortcuts: 0)) { Settle = TimeSpan.FromSeconds(1), Resizable = false });
+        scenes.Add(new SnapshotScene("hauptfenster", "rueckfrage-entfernen-verknuepfungen", () => RemoveSettingsDialogScene(previewShortcuts: 2)) { Settle = TimeSpan.FromSeconds(1), Resizable = false });
+
         // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
@@ -170,6 +182,44 @@ public sealed partial class AppServices
             vm.ApplySearch();
             await Task.Delay(1400);
         }
+    }
+
+    /// <summary>
+    /// Erstes nicht installiertes Launcher-Spiel der Liste wählen, ohne es als gesehen zu speichern (E90), und auf Wunsch den
+    /// Detailbereich bis ganz nach unten scrollen, wo „Einstellungen entfernen…“ steht.
+    /// </summary>
+    private static async Task SelectRemovableAsync(Window window, bool scrollDetails)
+    {
+        if (window is not MainWindow { ViewModel: { } vm } main
+            || vm.GamesView.Cast<GameItemViewModel>().FirstOrDefault(g => g.IsRemovable) is not { } item)
+        {
+            return;
+        }
+
+        vm.SelectQuietly(item);
+        await Task.Delay(1800);
+        if (scrollDetails)
+        {
+            main.ScrollDetailsToEnd();
+            await Task.Delay(300);
+        }
+    }
+
+    /// <summary>
+    /// Rückfrage „Einstellungen entfernen…“ für das erste entfernbare Spiel der Ablage, wie die Bibliothek sie zusammensetzt
+    /// (Laufwerk geprüft, Verknüpfungen gesucht); mit <paramref name="previewShortcuts"/> über 0 als Vorschau mit so vielen
+    /// Verknüpfungen (Häkchen). Ohne entfernbares Spiel ein leeres Fenster.
+    /// </summary>
+    private Window RemoveSettingsDialogScene(int previewShortcuts)
+    {
+        if (LibraryCleanup.Removable(Config.Current).FirstOrDefault() is not { } game)
+        {
+            return new Window();
+        }
+
+        var drive = GameCleanup.MissingDriveAsync(game.InstallDir).GetAwaiter().GetResult();
+        var shortcuts = previewShortcuts > 0 ? previewShortcuts : GameCleanup.FindShortcuts(game.Key).Count;
+        return new ConfirmDialog(RemoveSettingsText.ForGame(game, drive, shortcuts));
     }
 
     /// <summary>Ein- bzw. Ausklappen der Werkzeugleiste, angehalten nach einigen Millisekunden (wie #t= der Vorschau).</summary>

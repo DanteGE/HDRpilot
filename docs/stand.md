@@ -3,7 +3,24 @@
 Zuletzt aktualisiert: 2026-10-18. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
-## Neue Wünsche des Nutzers (2026-10-18), noch nicht begonnen
+## Seit 2026-10-19 in Arbeit: Auswahl beim Filtern, nicht installierte Spiele, danach Quiver
+- **Recherche und Plan:** nur lesend, liegen in `docs/uebergabe/wuensche-2026-10-18-plan.md`.
+- **Entscheidungen des Nutzers 2026-10-19:** jeweils die Empfehlung.
+  - Beim Entfernen gehen Einstellungen, Bilder und Symbole mit, HDRpilot-Verknüpfungen nur per Häkchen.
+  - Ausgeblendete Spiele zählen nicht mit; Sammel-Entfernen in der Karte „Bibliothek“.
+  - Quiver wird eine eigene Quelle, gestartet direkt über die EXE, ohne PCGamingWiki-Abgleich.
+  - Wird das gewählte Spiel herausgefiltert, springt die Auswahl auf den ersten Treffer und kehrt nach dem Filter
+    zurück.
+- **Kriterien:** in `GATES.md` als G10.5 (Auswahl beim Filtern), Phase 11 und Phase 12.
+- **Lauf 1** auf `feature/library-toolbar` (`.worktrees/s12-bar`, ab 523340c):
+  - Auswahl beim Filtern;
+  - Phase 11;
+  - Prüfung aus Sicht von Funktion, Oberfläche und Datensicherheit;
+  - Korrektur und Gegenprüfung.
+- **Lauf 2 danach:** Phase 12 Quiver.
+- **Wunsch des Nutzers:** gründlich bleiben, Tempo ist zweitrangig.
+
+## Neue Wünsche des Nutzers (2026-10-18)
 Der Nutzer will sie beim nächsten Mal angehen, aber erst auf sein Zeichen. Vorher die Arbeit an der Werkzeugleiste
 (unten) abschließen oder mit ihm die Reihenfolge klären.
 1. **Deinstallierte Spiele:**

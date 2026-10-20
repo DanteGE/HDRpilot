@@ -10,7 +10,10 @@
     <SatelliteResourceLanguages>de;en</SatelliteResourceLanguages>
     <Company>HDRpilot</Company>
     <Product>HDRpilot</Product>
-    <Version>1.4.0</Version>
+    <Authors>Dante_GE</Authors>
+    <!-- Copyright-Zeichen als Zeichenreferenz, damit die Datei reines ASCII bleibt -->
+    <Copyright>&#169; Dante_GE</Copyright>
+    <Version>1.5.0</Version>
     <NeutralLanguage>de</NeutralLanguage>
     <!-- Symbole in der Assembly: keine losen .pdb-Dateien neben der EXE, Stapelverfolgungen behalten Datei und Zeile. -->
     <DebugType>embedded</DebugType>

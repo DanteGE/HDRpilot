@@ -720,7 +720,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Graue Zeile unter dem Kopf wie im echten Menü: „Version 1.4.0“.</summary>
+    /// <summary>Graue Zeile unter dem Kopf wie im echten Menü: „Version 1.5.0“.</summary>
     public string TrayMenuVersion => AppVersion.LabelText;
 
     public string TrayMenuToggleText => HdrOnNow ? ShellStrings.TrayMenuToggleHdrOff : ShellStrings.TrayMenuToggleHdrOn;

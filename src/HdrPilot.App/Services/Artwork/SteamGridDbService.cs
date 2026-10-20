@@ -122,7 +122,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
 
     public event EventHandler? Changed;
 
-    /// <summary>„HDRpilot/1.4.0 (Windows desktop app; artwork)“.</summary>
+    /// <summary>„HDRpilot/1.5.0 (Windows desktop app; artwork)“.</summary>
     public static string UserAgent { get; } =
         "HDRpilot/" + (typeof(SteamGridDbService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0") + " (Windows desktop app; artwork)";
 

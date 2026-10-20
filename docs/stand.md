@@ -3,6 +3,30 @@
 Zuletzt aktualisiert: 2026-10-18. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
+## Veröffentlichung auf GitHub (Wunsch des Nutzers 2026-10-20)
+- **Ziel:** öffentliches Repository https://github.com/DanteGE/HDRpilot. Dort liegen schon zwei Commits des Nutzers
+  („Initial commit“ mit englischer Kurz-README, „Create funding.yml“ mit `ko_fi: Dante_GE`). Beide bleiben erhalten:
+  zusammenführen, nie überschreiben.
+- **Vorgaben des Nutzers:**
+  1. GitHub-noreply-Adresse statt der bisherigen Mail-Adresse: `115689511+DanteGE@users.noreply.github.com`.
+  2. Keine lokalen Pfade, auch nicht in alten Versionen.
+  3. Als Name überall „Dante_GE“.
+  4. Lizenz: PolyForm Strict 1.0.0 mit „Required Notice: Copyright Dante_GE (https://github.com/DanteGE/HDRpilot)“.
+     Erlaubt ist nichtkommerzielle Nutzung, nicht erlaubt sind Änderungen, Weitergabe und kommerzielle Nutzung.
+- **Erledigt:**
+  - Lokale Git-Identität Dante_GE mit noreply-Adresse.
+  - Remote `origin` eingetragen.
+  - Anmeldung bei GitHub eingerichtet und ohne Übertragung geprüft.
+- **Ablauf:**
+  1. Abschlussprüfung von `feature/library-toolbar`.
+  2. Merge nach `phase5/release` und `main`.
+  3. 1.5.0 setzen (Empfehlung; der Nutzer hat nicht widersprochen).
+  4. LICENSE und README-Kopf einfügen.
+  5. Verlauf bereinigen: Werkzeug aus dem Lauf `publish-prep`, getestet an einer Kopie.
+  6. Restesuche über alle Versionen.
+  7. Mit `origin/main` zusammenführen und hochladen.
+  8. Die Setup-Installation bleibt beim Nutzer.
+
 ## Seit 2026-10-19 in Arbeit: Auswahl beim Filtern, nicht installierte Spiele, danach Quiver
 - **Recherche und Plan:** nur lesend, liegen in `docs/uebergabe/wuensche-2026-10-18-plan.md`.
 - **Entscheidungen des Nutzers 2026-10-19:** jeweils die Empfehlung.

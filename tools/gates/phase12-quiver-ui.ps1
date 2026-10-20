@@ -3,12 +3,14 @@
 # Testablage: ein nachgebauter Quiver-Ordner (Velopack-Aufbau mit current\sq.version, settings.json, apps.json) im Ordner der
 # Ablage, als gelernter Ordner (settings.quiverFolders) eingetragen. Sein einziges Spiel ist ein harmloses Prüfprogramm
 # (kein Spiel: schreibt beim Start Arbeitsordner, eigenen Pfad und Zahl der Argumente in eine Datei neben sich und wartet
-# 5 s), sein Cover ein erzeugtes PNG im Bildzwischenspeicher von Quiver (Cache\Images\<MD5 der Kartenadresse>, ohne Endung).
+# 5 s), sein Cover ein erzeugtes quadratisches PNG (480 × 480 wie bei „Black“) im Bildzwischenspeicher von Quiver
+# (Cache\Images\<MD5 der Kartenadresse>, ohne Endung).
 # Beim Start liest die Testinstanz auch die echten Launcher nur lesend ein (dabei auch den echten Quiver-Ordner, falls es ihn gibt).
 #   - Das Einlesen übernimmt das Spiel als Quiver:HDRpilot-Quiver-Pruefspiel: Start-EXE das Prüfprogramm, Arbeitsordner sein
 #     Ordner, Cover-Hinweis die Datei im Zwischenspeicher
 #   - Quelle „Quiver“ im Quellenfilter (Liste zeigt danach nur Quiver-Spiele) und in der eingeklappten Kapsel (ItemStatus)
-#   - Das Cover kommt aus dem Zwischenspeicher (art\index.json: Herkunft Quiver, genau diese Datei)
+#   - Das Cover kommt aus dem Zwischenspeicher (art\index.json: Herkunft Quiver, genau diese Datei, 480 × 480) und steht
+#     ganz in einem erzeugten Cover im Hochformat (cover-square, 600 × 900), nicht links und rechts abgeschnitten
 #   - „Starten“ startet das Prüfprogramm direkt (Arbeitsordner = sein Ordner, ohne Argumente), die Sitzung erkennt seinen
 #     Prozess, merkt die EXE und endet nach der Nachlaufzeit
 #   - Bildschirmfotos (Liste, Raster, Regal, Regal mit Schublade, gefiltert, Kapsel) bei 1280×800, 1920×1080 und 3440×1440,
@@ -46,19 +48,20 @@ function Read-Log([string]$cfg) {
 function Detail-Name($win) { try { $d = Find-Id $win 'DetailName' 500; if ($d) { [string]$d.Current.Name } else { $null } } catch { $null } }
 function Row-Names($win) { try { @(Get-ListItems (Find-Id $win 'GameList' 2000) | ForEach-Object { [string]$_.Current.Name }) } catch { @() } }
 
-# Cover für das Prüfspiel: 600 × 900, Verlauf mit Schrift (erzeugt, kein Spielbild), als PNG ohne Endung wie bei Quiver
+# Cover für das Prüfspiel: 480 × 480 wie das Kartenbild von „Black“ (quadratisch), Verlauf mit Schrift über die ganze
+# Breite (erzeugt, kein Spielbild), als PNG ohne Endung wie bei Quiver
 function Write-Cover([string]$path) {
     $visual = New-Object Windows.Media.DrawingVisual
     $dc = $visual.RenderOpen()
     $brush = New-Object Windows.Media.LinearGradientBrush ([Windows.Media.Color]::FromRgb(0x2A, 0x0A, 0x3D)), ([Windows.Media.Color]::FromRgb(0xF4, 0x72, 0xB6)), 60.0
-    $dc.DrawRectangle($brush, $null, (New-Object Windows.Rect 0, 0, 600, 900))
+    $dc.DrawRectangle($brush, $null, (New-Object Windows.Rect 0, 0, 480, 480))
     $face = New-Object Windows.Media.Typeface 'Segoe UI'
-    foreach ($line in @(@('HDRpilot', 300, 56), @('QUIVER', 420, 96), @('PRÜFSPIEL', 540, 72))) {
+    foreach ($line in @(@('HDRpilot', 110, 48), @('QUIVER-PRÜFSPIEL', 200, 52), @('quadratisch 480 × 480', 300, 34))) {
         $text = New-Object Windows.Media.FormattedText ($line[0], [Globalization.CultureInfo]::InvariantCulture, [Windows.FlowDirection]::LeftToRight, $face, [double]$line[2], [Windows.Media.Brushes]::White)
-        $dc.DrawText($text, (New-Object Windows.Point ((600 - $text.Width) / 2), $line[1]))
+        $dc.DrawText($text, (New-Object Windows.Point ((480 - $text.Width) / 2), $line[1]))
     }
     $dc.Close()
-    $bitmap = New-Object Windows.Media.Imaging.RenderTargetBitmap 600, 900, 96, 96, ([Windows.Media.PixelFormats]::Pbgra32)
+    $bitmap = New-Object Windows.Media.Imaging.RenderTargetBitmap 480, 480, 96, 96, ([Windows.Media.PixelFormats]::Pbgra32)
     $bitmap.Render($visual)
     $encoder = New-Object Windows.Media.Imaging.PngBitmapEncoder
     $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
@@ -196,16 +199,22 @@ try {
     Check (Wait-Until { (Detail-Name $win) -eq $gameName } 4000) ('Gewählt: „{0}“' -f (Detail-Name $win))
     $indexFile = Join-Path $cfg 'art\index.json'
     $located = $null
+    $generated = $null
     [void](Wait-Until {
         $text = Read-Shared $indexFile
         if (-not $text) { return $false }
         $entry = ($text | ConvertFrom-Json).games.$key
         $script:located = if ($entry) { $entry.located.cover } else { $null }
-        return $null -ne $script:located
+        $script:generated = if ($entry -and $entry.generated) { $entry.generated } else { $null }
+        return $null -ne $script:located -and $null -ne $script:generated -and $null -ne $script:generated.'cover-square'
     } 15000)
     $located = $script:located
     $coverText = if ($located) { '{0} ({1}, {2} × {3})' -f $located.path, $located.source, $located.w, $located.h } else { 'nicht im Verzeichnis' }
-    Check ($located -and $located.path -eq $cover -and $located.source -eq 'Quiver') ('Cover aus dem Zwischenspeicher von Quiver: ' + $coverText)
+    Check ($located -and $located.path -eq $cover -and $located.source -eq 'Quiver' -and $located.w -eq 480 -and $located.h -eq 480) ('Cover aus dem Zwischenspeicher von Quiver: ' + $coverText)
+    # Quadratisch: als Cover im Hochformat ganz gezeigt (erzeugt aus dem Bild, nicht links und rechts abgeschnitten)
+    $squareFile = if ($script:generated) { $script:generated.'cover-square' } else { $null }
+    $squareSize = if ($squareFile) { Png-Size (Join-Path $cfg "art\gen\$squareFile") } else { $null }
+    Check ($squareFile -and $squareSize -eq '600x900') ('Quadratisches Cover im Hochformat gesetzt: {0} ({1})' -f $squareFile, $squareSize)
 
     # --- „Starten“: Prüfprogramm direkt, Arbeitsordner = sein Ordner; die Sitzung erkennt es ---
     $launch = Find-Id $win 'LaunchButton' 3000

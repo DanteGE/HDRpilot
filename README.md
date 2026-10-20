@@ -112,13 +112,13 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   installierten Spielen aus Launchern, **Einstellungen entfernen…**.
 - Titelbild, Logo und Cover kommen aus den Bild-Zwischenspeichern der Launcher auf dem PC (Steam, GOG Galaxy, Ubisoft
   Connect, Xbox-Paket, bei Quiver nur das Cover), nur lesend, nie aus dem Netz. Fehlt eines, erzeugt HDRpilot ein
-  Ersatzbild aus Symbol und Name; neue Bilder eines Launchers erscheinen von selbst (siehe „So funktioniert es“). Ein
-  anderes Bild wählst du per Rechtsklick › **Bild wählen…** oder im Abschnitt „BILDER“ der Details: Je Reiter
-  **Titelbild**, **Logo** und **Cover** stehen **Automatisch**, weitere lokale Bilder (etwa der Startbildschirm eines
-  Xbox-Pakets), das erzeugte Bild und **Eigene Datei…** (PNG, JPG, WebP, BMP) zur Wahl; **Übernehmen** speichert,
-  **Zurücksetzen** wählt im aktuellen Reiter wieder **Automatisch**. Eigene Bilder legt HDRpilot verkleinert in seinem
-  Datenordner ab, die gewählte Datei bleibt unverändert. Optional füllt SteamGridDB fehlende Bilder aus dem Netz (siehe
-  „Einstellungen“).
+  Ersatzbild aus Symbol und Name; neue Bilder eines Launchers erscheinen von selbst, bei Quiver nach dem nächsten
+  Einlesen (siehe „So funktioniert es“). Ein anderes Bild wählst du per Rechtsklick › **Bild wählen…** oder im
+  Abschnitt „BILDER“ der Details: Je Reiter **Titelbild**, **Logo** und **Cover** stehen **Automatisch**, weitere lokale
+  Bilder (etwa der Startbildschirm eines Xbox-Pakets), das erzeugte Bild und **Eigene Datei…** (PNG, JPG, WebP, BMP) zur
+  Wahl; **Übernehmen** speichert, **Zurücksetzen** wählt im aktuellen Reiter wieder **Automatisch**. Eigene Bilder legt
+  HDRpilot verkleinert in seinem Datenordner ab, die gewählte Datei bleibt unverändert. Optional füllt SteamGridDB
+  fehlende Bilder aus dem Netz (siehe „Einstellungen“).
 - Bewegung: Das Titelbild zoomt langsam und folgt leicht der Maus, Lichtstrahlen und Lichtpunkte ziehen darüber. Geht
   HDR an, während die Bibliothek offen ist, läuft ein kurzer HDR-Moment (Lichtstreifen, hellere Fassung des Titelbilds,
   Partikel für höchstens 2,5 s, leuchtender Rand). Wie viel sich bewegt, stellst du unter „Darstellung“ › „Effekte“
@@ -352,16 +352,27 @@ sofort ohne HDR.
 `current\sq.version` mit der Kennung QuiverLauncher (bis Version 2.4.x an `Quiver.exe`) und sucht ihn nur lesend in
 dieser Reihenfolge: Ordner, die es sich gemerkt hat; das Protokoll des Updaters von Quiver
 (`%LOCALAPPDATA%\velopack\velopack_QuiverLauncher.log`); deine Suchordner und ihre Unterordner;
-`%LOCALAPPDATA%\QuiverLauncher`. Findet das nichts, sucht es in Downloads, Desktop, Dokumenten, im Benutzerordner und
-auf den festen Laufwerken bis zwei Ebenen tief (höchstens 1500 Ordner, ohne Windows- und Programmordner). Liegt Quiver
-woanders, merkt sich HDRpilot den Ordner, sobald Quiver startet, während HDRpilot läuft, und liest wenige Sekunden
-später neu ein. Gelesen werden `apps.json` und aus `settings.json` nur ein eigener Apps-Ordner; Quivers Dateien ändert
+`%LOCALAPPDATA%\QuiverLauncher` und ein Eintrag unter
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuiverLauncher` (falls Quiver je mit einem Setup kommt).
+Findet das nichts, sucht es in Downloads, Desktop, Dokumenten, im Benutzerordner und auf den festen Laufwerken bis
+zwei Ebenen tief (höchstens 1500 Ordner, ohne Windows- und Programmordner, nur auf festen Laufwerken und ohne
+verknüpften Ordnern zu folgen, also nie auf eine Netzfreigabe). Liegt Quiver woanders, merkt sich HDRpilot den Ordner,
+sobald Quiver startet, während HDRpilot läuft, und liest wenige Sekunden später neu ein. Gelesen werden `apps.json`
+und aus `settings.json` nur ein eigener Apps-Ordner (auch eine Laufwerkswurzel wie `G:\`); Quivers Dateien ändert
 HDRpilot nie. „Starten“ startet die Spiel-EXE direkt mit ihrem Ordner als Arbeitsordner, wie Quiver selbst: die in
-Quiver gewählte EXE, sonst die einzige im Spielordner. Liegen dort mehrere und hat Quiver sich keine gemerkt, startest
-du das Spiel einmal in Quiver und wählst dort die EXE; nach dem nächsten Einlesen geht es auch über HDRpilot. Spiele,
-die Quiver über den Windows Installer installiert hat, starten über die EXE, die Quiver dafür verknüpft hat; ihr Ordner
-gilt als Installationsordner. Erkannt wird ein laufendes Spiel immer über seinen Ordner. Das Cover liest HDRpilot aus
-dem Ordner `Cache` von Quiver, „Zuletzt gespielt“ aus Quivers `LastPlayed.txt`.
+Quiver gewählte EXE, sonst die einzige oben im Spielordner, sonst die einzige bis drei Ebenen tief. Ein Startskript
+(BAT oder CMD) zählt dabei wie in Quiver mit, gestartet wird es aber nie: Startet Quiver ein Skript, liegen mehrere
+Kandidaten im Spielordner oder liegt die EXE noch tiefer, kennt HDRpilot keine Start-EXE. Dann startest du das Spiel
+einmal in Quiver und wählst dort die EXE, wenn Quiver danach fragt; nach „Neu einlesen“ geht es auch über HDRpilot.
+Als installiert gilt ein Spiel wie in Quiver, sobald irgendwo im Spielordner eine EXE, BAT oder CMD liegt (gesucht bis
+16 Ebenen tief, höchstens 3000 Ordner; endet die Suche an dieser Grenze, gilt es als installiert). Spiele, die Quiver
+über den Windows Installer installiert hat, starten über die EXE, die Quiver dafür verknüpft hat; ihr Ordner gilt als
+Installationsordner. Erkannt wird ein laufendes Spiel immer über seinen Ordner. Steht dasselbe Spiel in zwei
+Quiver-Ordnern (etwa während des Umzugs von Quiver 2.4 auf 3.x), gilt der Ordner von 3.x, sonst der zuletzt gespielte.
+Hast du ein Quiver-Spiel früher selbst eingetragen, steht es zweimal in der Bibliothek; die Details beider Einträge
+weisen darauf hin, entfernt wird nichts von selbst. Das Cover liest HDRpilot aus dem Ordner `Cache` von Quiver,
+„Zuletzt gespielt“ aus Quivers `LastPlayed.txt` (ein Datum in einem anderen Kalender, etwa dem thailändischen mit dem
+Jahr 2569, zählt nicht).
 
 **Zurückstellen:** Vor dem Schalten merkt sich HDRpilot den HDR-Zustand jedes betroffenen Bildschirms und speichert
 ihn sofort. Wenn das letzte HDR-Spiel beendet ist und die Nachlaufzeit (10 s) verstrichen ist, stellt HDRpilot diesen
@@ -415,17 +426,21 @@ Quiver, sonst die Kopie, die Quiver geladen hat; neue Bilder von Quiver erschein
 und Battle.net haben keinen solchen Speicher; dort, bei Quiver und bei selbst eingetragenen Spielen kommt das Symbol aus
 der Spiel-EXE. Fehlt ein Bild, erzeugt HDRpilot ein Ersatzbild: ein Titelbild aus den Farben des Symbols mit dem Namen
 als Muster, ein Cover aus Titelbild oder Symbol mit dem Namen, statt eines Logos den Namen in der Titelschrift und ohne
-Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte
-Kapselbilder als einziges Cover) erkennt HDRpilot und ersetzt sie durch einen Ausschnitt aus dem Titelbild; Logos
-schneidet es auf ihren sichtbaren Teil zu. Umgebungsfarben berechnet es je Bild einmal, die hellere Fassung des
-Titelbilds nur bei aktivem Bibliotheksfenster und nie, solange ein Spiel läuft oder startet: kurz nachdem die Auswahl
-zur Ruhe gekommen ist, mit niedriger Priorität, damit sie bereitliegt, wenn HDR angeht. Beides legt es mit den
-Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab. Solange ein Fenster offen ist, beobachtet es die Ordner der
-Launcher (bei Ubisoft Connect auch den Produkt-Cache), sodass neue Bilder von selbst erscheinen; im Speicher hält es
-höchstens 192 MB Bilder. Bei geschlossenem Fenster gibt es weder Beobachtung noch Bilder im Speicher (auch den
-Grafikspeicher des Fensters gibt HDRpilot wenige Sekunden nach dem Schließen zurück), und Bilder von Spielen, die nicht
-mehr in der Bibliothek stehen, räumt es dann auf. Eigene Bilder („Bild wählen…“, höchstens 32 MB und 100 Megapixel, größere
-Fotos werden verkleinert) stehen je Bildart in `config.json` (`artwork`) und liegen in `art\custom\`.
+Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte Kapselbilder als einziges Cover) erkennt HDRpilot und
+ersetzt sie durch einen Ausschnitt aus dem Titelbild. Quadratische Cover von Quiver (wie meist, 480 × 480) beschneidet
+es nicht, sondern setzt sie ganz oben in ein Cover im Hochformat und rechts in das erzeugte Titelbild, wie das
+Kachelbild eines Xbox-Spiels; die Farben kommen dann aus diesem Bild. Logos schneidet es auf ihren sichtbaren Teil zu.
+Umgebungsfarben berechnet es je Bild einmal, die hellere Fassung des Titelbilds nur bei aktivem Bibliotheksfenster und
+nie, solange ein Spiel läuft oder startet: kurz nachdem die Auswahl zur Ruhe gekommen ist, mit niedriger Priorität,
+damit sie bereitliegt, wenn HDR angeht. Beides legt es mit den Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab.
+Bilddateien der Launcher öffnet es nur so lange, bis ihr Inhalt im Speicher liegt. Solange ein Fenster offen ist,
+beobachtet es die Ordner der Launcher (bei Ubisoft Connect auch den Produkt-Cache, den Ordner von Quiver nicht), sodass
+neue Bilder von selbst erscheinen; im Speicher hält es höchstens 192 MB Bilder. Bei geschlossenem Fenster gibt es weder
+Beobachtung noch Bilder im Speicher (auch den Grafikspeicher des Fensters gibt HDRpilot wenige Sekunden nach dem
+Schließen zurück), und Bilder von Spielen, die nicht mehr in der Bibliothek stehen, räumt es dann auf; Spiele einer
+Quelle, die diese Version nicht kennt, zählen dabei als vorhanden. Eigene Bilder („Bild wählen…“, höchstens 32 MB und
+100 Megapixel, größere Fotos werden verkleinert) stehen je Bildart in `config.json` (`artwork`) und liegen in
+`art\custom\`.
 
 **SteamGridDB:** nur eingeschaltet und mit eigenem Schlüssel (siehe „Einstellungen“). Gefragt wird
 `www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen (nur ein Treffer mit gleichem Namen zählt),
@@ -677,8 +692,8 @@ hdrpilot run <schlüssel>
 
 `<auswahl>`: `primary` (Standard), `all`, Nummer aus `hdr status`, Teil des Namens oder `monitorDevicePath`.
 `<quelle>`: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver. `scan`, `games`, `watch` und `run` verstehen
-außerdem `--config-dir <ordner>`; `scan` liest dann nur Suchordner und gemerkte Quiver-Ordner dieser Ablage und schreibt
-nichts. `hdrpilot --help` zeigt die vollständige Hilfe.
+außerdem `--config-dir <ordner>`; `scan` nimmt dann die Suchordner und gemerkten Quiver-Ordner dieser Ablage hinzu
+(gelesen, nicht geschrieben) und sucht sonst wie immer. `hdrpilot --help` zeigt die vollständige Hilfe.
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden, 4 Bildschirm ohne HDR,
 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden.
@@ -734,7 +749,10 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   Suchordner eingetragen ist; nach dem Verschieben gelten seine Spiele bis dahin als „Nicht installiert“. Quivers
   Dateien sind keine offizielle Schnittstelle und können sich mit einem Update ändern; was HDRpilot nicht lesen kann,
   meldet die Bibliothek als Fehler beim Einlesen. Titelbild und Logo hat Quiver nicht, die Cover sind meist WebP
-  (braucht die WebP-Erweiterung von Windows). Am Testrechner geprüft mit Quiver 3.5.1 und einem Spiel („Black“), nur
+  (braucht die WebP-Erweiterung von Windows). Startskripte (BAT, CMD) startet HDRpilot nie, auch wenn Quiver ein Spiel
+  so startet. Ersetzt Quiver eine Datei genau in der Millisekunde, in der HDRpilot sie liest (ein Bild in `Cache` oder
+  die Verknüpfung `windows-installer.json`), meldet Windows Quiver einmal „Zugriff verweigert“; HDRpilot hält jede Datei
+  nur so kurz offen, wie das Lesen dauert. Am Testrechner geprüft mit Quiver 3.5.1 und einem Spiel („Black“), nur
   lesend; Spiele aus dem Windows Installer und Quiver bis 2.4.x nur mit nachgebildeten Daten, der Start aus Quiver mit
   HDR noch nicht.
 - **Ältere Version nach Quiver-Spielen:** HDRpilot 1.4.0 und älter kennen die Quelle „Quiver“ nicht. Steht ein
@@ -787,8 +805,8 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   bleibt HDR bis zum Ende der Startfrist an.
 - **„Starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
   HDRpilot keine Start-EXE. Dann das Spiel über seine EXE hinzufügen. Bei einem Spiel aus dem Quiver Launcher liegen
-  meist mehrere EXE-Dateien im Spielordner: das Spiel einmal in Quiver starten, dort die EXE wählen und danach „Neu
-  einlesen“.
+  meist mehrere EXE-Dateien im Spielordner, die EXE liegt sehr tief, oder Quiver startet ein Skript (BAT oder CMD): das
+  Spiel einmal in Quiver starten, dort die EXE wählen, wenn Quiver danach fragt, und danach „Neu einlesen“.
 - **Windows Auto HDR wirkt nicht:** Hast du das Spiel über HDRpilot gestartet („Starten“, „(HDR)“-Verknüpfung
   oder Steam-Startoption)? Ein Start direkt im Launcher ohne Startoption bekommt Auto HDR nur über die Frühwarnung, und
   dann nur, wenn Windows-HDR schon an ist. Das Spiel muss DirectX 11 oder 12 nutzen und von Windows für Auto HDR

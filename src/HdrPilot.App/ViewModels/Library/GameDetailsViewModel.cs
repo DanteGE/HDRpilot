@@ -82,10 +82,22 @@ public sealed class GameDetailsViewModel : ObservableObject
 
     // ---------- Spielprofil und Bilder (E89) ----------
 
-    /// <summary>„Steam · GoWEDay-Steam.exe“ (Haupt-EXE: Hilfs- und Startprogramme nach hinten) bzw. „Steam · keine EXE erkannt“.</summary>
-    public string ProfileSubtitle => MainExecutable is { } exe
-        ? LibraryText.Format(LibraryStrings.Profile_Subtitle, Item.SourceName, exe)
-        : LibraryText.Format(LibraryStrings.Profile_SubtitleNoExe, Item.SourceName);
+    /// <summary>
+    /// „Steam · GoWEDay-Steam.exe“ (Haupt-EXE: Hilfs- und Startprogramme nach hinten), „Quiver · mehrere EXE“ (ohne
+    /// Start-Befehl und gemerkte EXE, mehrere mögliche: kein Dateiname, der nur zufällig vorne stünde) bzw. „Steam · keine EXE
+    /// erkannt“.
+    /// </summary>
+    public string ProfileSubtitle => SeveralExecutablesWithoutChoice
+        ? LibraryText.Format(LibraryStrings.Profile_SubtitleSeveralExe, Item.SourceName)
+        : MainExecutable is { } exe
+            ? LibraryText.Format(LibraryStrings.Profile_Subtitle, Item.SourceName, exe)
+            : LibraryText.Format(LibraryStrings.Profile_SubtitleNoExe, Item.SourceName);
+
+    /// <summary>Kein Start-Befehl, keine beim Spielen gemerkte EXE und mehr als eine mögliche Haupt-EXE.</summary>
+    private bool SeveralExecutablesWithoutChoice =>
+        !CanLaunchGame
+        && !Executables.Any(e => e.Origin == ExecutableOrigin.Detected && !e.IsExcluded)
+        && Executables.Count(e => !e.IsExcluded && !e.IsHelper && !LauncherName(e.FileName)) > 1;
 
     /// <summary>Dateiname der Haupt-EXE (null ohne bekannte EXE).</summary>
     public string? MainExecutable => Executables
@@ -192,13 +204,49 @@ public sealed class GameDetailsViewModel : ObservableObject
     public bool CanLaunchGame => !string.IsNullOrWhiteSpace(_config.LaunchCommand);
 
     /// <summary>
-    /// Hinweis ohne Start-Befehl (unter „Mit HDR starten“): bei Quiver-Spielen der Weg über Quiver (mehrere EXE und keine
-    /// gemerkte Wahl, E91), sonst der allgemeine Hinweis für eigene Einträge.
+    /// Hinweis ohne Start-Befehl (unter „Mit HDR starten“): bei Quiver-Spielen der Weg über Quiver (mehrere Kandidaten, eine
+    /// sehr tief liegende EXE oder ein Startskript, das HDRpilot nicht ausführt, E91), sonst der allgemeine Hinweis für eigene
+    /// Einträge.
     /// </summary>
     public string NoLaunchText => Item.Source == GameSource.Quiver ? LibraryStrings.Launch_NoCommandQuiver : LibraryStrings.Launch_NoCommand;
 
     /// <summary>Quiver-Spiel, das per Windows Installer installiert wurde (E91): Hinweis, welcher Ordner als Installationsordner gilt.</summary>
     public bool ShowWindowsInstallerHint => Item.Source == GameSource.Quiver && string.Equals(_config.InstallKind, InstallKinds.WindowsInstaller, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Dasselbe Spiel zweimal in der Bibliothek (E91): ein früher von Hand eingetragenes Spiel, das HDRpilot jetzt auch aus
+    /// Quiver liest (der eigene Eintrag zeigt auf den Quiver-Spielordner oder einen Ordner darin). Beide Einträge nennen den
+    /// anderen; HDRpilot entfernt nichts von selbst. Leer ohne solchen Eintrag.
+    /// </summary>
+    public string DuplicateHint
+    {
+        get
+        {
+            if (Item.Source is not (GameSource.Quiver or GameSource.Manual) || string.IsNullOrWhiteSpace(_config.InstallDir))
+            {
+                return string.Empty;
+            }
+
+            var quiver = Item.Source == GameSource.Quiver;
+            foreach (var other in _owner.Context.Config.Games)
+            {
+                if (other.Source != (quiver ? GameSource.Manual : GameSource.Quiver) || string.IsNullOrWhiteSpace(other.InstallDir))
+                {
+                    continue;
+                }
+
+                var (quiverDir, manualDir) = quiver ? (_config.InstallDir, other.InstallDir) : (other.InstallDir, _config.InstallDir);
+                if (PathUtil.IsUnder(manualDir, quiverDir))
+                {
+                    return LibraryText.Format(quiver ? LibraryStrings.Details_DuplicateOfManual : LibraryStrings.Details_DuplicateOfQuiver, other.Name);
+                }
+            }
+
+            return string.Empty;
+        }
+    }
+
+    public bool HasDuplicateHint => DuplicateHint.Length > 0;
 
     public string? LastPlayedText => _config.LastPlayed is { } t
         ? LibraryText.Format(LibraryStrings.Details_LastPlayed, t.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
@@ -484,6 +532,8 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasLastPlayed));
         OnPropertyChanged(nameof(ProfileSubtitle));
         OnPropertyChanged(nameof(MainExecutable));
+        OnPropertyChanged(nameof(DuplicateHint));
+        OnPropertyChanged(nameof(HasDuplicateHint));
         OnPropertyChanged(nameof(ExecutablesHeader));
         OnPropertyChanged(nameof(LaunchCommandText));
         OnPropertyChanged(nameof(HasLaunchCommandText));

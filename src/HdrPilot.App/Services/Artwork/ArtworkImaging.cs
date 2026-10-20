@@ -246,17 +246,23 @@ public static class ArtworkImaging
     public static bool IsDecodeFailure(Exception ex) =>
         IconReader.IsDecodeFailure(ex) || ex is System.Runtime.InteropServices.COMException or FileFormatException or OutOfMemoryException;
 
-    /// <summary>Datei geteilt öffnen; zu große Dateien werden abgelehnt.</summary>
-    public static FileStream OpenRead(string path)
+    /// <summary>
+    /// Bilddatei lesen: geteilt geöffnet (Lesen, Schreiben, Löschen) und nur so lange, bis der Inhalt im Speicher liegt; die
+    /// Datei ist wieder zu, bevor dekodiert wird. Ein offener Leser lässt nämlich das Ersetzen der Datei durch Verschieben
+    /// mit „Zugriff verweigert“ scheitern (so ersetzt etwa Quiver seine Bilder und Verknüpfungen, E91). Dateien über
+    /// <see cref="MaxFileBytes"/> werden abgelehnt.
+    /// </summary>
+    public static Stream OpenRead(string path)
     {
-        var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.SequentialScan);
-        if (stream.Length > MaxFileBytes)
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 1, FileOptions.SequentialScan);
+        if (file.Length > MaxFileBytes)
         {
-            stream.Dispose();
             throw new ImageTooLargeException("Bild ist zu groß: " + Path.GetFileName(path));
         }
 
-        return stream;
+        var buffer = new byte[file.Length];
+        var read = file.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false);
+        return new MemoryStream(buffer, 0, read, writable: false, publiclyVisible: true);
     }
 
     /// <summary>

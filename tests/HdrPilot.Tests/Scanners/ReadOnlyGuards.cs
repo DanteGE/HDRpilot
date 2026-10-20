@@ -19,6 +19,8 @@ internal sealed class ReadOnlyFileSystem(IFileSystem inner) : IFileSystem
     public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) =>
         inner.EnumerateDirectories(directory, searchPattern, recursive);
 
+    public IEnumerable<string> EnumerateDirectoriesWithoutLinks(string directory) => inner.EnumerateDirectoriesWithoutLinks(directory);
+
     public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
 
     public IEnumerable<string> EnumerateFilesUpTo(string directory, string searchPattern, int maxDepth) =>

@@ -189,12 +189,17 @@ public sealed partial class ArtworkService
         var kind = generator switch
         {
             Generator.Hero => ArtworkKind.Hero,
-            Generator.CoverFromHero or Generator.CoverFromField => ArtworkKind.Cover,
+            Generator.CoverFromHero or Generator.CoverFromField or Generator.CoverFromSquare => ArtworkKind.Cover,
             Generator.Header => ArtworkKind.Header,
             Generator.Monogram => ArtworkKind.Icon,
             _ => throw new ArgumentOutOfRangeException(nameof(generator), generator, "Kein erzeugtes Bild."),
         };
-        var name = NameOf(kind) + (generator == Generator.CoverFromHero ? "-hero" : string.Empty);
+        var name = NameOf(kind) + generator switch
+        {
+            Generator.CoverFromHero => "-hero",
+            Generator.CoverFromSquare => "-square",
+            _ => string.Empty,
+        };
         var file = ArtworkFiles.GeneratedFileName(state.Key, kind);
         var path = Path.Combine(_options.ArtDirectory, ArtworkFiles.GeneratedFolder, file);
         lock (_gameLocks.GetOrAdd(state.Key, _ => new object()))
@@ -211,6 +216,7 @@ public sealed partial class ArtworkService
                 e.Generated ??= new Dictionary<string, string>(StringComparer.Ordinal);
                 e.Generated.Remove(NameOf(kind));
                 e.Generated.Remove(NameOf(kind) + "-hero");
+                e.Generated.Remove(NameOf(kind) + "-square");
                 e.Generated[name] = file;
             });
             _logger.LogDebug("Bilder: {Kind} von {Game} erzeugt ({Generator}).", kind, state.Key, generator);
@@ -227,13 +233,17 @@ public sealed partial class ArtworkService
         switch (generator)
         {
             case Generator.Hero:
-                return ArtworkRenderer.Hero(name, field, isTile ? Icon(ArtworkRenderer.HeroHeight) : null);
+                // Kachelbild (Xbox) oder quadratisches Cover (Quiver) rechts der Mitte, wie im Prototyp.
+                return ArtworkRenderer.Hero(name, field, isTile ? Icon(ArtworkRenderer.HeroHeight) : state.SquareArt is { } art ? TryDecode(art, ArtworkRenderer.HeroHeight) : null);
+            case Generator.CoverFromSquare when state.Cover.File is { } square && TryDecode(square, ArtworkRenderer.CoverWidth) is { } picture:
+                return ArtworkRenderer.CoverFromField(name, field, picture, picture.PixelWidth, iconIsTile: true, PixelAnalysis.Monogram(name));
             case Generator.CoverFromHero when state.Hero.File is { } heroFile && TryDecode(heroFile, 3840) is { } hero:
                 var lightX = state.Ambient is { FromHero: true } ambient ? ambient.LightX : 0.5;
                 var logo = state.Logo.File is { } logoFile ? (state.IsHypothetical ? TrimInMemory(logoFile, 480) : TrimmedLogo(state, logoFile, 480) as BitmapSource) : null;
                 return ArtworkRenderer.CoverFromHero(hero, lightX, logo, name);
             case Generator.CoverFromHero:
             case Generator.CoverFromField:
+            case Generator.CoverFromSquare:
                 return ArtworkRenderer.CoverFromField(name, field, Icon(256), state.Icon.Px, isTile, PixelAnalysis.Monogram(name));
             case Generator.Header:
                 return ArtworkRenderer.Header(field, Icon(256), state.Icon.Px, isTile, PixelAnalysis.Monogram(name));

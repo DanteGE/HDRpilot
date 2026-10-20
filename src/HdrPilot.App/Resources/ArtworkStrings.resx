@@ -120,6 +120,18 @@
     <value>{0}: kein lokales Titelbild – erzeugt aus Monogramm und Name</value>
     <comment>Zeile im Detailbereich ohne Bild und ohne Symbol; {0} = Launcher</comment>
   </data>
+  <data name="Summary_CoverFromCache" xml:space="preserve">
+    <value>Cover lokal aus dem {0} · Titelbild aus dem Symbol erzeugt</value>
+    <comment>Zeile im Detailbereich: Cover aus einem Bildcache, aber kein Titelbild (etwa Quiver, E91); {0} = Herkunft, etwa „Quiver-Cache“</comment>
+  </data>
+  <data name="Summary_CoverFromCacheNoIcon" xml:space="preserve">
+    <value>Cover lokal aus dem {0} · Titelbild aus Monogramm und Name erzeugt</value>
+    <comment>Wie Summary_CoverFromCache, aber ohne Symbol; {0} = Herkunft</comment>
+  </data>
+  <data name="Summary_SquareArt" xml:space="preserve">
+    <value>Lokal aus dem {0}: quadratisches Bild · Titelbild und Cover daraus erzeugt</value>
+    <comment>Zeile im Detailbereich (Quiver, E91): Das Cover im Cache ist fast quadratisch; Cover im Hochformat und Titelbild zeigen es ganz. {0} = Herkunft, etwa „Quiver-Cache“</comment>
+  </data>
   <data name="Candidate_Automatic" xml:space="preserve">
     <value>Automatisch</value>
     <comment>„Bild wählen…“: Launcher-Bild, sonst erzeugt</comment>

@@ -4,7 +4,9 @@ Stand: 2026-10-20, Zielrechner (Windows 11 Build 26300, Quiver Launcher 3.5.1 po
 „Black“). Alle Angaben unten sind am echten System nur lesend geprüft (Dateinamen, kleine Textdateien geteilt geöffnet,
 die gebaute Kommandozeile `scan --source Quiver` mit leerer eigener Ablage); nichts wurde gestartet oder geschrieben,
 weder Quiver noch das Spiel. Quiver ist ein portabler Launcher für Programme aus GitHub-Releases (MIT); HDRpilot nutzt
-keinen Code von Quiver, sondern liest nur dessen Dateien. Entscheidung: E91.
+keinen Code von Quiver, sondern liest nur dessen Dateien. Nachgebildet sind nur Namen, Adressen und Dateiformate; die
+Prüfung des Bildkopfs und die Regel für die verkleinerten Kopien sind nach der Prüfung vom 2026-10-20 eigenständig neu
+geschrieben (vorher zu nah an Quivers `LauncherIconCache`/`LauncherArtworkLoader`). Entscheidung: E91.
 
 Code: `src/HdrPilot.Core/Games/Scanners/QuiverScanner.cs`, Hilfsklassen unter
 `src/HdrPilot.Core/Games/Scanners/Quiver/` (`QuiverRoot`, `QuiverRootFinder`, `QuiverLibrary`, `QuiverExecutables`,
@@ -49,9 +51,12 @@ günstigsten Quellen zuerst; jeder Ordner wird nur an seinem Kennzeichen erkannt
 
 1. Gelernte Ordner (`settings.quiverFolders` in `config.json`, siehe 7) und `ScanOptions.QuiverFolders`.
 2. Das Protokoll von Velopack `%LOCALAPPDATA%\velopack\velopack_QuiverLauncher.log`: nur die letzten 256 KB, geteilt
-   gelesen (Quiver schreibt weiter hinein); jeder Laufwerkspfad (auch mit verdoppelten Backslashes) und seine zwei
-   übergeordneten Ordner, die jüngsten Zeilen zuerst, höchstens 32. Andere Velopack-Programme haben ihr eigenes Protokoll
-   (am Zielrechner `velopack_SCSKiller.App.log`, `velopack.log`); sie werden nicht gelesen.
+   gelesen (Quiver schreibt weiter hinein); jeder Laufwerkspfad und seine zwei übergeordneten Ordner, die jüngsten
+   Zeilen zuerst, höchstens 32. Je Zeile zuerst Pfade in einfachen Anführungszeichen (bis zum letzten `'` der Zeile),
+   dann die übrigen bis zum Zeilenende, bis vor ein `"` (in doppelten Anführungszeichen verdoppelt Velopack die
+   Backslashes) oder bis vor den nächsten Laufwerkspfad; so bleibt ein `'` im Pfad erhalten (`C:\Users\O'Brien\…`), und
+   zwei Pfade einer Zeile werden nicht zu einem. Andere Velopack-Programme haben ihr eigenes Protokoll (am Zielrechner
+   `velopack_SCSKiller.App.log`, `velopack.log`); sie werden nicht gelesen.
 3. Die Suchordner des Nutzers und ihre direkten Unterordner (je höchstens 400).
 4. `%LOCALAPPDATA%\QuiverLauncher` (Standardordner, falls Quiver je mit einem Velopack-Setup kommt) und
    `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuiverLauncher` (`InstallLocation`).
@@ -59,7 +64,10 @@ günstigsten Quellen zuerst; jeder Ordner wird nur an seinem Kennzeichen erkannt
    Desktop, Dokumente, Benutzerordner und die festen Laufwerke, je bis zwei Ebenen tief, höchstens 1500 Ordner zusammen,
    ohne Windows-, Programm- und Datenordner (`Windows`, `Program Files*`, `ProgramData`, `AppData`, `steamapps`,
    `node_modules`, `$…`, `.…` u. a.); die Suche endet beim ersten Treffer. Jeder Ordner wird höchstens einmal geprüft
-   und einmal aufgelistet.
+   und einmal aufgelistet. Sie bleibt auf festen Laufwerken (ein auf eine Netzfreigabe oder einen Wechseldatenträger
+   umgeleiteter Ordner fällt heraus) und betritt keinen verknüpften Ordner (Junction, symbolische Verknüpfung;
+   `IFileSystem.EnumerateDirectoriesWithoutLinks`), damit sie nie über eine Verknüpfung auf eine Netzfreigabe gerät und
+   dort hängt. Gelernte Ordner und Suchordner gelten weiter so, wie sie eingetragen sind.
 
 Die MuiCache (Liste ausgeführter Programme) wird bewusst nicht gelesen (Entscheidung des Nutzers: Nutzungsverlauf).
 
@@ -75,34 +83,54 @@ die Kommandozeile nicht aus, das Ergebnis ist dasselbe).
   höchstens 16 MB. Fehlt `apps.json`, hat dieser Ordner noch keine Bibliothek (kein Fehler).
 - Fehlt `apps` oder ist es keine Liste: „Quiver-Bibliothek defekt“ mit Pfad. Ein einzelner unbrauchbarer Eintrag
   („Quiver-Eintrag n unbrauchbar“) kostet nur diesen Eintrag.
-- Apps-Ordner: `AppsPath` aus `settings.json`, wenn absolut und keine Laufwerkswurzel; sonst `<Quiver>\Apps` (defekte
-  oder unbrauchbare Einstellung: Fehler mit Pfad, es gilt der Standardordner).
-- Spielordner: `installPath`, wenn gesetzt (gleiche Prüfung wie `AppsPath`), sonst `<Apps>\<folderName>`.
-- Schlüssel `Quiver:<folderName>`. Abgelehnt (Fehler mit Pfad) werden leere Namen, `.` und `..` (auch als Teil),
-  `\`, `/`, `:`, im Dateinamen ungültige Zeichen und ein Punkt oder Leerzeichen am Ende; Leerraum wird nicht
-  abgeschnitten. So kann kein Eintrag aus dem Apps-Ordner hinauszeigen.
+- Apps-Ordner: `AppsPath` aus `settings.json`, wenn absolut, auch eine Laufwerkswurzel wie `G:\` (Quiver nimmt den Wert
+  unverändert; die Spiele liegen dann in `G:\<folderName>`, und dieser Spielordner ist nie selbst eine Wurzel); sonst
+  `<Quiver>\Apps` (defekte Datei, relativer oder ungültiger Pfad: Fehler mit Pfad, es gilt der Standardordner).
+- Spielordner: `installPath`, wenn gesetzt (absolut und keine Laufwerkswurzel, sonst Fehler), sonst `<Apps>\<folderName>`.
+- Schlüssel `Quiver:<folderName>`. Abgelehnt (Fehler mit Pfad) werden leere Namen, ein Name, der nur `.` ist, `..`
+  irgendwo im Namen (`Spiel..Teil`; ein einzelner Punkt im Namen ist erlaubt), `\`, `/`, `:`, im Dateinamen ungültige
+  Zeichen und ein Punkt oder Leerzeichen am Ende; Leerraum wird nicht abgeschnitten. So kann kein Eintrag aus dem
+  Apps-Ordner hinauszeigen.
 - Name: `customDisplayName`, sonst `name`, sonst `project`, sonst `folderName`. Quiver kennt daneben
   `UserAppDisplayNames` in `settings.json` (laut seiner Oberfläche eine ältere Ablage, die es übernimmt); das Feld ist am
   Zielrechner leer, und welchen Schlüssel es nutzt, ist nicht belegt. HDRpilot liest es deshalb nicht.
-- Installiert wie in Quiver: Spielordner da, keine `install-incomplete.txt`, mindestens eine EXE, BAT oder CMD.
-  Sonst übersprungen (Protokoll), ohne Fehler; ein schon bekanntes Spiel gilt dann als „Nicht installiert“ (E90).
-- Doppelt: kommt ein `folderName` in `apps.json` zweimal oder in zwei Quiver-Ordnern vor, gilt der erste (gelernte
-  Ordner zuerst), der Rest steht im Protokoll.
+- Installiert wie in Quiver: Spielordner da, keine `install-incomplete.txt`, mindestens eine EXE, BAT oder CMD irgendwo
+  im Spielordner (Quiver sucht ohne Grenze; HDRpilot bis 16 Ebenen und höchstens 3000 Ordner, siehe 4). Sonst
+  übersprungen (Protokoll), ohne Fehler; ein schon bekanntes Spiel gilt dann als „Nicht installiert“ (E90). Endet die
+  Suche an ihrer Grenze, gilt das Spiel als installiert (ohne Start-Befehl), nie als „Nicht installiert“: Das gäbe
+  „Einstellungen entfernen…“ frei.
+- Doppelt in `apps.json`: der erste Eintrag gilt, der Rest steht im Protokoll.
+- Doppelt in zwei Quiver-Ordnern: Quiver beschreibt in MIGRATING.md den Umzug von 2.4.x auf 3.x so, dass der alte
+  Ordner liegen bleibt, bis der neue passt. Es gilt deshalb der Ordner im Aufbau ab 3.0 (Velopack) vor der alten
+  Struktur, dann der mit dem späteren „Zuletzt gespielt“, dann der zuerst gefundene (gelernte Ordner zuerst); der Rest
+  steht im Protokoll.
+- Doppelt mit einem eigenen Eintrag: Wurde ein Spiel früher von Hand eingetragen (Ordner oder EXE im Quiver-Spielordner),
+  steht es zweimal in der Bibliothek. Beide Einträge nennen in den Details den anderen (`Details_DuplicateOfManual`,
+  `Details_DuplicateOfQuiver`); entfernt wird nichts von selbst.
 
 ## 4. Start-EXE (`QuiverExecutables`)
 
 1. `selected_executable.txt` im Spielordner (die Wahl des Nutzers in Quiver), nur wenn sie auf eine vorhandene Datei im
    Spielordner zeigt (relativ oder absolut). Zeigt sie hinaus, fehlt die Datei oder ist sie unlesbar, zählt sie nicht.
-   Ist die gewählte Datei eine BAT/CMD, gibt es keinen Start-Befehl: HDRpilot startet nur EXE-Dateien.
-2. Sonst die einzige EXE oben im Spielordner.
-3. Gibt es oben keine, die einzige bis drei Ebenen tief.
+   Ist die gewählte Datei eine BAT/CMD, gibt es keinen Start-Befehl: HDRpilot startet nur EXE-Dateien. Die Wahl wird
+   vor jeder Suche gelesen und gilt, wie viele Dateien der Ordner auch hat.
+2. Sonst der einzige Kandidat oben im Spielordner. Wie in Quiver zählen oben EXE, BAT und CMD: Ist der einzige Kandidat
+   ein Startskript (etwa `launch.bat`, das Quiver startet), gibt es keinen Start-Befehl, statt die EXE am Skript vorbei
+   zu starten (Argumente, Umgebung und Arbeitsordner des Skripts fehlten sonst). Eine EXE und ein Skript oben sind zwei
+   Kandidaten.
+3. Gibt es oben keinen, der einzige bis drei Ebenen tief (ebenso mit Skripten).
 
 Hilfsprogramme (`HelperExecutables`: Absturzmelder, Installer, Laufzeitpakete, Anti-Cheat-Installer …) zählen nicht.
-Gesucht wird nur nach Namen, ohne verknüpften Ordnern (Reparse Points) zu folgen, ohne Ordner von Wine/Proton
-(`.wine-prefix`, `.steam-compat-data`, `dosdevices`, `drive_c`), höchstens 5000 Dateien; das Abbild von „Black“ (7,8 GB)
-wird nie geöffnet. Bleiben mehrere EXE-Dateien, gibt es keinen Start-Befehl (E61): „Mit HDR starten“ ist gesperrt und
-die Details sagen, dass das Spiel einmal in Quiver gestartet und die EXE dort gewählt werden soll
-(`Launch_NoCommandQuiver`). Die Erkennung beim Spielen wirkt trotzdem, weil jedes Programm im Spielordner zählt.
+Gesucht wird Ebene für Ebene nur nach Namen: verknüpfte Ordner (Junction, symbolische Verknüpfung) und Ordner von
+Wine/Proton (`.wine-prefix`, `.steam-compat-data`, `dosdevices`, `drive_c`) betritt die Suche gar nicht erst, andere
+Dateien als EXE, BAT und CMD kosten nichts (höchstens 256 Kandidaten, höchstens 3000 aufgelistete Ordner). Für
+„installiert“ sucht sie weiter bis 16 Ebenen, aber nur bis zur ersten Ebene mit einem Kandidaten und nur, wenn bis drei
+Ebenen keiner liegt; eine so tiefe EXE gibt keinen Start-Befehl. Das Abbild von „Black“ (7,8 GB) wird nie geöffnet.
+Bleiben mehrere Kandidaten, gibt es keinen Start-Befehl (E61): „Mit HDR starten“ ist gesperrt, die Profilzeile sagt
+„Quiver · mehrere EXE“, und die Details sagen, warum (mehrere Kandidaten, sehr tiefe EXE oder Startskript) und dass das
+Spiel einmal in Quiver gestartet und die EXE dort gewählt werden soll, dann „Neu einlesen“ (`Launch_NoCommandQuiver`).
+Bei einem Spiel, das nur über ein Skript startet, hilft das nicht; dann bleibt der Start aus Quiver. Die Erkennung beim
+Spielen wirkt trotzdem, weil jedes Programm im Spielordner zählt.
 
 Gestartet wird die EXE direkt mit ihrem Ordner als Arbeitsordner und ohne Argumente, wie Quiver selbst (Abschnitt 1),
 nicht über `QuiverLauncher.exe --run`: Das öffnet laut Quelltext von Quiver ein Konsolenfenster, sucht online nach
@@ -116,9 +144,12 @@ oder defekte Datei ist ein Fehler mit Pfad. Belegt nur mit Beispieldateien; am Z
 
 ## 5. Zuletzt gespielt
 
-`LastPlayed.txt` (Ortszeit im Format `yyyy-MM-dd HH:mm:ss`) im Ordner der EXE und im Spielordner; die spätere zählt,
-Unlesbares nicht. HDRpilot übernimmt den Wert wie bei Steam als „Zuletzt gespielt“, solange es selbst keinen späteren
-Start gesehen hat.
+`LastPlayed.txt` (Ortszeit im Format `yyyy-MM-dd HH:mm:ss`; mit `:`, `.` als Zeittrenner oder `T`) im Ordner der EXE
+und im Spielordner; die spätere zählt, Unlesbares nicht. Quiver schreibt den Wert im Kalender der Kultur
+(`DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")`): unter Thai steht dort das Jahr 2569, unter Umm al-Qura 1448. Werte vor
+2000 oder mehr als einen Tag in der Zukunft zählen deshalb nicht; ein Jahr 2569 bliebe sonst für immer „zuletzt
+gespielt“, weil der Abgleich der Bibliothek den späteren Wert behält. HDRpilot übernimmt den Wert wie bei Steam als
+„Zuletzt gespielt“, solange es selbst keinen späteren Start gesehen hat.
 
 ## 6. Bilder (`QuiverArtwork`, `ArtworkLocator`)
 
@@ -137,9 +168,22 @@ die Kopie mit Breite 480 heißt `Cache\Images\8C8FC6677FB84678288E4615E4E470A5` 
 mit dem WebP-Decoder von Windows). Die Kandidaten stehen je Spiel in `config.json` (`coverCandidates`), damit die
 Bibliothek ohne neues Einlesen weiß, wo sie suchen soll; dekodiert wird erst in der App. Titelbild und Logo hat Quiver
 nicht: HDRpilot erzeugt sie wie bei Spielen anderer Launcher ohne solche Bilder (README, „Spielbilder“), optional füllt
-SteamGridDB sie. Das Symbol kommt aus der Spiel-EXE (`BLACK.exe` hat keins, daher das Monogramm). Ein Quiver-Logo und Programmsymbole von Quiver werden nie verwendet.
-Neue Bilder von Quiver erscheinen nach dem nächsten Einlesen; den Cache-Ordner beobachtet HDRpilot nicht (er liegt oft in
-Downloads, wo ein Beobachter viele fremde Änderungen sähe).
+SteamGridDB sie. Das Symbol kommt aus der Spiel-EXE (`BLACK.exe` hat keins, daher das Monogramm). Ein Quiver-Logo und
+Programmsymbole von Quiver werden nie verwendet. Neue Bilder von Quiver erscheinen nach dem nächsten Einlesen; den
+Cache-Ordner beobachtet HDRpilot nicht (er liegt oft in Downloads, wo ein Beobachter viele fremde Änderungen sähe).
+
+Quadratische Cover: Die Kartenbilder von SteamGridDB, die Quiver ablegt, sind meist quadratisch (bei „Black“ 480 × 480).
+Als Cover im Hochformat zugeschnitten fehlte links und rechts je ein Sechstel, beim Schriftzug „BLACK“ etwa das „B“.
+Ein Cover aus dem Cache von Quiver mit einem Verhältnis von Höhe zu Breite unter 1,2 setzt HDRpilot
+deshalb wie das Kachelbild eines Xbox-Spiels ganz oben in ein erzeugtes Cover im Hochformat (600 × 900, darunter der
+Name; `art\gen\…-cover.jpg`, im Verzeichnis `cover-square`) und rechts der Mitte in das erzeugte Titelbild; die Farben
+kommen aus diesem Bild. Die Herkunft bleibt „Quiver-Cache“, die Zeile unter den Bildern sagt „Lokal aus dem
+Quiver-Cache: quadratisches Bild · Titelbild und Cover daraus erzeugt“. Ein Cover im Hochformat bleibt, wie es ist
+(„Cover lokal aus dem Quiver-Cache · Titelbild aus dem Symbol erzeugt“). Das Symbol bleibt das der EXE bzw. das
+Monogramm (E91).
+
+Gelesen werden die Bilder in der App nur so lange, bis ihr Inhalt im Speicher liegt (`ArtworkImaging.OpenRead`); die
+Datei ist zu, bevor dekodiert wird (siehe 10).
 
 ## 7. Ordner lernen (`QuiverFolderLearner`)
 
@@ -181,7 +225,10 @@ und keine Argumente.
   eigene EXE und die Spiele dort wären sonst doppelt.
 - **Unbekannte Quellen in `config.json`** (E91, G12.3): `AppConfigConverter` behält Spiele mit einer Quelle, die diese
   Version nicht kennt, unverändert in der Datei (beim Schreiben wieder angehängt), statt die ganze Datei als defekt zu
-  sichern. HDRpilot 1.4.0 hat das noch nicht.
+  sichern. Auch ihre eigenen Bilder und Logos bleiben: Das Aufräumen der Bilder nach dem Schließen zählt ihre Schlüssel
+  mit (`AppConfig.AllGameKeys`). HDRpilot 1.4.0 hat das noch nicht.
+- **Startskripte** (BAT, CMD) startet HDRpilot nie, und es startet nie eine andere Datei als Quiver: Startet Quiver ein
+  Skript, gibt es keinen Start-Befehl (siehe 4).
 
 ## 10. Grenzen
 
@@ -191,6 +238,16 @@ und keine Argumente.
   erscheint häufig neu (3.5.1 vom 15.10.2026); HDRpilot liest tolerant, meldet Unlesbares als Fehler des Scanners.
 - Ein Schreibvorgang von Quiver genau während des Lesens kann eine halbe Datei liefern; das ergibt einmal „defekt“, das
   nächste Einlesen ist wieder richtig.
+- Geteilt lesen heißt nicht ganz ohne Einfluss: Solange HDRpilot eine Datei offen hat (auch mit Freigabe zum Lesen,
+  Schreiben und Löschen), scheitert das Ersetzen dieser Datei durch Verschieben einer anderen darüber (`MoveFileEx`,
+  .NET `File.Move(…, overwrite: true)`) mit „Zugriff verweigert“ (Fehler 5, am Zielrechner nachgemessen; `ReplaceFile`
+  und gewöhnliches Schreiben gehen). So ersetzt Quiver `windows-installer.json` (`WindowsInstallerService.WriteReceipt`,
+  ohne Wiederholung) und Bilder im älteren Speicher `Cache\Icons` (`LauncherIconCache`). HDRpilot hält diese Dateien
+  deshalb nur so lange offen, wie das Lesen dauert: höchstens 4 KB bzw. 12 Byte beim Einlesen, das ganze Bild beim
+  Dekodieren in der App (dann zu, bevor dekodiert wird), jeweils unter einer Millisekunde. Trifft Quiver genau diesen
+  Moment, scheitert dieser eine Schritt von Quiver einmal (Verknüpfung des Windows Installers bzw. Auffrischen eines
+  Bildes); `apps.json` und `settings.json` (Quiver nutzt `ReplaceFile`), `LastPlayed.txt` und
+  `selected_executable.txt` (gewöhnlich geschrieben) betrifft das nicht.
 - WebP-Cover brauchen die WebP-Erweiterung von Windows; ohne sie erzeugt HDRpilot ein Cover.
 - Spiele aus dem Windows Installer und die alte Struktur 2.4.x sind nur mit Beispieldateien geprüft.
 - Livetest (HDR beim Start von „Black“ aus Quiver) nur mit dem Nutzer (G12.7).

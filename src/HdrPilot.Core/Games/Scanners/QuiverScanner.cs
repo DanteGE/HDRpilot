@@ -16,8 +16,9 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <see cref="QuiverExecutables"/>. Per Windows Installer installierte Spiele (<c>windows-installer.json</c>) starten über
 /// die dort verknüpfte EXE; ihr Ordner gilt als Installationsordner. Gestartet wird wie in Quiver direkt über die EXE mit
 /// ihrem Ordner als Arbeitsordner, ohne Argumente (nicht über <c>QuiverLauncher.exe --run</c>). Cover aus den Zwischenspeichern
-/// von Quiver (<see cref="QuiverArtwork"/>). Kommt ein Spiel in zwei Quiver-Ordnern vor, gilt das erste (gelernte zuerst).
-/// Liest nur, Dateien geteilt geöffnet, schreibt nichts, kein Netz. Details: docs\scanner\quiver.md.
+/// von Quiver (<see cref="QuiverArtwork"/>). Kommt ein Spiel in zwei Quiver-Ordnern vor (etwa während des Umzugs von 2.4.x
+/// auf 3.x, den Quiver selbst beschreibt), gilt der Ordner im Aufbau ab 3.0, dann der zuletzt gespielte, dann der zuerst
+/// gefundene (gelernte zuerst). Liest nur, Dateien geteilt geöffnet, schreibt nichts, kein Netz. Details: docs\scanner\quiver.md.
 /// </summary>
 public sealed class QuiverScanner : IGameScanner
 {
@@ -45,23 +46,29 @@ public sealed class QuiverScanner : IGameScanner
     {
         cancellationToken.ThrowIfCancellationRequested();
         var roots = new QuiverRootFinder(_fileSystem, _registry, _environment, _logger).Find(options, cancellationToken);
-        var games = new List<GameEntry>();
+        var found = new List<(GameEntry Game, QuiverRootHit Root)>();
         var errors = new List<ScanError>();
-        var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var root in roots)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            foreach (var game in ReadRoot(root, errors, cancellationToken))
-            {
-                if (seen.TryGetValue(game.SourceId, out var first))
-                {
-                    _logger.LogInformation("Quiver: {Folder} kommt in {Root} noch einmal vor; es gilt der Eintrag aus {First}.", game.SourceId, root.Folder, first);
-                    continue;
-                }
+            found.AddRange(ReadRoot(root, errors, cancellationToken).Select(game => (game, root)));
+        }
 
-                seen[game.SourceId] = root.Folder;
-                games.Add(game);
+        // Doppelt (zwei Quiver-Ordner mit demselben folderName): Aufbau ab 3.0 vor der alten Struktur, dann der zuletzt
+        // gespielte, dann der zuerst gefundene. Die Reihenfolge der Spiele bleibt die des ersten Fundes.
+        var games = new List<GameEntry>();
+        foreach (var group in found.GroupBy(f => f.Game.SourceId, StringComparer.OrdinalIgnoreCase))
+        {
+            var best = group
+                .OrderByDescending(f => f.Root.Layout == QuiverLayout.Velopack)
+                .ThenByDescending(f => f.Game.LastPlayed ?? DateTimeOffset.MinValue)
+                .First();
+            foreach (var other in group.Where(f => !ReferenceEquals(f.Game, best.Game)))
+            {
+                _logger.LogInformation("Quiver: {Folder} kommt auch in {Root} vor; es gilt der Eintrag aus {Chosen}.", other.Game.SourceId, other.Root.Folder, best.Root.Folder);
             }
+
+            games.Add(best.Game);
         }
 
         return new ScanResult
@@ -129,8 +136,10 @@ public sealed class QuiverScanner : IGameScanner
     }
 
     /// <summary>
-    /// Apps-Ordner: <c>AppsPath</c> aus settings.json, wenn absolut; sonst <c>&lt;Quiver&gt;\Apps</c>. Eine defekte
-    /// settings.json wird gemeldet, es gilt dann der Standardordner (so liegen die Spiele fast immer).
+    /// Apps-Ordner: <c>AppsPath</c> aus settings.json, wenn absolut, auch eine Laufwerkswurzel (Quiver nimmt den Wert
+    /// unverändert, die Spiele liegen dann in <c>G:\&lt;folderName&gt;</c>; ein Spielordner darunter ist nie selbst eine
+    /// Wurzel, weil <c>folderName</c> nie leer ist); sonst <c>&lt;Quiver&gt;\Apps</c>. Eine defekte settings.json oder ein
+    /// relativer <c>AppsPath</c> wird gemeldet, es gilt dann der Standardordner (so liegen die Spiele fast immer).
     /// </summary>
     private string AppsFolder(string root, List<ScanError> errors)
     {
@@ -162,10 +171,10 @@ public sealed class QuiverScanner : IGameScanner
             return standard;
         }
 
-        var folder = InstallPaths.NormalizeInstallDir(appsPath, out var problem);
-        if (folder is null)
+        var folder = PathUtil.Normalize(appsPath);
+        if (folder.Length == 0 || folder.IndexOfAny(Path.GetInvalidPathChars()) >= 0 || !Path.IsPathFullyQualified(folder))
         {
-            errors.Add(new ScanError("Quiver-Einstellung AppsPath unbrauchbar, es gilt der Ordner Apps: " + problem, settings));
+            errors.Add(new ScanError($"Quiver-Einstellung AppsPath unbrauchbar, es gilt der Ordner Apps: \"{folder}\" ist kein gültiger absoluter Pfad.", settings));
             return standard;
         }
 
@@ -282,9 +291,9 @@ public sealed class QuiverScanner : IGameScanner
     }
 
     /// <summary>
-    /// Null, wenn <paramref name="folderName"/> als Schlüssel und Ordnername taugt; sonst die Begründung: leer, „.“ oder
-    /// „..“ (auch als Teil), Trenner, Laufwerksangabe oder ein im Dateinamen ungültiges Zeichen. So kann ein Eintrag nie
-    /// aus dem Apps-Ordner hinauszeigen.
+    /// Null, wenn <paramref name="folderName"/> als Schlüssel und Ordnername taugt; sonst die Begründung: leer, genau „.“,
+    /// „..“ (auch als Teil des Namens), Trenner, Laufwerksangabe oder ein im Dateinamen ungültiges Zeichen. So kann ein
+    /// Eintrag nie aus dem Apps-Ordner hinauszeigen.
     /// </summary>
     internal static string? ValidateFolderName(string? folderName)
     {
@@ -293,7 +302,12 @@ public sealed class QuiverScanner : IGameScanner
             return "folderName fehlt.";
         }
 
-        if (folderName.Contains("..", StringComparison.Ordinal) || folderName == ".")
+        if (folderName == ".")
+        {
+            return "folderName ist „.“.";
+        }
+
+        if (folderName.Contains("..", StringComparison.Ordinal))
         {
             return $"folderName \"{folderName}\" enthält „..“.";
         }

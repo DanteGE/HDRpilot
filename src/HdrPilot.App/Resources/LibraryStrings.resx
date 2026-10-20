@@ -500,8 +500,16 @@
     <value>Für diesen Eintrag kennt HDRpilot keine Start-EXE: Im Ordner liegt keine oder mehr als eine. Die Erkennung beim Spielen wirkt trotzdem. Zum Starten über HDRpilot das Spiel über seine EXE hinzufügen.</value>
   </data>
   <data name="Launch_NoCommandQuiver" xml:space="preserve">
-    <value>Für dieses Quiver-Spiel kennt HDRpilot keine eindeutige Start‑EXE, meist weil im Spielordner mehrere EXE‑Dateien liegen und Quiver sich keine gemerkt hat. Starte das Spiel einmal in Quiver und wähle dort die EXE; nach dem nächsten Einlesen startet HDRpilot sie direkt. Die Erkennung beim Spielen wirkt trotzdem.</value>
-    <comment>E91: Quiver-Spiel ohne Start-Befehl (mehrere EXE und keine selected_executable.txt); geschützte Bindestriche (U+2011)</comment>
+    <value>Für dieses Quiver-Spiel kennt HDRpilot keine eindeutige Start‑EXE: Im Spielordner liegen mehrere Kandidaten, die EXE liegt sehr tief, oder Quiver startet ein Skript (BAT oder CMD), das HDRpilot nicht ausführt. Starte das Spiel einmal in Quiver und wähle dort die EXE, wenn Quiver danach fragt; nach „Neu einlesen“ startet HDRpilot sie direkt. Die Erkennung beim Spielen wirkt trotzdem.</value>
+    <comment>E91: Quiver-Spiel ohne Start-Befehl (mehrere Kandidaten ohne selected_executable.txt, EXE tiefer als drei Ebenen, Startskript); geschützter Bindestrich (U+2011)</comment>
+  </data>
+  <data name="Details_DuplicateOfManual" xml:space="preserve">
+    <value>Dasselbe Spiel steht auch als eigener Eintrag „{0}“ in der Bibliothek, für denselben Ordner. HDRpilot entfernt nichts von selbst: Brauchst du den eigenen Eintrag nicht mehr, entferne ihn in seinen Details mit „Aus der Bibliothek entfernen“.</value>
+    <comment>E91: Quiver-Spiel, das früher von Hand eingetragen wurde; {0} = Name des eigenen Eintrags</comment>
+  </data>
+  <data name="Details_DuplicateOfQuiver" xml:space="preserve">
+    <value>HDRpilot liest dieses Spiel auch aus Quiver („{0}“), für denselben Ordner. HDRpilot entfernt nichts von selbst: Brauchst du diesen eigenen Eintrag nicht mehr, entferne ihn unten mit „Aus der Bibliothek entfernen“.</value>
+    <comment>E91: eigener Eintrag, den HDRpilot jetzt auch aus Quiver liest; {0} = Name des Quiver-Spiels</comment>
   </data>
   <data name="Details_QuiverWindowsInstaller" xml:space="preserve">
     <value>Über Windows Installer installiert: Als Installationsordner gilt der Ordner der EXE, die in Quiver verknüpft ist. „Starten“ startet diese EXE direkt.</value>
@@ -1034,6 +1042,10 @@
     <value>{0} · keine EXE erkannt</value>
     <comment>{0} = Quelle</comment>
   </data>
+  <data name="Profile_SubtitleSeveralExe" xml:space="preserve">
+    <value>{0} · mehrere EXE</value>
+    <comment>Kein Start-Befehl, mehrere mögliche Haupt-EXEs und keine beim Spielen gemerkte (etwa Quiver, E91); {0} = Quelle</comment>
+  </data>
   <data name="Profile_More" xml:space="preserve">
     <value>Weitere Optionen</value>
   </data>
@@ -1178,7 +1190,7 @@
     <value>Wird beim Übernehmen verkleinert im Datenordner gespeichert, die Datei selbst bleibt unverändert.</value>
   </data>
   <data name="Picker_SourceNote" xml:space="preserve">
-    <value>HDRpilot liest Bilder nur aus den lokalen Caches der Launcher (Steam, GOG Galaxy, Ubisoft, Xbox-Paket). Fehlt eines, wird es aus Symbol und Name erzeugt. SteamGridDB (online) füllt nur fehlende Bilder und nur, wenn du es in den Einstellungen einschaltest.</value>
+    <value>HDRpilot liest Bilder nur aus den lokalen Caches der Launcher (Steam, GOG Galaxy, Ubisoft, Xbox-Paket, Quiver). Fehlt eines, wird es aus Symbol und Name erzeugt. SteamGridDB (online) füllt nur fehlende Bilder und nur, wenn du es in den Einstellungen einschaltest.</value>
   </data>
   <data name="Picker_Size" xml:space="preserve">
     <value>{0} × {1}</value>

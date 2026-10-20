@@ -144,7 +144,13 @@ public sealed partial class ArtworkService
         var preview = Preview(state, spec, previewWidth);
 
         var (width, height) = (0, 0);
-        if (spec.File is { } file)
+        if (GeneratedSize(spec.Generate) is { } generated)
+        {
+            // Erzeugte Bilder (auch das Hochformat aus einem quadratischen Bild): die Größe der gespeicherten Fassung, nicht die
+            // der kleinen Vorschau oder der Vorlage.
+            (width, height) = generated;
+        }
+        else if (spec.File is { } file)
         {
             try
             {
@@ -154,11 +160,6 @@ public sealed partial class ArtworkService
             {
                 // Größe unbekannt.
             }
-        }
-        else if (GeneratedSize(spec.Generate) is { } generated)
-        {
-            // Erzeugte Bilder: die Größe der gespeicherten Fassung, nicht die der kleinen Vorschau.
-            (width, height) = generated;
         }
         else if (preview is BitmapSource bitmap)
         {
@@ -172,7 +173,7 @@ public sealed partial class ArtworkService
     private static (int Width, int Height)? GeneratedSize(Generator generator) => generator switch
     {
         Generator.Hero => (ArtworkRenderer.HeroWidth, ArtworkRenderer.HeroHeight),
-        Generator.CoverFromHero or Generator.CoverFromField => (ArtworkRenderer.CoverWidth, ArtworkRenderer.CoverHeight),
+        Generator.CoverFromHero or Generator.CoverFromField or Generator.CoverFromSquare => (ArtworkRenderer.CoverWidth, ArtworkRenderer.CoverHeight),
         Generator.Header => (ArtworkRenderer.HeaderWidth, ArtworkRenderer.HeaderHeight),
         Generator.Monogram => (ArtworkRenderer.IconSize, ArtworkRenderer.IconSize),
         _ => null,

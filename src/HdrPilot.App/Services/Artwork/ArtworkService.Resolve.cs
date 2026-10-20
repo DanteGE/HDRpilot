@@ -18,6 +18,12 @@ public sealed partial class ArtworkService
     /// <summary>Ohne Titelbild wird die EXE nach einem größeren Symbol gefragt, wenn das beste kleiner ist.</summary>
     private const int ExeIconWanted = 128;
 
+    /// <summary>
+    /// Ein Cover aus dem Cache gilt unter diesem Verhältnis von Höhe zu Breite als (fast) quadratisch: Quiver legt die Kartenbilder
+    /// von SteamGridDB meist quadratisch ab (480 × 480), ein Hochformat-Cover hat 1,5 (600 × 900).
+    /// </summary>
+    private const double SquareCoverRatio = 1.2;
+
     private readonly Lazy<IconReader> _iconReader = new(() => new IconReader());
 
     /// <summary>Wie eine Bildart entsteht.</summary>
@@ -28,6 +34,9 @@ public sealed partial class ArtworkService
         Hero,
         CoverFromHero,
         CoverFromField,
+
+        /// <summary>Cover im Hochformat aus einem (fast) quadratischen Bild des Launchers (Quiver): das Bild ganz, oben.</summary>
+        CoverFromSquare,
         Header,
         Monogram,
 
@@ -54,6 +63,12 @@ public sealed partial class ArtworkService
         public required IndexedIcon Icon { get; init; }
 
         public required bool CoverSmeared { get; init; }
+
+        /// <summary>Cover-Dateien des Launchers, die (fast) quadratisch sind (Quiver); als Cover gilt dann <see cref="Generator.CoverFromSquare"/>.</summary>
+        public required IReadOnlySet<string> SquareCovers { get; init; }
+
+        /// <summary>Das automatische Cover, wenn es (fast) quadratisch ist: Es steht auch im erzeugten Titelbild und gibt die Farben.</summary>
+        public string? SquareArt => Located.Cover is { } cover && SquareCovers.Contains(cover.Path) ? cover.Path : null;
 
         public required ArtSpec Hero { get; init; }
 
@@ -123,11 +138,41 @@ public sealed partial class ArtworkService
             var icon = Entry(game.Key, e => e.Icon) ?? StoreIcon(game.Key, ChooseIcon(game, located, hero.File is not null, customIcon));
             var smeared = located.Cover is { Cache: LauncherCache.Steam } cover
                 && (Entry(game.Key, e => e.CoverSmeared) ?? StoreSmear(game.Key, cover.Path));
-            var ambient = full ? Entry(game.Key, e => e.Ambient) ?? StoreAmbient(game.Key, ComputeAmbient(game, hero, icon)) : Entry(game.Key, e => e.Ambient);
-            var state = Build(game, stamp, signature, located, custom, sgdb, icon, smeared, ambient);
+            var squares = SquareCovers(located);
+            var squareArt = located.Cover is { } automatic && squares.Contains(automatic.Path) ? automatic.Path : null;
+            var ambient = full ? Entry(game.Key, e => e.Ambient) ?? StoreAmbient(game.Key, ComputeAmbient(game, hero, squareArt, icon)) : Entry(game.Key, e => e.Ambient);
+            var state = Build(game, stamp, signature, located, custom, sgdb, icon, smeared, squares, ambient);
             _states[game.Key] = state;
             return state;
         }
+    }
+
+    /// <summary>
+    /// Cover-Dateien aus dem Cache von Quiver (automatisch und zur Wahl), die (fast) quadratisch sind
+    /// (<see cref="SquareCoverRatio"/>; gemessen am Kopf der Datei). Als Cover zugeschnitten fehlte ihnen links und rechts ein
+    /// Drittel, etwa vom Schriftzug „BLACK“; sie werden deshalb ganz in ein erzeugtes Cover im Hochformat gesetzt.
+    /// </summary>
+    private HashSet<string> SquareCovers(LocatedArtwork located)
+    {
+        var squares = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var covers = located.Cover is { } automatic ? located.Alternatives.Prepend(automatic) : located.Alternatives;
+        foreach (var image in covers.Where(i => i is { Kind: ArtworkKind.Cover, Cache: LauncherCache.Quiver }))
+        {
+            try
+            {
+                var (width, height) = ArtworkImaging.Measure(image.Path);
+                if (width > 0 && height > 0 && height < width * SquareCoverRatio)
+                {
+                    squares.Add(image.Path);
+                }
+            }
+            catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex))
+            {
+                _logger.LogDebug("Bilder: Cover {Path} nicht lesbar: {Error}", image.Path, ex.GetType().Name);
+            }
+        }
+
+        return squares;
     }
 
     /// <summary>
@@ -142,8 +187,8 @@ public sealed partial class ArtworkService
         var custom = CustomFiles(game);
         var sgdb = SteamGridDbFiles(game.Key);
         var hero = HeroSpec(game, real.Located, custom, sgdb);
-        var ambient = hero.File == real.Hero.File && real.Ambient is not null ? real.Ambient : ComputeAmbient(game, hero, real.Icon);
-        return Build(game, ConfigStamp(game), real.Signature, real.Located, custom, sgdb, real.Icon, real.CoverSmeared, ambient, hypothetical: true);
+        var ambient = hero.File == real.Hero.File && real.Ambient is not null ? real.Ambient : ComputeAmbient(game, hero, real.SquareArt, real.Icon);
+        return Build(game, ConfigStamp(game), real.Signature, real.Located, custom, sgdb, real.Icon, real.CoverSmeared, real.SquareCovers, ambient, hypothetical: true);
     }
 
     /// <summary>Geltende Quelle je Bildart aus den ermittelten Angaben (ohne Plattenzugriff).</summary>
@@ -156,12 +201,17 @@ public sealed partial class ArtworkService
         Dictionary<ArtworkKind, string> sgdb,
         IndexedIcon icon,
         bool smeared,
+        IReadOnlySet<string> squareCovers,
         IndexedAmbient? ambient,
         bool hypothetical = false)
     {
         var hero = HeroSpec(game, located, custom, sgdb);
         var logo = LogoSpec(game, located, custom, sgdb);
         var cover = CoverSpec(game, located, custom, sgdb, hero, smeared);
+        if (cover is { Generate: Generator.None, File: { } coverFile, Origin: ArtworkOrigin.Launcher or ArtworkOrigin.Alternative } && squareCovers.Contains(coverFile))
+        {
+            cover = cover with { Generate = Generator.CoverFromSquare };
+        }
         var header = located.Header is { } h
             ? new ArtSpec(ArtworkKind.Header, h.Path, ArtworkOrigin.Launcher, CacheLabel(h.Cache), Generator.None)
             : hero.File is not null
@@ -182,6 +232,7 @@ public sealed partial class ArtworkService
             Located = located,
             Icon = icon,
             CoverSmeared = smeared,
+            SquareCovers = squareCovers,
             Hero = hero,
             Logo = logo,
             Cover = cover,
@@ -189,7 +240,7 @@ public sealed partial class ArtworkService
             Field = field,
             IconSpec = iconSpec,
             Ambient = ambient,
-            Summary = Summary(game, hero, logo, cover, iconSpec, icon, smeared),
+            Summary = Summary(game, hero, logo, cover, iconSpec, icon, smeared, located.Cover is { } automatic && squareCovers.Contains(automatic.Path)),
             IsHypothetical = hypothetical,
         };
     }
@@ -468,12 +519,13 @@ public sealed partial class ArtworkService
     }
 
     /// <summary>
-    /// Umgebungsfarben: aus dem Titelbild (Szene, Farbfeld 8×3), sonst aus Symbol oder Kachelbild (Farbfeld 6×6), sonst aus dem
-    /// Namen (fester Farbton je Name, Farbfeld als Verlauf).
+    /// Umgebungsfarben: aus dem Titelbild (Szene, Farbfeld 8×3), sonst aus einem quadratischen Cover des Launchers (Quiver,
+    /// steht dann auch im erzeugten Titelbild und Cover), aus Symbol oder Kachelbild (Farbfeld 6×6), sonst aus dem Namen (fester
+    /// Farbton je Name, Farbfeld als Verlauf).
     /// </summary>
-    private IndexedAmbient ComputeAmbient(GameConfig game, ArtSpec hero, IndexedIcon icon)
+    private IndexedAmbient ComputeAmbient(GameConfig game, ArtSpec hero, string? squareArt, IndexedIcon icon)
     {
-        foreach (var (path, scene) in new[] { (hero.File, true), (icon.Path, false) })
+        foreach (var (path, scene) in new[] { (hero.File, true), (squareArt, false), (icon.Path, false) })
         {
             if (path is null)
             {
@@ -537,8 +589,11 @@ public sealed partial class ArtworkService
         }
     }
 
-    /// <summary>Zeile für den Detailbereich und Herkunft je Bildart (wie artLine im Prototyp).</summary>
-    private static ArtworkSummary Summary(GameConfig game, ArtSpec hero, ArtSpec logo, ArtSpec cover, ArtSpec iconSpec, IndexedIcon icon, bool smeared)
+    /// <summary>
+    /// Zeile für den Detailbereich und Herkunft je Bildart (wie artLine im Prototyp). Ohne Titelbild im Cache: ein
+    /// quadratisches Cover (Quiver) oder ein Cover aus dem Cache wird genannt; „kein Bildcache“ nur bei Launchern ohne Bildcache.
+    /// </summary>
+    private static ArtworkSummary Summary(GameConfig game, ArtSpec hero, ArtSpec logo, ArtSpec cover, ArtSpec iconSpec, IndexedIcon icon, bool smeared, bool squareArt)
     {
         var source = LibraryText.SourceName(game.Source);
         string description;
@@ -567,8 +622,17 @@ public sealed partial class ArtworkService
             // Steam hat einen Bildcache, nur kein Titelbild für dieses Spiel (auch wenn das Symbol aus der EXE kommt).
             description = ArtworkStrings.Summary_SteamNoHero;
         }
-        else if (icon.Kind == "exe" && icon.Path is { } exe)
+        else if (squareArt)
         {
+            description = Format(ArtworkStrings.Summary_SquareArt, ArtworkStrings.Source_QuiverCache);
+        }
+        else if (cover.Origin is ArtworkOrigin.Launcher or ArtworkOrigin.Alternative)
+        {
+            description = Format(icon.Path is null ? ArtworkStrings.Summary_CoverFromCacheNoIcon : ArtworkStrings.Summary_CoverFromCache, cover.Label);
+        }
+        else if (icon.Kind == "exe" && icon.Path is { } exe && game.Source is GameSource.Epic or GameSource.EA or GameSource.BattleNet or GameSource.Manual)
+        {
+            // Nur Launcher ohne eigenen Bildcache; Steam, GOG, Ubisoft, Xbox und Quiver haben einen, nur ohne Titelbild.
             description = Format(ArtworkStrings.Summary_ExeIcon, source, Path.GetFileName(exe), icon.Px);
         }
         else

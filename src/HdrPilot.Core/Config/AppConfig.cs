@@ -29,6 +29,21 @@ public sealed class AppConfig
     public GameConfig? FindGame(string key) =>
         Games.FirstOrDefault(g => string.Equals(g.Key, key, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Schlüssel aller Spiele der Datei, auch der mit unbekannter Quelle (<c>&lt;source&gt;:&lt;sourceId&gt;</c>, so wie die
+    /// Version sie bildet, die die Quelle kennt): Das Aufräumen der Bilder löscht so nie eigene Bilder oder Logos eines Spiels,
+    /// das nur diese Version nicht kennt (E91). Einträge ohne Quelle oder ID als Text haben keinen Schlüssel.
+    /// </summary>
+    public IReadOnlyList<string> AllGameKeys() =>
+        Games.Select(g => g.Key).Concat(UnknownSourceGames.Select(UnknownSourceKey).OfType<string>()).ToList();
+
+    private static string? UnknownSourceKey(JsonElement game) =>
+        game.ValueKind == JsonValueKind.Object
+        && game.TryGetProperty("source", out var source) && source.ValueKind == JsonValueKind.String && source.GetString() is { Length: > 0 } name
+        && game.TryGetProperty("sourceId", out var id) && id.ValueKind == JsonValueKind.String && id.GetString() is { Length: > 0 } sourceId
+            ? name + ":" + sourceId
+            : null;
+
     /// <summary>Tiefe Kopie über JSON, damit Leser einen unveränderlichen Stand behalten.</summary>
     public AppConfig Clone() => JsonSerializer.Deserialize<AppConfig>(JsonSerializer.Serialize(this, ConfigJson.Options), ConfigJson.Options)!;
 }

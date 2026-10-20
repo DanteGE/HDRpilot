@@ -22,8 +22,10 @@ internal sealed record QuiverRootHit(string Folder, QuiverLayout Layout, string 
 /// </list>
 /// Erst wenn das nichts findet, folgt eine begrenzte Suche: Downloads (bekannter Ordner aus der Registry), Desktop,
 /// Dokumente, Benutzerordner und die festen Laufwerke, je bis zwei Ebenen tief, höchstens <see cref="MaxSearchedFolders"/>
-/// Ordner, ohne System- und Programmordner; sie endet beim ersten Treffer. Geprüft wird jeder Ordner nur an seinem
-/// Kennzeichen (<see cref="QuiverRoot.Detect"/>), also mit zwei Dateiabfragen. Liest nur, schreibt nichts, kein Netz.
+/// Ordner, ohne System- und Programmordner; sie endet beim ersten Treffer. Sie bleibt auf festen Laufwerken (ein umgeleiteter
+/// Ordner auf einer Netzfreigabe oder einem Wechseldatenträger fällt heraus) und folgt keinem verknüpften Ordner (Junction,
+/// symbolische Verknüpfung), damit sie nie über eine Verknüpfung auf eine Netzfreigabe gerät. Geprüft wird jeder Ordner nur
+/// an seinem Kennzeichen (<see cref="QuiverRoot.Detect"/>), also mit zwei Dateiabfragen. Liest nur, schreibt nichts, kein Netz.
 /// </summary>
 internal sealed class QuiverRootFinder(IFileSystem fileSystem, IRegistry registry, IAppEnvironment environment, ILogger logger)
 {
@@ -50,8 +52,17 @@ internal sealed class QuiverRootFinder(IFileSystem fileSystem, IRegistry registr
     /// <summary>Bekannter Ordner „Downloads“ (FOLDERID_Downloads) als Wertname unter User Shell Folders.</summary>
     internal const string DownloadsValueName = "{374DE290-123F-4565-9164-39C4925E467B}";
 
-    /// <summary>Laufwerkspfade in einer Zeile des Protokolls: in Anführungszeichen (mit verdoppelten Backslashes) oder bis zum Zeilenende.</summary>
-    private static readonly Regex LogPath = new(@"(?<![A-Za-z])[A-Za-z]:\\{1,2}[^""'\r\n<>|?*]*", RegexOptions.CultureInvariant);
+    /// <summary>
+    /// Laufwerkspfad in einfachen Anführungszeichen, bis zum letzten ' der Zeile (ein Pfad wie C:\Users\O'Brien enthält
+    /// selbst eins; Velopack setzt je Zeile höchstens einen solchen Pfad).
+    /// </summary>
+    private static readonly Regex SingleQuotedPath = new(@"'(?<path>[A-Za-z]:\\[^\r\n]*)'", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Übriger Laufwerkspfad, auch in doppelten Anführungszeichen (Velopack verdoppelt dort die Backslashes): bis zum
+    /// Zeilenende, bis vor ein " oder bis vor den nächsten Laufwerkspfad; ein ' darf darin stehen.
+    /// </summary>
+    private static readonly Regex BarePath = new(@"(?<![A-Za-z])[A-Za-z]:\\(?:(?! [A-Za-z]:\\)[^""\r\n<>|?*])*", RegexOptions.CultureInvariant);
 
     /// <summary>Ordner, in die die Suche ohne Hinweis nicht hinabsteigt (Windows, Programme, große Datenordner, Verknüpfungen).</summary>
     private static readonly HashSet<string> SkippedFolders = new(StringComparer.OrdinalIgnoreCase)
@@ -147,7 +158,7 @@ internal sealed class QuiverRootFinder(IFileSystem fileSystem, IRegistry registr
 
                     if (depth < 2 && expanded.Add(folder))
                     {
-                        next.AddRange(Directories(folder).Where(d => !IsSkipped(Path.GetFileName(d))));
+                        next.AddRange(Directories(folder, withoutLinks: true).Where(d => !IsSkipped(Path.GetFileName(d))));
                     }
                 }
 
@@ -192,35 +203,71 @@ internal sealed class QuiverRootFinder(IFileSystem fileSystem, IRegistry registr
         return FoldersFromLog(text);
     }
 
-    /// <summary>Kandidaten aus dem Text des Protokolls (siehe <see cref="VelopackLogFolders"/>).</summary>
+    /// <summary>
+    /// Kandidaten aus dem Text des Protokolls (siehe <see cref="VelopackLogFolders"/>): je Zeile, die jüngste zuerst, erst
+    /// die Pfade in einfachen Anführungszeichen, dann die übrigen; jeder Fund wird in der Zeile gelöscht, bevor die nächste
+    /// Art gesucht wird. So bleibt ein ' im Pfad erhalten, und zwei Pfade einer Zeile werden nicht eins.
+    /// </summary>
     internal static IReadOnlyList<string> FoldersFromLog(string text)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var match in LogPath.Matches(text).Reverse())
+        foreach (var line in text.Split('\n').Reverse())
         {
-            var path = NormalizeFolder(match.Value.Replace(@"\\", @"\", StringComparison.Ordinal).TrimEnd(' ', '.', ',', ')', ';'));
-            for (var i = 0; i < 3 && path is not null; i++)
+            var rest = line;
+            var found = new List<(int Index, string Path)>();
+            foreach (var pattern in new[] { SingleQuotedPath, BarePath })
             {
-                if (seen.Add(path))
+                foreach (Match match in pattern.Matches(rest))
                 {
-                    result.Add(path);
-                    if (result.Count >= MaxLogCandidates)
-                    {
-                        return result;
-                    }
+                    var group = match.Groups["path"].Success ? match.Groups["path"] : match.Groups[0];
+                    found.Add((group.Index, group.Value));
                 }
 
-                path = Path.GetDirectoryName(path) is { } parent && parent.Length > 3 ? parent : null;
+                rest = pattern.Replace(rest, m => new string(' ', m.Length));
+            }
+
+            // In der Zeile hinten zuerst, wie die Zeilen selbst.
+            foreach (var (_, raw) in found.OrderByDescending(f => f.Index))
+            {
+                var path = NormalizeFolder(raw.Replace(@"\\", @"\", StringComparison.Ordinal).TrimEnd(' ', '.', ',', ')', ';'));
+                for (var i = 0; i < 3 && path is not null; i++)
+                {
+                    if (seen.Add(path))
+                    {
+                        result.Add(path);
+                        if (result.Count >= MaxLogCandidates)
+                        {
+                            return result;
+                        }
+                    }
+
+                    path = Path.GetDirectoryName(path) is { } parent && parent.Length > 3 ? parent : null;
+                }
             }
         }
 
         return result;
     }
 
-    /// <summary>Grundordner der Suche ohne Hinweis: Downloads, Desktop, Dokumente, Benutzerordner, feste Laufwerke.</summary>
+    /// <summary>
+    /// Grundordner der Suche ohne Hinweis: Downloads, Desktop, Dokumente, Benutzerordner, feste Laufwerke; nur solche auf
+    /// einem festen Laufwerk (ein auf eine Netzfreigabe umgeleiteter Ordner fällt heraus).
+    /// </summary>
     private IEnumerable<string> SearchBases()
     {
+        IReadOnlyList<string> drives;
+        try
+        {
+            drives = fileSystem.GetFixedDriveRoots();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogDebug("Quiver: Laufwerke nicht lesbar: {Message}", ex.Message);
+            drives = [];
+        }
+
+        var fixedRoots = new HashSet<string>(drives.Select(PathUtil.Normalize), StringComparer.OrdinalIgnoreCase);
         var bases = new List<string?>
         {
             DownloadsFolder(),
@@ -228,16 +275,11 @@ internal sealed class QuiverRootFinder(IFileSystem fileSystem, IRegistry registr
             environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
             environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         };
-        try
-        {
-            bases.AddRange(fileSystem.GetFixedDriveRoots());
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            logger.LogDebug("Quiver: Laufwerke nicht lesbar: {Message}", ex.Message);
-        }
-
-        return bases.Select(NormalizeFolder).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase);
+        bases.AddRange(drives);
+        return bases.Select(NormalizeFolder)
+            .OfType<string>()
+            .Where(b => Path.GetPathRoot(b) is { } root && fixedRoots.Contains(PathUtil.Normalize(root)))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -264,11 +306,13 @@ internal sealed class QuiverRootFinder(IFileSystem fileSystem, IRegistry registr
         return key?.GetString("InstallLocation");
     }
 
-    private List<string> Directories(string folder)
+    /// <summary>Unterordner, sortiert; mit <paramref name="withoutLinks"/> ohne verknüpfte Ordner (Suche ohne Hinweis).</summary>
+    private List<string> Directories(string folder, bool withoutLinks = false)
     {
         try
         {
-            return fileSystem.EnumerateDirectories(folder).Select(PathUtil.Normalize).Order(StringComparer.OrdinalIgnoreCase).ToList();
+            var children = withoutLinks ? fileSystem.EnumerateDirectoriesWithoutLinks(folder) : fileSystem.EnumerateDirectories(folder);
+            return children.Select(PathUtil.Normalize).Order(StringComparer.OrdinalIgnoreCase).ToList();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException)
         {

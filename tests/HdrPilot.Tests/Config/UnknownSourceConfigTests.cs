@@ -145,6 +145,20 @@ public sealed class UnknownSourceConfigTests
     }
 
     [Fact]
+    public void UnknownSource_games_keep_their_keys_for_the_artwork_cleanup()
+    {
+        // Das Aufräumen der Bilder beim Schließen löscht alles, was keinem Schlüssel gehört: Die fremden Spiele zählen mit,
+        // damit ihre eigenen Bilder die Rückkehr zur neueren Version überleben.
+        _fs.AddFile(ConfigPath, FutureConfig.Replace("\"games\": [", "\"games\": [ { \"source\": 99, \"sourceId\": \"zahl\" }, { \"source\": \"Itch\" },", StringComparison.Ordinal));
+
+        var config = new ConfigStore(_fs, ConfigPath, _clock).Load().Config;
+
+        Assert.Equal(3, config.UnknownSourceGames.Count);
+        Assert.Equal(["Steam:570", "Gog:1423049311", "Itch:celeste"], config.AllGameKeys());
+        Assert.Equal(["Steam:570", "Gog:1423049311", "Itch:celeste"], config.Clone().AllGameKeys());
+    }
+
+    [Fact]
     public void UnknownSource_does_not_include_quiver_which_this_version_knows()
     {
         _fs.AddFile(ConfigPath, FutureConfig.Replace("\"source\": \"Itch\", \"sourceId\": \"celeste\"", "\"source\": \"Quiver\", \"sourceId\": \"Black-BlackXBERecomp\"", StringComparison.Ordinal));

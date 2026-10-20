@@ -155,6 +155,40 @@ public sealed partial class PhysicalFileSystemTests : IDisposable
     }
 
     [Fact]
+    public void Quiver_listing_without_links_skips_junctions()
+    {
+        // Suche nach dem Quiver-Ordner und nach der Start-EXE (E91): verknüpfte Ordner (etwa auf eine Netzfreigabe) fehlen.
+        Put(@"Downloads\Echt\datei.txt");
+        Put(@"Anderswo\Quiver\current\sq.version");
+        Junction(Path.Combine(_dir, @"Downloads\Verknuepft"), Path.Combine(_dir, "Anderswo"));
+
+        Assert.Equal([Path.Combine(_dir, @"Downloads\Echt")], PhysicalFileSystem.Instance.EnumerateDirectoriesWithoutLinks(Path.Combine(_dir, "Downloads")));
+        Assert.Equal(2, PhysicalFileSystem.Instance.EnumerateDirectories(Path.Combine(_dir, "Downloads")).Count()); // Gegenprobe
+        Assert.Empty(PhysicalFileSystem.Instance.EnumerateDirectoriesWithoutLinks(Path.Combine(_dir, "Fehlt")));
+    }
+
+    [Fact]
+    public void Quiver_game_folder_walk_does_not_follow_a_junction()
+    {
+        // Echter Quiver-Ordner im Temp-Ordner: Spiel mit bin\Game.exe und einer Junction „Mods“ auf einen Ordner mit einer
+        // weiteren EXE. Folgte die Suche ihr, gäbe es zwei Kandidaten und keinen Start-Befehl.
+        var root = Path.Combine(_dir, "Quiver");
+        Put(@"Quiver\current\sq.version", File.ReadAllText(Path.Combine(InMemoryFileSystem.FixturesRoot, "Quiver", "sq.version")));
+        Put(@"Quiver\apps.json", """{ "apps": [ { "folderName": "Spiel", "name": "Spiel" } ] }""");
+        var game = Put(@"Quiver\Apps\Spiel\bin\Game.exe", "MZ");
+        Put(@"Anderswo\Fremd.exe", "MZ");
+        Junction(Path.Combine(root, @"Apps\Spiel\Mods"), Path.Combine(_dir, "Anderswo"));
+
+        var result = new HdrPilot.Core.Games.Scanners.QuiverScanner(PhysicalFileSystem.Instance, new FakeRegistry(), new FakeEnvironment())
+            .Scan(new HdrPilot.Core.Games.ScanOptions { QuiverFolders = [root] }, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.Errors);
+        var entry = Assert.Single(result.Games);
+        Assert.Equal(game, entry.LaunchCommand);
+        Assert.Equal([game], entry.Executables);
+    }
+
+    [Fact]
     public void Developer_switches_recognize_the_real_folder_on_another_way()
     {
         // HasOwnConfigDir (E90): Derselbe Ordner über eine Junction, mit kurzem 8.3-Namen oder mit \\?\ davor ist derselbe;

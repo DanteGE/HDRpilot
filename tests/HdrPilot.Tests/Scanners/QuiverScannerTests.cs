@@ -147,7 +147,9 @@ public sealed class QuiverScannerTests
     [Fact]
     public void Quiver_downloads_folder_comes_from_the_known_folder_in_the_registry()
     {
-        // Downloads nach E:\ verschoben (kein festes Laufwerk der Attrappe): nur über den bekannten Ordner zu finden.
+        // Downloads nach E:\ verschoben (festes Laufwerk; die Suche über die Laufwerke reicht zwei Ebenen, Quiver liegt in der
+        // dritten): nur über den bekannten Ordner zu finden.
+        _fs.FixedDriveRoots.Add(@"E:\");
         _registry.Set(RegistryHiveKind.CurrentUser, QuiverRootFinder.UserShellFoldersKeyPath, QuiverRootFinder.DownloadsValueName, @"E:\Ablage\Downloads");
         const string root = @"E:\Ablage\Downloads\Quiver";
         AddRoot(root);
@@ -282,8 +284,9 @@ public sealed class QuiverScannerTests
     }
 
     [Theory]
-    [InlineData("Spiele", "kein absoluter Pfad")]
-    [InlineData("E:\\\\", "Laufwerkswurzel")]
+    [InlineData("Spiele", "\"Spiele\" ist kein gültiger absoluter Pfad")]
+    [InlineData("\\\\Spiele", "\"\\Spiele\" ist kein gültiger absoluter Pfad")] // ohne Laufwerk
+    [InlineData("E:\\\\Spiele|1", "\"E:\\Spiele|1\" ist kein gültiger absoluter Pfad")]
     public void Broken_apps_path_is_reported_and_the_apps_folder_used(string appsPath, string problem)
     {
         AddRoot();
@@ -393,7 +396,7 @@ public sealed class QuiverScannerTests
         Assert.Null(game.LaunchWorkingDirectory);
         Assert.Equal([BlackDir + @"\BLACK.exe", BlackDir + @"\BLACK_Vulkan.exe"], game.Executables);
         Assert.Equal(BlackDir, game.InstallDir);
-        Assert.True(_log.Contains(LogLevel.Information, "ohne Start-Befehl (2 EXE-Dateien und keine Wahl in Quiver)"));
+        Assert.True(_log.Contains(LogLevel.Information, "ohne Start-Befehl (2 Kandidaten und keine Wahl in Quiver)"));
     }
 
     [Fact]
@@ -423,16 +426,72 @@ public sealed class QuiverScannerTests
         var result = Scan(Learned(Root));
 
         Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games); // installiert wie in Quiver, das ohne Grenze sucht
         if (found)
         {
-            var game = Assert.Single(result.Games);
             Assert.Equal(BlackDir + @"\" + relative, game.LaunchCommand);
             Assert.Equal(Path.GetDirectoryName(BlackDir + @"\" + relative), game.LaunchWorkingDirectory);
         }
         else
         {
-            Assert.Empty(result.Games); // zu tief: wie keine EXE, also nicht installiert
+            // Zu tief für die Wahl der Start-EXE: kein Start-Befehl, aber das Spiel ist da (und bleibt „installiert“).
+            Assert.Null(game.LaunchCommand);
+            Assert.Equal([BlackDir + @"\" + relative], game.Executables);
+            Assert.True(_log.Contains(LogLevel.Information, "EXE erst tiefer als 3 Ebenen"));
         }
+    }
+
+    [Fact]
+    public void Quiver_installed_check_reaches_deep_but_stays_bounded()
+    {
+        // Eine EXE in Ebene 16 zählt für „installiert“, in Ebene 17 nicht mehr (Quiver sucht ohne Grenze, HDRpilot begrenzt).
+        AddRoot(apps: """{ "apps": [ { "folderName": "Tief", "name": "Tief" }, { "folderName": "ZuTief", "name": "ZuTief" } ] }""");
+        var sixteen = string.Concat(Enumerable.Range(1, QuiverExecutables.MaxInstallDepth).Select(i => $@"\e{i}"));
+        _fs.AddFile(Apps + @"\Tief" + sixteen + @"\Spiel.exe", "MZ");
+        _fs.AddFile(Apps + @"\ZuTief" + sixteen + @"\e17\Spiel.exe", "MZ");
+
+        var result = Scan(Learned(Root));
+
+        Assert.Equal(["Quiver:Tief"], result.Games.Select(g => g.Key));
+        Assert.Null(result.Games[0].LaunchCommand);
+    }
+
+    [Fact]
+    public void Quiver_search_that_hits_its_folder_limit_never_says_not_installed()
+    {
+        // Mehr Ordner als die Grenze und keine EXE darin: lieber „installiert ohne Start-Befehl“ als „nicht installiert“
+        // (das gäbe „Einstellungen entfernen…“ frei, E90).
+        AddRoot();
+        _fs.AddDirectory(BlackDir + @"\daten");
+
+        // Spielordner, „daten“ und die Unterordner: eins über der Grenze.
+        var result = Scan(Learned(Root), new WideFolder(_fs, BlackDir + @"\daten", QuiverExecutables.MaxFolders - 1));
+
+        var game = Assert.Single(result.Games);
+        Assert.Null(game.LaunchCommand);
+        Assert.Empty(game.Executables);
+        Assert.True(_log.Contains(LogLevel.Information, $"Suche nach {QuiverExecutables.MaxFolders} Ordnern beendet"));
+
+        // Gegenprobe: genau an der Grenze ist die Suche vollständig, also nicht installiert.
+        Assert.Empty(Scan(Learned(Root), new WideFolder(_fs, BlackDir + @"\daten", QuiverExecutables.MaxFolders - 2)).Games);
+    }
+
+    [Fact]
+    public void Quiver_linked_folders_in_the_game_folder_are_not_followed()
+    {
+        // Eine Junction im Spielordner (etwa auf ein anderes Laufwerk) wird nie betreten; Ordner von Wine/Proton auch nicht.
+        AddRoot();
+        _fs.AddFile(BlackDir + @"\verknuepft\Fremd.exe", "MZ");
+        _fs.AddFile(BlackDir + @"\bin\Game.exe", "MZ");
+        _fs.AddFile(BlackDir + @"\pfx\dosdevices\c\Tool.exe", "MZ");
+        _fs.AddFile(BlackDir + @"\pfx\drive_c\windows\Setup.exe", "MZ");
+        var counting = new ListingCounter(_fs);
+        counting.Links.Add(BlackDir + @"\verknuepft");
+
+        var game = Assert.Single(Scan(Learned(Root), counting).Games);
+
+        Assert.Equal(BlackDir + @"\bin\Game.exe", game.LaunchCommand);
+        Assert.DoesNotContain(counting.Listed, d => d.Contains("verknuepft", StringComparison.OrdinalIgnoreCase) || d.Contains("dosdevices", StringComparison.OrdinalIgnoreCase) || d.Contains("drive_c", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -516,7 +575,7 @@ public sealed class QuiverScannerTests
 
         Assert.Equal(BlackDir, Assert.Single(result.Games).InstallDir);
         Assert.Empty(result.Errors);
-        Assert.True(_log.Contains(LogLevel.Information, "noch einmal vor; es gilt der Eintrag aus " + Root));
+        Assert.True(_log.Contains(LogLevel.Information, "kommt auch in " + second + " vor; es gilt der Eintrag aus " + Root));
     }
 
     [Fact]
@@ -574,6 +633,42 @@ public sealed class QuiverScannerTests
         Assert.Equal("https://example.org/cover.png", QuiverArtwork.ResizedUrl("https://example.org/cover.png", 480, 70));
         Assert.Equal("Black-BlackXBERecomp_" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(IconUrl)))[..16].ToLowerInvariant() + ".png",
             QuiverArtwork.LegacyFileName("Black-BlackXBERecomp", IconUrl));
+    }
+
+    [Theory]
+    [InlineData("https://cdn2.steamgriddb.com/grid/df6f08b0faeb3094ca257cafd49dbcd9.png", true)]
+    [InlineData("https://cdn2.steamgriddb.com/hero/0A1B2C3D.jpg", true)]
+    [InlineData("HTTPS://CDN2.STEAMGRIDDB.COM/GRID/abc.webp", true)]
+    [InlineData("https://cdn2.steamgriddb.com/logo/abc.png", false)]
+    [InlineData("https://cdn2.steamgriddb.com/grid/xyz.png", false)] // keine Hex-Ziffern
+    [InlineData("https://cdn2.steamgriddb.com/grid/abc.png?x=1", false)]
+    [InlineData("https://cdn2.steamgriddb.com/grid/sub/abc.png", false)]
+    [InlineData("https://cdn2.steamgriddb.com/grid/abc.", false)]
+    [InlineData("https://cdn2.steamgriddb.com/grid/.png", false)]
+    [InlineData("http://cdn2.steamgriddb.com/grid/abc.png", false)]
+    [InlineData("https://cdn2.steamgriddb.com.example.org/grid/abc.png", false)]
+    public void Quiver_resized_copies_exist_only_for_steamgriddb_grids_and_heroes(string url, bool resized)
+    {
+        Assert.Equal(resized, QuiverArtwork.HasResizedCopies(url));
+        Assert.Equal(resized, QuiverArtwork.ResizedUrl(url, 480, 70) != url);
+    }
+
+    [Theory]
+    [InlineData(new byte[] { 0x89, 0x50, 0x4E, 0x47, 13, 10 }, true)]
+    [InlineData(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 }, true)]
+    [InlineData(new byte[] { (byte)'G', (byte)'I', (byte)'F', (byte)'8', (byte)'9', (byte)'a' }, true)]
+    [InlineData(new byte[] { (byte)'B', (byte)'M', 0, 0 }, true)]
+    [InlineData(new byte[] { 0, 0, 1, 0, 1, 0 }, true)]
+    [InlineData(new byte[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 1, 2, 3, 4, (byte)'W', (byte)'E', (byte)'B', (byte)'P' }, true)]
+    [InlineData(new byte[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 1, 2, 3, 4, (byte)'W', (byte)'A', (byte)'V', (byte)'E' }, false)] // Ton, kein Bild
+    [InlineData(new byte[] { (byte)'R', (byte)'I', (byte)'F', (byte)'F', 1, 2, 3, 4, (byte)'W', (byte)'E', (byte)'B' }, false)] // abgeschnitten
+    [InlineData(new byte[] { 0, 0, 2, 0 }, false)] // Mauszeiger, kein Symbol
+    [InlineData(new byte[] { 0x89, 0x50 }, false)]
+    [InlineData(new byte[] { (byte)'<', (byte)'h', (byte)'t', (byte)'m', (byte)'l', (byte)'>' }, false)]
+    public void Quiver_image_header_is_recognised_from_the_first_bytes(byte[] head, bool image)
+    {
+        Assert.Equal(image, QuiverArtwork.HasImageHeader(head));
+        Assert.Equal(12, QuiverArtwork.HeaderBytes);
     }
 
     [Fact]
@@ -896,7 +991,276 @@ public sealed class QuiverScannerTests
         Assert.Equal(GameSource.Quiver, ScannerCatalog.CreateAll(_fs, _registry, _env).Last().Source); // neue Quelle am Ende
     }
 
+    // ---- Prüfung 2026-10-20: Grenzen der Suche, Startskripte, Kalender, Doppelte, Protokoll ----
+
+    [Fact]
+    public void Quiver_many_asset_files_do_not_hide_the_game_exe()
+    {
+        // Mehr Dateien als früher je Spiel aufgelistet wurden (5000), alphabetisch vor der EXE: Das Spiel fehlte ganz.
+        AddRoot();
+        AddManyFiles(BlackDir + @"\assets", 5001);
+        _fs.AddFile(BlackDir + @"\bin\Game.exe", "MZ");
+
+        var result = Scan(Learned(Root));
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Equal(BlackDir + @"\bin\Game.exe", game.LaunchCommand);
+        Assert.Equal(BlackDir + @"\bin", game.LaunchWorkingDirectory);
+    }
+
+    [Fact]
+    public void Quiver_selected_executable_counts_even_with_many_files()
+    {
+        AddRoot();
+        AddManyFiles(BlackDir + @"\assets", 5001);
+        _fs.AddFile(BlackDir + @"\bin\Game.exe", "MZ");
+        _fs.AddFile(BlackDir + @"\bin\Editor.exe", "MZ");
+        _fs.AddFile(BlackDir + @"\selected_executable.txt", @"bin\Game.exe");
+
+        var game = Assert.Single(Scan(Learned(Root)).Games);
+
+        Assert.Equal(BlackDir + @"\bin\Game.exe", game.LaunchCommand);
+    }
+
+    [Fact]
+    public void Quiver_files_in_wine_folders_do_not_use_up_the_search()
+    {
+        // Ordner von Wine/Proton betritt die Suche gar nicht erst (früher: aufgelistet, erst danach aussortiert).
+        AddRoot();
+        AddManyFiles(BlackDir + @"\.wine-prefix\drive_c\windows", 5001);
+        _fs.AddFile(BlackDir + @"\bin\Game.exe", "MZ");
+        var counting = new ListingCounter(_fs);
+
+        var game = Assert.Single(Scan(Learned(Root), counting).Games);
+
+        Assert.Equal(BlackDir + @"\bin\Game.exe", game.LaunchCommand);
+        Assert.DoesNotContain(counting.Listed, d => d.Contains(".wine-prefix", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Quiver_launcher_script_at_the_top_gives_no_launch_command()
+    {
+        // Oben nur ein Startskript, die EXE tiefer: Quiver startet das Skript (mit seinen Argumenten und Umgebung). HDRpilot
+        // startet keine Skripte und darf die EXE nicht am Skript vorbei starten.
+        AddRoot();
+        _fs.AddFile(BlackDir + @"\launch.bat", "@echo off\r\nstart bin\\game.exe -vulkan");
+        _fs.AddFile(BlackDir + @"\bin\game.exe", "MZ");
+
+        var result = Scan(Learned(Root));
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Null(game.LaunchCommand);
+        Assert.Equal([BlackDir + @"\bin\game.exe"], game.Executables);
+        Assert.True(_log.Contains(LogLevel.Information, "Quiver startet launch.bat"));
+    }
+
+    [Fact]
+    public void Quiver_exe_and_script_side_by_side_are_two_candidates()
+    {
+        // Wie in Quiver: oben eine EXE und ein Skript sind zwei Kandidaten; ohne Wahl in Quiver kein Start-Befehl.
+        AddRoot();
+        AddBlack();
+        _fs.AddFile(BlackDir + @"\start-vulkan.cmd", "@echo off");
+
+        var game = Assert.Single(Scan(Learned(Root)).Games);
+
+        Assert.Null(game.LaunchCommand);
+        Assert.Equal([BlackDir + @"\BLACK.exe"], game.Executables);
+    }
+
+    [Fact]
+    public void Quiver_apps_path_on_a_drive_root_is_used()
+    {
+        // Quiver nimmt AppsPath unverändert, auch eine Laufwerkswurzel: die Spiele liegen dann in G:\<folderName>.
+        AddRoot();
+        _fs.AddFile(Root + @"\settings.json", "{ \"AppsPath\": \"G:\\\\\" }");
+        AddBlack(@"G:\Black-BlackXBERecomp");
+
+        var result = Scan(Learned(Root));
+
+        Assert.Empty(result.Errors);
+        var game = Assert.Single(result.Games);
+        Assert.Equal(@"G:\Black-BlackXBERecomp", game.InstallDir);
+        Assert.Equal(@"G:\Black-BlackXBERecomp\BLACK.exe", game.LaunchCommand);
+    }
+
+    [Theory]
+    [InlineData("2569-10-16 21:47:35")] // Thai (Buddhistischer Kalender): Quiver schreibt im Kalender der Kultur
+    [InlineData("1448-05-05 21:47:35")] // Umm al-Qura (ar-SA)
+    public void Quiver_last_played_from_another_calendar_is_ignored(string text)
+    {
+        AddRoot();
+        AddBlack();
+        _fs.AddFile(BlackDir + @"\LastPlayed.txt", text);
+
+        Assert.Null(Assert.Single(Scan(Learned(Root)).Games).LastPlayed);
+    }
+
+    [Theory]
+    [InlineData("2026-10-16 21:47:35")]
+    [InlineData("2026-10-16 21.47.35")] // Kultur mit Punkt als Zeittrenner (etwa fi-FI)
+    [InlineData("2026-10-16T21:47:35")]
+    public void Quiver_last_played_formats_are_read(string text)
+    {
+        AddRoot();
+        AddBlack();
+        _fs.AddFile(BlackDir + @"\LastPlayed.txt", text);
+
+        Assert.Equal(new DateTimeOffset(new DateTime(2026, 10, 16, 21, 47, 35, DateTimeKind.Local)), Assert.Single(Scan(Learned(Root)).Games).LastPlayed);
+    }
+
+    [Fact]
+    public void Quiver_duplicate_during_a_migration_follows_the_velopack_copy()
+    {
+        // MIGRATING.md von Quiver: Der alte Ordner (2.4.x) bleibt liegen, bis der neue (3.x) passt. Auch wenn der alte zuerst
+        // gelernt wurde, gilt der neue.
+        const string old = @"D:\Alt\Quiver";
+        _fs.AddFile(old + @"\Quiver.exe", "MZ");
+        _fs.AddFixture(@"Quiver\apps.json", old + @"\apps.json");
+        AddBlack(old + @"\Apps\Black-BlackXBERecomp");
+        AddRoot();
+        AddBlack();
+
+        var result = Scan(new ScanOptions { QuiverFolders = [old, Root] });
+
+        Assert.Equal(BlackDir, Assert.Single(result.Games).InstallDir);
+        Assert.True(_log.Contains(LogLevel.Information, "Black-BlackXBERecomp kommt auch in " + old + " vor"));
+    }
+
+    [Fact]
+    public void Quiver_duplicate_in_two_new_folders_follows_the_one_played_last()
+    {
+        const string copy = @"E:\Kopie\QuiverLauncher";
+        AddRoot();
+        AddBlack();
+        AddRoot(copy);
+        AddBlack(copy + @"\Apps\Black-BlackXBERecomp");
+        _fs.AddFile(copy + @"\Apps\Black-BlackXBERecomp\LastPlayed.txt", "2026-10-19 20:00:00");
+
+        var game = Assert.Single(Scan(new ScanOptions { QuiverFolders = [Root, copy] }).Games);
+
+        Assert.Equal(copy + @"\Apps\Black-BlackXBERecomp", game.InstallDir);
+    }
+
+    [Fact]
+    public void Quiver_velopack_log_paths_with_an_apostrophe_are_found()
+    {
+        const string root = @"C:\Users\O'Brien\Downloads\Quiver";
+        var doubled = root.Replace(@"\", @"\\", StringComparison.Ordinal);
+        var text = string.Join('\n',
+            "[update:1] [INFO] Moving C:\\Alt\\Quiver to D:\\Neu\\Quiver",
+            $"[update:1] [INFO]     CWD: \"{doubled}\"",
+            $"[update:1] [INFO] Root directory '{root}' writable: true",
+            $"[update:1] [INFO] Using root packages directory: {root}\\packages");
+
+        var folders = QuiverRootFinder.FoldersFromLog(text);
+
+        Assert.Equal(root + @"\packages", folders[0]); // die jüngste Zeile mit Pfad zuerst
+        Assert.Contains(root, folders);
+        Assert.Contains(@"D:\Neu\Quiver", folders);
+        Assert.DoesNotContain(folders, f => f.Contains("C:\\Users\\O\\", StringComparison.Ordinal) || f.EndsWith(@"\O", StringComparison.Ordinal));
+        Assert.DoesNotContain(folders, f => f.Contains(" D:", StringComparison.Ordinal));
+        Assert.DoesNotContain(folders, f => f.Contains("writable", StringComparison.Ordinal) || (f.Contains('\'', StringComparison.Ordinal) && f.EndsWith('\'')));
+
+        // Nur die Zeile in einfachen Anführungszeichen: der ganze Pfad samt ', nichts dahinter.
+        Assert.Equal(root, QuiverRootFinder.FoldersFromLog($"[update:1] [INFO] Root directory '{root}' writable: true")[0]);
+    }
+
+    [Fact]
+    public void Quiver_search_skips_system_hidden_and_recycle_folders()
+    {
+        foreach (var hidden in new[] { @"C:\ProgramData\Quiver", @"C:\.versteckt\Quiver", @"C:\$Recycle.Bin\Quiver", @"C:\Users\Test\AppData\Quiver" })
+        {
+            var fs = new InMemoryFileSystem();
+            AddRoot(hidden, fileSystem: fs);
+            AddBlack(hidden + @"\Apps\Black-BlackXBERecomp", fs);
+            Assert.False(Scan(fileSystem: fs).LauncherDetected, hidden);
+        }
+
+        // Gegenprobe: ein gewöhnlicher Ordner in derselben Tiefe wird gefunden.
+        AddRoot(@"C:\Daten\Quiver");
+        AddBlack(@"C:\Daten\Quiver\Apps\Black-BlackXBERecomp");
+        Assert.True(Scan().LauncherDetected);
+    }
+
+    [Theory]
+    [InlineData(QuiverRootFinder.MaxSearchFolderChildren, false)]
+    [InlineData(QuiverRootFinder.MaxSearchFolderChildren - 1, true)] // Gegenprobe: dann liegt Quiver innerhalb der Grenze
+    public void Quiver_search_folder_children_are_limited(int before, bool found)
+    {
+        for (var i = 0; i < before; i++)
+        {
+            _fs.AddDirectory($@"D:\Spielordner\Ordner{i:000}");
+        }
+
+        AddRoot(@"D:\Spielordner\zz-Quiver");
+        AddBlack(@"D:\Spielordner\zz-Quiver\Apps\Black-BlackXBERecomp");
+
+        Assert.Equal(found, Scan(new ScanOptions { SearchFolders = [@"D:\Spielordner"] }).LauncherDetected);
+    }
+
+    [Theory]
+    [InlineData("Beispiel-Launcher.exe")] // relativ (läge sonst im Arbeitsordner von HDRpilot)
+    [InlineData("E:\\\\Programme\\\\Beispiel-Launcher\\\\start.bat")]
+    public void Incomplete_windows_installer_link_must_be_an_absolute_exe(string executable)
+    {
+        AddRoot(apps: Apps1("Beispiel-Launcher"));
+        _fs.AddFile(Apps + @"\Beispiel-Launcher\windows-installer.json", "{\"Phase\":\"Linked\",\"ExecutablePath\":\"" + executable + "\"}");
+        _fs.AddFile("Beispiel-Launcher.exe", "MZ"); // relativer Pfad, den die Attrappe kennt
+        _fs.AddFile(@"E:\Programme\Beispiel-Launcher\start.bat", "@echo off");
+
+        var result = Scan(Learned(Root));
+
+        Assert.Empty(result.Games);
+        Assert.Empty(result.Errors);
+        Assert.True(_log.Contains(LogLevel.Information, "keine vorhandene EXE verknüpft"));
+    }
+
+    [Fact]
+    public void Quiver_search_without_hint_stays_on_fixed_drives()
+    {
+        // Downloads auf einer Netzfreigabe (Ordnerumleitung): Die Suche ohne Hinweis fasst keine Netzpfade an.
+        _registry.Set(RegistryHiveKind.CurrentUser, QuiverRootFinder.UserShellFoldersKeyPath, QuiverRootFinder.DownloadsValueName, @"\\server\freigabe\Downloads");
+        const string root = @"\\server\freigabe\Downloads\Quiver";
+        AddRoot(root);
+        AddBlack(root + @"\Apps\Black-BlackXBERecomp");
+        var counting = new ListingCounter(_fs);
+
+        Assert.False(Scan(fileSystem: counting).LauncherDetected);
+        Assert.DoesNotContain(counting.Touched, p => p.StartsWith(@"\\", StringComparison.Ordinal));
+
+        // Gegenprobe: als gelernter Ordner (Quiver lief dort) gilt er.
+        Assert.True(Scan(Learned(root)).LauncherDetected);
+    }
+
+    [Fact]
+    public void Quiver_search_without_hint_does_not_follow_linked_folders()
+    {
+        // Ein verknüpfter Ordner in Downloads (Junction, etwa auf eine Netzfreigabe) wird nicht betreten.
+        const string link = @"C:\Users\Test\Downloads\Verknuepft";
+        AddRoot(link + @"\Quiver");
+        AddBlack(link + @"\Quiver\Apps\Black-BlackXBERecomp");
+        var counting = new ListingCounter(_fs);
+        counting.Links.Add(link);
+
+        Assert.False(Scan(fileSystem: counting).LauncherDetected);
+        Assert.DoesNotContain(counting.Touched, p => p.StartsWith(link + @"\", StringComparison.OrdinalIgnoreCase));
+
+        // Gegenprobe: derselbe Ordner ohne Verknüpfung wird gefunden.
+        Assert.True(Scan(fileSystem: new ListingCounter(_fs)).LauncherDetected);
+    }
+
     // ---- Hilfen ----
+
+    private void AddManyFiles(string folder, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            _fs.AddFile($@"{folder}\datei{i:00000}.pak", [1]);
+        }
+    }
 
     private ScanResult Scan(ScanOptions? options = null, IFileSystem? fileSystem = null)
     {
@@ -989,6 +1353,100 @@ public sealed class QuiverScannerTests
         public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) => inner.EnumerateDirectories(directory, searchPattern, recursive);
 
         public IEnumerable<string> EnumerateFilesUpTo(string directory, string searchPattern, int maxDepth) => inner.EnumerateFilesUpTo(directory, searchPattern, maxDepth);
+
+        public void CreateDirectory(string path) => inner.CreateDirectory(path);
+
+        public void WriteAllTextAtomic(string path, string contents) => inner.WriteAllTextAtomic(path, contents);
+
+        public void DeleteFile(string path) => inner.DeleteFile(path);
+
+        public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
+    }
+
+    /// <summary>Ein Ordner mit sehr vielen leeren Unterordnern, ohne sie alle im Speicher anzulegen (die Attrappe listet linear).</summary>
+    private sealed class WideFolder(IFileSystem inner, string folder, int children) : IFileSystem
+    {
+        private bool IsChild(string path) => path.StartsWith(folder + @"\leer", StringComparison.OrdinalIgnoreCase);
+
+        public bool FileExists(string path) => !IsChild(path) && inner.FileExists(path);
+
+        public bool DirectoryExists(string path) => IsChild(path) || inner.DirectoryExists(path);
+
+        public string ReadAllText(string path) => inner.ReadAllText(path);
+
+        public byte[] ReadAllBytes(string path) => inner.ReadAllBytes(path);
+
+        public SharedRead ReadShared(string path, int maxBytes, bool fromEnd = false) => inner.ReadShared(path, maxBytes, fromEnd);
+
+        public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false) =>
+            IsChild(directory) ? [] : inner.EnumerateFiles(directory, searchPattern, recursive);
+
+        public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) =>
+            IsChild(directory) ? []
+            : string.Equals(directory, folder, StringComparison.OrdinalIgnoreCase) ? Enumerable.Range(0, children).Select(i => $@"{folder}\leer{i:0000}")
+            : inner.EnumerateDirectories(directory, searchPattern, recursive);
+
+        public void CreateDirectory(string path) => inner.CreateDirectory(path);
+
+        public void WriteAllTextAtomic(string path, string contents) => inner.WriteAllTextAtomic(path, contents);
+
+        public void DeleteFile(string path) => inner.DeleteFile(path);
+
+        public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
+    }
+
+    /// <summary>Merkt sich jeden aufgelisteten Ordner und jeden berührten Pfad (Prüfung der Grenzen der Suche).</summary>
+    private sealed class ListingCounter(IFileSystem inner) : IFileSystem
+    {
+        public List<string> Listed { get; } = [];
+
+        public List<string> Touched { get; } = [];
+
+        public bool FileExists(string path)
+        {
+            Touched.Add(path);
+            return inner.FileExists(path);
+        }
+
+        public bool DirectoryExists(string path)
+        {
+            Touched.Add(path);
+            return inner.DirectoryExists(path);
+        }
+
+        public string ReadAllText(string path) => inner.ReadAllText(path);
+
+        public byte[] ReadAllBytes(string path) => inner.ReadAllBytes(path);
+
+        public SharedRead ReadShared(string path, int maxBytes, bool fromEnd = false)
+        {
+            Touched.Add(path);
+            return inner.ReadShared(path, maxBytes, fromEnd);
+        }
+
+        public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false)
+        {
+            Listed.Add(directory);
+            Touched.Add(directory);
+            return inner.EnumerateFiles(directory, searchPattern, recursive);
+        }
+
+        public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false)
+        {
+            Listed.Add(directory);
+            Touched.Add(directory);
+            return inner.EnumerateDirectories(directory, searchPattern, recursive);
+        }
+
+        public IEnumerable<string> EnumerateDirectoriesWithoutLinks(string directory)
+        {
+            Listed.Add(directory);
+            Touched.Add(directory);
+            return inner.EnumerateDirectoriesWithoutLinks(directory).Where(d => !Links.Contains(d, StringComparer.OrdinalIgnoreCase));
+        }
+
+        /// <summary>Ordner, die hier als verknüpft gelten (Junction): Sie fehlen in <see cref="EnumerateDirectoriesWithoutLinks"/>.</summary>
+        public List<string> Links { get; } = [];
 
         public void CreateDirectory(string path) => inner.CreateDirectory(path);
 

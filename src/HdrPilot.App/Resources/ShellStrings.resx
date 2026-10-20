@@ -885,7 +885,7 @@
     <value>Hauptquelle</value>
   </data>
   <data name="ArtworkLocalHint" xml:space="preserve">
-    <value>Nur lesen, kein Netzwerk. Neue Bilder erscheinen von selbst, sobald ein Launcher sie zwischenspeichert.</value>
+    <value>Nur lesen, kein Netzwerk. Neue Bilder erscheinen von selbst, sobald ein Launcher sie zwischenspeichert; bei Quiver nach dem nächsten Einlesen.</value>
   </data>
   <data name="ArtworkAlwaysOn" xml:space="preserve">
     <value>Immer aktiv</value>

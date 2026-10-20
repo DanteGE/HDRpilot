@@ -19,6 +19,14 @@ public interface IFileSystem
     /// <summary>Liefert vollständige Pfade. Wirft nicht bei fehlendem Ordner, sondern liefert eine leere Folge.</summary>
     IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false);
 
+    /// <summary>
+    /// Direkte Unterordner ohne verknüpfte Ordner (Junction, symbolische Verknüpfung): für Suchen, die nie woandershin
+    /// abbiegen dürfen, etwa über eine Verknüpfung auf eine Netzfreigabe (E91). Ordner von OneDrive und Co. (Platzhalter
+    /// mit Analysepunkt, aber ohne Ziel) zählen als echte Ordner. Wirft nicht bei fehlendem Ordner. Standard:
+    /// <see cref="EnumerateDirectories"/> (Attrappen kennen keine Verknüpfungen).
+    /// </summary>
+    IEnumerable<string> EnumerateDirectoriesWithoutLinks(string directory) => EnumerateDirectories(directory);
+
     void CreateDirectory(string path);
 
     /// <summary>
@@ -118,6 +126,23 @@ public sealed class PhysicalFileSystem : IFileSystem
 
         return Directory.EnumerateDirectories(directory, searchPattern, recursive ? Recursive : TopLevel);
     }
+
+    public IEnumerable<string> EnumerateDirectoriesWithoutLinks(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return [];
+        }
+
+        return new FileSystemEnumerable<string>(directory, (ref FileSystemEntry entry) => entry.ToFullPath(), TopLevel)
+        {
+            ShouldIncludePredicate = (ref FileSystemEntry entry) => entry.IsDirectory && !IsLink(ref entry),
+        };
+    }
+
+    /// <summary>Verknüpfter Ordner mit Ziel (Junction, symbolische Verknüpfung); Platzhalter von OneDrive und Co. nicht.</summary>
+    private static bool IsLink(ref FileSystemEntry entry) =>
+        (entry.Attributes & FileAttributes.ReparsePoint) != 0 && new DirectoryInfo(entry.ToFullPath()).LinkTarget is not null;
 
     public IEnumerable<string> EnumerateFilesUpTo(string directory, string searchPattern, int maxDepth)
     {

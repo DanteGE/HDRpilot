@@ -59,7 +59,9 @@ Check ($LASTEXITCODE -eq 0) 'Veröffentlichung ohne Fehler'
 
 # 2. Inhalt, Architektur, Version
 $files = @(Get-ChildItem $out -Recurse -File | ForEach-Object { $_.FullName.Substring($out.Length + 1) } | Sort-Object)
-Check (($files -join ',') -eq 'cli\hdrpilot.exe,HDRpilot.exe,README.md,THIRD-PARTY-NOTICES.txt') ("Ausgabe enthält genau HDRpilot.exe, cli\hdrpilot.exe, README.md, THIRD-PARTY-NOTICES.txt (gefunden: {0})" -f ($files -join ', '))
+Check (($files -join ',') -eq 'cli\hdrpilot.exe,HDRpilot.exe,LICENSE,README.md,THIRD-PARTY-NOTICES.txt') ("Ausgabe enthält genau HDRpilot.exe, cli\hdrpilot.exe, LICENSE, README.md, THIRD-PARTY-NOTICES.txt (gefunden: {0})" -f ($files -join ', '))
+$shippedLicense = Join-Path $out 'LICENSE'
+Check ((Test-Path $shippedLicense) -and (Get-FileHash $shippedLicense -Algorithm SHA256).Hash -eq (Get-FileHash (Join-Path $root 'LICENSE') -Algorithm SHA256).Hash) 'LICENSE byte-gleich mit dem Lizenztext im Repository (E92)'
 $notices = Join-Path $out 'THIRD-PARTY-NOTICES.txt'
 $noticeText = if (Test-Path $notices) { [IO.File]::ReadAllText($notices) } else { '' }
 $mitCount = ([regex]::Matches($noticeText, 'MIT License')).Count

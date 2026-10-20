@@ -25,7 +25,7 @@ public sealed record SetupLocations(
     public const string UninstallKeyName = "HDRpilot";
 
     /// <summary>Dateien, die der Setup installiert und beim Entfernen löscht (relativ zum Programmordner).</summary>
-    public static readonly IReadOnlyList<string> InstalledFiles = [ExeName, "README.md", "THIRD-PARTY-NOTICES.txt", @"cli\hdrpilot.exe"];
+    public static readonly IReadOnlyList<string> InstalledFiles = [ExeName, "README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", @"cli\hdrpilot.exe"];
 
     /// <summary>Normale Registry-Wurzel; darunter „Uninstall“ und „Run“.</summary>
     public const string WindowsRegistryRoot = @"Software\Microsoft\Windows\CurrentVersion";

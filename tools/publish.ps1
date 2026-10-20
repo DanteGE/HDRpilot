@@ -1,5 +1,5 @@
-﻿# Veröffentlicht HdrPilot als einzelne, eigenständige EXE (Windows x64), dazu die Kommandozeile und die README.
-# Ergebnis (Standard): artifacts\publish\HDRpilot\HDRpilot.exe, ...\cli\hdrpilot.exe, ...\README.md
+﻿# Veröffentlicht HdrPilot als einzelne, eigenständige EXE (Windows x64), dazu die Kommandozeile, die README und den
+# Lizenztext. Ergebnis (Standard): artifacts\publish\HDRpilot\HDRpilot.exe, ...\cli\hdrpilot.exe, ...\README.md, ...\LICENSE
 # und daneben die Setup-Datei artifacts\publish\HDRpilot-Setup-<Version>.exe (E83).
 param([string]$Output)
 $ErrorActionPreference = 'Stop'
@@ -111,10 +111,15 @@ if (Test-Path $readme) {
     Write-Output 'Hinweis: README.md fehlt im Repository und wurde nicht beigelegt.'
 }
 
+# Lizenztext von HDRpilot (PolyForm Strict 1.0.0, E92): Pflicht, die README verweist darauf.
+$license = Join-Path $root 'LICENSE'
+if (-not (Test-Path $license)) { throw 'LICENSE fehlt im Repository' }
+Copy-Item $license $Output
+
 Remove-Item $staging -Recurse -Force
 
 # Setup-Datei (E83, Format wie src\HdrPilot.App\Setup\SetupBundle.cs): die veröffentlichte HDRpilot.exe unverändert,
-# dahinter ein Zip mit README.md, THIRD-PARTY-NOTICES.txt und cli/hdrpilot.exe und ein Abschluss von 64 Bytes:
+# dahinter ein Zip mit README.md, LICENSE, THIRD-PARTY-NOTICES.txt und cli/hdrpilot.exe und ein Abschluss von 64 Bytes:
 # 16 Bytes ASCII "HDRPILOT-SETUP01" | Int64 Länge der EXE | Int64 Länge des Zips | 32 Bytes SHA-256 der EXE (little endian).
 # Das Zip entsteht erst im Speicher: Direkt hinter die EXE geschrieben, stünden im Zip Positionen ab Dateianfang.
 $appExe = Join-Path $Output 'HDRpilot.exe'
@@ -125,7 +130,7 @@ Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 $zipBuffer = New-Object IO.MemoryStream
 $zip = New-Object IO.Compression.ZipArchive($zipBuffer, [IO.Compression.ZipArchiveMode]::Create, $true)
 try {
-    foreach ($entry in 'README.md', 'THIRD-PARTY-NOTICES.txt', 'cli/hdrpilot.exe') {
+    foreach ($entry in 'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'cli/hdrpilot.exe') {
         $source = Join-Path $Output ($entry -replace '/', '\')
         if (-not (Test-Path $source)) { throw "Setup: $source fehlt" }
         [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $source, $entry, [IO.Compression.CompressionLevel]::Optimal)

@@ -31,7 +31,7 @@ Fertige Versionen gibt es unter [GitHub Releases](https://github.com/DanteGE/HDR
    (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
    **Installieren** kopiert HDRpilot dorthin, legt eine Verknüpfung im Startmenü an und trägt HDRpilot unter
    *Einstellungen → Apps → Installierte Apps* ein. Die Kommandozeile liegt danach in `<Programmordner>\cli`, daneben
-   README und Lizenzhinweise.
+   README, Lizenztext (`LICENSE`) und Lizenzhinweise.
 3. Mit der dritten Option öffnet sich nach der Installation die Spielebibliothek (nicht, wenn der Setup mit
    Administratorrechten läuft; dann startest du HDRpilot über das Startmenü). Im Alltag läuft HDRpilot als Symbol
    im Infobereich (unten rechts neben der Uhr) und liest bei jedem Start deine Spiele ein. Siehst du das Symbol nicht,
@@ -588,7 +588,7 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 
 | Was | Wo |
 |---|---|
-| Programm (Setup): HDRpilot.exe, `cli\hdrpilot.exe`, README, Lizenzhinweise | `%LOCALAPPDATA%\Programs\HDRpilot\` |
+| Programm (Setup): HDRpilot.exe, `cli\hdrpilot.exe`, README, `LICENSE`, Lizenzhinweise | `%LOCALAPPDATA%\Programs\HDRpilot\` |
 | Eintrag unter „Installierte Apps“ (Setup) | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\HDRpilot` |
 | Verknüpfung im Startmenü (Setup) | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot.lnk` |
 | Protokoll von Setup und Entfernen | `%TEMP%\HDRpilot-Setup.log` |
@@ -895,15 +895,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
 `tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab und daneben den Setup
-`artifacts\publish\HDRpilot-Setup-1.5.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenzhinweisen und
-Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
+`artifacts\publish\HDRpilot-Setup-1.5.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenztext,
+Lizenzhinweisen und Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
 `HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
 `GATES.md`.
 
 ## Lizenz
 
 HDRpilot steht unter der PolyForm Strict License 1.0.0, Copyright Dante_GE. Maßgeblich ist allein der Lizenztext in
-[`LICENSE`](LICENSE); kurz gefasst:
+[`LICENSE`](LICENSE), der auch dem Setup und dem Ordner ohne Installation beiliegt; kurz gefasst:
 
 - Erlaubt ist die Nutzung für nicht-kommerzielle Zwecke, etwa privat, zum Lernen und Ausprobieren, als Hobby oder in
   gemeinnützigen und öffentlichen Einrichtungen.

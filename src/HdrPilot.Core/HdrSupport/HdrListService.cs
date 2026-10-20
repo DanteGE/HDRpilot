@@ -100,7 +100,8 @@ public sealed class HdrListService : IHdrListService, IDisposable
 
     public event EventHandler? Changed;
 
-    /// <summary>„HdrPilot/1.0.0 (Windows desktop app; HDR list)“, wie es die Nutzungsregeln des Wikis erbitten.</summary>
+    /// <summary>„HDRpilot/&lt;Version&gt; (Windows desktop app; HDR list)“, etwa „HDRpilot/1.5.0 (Windows desktop app; HDR list)“,
+    /// wie es die Nutzungsregeln des Wikis erbitten; nur Name und Version, kein Link (E92).</summary>
     public static string UserAgent { get; } =
         "HDRpilot/" + (typeof(HdrListService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0") + " (Windows desktop app; HDR list)";
 

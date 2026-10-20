@@ -51,6 +51,15 @@ public sealed class SteamGridDbServiceTests
     }
 
     [Fact]
+    public void User_agent_names_only_app_version_and_purpose()
+    {
+        // E92: nur Name und Version, kein Link auf das Projekt; die Version ist die der Programmdaten.
+        var version = typeof(SteamGridDbService).Assembly.GetName().Version!.ToString(3);
+        Assert.Equal("HDRpilot/" + version + " (Windows desktop app; artwork)", SteamGridDbService.UserAgent);
+        Assert.Matches(@"^HDRpilot/\d+\.\d+\.\d+ \(Windows desktop app; artwork\)$", SteamGridDbService.UserAgent);
+    }
+
+    [Fact]
     public async Task Enabled_without_key_never_touches_the_network()
     {
         _config.Games.Add(Steam("1"));

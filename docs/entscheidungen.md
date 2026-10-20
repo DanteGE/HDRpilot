@@ -1232,7 +1232,9 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
 - Lizenz: PolyForm Strict 1.0.0 (`LICENSE`, Hinweis „Copyright Dante_GE“). Erlaubt ist nicht-kommerzielle Nutzung,
   nicht erlaubt sind Änderungen, Weitergabe und kommerzielle Nutzung. Fremdbestandteile behalten ihre Lizenzen; die
   Testdaten aus PCGamingWiki stehen als Ausnahme unter CC BY-NC-SA 3.0 (README, Abschnitt „Lizenz“). Fertige Versionen
-  erscheinen über GitHub Releases.
+  erscheinen über GitHub Releases. `LICENSE` liegt jeder Auslieferung bei: im Ordner ohne Installation und im Paket der
+  Setup-Datei (Eintrag `LICENSE`, installiert neben README und Lizenzhinweisen, beim Entfernen gelöscht); Setup-Dateien
+  vor 1.5.0 ohne diesen Eintrag bleiben gültig.
 - Name und Adresse: überall „Dante_GE“, die Git-Identität mit der Noreply-Adresse von GitHub. In den Programmdaten nur
   `Authors` und `Copyright` („© Dante_GE“); Firma und Produkt bleiben „HDRpilot“, ebenso der Herausgeber im Eintrag
   unter „Installierte Apps“. Die Kennung beim Abruf von PCGamingWiki und SteamGridDB nennt nur Name und Version, keinen
@@ -1245,9 +1247,17 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
   `F:\Steam-Bibliothek`, `D:\Anwendungen`, `D:\Programmordner`, `D:\GOG-Spiele`, `F:\GOG-Spiele`, `D:\Ubisoft-Spiele`,
   `D:\Xbox Bibliothek`, `D:\Spielordner`; in der Battle.net-Beispieldatei gleich lange Pfade auf K: und J:).
 - Echte Spielelisten entfernt: `docs/recherche/symbole/messung-vorher/` gelöscht, die vollständigen Tabellen in
-  `docs/scanner/` durch erfundene Beispielzeilen ersetzt. Die Arbeitsprotokolle (`docs/stand.md`, `docs/uebergabe/`,
-  Berichte, `GATES.md`) bleiben, bereinigt; `docs/umgebung.md` beschreibt die Testumgebung nur noch allgemein.
-- Prüfung: G13.3 `publish-check.ps1` über alle verfolgten Dateien (Profilpfade, Ordner von Claude-Sitzungen, private
-  Links, frühere Mail-Adresse, echte Installationsordner und Kennungen; persönliche Werte nur als SHA-256,
-  Positivkontrolle bei jedem Lauf). Die Geschichte wird vor dem Hochladen mit denselben Regeln umgeschrieben (eigener
-  Lauf außerhalb dieses Repositorys).
+  `docs/scanner/` durch erfundene Beispielzeilen ersetzt, Aufzählungen einer ganzen Bibliothek oder Klasse (GOG- und
+  Epic-Bericht, Symbol-Berichte) durch Anzahlen, Namen früher installierter, inzwischen deinstallierter Spiele entfernt
+  (EA, Ubisoft, Xbox, Abgleich Phase 2). Einzelne Spiele bleiben als Beleg eines technischen Befunds genannt, wie in den
+  Beispieldateien und Tests, die nach Wunsch des Nutzers bleiben (dort mit erfundenen Pfaden). Die Arbeitsprotokolle
+  (`docs/stand.md`, `docs/uebergabe/`, Berichte, `GATES.md`) bleiben, bereinigt; `docs/umgebung.md` beschreibt die
+  Testumgebung nur noch allgemein.
+- Prüfung: G13.3 `publish-check.ps1` über alle verfolgten Dateien (Profilpfade auch URL-kodiert, Ordner von
+  Claude-Sitzungen, private Links, frühere Mail-Adresse, echte Installationsordner mit Laufwerk und unverwechselbare
+  Ordnernamen auch ohne, Kennungen samt Treiberstand, Stichproben aus den entfernten Spielelisten; persönliche Werte
+  nur als SHA-256, Positivkontrolle bei jedem Lauf). Die Geschichte wird vor dem Hochladen umgeschrieben (eigener Lauf
+  außerhalb dieses Repositorys; alte Fassungen der bereinigten Dateien werden dabei ausdrücklich ersetzt, nicht nur
+  per Regel) und mit `publish-check.ps1 -History` geprüft (G13.5): jede Blob-Version, jeder Pfadname, jede Nachricht
+  sowie Autor und Committer jedes Commits (nur Dante_GE mit der Noreply-Adresse, als Committer auch GitHub selbst),
+  mit eigener Positivkontrolle an einem Wegwerf-Repository.

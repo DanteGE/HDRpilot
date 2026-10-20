@@ -33,6 +33,7 @@ public sealed class SetupInstallEngineTests : IDisposable
         Assert.True(result.AppStarted);
         Assert.Equal(SetupHarness.ExeBytes("1.1.0"), File.ReadAllBytes(L.ExePath)); // byte-gleich mit der portablen EXE
         Assert.Equal("README 1.1.0", File.ReadAllText(_h.InstalledFile("README.md")));
+        Assert.Equal("LICENSE 1.1.0", File.ReadAllText(_h.InstalledFile("LICENSE")));
         Assert.Equal("NOTICES 1.1.0", File.ReadAllText(_h.InstalledFile("THIRD-PARTY-NOTICES.txt")));
         Assert.Equal("CLI 1.1.0", File.ReadAllText(_h.InstalledFile(@"cli\hdrpilot.exe")));
         AssertNoLeftovers();
@@ -105,6 +106,7 @@ public sealed class SetupInstallEngineTests : IDisposable
         Assert.Contains("hdrpilot.exe", result.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(SetupHarness.ExeBytes("1.0.0"), File.ReadAllBytes(L.ExePath)); // alte EXE bleibt lauffähig
         Assert.Equal("README 1.0.0", File.ReadAllText(_h.InstalledFile("README.md")));
+        Assert.Equal("LICENSE 1.0.0", File.ReadAllText(_h.InstalledFile("LICENSE")));
         Assert.Equal("NOTICES 1.0.0", File.ReadAllText(_h.InstalledFile("THIRD-PARTY-NOTICES.txt")));
         Assert.Equal("CLI 1.0.0", File.ReadAllText(_h.InstalledFile(@"cli\hdrpilot.exe")));
         AssertNoLeftovers();
@@ -529,6 +531,31 @@ public sealed class SetupInstallEngineTests : IDisposable
 
         Assert.Equal(L.ExtraLaunchArguments, SetupLinks.Read(L.DesktopShortcut).Arguments);
         Assert.Contains("--config-dir", L.ExtraLaunchArguments, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Update_from_a_setup_without_license_adds_the_license_and_uninstall_removes_it()
+    {
+        // Setup-Dateien vor 1.5.0 hatten keinen Lizenztext (E92): die Installation bleibt gültig, die Aktualisierung legt
+        // LICENSE dazu, das Entfernen löscht ihn mit den übrigen eigenen Dateien.
+        var old = await _h.Setup(_h.Bundle("1.4.0", withLicense: false), "1.4.0").InstallAsync(Quiet, null, TestContext.Current.CancellationToken);
+        Assert.True(old.Success, old.Message);
+        Assert.False(File.Exists(_h.InstalledFile("LICENSE")));
+        Assert.Equal("README 1.4.0", File.ReadAllText(_h.InstalledFile("README.md")));
+
+        var update = await _h.InstallAsync("1.5.0", Quiet);
+
+        Assert.True(update.Success, update.Message);
+        Assert.Equal(new Version(1, 4, 0), update.PreviousVersion);
+        Assert.Equal("LICENSE 1.5.0", File.ReadAllText(_h.InstalledFile("LICENSE")));
+        Assert.Equal("README 1.5.0", File.ReadAllText(_h.InstalledFile("README.md")));
+        AssertNoLeftovers();
+
+        var removed = await _h.UninstallAsync();
+
+        Assert.True(removed.Success, removed.Message);
+        Assert.False(File.Exists(_h.InstalledFile("LICENSE")));
+        Assert.False(Directory.Exists(L.InstallDirectory));
     }
 
     private void AssertNoLeftovers()

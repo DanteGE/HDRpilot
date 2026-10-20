@@ -22,6 +22,12 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
     Copyright in den Programmdaten, `LICENSE`, README mit englischer Einleitung und Abschnitt „Lizenz“, `.gitignore`
     um Werkzeugordner ergänzt, Arbeitsstand bereinigt (E92) und Gate `publish-check.ps1` (G13.3). Alle Gates ohne echte
     HDR-Umschaltung grün (G13.4).
+  - Prüfung von 1.5.0 (2026-10-20): keine blockierenden Funde; behoben im Commit „Release 1.5.0: Funde der Prüfung“:
+    `publish-check.ps1` findet jetzt auch unverwechselbare Ordnernamen ohne Laufwerk, URL-kodierte Profilpfade,
+    Treiberstand und persönliche Angaben der früheren Umgebungsbeschreibung, Stichproben aus den entfernten
+    Spielelisten und prüft mit `-History` die ganze Geschichte (Autor, Committer, Nachrichten, Pfadnamen, jede
+    Blob-Version); Aufzählungen der Bibliothek und Namen früher installierter Spiele in den Berichten entfernt (E92);
+    `LICENSE` liegt Ordner und Setup bei; Kommentare zu den Kennungen der Abrufe auf „HDRpilot/<Version>“ korrigiert.
 - **Ablauf (offen ab Schritt 5):**
   1. Abschlussprüfung von `feature/library-toolbar` (erledigt).
   2. Merge nach `phase5/release` und `main` (`phase5/release` ist schon in `feature/library-toolbar` zusammengeführt;
@@ -29,10 +35,26 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   3. 1.5.0 setzen (erledigt).
   4. LICENSE und README-Kopf einfügen (erledigt).
   5. Verlauf bereinigen: Werkzeug aus dem Lauf `publish-prep`, getestet an einer Kopie; dazu die erfundenen
-     Installationsordner und die entfernten Spielelisten aus E92 auch in allen alten Versionen.
-  6. Restesuche über alle Versionen (`publish-check.ps1 -Rev <Commit>` prüft einen Commit ohne Auschecken).
+     Installationsordner und die entfernten Spielelisten aus E92 auch in allen alten Versionen. Nach der Prüfung vom
+     2026-10-20 zusätzlich nötig (der Probelauf des Werkzeugs hatte unter `-History` noch 2 261 Treffer):
+     - Die Regeln für die echten Installationsordner (wie im Arbeitsstand) auf alle Versionen anwenden, ebenso die für
+       gekürzte Verweise auf den Notizordner und die Epic-InstallationGuid.
+     - Alte Fassungen ausdrücklich behandeln (bei Dokumenten die bereinigte Fassung, bei Code und Beispieldateien eine
+       eigene Regel), weil Ordnernamen ohne Laufwerk und Listen keine Pfadregel trifft: `docs/umgebung.md`,
+       `docs/scanner/*.md`, `docs/phase2-abgleich.md`,
+       `docs/recherche/symbole/berichte/baseline.md`, `docs/recherche/symbole/synthese.md`,
+       `tests/HdrPilot.Tests/Scanners/XboxFormatTests.cs`, `tests/HdrPilot.Tests/Games/SearchFolderCandidateFinderTests.cs`
+       und `tests/HdrPilot.Tests/Fixtures/Xbox/GamingRoot_D.bin`; `docs/recherche/symbole/messung-vorher/` aus allen
+       Versionen entfernen.
+     - In den Nachrichten den gekürzten Verweis auf den Notizordner im Bereinigungs-Commit vom 2026-10-20 anpassen.
+     - Versionsangaben wie `1.0.0+<Hash>` (so zeigte es die EXE) beim Umschreiben der Hashes in Dokumenten
+       auslassen; die Zuordnung der Hashes als eigenen Commit obenauf, mit `--remap-messages`.
+  6. Restesuche im umgeschriebenen Repository nach `git gc --prune=now`: `publish-check.ps1 -History *` (alle Refs,
+     also die hochzuladenden Zweige und `origin/main`; G13.5).
   7. Mit `origin/main` zusammenführen und hochladen.
-  8. Die Setup-Installation bleibt beim Nutzer.
+  8. Setup-Datei und Ordner für GitHub Releases erst aus dem umgeschriebenen Repository bauen: Die Produktversion
+     enthält den Commit-Hash (`1.5.0+<Hash>`), und den bisherigen gibt es öffentlich nicht.
+  9. Die Setup-Installation bleibt beim Nutzer.
 
 ## Seit 2026-10-19 in Arbeit: Auswahl beim Filtern, nicht installierte Spiele, danach Quiver
 - **Recherche und Plan:** nur lesend, liegen in `docs/uebergabe/wuensche-2026-10-18-plan.md`.

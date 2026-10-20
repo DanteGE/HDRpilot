@@ -8,8 +8,8 @@
 $script:Phase7Root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $script:PublishDir = Join-Path $Phase7Root 'artifacts\publish'
 $script:PortableDir = Join-Path $PublishDir 'HDRpilot'
-$script:PayloadEntries = @('README.md', 'THIRD-PARTY-NOTICES.txt', 'cli/hdrpilot.exe')
-$script:InstalledFiles = @('HDRpilot.exe', 'README.md', 'THIRD-PARTY-NOTICES.txt', 'cli\hdrpilot.exe')
+$script:PayloadEntries = @('README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'cli/hdrpilot.exe')
+$script:InstalledFiles = @('HDRpilot.exe', 'README.md', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'cli\hdrpilot.exe')
 $script:AsInvokerText = 'requestedExecutionLevel level="asInvoker"'
 $script:RunValueName = [regex]::Match([IO.File]::ReadAllText((Join-Path $Phase7Root 'src\HdrPilot.App\Services\AutostartService.cs')), 'ValueName = "([^"]+)"').Groups[1].Value
 
@@ -304,11 +304,11 @@ function Get-Sha([string]$path) {
     return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
 }
 
-# Neu veröffentlichen, wenn die Setup-Datei fehlt oder älter ist als der Quelltext (src ohne bin/obj, README als
-# Beigabe, Version, Veröffentlichungsskript). Liefert die Zeilen der Veröffentlichung.
+# Neu veröffentlichen, wenn die Setup-Datei fehlt oder älter ist als der Quelltext (src ohne bin/obj, README und
+# LICENSE als Beigaben, Version, Veröffentlichungsskript). Liefert die Zeilen der Veröffentlichung.
 function Update-SetupFile([string]$setup) {
     $inputs = @(Get-ChildItem (Join-Path $Phase7Root 'src') -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' })
-    $inputs += @(Get-Item (Join-Path $Phase7Root 'README.md'), (Join-Path $Phase7Root 'Directory.Build.props'), (Join-Path $Phase7Root 'tools\publish.ps1'))
+    $inputs += @(Get-Item (Join-Path $Phase7Root 'README.md'), (Join-Path $Phase7Root 'LICENSE'), (Join-Path $Phase7Root 'Directory.Build.props'), (Join-Path $Phase7Root 'tools\publish.ps1'))
     $newest = $inputs | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
     $file = Get-Item -LiteralPath $setup -ErrorAction SilentlyContinue
     if ($file -and (Test-Path (Join-Path $PortableDir 'HDRpilot.exe')) -and $file.LastWriteTimeUtc -ge $newest.LastWriteTimeUtc) {
@@ -474,6 +474,7 @@ public static class FruehereHdrPilotVersion
     }
     New-Item -ItemType Directory -Force $layout.InstallDir | Out-Null
     Copy-Item -LiteralPath $stub -Destination $layout.Exe -Force
+    # Wie eine Installation vor 1.5.0: noch ohne LICENSE (die Aktualisierung legt ihn dazu, E92)
     foreach ($f in 'README.md', 'THIRD-PARTY-NOTICES.txt') { [IO.File]::WriteAllText((Join-Path $layout.InstallDir $f), "Stand 1.0.0: $f`n") }
     if (-not (Test-Path $layout.RunKey)) { New-Item -Path $layout.RunKey -Force | Out-Null }
     New-ItemProperty -Path $layout.RunKey -Name $RunValueName -Value ('"{0}" --minimized' -f $layout.Exe) -PropertyType String -Force | Out-Null

@@ -290,23 +290,53 @@ public sealed class UninstalledSettingsCardTests
     });
 
     [Fact]
-    public void Uninstalled_bulk_removal_marks_games_whose_folder_is_still_there() => Sta.Run(async () =>
+    public void Uninstalled_bulk_removal_marks_games_whose_exe_is_still_there() => Sta.Run(async () =>
     {
-        // Steam nicht gefunden: Seine Spiele gelten als nicht installiert, ihre Ordner sind aber da. Die Rückfrage nennt bei
-        // jedem, dass der Ordner noch da ist, und warnt; die übrigen bleiben ohne Hinweis.
+        // Steam nicht gefunden: Seine Spiele gelten als nicht installiert, ihre EXEs sind aber da. Die Rückfrage nennt bei
+        // jedem, dass die EXE noch da ist, und warnt; ein Restordner nur mit Spielständen bleibt ohne Hinweis.
         var (vm, context) = Create();
         context.Config.Update(c => c.FindGame(Rolla)!.InstallDir = @"C:\SteamLibrary\steamapps\common\ROLLA");
         context.Config.Update(c => c.FindGame(Outlast)!.InstallDir = @"C:\SteamLibrary\steamapps\common\Nachtprobe");
         _fs.AddFile(@"C:\SteamLibrary\steamapps\common\ROLLA\ROLLA.exe", "exe");
-        _fs.AddDirectory(@"C:\SteamLibrary\steamapps\common\Nachtprobe"); // leer: deinstalliert
+        _fs.AddFile(@"C:\SteamLibrary\steamapps\common\Nachtprobe\Saved\SaveGames\Profil.sav", "sav"); // Reste: deinstalliert
 
         vm.RemoveUninstalledCommand.Execute(null);
         await Sta.Finished(vm.RemoveUninstalledCommand);
 
         var request = Assert.Single(_confirm.Requests);
-        Assert.Equal([new ConfirmDetail("ROLLA", "Ordner noch da"), new ConfirmDetail("The Outlast Trials", "„HDR automatisch“ ist an")], request.Details);
-        Assert.Equal(LibraryStrings.RemoveAll_FoldersPresentOne, request.Warning);
+        Assert.Equal([new ConfirmDetail("ROLLA", "EXE\u2011Datei noch da"), new ConfirmDetail("The Outlast Trials", "„HDR automatisch“ ist an")], request.Details);
+        Assert.Equal(LibraryStrings.RemoveAll_UnsureOne, request.Warning);
     });
+
+    [Fact]
+    public void Uninstalled_bulk_removal_names_why_each_game_may_still_be_installed()
+    {
+        // Je Spiel der Grund unter dem Namen, oben die Laufwerke und die Zahl der übrigen Spiele, die vielleicht noch
+        // installiert sind (EXE noch da, bei Steam eingetragen, nicht zu prüfen).
+        GameConfig G(string id, string name) => new() { Source = GameSource.Steam, SourceId = id, Name = name, IsInstalled = false };
+        var request = RemoveSettingsText.ForGames(
+            [G("1", "Eins"), G("2", "Zwei"), G("3", "Drei"), G("4", "Vier"), G("5", "Fünf")],
+            [InstallTrace.MissingDrive("F:"), new InstallTrace(InstallSign.Program), new InstallTrace(InstallSign.SteamManifest), new InstallTrace(InstallSign.Unchecked), InstallTrace.None],
+            shortcuts: 0);
+
+        Assert.Equal(
+            [
+                new ConfirmDetail("Eins", "Laufwerk F: nicht verbunden"), new ConfirmDetail("Zwei", "EXE\u2011Datei noch da"),
+                new ConfirmDetail("Drei", "bei Steam noch eingetragen"), new ConfirmDetail("Vier", "nicht prüfbar"), new ConfirmDetail("Fünf"),
+            ],
+            request.Details);
+        Assert.Equal(
+            "Laufwerk F: ist nicht verbunden. Spiele dort sind vielleicht noch installiert. " + LibraryText.Format(LibraryStrings.RemoveAll_UnsureMany, 3),
+            request.Warning);
+        Assert.Equal("Bei 3 Spielen steht unter dem Namen, warum sie vielleicht noch installiert sind.", LibraryText.Format(LibraryStrings.RemoveAll_UnsureMany, 3));
+
+        // Einzeln: je Grund die eigene Warnung.
+        var game = G("6", "Sechs");
+        Assert.Equal(LibraryStrings.RemoveSettings_ProgramPresent, RemoveSettingsText.ForGame(game, new InstallTrace(InstallSign.Program), 0).Warning);
+        Assert.Equal(LibraryStrings.RemoveSettings_SteamListed, RemoveSettingsText.ForGame(game, new InstallTrace(InstallSign.SteamManifest), 0).Warning);
+        Assert.Equal(LibraryStrings.RemoveSettings_Unchecked, RemoveSettingsText.ForGame(game, new InstallTrace(InstallSign.Unchecked), 0).Warning);
+        Assert.Null(RemoveSettingsText.ForGame(game, InstallTrace.None, 0).Warning);
+    }
 
     [Fact]
     public void Uninstalled_bulk_removal_says_that_it_is_checking_while_a_drive_answers_slowly() => Sta.Run(async () =>
@@ -319,7 +349,16 @@ public sealed class UninstalledSettingsCardTests
         try
         {
             vm.RemoveUninstalledCommand.Execute(null);
-            await Task.Delay(LibraryViewModel.CheckingDelay * 3);
+
+            // Nach CheckingDelay, sicher vor dem Ende der Prüfung (CheckTimeout); gewartet wird, bis es so weit ist, nicht eine
+            // feste Zeit (Zeitgeber laufen unter Last im Threadpool verspätet).
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (vm.LibraryMessage != LibraryStrings.RemoveAll_Checking && watch.Elapsed < UninstalledGameCleanup.CheckTimeout * 0.9)
+            {
+                await Task.Delay(20);
+            }
+
+            Assert.InRange(watch.Elapsed, LibraryViewModel.CheckingDelay * 0.9, UninstalledGameCleanup.CheckTimeout);
             Assert.Equal(LibraryStrings.RemoveAll_Checking, vm.LibraryMessage);
             Assert.False(vm.LibraryMessageIsError);
             Assert.False(vm.RemoveUninstalledCommand.CanExecute(null));
@@ -331,7 +370,7 @@ public sealed class UninstalledSettingsCardTests
         }
 
         Assert.Null(messageWhileAsking);
-        Assert.Equal("Laufwerk F: ist nicht verbunden. Spiele dort sind vielleicht noch installiert.", Assert.Single(_confirm.Requests).Warning);
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_UnsureMany, 2), Assert.Single(_confirm.Requests).Warning); // F: antwortet nicht: bei beiden nicht zu klären
     });
 
     /// <summary>Rückfrage zum Mitlesen: Antworten der Reihe nach, sonst „Abbrechen“.</summary>

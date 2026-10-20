@@ -100,7 +100,7 @@ public sealed class RemoveSettingsTests
 
         var request = Assert.Single(dialogs.Requests);
         Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_ConfirmTitle, "The Outlast Trials"), request.Title);
-        Assert.Equal([new ConfirmDetail("„HDR automatisch“ ist an"), new ConfirmDetail("2 gemerkte EXE-Dateien")], request.Details);
+        Assert.Equal([new ConfirmDetail("„HDR automatisch“ ist an"), new ConfirmDetail("2 gemerkte EXE\u2011Dateien")], request.Details);
         Assert.Equal(LibraryStrings.RemoveSettings_LossHeader, request.DetailsHeader);
         Assert.Equal("Laufwerk Q: ist nicht verbunden. Das Spiel ist vielleicht noch installiert.", request.Warning);
         Assert.Equal("Auch die 2 HDRpilot-Verknüpfungen löschen", request.OptionText);
@@ -131,7 +131,7 @@ public sealed class RemoveSettingsTests
         var klippe = Game(GameSource.Steam, "9990140", "KLIPPE Demo", installed: false);
         var rolla = Game(GameSource.Steam, "3975830", "ROLLA", installed: false);
 
-        var request = RemoveSettingsText.ForGames([outlast, klippe, rolla], [new("G:", false), InstallTrace.None, new("F:", false)], shortcuts: 3);
+        var request = RemoveSettingsText.ForGames([outlast, klippe, rolla], [InstallTrace.MissingDrive("G:"), InstallTrace.None, InstallTrace.MissingDrive("F:")], shortcuts: 3);
 
         Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, 3), request.Title);
         Assert.Equal(
@@ -322,19 +322,48 @@ public sealed class RemoveSettingsTests
     });
 
     [Fact]
-    public void RemoveSettings_warns_when_the_game_folder_is_still_there() => Sta.Run(async () =>
+    public void RemoveSettings_warns_when_an_exe_of_the_game_is_still_there() => Sta.Run(async () =>
     {
         // Prüfung (E90): Steam nicht gefunden oder ein Update ohne „vollständig installiert“ macht ein installiertes Spiel zu
-        // „nicht installiert“; sein Ordner ist dann noch da. Die Rückfrage sagt das, statt still alles zu entfernen.
+        // „nicht installiert“; seine EXE ist dann noch da. Die Rückfrage sagt das, statt still alles zu entfernen.
         var context = SampleContext();
-        context.Files.AddFile(@"C:\Program Files (x86)\Steam\steamapps\common\KlippeDemo\Klippe.exe", "exe");
+        context.Files.AddFile(@"C:\Program Files (x86)\Steam\steamapps\common\KlippeDemo\KlippeDemo.exe", "exe");
         var dialogs = new FakeDialogs();
         using var vm = new LibraryViewModel(context, dialogs);
 
         await Remove(vm, Klippe);
 
-        Assert.Equal(LibraryStrings.RemoveSettings_FolderPresent, Assert.Single(dialogs.Requests).Warning);
+        Assert.Equal(LibraryStrings.RemoveSettings_ProgramPresent, Assert.Single(dialogs.Requests).Warning);
         Assert.NotNull(context.Config.FindGame(Klippe)); // abgebrochen
+    });
+
+    [Fact]
+    public void RemoveSettings_leftover_folder_without_an_exe_gets_no_warning() => Sta.Run(async () =>
+    {
+        // Prüfung (E90), echte Daten: Der Ordner von KLIPPE Demo hält nach dem Deinstallieren nur Spielstände, Einstellungen,
+        // Protokolle und Absturzdaten (13 Dateien, keine EXE), die gemerkten EXEs sind weg, Steam führt es nicht mehr. Das ist
+        // deinstalliert: keine Warnung „vielleicht noch installiert“.
+        var context = SampleContext();
+        const string Dir = @"C:\Program Files (x86)\Steam\steamapps\common\KlippeDemo";
+        context.ConfigService.UpdateGame(Klippe, g => g.DetectedExecutables = [Dir + @"\Klippe\Binaries\Win64\KlippeDemo-Win64-Test.exe", Dir + @"\KlippeDemo.exe"]);
+        foreach (var file in new[] { @"Engine\Saved\Config\Windows\Manifest.ini", @"Klippe\Saved\Config\Windows\Engine.ini", @"Klippe\Saved\Config\Windows\GameUserSettings.ini", @"Klippe\Saved\Logs\Klippe.log", @"Klippe\Saved\SaveGames\steam_autocloud.vdf", @"Klippe\.sentry-native\settings.dat" })
+        {
+            context.Files.AddFile(Path.Combine(Dir, file), "x");
+        }
+
+        var dialogs = new FakeDialogs();
+        using var vm = new LibraryViewModel(context, dialogs);
+
+        await Remove(vm, Klippe);
+
+        var request = Assert.Single(dialogs.Requests);
+        Assert.Null(request.Warning);
+        Assert.Equal([new ConfirmDetail("2 gemerkte EXE\u2011Dateien")], request.Details);
+
+        // Gegenprobe: Ist eine gemerkte EXE noch da, warnt sie.
+        context.Files.AddFile(Dir + @"\Klippe\Binaries\Win64\KlippeDemo-Win64-Test.exe", "exe");
+        await Remove(vm, Klippe);
+        Assert.Equal(LibraryStrings.RemoveSettings_ProgramPresent, dialogs.Requests[^1].Warning);
     });
 
     [Fact]
@@ -416,8 +445,15 @@ public sealed class RemoveSettingsTests
         {
             vm.SelectedGame = Item(vm, Outlast);
             vm.RemoveSettingsCommand.Execute(null);
-            await Task.Delay(LibraryViewModel.CheckingDelay * 3);
-            Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_Checking, "The Outlast Trials"), vm.StatusMessage);
+            var checking = LibraryText.Format(LibraryStrings.RemoveSettings_Checking, "The Outlast Trials");
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (vm.StatusMessage != checking && watch.Elapsed < UninstalledGameCleanup.CheckTimeout * 0.9)
+            {
+                await Task.Delay(20); // Zeitgeber laufen unter Last verspätet: warten, bis es so weit ist
+            }
+
+            Assert.InRange(watch.Elapsed, LibraryViewModel.CheckingDelay * 0.9, UninstalledGameCleanup.CheckTimeout);
+            Assert.Equal(checking, vm.StatusMessage);
             Assert.Empty(dialogs.Requests);
             await Sta.Finished(vm.RemoveSettingsCommand);
         }
@@ -427,7 +463,7 @@ public sealed class RemoveSettingsTests
         }
 
         Assert.Null(statusWhileAsking);
-        Assert.Equal("Laufwerk Q: ist nicht verbunden. Das Spiel ist vielleicht noch installiert.", Assert.Single(dialogs.Requests).Warning);
+        Assert.Equal(LibraryStrings.RemoveSettings_Unchecked, Assert.Single(dialogs.Requests).Warning); // antwortet nicht: nicht zu klären
         Assert.Contains(LibraryText.Format(LibraryStrings.RemoveSettings_Checking, "The Outlast Trials"), shown);
     });
 
@@ -489,5 +525,25 @@ public sealed class RemoveSettingsTests
         game.LastPlayed = null;
         Assert.Equal([new ConfirmDetail(LibraryStrings.RemoveSettings_LossChosenOne)], RemoveSettingsText.ForGame(game, InstallTrace.None, 0).Details);
         Assert.False(LibraryCleanup.LossOf(game).IsEmpty);
+    }
+
+    [Fact]
+    public void RemoveSettings_exe_texts_never_break_at_the_hyphen()
+    {
+        // Prüfung 2026-10-20: In der gedämpften Zeile unter einem Namen brach „EXE-|Dateien“ am Bindestrich um. Jeder Text
+        // der Rückfragen mit „EXE-Datei“ nimmt den geschützten Bindestrich (U+2011, Segoe UI hat ihn).
+        string[] texts =
+        [
+            LibraryStrings.RemoveSettings_LossDetectedOne, LibraryStrings.RemoveSettings_LossDetectedMany,
+            LibraryStrings.RemoveSettings_LossExtraOne, LibraryStrings.RemoveSettings_LossExtraMany,
+            LibraryStrings.RemoveSettings_LossExcludedOne, LibraryStrings.RemoveSettings_LossExcludedMany,
+            LibraryStrings.RemoveSettings_ProgramPresent, LibraryStrings.RemoveAll_MarkProgramPresent,
+        ];
+        Assert.All(texts, t =>
+        {
+            Assert.Contains("EXE\u2011Datei", t, StringComparison.Ordinal);
+            Assert.DoesNotContain("EXE-", t, StringComparison.Ordinal);
+        });
+        Assert.Equal("4 ausgeschlossene EXE\u2011Dateien", LibraryText.Format(LibraryStrings.RemoveSettings_LossExcludedMany, 4));
     }
 }

@@ -143,7 +143,9 @@ public sealed class ShortcutService : IShortcutService
     /// <summary>
     /// Zeigt noch eine Verknüpfung diese Symboldatei? Liest (nur lesend) alle .lnk auf dem Desktop und im Startmenü samt
     /// Unterordnern und in den weiteren Orten (gemeinsamer Desktop und gemeinsames Startmenü, angeheftete Verknüpfungen der
-    /// Taskleiste), egal wohin sie zeigen; nicht lesbare zählen nicht. Nicht auf dem UI-Thread.
+    /// Taskleiste), egal wohin sie zeigen. Lässt es sich nicht ganz klären, gilt die Datei als benutzt (sie bleibt): ein nicht
+    /// lesbarer Ordner, ein verknüpfter Ordner (Junction, symbolische Verknüpfung, dem es nicht folgt) oder eine nicht lesbare
+    /// Verknüpfung. Nur eine Verknüpfung, die inzwischen verschwand, zählt nicht. Nicht auf dem UI-Thread.
     /// </summary>
     public bool IsIconInUse(string iconPath)
     {
@@ -152,11 +154,15 @@ public sealed class ShortcutService : IShortcutService
             List<string> files;
             try
             {
-                files = _fileSystem.EnumerateFiles(directory, "*.lnk", recursive: true).ToList();
+                files = _fileSystem.EnumerateFilesCompletely(directory, "*.lnk").ToList();
+            }
+            catch (DirectoryNotFoundException)
+            {
+                continue; // gerade verschwunden: dort zeigt nichts mehr darauf
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
             {
-                continue;
+                return true; // nicht ganz lesbar: vielleicht zeigt dort eine darauf
             }
 
             foreach (var file in files)
@@ -168,9 +174,13 @@ public sealed class ShortcutService : IShortcutService
                         return true;
                     }
                 }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+                {
+                    // Inzwischen verschwunden: zählt nicht.
+                }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or COMException or ArgumentException)
                 {
-                    // Nicht lesbar: zählt nicht.
+                    return true; // nicht lesbar: vielleicht zeigt sie darauf
                 }
             }
         }

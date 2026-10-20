@@ -206,12 +206,12 @@ public sealed class RemoveSettingsWindowTests
             EnsureLibraryResources();
             var game = Game(GameSource.Steam, "1304930", "The Outlast Trials", hdrAuto: true, installed: false, installDir: @"Q:\Spiele\Outlast");
             game.DetectedExecutables = [@"Q:\Spiele\Outlast\a.exe", @"Q:\Spiele\Outlast\b.exe"];
-            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(game, new InstallTrace("Q:", false), 2));
+            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(game, InstallTrace.MissingDrive("Q:"), 2));
             WpfTestHost.Layout(dialog, new Size(ConfirmDialog.WideWidth, 900));
 
             Assert.Equal(ConfirmDialog.WideWidth, dialog.Width);
             var details = (ItemsControl)dialog.FindName("DetailsList");
-            Assert.Equal(["„HDR automatisch“ ist an", "2 gemerkte EXE-Dateien"], details.Items.Cast<ConfirmDetail>().Select(d => d.Text));
+            Assert.Equal(["„HDR automatisch“ ist an", "2 gemerkte EXE\u2011Dateien"], details.Items.Cast<ConfirmDetail>().Select(d => d.Text));
             Assert.Equal(Visibility.Visible, ((FrameworkElement)dialog.FindName("WarningArea")).Visibility);
             Assert.Equal("Laufwerk Q: ist nicht verbunden. Das Spiel ist vielleicht noch installiert.", ((TextBlock)dialog.FindName("WarningText")).Text);
             var option = (CheckBox)dialog.FindName("OptionBox");
@@ -259,7 +259,7 @@ public sealed class RemoveSettingsWindowTests
             game.DetectedExecutables = [@"R:\Games\Z" + i + @"\Spiel.exe"];
             return game;
         }).ToList();
-        return RemoveSettingsText.ForGames(games, [.. games.Select(_ => new InstallTrace("R:", false))], 3);
+        return RemoveSettingsText.ForGames(games, [.. games.Select(_ => InstallTrace.MissingDrive("R:"))], 3);
     }
 
     private static ScrollViewer DetailsScroll(ConfirmDialog dialog) => (ScrollViewer)dialog.FindName("DetailsScroll");
@@ -281,7 +281,7 @@ public sealed class RemoveSettingsWindowTests
         WpfTestHost.Run(() =>
         {
             EnsureLibraryResources();
-            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(EverythingGame(), new InstallTrace("Q:", false), 2));
+            var dialog = new ConfirmDialog(RemoveSettingsText.ForGame(EverythingGame(), InstallTrace.MissingDrive("Q:"), 2));
             LayoutDialog(dialog, double.PositiveInfinity);
 
             var details = (ItemsControl)dialog.FindName("DetailsList");
@@ -319,9 +319,58 @@ public sealed class RemoveSettingsWindowTests
             // Punkte des Sammel-Entfernens: der Name, darunter gedämpft, was verloren geht.
             var third = list.Items.Cast<ConfirmDetail>().ElementAt(2);
             Assert.Equal("Zusatzspiel Nummer 03 mit einem recht langen Namen zum Umbrechen", third.Text);
-            Assert.Equal("Laufwerk R: nicht verbunden · „HDR automatisch“ ist an · 1 gemerkte EXE-Datei", third.Note);
+            Assert.Equal("Laufwerk R: nicht verbunden · „HDR automatisch“ ist an · 1 gemerkte EXE\u2011Datei", third.Note);
             dialog.Close();
         });
+    }
+
+    [Fact]
+    public void RemoveSettings_enter_in_the_scrolling_list_does_not_confirm()
+    {
+        // E90: Wer die lange Liste mit der Tastatur liest, löst mit Enter nicht „Entfernen“ aus. Geprüft wird die Verdrahtung im
+        // Fenster (KeyDown der Aufzählung), nicht nur die Regel: Die Taste ist erledigt, bevor sie die Standardschaltfläche
+        // erreicht, auch wenn sie von einem Punkt der Liste aufsteigt; die Rückfrage bleibt unbeantwortet.
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var dialog = new ConfirmDialog(EighteenGames());
+            LayoutDialog(dialog, double.PositiveInfinity);
+            var scroll = DetailsScroll(dialog);
+            Assert.True(scroll.Focusable && scroll.IsTabStop);
+            KeyEventArgs Press(UIElement target, Key key)
+            {
+                var args = new KeyEventArgs(Keyboard.PrimaryDevice, new KeySource(), Environment.TickCount, key) { RoutedEvent = Keyboard.KeyDownEvent };
+                target.RaiseEvent(args);
+                return args;
+            }
+
+            Assert.True(Press(scroll, Key.Enter).Handled);
+            var line = WpfTestHost.Visuals(scroll).OfType<TextBlock>().First(t => t.Text.StartsWith("Zusatzspiel", StringComparison.Ordinal));
+            Assert.True(Press(line, Key.Enter).Handled);
+            Assert.Null(dialog.DialogResult);
+            Assert.Equal(new ConfirmAnswer(false, false), dialog.Answer);
+
+            // Außerhalb der Liste gehört Enter weiter der Standardschaltfläche „Entfernen“ (nicht verschluckt).
+            Assert.False(Press((UIElement)dialog.FindName("MessageText"), Key.Enter).Handled);
+            Assert.True(((Button)dialog.FindName("ConfirmButton")).IsDefault);
+            dialog.Close();
+        });
+    }
+
+    /// <summary>Tastenereignisse brauchen eine Quelle; die Rückfrage wird in Tests nie angezeigt.</summary>
+    private sealed class KeySource : PresentationSource
+    {
+        private System.Windows.Media.Visual? _root;
+
+        public override System.Windows.Media.Visual? RootVisual
+        {
+            get => _root;
+            set => _root = value;
+        }
+
+        public override bool IsDisposed => false;
+
+        protected override System.Windows.Media.CompositionTarget? GetCompositionTargetCore() => null;
     }
 
     [Fact]
@@ -330,7 +379,7 @@ public sealed class RemoveSettingsWindowTests
         WpfTestHost.Run(() =>
         {
             EnsureLibraryResources();
-            foreach (var request in new[] { RemoveSettingsText.ForGame(EverythingGame(), new InstallTrace("Q:", false), 2), EighteenGames() })
+            foreach (var request in new[] { RemoveSettingsText.ForGame(EverythingGame(), InstallTrace.MissingDrive("Q:"), 2), EighteenGames() })
             {
                 var dialog = new ConfirmDialog(request);
                 Assert.True(dialog.MaxHeight <= SystemParameters.WorkArea.Height, "höher als die Arbeitsfläche: " + dialog.MaxHeight);
@@ -359,11 +408,11 @@ public sealed class RemoveSettingsWindowTests
         {
             EnsureLibraryResources();
             var game = Game(GameSource.Steam, "1304930", "The Outlast Trials", hdrAuto: true, installed: false);
-            var request = RemoveSettingsText.ForGame(game, new InstallTrace(null, true), 0);
+            var request = RemoveSettingsText.ForGame(game, new InstallTrace(InstallSign.Program), 0);
             var dialog = new ConfirmDialog(request);
 
             var help = AutomationProperties.GetHelpText(dialog);
-            Assert.Equal(request.Message + " " + LibraryStrings.RemoveSettings_FolderPresent + " " + LibraryStrings.RemoveSettings_LossHeader + ": „HDR automatisch“ ist an", help);
+            Assert.Equal(request.Message + " " + LibraryStrings.RemoveSettings_ProgramPresent + " " + LibraryStrings.RemoveSettings_LossHeader + ": „HDR automatisch“ ist an", help);
             Assert.Equal(help, AutomationProperties.GetHelpText((DependencyObject)dialog.FindName("CancelButton"))); // hier liegt der Fokus
             Assert.Equal(LibraryStrings.RemoveSettings_LossHeader, AutomationProperties.GetName(DetailsScroll(dialog)));
             dialog.Close();

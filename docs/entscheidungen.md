@@ -231,7 +231,14 @@ Steuerelemente (Schalter, Akzent-Knopf) über `Motion.Instance`.
 als PNG (für die Durchsicht der Oberfläche ohne Bildschirm-Aufnahme). Kein Teil der normalen Bedienung.
 
 **E55 Speicherfehler der Konfiguration sind sichtbar:** `ConfigService` wirft `ConfigSaveException` und übernimmt die
-Änderung nicht; Oberfläche und Tray melden „nicht gespeichert“ statt still einen anderen Zustand anzuzeigen.
+Änderung nicht; Oberfläche und Tray melden „nicht gespeichert“ statt still einen anderen Zustand anzuzeigen. Hält ein
+anderer Prozess `config.json` gerade offen (Kommandozeile, Prüfskript, Virenscanner), verweigert Windows das atomare
+Ersetzen mit „Zugriff verweigert“, auch wenn er das Löschen freigibt; `FileReplace` versucht es dann nach kurzen,
+wachsenden Pausen erneut (zusammen höchstens 1,2 s, die fertige temporäre Datei bleibt so lange liegen), erst danach gilt
+das Speichern als gescheitert, und die alte Datei bleibt ganz. Eine dabei schon gelesene fremde Änderung gilt weiter als
+neu (sonst schriebe das nächste Speichern den alten Stand darüber); „zuletzt gespielt“ und gemerkte EXEs der
+Sitzungslogik, deren Speichern scheiterte, holt das nächste Speichern nach, ein älteres „zuletzt gespielt“ nie über ein
+neueres (Prüfung 2026-10-20, `ConfigSaveTests`, `PhysicalFileSystemTests`).
 
 **E56 Bibliothek wird bei jedem Start im Hintergrund neu eingelesen** (nach dem Start der Automatik), damit neue Spiele
 markiert erscheinen, ohne dass jemand „Neu einlesen“ drückt. Danach wird der Speicher zurückgegeben, wenn kein Fenster
@@ -1020,7 +1027,8 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Detailbereich und Menüs bleibt er. Prüfung: `test.ps1 -Filter "FullyQualifiedName~SelectionFollowsFilter"`,
   `phase10-ui.ps1` (Filter „Neu“, Suche ohne Treffer, Zurücksetzen in der Kapsel); Zustände `liste-ohne-treffer` und
   `regal-ohne-treffer` für Bildschirmfotos. Ohne gewähltes Spiel zeigt das Regal keine Automatik-Karte (ihre Schalter
-  hätten kein Spiel und speicherten nichts; Prüfung 2026-10-20).
+  hätten kein Spiel und speicherten nichts; Prüfung 2026-10-20), und ohne Treffer verschwindet die Stelle „1–7 von 651“
+  unten rechts, statt „0–0 von 0“ zu zeigen.
 
 **E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
 2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und
@@ -1037,19 +1045,26 @@ Launcher mitten in einem Update sein.
   EXE-Dateien, eigenes Symbol, eigene Bilder, per „Bild wählen…“ gewählte Bilder ohne eigene Datei, zuletzt gespielt mit
   dem Datum wie in der Liste; sonst „Nur der Eintrag in der Bibliothek, keine eigenen Einstellungen“), warnt, wenn das
   Spiel vielleicht noch installiert ist, und hat den Fokus auf „Abbrechen“.
-- Vielleicht noch installiert (Prüfung 2026-10-20, `UninstalledGameCleanup.CheckInstallsAsync`): Das Laufwerk des
-  Installationsordners antwortet nicht (Laufwerksbuchstabe, höchstens 2 s, danach als nicht verbunden gewertet;
-  UNC-Pfade ohne diese Warnung), oder der Ordner ist noch da und nicht leer. Das Zweite fängt ab, was ein installiertes
-  Spiel fälschlich zu „nicht installiert“ macht: Das Einlesen findet Steam nicht (dann gelten alle seine Spiele als nicht
-  installiert, `LibraryMerger` markiert nur bei abgestürztem Scanner nichts), oder Steam steckt in einem Update ohne
-  „vollständig installiert“. Ein leerer Restordner zählt nicht. Jedes Laufwerk wird einmal gefragt, alle gleichzeitig,
-  Ordner nur auf verbundenen Laufwerken; dauert das länger als 250 ms, sagt die Hinweiszeile der Bibliothek bzw. die
-  Karte „Prüfe …“. Wie das Einlesen „nicht installiert“ setzt, bleibt unverändert (ein fehlender Launcher kann auch
-  deinstalliert sein); die Warnung lässt die Wahl.
+- Vielleicht noch installiert (Prüfung 2026-10-20, `UninstalledGameCleanup.CheckInstallsAsync`, nur lesend, nur Namen):
+  Als Spur zählt nur, was auf ein Programm deutet. Das Laufwerk des Installationsordners ist nicht verbunden; eine
+  gemerkte oder hinzugefügte EXE (voller Pfad) ist noch da; im Installationsordner liegt bis vier Ebenen tief eine EXE
+  (ohne verknüpften Ordnern zu folgen); bei Steam steht `appmanifest_<ID>.acf` noch in `steamapps` der Bibliothek. Ein
+  Restordner mit Spielständen, Einstellungen und Protokollen zählt nicht (echte Daten: VEIN Demo hinterließ 13 solche
+  Dateien und keine EXE, die Rückfrage warnte dort zu Unrecht). Das fängt ab, was ein installiertes Spiel fälschlich zu
+  „nicht installiert“ macht: Das Einlesen findet Steam nicht (dann gelten alle seine Spiele als nicht installiert,
+  `LibraryMerger` markiert nur bei abgestürztem Scanner nichts), oder Steam steckt in einem Update ohne „vollständig
+  installiert“. Was nicht antwortet (Laufwerk, Netzwerkfreigabe, Ordner) oder nicht lesbar ist, gilt als „nicht prüfbar“
+  und bekommt ebenfalls die Warnung (ein getrenntes Netzlaufwerk ist kein „deinstalliert“); als „nicht verbunden“ gilt
+  ein Laufwerk nur, wenn Windows das so beantwortet. Jedes Laufwerk und jede Freigabe wird einmal gefragt, Ordner nur auf
+  erreichbaren; höchstens vier Zugriffe zugleich (ein hängender hält einen Thread), alle zusammen höchstens 2 s. Dauert
+  das länger als 250 ms, sagt die Hinweiszeile der Bibliothek bzw. die Karte „Prüfe …“. Wie das Einlesen „nicht
+  installiert“ setzt, bleibt unverändert (ein fehlender Launcher kann auch deinstalliert sein); die Warnung lässt die
+  Wahl.
 - Die Rückfrage passt immer auf die Arbeitsfläche: Reicht die Höhe nicht, gibt nur die Aufzählung nach und scrollt (bis
-  340 px hoch; alles, was bei einem Spiel verloren gehen kann, passt ohne Scrollen). Eine scrollende Aufzählung ist ein
-  Halt der Tabulatortaste mit Fokusrahmen, scrollt mit den Pfeiltasten (Enter löst dort nicht „Entfernen“ aus) und lässt
-  rechts Platz für die Bildlaufleiste. Bildschirmleser hören Text, Warnung und Aufzählung als Hilfe des Fensters und von
+  340 px hoch; alles, was bei einem Spiel verloren gehen kann, passt ohne Scrollen; „EXE‑Datei“ mit geschütztem
+  Bindestrich, damit keine Zeile mit „Dateien“ beginnt). Eine scrollende Aufzählung ist ein Halt der Tabulatortaste mit
+  Fokusrahmen, scrollt mit den Pfeiltasten (Enter löst dort nicht „Entfernen“ aus) und lässt rechts Platz für die
+  Bildlaufleiste. Bildschirmleser hören Text, Warnung und Aufzählung als Hilfe des Fensters und von
   „Abbrechen“; der Knopf des Sammel-Entfernens hat seine Erklärung als Hilfe.
 - Gelöscht werden nur: der Eintrag in `config.json` samt allen Schaltern, das eigene Symbol (`icons\<Stamm>.png` nach
   `CustomIcons.FileNameFor`), der Eintrag im Symbol-Cache (`icon-cache.json`), die eigenen Bilder
@@ -1059,8 +1074,10 @@ Launcher mitten in einem Update sein.
   `ShortcutService` schreibt (`--run "<Schlüssel>"`, in Testinstanzen mit deren `--config-dir`; Groß- und Kleinschreibung
   egal); vor dem Löschen wird jede erneut gelesen. Die .ico neben dem eigenen Symbol fällt nur, wenn eine gelöschte
   Verknüpfung sie zeigte und keine andere mehr (`IShortcutService.IsIconInUse`, nur lesend: auch Unterordner von Desktop
-  und Startmenü, gemeinsamer Desktop und gemeinsames Startmenü, angeheftete Verknüpfungen der Taskleiste; nicht lesbar:
-  bleibt). Eine Datei, die ein verbliebener Eintrag noch nennt (nur in einer von Hand geänderten `config.json`), bleibt.
+  und Startmenü, gemeinsamer Desktop und gemeinsames Startmenü, angeheftete Verknüpfungen der Taskleiste). Lässt sich
+  das nicht ganz klären, bleibt sie: ein nicht lesbarer Ordner, ein verknüpfter Ordner (Junction, symbolische
+  Verknüpfung; dem wird nicht gefolgt) oder eine nicht lesbare Verknüpfung; nur eine inzwischen verschwundene zählt
+  nicht. Eine Datei, die ein verbliebener Eintrag noch nennt (nur in einer von Hand geänderten `config.json`), bleibt.
   Erzeugte Bilder (`gen`, `boost`, `logo`, `sgdb`, `index.json`) räumt wie bisher das Aufräumen beim Schließen des
   Fensters ab, die HDR-Liste der nächste Abgleich. Dateien von Spielen, Launchern und Steam fasst HDRpilot nie an. Ohne
   Häkchen bleiben Verknüpfungen liegen; `--run` meldet dann ein unbekanntes Spiel, bis es wieder eingelesen ist.
@@ -1082,14 +1099,16 @@ Launcher mitten in einem Update sein.
   zählen damit nirgends mit: Zahl im Kopf, Quellen, Zahlen der Filter, Kapsel „x/y“, Zahl der Spiele in der Navigation
   der Einstellungen. Ausblenden ist kein Filter (`IsFiltered` bleibt aus, keine Lichtnaht); die Zahl nennen nur die Karte
   und der Tooltip von „Zurücksetzen“ (kein eigener Eintrag im Menü der Leiste). Sind alle Spiele ausgeblendet, zeigt die
-  Liste „Nur nicht installierte Spiele“ mit dem Weg zum Schalter. Die Sitzungslogik sieht weiter alle Spiele: „HDR
-  automatisch“ und Auto HDR wirken auch für ausgeblendete, ein laufendes steht in der Statuszeile. Findet die Suche
+  Liste „Nur nicht installierte Spiele“ mit dem Weg zum Schalter („Einstellungen › Bibliothek“, wie in der Navigation
+  der Einstellungen und im Tooltip von „Zurücksetzen“). Die Sitzungslogik sieht weiter alle Spiele: „HDR automatisch“
+  und Auto HDR wirken auch für ausgeblendete, ein laufendes steht in der Statuszeile. Findet die Suche
   nur ausgeblendete Spiele, sagt „Keine Spiele für diese Auswahl“, wie viele passen würden und wo sie sich einblenden
   lassen; die Zahl im Kopf zählt sie weiter nicht mit (Entscheidung des Nutzers).
 - Sammel-Entfernen in derselben Karte: „Einstellungen aller nicht installierten Spiele entfernen…“ (nur Launcher-Spiele,
   ohne solche mit Sitzung; laufen alle, sagt die Karte das, statt still nichts zu tun), Rückfrage mit einem Punkt je
-  Spiel: der Name, darunter gedämpft „Laufwerk F: nicht verbunden“ bzw. „Ordner noch da“ und was verloren geht; dazu
-  die Warnung zu Laufwerken und Ordnern und das Häkchen für die Verknüpfungen. Es gilt sofort, unabhängig von
+  Spiel: der Name, darunter gedämpft die Spur einer Installation („Laufwerk F: nicht verbunden“, „EXE‑Datei noch da“,
+  „bei Steam noch eingetragen“, „nicht prüfbar“) und was verloren geht; dazu die Warnung zu Laufwerken und Spuren und
+  das Häkchen für die Verknüpfungen. Es gilt sofort, unabhängig von
   „Speichern“; ob ein Spiel noch entfernbar ist und keine Sitzung hat, prüft wie beim einzelnen erst das Schreiben.
   Danach werden die Karte und die Zahl der Spiele in der Navigation neu gezählt; hat ein Einlesen alle wiedergefunden,
   sagt die Meldung nur, dass sie bleiben.
@@ -1102,6 +1121,8 @@ Launcher mitten in einem Update sein.
   `-rueckfrage-entfernen-verknuepfungen`, `einstellungen-bibliothek` und `-rueckfrage-alle` für Bildschirmfotos), G11.3
   (`phase11-migration.ps1`: eine nur lesend kopierte echte Ablage, über den Entwicklerschalter `--settings-probe` ohne
   Einlesen und Automatik zweimal wie in den Einstellungen gespeichert; nur `hideUninstalledGames` unterscheidet sich, der
-  Hash der echten Ablage bleibt gleich). `--settings-probe`, `--snapshot` und `--artwork-report` beenden sich mit
-  Exit-Code 2, wenn `--config-dir` auf die echte Konfiguration oder den echten Datenordner zeigt (auch anders geschrieben,
-  `AppArguments.HasOwnConfigDir`).
+  Hash der echten Ablage bleibt gleich; der Bericht nennt je entfernbares Spiel die Spur einer Installation, nur lesend
+  in den echten Spielordnern geprüft). `--settings-probe`, `--snapshot` und `--artwork-report` beenden sich mit
+  Exit-Code 2, wenn `--config-dir` auf die echte Konfiguration oder den echten Datenordner zeigt, auch anders geschrieben
+  oder auf anderem Weg dorthin (`\\?\`, 8.3-Name, Junction, subst: bei vorhandenen Ordnern entscheidet ihre Kennung,
+  `PathUtil.SameDirectory`, `AppArguments.HasOwnConfigDir`).

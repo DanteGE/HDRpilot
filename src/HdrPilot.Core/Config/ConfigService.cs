@@ -30,6 +30,10 @@ public sealed class ConfigService : ISessionConfigSource
     private readonly ILogger _logger;
     private readonly object _gate = new();
     private readonly Mutex _fileLock;
+
+    // Aufzeichnungen der Sitzungslogik, deren Speichern scheiterte (Datei gesperrt): je Spiel, beim nächsten Speichern nachgeholt.
+    private readonly Dictionary<string, List<string>> _pendingExecutables = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTimeOffset> _pendingLastPlayed = new(StringComparer.OrdinalIgnoreCase);
     private AppConfig _current;
     private long _revision;
     private string? _lastText;
@@ -66,6 +70,7 @@ public sealed class ConfigService : ISessionConfigSource
     /// <summary>
     /// Ändert die Konfiguration unter Sperre, speichert sofort und meldet die Änderung. Hat ein anderer Prozess
     /// (etwa die Kommandozeile) die Datei inzwischen geändert, wird sie vorher neu gelesen, damit nichts verloren geht.
+    /// Aufzeichnungen der Sitzungslogik, deren Speichern zuvor scheiterte, kommen dabei mit hinein.
     /// </summary>
     public void Update(Action<AppConfig> mutate)
     {
@@ -73,16 +78,31 @@ public sealed class ConfigService : ISessionConfigSource
         {
             WithFileLock(() =>
             {
-                var baseConfig = ReloadBaseIfChangedOnDisk() ?? _current;
-                var next = baseConfig.Clone();
-                mutate(next);
-                ConfigStore.Normalize(next);
-                if (!TrySave(next, out var error))
+                var readText = _lastText;
+                AppConfig next;
+                try
                 {
-                    // Nicht übernehmen: Speicher und Platte bleiben gleich, der Aufrufer erfährt den Fehler.
-                    throw new ConfigSaveException(_store.Path, error);
+                    var baseConfig = ReloadBaseIfChangedOnDisk() ?? _current;
+                    next = baseConfig.Clone();
+                    ApplyPending(next);
+                    mutate(next);
+                    ConfigStore.Normalize(next);
+                    if (!TrySave(next, out var error))
+                    {
+                        // Nicht übernehmen: Speicher und Platte bleiben gleich, der Aufrufer erfährt den Fehler.
+                        throw new ConfigSaveException(_store.Path, error);
+                    }
+                }
+                catch
+                {
+                    // Eine eben gelesene fremde Änderung gilt weiter als neu: Sonst überginge das nächste Neulesen sie, und
+                    // das nächste Speichern schriebe den alten Stand darüber.
+                    _lastText = readText;
+                    throw;
                 }
 
+                _pendingExecutables.Clear();
+                _pendingLastPlayed.Clear();
                 Volatile.Write(ref _current, next);
                 Interlocked.Increment(ref _revision);
             });
@@ -191,7 +211,18 @@ public sealed class ConfigService : ISessionConfigSource
         }
         catch (ConfigSaveException ex)
         {
-            _logger.LogWarning("Gemerkte Spiel-EXEs nicht gespeichert: {Error}", ex.Message);
+            lock (_gate)
+            {
+                if (!_pendingExecutables.TryGetValue(gameKey, out var pending))
+                {
+                    _pendingExecutables[gameKey] = pending = [];
+                }
+
+                var added = executables.Where(e => !pending.Contains(e, StringComparer.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                pending.AddRange(added);
+            }
+
+            _logger.LogWarning("Gemerkte Spiel-EXEs nicht gespeichert, beim nächsten Speichern nachgeholt: {Error}", ex.Message);
         }
     }
 
@@ -225,7 +256,15 @@ public sealed class ConfigService : ISessionConfigSource
         }
         catch (ConfigSaveException ex)
         {
-            _logger.LogWarning("Zuletzt gespielt nicht gespeichert: {Error}", ex.Message);
+            lock (_gate)
+            {
+                if (!_pendingLastPlayed.TryGetValue(gameKey, out var pending) || pending < when)
+                {
+                    _pendingLastPlayed[gameKey] = when;
+                }
+            }
+
+            _logger.LogWarning("Zuletzt gespielt nicht gespeichert, beim nächsten Speichern nachgeholt: {Error}", ex.Message);
         }
     }
 
@@ -243,6 +282,29 @@ public sealed class ConfigService : ISessionConfigSource
                 g.LastPlayed = when;
             }
         });
+    }
+
+    /// <summary>
+    /// Holt Aufzeichnungen nach, deren Speichern scheiterte (unter <c>_gate</c>): gemerkte EXEs kommen dazu, „zuletzt
+    /// gespielt“ nur, wenn es neuer ist als der Eintrag. Ein inzwischen entferntes Spiel bleibt entfernt.
+    /// </summary>
+    private void ApplyPending(AppConfig config)
+    {
+        foreach (var (key, executables) in _pendingExecutables)
+        {
+            if (config.FindGame(key) is { } game)
+            {
+                game.DetectedExecutables.AddRange(executables.Where(e => !game.DetectedExecutables.Contains(e, StringComparer.OrdinalIgnoreCase)));
+            }
+        }
+
+        foreach (var (key, when) in _pendingLastPlayed)
+        {
+            if (config.FindGame(key) is { } game && (game.LastPlayed is null || game.LastPlayed < when))
+            {
+                game.LastPlayed = when;
+            }
+        }
     }
 
     private void TrySave(AppConfig config) => TrySave(config, out _);

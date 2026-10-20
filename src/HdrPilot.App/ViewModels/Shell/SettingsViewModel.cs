@@ -778,9 +778,9 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Sammel-Entfernen (E90): alle nicht installierten Launcher-Spiele ohne laufende oder vorbereitete Sitzung; laufen alle,
     /// sagt die Karte das. Vor der Rückfrage im Hintergrund ihre HDRpilot-Verknüpfungen und, alle zugleich, ob sie vielleicht
-    /// noch installiert sind (Laufwerk, Ordner); dauert das länger als <see cref="LibraryViewModel.CheckingDelay"/>, steht in der
-    /// Karte, dass geprüft wird. Die Rückfrage nennt jedes Spiel mit dem, was verloren geht, warnt bei fehlenden Laufwerken und
-    /// noch vorhandenen Ordnern und bietet die Verknüpfungen per Häkchen an. Geprüft wird beim Schreiben
+    /// noch installiert sind (Laufwerk, EXE, Steam); dauert das länger als <see cref="LibraryViewModel.CheckingDelay"/>, steht in
+    /// der Karte, dass geprüft wird. Die Rückfrage nennt jedes Spiel mit dem, was verloren geht, und darunter die Spur einer
+    /// Installation, warnt dann und bietet die Verknüpfungen per Häkchen an. Geprüft wird beim Schreiben
     /// (<see cref="LibraryCleanup.RemoveNotInstalled"/>): Inzwischen wiedergefundene oder laufende Spiele bleiben. Danach räumt
     /// <see cref="UninstalledGameCleanup"/> je entferntes Spiel auf.
     /// </summary>
@@ -814,7 +814,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         try
         {
             var shortcutSearch = Task.Run(() => games.ToDictionary(g => g.Key, g => cleanup.FindShortcuts(g.Key), StringComparer.OrdinalIgnoreCase));
-            var installCheck = cleanup.CheckInstallsAsync([.. games.Select(g => g.InstallDir)]);
+            var installCheck = cleanup.CheckInstallsAsync(games);
             var prepared = Task.WhenAll(shortcutSearch, installCheck);
             if (await Task.WhenAny(prepared, Task.Delay(LibraryViewModel.CheckingDelay)) != prepared)
             {

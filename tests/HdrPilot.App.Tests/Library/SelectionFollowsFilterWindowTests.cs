@@ -234,4 +234,31 @@ public sealed class SelectionFollowsFilterWindowTests
             window.Close();
         });
     }
+
+    [Fact]
+    public void In_the_shelf_the_position_hides_without_a_match()
+    {
+        // Prüfung 2026-10-20: Ohne Treffer stand „0–0 von 0“ unter dem leeren Regal. Die Stelle verschwindet (auch für
+        // Bildschirmleser) und kehrt mit den Spielen zurück.
+        WpfTestHost.Run(() =>
+        {
+            var (window, model) = Open(LibraryViewMode.Shelf);
+            var position = Named<TextBlock>(window, "ShelfPosition");
+            Assert.Equal(Visibility.Visible, position.Visibility);
+            Assert.Matches(@"^1–\d+ von 60$", position.Text);
+
+            model.SearchText = "xqz";
+            model.ApplySearch();
+            Arrange(window);
+            Assert.Equal(Visibility.Collapsed, position.Visibility);
+            Assert.Equal(string.Empty, position.Text);
+            Assert.Equal(string.Empty, System.Windows.Automation.AutomationProperties.GetName(position));
+
+            model.ClearFiltersCommand.Execute(null);
+            Arrange(window);
+            Assert.Equal(Visibility.Visible, position.Visibility);
+            Assert.Matches(@"^1–\d+ von 60$", position.Text);
+            window.Close();
+        });
+    }
 }

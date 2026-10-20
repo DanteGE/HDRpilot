@@ -227,10 +227,10 @@
     <value>Keine Spiele für diese Auswahl</value>
   </data>
   <data name="List_NoMatchHiddenOne" xml:space="preserve">
-    <value>Suche, Quelle und Filter schließen alle Spiele aus. Ein ausgeblendetes nicht installiertes Spiel würde passen; einblenden kannst du es unter Einstellungen › Allgemein › Bibliothek.</value>
+    <value>Suche, Quelle und Filter schließen alle Spiele aus. Ein ausgeblendetes nicht installiertes Spiel würde passen; einblenden kannst du es unter Einstellungen › Bibliothek.</value>
   </data>
   <data name="List_NoMatchHiddenMany" xml:space="preserve">
-    <value>Suche, Quelle und Filter schließen alle Spiele aus. {0} ausgeblendete nicht installierte Spiele würden passen; einblenden kannst du sie unter Einstellungen › Allgemein › Bibliothek.</value>
+    <value>Suche, Quelle und Filter schließen alle Spiele aus. {0} ausgeblendete nicht installierte Spiele würden passen; einblenden kannst du sie unter Einstellungen › Bibliothek.</value>
     <comment>{0} = Anzahl</comment>
   </data>
   <data name="List_NoMatchText" xml:space="preserve">
@@ -1416,24 +1416,24 @@
     <value>„Nach dem Spiel zurückstellen“ ist aus</value>
   </data>
   <data name="RemoveSettings_LossDetectedOne" xml:space="preserve">
-    <value>1 gemerkte EXE-Datei</value>
+    <value>1 gemerkte EXE‑Datei</value>
   </data>
   <data name="RemoveSettings_LossDetectedMany" xml:space="preserve">
-    <value>{0} gemerkte EXE-Dateien</value>
+    <value>{0} gemerkte EXE‑Dateien</value>
     <comment>{0} = Anzahl</comment>
   </data>
   <data name="RemoveSettings_LossExtraOne" xml:space="preserve">
-    <value>1 hinzugefügte EXE-Datei</value>
+    <value>1 hinzugefügte EXE‑Datei</value>
   </data>
   <data name="RemoveSettings_LossExtraMany" xml:space="preserve">
-    <value>{0} hinzugefügte EXE-Dateien</value>
+    <value>{0} hinzugefügte EXE‑Dateien</value>
     <comment>{0} = Anzahl</comment>
   </data>
   <data name="RemoveSettings_LossExcludedOne" xml:space="preserve">
-    <value>1 ausgeschlossene EXE-Datei</value>
+    <value>1 ausgeschlossene EXE‑Datei</value>
   </data>
   <data name="RemoveSettings_LossExcludedMany" xml:space="preserve">
-    <value>{0} ausgeschlossene EXE-Dateien</value>
+    <value>{0} ausgeschlossene EXE‑Dateien</value>
     <comment>{0} = Anzahl</comment>
   </data>
   <data name="RemoveSettings_LossCustomIcon" xml:space="preserve">
@@ -1465,8 +1465,14 @@
     <value>Laufwerk {0} ist nicht verbunden. Das Spiel ist vielleicht noch installiert.</value>
     <comment>{0} = Laufwerk, etwa „F:“</comment>
   </data>
-  <data name="RemoveSettings_FolderPresent" xml:space="preserve">
-    <value>Der Ordner des Spiels ist noch da. Vielleicht ist es noch installiert und wurde beim Einlesen nur nicht erkannt, etwa mitten in einem Update.</value>
+  <data name="RemoveSettings_ProgramPresent" xml:space="preserve">
+    <value>Eine EXE‑Datei des Spiels ist noch da. Vielleicht ist es noch installiert und wurde beim Einlesen nur nicht erkannt, etwa mitten in einem Update.</value>
+  </data>
+  <data name="RemoveSettings_SteamListed" xml:space="preserve">
+    <value>Steam führt das Spiel noch als installiert. Vielleicht wurde es beim Einlesen nur nicht erkannt, etwa mitten in einem Update.</value>
+  </data>
+  <data name="RemoveSettings_Unchecked" xml:space="preserve">
+    <value>Laufwerk oder Ordner des Spiels antworten nicht oder sind nicht lesbar. Das Spiel ist vielleicht noch installiert.</value>
   </data>
   <data name="RemoveSettings_Checking" xml:space="preserve">
     <value>Prüfe Laufwerk und Verknüpfungen von „{0}“ …</value>
@@ -1539,9 +1545,17 @@
     <value>Laufwerk {0} nicht verbunden</value>
     <comment>Unter dem Namen eines Spiels, vor dem, was verloren geht; {0} = Laufwerk, etwa „F:“</comment>
   </data>
-  <data name="RemoveAll_MarkFolderPresent" xml:space="preserve">
-    <value>Ordner noch da</value>
+  <data name="RemoveAll_MarkProgramPresent" xml:space="preserve">
+    <value>EXE‑Datei noch da</value>
     <comment>Unter dem Namen eines Spiels, vor dem, was verloren geht</comment>
+  </data>
+  <data name="RemoveAll_MarkSteamListed" xml:space="preserve">
+    <value>bei Steam noch eingetragen</value>
+    <comment>Unter dem Namen eines Spiels, vor dem, was verloren geht</comment>
+  </data>
+  <data name="RemoveAll_MarkUnchecked" xml:space="preserve">
+    <value>nicht prüfbar</value>
+    <comment>Unter dem Namen eines Spiels, vor dem, was verloren geht: Laufwerk oder Ordner antworten nicht oder sind nicht lesbar</comment>
   </data>
   <data name="RemoveAll_DrivesMissingOne" xml:space="preserve">
     <value>Laufwerk {0} ist nicht verbunden. Spiele dort sind vielleicht noch installiert.</value>
@@ -1551,11 +1565,11 @@
     <value>Laufwerke {0} sind nicht verbunden. Spiele dort sind vielleicht noch installiert.</value>
     <comment>{0} = Laufwerke, etwa „F:, G:“</comment>
   </data>
-  <data name="RemoveAll_FoldersPresentOne" xml:space="preserve">
-    <value>Bei einem Spiel ist der Ordner noch da; es ist vielleicht noch installiert.</value>
+  <data name="RemoveAll_UnsureOne" xml:space="preserve">
+    <value>Bei einem Spiel steht unter dem Namen, warum es vielleicht noch installiert ist.</value>
   </data>
-  <data name="RemoveAll_FoldersPresentMany" xml:space="preserve">
-    <value>Bei {0} Spielen ist der Ordner noch da; sie sind vielleicht noch installiert.</value>
+  <data name="RemoveAll_UnsureMany" xml:space="preserve">
+    <value>Bei {0} Spielen steht unter dem Namen, warum sie vielleicht noch installiert sind.</value>
     <comment>{0} = Anzahl</comment>
   </data>
   <data name="RemoveAll_Checking" xml:space="preserve">
@@ -1599,10 +1613,10 @@
     <value>Nur nicht installierte Spiele</value>
   </data>
   <data name="List_EmptyHiddenTextOne" xml:space="preserve">
-    <value>Ein nicht installiertes Spiel ist ausgeblendet. Einblenden kannst du es unter Einstellungen › Allgemein › Bibliothek.</value>
+    <value>Ein nicht installiertes Spiel ist ausgeblendet. Einblenden kannst du es unter Einstellungen › Bibliothek.</value>
   </data>
   <data name="List_EmptyHiddenTextMany" xml:space="preserve">
-    <value>{0} nicht installierte Spiele sind ausgeblendet. Einblenden kannst du sie unter Einstellungen › Allgemein › Bibliothek.</value>
+    <value>{0} nicht installierte Spiele sind ausgeblendet. Einblenden kannst du sie unter Einstellungen › Bibliothek.</value>
     <comment>{0} = Anzahl</comment>
   </data>
 </root>

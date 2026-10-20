@@ -107,8 +107,9 @@ public sealed record AppArguments
     /// <summary>
     /// Eine eigene Ablage, wie sie die Entwicklerschalter brauchen (<c>--snapshot</c>, <c>--artwork-report</c>,
     /// <c>--settings-probe</c>): <see cref="ConfigDir"/> ist gesetzt und weder der echte Konfigurationsordner noch der echte
-    /// Datenordner (<paramref name="defaults"/>), auch nicht in anderer Schreibweise. Sonst schrieben sie in die echte
-    /// Konfiguration, womöglich neben der laufenden App.
+    /// Datenordner (<paramref name="defaults"/>), auch nicht in anderer Schreibweise oder auf einem anderen Weg dorthin
+    /// (<see cref="Core.Util.PathUtil.SameDirectory"/>: 8.3-Namen, <c>\\?\</c>, Junctions, subst). Sonst schrieben sie in die
+    /// echte Konfiguration, womöglich neben der laufenden App.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.MemberNotNullWhen(true, nameof(ConfigDir))]
     public bool HasOwnConfigDir(Core.Config.AppPaths defaults)
@@ -128,7 +129,7 @@ public sealed record AppArguments
             return false;
         }
 
-        return !Core.Util.PathUtil.PathEquals(full, defaults.ConfigDirectory) && !Core.Util.PathUtil.PathEquals(full, defaults.DataDirectory);
+        return !Core.Util.PathUtil.SameDirectory(full, defaults.ConfigDirectory) && !Core.Util.PathUtil.SameDirectory(full, defaults.DataDirectory);
     }
 
     public static AppArguments Parse(IReadOnlyList<string> args)

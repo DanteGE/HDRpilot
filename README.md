@@ -196,13 +196,14 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     Rechtsklick oder Entf. Nach einer Rückfrage vergisst HDRpilot, was es zu dem Spiel gespeichert hat: den Eintrag
     samt Schaltern, gemerkten EXE-Dateien und Bildwahl, das eigene Symbol und die eigenen Bilder. Die Rückfrage nennt,
     was verloren geht (etwa dass „HDR automatisch“ an ist oder „2 gemerkte EXE-Dateien“), warnt, wenn das Spiel
-    vielleicht noch installiert ist (sein Laufwerk ist nicht verbunden, oder sein Ordner ist noch da, etwa mitten in
-    einem Update), und hat den Fokus auf **Abbrechen**. Gibt es „(HDR)“-Verknüpfungen des Spiels auf dem Desktop oder
-    im Startmenü, löscht ein Häkchen sie mit, ihre ICO-Datei nur, wenn keine andere Verknüpfung sie mehr zeigt; ohne
-    Häkchen bleiben sie liegen und starten das Spiel erst wieder, wenn es installiert und neu eingelesen ist. Am Spiel,
-    am Launcher und an anderen Verknüpfungen ändert sich nichts. Danach ist das nächste Spiel der Liste gewählt.
-    Installierst du das Spiel wieder, erscheint es beim nächsten Einlesen als neu, mit „HDR automatisch“ aus. Solange
-    das Spiel läuft, geht es nicht.
+    vielleicht noch installiert ist (sein Laufwerk ist nicht verbunden, eine EXE des Spiels ist noch da, Steam führt es
+    noch als installiert, etwa mitten in einem Update, oder Laufwerk bzw. Ordner antworten nicht; ein Restordner nur mit
+    Spielständen, Einstellungen und Protokollen zählt nicht), und hat den Fokus auf **Abbrechen**. Gibt es
+    „(HDR)“-Verknüpfungen des Spiels auf dem Desktop oder im Startmenü, löscht ein Häkchen sie mit, ihre ICO-Datei nur,
+    wenn sicher keine andere Verknüpfung sie mehr zeigt; ohne Häkchen bleiben sie liegen und starten das Spiel erst
+    wieder, wenn es installiert und neu eingelesen ist. Am Spiel, am Launcher und an anderen Verknüpfungen ändert sich
+    nichts. Danach ist das nächste Spiel der Liste gewählt. Installierst du das Spiel wieder, erscheint es beim nächsten
+    Einlesen als neu, mit „HDR automatisch“ aus. Solange das Spiel läuft, geht es nicht.
 
 ### Infobereich
 

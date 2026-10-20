@@ -354,12 +354,28 @@ public sealed class LogTail : IDisposable
 /// <summary>Datei-ID (Volume-Seriennummer und Dateiindex) einer geöffneten Datei; unterscheidet eine neu angelegte Datei gleichen Namens.</summary>
 internal readonly partial record struct FileIdentity(uint VolumeSerialNumber, ulong FileIndex)
 {
+    /// <summary>winnt.h und WinBase.h: nur Attribute lesen; FILE_FLAG_BACKUP_SEMANTICS öffnet auch Ordner.</summary>
+    private const uint FILE_READ_ATTRIBUTES = 0x80;
+    private const uint FILE_FLAG_BACKUP_SEMANTICS = 0x02000000;
+
     public static FileIdentity? Of(SafeFileHandle handle) =>
         GetFileInformationByHandle(handle, out var info)
             ? new FileIdentity(info.dwVolumeSerialNumber, ((ulong)info.nFileIndexHigh << 32) | info.nFileIndexLow)
             : null;
 
-    // fileapi.h: BY_HANDLE_FILE_INFORMATION. Gilt nur für die eigene, gerade geöffnete Protokolldatei.
+    /// <summary>
+    /// Kennung eines vorhandenen Ordners (oder einer Datei), egal wie der Pfad geschrieben ist: kurze 8.3-Namen, Präfix
+    /// <c>\\?\</c>, Junctions und symbolische Verknüpfungen (Windows folgt ihnen), mit subst verbundene Laufwerke. Öffnet nur
+    /// zum Lesen der Attribute und sperrt nichts; null, wenn es den Pfad nicht gibt oder er sich nicht öffnen lässt.
+    /// </summary>
+    public static FileIdentity? OfPath(string path)
+    {
+        using var handle = CreateFileW(path, FILE_READ_ATTRIBUTES, FileShare.ReadWrite | FileShare.Delete, IntPtr.Zero, FileMode.Open, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+        return handle.IsInvalid ? null : Of(handle);
+    }
+
+    // fileapi.h: BY_HANDLE_FILE_INFORMATION. Für die eigene, gerade geöffnete Protokolldatei und für Ordner, die nur zum Lesen
+    // der Attribute geöffnet sind (PathUtil.SameDirectory).
 #pragma warning disable IDE1006
     [StructLayout(LayoutKind.Sequential)]
     private struct BY_HANDLE_FILE_INFORMATION
@@ -388,4 +404,9 @@ internal readonly partial record struct FileIdentity(uint VolumeSerialNumber, ul
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GetFileInformationByHandle(SafeFileHandle hFile, out BY_HANDLE_FILE_INFORMATION lpFileInformation);
+
+    // fileapi.h: CreateFileW (dwShareMode und dwCreationDisposition haben dieselben Werte wie FileShare und FileMode).
+    [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    private static partial SafeFileHandle CreateFileW(
+        string lpFileName, uint dwDesiredAccess, FileShare dwShareMode, IntPtr lpSecurityAttributes, FileMode dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
 }

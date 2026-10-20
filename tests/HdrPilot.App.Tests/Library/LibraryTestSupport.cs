@@ -166,24 +166,27 @@ public sealed class DenyingFileSystem(IFileSystem inner, params string[] deniedD
 }
 
 /// <summary>
-/// Dateisystem, dessen Prüfung bestimmter Ordner (DirectoryExists) hängt, bis <see cref="Release"/> aufgerufen ist, längstens
-/// 30 s: ein getrenntes Netzlaufwerk oder eine anlaufende Platte (E90, Prüfung vor „Einstellungen entfernen…“).
+/// Dateisystem, dessen Prüfung bestimmter Ordner (DirectoryExists, Auflisten) hängt, bis <see cref="Release"/> aufgerufen ist,
+/// längstens 30 s: ein getrenntes Netzlaufwerk oder eine anlaufende Platte (E90, Prüfung vor „Einstellungen entfernen…“).
 /// </summary>
 public sealed class HangingFileSystem(IFileSystem inner, params string[] hanging) : IFileSystem
 {
     private readonly ManualResetEventSlim _released = new();
+    private int _waiting;
 
     public void Release() => _released.Set();
+
+    /// <summary>Höchstzahl der Zugriffe, die gleichzeitig hingen.</summary>
+    public int MaxWaiting { get; private set; }
+
+    /// <summary>Ordner, die erst nach dieser Zeit antworten (eine anlaufende Platte), statt zu hängen.</summary>
+    public Dictionary<string, TimeSpan> Slow { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public bool FileExists(string path) => inner.FileExists(path);
 
     public bool DirectoryExists(string path)
     {
-        if (hanging.Any(h => HdrPilot.Core.Util.PathUtil.PathEquals(h, path)))
-        {
-            _released.Wait(TimeSpan.FromSeconds(30));
-        }
-
+        Hang(path);
         return inner.DirectoryExists(path);
     }
 
@@ -191,7 +194,36 @@ public sealed class HangingFileSystem(IFileSystem inner, params string[] hanging
 
     public byte[] ReadAllBytes(string path) => inner.ReadAllBytes(path);
 
-    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false) => inner.EnumerateFiles(directory, searchPattern, recursive);
+    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false)
+    {
+        Hang(directory);
+        return inner.EnumerateFiles(directory, searchPattern, recursive);
+    }
+
+    private void Hang(string path)
+    {
+        if (Slow.FirstOrDefault(s => HdrPilot.Core.Util.PathUtil.PathEquals(s.Key, path)) is { Key: not null } slow)
+        {
+            Thread.Sleep(slow.Value);
+            return;
+        }
+
+        if (!hanging.Any(h => HdrPilot.Core.Util.PathUtil.PathEquals(h, path)))
+        {
+            return;
+        }
+
+        lock (_released)
+        {
+            MaxWaiting = Math.Max(MaxWaiting, ++_waiting);
+        }
+
+        _released.Wait(TimeSpan.FromSeconds(30));
+        lock (_released)
+        {
+            _waiting--;
+        }
+    }
 
     public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) => inner.EnumerateDirectories(directory, searchPattern, recursive);
 

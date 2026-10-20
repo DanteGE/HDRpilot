@@ -1,14 +1,15 @@
 ﻿# Gate G11.2: Daten nicht installierter Spiele entfernen und ausblenden (E90) per UI-Automation an einer eigenen Testinstanz
 # (eigene Ablage, nur Fenster dieser Prozess-ID, keine Maus- oder Tastatureingaben) und Bildschirmfotos.
 # Testablage: zwei nicht installierte Launcher-Spiele mit erfundenen IDs (Steam auf einem nicht verbundenen Laufwerk, mit
-# „HDR automatisch“ und zwei gemerkten EXE-Dateien; Epic in einem fehlenden Ordner auf einem verbundenen Laufwerk) und ein
-# eigenes Spiel (Ordner mit Stellvertreter-EXE). Beim Start liest die Testinstanz die echte Bibliothek nur lesend ein; diese
-# Spiele kommen installiert und ohne „HDR automatisch“ dazu.
+# „HDR automatisch“ und zwei gemerkten EXE-Dateien; Epic mit einem Restordner ohne EXE, nur Spielstände und Protokolle, auf
+# einem verbundenen Laufwerk) und ein eigenes Spiel (Ordner mit Stellvertreter-EXE). Beim Start liest die Testinstanz die
+# echte Bibliothek nur lesend ein; diese Spiele kommen installiert und ohne „HDR automatisch“ dazu.
 #   - Menüeintrag „Einstellungen entfernen…“ und Knopf ganz unten nur bei den beiden nicht installierten Launcher-Spielen,
 #     nicht beim eigenen Spiel (das behält „Aus der Bibliothek entfernen“) und nicht bei einem installierten
 #   - Rückfrage: nennt, was verloren geht („HDR automatisch“ ist an, 2 gemerkte EXE-Dateien), warnt beim nicht verbundenen
-#     Laufwerk („vielleicht noch installiert“), beim anderen Spiel nicht; Fokus auf „Abbrechen“ (UI-Automation im aktiven
-#     Fenster, sonst der Fokus, den die Rückfrage beim Aktivieren wiederherstellt, aus dem Protokoll der Testinstanz)
+#     Laufwerk („vielleicht noch installiert“), beim anderen Spiel trotz Restordner nicht (keine EXE); Fokus auf „Abbrechen“
+#     (UI-Automation im aktiven Fenster, sonst der Fokus, den die Rückfrage beim Aktivieren wiederherstellt, aus dem
+#     Protokoll der Testinstanz)
 #   - „Abbrechen“ lässt die Testablage byteweise gleich; „Entfernen“ nimmt genau dieses Spiel heraus (alle übrigen Einträge
 #     unverändert) und wählt den Nachbarn
 #   - Einstellungen › Bibliothek: „zurzeit 2“; ausblenden und speichern senkt die Zahl der Spiele um 2, wieder einblenden
@@ -160,6 +161,12 @@ try {
         knownExecutables = @(); detectedExecutables = @(); excludedExecutables = @(); extraExecutables = @()
         hdrAuto = $false; autoHdr = $false; restoreAfter = $true; isNew = $false; isInstalled = $false; iconCandidates = @()
     }
+    # Restordner von B wie nach einer Deinstallation (VEIN Demo): Spielstände und Protokolle, keine EXE
+    foreach ($rest in 'Saved\SaveGames\Profil.sav', 'Saved\Logs\Spiel.log', 'Saved\Config\Windows\GameUserSettings.ini') {
+        $restFile = Join-Path $gameB.installDir $rest
+        New-Item -ItemType Directory -Force (Split-Path $restFile) | Out-Null
+        [IO.File]::WriteAllText($restFile, 'Rest', (New-Object Text.UTF8Encoding $false))
+    }
     $config.games = @(@($config.games) + $gameA + $gameB)
     [IO.File]::WriteAllText((Join-Path $cfg 'config.json'), ($config | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
     $keyA = 'Steam:990001304'; $keyB = 'Epic:hdrpilot-testspiel-ordner'
@@ -217,11 +224,11 @@ try {
         $warning = Find-Id $dlg 'ConfirmWarning' $(if ($driveMissing) { 2000 } else { 600 })
         Check ($title -eq ('Einstellungen von „{0}“ entfernen?' -f $name)) ('Titel: {0}' -f $title)
         if ($driveMissing) {
-            Check (($details -contains '„HDR automatisch“ ist an') -and ($details -contains '2 gemerkte EXE-Dateien')) ('Nennt, was verloren geht: ' + ($details -join ' | '))
+            Check (($details -contains '„HDR automatisch“ ist an') -and ($details -contains ('2 gemerkte EXE{0}Dateien' -f [char]0x2011))) ('Nennt, was verloren geht: ' + ($details -join ' | '))
             Check ($warning -and $warning.Current.Name -eq "Laufwerk $($letter): ist nicht verbunden. Das Spiel ist vielleicht noch installiert.") ('Warnt beim nicht verbundenen Laufwerk: ' + $(if ($warning) { $warning.Current.Name } else { 'keine Warnung' }))
         } else {
             Check ($details -contains 'Nur der Eintrag in der Bibliothek, keine eigenen Einstellungen') ('Ohne eigene Einstellungen: ' + ($details -join ' | '))
-            Check ($null -eq $warning) 'Laufwerk verbunden: keine Warnung'
+            Check ($null -eq $warning) 'Laufwerk verbunden, Restordner ohne EXE: keine Warnung'
         }
         Check ($null -eq (Find-Id $dlg 'ConfirmOption' 500)) 'Ohne HDRpilot-Verknüpfungen kein Häkchen'
         $focus = Dialog-Focus $dlg $cfg $seenDialogs
@@ -320,7 +327,7 @@ try {
             Check ($title -eq 'Einstellungen von 2 nicht installierten Spielen entfernen?') "Titel: $title"
             # Je Spiel ein Punkt: der Name, darunter (nur wenn es etwas zu sagen gibt) Laufwerk und was verloren geht
             # (Trenner mit geschütztem Leerzeichen davor, damit keine Zeile mit dem Punkt beginnt)
-            $noteA = 'Laufwerk {0}: nicht verbunden{1}· „HDR automatisch“ ist an{1}· 2 gemerkte EXE-Dateien' -f $letter, [char]0xA0
+            $noteA = 'Laufwerk {0}: nicht verbunden{1}· „HDR automatisch“ ist an{1}· 2 gemerkte EXE{2}Dateien' -f $letter, [char]0xA0, [char]0x2011
             Check ($details.Count -eq 3 -and $details[0] -eq $nameA -and $details[1] -eq $noteA -and $details[2] -eq $nameB) ('Nennt genau die beiden Spiele: ' + ($details -join ' | '))
             $warning = Find-Id $dlg 'ConfirmWarning' 2000
             Check ($warning -and $warning.Current.Name -like "Laufwerk $($letter): ist nicht verbunden.*") ('Warnung: ' + $(if ($warning) { $warning.Current.Name }))

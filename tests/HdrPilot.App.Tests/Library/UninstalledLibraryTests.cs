@@ -251,4 +251,30 @@ public sealed class UninstalledLibraryTests
         Assert.Contains("The Outlast Trials", vm.ActiveSessionText, StringComparison.Ordinal);
         Assert.Equal(2, vm.TotalCount);
     });
+
+    [Fact]
+    public void Uninstalled_hints_name_the_switch_by_the_path_of_the_settings_navigation()
+    {
+        // Prüfung 2026-10-20: Leerzustand und Suche ohne Treffer sagten „Einstellungen › Allgemein › Bibliothek“, der Tooltip
+        // von „Zurücksetzen“ „Einstellungen › Bibliothek“. Die Navigation der Einstellungen hat „Bibliothek“ als eigenen
+        // Eintrag: Jeder Hinweis nennt genau diesen Weg.
+        var path = "Einstellungen › " + ShellStrings.NavLibrary;
+        string[] hints =
+        [
+            LibraryStrings.List_NoMatchHiddenOne, LibraryStrings.List_NoMatchHiddenMany, LibraryStrings.List_EmptyHiddenTextOne,
+            LibraryStrings.List_EmptyHiddenTextMany, LibraryStrings.Toolbar_ResetTipHiddenOne, LibraryStrings.Toolbar_ResetTipHidden,
+        ];
+        Assert.All(hints, h => Assert.Contains(path, h, StringComparison.Ordinal));
+
+        var all = new[] { typeof(LibraryStrings), typeof(ShellStrings), typeof(CommonStrings) }
+            .SelectMany(t => t.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+            .Where(p => p.PropertyType == typeof(string))
+            .Select(p => (Name: p.Name, Text: (string)p.GetValue(null)!))
+            .Where(s => s.Text.Contains("Einstellungen ›", StringComparison.Ordinal))
+            .ToList();
+        Assert.True(all.Count >= hints.Length, "Hinweise nicht gefunden: " + all.Count);
+        Assert.All(all, s => Assert.True(
+            System.Text.RegularExpressions.Regex.Matches(s.Text, "Einstellungen › ([^ .,)]+)").All(m => m.Groups[1].Value == ShellStrings.NavLibrary),
+            s.Name + ": " + s.Text));
+    }
 }

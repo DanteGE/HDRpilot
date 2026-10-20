@@ -1109,10 +1109,12 @@ public partial class MainWindow : ChromeWindow
             return;
         }
 
+        // Ohne Treffer kein „0–0 von 0“: Die Stelle verschwindet, die Liste sagt, dass nichts passt.
         var count = panel.ItemCount;
-        var first = count == 0 ? 0 : panel.FirstVisibleIndex + 1;
-        var last = Math.Min(count, panel.FirstVisibleIndex + Math.Max(1, panel.VisibleCount));
-        var text = LibraryText.Format(LibraryStrings.Shelf_Position, first, count == 0 ? 0 : last, count);
+        var text = count == 0
+            ? string.Empty
+            : LibraryText.Format(LibraryStrings.Shelf_Position, panel.FirstVisibleIndex + 1, Math.Min(count, panel.FirstVisibleIndex + Math.Max(1, panel.VisibleCount)), count);
+        ShelfPosition.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
         if (!string.Equals(ShelfPosition.Text, text, StringComparison.Ordinal))
         {
             ShelfPosition.Text = text;

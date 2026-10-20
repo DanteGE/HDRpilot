@@ -219,7 +219,7 @@ public sealed partial class AppServices
             return new Window();
         }
 
-        var trace = GameCleanup.CheckInstallAsync(game.InstallDir).GetAwaiter().GetResult();
+        var trace = GameCleanup.CheckInstallAsync(game).GetAwaiter().GetResult();
         var shortcuts = previewShortcuts > 0 ? previewShortcuts : GameCleanup.FindShortcuts(game.Key).Count;
         return new ConfirmDialog(RemoveSettingsText.ForGame(game, trace, shortcuts));
     }

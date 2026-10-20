@@ -181,6 +181,7 @@ public sealed class AppArgumentsTests
     [InlineData(@"c:\users\test\appdata\roaming\hdrpilot\", false)] // dieselbe, anders geschrieben
     [InlineData(@"C:/Users/Test/AppData/Roaming/HDRpilot", false)]
     [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot\Kopie\..", false)]
+    [InlineData(@"\\?\C:\Users\Test\AppData\Roaming\HDRpilot", false)] // mit Präfix für lange Pfade
     [InlineData(@"C:\Users\Test\AppData\Local\HDRpilot", false)] // der echte Datenordner (Protokolle, Symbole, Bilder)
     [InlineData(null, false)]
     [InlineData("", false)]
@@ -193,5 +194,42 @@ public sealed class AppArgumentsTests
 
         Assert.Equal(@"C:\Temp\bericht.json", args.SettingsProbe);
         Assert.Equal(own, args.HasOwnConfigDir(defaults));
+    }
+
+    [Fact]
+    public void Developer_modes_refuse_the_real_config_dir_behind_a_junction()
+    {
+        // Prüfung 2026-10-20: „auch anders geschrieben“ heißt auch auf anderem Weg dorthin. Eine Junction (wie ein mit subst
+        // verbundenes Laufwerk oder ein 8.3-Name) führt zum echten Ordner; verglichen wird der Ordner selbst, nicht der Pfad.
+        var root = Path.Combine(Path.GetTempPath(), "hdrpilot-ablage-" + Guid.NewGuid().ToString("N")[..8]);
+        var real = Path.Combine(root, "Roaming", "HDRpilot");
+        var data = Path.Combine(root, "Local", "HDRpilot");
+        var link = Path.Combine(root, "Umweg");
+        Directory.CreateDirectory(real);
+        Directory.CreateDirectory(data);
+        try
+        {
+            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{link}\" \"{real}\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+            using (var mklink = System.Diagnostics.Process.Start(start)!)
+            {
+                mklink.StandardOutput.ReadToEnd();
+                Assert.True(mklink.WaitForExit(10_000));
+            }
+
+            Assert.NotNull(new DirectoryInfo(link).LinkTarget);
+            var defaults = new HdrPilot.Core.Config.AppPaths(real, data);
+
+            Assert.False(AppArguments.Parse(["--settings-probe", "b.json", "--config-dir", link]).HasOwnConfigDir(defaults));
+            Assert.True(AppArguments.Parse(["--settings-probe", "b.json", "--config-dir", Path.Combine(root, "Testablage")]).HasOwnConfigDir(defaults));
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+            {
+                Directory.Delete(link); // nur die Verknüpfung, nie ihr Ziel
+            }
+
+            Directory.Delete(root, recursive: true);
+        }
     }
 }

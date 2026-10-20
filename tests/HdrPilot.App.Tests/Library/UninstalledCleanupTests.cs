@@ -30,6 +30,7 @@ public sealed class UninstalledCleanupTests
 
     private readonly RecordingFileSystem _fs = new();
     private readonly Dictionary<string, ShortcutInfo> _links = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _brokenLinks = new(StringComparer.OrdinalIgnoreCase);
     private readonly FakeIcons _icons = new();
     private readonly FakeArtworkService _artwork = new();
 
@@ -113,7 +114,8 @@ public sealed class UninstalledCleanupTests
         Programs,
         () => HdrPilotExe,
         fileSystem: _fs,
-        read: path => _links.TryGetValue(path, out var info) && _fs.FileExists(path) ? info : throw new FileNotFoundException(path),
+        read: path => _brokenLinks.Contains(path) ? throw new System.Runtime.InteropServices.COMException("Verknüpfung beschädigt")
+            : _links.TryGetValue(path, out var info) && _fs.FileExists(path) ? info : throw new FileNotFoundException(path),
         otherShortcutDirectories: [PublicDesktop, QuickLaunch]);
 
     private UninstalledGameCleanup Cleanup(ShortcutService? shortcuts = null) => new(_fs, Icons, CustomArt, _icons, _artwork, shortcuts ?? Shortcuts());
@@ -220,18 +222,23 @@ public sealed class UninstalledCleanupTests
         Assert.True(_fs.FileExists(@"C:\Users\Test\Documents\Nachtprobe (HDR).lnk"));
     }
 
+    /// <summary>Nicht installiertes Spiel mit diesem Installationsordner (und auf Wunsch gemerkten EXEs).</summary>
+    private static GameConfig Uninstalled(string installDir, string id = "9990160", GameSource source = GameSource.Steam, params string[] detected) =>
+        new() { Source = source, SourceId = id, Name = "Spiel " + id, InstallDir = installDir, IsInstalled = false, DetectedExecutables = [.. detected] };
+
     [Theory]
     [InlineData(@"Q:\SteamLibrary\steamapps\common\Spiel", "Q:")]
     [InlineData(@"q:/Spiele/Spiel", "Q:")]
     [InlineData(@"C:\Program Files (x86)\Steam\steamapps\common\Spiel", null)]
-    [InlineData(@"\\nas\spiele\Spiel", null)]
     [InlineData("", null)]
     [InlineData(@"Spiele\relativ", null)]
     public async Task Uninstalled_missing_drive_is_named_only_for_a_disconnected_drive_letter(string installDir, string? expected)
     {
         _fs.Inner.AddDirectory(@"C:\");
 
-        Assert.Equal(expected, await Cleanup().MissingDriveAsync(installDir));
+        var trace = await Cleanup().CheckInstallAsync(Uninstalled(installDir));
+
+        Assert.Equal(expected is null ? InstallTrace.None : InstallTrace.MissingDrive(expected), trace);
     }
 
     [Fact]
@@ -309,41 +316,106 @@ public sealed class UninstalledCleanupTests
     }
 
     [Fact]
-    public async Task Uninstalled_install_check_names_missing_drives_and_folders_that_are_still_there()
+    public async Task Uninstalled_install_check_counts_programs_not_leftover_folders()
     {
+        // Prüfung (E90): Ein deinstalliertes Spiel hinterlässt oft einen Ordner mit Spielständen, Einstellungen und
+        // Protokollen (KLIPPE Demo: Klippe\Saved\Config, Logs, SaveGames, .sentry-native, keine EXE). Das ist keine Spur; eine EXE
+        // im Ordner (auch tief wie bei Unreal) schon. Gesucht wird nur begrenzt tief.
         _fs.Inner.AddDirectory(@"C:\");
-        _fs.Inner.AddFile(@"C:\Spiele\Noch da\Spiel.exe", "x"); // Ordner noch da: vielleicht noch installiert
-        _fs.Inner.AddDirectory(@"C:\Spiele\Leer"); // nur ein leerer Ordner blieb: deinstalliert
+        _fs.Inner.AddFile(@"C:\Spiele\Noch da\Spiel.exe", "x");
+        _fs.Inner.AddFile(@"C:\Spiele\Unreal\Klippe\Binaries\Win64\KlippeDemo-Win64-Test.exe", "x");
+        _fs.Inner.AddFile(@"C:\Spiele\Reste\Engine\Saved\Config\Windows\Manifest.ini", "x")
+            .AddFile(@"C:\Spiele\Reste\Klippe\Saved\Config\Windows\Engine.ini", "x")
+            .AddFile(@"C:\Spiele\Reste\Klippe\Saved\Logs\Klippe.log", "x")
+            .AddFile(@"C:\Spiele\Reste\Klippe\Saved\SaveGames\steam_autocloud.vdf", "x")
+            .AddFile(@"C:\Spiele\Reste\Klippe\.sentry-native\settings.dat", "x");
+        _fs.Inner.AddFile(@"C:\Spiele\Zu tief\a\b\c\d\e\Spiel.exe", "x"); // fünf Ebenen: wird nicht mehr gesucht
+        _fs.Inner.AddDirectory(@"C:\Spiele\Leer");
         _fs.Inner.AddFile(@"\\nas\spiele\Netz\Spiel.exe", "x");
 
         var traces = await Cleanup().CheckInstallsAsync(
-            [@"Q:\Spiele\Weg", @"C:\Spiele\Noch da", @"C:\Spiele\Leer", @"C:\Spiele\Fehlt", @"\\nas\spiele\Netz", @"\\nas\spiele\Fehlt", string.Empty, null, @"Spiele\relativ", @"q:\Anderes"]);
+        [
+            Uninstalled(@"C:\Spiele\Noch da"), Uninstalled(@"C:\Spiele\Unreal"), Uninstalled(@"C:\Spiele\Reste"), Uninstalled(@"C:\Spiele\Zu tief"),
+            Uninstalled(@"C:\Spiele\Leer"), Uninstalled(@"C:\Spiele\Fehlt"), Uninstalled(@"\\nas\spiele\Netz"), Uninstalled(@"\\nas\spiele\Fehlt"),
+            Uninstalled(@"Q:\Spiele\Weg"), Uninstalled(@"q:\Anderes"), Uninstalled(string.Empty), Uninstalled(@"Spiele\relativ"),
+        ]);
 
+        var program = new InstallTrace(InstallSign.Program);
         Assert.Equal(
             [
-                new InstallTrace("Q:", false), new InstallTrace(null, true), InstallTrace.None, InstallTrace.None, new InstallTrace(null, true),
-                InstallTrace.None, InstallTrace.None, InstallTrace.None, InstallTrace.None, new InstallTrace("Q:", false),
+                program, program, InstallTrace.None, InstallTrace.None,
+                InstallTrace.None, InstallTrace.None, program, InstallTrace.None,
+                InstallTrace.MissingDrive("Q:"), InstallTrace.MissingDrive("Q:"), InstallTrace.None, InstallTrace.None,
             ],
             traces);
-        Assert.Equal(new InstallTrace(null, true), await Cleanup().CheckInstallAsync(@"C:\Spiele\Noch da"));
+        Assert.False(InstallTrace.None.MaybeInstalled);
+        Assert.True(program.MaybeInstalled);
     }
 
     [Fact]
-    public async Task Uninstalled_install_check_waits_for_slow_drives_at_the_same_time_and_only_so_long()
+    public async Task Uninstalled_install_check_counts_a_remembered_exe_that_still_exists()
     {
-        // Zwei Netzlaufwerke antworten nicht: Beide gelten nach höchstens einer Wartezeit als nicht verbunden (gleichzeitig
-        // geprüft, nicht nacheinander), ein Ordner, der nicht antwortet, als ohne Spur.
-        var slow = new HangingFileSystem(_fs.Inner, @"M:\", @"N:\", @"C:\Spiele\Hängt");
-        _fs.Inner.AddDirectory(@"C:\").AddDirectory(@"M:\").AddDirectory(@"N:\").AddFile(@"C:\Spiele\Hängt\Spiel.exe", "x");
-        var cleanup = new UninstalledGameCleanup(slow, Icons, CustomArt, _icons, _artwork, Shortcuts());
+        // Restordner ohne EXE, aber eine gemerkte EXE (auch außerhalb des Ordners) ist noch da: vielleicht noch installiert.
+        // Gemerkte EXEs, die fehlen oder auf einem nicht verbundenen Laufwerk liegen, und bloße Dateinamen zählen nicht.
+        _fs.Inner.AddDirectory(@"C:\");
+        _fs.Inner.AddFile(@"C:\Spiele\Reste\Klippe\Saved\Logs\Klippe.log", "x");
+        _fs.Inner.AddFile(@"C:\Werkzeuge\Starter.exe", "x");
+        var withExe = Uninstalled(@"C:\Spiele\Reste", detected: [@"C:\Spiele\Reste\KlippeDemo.exe", @"C:\Werkzeuge\Starter.exe"]);
+        var gone = Uninstalled(@"C:\Spiele\Reste", detected: [@"C:\Spiele\Reste\KlippeDemo.exe", @"Z:\Weg\Spiel.exe"]);
+        var extra = Uninstalled(@"C:\Spiele\Fehlt");
+        extra.ExtraExecutables = ["Starter.exe", @"C:\Werkzeuge\Starter.exe"];
+        var nameOnly = Uninstalled(@"C:\Spiele\Fehlt");
+        nameOnly.ExtraExecutables = ["Starter.exe"];
+
+        var traces = await Cleanup().CheckInstallsAsync([withExe, gone, extra, nameOnly]);
+
+        Assert.Equal([new InstallTrace(InstallSign.Program), InstallTrace.None, new InstallTrace(InstallSign.Program), InstallTrace.None], traces);
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_counts_a_steam_manifest_in_the_library()
+    {
+        // Steam führt das Spiel noch (etwa mitten in einem Update): appmanifest_<ID>.acf in steamapps der Bibliothek. Nur für
+        // Steam, nur mit Ziffern als ID und nur für Ordner unter steamapps\common.
+        _fs.Inner.AddDirectory(@"C:\");
+        _fs.Inner.AddFile(@"D:\Steam-Bibliothek\steamapps\appmanifest_9990140.acf", "x");
+        _fs.Inner.AddFile(@"D:\Steam-Bibliothek\steamapps\common\KlippeDemo\Klippe\Saved\Logs\Klippe.log", "x");
+        _fs.Inner.AddFile(@"D:\Steam-Bibliothek\steamapps\appmanifest_..\x.acf", "x");
+        _fs.Inner.AddFile(@"D:\Spielordner\appmanifest_9990140.acf", "x");
+
+        var traces = await Cleanup().CheckInstallsAsync(
+        [
+            Uninstalled(@"D:\Steam-Bibliothek\steamapps\common\KlippeDemo", "9990140"),
+            Uninstalled(@"D:\Steam-Bibliothek\steamapps\common\Anderes", "9990160"),
+            Uninstalled(@"D:\Steam-Bibliothek\steamapps\common\KlippeDemo", "9990140", GameSource.Epic),
+            Uninstalled(@"D:\Steam-Bibliothek\steamapps\common\X", @"..\x"),
+            Uninstalled(@"D:\Spielordner\KlippeDemo", "9990140"),
+        ]);
+
+        Assert.Equal([new InstallTrace(InstallSign.SteamManifest), InstallTrace.None, InstallTrace.None, InstallTrace.None, InstallTrace.None], traces);
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_without_an_answer_warns_instead_of_counting_as_gone()
+    {
+        // Prüfung (E90): Was nicht rechtzeitig antwortet (Laufwerk, Netzwerkfreigabe, Ordner) oder nicht lesbar ist, ist nicht
+        // „keine Spur“, sondern ungeklärt: Ein getrenntes Netzlaufwerk bekommt die Warnung. Alle zusammen warten höchstens eine
+        // Frist (nicht je Laufwerk und Ordner eine).
+        var slow = new HangingFileSystem(_fs.Inner, @"M:\", @"\\nas\spiele\", @"C:\Spiele\Hängt");
+        _fs.Inner.AddDirectory(@"C:\").AddDirectory(@"M:\").AddDirectory(@"\\nas\spiele").AddFile(@"C:\Spiele\Hängt\Saved\Logs\Spiel.log", "x");
+        var denied = new DenyingFileSystem(slow, @"C:\Spiele\Gesperrt");
+        _fs.Inner.AddFile(@"C:\Spiele\Gesperrt\Saved\Spiel.sav", "x");
+        var cleanup = new UninstalledGameCleanup(denied, Icons, CustomArt, _icons, _artwork, Shortcuts());
         try
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            var traces = await cleanup.CheckInstallsAsync([@"M:\Spiele\A", @"N:\Spiele\B", @"C:\Spiele\Hängt"]);
+            var traces = await cleanup.CheckInstallsAsync(
+                [Uninstalled(@"M:\Spiele\A"), Uninstalled(@"\\nas\spiele\B"), Uninstalled(@"C:\Spiele\Hängt"), Uninstalled(@"\\offline\spiele\C"), Uninstalled(@"C:\Spiele\Gesperrt")]);
             watch.Stop();
 
-            Assert.Equal([new InstallTrace("M:", false), new InstallTrace("N:", false), InstallTrace.None], traces);
-            Assert.InRange(watch.Elapsed, UninstalledGameCleanup.DriveCheckTimeout * 0.9, UninstalledGameCleanup.DriveCheckTimeout * 1.75);
+            Assert.All(traces, t => Assert.Equal(new InstallTrace(InstallSign.Unchecked), t));
+            Assert.True(traces[0].MaybeInstalled);
+            Assert.InRange(watch.Elapsed, UninstalledGameCleanup.CheckTimeout * 0.9, UninstalledGameCleanup.CheckTimeout * 1.75);
         }
         finally
         {
@@ -351,10 +423,117 @@ public sealed class UninstalledCleanupTests
         }
     }
 
+    [Fact]
+    public async Task Uninstalled_install_check_steps_share_one_deadline()
+    {
+        // Eine anlaufende Platte antwortet nach 1,5 s, ihr Ordner danach gar nicht: Die Prüfung endet mit der einen Frist
+        // (2 s ab Beginn), nicht mit einer neuen Frist je Schritt (1,5 s + 2 s).
+        var slow = new HangingFileSystem(_fs.Inner, @"S:\Spiele\A");
+        slow.Slow[@"S:\"] = TimeSpan.FromSeconds(1.5);
+        _fs.Inner.AddFile(@"S:\Spiele\A\Spiel.exe", "x");
+        var cleanup = new UninstalledGameCleanup(slow, Icons, CustomArt, _icons, _artwork, Shortcuts());
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var trace = await cleanup.CheckInstallAsync(Uninstalled(@"S:\Spiele\A"));
+            watch.Stop();
+
+            Assert.Equal(new InstallTrace(InstallSign.Unchecked), trace);
+            Assert.InRange(watch.Elapsed, UninstalledGameCleanup.CheckTimeout * 0.9, UninstalledGameCleanup.CheckTimeout * 1.4);
+        }
+        finally
+        {
+            slow.Release();
+        }
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_limits_parallel_access_and_shares_one_deadline()
+    {
+        // Zehn Spiele in Ordnern, die nicht antworten (eine langsame Platte): Höchstens MaxParallelChecks Zugriffe hängen
+        // zugleich (jeder hält einen Thread), und nach einer gemeinsamen Frist steht die Antwort fest, statt je Ordner zu warten.
+        var folders = Enumerable.Range(1, 10).Select(i => @"C:\Spiele\Langsam " + i).ToArray();
+        var slow = new HangingFileSystem(_fs.Inner, folders);
+        _fs.Inner.AddDirectory(@"C:\");
+        foreach (var folder in folders)
+        {
+            _fs.Inner.AddFile(folder + @"\Spiel.exe", "x");
+        }
+
+        var cleanup = new UninstalledGameCleanup(slow, Icons, CustomArt, _icons, _artwork, Shortcuts());
+        try
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var traces = await cleanup.CheckInstallsAsync([.. folders.Select(f => Uninstalled(f))]);
+            watch.Stop();
+
+            Assert.All(traces, t => Assert.Equal(InstallSign.Unchecked, t.Sign));
+            Assert.InRange(slow.MaxWaiting, 1, UninstalledGameCleanup.MaxParallelChecks);
+            Assert.InRange(watch.Elapsed, UninstalledGameCleanup.CheckTimeout * 0.9, UninstalledGameCleanup.CheckTimeout * 1.75);
+        }
+        finally
+        {
+            slow.Release();
+        }
+    }
+
+    [Theory]
+    [InlineData("nicht lesbarer Ordner")]
+    [InlineData("verknüpfter Ordner")]
+    [InlineData("nicht lesbare Verknüpfung")]
+    public void Uninstalled_cleanup_keeps_the_ico_when_it_cannot_see_every_shortcut(string obstacle)
+    {
+        // E90 „nicht lesbar: bleibt“: Lässt sich nicht ganz klären, ob noch eine Verknüpfung die .ico zeigt (ein Unterordner des
+        // Startmenüs ohne Leserecht, eine Junction auf dem gemeinsamen Desktop, der nicht gefolgt wird, eine beschädigte .lnk in
+        // der Taskleiste), bleibt sie; sonst stünde dort vielleicht ein leeres Symbol.
+        AddLink(Desktop + @"\NACHTPROBE (HDR).lnk", "--run \"" + Key + "\"", OwnIco);
+        switch (obstacle)
+        {
+            case "nicht lesbarer Ordner":
+                _fs.CompletelyFails[Programs] = new UnauthorizedAccessException("Zugriff verweigert: " + Programs + @"\Gesperrt");
+                break;
+            case "verknüpfter Ordner":
+                _fs.CompletelyFails[PublicDesktop] = new IOException("Verknüpfter Ordner, nicht verfolgt: " + PublicDesktop + @"\Spiele");
+                break;
+            default:
+                _fs.Inner.AddFile(QuickLaunch + @"\User Pinned\TaskBar\Kaputt.lnk", "lnk");
+                _brokenLinks.Add(QuickLaunch + @"\User Pinned\TaskBar\Kaputt.lnk");
+                break;
+        }
+
+        var shortcuts = Shortcuts();
+        var result = Cleanup(shortcuts).DeleteData(Game(), shortcuts.FindFor(Key), Remaining());
+
+        Assert.Equal(1, result.DeletedShortcuts);
+        Assert.True(_fs.FileExists(OwnIco));
+        Assert.DoesNotContain(OwnIco, _fs.Deleted, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Uninstalled_cleanup_deletes_the_ico_when_another_shortcut_vanished_meanwhile()
+    {
+        // Gegenprobe: Eine Verknüpfung, die zwischen Auflisten und Lesen verschwand, zeigt nichts mehr; die .ico fällt.
+        AddLink(Desktop + @"\NACHTPROBE (HDR).lnk", "--run \"" + Key + "\"", OwnIco);
+        _fs.Inner.AddFile(Desktop + @"\Gerade geloescht.lnk", "lnk"); // gelistet, Lesen meldet „nicht gefunden“
+        var shortcuts = Shortcuts();
+
+        var result = Cleanup(shortcuts).DeleteData(Game(), shortcuts.FindFor(Key), Remaining());
+
+        Assert.Equal(1, result.DeletedShortcuts);
+        Assert.False(_fs.FileExists(OwnIco));
+        Assert.Contains(OwnIco, _fs.Deleted, StringComparer.OrdinalIgnoreCase);
+    }
+
     /// <summary>Attrappen-Dateisystem, das Löschen und Schreiben mitschreibt.</summary>
     private sealed class RecordingFileSystem : IFileSystem
     {
         public InMemoryFileSystem Inner { get; } = new();
+
+        /// <summary>Vollständiges Auflisten dieser Ordner scheitert (nicht lesbarer oder verknüpfter Ordner darunter).</summary>
+        public Dictionary<string, Exception> CompletelyFails { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public IEnumerable<string> EnumerateFilesCompletely(string directory, string searchPattern) =>
+            CompletelyFails.TryGetValue(directory, out var failure) ? throw failure : ((IFileSystem)Inner).EnumerateFilesCompletely(directory, searchPattern);
 
         public List<string> Deleted { get; } = [];
 

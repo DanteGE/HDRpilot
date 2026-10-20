@@ -7,9 +7,9 @@ namespace HdrPilot.App.ViewModels.Library;
 /// <summary>
 /// Rückfragen von „Einstellungen entfernen…“ (E90), je Spiel zusammengesetzt: was verloren geht (etwa „„HDR automatisch“
 /// ist an“, „2 gemerkte EXE-Dateien“), eine Warnung, wenn das Spiel vielleicht noch installiert ist (Laufwerk nicht
-/// verbunden oder Ordner noch da, <see cref="InstallTrace"/>), und ein Häkchen für die HDRpilot-Verknüpfungen, nur wenn es
-/// welche gibt. Für das Sammel-Entfernen in den Einstellungen je betroffenes Spiel ein Punkt: der Name und darunter, was
-/// verloren geht, angeführt von der Spur einer Installation.
+/// verbunden, EXE noch da, bei Steam noch eingetragen oder nicht zu prüfen, <see cref="InstallTrace"/>), und ein Häkchen für
+/// die HDRpilot-Verknüpfungen, nur wenn es welche gibt. Für das Sammel-Entfernen in den Einstellungen je betroffenes Spiel
+/// ein Punkt: der Name und darunter, was verloren geht, angeführt von der Spur einer Installation.
 /// </summary>
 public static class RemoveSettingsText
 {
@@ -27,10 +27,12 @@ public static class RemoveSettingsText
         {
             DetailsHeader = LibraryStrings.RemoveSettings_LossHeader,
             Details = [.. Losses(LibraryCleanup.LossOf(game)).Select(l => new ConfirmDetail(l))],
-            Warning = trace switch
+            Warning = trace.Sign switch
             {
-                { MissingDrive: { } drive } => LibraryText.Format(LibraryStrings.RemoveSettings_DriveMissing, drive),
-                { FolderPresent: true } => LibraryStrings.RemoveSettings_FolderPresent,
+                InstallSign.DriveMissing => LibraryText.Format(LibraryStrings.RemoveSettings_DriveMissing, trace.Drive),
+                InstallSign.Program => LibraryStrings.RemoveSettings_ProgramPresent,
+                InstallSign.SteamManifest => LibraryStrings.RemoveSettings_SteamListed,
+                InstallSign.Unchecked => LibraryStrings.RemoveSettings_Unchecked,
                 _ => null,
             },
             OptionText = ShortcutOption(shortcuts),
@@ -42,8 +44,9 @@ public static class RemoveSettingsText
     /// <param name="shortcuts">Zahl der gefundenen HDRpilot-Verknüpfungen aller Spiele (0: kein Häkchen).</param>
     public static ConfirmRequest ForGames(IReadOnlyList<GameConfig> games, IReadOnlyList<InstallTrace> traces, int shortcuts)
     {
-        var drives = traces.Select(t => t.MissingDrive).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
-        var folders = traces.Count(t => t.FolderPresent);
+        var drives = traces.Where(t => t.Sign == InstallSign.DriveMissing).Select(t => t.Drive).OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        var unsure = traces.Count(t => t.MaybeInstalled && t.Sign != InstallSign.DriveMissing);
         var warnings = new List<string>();
         if (drives.Count > 0)
         {
@@ -52,9 +55,10 @@ public static class RemoveSettingsText
                 : LibraryText.Format(LibraryStrings.RemoveAll_DrivesMissingMany, string.Join(", ", drives)));
         }
 
-        if (folders > 0)
+        // EXE noch da, bei Steam noch eingetragen, nicht zu prüfen: Was genau, steht unter dem Namen des Spiels.
+        if (unsure > 0)
         {
-            warnings.Add(folders == 1 ? LibraryStrings.RemoveAll_FoldersPresentOne : LibraryText.Format(LibraryStrings.RemoveAll_FoldersPresentMany, folders));
+            warnings.Add(unsure == 1 ? LibraryStrings.RemoveAll_UnsureOne : LibraryText.Format(LibraryStrings.RemoveAll_UnsureMany, unsure));
         }
 
         return new(
@@ -126,13 +130,17 @@ public static class RemoveSettingsText
     private static ConfirmDetail GameLine(GameConfig game, InstallTrace trace)
     {
         var notes = new List<string>();
-        if (trace.MissingDrive is { } drive)
+        var mark = trace.Sign switch
         {
-            notes.Add(LibraryText.Format(LibraryStrings.RemoveAll_MarkDriveMissing, drive));
-        }
-        else if (trace.FolderPresent)
+            InstallSign.DriveMissing => LibraryText.Format(LibraryStrings.RemoveAll_MarkDriveMissing, trace.Drive),
+            InstallSign.Program => LibraryStrings.RemoveAll_MarkProgramPresent,
+            InstallSign.SteamManifest => LibraryStrings.RemoveAll_MarkSteamListed,
+            InstallSign.Unchecked => LibraryStrings.RemoveAll_MarkUnchecked,
+            _ => null,
+        };
+        if (mark is not null)
         {
-            notes.Add(LibraryStrings.RemoveAll_MarkFolderPresent);
+            notes.Add(mark);
         }
 
         var loss = LibraryCleanup.LossOf(game);

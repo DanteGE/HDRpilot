@@ -97,7 +97,7 @@ public sealed partial class AppServices
             return new Window();
         }
 
-        var traces = GameCleanup.CheckInstallsAsync([.. games.Select(g => g.InstallDir)]).GetAwaiter().GetResult();
+        var traces = GameCleanup.CheckInstallsAsync(games).GetAwaiter().GetResult();
         var shortcuts = games.Sum(g => GameCleanup.FindShortcuts(g.Key).Count);
         return new ConfirmDialog(RemoveSettingsText.ForGames(games, traces, shortcuts));
     }
@@ -106,8 +106,9 @@ public sealed partial class AppServices
     /// Prüfung (E90, G11.3, phase11-migration.ps1, --settings-probe): die geladene Konfiguration (eine Kopie der echten Ablage)
     /// zweimal wie die Einstellungen speichern, erst unverändert (Vergleichsstand im neuen Format:
     /// <c>config.unveraendert.json</c> neben dem Bericht), dann mit umgeschaltetem „Nicht installierte Spiele ausblenden“
-    /// (<c>config.umgeschaltet.json</c>). Der Bericht nennt Ladewarnung, Zahl der Spiele, die nicht installierten und was die
-    /// Karte „Bibliothek“ zeigt. Nur mit eigener Ablage aufgerufen (App.xaml.cs). True, wenn beide Male gespeichert wurde.
+    /// (<c>config.umgeschaltet.json</c>). Der Bericht nennt Ladewarnung, Zahl der Spiele, die nicht installierten, was die
+    /// Karte „Bibliothek“ zeigt und je entfernbares Spiel die Spur einer Installation, wie die Rückfrage des Sammel-Entfernens
+    /// sie prüft (nur lesend). Nur mit eigener Ablage aufgerufen (App.xaml.cs). True, wenn beide Male gespeichert wurde.
     /// </summary>
     public bool WriteSettingsProbe(string reportFile)
     {
@@ -135,13 +136,16 @@ public sealed partial class AppServices
         }
 
         System.IO.File.Copy(Paths.ConfigFile, System.IO.Path.Combine(directory, "config.umgeschaltet.json"), overwrite: true);
+        var removable = LibraryCleanup.Removable(loaded);
+        var traces = GameCleanup.CheckInstallsAsync(removable).GetAwaiter().GetResult();
         var report = new
         {
             Config.LoadWarning,
             Games = loaded.Games.Count,
             NotInstalled = LibraryCleanup.CountNotInstalled(loaded),
             NotInstalledGames = loaded.Games.Where(g => !g.IsInstalled).Select(g => new { g.Key, g.Name, g.HdrAuto, g.IsManual }).ToList(),
-            Removable = LibraryCleanup.Removable(loaded).Count,
+            Removable = removable.Count,
+            RemovableTraces = removable.Zip(traces, (g, t) => new { g.Key, g.Name, Sign = t.Sign.ToString(), t.Drive }).ToList(),
             ShownCount = shownCount,
             ShownRemovable = shownRemovable,
             HideBefore = hideBefore,

@@ -47,7 +47,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public static readonly TimeSpan LayoutDelay = TimeSpan.FromMilliseconds(400);
 
     /// <summary>
-    /// Dauert die Prüfung vor der Rückfrage „Einstellungen entfernen…“ länger (Laufwerk, Ordner, Verknüpfungen; E90), sagt die
+    /// Dauert die Prüfung vor der Rückfrage „Einstellungen entfernen…“ länger (Laufwerk, EXE, Verknüpfungen; E90), sagt die
     /// Hinweiszeile, dass geprüft wird; kürzer bliebe sie nur ein Flackern.
     /// </summary>
     public static readonly TimeSpan CheckingDelay = TimeSpan.FromMilliseconds(250);
@@ -1022,9 +1022,10 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>
     /// „Einstellungen entfernen…“ (E90; Kontextmenü, Taste Entf, Knopf ganz unten im Detailbereich): nur für nicht installierte
     /// Launcher-Spiele ohne laufende oder vorbereitete Sitzung. Vor der Rückfrage sucht HDRpilot im Hintergrund die
-    /// HDRpilot-Verknüpfungen und prüft, ob das Spiel vielleicht noch installiert ist (Laufwerk, Ordner); dauert das länger als
-    /// <see cref="CheckingDelay"/>, sagt die Hinweiszeile es. Die Rückfrage nennt, was verloren geht, warnt bei fehlendem
-    /// Laufwerk oder noch vorhandenem Ordner und bietet die Verknüpfungen per Häkchen an. Entfernt wird erst nach „Entfernen“
+    /// HDRpilot-Verknüpfungen und prüft, ob das Spiel vielleicht noch installiert ist (Laufwerk, EXE, Steam,
+    /// <see cref="UninstalledGameCleanup.CheckInstallsAsync"/>); dauert das länger als <see cref="CheckingDelay"/>, sagt die
+    /// Hinweiszeile es. Die Rückfrage nennt, was verloren geht, warnt bei jeder Spur einer Installation und bietet die
+    /// Verknüpfungen per Häkchen an. Entfernt wird erst nach „Entfernen“
     /// und nur, wenn das Spiel beim Schreiben noch entfernbar ist (<see cref="LibraryCleanup.RemoveNotInstalled"/>); danach
     /// räumt <see cref="UninstalledGameCleanup"/> Symbol, eigene Bilder und gewählte Verknüpfungen auf, und die Liste wählt
     /// den Nachbarn.
@@ -1059,7 +1060,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         {
             var cleanup = _context.Cleanup;
             var shortcutSearch = Task.Run(() => cleanup.FindShortcuts(key));
-            var installCheck = cleanup.CheckInstallAsync(game.InstallDir);
+            var installCheck = cleanup.CheckInstallAsync(game);
             var checking = LibraryText.Format(LibraryStrings.RemoveSettings_Checking, item.Name);
             var prepared = Task.WhenAll(shortcutSearch, installCheck);
             if (await Task.WhenAny(prepared, Task.Delay(CheckingDelay)) != prepared)

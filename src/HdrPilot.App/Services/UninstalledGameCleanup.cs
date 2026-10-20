@@ -13,17 +13,37 @@ namespace HdrPilot.App.Services;
 /// <summary>Was nach dem Entfernen eines Eintrags gelöscht wurde und was sich nicht löschen ließ (volle Pfade).</summary>
 public sealed record CleanupResult(IReadOnlyList<string> Deleted, IReadOnlyList<string> Failed, int DeletedShortcuts);
 
-/// <summary>
-/// Spuren einer Installation, geprüft vor der Rückfrage (E90): Das Laufwerk des Installationsordners ist nicht verbunden
-/// (<see cref="MissingDrive"/>, etwa „F:“), oder der Ordner ist noch da und nicht leer (<see cref="FolderPresent"/>). Beides
-/// heißt „vielleicht noch installiert“: ein getrenntes Laufwerk, ein Launcher mitten in einem Update oder einer, den das
-/// Einlesen nicht fand. <see cref="None"/>: keine Spur (oder nicht rechtzeitig zu klären).
-/// </summary>
-public sealed record InstallTrace(string? MissingDrive, bool FolderPresent)
+/// <summary>Was vor der Rückfrage darauf hindeutet, dass ein nicht installiertes Spiel doch noch installiert ist (E90).</summary>
+public enum InstallSign
 {
-    public static readonly InstallTrace None = new(null, false);
+    /// <summary>Keine Spur: kein Programm mehr da. Ein Restordner mit Spielständen, Einstellungen oder Protokollen zählt nicht.</summary>
+    None,
 
-    public bool MaybeInstalled => MissingDrive is not null || FolderPresent;
+    /// <summary>Das Laufwerk des Installationsordners ist nicht verbunden (<see cref="InstallTrace.Drive"/>, etwa „F:“).</summary>
+    DriveMissing,
+
+    /// <summary>Eine EXE des Spiels ist noch da: eine gemerkte oder hinzugefügte oder eine im Installationsordner.</summary>
+    Program,
+
+    /// <summary>Steam führt das Spiel noch als installiert (<c>appmanifest_&lt;ID&gt;.acf</c> in seiner Bibliothek).</summary>
+    SteamManifest,
+
+    /// <summary>Nicht zu klären: Laufwerk, Netzwerkfreigabe oder Ordner antworten nicht rechtzeitig oder sind nicht lesbar.</summary>
+    Unchecked,
+}
+
+/// <summary>
+/// Spur einer Installation, geprüft vor der Rückfrage (E90). Alles außer <see cref="InstallSign.None"/> heißt „vielleicht noch
+/// installiert“: ein getrenntes Laufwerk, ein Launcher mitten in einem Update oder einer, den das Einlesen nicht fand.
+/// </summary>
+/// <param name="Drive">Bei <see cref="InstallSign.DriveMissing"/> das Laufwerk, etwa „F:“.</param>
+public sealed record InstallTrace(InstallSign Sign, string? Drive = null)
+{
+    public static readonly InstallTrace None = new(InstallSign.None);
+
+    public static InstallTrace MissingDrive(string drive) => new(InstallSign.DriveMissing, drive);
+
+    public bool MaybeInstalled => Sign != InstallSign.None;
 }
 
 /// <summary>
@@ -36,7 +56,7 @@ public sealed record InstallTrace(string? MissingDrive, bool FolderPresent)
 /// bleibt. Erzeugte Bilder, helle Fassungen und Einträge im Bildverzeichnis sind nur Zwischenspeicher; sie räumt der
 /// Bilddienst nach dem Schließen des Fensters auf (<see cref="ArtworkService.PruneRemovedGames"/>).
 /// Dazu die Prüfungen vor der Rückfrage: welche Verknüpfungen es gibt und ob das Spiel vielleicht noch installiert ist
-/// (Laufwerk nicht verbunden oder Ordner noch da, <see cref="CheckInstallsAsync"/>).
+/// (Laufwerk nicht verbunden, EXE noch da, bei Steam noch eingetragen oder nicht zu klären, <see cref="CheckInstallsAsync"/>).
 /// </summary>
 public sealed class UninstalledGameCleanup(
     IFileSystem fileSystem,
@@ -47,8 +67,17 @@ public sealed class UninstalledGameCleanup(
     IShortcutService shortcuts,
     ILogger? logger = null)
 {
-    /// <summary>Länger wartet die Rückfrage nicht auf ein Laufwerk (ein getrenntes Netzlaufwerk antwortet langsam).</summary>
-    public static readonly TimeSpan DriveCheckTimeout = TimeSpan.FromSeconds(2);
+    /// <summary>
+    /// Länger wartet die Rückfrage nicht auf die Prüfung aller Spiele zusammen (ein getrenntes Netzlaufwerk antwortet langsam);
+    /// was bis dahin nicht geklärt ist, gilt als <see cref="InstallSign.Unchecked"/>.
+    /// </summary>
+    public static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(2);
+
+    /// <summary>Höchstens so viele Zugriffe der Prüfung laufen gleichzeitig (jeder hält, solange er hängt, einen Thread).</summary>
+    public const int MaxParallelChecks = 4;
+
+    /// <summary>So viele Ordnerebenen tief sucht die Prüfung im Installationsordner eine EXE (Unreal: Spiel\Binaries\Win64).</summary>
+    public const int ExecutableSearchDepth = 4;
 
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
@@ -66,95 +95,187 @@ public sealed class UninstalledGameCleanup(
         }
     }
 
+    /// <summary>Spur einer Installation für ein Spiel (siehe <see cref="CheckInstallsAsync"/>).</summary>
+    public async Task<InstallTrace> CheckInstallAsync(GameConfig game) => (await CheckInstallsAsync([game]).ConfigureAwait(false))[0];
+
     /// <summary>
-    /// Laufwerk des Installationsordners, wenn es nicht verbunden ist („F:“), sonst null. Nur Laufwerksbuchstaben (ein
-    /// UNC-Pfad hat keinen); antwortet es nicht innerhalb von <see cref="DriveCheckTimeout"/>, gilt es als nicht verbunden.
+    /// Spur einer Installation je Spiel, in derselben Reihenfolge (vor der Rückfrage, nur lesend, nur Namen). Als Spur zählt
+    /// nur, was auf ein Programm deutet, nicht ein Restordner mit Spielständen oder Protokollen:
+    /// <list type="number">
+    /// <item>Das Laufwerk des Installationsordners ist nicht verbunden (<see cref="InstallSign.DriveMissing"/>); je Laufwerk
+    /// und Netzwerkfreigabe wird einmal gefragt, Ordner darauf nur, wenn es antwortet.</item>
+    /// <item>Eine gemerkte oder hinzugefügte EXE (voller Pfad) ist noch da, oder im Installationsordner liegt bis
+    /// <see cref="ExecutableSearchDepth"/> Ebenen tief eine EXE, ohne verknüpften Ordnern zu folgen (<see cref="InstallSign.Program"/>).</item>
+    /// <item>Bei Steam steht <c>appmanifest_&lt;ID&gt;.acf</c> noch in der Bibliothek (<see cref="InstallSign.SteamManifest"/>).</item>
+    /// </list>
+    /// Was nicht antwortet (Laufwerk, Freigabe, Ordner) oder nicht lesbar ist, gilt als <see cref="InstallSign.Unchecked"/>,
+    /// nicht als „keine Spur“: Ein getrenntes Netzlaufwerk soll die Warnung bekommen. Höchstens <see cref="MaxParallelChecks"/>
+    /// Zugriffe gleichzeitig, alle zusammen höchstens <see cref="CheckTimeout"/> lang.
     /// </summary>
-    public async Task<string?> MissingDriveAsync(string? installDir)
+    public async Task<IReadOnlyList<InstallTrace>> CheckInstallsAsync(IReadOnlyList<GameConfig> games)
     {
-        if (DriveOf(installDir) is not { } drive)
+        using var deadline = new CancellationTokenSource(CheckTimeout);
+        var probes = new Probes(deadline.Token);
+        var roots = new Dictionary<string, Task<bool?>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in games.SelectMany(g => RememberedExecutables(g).Append(FullPath(g.InstallDir))).Select(RootOf).OfType<string>())
         {
-            return null;
+            if (!roots.ContainsKey(root))
+            {
+                roots[root] = probes.AskAsync(() => fileSystem.DirectoryExists(root + "\\"));
+            }
         }
 
-        return await ExistsWithinAsync(drive + "\\").ConfigureAwait(false) == true ? null : drive;
-    }
-
-    /// <summary>Spuren einer Installation für ein Spiel (siehe <see cref="CheckInstallsAsync"/>).</summary>
-    public async Task<InstallTrace> CheckInstallAsync(string? installDir) => (await CheckInstallsAsync([installDir]).ConfigureAwait(false))[0];
-
-    /// <summary>
-    /// Spuren einer Installation je Installationsordner, in derselben Reihenfolge (vor der Rückfrage): je Laufwerk einmal, ob
-    /// es verbunden ist (wie <see cref="MissingDriveAsync"/>), und nur auf einem verbundenen (oder bei UNC-Pfaden), ob der
-    /// Ordner noch da und nicht leer ist. Die Laufwerke gleichzeitig, jede Prüfung höchstens <see cref="DriveCheckTimeout"/>
-    /// lang; ein Ordner, der nicht rechtzeitig antwortet, gilt als ohne Spur. Ordner auf einem nicht verbundenen Laufwerk
-    /// fragt sie gar nicht erst an (jede Anfrage hielte dort einen Thread fest).
-    /// </summary>
-    public async Task<IReadOnlyList<InstallTrace>> CheckInstallsAsync(IReadOnlyList<string?> installDirs)
-    {
-        var traces = Enumerable.Repeat(InstallTrace.None, installDirs.Count).ToArray();
-        var groups = Enumerable.Range(0, installDirs.Count)
-            .Where(i => !string.IsNullOrWhiteSpace(installDirs[i]) && Path.IsPathFullyQualified(installDirs[i]!))
-            .GroupBy(i => DriveOf(installDirs[i]) ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        await Task.WhenAll(groups.Select(async group =>
+        var traces = await Task.WhenAll(games.Select(g => CheckAsync(g, roots, probes))).ConfigureAwait(false);
+        for (var i = 0; i < games.Count; i++)
         {
-            if (group.Key.Length > 0 && await ExistsWithinAsync(group.Key + "\\").ConfigureAwait(false) != true)
+            if (traces[i].MaybeInstalled)
             {
-                foreach (var i in group)
-                {
-                    traces[i] = new InstallTrace(group.Key, false);
-                }
-
-                return;
+                _logger.LogInformation("Vielleicht noch installiert: {Game} ({Key}): {Sign} {Drive}", games[i].Name, games[i].Key, traces[i].Sign, traces[i].Drive);
             }
+        }
 
-            var indices = group.ToList();
-            var present = await Task.WhenAll(indices.Select(i => HasContentWithinAsync(installDirs[i]!))).ConfigureAwait(false);
-            for (var n = 0; n < indices.Count; n++)
-            {
-                if (present[n] == true)
-                {
-                    traces[indices[n]] = new InstallTrace(null, true);
-                }
-            }
-        })).ConfigureAwait(false);
         return traces;
     }
 
-    /// <summary>„F:“ für einen Pfad mit Laufwerksbuchstaben, sonst null.</summary>
-    public static string? DriveOf(string? path)
+    /// <summary>Spur eines Spiels; die Wurzeln (Laufwerke, Freigaben) sind schon angefragt.</summary>
+    private async Task<InstallTrace> CheckAsync(GameConfig game, IReadOnlyDictionary<string, Task<bool?>> roots, Probes probes)
     {
-        if (string.IsNullOrWhiteSpace(path) || path.Length < 3 || !char.IsAsciiLetter(path[0]) || path[1] != ':' || path[2] is not ('\\' or '/'))
+        var installDir = FullPath(game.InstallDir);
+        if (RootOf(installDir) is { } installRoot)
+        {
+            var answer = await roots[installRoot].ConfigureAwait(false);
+            if (answer == false && installRoot.Length == 2)
+            {
+                return InstallTrace.MissingDrive(installRoot);
+            }
+
+            if (answer != true)
+            {
+                return new InstallTrace(InstallSign.Unchecked); // antwortet nicht, oder die Freigabe ist nicht erreichbar
+            }
+        }
+
+        var unclear = false;
+        async Task<bool> Found(string path, Func<bool> probe)
+        {
+            if (RootOf(path) is { } root && await roots[root].ConfigureAwait(false) != true)
+            {
+                unclear |= await roots[root].ConfigureAwait(false) is null;
+                return false; // Laufwerk nicht verbunden: dort ist nichts
+            }
+
+            var found = await probes.AskAsync(probe).ConfigureAwait(false);
+            unclear |= found is null;
+            return found == true;
+        }
+
+        foreach (var exe in RememberedExecutables(game))
+        {
+            if (await Found(exe, () => fileSystem.FileExists(exe)).ConfigureAwait(false))
+            {
+                return new InstallTrace(InstallSign.Program);
+            }
+        }
+
+        if (installDir is not null && await Found(installDir, () => fileSystem.EnumerateFilesUpTo(installDir, "*.exe", ExecutableSearchDepth).Any()).ConfigureAwait(false))
+        {
+            return new InstallTrace(InstallSign.Program);
+        }
+
+        if (SteamManifestOf(game, installDir) is { } manifest && await Found(manifest, () => fileSystem.FileExists(manifest)).ConfigureAwait(false))
+        {
+            return new InstallTrace(InstallSign.SteamManifest);
+        }
+
+        return unclear ? new InstallTrace(InstallSign.Unchecked) : InstallTrace.None;
+    }
+
+    /// <summary>Gemerkte und hinzugefügte EXEs mit vollem Pfad (ein bloßer Dateiname sagt nichts über die Installation).</summary>
+    private static IEnumerable<string> RememberedExecutables(GameConfig game) =>
+        game.DetectedExecutables.Concat(game.ExtraExecutables).Select(FullPath).OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Der Pfad, wenn er vollständig ist (mit Laufwerk oder UNC), sonst null.</summary>
+    private static string? FullPath(string? path) => !string.IsNullOrWhiteSpace(path) && Path.IsPathFullyQualified(path) ? path : null;
+
+    /// <summary>„F:“ für einen Pfad mit Laufwerksbuchstaben, „\\server\freigabe“ für einen UNC-Pfad, sonst null.</summary>
+    private static string? RootOf(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
         {
             return null;
         }
 
-        return char.ToUpperInvariant(path[0]) + ":";
+        if (path.Length >= 3 && char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] is '\\' or '/')
+        {
+            return char.ToUpperInvariant(path[0]) + ":";
+        }
+
+        // \\server\freigabe\…, nicht \\?\ oder \\.\ (dort entscheidet das Laufwerk dahinter, das prüft dann der Zugriff selbst)
+        var parts = path.Replace('/', '\\').Split('\\');
+        return path.Length > 2 && path[0] is '\\' or '/' && path[1] is '\\' or '/' && parts.Length >= 4 && parts[2] is { Length: > 0 } server
+            && server is not ("?" or ".") && parts[3].Length > 0
+                ? @"\\" + server + @"\" + parts[3]
+                : null;
     }
 
-    /// <summary>Gibt es den Ordner? null, wenn die Antwort nicht innerhalb von <see cref="DriveCheckTimeout"/> kommt.</summary>
-    private Task<bool?> ExistsWithinAsync(string path) => WithinAsync(() => fileSystem.DirectoryExists(path));
-
-    /// <summary>Gibt es den Ordner, und liegt etwas darin? null, wenn die Antwort nicht rechtzeitig kommt.</summary>
-    private Task<bool?> HasContentWithinAsync(string path) => WithinAsync(() =>
-        fileSystem.DirectoryExists(path) && (fileSystem.EnumerateFiles(path).Any() || fileSystem.EnumerateDirectories(path).Any()));
-
-    private static async Task<bool?> WithinAsync(Func<bool> probe)
+    /// <summary>
+    /// <c>&lt;Bibliothek&gt;\steamapps\appmanifest_&lt;ID&gt;.acf</c> eines Steam-Spiels, dessen Ordner unter
+    /// <c>steamapps\common</c> liegt (wie sie der Steam-Scanner einträgt); sonst null. Nur Ziffern als ID, nie ein Pfad.
+    /// </summary>
+    private static string? SteamManifestOf(GameConfig game, string? installDir)
     {
-        var check = Task.Run(() =>
+        if (game.Source != GameSource.Steam || installDir is null || game.SourceId.Length == 0 || !game.SourceId.All(char.IsAsciiDigit))
+        {
+            return null;
+        }
+
+        const string Common = @"\steamapps\common\";
+        var at = installDir.Replace('/', '\\').LastIndexOf(Common, StringComparison.OrdinalIgnoreCase);
+        return at < 0 ? null : Path.Combine(installDir[..(at + @"\steamapps".Length)], "appmanifest_" + game.SourceId + ".acf");
+    }
+
+    /// <summary>
+    /// Zugriffe der Prüfung mit einer gemeinsamen Frist und höchstens <see cref="MaxParallelChecks"/> zugleich. Ein Zugriff,
+    /// der hängt (getrenntes Netzlaufwerk), hält seinen Platz, bis Windows antwortet; nach der Frist beginnt keiner mehr.
+    /// </summary>
+    private sealed class Probes(CancellationToken deadline)
+    {
+        private readonly SemaphoreSlim _slots = new(MaxParallelChecks);
+        private readonly Task _expired = Task.Delay(Timeout.InfiniteTimeSpan, deadline);
+
+        /// <summary>Antwort des Zugriffs; null: keine Antwort bis zur Frist oder nicht lesbar.</summary>
+        public async Task<bool?> AskAsync(Func<bool> probe)
         {
             try
             {
-                return probe();
+                await _slots.WaitAsync(deadline).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or System.Security.SecurityException)
+            catch (OperationCanceledException)
             {
-                return false;
+                return null;
             }
-        });
-        var finished = await Task.WhenAny(check, Task.Delay(DriveCheckTimeout)).ConfigureAwait(false);
-        return ReferenceEquals(finished, check) ? check.Result : null;
+
+            var check = Task.Run(() =>
+            {
+                try
+                {
+                    return (bool?)probe();
+                }
+                catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or PathTooLongException or ArgumentException or NotSupportedException)
+                {
+                    return false; // nicht (mehr) da, oder kein gültiger Pfad: dort liegt nichts
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+                {
+                    return null; // nicht lesbar: nicht zu klären
+                }
+                finally
+                {
+                    _slots.Release();
+                }
+            });
+            return await Task.WhenAny(check, _expired).ConfigureAwait(false) == check ? check.Result : null;
+        }
     }
 
     /// <summary>

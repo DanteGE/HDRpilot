@@ -6,7 +6,8 @@
 #   - Die Kopie lädt die neue App in einer eigenen Ablage (--config-dir) über --settings-probe: ohne Automatik, Einlesen und
 #     Fenster, ohne Ladewarnung und ohne Sicherung als „defekt“; sie zählt die nicht installierten Spiele (wie die Karte
 #     „Bibliothek“) und speichert wie die Einstellungen zweimal, erst unverändert, dann mit umgeschaltetem
-#     „Nicht installierte Spiele ausblenden“.
+#     „Nicht installierte Spiele ausblenden“. Je entfernbares Spiel nennt der Bericht die Spur einer Installation, wie die
+#     Rückfrage des Sammel-Entfernens sie prüft (nur lesend in den echten Spielordnern: Laufwerk, EXE, Steam-Manifest).
 #   - Unverändert gespeichert steht jeder Wert der Kopie unverändert in der Datei (nur Felder, die die alte Version nicht
 #     kannte, kommen mit Standardwerten dazu); umgeschaltet unterscheidet sich die Datei davon nur in
 #     settings.hideUninstalledGames.
@@ -123,6 +124,8 @@ try {
     Check ($r.notInstalled -eq $notInstalled.Count -and $r.shownCount -eq $notInstalled.Count) ('Zählt die nicht installierten Spiele: {0} (Karte „Bibliothek“: zurzeit {1}): {2}' -f $r.notInstalled, $r.shownCount, (($r.notInstalledGames | ForEach-Object { $_.name }) -join ', '))
     $removable = @($notInstalled | Where-Object { $_.source -ne 'Manual' }).Count
     Check ($r.removable -eq $removable -and $r.shownRemovable -eq $removable) ("Davon entfernbar (Launcher): {0}" -f $r.removable)
+    $traces = @($r.removableTraces | ForEach-Object { '{0}: {1}{2}' -f $_.name, $_.sign, $(if ($_.drive) { ' ' + $_.drive } else { '' }) })
+    Check ($traces.Count -eq $r.removable) ('Spur einer Installation je entfernbares Spiel (wie die Rückfrage): ' + ($traces -join ', '))
     Check ($r.savedUnchanged -and $r.savedToggled) 'Zweimal gespeichert (unverändert, umgeschaltet)'
     Check ($r.hideAfter -eq (-not $r.hideBefore) -and $r.hideStored -eq $r.hideAfter) ("Umgeschaltet: hideUninstalledGames {0} → {1}" -f $r.hideBefore, $r.hideAfter)
     $logs = (Get-ChildItem (Join-Path $ablage 'logs') -Filter '*.log' -ErrorAction SilentlyContinue | ForEach-Object { [IO.File]::ReadAllText($_.FullName, [Text.Encoding]::UTF8) }) -join "`n"

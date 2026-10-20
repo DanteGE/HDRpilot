@@ -337,7 +337,7 @@ public sealed partial class ArtworkService
 
     /// <summary>
     /// Symbol: eigenes Symbol, sonst das größte der Symbol-Hinweise des Launchers, des Symbols im Bildcache (GOG) und des
-    /// Kachelbilds (Xbox); die EXE nur bei Epic, EA, Battle.net und manuellen Spielen oder wenn ein Spiel ohne Titelbild nur
+    /// Kachelbilds (Xbox); die EXE nur bei Epic, EA, Battle.net, Quiver und manuellen Spielen oder wenn ein Spiel ohne Titelbild nur
     /// ein kleines Symbol (unter 128 px) hat. Das 32-px-Gemeinschaftssymbol von Steam nur als letzter Ersatz; sonst Monogramm.
     /// Deckende Bilder ab 256 px gelten als Kachelbild.
     /// </summary>
@@ -394,7 +394,7 @@ public sealed partial class ArtworkService
             Consider(tile.Path, "tile");
         }
 
-        var needExe = game.Source is GameSource.Epic or GameSource.EA or GameSource.BattleNet or GameSource.Manual
+        var needExe = game.Source is GameSource.Epic or GameSource.EA or GameSource.BattleNet or GameSource.Manual or GameSource.Quiver
             || (!hasHero && (best?.Px ?? 0) < ExeIconWanted);
         if (needExe && ExecutableIcon(game) is { } exe && exe.Px > (best?.Px ?? 0))
         {
@@ -593,6 +593,7 @@ public sealed partial class ArtworkService
         LauncherCache.Steam => ArtworkStrings.Source_SteamCache,
         LauncherCache.Gog => ArtworkStrings.Source_GogCache,
         LauncherCache.Ubisoft => ArtworkStrings.Source_UbisoftCache,
+        LauncherCache.Quiver => ArtworkStrings.Source_QuiverCache,
         _ => ArtworkStrings.Source_XboxPackage,
     };
 

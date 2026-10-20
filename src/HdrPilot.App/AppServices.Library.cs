@@ -140,6 +140,15 @@ public sealed partial class AppServices
         scenes.Add(new SnapshotScene("hauptfenster", "rueckfrage-entfernen", () => RemoveSettingsDialogScene(previewShortcuts: 0)) { Settle = TimeSpan.FromSeconds(1), Resizable = false });
         scenes.Add(new SnapshotScene("hauptfenster", "rueckfrage-entfernen-verknuepfungen", () => RemoveSettingsDialogScene(previewShortcuts: 2)) { Settle = TimeSpan.FromSeconds(1), Resizable = false });
 
+        // Quiver Launcher (E91): das erste Quiver-Spiel der Ablage gewählt in Liste, Raster und Regal (auch mit Schublade), dazu der
+        // Filter „Quiver“ in der Leiste und in der eingeklappten Kapsel. Ohne Quiver-Spiel bleibt die Auswahl wie beim Öffnen.
+        scenes.Add(new SnapshotScene("hauptfenster", "quiver-liste", () => LibraryScene(LibraryViewMode.List), w => SelectQuiverAsync(w)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "quiver-raster", () => LibraryScene(LibraryViewMode.Grid), w => SelectQuiverAsync(w)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "quiver-regal", () => LibraryScene(LibraryViewMode.Shelf), w => SelectQuiverAsync(w)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "quiver-regal-details", () => LibraryScene(LibraryViewMode.Shelf), w => SelectQuiverAsync(w, drawer: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "quiver-gefiltert", () => LibraryScene(LibraryViewMode.List), w => SelectQuiverAsync(w, filter: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "quiver-kapsel", () => LibraryScene(LibraryViewMode.Grid), w => SelectQuiverAsync(w, filter: true, collapse: true)) { Settle = LibrarySettle });
+
         // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
@@ -204,6 +213,37 @@ public sealed partial class AppServices
         {
             main.ScrollDetailsToEnd();
             await Task.Delay(300);
+        }
+    }
+
+    /// <summary>
+    /// Erstes Quiver-Spiel der Bibliothek wählen, ohne es als gesehen zu speichern (E91); auf Wunsch vorher den Quellenfilter
+    /// „Quiver“ setzen und die Leiste zur Kapsel einklappen, im Regal die Schublade öffnen. Nur im ViewModel, nichts wird
+    /// gespeichert; danach laufen Überblendungen und das Laden der Bilder zu Ende.
+    /// </summary>
+    private static async Task SelectQuiverAsync(Window window, bool filter = false, bool collapse = false, bool drawer = false)
+    {
+        if (window is not MainWindow { ViewModel: { } vm } || vm.Games.FirstOrDefault(g => g.Source == GameSource.Quiver) is not { } item)
+        {
+            return;
+        }
+
+        if (filter && vm.SourceOptions.FirstOrDefault(o => o.Source == GameSource.Quiver) is { } option)
+        {
+            vm.SelectedSource = option;
+        }
+
+        vm.SelectQuietly(item);
+        if (collapse)
+        {
+            vm.SetToolbarCollapsed(true, persist: false);
+        }
+
+        await Task.Delay(1800);
+        if (drawer)
+        {
+            vm.IsDetailsDrawerOpen = true;
+            await Task.Delay(900);
         }
     }
 

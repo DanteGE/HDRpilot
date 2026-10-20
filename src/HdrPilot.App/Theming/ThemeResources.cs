@@ -105,7 +105,7 @@ public static class ThemeResources
         d[ThemeKeys.BrushWarningSoft] = Solid(Argb(0x2E, 0xFF, 0xB0, 0x20));
         d[ThemeKeys.BrushDangerSoft] = Solid(Argb(0x29, 0xFF, 0x4D, 0x4D));
 
-        // ---- Quellen (Punkte vor dem Namen); Epic und Manuell im hellen Thema dunkler (sonst auf Weiß unsichtbar) ----
+        // ---- Quellen (Punkte vor dem Namen); Epic, Manuell und Quiver im hellen Thema dunkler (sonst auf Weiß unsichtbar) ----
         d[ThemeKeys.BrushSourceSteam] = Solid(Rgb(0x66, 0xC0, 0xF4));
         d[ThemeKeys.BrushSourceEpic] = Solid(dark ? Rgb(0xD7, 0xDA, 0xE3) : Rgb(0x8A, 0x8F, 0xA5));
         d[ThemeKeys.BrushSourceXbox] = Solid(Rgb(0x3F, 0xB9, 0x50));
@@ -114,6 +114,7 @@ public static class ThemeResources
         d[ThemeKeys.BrushSourceEA] = Solid(Rgb(0xFF, 0x5A, 0x5A));
         d[ThemeKeys.BrushSourceBattleNet] = Solid(Rgb(0x27, 0xB8, 0xFF));
         d[ThemeKeys.BrushSourceManual] = Solid(dark ? Rgb(0xC8, 0xCC, 0xD8) : Rgb(0x8A, 0x8F, 0xA5));
+        d[ThemeKeys.BrushSourceQuiver] = Solid(dark ? Rgb(0xF4, 0x72, 0xB6) : Rgb(0xD0, 0x40, 0x8C));
 
         // ---- Schriften (Windows-Schriften, solange keine OFL-Schrift eingebettet ist) ----
         d[ThemeKeys.FontDisplay] = DisplayFont;

@@ -314,6 +314,10 @@
   <data name="Source_Manual" xml:space="preserve">
     <value>Manuell</value>
   </data>
+  <data name="Source_Quiver" xml:space="preserve">
+    <value>Quiver</value>
+    <comment>Quelle (E91): Quiver Launcher; nur der Name, kein Logo</comment>
+  </data>
 
   <!-- Detailbereich -->
   <data name="Details_Name" xml:space="preserve">
@@ -494,6 +498,14 @@
   </data>
   <data name="Launch_NoCommand" xml:space="preserve">
     <value>Für diesen Eintrag kennt HDRpilot keine Start-EXE: Im Ordner liegt keine oder mehr als eine. Die Erkennung beim Spielen wirkt trotzdem. Zum Starten über HDRpilot das Spiel über seine EXE hinzufügen.</value>
+  </data>
+  <data name="Launch_NoCommandQuiver" xml:space="preserve">
+    <value>Für dieses Quiver-Spiel kennt HDRpilot keine eindeutige Start‑EXE, meist weil im Spielordner mehrere EXE‑Dateien liegen und Quiver sich keine gemerkt hat. Starte das Spiel einmal in Quiver und wähle dort die EXE; nach dem nächsten Einlesen startet HDRpilot sie direkt. Die Erkennung beim Spielen wirkt trotzdem.</value>
+    <comment>E91: Quiver-Spiel ohne Start-Befehl (mehrere EXE und keine selected_executable.txt); geschützte Bindestriche (U+2011)</comment>
+  </data>
+  <data name="Details_QuiverWindowsInstaller" xml:space="preserve">
+    <value>Über Windows Installer installiert: Als Installationsordner gilt der Ordner der EXE, die in Quiver verknüpft ist. „Starten“ startet diese EXE direkt.</value>
+    <comment>E91: Quiver-Spiel, das per Windows Installer (MSI) installiert wurde (windows-installer.json)</comment>
   </data>
   <data name="Launch_Running" xml:space="preserve">
     <value>HDR wird eingeschaltet, dann startet das Spiel …</value>

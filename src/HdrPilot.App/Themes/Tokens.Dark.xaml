@@ -103,6 +103,7 @@
     <SolidColorBrush x:Key="Hp.Brush.Source.EA" Color="#FFFF5A5A" />
     <SolidColorBrush x:Key="Hp.Brush.Source.BattleNet" Color="#FF27B8FF" />
     <SolidColorBrush x:Key="Hp.Brush.Source.Manual" Color="#FFC8CCD8" />
+    <SolidColorBrush x:Key="Hp.Brush.Source.Quiver" Color="#FFF472B6" />
     <FontFamily x:Key="Hp.Font.Display">Bahnschrift, Segoe UI</FontFamily>
     <FontFamily x:Key="Hp.Font.Text">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="Hp.Font.Mono">Cascadia Mono, Consolas</FontFamily>

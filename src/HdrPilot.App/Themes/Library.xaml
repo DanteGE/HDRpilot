@@ -130,6 +130,9 @@
             <DataTrigger Binding="{Binding Source}" Value="BattleNet">
                 <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Source.BattleNet}" />
             </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -161,6 +164,9 @@
             <DataTrigger Binding="{Binding Source}" Value="BattleNet">
                 <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.BattleNet}" />
             </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 
@@ -190,6 +196,9 @@
             </DataTrigger>
             <DataTrigger Binding="{Binding Source}" Value="BattleNet">
                 <Setter Property="Background" Value="{DynamicResource Hp.Brush.Source.BattleNet}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                <Setter Property="Background" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>

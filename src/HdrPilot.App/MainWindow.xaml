@@ -561,6 +561,9 @@
                 <DataTrigger Binding="{Binding Source}" Value="Manual">
                     <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Hp.Brush.Source.Manual}" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                    <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
+                </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
 
@@ -1620,9 +1623,13 @@
                                                 <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE8A7;" FontSize="11" Margin="0,0,6,0" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
                                                 <lib:MiddleEllipsisText FullText="{Binding LaunchCommandText}" FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="11" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
                                             </DockPanel>
-                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Launch_NoCommand}" Margin="0,8,0,0"
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding NoLaunchText}" Margin="0,8,0,0"
                                                        AutomationProperties.AutomationId="LaunchNoCommandHint"
                                                        Visibility="{Binding CanLaunchGame, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}" />
+                                            <!-- Quiver-Spiel per Windows Installer (E91): Installationsordner ist der Ordner der verknüpften EXE -->
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_QuiverWindowsInstaller}" Margin="0,8,0,0"
+                                                       AutomationProperties.AutomationId="QuiverWindowsInstallerHint"
+                                                       Visibility="{Binding ShowWindowsInstallerHint, Converter={StaticResource Lib.BoolToVisibility}}" />
 
                                             <!-- Notlösung nur für Steam-Spiele: Startoption, mit der Steam das Spiel über HDRpilot startet -->
                                             <StackPanel x:Name="SteamLaunchOptionArea" Margin="0,10,0,0" Visibility="{Binding IsSteam, Converter={StaticResource Lib.BoolToVisibility}}">

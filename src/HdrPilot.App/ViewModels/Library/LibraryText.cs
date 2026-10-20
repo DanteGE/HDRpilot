@@ -82,6 +82,7 @@ public static class LibraryText
         GameSource.EA => LibraryStrings.Source_EA,
         GameSource.BattleNet => LibraryStrings.Source_BattleNet,
         GameSource.Manual => LibraryStrings.Source_Manual,
+        GameSource.Quiver => LibraryStrings.Source_Quiver,
         _ => source.ToString(),
     };
 }

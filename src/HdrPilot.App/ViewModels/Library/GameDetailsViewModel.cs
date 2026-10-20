@@ -191,6 +191,15 @@ public sealed class GameDetailsViewModel : ObservableObject
     /// </summary>
     public bool CanLaunchGame => !string.IsNullOrWhiteSpace(_config.LaunchCommand);
 
+    /// <summary>
+    /// Hinweis ohne Start-Befehl (unter „Mit HDR starten“): bei Quiver-Spielen der Weg über Quiver (mehrere EXE und keine
+    /// gemerkte Wahl, E91), sonst der allgemeine Hinweis für eigene Einträge.
+    /// </summary>
+    public string NoLaunchText => Item.Source == GameSource.Quiver ? LibraryStrings.Launch_NoCommandQuiver : LibraryStrings.Launch_NoCommand;
+
+    /// <summary>Quiver-Spiel, das per Windows Installer installiert wurde (E91): Hinweis, welcher Ordner als Installationsordner gilt.</summary>
+    public bool ShowWindowsInstallerHint => Item.Source == GameSource.Quiver && string.Equals(_config.InstallKind, InstallKinds.WindowsInstaller, StringComparison.Ordinal);
+
     public string? LastPlayedText => _config.LastPlayed is { } t
         ? LibraryText.Format(LibraryStrings.Details_LastPlayed, t.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
         : null;
@@ -478,8 +487,12 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(ExecutablesHeader));
         OnPropertyChanged(nameof(LaunchCommandText));
         OnPropertyChanged(nameof(HasLaunchCommandText));
+        OnPropertyChanged(nameof(CanLaunchGame));
+        OnPropertyChanged(nameof(ShowWindowsInstallerHint));
         RelearnExeCommand.RaiseCanExecuteChanged();
         LaunchCommand.RaiseCanExecuteChanged();
+        CreateDesktopShortcutCommand.RaiseCanExecuteChanged();
+        CreateStartMenuShortcutCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>Ein anderes Spiel ist gewählt oder das Fenster geschlossen: nicht mehr auf die Zeile hören.</summary>

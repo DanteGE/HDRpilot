@@ -373,6 +373,8 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         ExcludedExecutables = [.. game.ExcludedExecutables],
         ExtraExecutables = [.. game.ExtraExecutables],
         IconCandidates = [.. game.IconCandidates],
+        CoverCandidates = game.CoverCandidates is { } covers ? [.. covers] : null,
+        InstallKind = game.InstallKind,
         CustomIcon = game.CustomIcon,
         Artwork = game.Artwork is null ? null : new GameArtworkChoice { Hero = game.Artwork.Hero, Logo = game.Artwork.Logo, Cover = game.Artwork.Cover },
         IsInstalled = game.IsInstalled,
@@ -396,7 +398,8 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
         string.Join(';', game.DetectedExecutables),
         string.Join(';', game.KnownExecutables),
         string.Join(';', game.ExcludedExecutables),
-        string.Join(';', _options.HelperPatterns() ?? []));
+        string.Join(';', _options.HelperPatterns() ?? []),
+        string.Join(';', game.CoverCandidates ?? []));
 
     /// <summary>Breiten unter 16 px und über 3840 px gibt es nicht; Farbfeld und Symbol haben eigene Grenzen.</summary>
     private static int NormalizeWidth(ArtworkKind kind, int width) => kind switch

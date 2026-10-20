@@ -60,7 +60,20 @@ public sealed partial class AppServices : IAsyncDisposable
 
         host.Sessions.Notification += OnSessionNotification;
         host.Sessions.StateChanged += (_, _) => RaiseHdrStateChanged();
+        host.QuiverFolders.Learned += OnQuiverFolderLearned;
         DisplayEvents.DisplaysChanged += OnDisplaysChanged;
+    }
+
+    /// <summary>
+    /// Quiver gestartet und sein Ordner neu gelernt (E91): nach kurzer Pause neu einlesen, damit seine Spiele erscheinen.
+    /// Kommt auf dem Thread der Überwachung; das Einlesen läuft ohnehin im Hintergrund.
+    /// </summary>
+    private void OnQuiverFolderLearned(object? sender, string folder) => _ = RescanLaterAsync();
+
+    private async Task RescanLaterAsync()
+    {
+        await Task.Delay(AutomationHost.RescanDelayAfterQuiverLearned).ConfigureAwait(false);
+        await RescanAsync().ConfigureAwait(false);
     }
 
     public AutomationHost Host { get; }

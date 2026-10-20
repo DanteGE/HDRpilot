@@ -202,6 +202,9 @@ public static class ThemeKeys
 
     public const string BrushSourceManual = "Hp.Brush.Source.Manual";
 
+    /// <summary>Quiver Launcher (E91): Rosa, im hellen Thema dunkler (sonst auf Weiß zu blass).</summary>
+    public const string BrushSourceQuiver = "Hp.Brush.Source.Quiver";
+
     // ---- Schriften (FontFamily) ----
 
     /// <summary>Titelschrift (Überschriften, Name statt Logo). Mitgelieferte Windows-Schrift, solange keine OFL-Schrift eingebettet ist.</summary>

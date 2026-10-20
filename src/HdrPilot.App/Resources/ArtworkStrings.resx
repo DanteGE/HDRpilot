@@ -28,6 +28,10 @@
     <value>Xbox-Paket</value>
     <comment>Herkunft eines Bildes: Ordner Resources im Paket eines Xbox-Spiels</comment>
   </data>
+  <data name="Source_QuiverCache" xml:space="preserve">
+    <value>Quiver-Cache</value>
+    <comment>Herkunft eines Bildes (E91): Bildzwischenspeicher des Quiver Launchers (Cache im Quiver-Ordner), nur gelesen</comment>
+  </data>
   <data name="Source_Custom" xml:space="preserve">
     <value>Eigene Datei</value>
     <comment>Herkunft eines Bildes: vom Nutzer über „Bild wählen…“ gewählt</comment>

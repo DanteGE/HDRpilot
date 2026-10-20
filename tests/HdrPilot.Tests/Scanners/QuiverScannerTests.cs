@@ -438,12 +438,19 @@ public sealed class QuiverScannerTests
     [Fact]
     public void Quiver_exe_in_a_wine_prefix_does_not_count()
     {
+        // Oben im Spielordner liegt keine EXE, die einzige Spiel-EXE eine Ebene tiefer; daneben Programme in den Ordnern von
+        // Wine/Proton (legt Quiver unter Linux an). Zählten sie mit, gäbe es mehrere Kandidaten und keinen Start-Befehl.
         AddRoot();
-        AddBlack();
+        _fs.AddFile(BlackDir + @"\version.txt", "V1");
+        _fs.AddFile(BlackDir + @"\bin\Spiel.exe", "MZ");
         _fs.AddFile(BlackDir + @"\.wine-prefix\Setup.exe", "MZ");
         _fs.AddFile(BlackDir + @"\dosdevices\Tool.exe", "MZ");
+        _fs.AddFile(BlackDir + @"\.steam-compat-data\pfx\drive_c\Start.exe", "MZ");
 
-        Assert.Equal(BlackDir + @"\BLACK.exe", Assert.Single(Scan(Learned(Root)).Games).LaunchCommand);
+        var game = Assert.Single(Scan(Learned(Root)).Games);
+
+        Assert.Equal(BlackDir + @"\bin\Spiel.exe", game.LaunchCommand);
+        Assert.Equal([BlackDir + @"\bin\Spiel.exe"], game.Executables);
     }
 
     // ---- Schlüssel und Name ----
@@ -452,6 +459,7 @@ public sealed class QuiverScannerTests
     [InlineData("..")]
     [InlineData(@"..\\..\\Windows")]
     [InlineData("Spiel..")]
+    [InlineData("Spiel..Teil")] // „..“ auch als Teil des Namens (E91), nicht nur als ganzer Name
     [InlineData(".")]
     [InlineData("a/b")]
     [InlineData(@"a\\b")]
@@ -991,8 +999,8 @@ public sealed class QuiverScannerTests
         public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
     }
 
-    /// <summary>Zählt, wie oft nach dem Kennzeichen von Quiver gesehen wird (je geprüftem Ordner einmal).</summary>
-    private sealed class CountingFileSystem(IFileSystem inner) : IFileSystem
+    /// <summary>Zählt, wie oft nach dem Kennzeichen von Quiver gesehen wird (je geprüftem Ordner einmal; auch für das Lernen).</summary>
+    internal sealed class CountingFileSystem(IFileSystem inner) : IFileSystem
     {
         private readonly HashSet<string> _distinct = new(StringComparer.OrdinalIgnoreCase);
 

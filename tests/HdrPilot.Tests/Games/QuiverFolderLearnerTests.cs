@@ -62,6 +62,24 @@ public sealed class QuiverFolderLearnerTests
     }
 
     [Fact]
+    public void Quiver_learning_looks_at_each_exe_path_only_once()
+    {
+        // Wie die Zuordnung (E31): Ein schon geprüfter EXE-Pfad kostet keinen Dateizugriff mehr, auch nach einem Neustart von
+        // Quiver (neue Prozess-ID); nur ein anderer Pfad wird geprüft.
+        AddQuiver(Root);
+        var counting = new QuiverScannerTests.CountingFileSystem(_fs);
+        var learner = new QuiverFolderLearner(counting, _config, _log);
+
+        learner.Observe([Process(Root + @"\current\QuiverLauncher.exe")]);
+        learner.Observe([Process(Root + @"\current\QuiverLauncher.exe", 43)]);
+        learner.Observe([Process(Root.ToLowerInvariant() + @"\current\QuiverLauncher.exe", 44)]);
+        Assert.Equal(1, counting.ManifestChecks);
+
+        learner.Observe([Process(Root + @"\QuiverLauncher.exe", 45)]); // Starter von Velopack: anderer Pfad, derselbe Ordner
+        Assert.Equal(2, counting.ManifestChecks);
+    }
+
+    [Fact]
     public void Quiver_known_folder_is_not_written_again()
     {
         AddQuiver(Root);

@@ -302,4 +302,41 @@ public sealed class ShowcaseViewModelTests
         Assert.DoesNotContain(picker.Candidates, c => c.PendingFile is not null);
         Assert.Empty(artwork.Saved);
     });
+
+    [Fact]
+    public void Picker_own_file_chosen_while_the_list_still_loads_stays_chosen() => Sta.Run(async () =>
+    {
+        // Prüfung 2026-10-20 (phase10-ui): Die Liste lädt im Hintergrund; war die eigene Datei schneller, ersetzte die fertige
+        // Liste sie bisher stillschweigend. Sie bleibt jetzt in der Liste und gewählt.
+        using var art = new HdrPilot.App.Tests.Artwork.ArtworkFixture();
+        var file = art.Save(Path.Combine(art.Root, "eigenes-titelbild.png"), HdrPilot.App.Tests.Artwork.ArtworkFixture.Cover(60, 90));
+        var context = SampleContext();
+        var artwork = new FakeArtworkService { PendingCandidates = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+        artwork.Candidates[ArtworkKind.Hero] = [new ArtworkCandidate("alt:hero_1.jpg", ArtworkKind.Hero, ArtworkOrigin.Alternative, "Steam 1", null, null, 3840, 1240, IsCurrent: false)];
+        context.Artwork = artwork;
+        var dialogs = new FakeDialogs { OnArtworkPicker = _ => false };
+        dialogs.ArtworkFiles.Enqueue(file);
+        using var vm = new LibraryViewModel(context, dialogs);
+        vm.SelectedGame = vm.Games.Single(g => g.Key == "Steam:1091500");
+        await Run(vm.ChooseArtworkCommand, null); // lädt die Liste (wartet auf PendingCandidates)
+        var picker = Assert.Single(dialogs.Pickers);
+
+        picker.PickFileCommand.Execute(null);
+        for (var i = 0; i < 300 && !picker.Candidates.Any(c => c.PendingFile is not null); i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.Equal(file, picker.Selected?.PendingFile);
+        artwork.PendingCandidates.SetResult();
+        for (var i = 0; i < 300 && !picker.Candidates.Any(c => c.Token == "alt:hero_1.jpg"); i++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.Equal(["Automatisch", "alt:hero_1.jpg", file], picker.Candidates.Select(c => c.PendingFile ?? c.Token ?? "Automatisch"));
+        Assert.Equal(file, picker.Selected?.PendingFile);
+        Assert.True(picker.Selected!.IsSelected);
+        Assert.False(picker.IsLoading);
+    });
 }

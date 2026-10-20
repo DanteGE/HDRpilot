@@ -500,6 +500,10 @@ try {
             Check ($null -ne (Find-Id $dialog $id 3000)) "Dialog-Element $id vorhanden"
         }
         Check (Is-Selected (Find-Id $dialog 'ArtworkTabHero')) 'Reiter „Titelbild“ gewählt'
+        # Die Liste lädt im Hintergrund (Vorschauen, erzeugtes Titelbild): erst warten, dann zählen (Prüfung 2026-10-20: 60 ms
+        # nach dem Öffnen war sie noch leer, nach rund 180 ms da)
+        $cands = Find-Id $dialog 'ArtworkCandidates'
+        [void](Wait-Until { @(Get-ListItems (Find-Id $dialog 'ArtworkCandidates')).Count -ge 1 })
         $cands = Find-Id $dialog 'ArtworkCandidates'
         Check (@(Get-ListItems $cands).Count -ge 1) ("Kandidaten angeboten ({0}, mindestens 'Automatisch')" -f @(Get-ListItems $cands).Count)
         Invoke-El (Find-Id $dialog 'ArtworkPickFileButton')

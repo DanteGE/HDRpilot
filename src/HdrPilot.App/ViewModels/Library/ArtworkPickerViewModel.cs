@@ -221,6 +221,13 @@ public sealed class ArtworkPickerViewModel : ObservableObject
             list.Insert(0, new ArtworkChoiceViewModel(null, LibraryStrings.Picker_Automatic, LibraryStrings.Picker_AutomaticNote, null, string.Empty, current is null));
         }
 
+        // Eine eigene Datei, die schon gewählt wurde, während die Liste noch lud, bleibt in der Liste (und gewählt); sonst
+        // ersetzte die fertige Liste sie stillschweigend (Prüfung 2026-10-20).
+        if (_loaded.GetValueOrDefault(kind)?.FirstOrDefault(c => c.PendingFile is not null) is { } pending)
+        {
+            list.Add(pending);
+        }
+
         _loaded[kind] = list;
         if (run == _loadRun)
         {

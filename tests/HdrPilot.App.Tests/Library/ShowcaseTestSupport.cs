@@ -124,8 +124,18 @@ public sealed class FakeArtworkService : IArtworkService
         Raise(gameKey);
     }
 
-    public Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<ArtworkCandidate>>(Candidates.TryGetValue(kind, out var list) ? list : []);
+    /// <summary>Gesetzt: Die Kandidaten kommen erst, wenn diese Quelle fertig ist (Tests: die Liste lädt noch).</summary>
+    public TaskCompletionSource? PendingCandidates { get; set; }
+
+    public async Task<IReadOnlyList<ArtworkCandidate>> GetCandidatesAsync(GameConfig game, ArtworkKind kind, CancellationToken cancellationToken = default)
+    {
+        if (PendingCandidates is { } pending)
+        {
+            await pending.Task.WaitAsync(cancellationToken);
+        }
+
+        return Candidates.TryGetValue(kind, out var list) ? list : [];
+    }
 
     public string SaveCustomImage(GameConfig game, ArtworkKind kind, string sourcePath)
     {

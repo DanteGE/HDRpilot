@@ -1126,3 +1126,63 @@ Launcher mitten in einem Update sein.
   Exit-Code 2, wenn `--config-dir` auf die echte Konfiguration oder den echten Datenordner zeigt, auch anders geschrieben
   oder auf anderem Weg dorthin (`\\?\`, 8.3-Name, Junction, subst: bei vorhandenen Ordnern entscheidet ihre Kennung,
   `PathUtil.SameDirectory`, `AppArguments.HasOwnConfigDir`).
+
+**E91 Quiver Launcher als eigene Quelle (Wunsch des Nutzers 2026-10-18, Entscheidungen 2026-10-19, G12):** Spiele des
+portablen Quiver Launchers (MIT, Velopack; beim Nutzer 3.5.1 mit „Black“) erscheinen von selbst mit der Quelle „Quiver“,
+bekommen „HDR automatisch“ wie alle anderen und starten über „Mit HDR starten“ direkt. HDRpilot liest dafür nur Dateien
+von Quiver, geteilt geöffnet (`IFileSystem.ReadShared`, `FileShare.ReadWrite | Delete`), schreibt nichts dorthin,
+startet Quiver nie und nutzt keinen Code von Quiver. Einzelheiten und Messungen: `docs/scanner/quiver.md`.
+- Quelle: `GameSource.Quiver` am Ende der Aufzählung, Schlüssel `Quiver:<folderName>` (Trenner, `.`/`..`, ungültige
+  Zeichen und Punkt oder Leerzeichen am Ende abgelehnt, nichts abgeschnitten). Kommt ein Spiel in zwei Quiver-Ordnern
+  vor, gilt das erste (gelernte Ordner zuerst), der Rest steht im Protokoll. Bezeichnung „Quiver“, eigene Farbe (Pink,
+  `Hp.Brush.Source.Quiver`, hell und dunkel) in Liste, Kacheln, Regal, Details, Filter und Kapsel.
+- Ordner finden (`QuiverRootFinder`), günstigste Quellen zuerst: gelernte Ordner (`settings.quiverFolders`, ohne
+  Oberfläche, fehlt ohne Eintrag ganz), das Protokoll von Velopack (`%LOCALAPPDATA%\velopack\velopack_QuiverLauncher.log`,
+  nur die letzten 256 KB), Suchordner samt direkten Unterordnern, `%LOCALAPPDATA%\QuiverLauncher` und ein
+  Uninstall-Eintrag unter HKCU. Erst wenn das nichts findet, Downloads (bekannter Ordner), Desktop, Dokumente,
+  Benutzerordner und feste Laufwerke bis zwei Ebenen, höchstens 1500 Ordner, ohne System- und Programmordner, Ende beim
+  ersten Treffer (gemessen ohne Quiver: 134 ms beim ersten, 72 ms beim zweiten Lauf). Erkannt wird ein Ordner nur an
+  `current\sq.version` mit der Kennung QuiverLauncher (andere Velopack-Programme fallen heraus) oder an der alten
+  Struktur bis 2.4.x. Die MuiCache wird nicht gelesen (Nutzungsverlauf).
+- Ordner lernen (`QuiverFolderLearner`): Sieht die Prozessüberwachung `QuiverLauncher.exe` oder `Quiver.exe` aus einem
+  Quiver-Ordner, trägt HDRpilot ihn in `quiverFolders` ein und liest 5 s später neu ein (App und `hdrpilot watch`). Jeder
+  EXE-Pfad wird nur einmal geprüft (E31); nur dieses Lernen schreibt, das Einlesen selbst bleibt rein lesend.
+- Bibliothek: `apps.json` (Name: `customDisplayName`, `name`, `project`, `folderName`), aus `settings.json` nur
+  `AppsPath`; Spielordner `installPath` oder `<Apps>\<folderName>`. Installiert wie in Quiver (Ordner da, keine
+  `install-incomplete.txt`, eine EXE, BAT oder CMD). Start-EXE: `selected_executable.txt` (nur innerhalb des
+  Spielordners), sonst die einzige EXE oben, sonst die einzige bis drei Ebenen tief, ohne Hilfsprogramme, nur Namen,
+  höchstens 5000 Dateien, ohne verknüpften Ordnern und Ordnern von Wine/Proton zu folgen. Bei mehreren gibt es keinen
+  Start-Befehl (E61); die Details sagen dann, das Spiel einmal in Quiver zu starten und dort die EXE zu wählen. Eine
+  gewählte BAT/CMD startet HDRpilot nicht. Per Windows Installer installierte Spiele (`windows-installer.json`, Phase
+  `Linked`): Ordner der verknüpften EXE als Installationsordner, mit Hinweis in den Details. „Zuletzt gespielt“ aus
+  `LastPlayed.txt`.
+- Start: die EXE direkt mit ihrem Ordner als Arbeitsordner und ohne Argumente, wie Quiver selbst laut
+  `quiver-launch.log`; nicht über `QuiverLauncher.exe --run` (Konsolenfenster, Updatesuche im Netz, schreibt in Quivers
+  Einstellungen). Erkennung beim Spielen über den Spielordner. Eine Frühwarnung oder eine Startoption wie bei Steam gibt
+  es für Quiver nicht: Beim Start aus Quiver schaltet HDR erst mit dem Spielprozess.
+- Bilder: nur lokal aus `<Quiver>\Cache` (eigenes Cover, gemeinsamer Zwischenspeicher `Images\<MD5 der Adresse>` samt
+  den verkleinerten Kopien, die Quiver über quiverlauncher.com lädt, älterer Speicher je Spiel), nur Dateien mit Bildkopf,
+  als `coverCandidates` je Spiel in `config.json`; dekodiert wird in der App (WebP über Windows). Titelbild und Logo
+  erzeugt HDRpilot, das Symbol kommt aus der Spiel-EXE; kein Logo und kein Programmsymbol von Quiver. Den Cache-Ordner
+  beobachtet HDRpilot nicht, neue Bilder kommen mit dem nächsten Einlesen. SteamGridDB (nur eingeschaltet) fragt wie
+  bei anderen Spielen ohne Steam-ID nach dem Namen.
+- HDR-Liste: Quiver-Spiele gleicht HDRpilot nicht mit PCGamingWiki ab (`HdrListSync.Skips`): Der Name träfe meist das
+  Originalspiel, und so gehen ihre Namen nicht ans Netz. Sie stehen als „unbekannt“ und zählen im Stand nicht mit.
+- Vorschläge aus Suchordnern übergehen den Quiver-Ordner und alles darin. `hdrpilot scan` kennt `--source Quiver` und
+  `--config-dir` (liest dann Suchordner und gelernte Quiver-Ordner der Ablage, nur lesend) und gibt `coverCandidates`,
+  `installKind` und `lastPlayed` mit aus.
+- Verträglichkeit (G12.3): Bisher hielt jede Version eine `config.json` mit einer unbekannten Quelle für defekt
+  (`JsonStringEnumConverter`), sicherte sie als „defekt“ und begann leer. `AppConfigConverter` legt Spiele mit einer
+  unbekannten Quelle beiseite, liest den Rest wie bisher und schreibt sie beim Speichern unverändert wieder ans Ende von
+  `games`; nichts wird als „defekt“ gesichert. Neue Felder (`coverCandidates`, `installKind`, `quiverFolders`) fehlen
+  ohne Wert, die Datei bleibt sonst gleich. HDRpilot 1.4.0 hat das noch nicht und hielte eine Datei mit einem Quiver-Spiel
+  für defekt; der Setup installiert eine ältere Version nur auf ausdrücklichen Wunsch (E83), README und Bekannte Grenzen
+  sagen das.
+- Prüfung: G12.1 (`test.ps1 -Filter "FullyQualifiedName~Quiver" -MinTests 30`; Beispieldateien mit erfundenen Pfaden,
+  Wächter gegen Schreiben und Netz), G12.2 (`phase2-scanner-tests.ps1`), G12.3 (`-Filter
+  "FullyQualifiedName~UnknownSource"`, Gegenprobe mit dem bisherigen Konverter), G12.4 (`phase12-quiver-scan.ps1`: echtes
+  System, nur lesend, in der Shell und außerhalb des Containers, Dateiliste des Quiver-Ordners vorher und nachher gleich),
+  G12.5 (`phase12-quiver-ui.ps1`: Testinstanz mit Quiver-Ordner aus Beispieldateien, Quelle in Filter und Kapsel, Cover
+  aus dem Cache, „Mit HDR starten“ startet ein harmloses Prüfprogramm direkt mit seinem Ordner als Arbeitsordner, ohne
+  echtes HDR; Zustände `hauptfenster-quiver-liste`, `-raster`, `-regal`, `-regal-details`, `-gefiltert` und `-kapsel`
+  für Bildschirmfotos). Der Livetest mit „Black“ (G12.7) steht aus und läuft nur mit dem Nutzer.

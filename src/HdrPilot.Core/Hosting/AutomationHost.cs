@@ -233,6 +233,9 @@ public sealed class AutomationHost : IAsyncDisposable
         LauncherSignals.Dispose();
         await Watcher.StopAsync().ConfigureAwait(false);
         _autoHdr.Shutdown(); // nach dem letzten Zyklus
+
+        // „Zuletzt gespielt“ und gemerkte EXEs, deren Speichern scheiterte, nicht nur im Speicher lassen (E55).
+        _ = Config.FlushPending();
         await ContainerCheck.ConfigureAwait(false); // Probe nie liegen lassen (dauert höchstens Sekundenbruchteile)
         _logger.LogInformation("HDRpilot beendet. Gemerkte Zustände bleiben gespeichert und werden beim nächsten Start geprüft.");
         LoggerFactory.Dispose();

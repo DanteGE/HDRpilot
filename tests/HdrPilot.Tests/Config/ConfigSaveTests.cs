@@ -1,7 +1,9 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.Hosting;
 using HdrPilot.Tests.TestSupport;
+using Microsoft.Extensions.Logging;
 
 namespace HdrPilot.Tests.Config;
 
@@ -10,7 +12,8 @@ namespace HdrPilot.Tests.Config;
 /// <see cref="FileReplace"/> versucht es nach kurzen Pausen erneut (die echte Platte prüft <c>PhysicalFileSystemTests</c>);
 /// bleibt die Datei gesperrt (hier eine Attrappe: ein Leser ohne Freigabe zum Löschen über alle Versuche), wird die Änderung
 /// gemeldet und nicht übernommen, nie halb geschrieben, eine eben gelesene fremde Änderung geht nicht verloren, und
-/// Aufzeichnungen der Sitzungslogik holt das nächste Speichern nach.
+/// Aufzeichnungen der Sitzungslogik holt das nächste Speichern nach, spätestens ein einmaliger Versuch nach
+/// <see cref="ConfigService.PendingRetryDelay"/> oder das Beenden.
 /// </summary>
 public sealed class ConfigSaveTests
 {
@@ -24,11 +27,25 @@ public sealed class ConfigSaveTests
     /// <summary>Ein Leser hält die Datei ohne Freigabe zum Löschen: Ersetzen scheitert wie unter Windows mit „Zugriff verweigert“.</summary>
     private void HoldByReader(bool held) => _fs.FailDeleting(Path, held ? new UnauthorizedAccessException("Der Zugriff auf den Pfad wurde verweigert.") : null);
 
-    private ConfigService ServiceWithGame()
+    private ConfigService ServiceWithGame(IClock? clock = null, ILogger? logger = null)
     {
-        var service = Service();
+        var service = clock is null ? Service() : new ConfigService(new ConfigStore(_fs, Path, clock), clock, logger);
         service.Update(c => c.Games.Add(new GameConfig { Source = GameSource.Manual, SourceId = "a", Name = "A", InstallDir = @"D:\A" }));
         return service;
+    }
+
+    /// <summary>Was auf der Platte steht (frisch gelesen).</summary>
+    private GameConfig Saved() => Service().Current.FindGame(GameKey)!;
+
+    /// <summary>Wartet, bis die Bedingung gilt (das erneute Speichern läuft hinter einer Wartezeit), längstens 5 s.</summary>
+    private static void Eventually(Func<bool> condition, string what)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (!condition())
+        {
+            Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5), "Nicht eingetreten: " + what);
+            Thread.Sleep(10);
+        }
     }
 
     [Fact]
@@ -147,6 +164,130 @@ public sealed class ConfigSaveTests
     }
 
     [Fact]
+    public void ConfigSave_session_records_are_saved_again_once_after_a_pause()
+    {
+        // Prüfung 2026-10-20: Eine Aufzeichnung, deren Speichern scheiterte, lag nur im Speicher, bis zufällig etwas anderes
+        // gespeichert wurde (stürzte die App vorher ab, war sie verloren). Jetzt wird nach PendingRetryDelay einmal erneut
+        // gespeichert, für alles Offene zusammen.
+        var clock = new ManualDelayClock();
+        var service = ServiceWithGame(clock);
+        var played = new DateTimeOffset(2026, 10, 20, 18, 0, 0, TimeSpan.Zero);
+        HoldByReader(true);
+
+        service.RecordLastPlayed(GameKey, played);
+        service.RecordDetectedExecutables(GameKey, [@"D:\A\a.exe"]);
+
+        Assert.Equal([ConfigService.PendingRetryDelay], clock.Requested); // ein Zeitgeber für beide
+        Assert.Equal(TimeSpan.FromSeconds(30), ConfigService.PendingRetryDelay);
+        Assert.Null(Saved().LastPlayed);
+
+        HoldByReader(false);
+        clock.Elapse();
+
+        Eventually(() => Saved().LastPlayed == played, "erneut gespeichert");
+        Assert.Equal([@"D:\A\a.exe"], Saved().DetectedExecutables);
+        Assert.Equal(played, service.Current.FindGame(GameKey)!.LastPlayed);
+        Assert.True(service.FlushPending()); // nichts mehr offen
+        Assert.Single(clock.Requested);
+    }
+
+    [Theory]
+    [InlineData("zuletzt gespielt")]
+    [InlineData("gemerkte EXEs")]
+    public void ConfigSave_each_kind_of_failed_session_record_gets_the_retry(string record)
+    {
+        // Jede Aufzeichnung für sich: Scheitert nur sie, startet sie den einen Versuch.
+        var clock = new ManualDelayClock();
+        var service = ServiceWithGame(clock);
+        var played = new DateTimeOffset(2026, 10, 20, 18, 0, 0, TimeSpan.Zero);
+        HoldByReader(true);
+        if (record == "zuletzt gespielt")
+        {
+            service.RecordLastPlayed(GameKey, played);
+        }
+        else
+        {
+            service.RecordDetectedExecutables(GameKey, [@"D:\A\a.exe"]);
+        }
+
+        Assert.Equal([ConfigService.PendingRetryDelay], clock.Requested);
+        HoldByReader(false);
+        clock.Elapse();
+
+        Eventually(() => record == "zuletzt gespielt" ? Saved().LastPlayed == played : Saved().DetectedExecutables.Count == 1, "erneut gespeichert: " + record);
+    }
+
+    [Fact]
+    public void ConfigSave_session_records_retry_once_and_are_flushed_at_shutdown()
+    {
+        // Bleibt die Datei gesperrt, scheitert auch der eine Versuch; danach startet kein weiterer Zeitgeber (keine Schleife bei
+        // einer dauerhaft gesperrten Datei). Das Beenden (FlushPending) speichert, was offen ist; eine neue gescheiterte
+        // Aufzeichnung bekommt wieder einen Versuch.
+        var clock = new ManualDelayClock();
+        var log = new ListLogger<ConfigService>();
+        var service = ServiceWithGame(clock, log);
+        var played = new DateTimeOffset(2026, 10, 20, 18, 0, 0, TimeSpan.Zero);
+        HoldByReader(true);
+        service.RecordLastPlayed(GameKey, played);
+
+        clock.Elapse();
+
+        Eventually(() => log.Contains(LogLevel.Warning, "weiter nicht gespeichert"), "Versuch gescheitert");
+        Assert.Single(clock.Requested);
+        Assert.Equal(0, clock.Waiting);
+        Assert.Null(Saved().LastPlayed);
+        Assert.False(service.FlushPending());
+
+        HoldByReader(false);
+        var writes = _fs.ReadAllText(Path);
+        Assert.True(service.FlushPending()); // beim Beenden
+        Assert.Equal(played, Saved().LastPlayed);
+        Assert.NotEqual(writes, _fs.ReadAllText(Path));
+
+        // Nichts offen: Beenden schreibt nichts.
+        var revision = service.Revision;
+        Assert.True(service.FlushPending());
+        Assert.Equal(revision, service.Revision);
+
+        HoldByReader(true);
+        service.RecordLastPlayed(GameKey, played.AddHours(1));
+        Assert.Equal(2, clock.Requested.Count);
+        Assert.Equal(1, clock.Waiting);
+    }
+
+    [Fact]
+    public async Task ConfigSave_session_records_are_flushed_when_the_automation_host_ends()
+    {
+        // Verdrahtung: Beenden im Tray und das Ende von „hdrpilot watch“ (AutomationHost.DisposeAsync) speichern, was offen
+        // ist. Ablage im Speicher, Protokolle in einem Temp-Ordner; die Überwachung läuft nicht, es wird nie HDR geschaltet.
+        var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hdrpilot-config-flush-" + Guid.NewGuid().ToString("N")[..8]);
+        var paths = AppPaths.InDirectory(dir);
+        var played = new DateTimeOffset(2026, 10, 20, 18, 0, 0, TimeSpan.Zero);
+        try
+        {
+            await using (var host = new AutomationHost(paths, _fs, new FakeRegistry(), new FakeEnvironment(), _clock, autoHdrStore: new FakeGpuPreferenceStore()))
+            {
+                host.Config.Update(c => c.Games.Add(new GameConfig { Source = GameSource.Manual, SourceId = "a", Name = "A", InstallDir = @"D:\A" }));
+                _fs.FailDeleting(paths.ConfigFile, new UnauthorizedAccessException("Der Zugriff auf den Pfad wurde verweigert."));
+                host.Config.RecordLastPlayed(GameKey, played); // scheitert, der eine Versuch (Uhr der Tests: sofort) auch
+                Assert.Null(Read().LastPlayed);
+                _fs.FailDeleting(paths.ConfigFile, null);
+            }
+
+            Assert.Equal(played, Read().LastPlayed);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+
+        GameConfig Read() => new ConfigService(new ConfigStore(_fs, paths.ConfigFile, _clock), _clock).Current.FindGame(GameKey)!;
+    }
+
+    [Fact]
     public void ConfigSave_caught_up_last_played_never_replaces_a_newer_one()
     {
         // Ein anderer Prozess hat inzwischen ein neueres „zuletzt gespielt“ gespeichert; das nachgeholte ältere überschreibt es
@@ -205,5 +346,55 @@ public sealed class ConfigSaveTests
 
         app.Update(c => c.Settings.GracePeriodSeconds = 45);
         Assert.NotNull(Service().Current.FindGame("Manual:b"));
+    }
+
+    /// <summary>Uhr, deren Wartezeiten erst enden, wenn der Test sie ablaufen lässt (Zeitgeber des erneuten Speicherns).</summary>
+    private sealed class ManualDelayClock : IClock
+    {
+        private readonly List<TaskCompletionSource> _waiting = [];
+
+        public DateTimeOffset UtcNow { get; } = new(2026, 10, 20, 18, 0, 0, TimeSpan.Zero);
+
+        /// <summary>Angefragte Wartezeiten, in der Reihenfolge.</summary>
+        public List<TimeSpan> Requested { get; } = [];
+
+        public int Waiting
+        {
+            get
+            {
+                lock (_waiting)
+                {
+                    return _waiting.Count;
+                }
+            }
+        }
+
+        public Task Delay(TimeSpan delay, CancellationToken cancellationToken = default)
+        {
+            var done = new TaskCompletionSource();
+            lock (_waiting)
+            {
+                Requested.Add(delay);
+                _waiting.Add(done);
+            }
+
+            return done.Task;
+        }
+
+        /// <summary>Lässt alle wartenden Zeitgeber ablaufen.</summary>
+        public void Elapse()
+        {
+            List<TaskCompletionSource> due;
+            lock (_waiting)
+            {
+                due = [.. _waiting];
+                _waiting.Clear();
+            }
+
+            foreach (var done in due)
+            {
+                done.SetResult();
+            }
+        }
     }
 }

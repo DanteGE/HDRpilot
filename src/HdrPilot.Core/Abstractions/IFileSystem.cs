@@ -42,12 +42,23 @@ public interface IFileSystem
 
     /// <summary>
     /// Dateien bis <paramref name="maxDepth"/> Ordnerebenen unter <paramref name="directory"/> (0: nur der Ordner selbst), nur
-    /// nach Namen; verknüpften Ordnern (Junction, symbolische Verknüpfung) folgt es nicht, nicht lesbare überspringt es. Wirft
-    /// nicht bei fehlendem Ordner. Standard: die rekursive Folge von <see cref="EnumerateFiles"/>, nach Tiefe begrenzt.
+    /// nach Namen; verknüpften Ordnern (Junction, symbolische Verknüpfung) folgt es nicht. Für Prüfungen, die „nichts da“ von
+    /// „nicht zu klären“ unterscheiden: Ist der Ordner selbst oder einer darunter (bis zur Tiefe) nicht lesbar, wirft die Folge
+    /// <see cref="UnauthorizedAccessException"/> (oder <see cref="IOException"/>), nachdem sie alle lesbaren Treffer geliefert
+    /// hat; wer beim ersten Treffer aufhört, merkt davon nichts. Wirft nicht bei fehlendem Ordner. Standard: die rekursive
+    /// Folge von <see cref="EnumerateFiles"/>, nach Tiefe begrenzt.
     /// </summary>
     IEnumerable<string> EnumerateFilesUpTo(string directory, string searchPattern, int maxDepth) =>
         EnumerateFiles(directory, searchPattern, recursive: true)
             .Where(f => Path.GetRelativePath(directory, f).Count(c => c == Path.DirectorySeparatorChar) <= maxDepth);
+
+    /// <summary>
+    /// Gibt es die Datei? Für Prüfungen, die „nicht da“ von „nicht zu klären“ unterscheiden: Anders als
+    /// <see cref="FileExists"/> wirft es (<see cref="UnauthorizedAccessException"/> oder <see cref="IOException"/>), wenn
+    /// Windows die Auskunft verweigert (eine Datei in einem nicht lesbaren Ordner) oder Laufwerk oder Freigabe nicht
+    /// antworten. Fehlt sie, ihr Ordner oder ihr Laufwerk, oder ist der Pfad ungültig: false. Standard: <see cref="FileExists"/>.
+    /// </summary>
+    bool FileExistsOrThrow(string path) => FileExists(path);
 
     /// <summary>
     /// Alle Dateien unter <paramref name="directory"/> samt Unterordnern, für Prüfungen, die nichts übersehen dürfen: Anders als
@@ -99,7 +110,19 @@ public sealed class PhysicalFileSystem : IFileSystem
         MatchCasing = MatchCasing.CaseInsensitive,
     };
 
+    // Win32-Fehler, wie sie Windows beim Öffnen und Lesen von Ordnern und Dateien meldet (HRESULT 0x8007xxxx).
+    private const int Win32Facility = unchecked((int)0x80070000);
+    private const int ErrorFileNotFound = 2;
+    private const int ErrorPathNotFound = 3;
+    private const int ErrorAccessDenied = 5;
+    private const int ErrorInvalidDrive = 15;
+    private const int ErrorInvalidName = 123;
+    private const int ErrorBadPathName = 161;
+    private const int ErrorDirectory = 267;
+
     public bool FileExists(string path) => File.Exists(path);
+
+    public bool FileExistsOrThrow(string path) => AttributesOrNull(path) is { } attributes && (attributes & FileAttributes.Directory) == 0;
 
     public bool DirectoryExists(string path) => Directory.Exists(path);
 
@@ -148,21 +171,85 @@ public sealed class PhysicalFileSystem : IFileSystem
     {
         if (!Directory.Exists(directory))
         {
+            // Fehlt er wirklich, oder verweigert Windows schon die Auskunft über ihn (ein nicht lesbarer Ordner darüber)? Dann
+            // wirft es; eine Datei dieses Namens ist kein Ordner.
+            _ = AttributesOrNull(directory);
             return [];
         }
 
+        return FilesUpTo(directory, searchPattern, maxDepth);
+    }
+
+    /// <summary>Liefert die lesbaren Treffer und wirft danach, wenn ein Ordner nicht lesbar war (<see cref="EnumerateFilesUpTo"/>).</summary>
+    private static IEnumerable<string> FilesUpTo(string directory, string searchPattern, int maxDepth)
+    {
         var options = new EnumerationOptions
         {
-            IgnoreInaccessible = true,
+            IgnoreInaccessible = false,
             RecurseSubdirectories = maxDepth > 0,
             MaxRecursionDepth = Math.Max(0, maxDepth),
             AttributesToSkip = 0,
         };
-        return new FileSystemEnumerable<string>(directory, (ref FileSystemEntry entry) => entry.ToFullPath(), options)
+        using var files = new FilesUpToEnumerator(directory, searchPattern, options);
+        while (files.MoveNext())
         {
-            ShouldIncludePredicate = (ref FileSystemEntry entry) => !entry.IsDirectory && FileSystemName.MatchesSimpleExpression(searchPattern, entry.FileName),
-            ShouldRecursePredicate = (ref FileSystemEntry entry) => (entry.Attributes & FileAttributes.ReparsePoint) == 0,
-        };
+            yield return files.Current;
+        }
+
+        if (files.Error != 0)
+        {
+            throw files.Error == ErrorAccessDenied
+                ? new UnauthorizedAccessException("Nicht jeder Ordner unter " + directory + " ist lesbar.")
+                : new IOException("Nicht jeder Ordner unter " + directory + " ist lesbar (Fehler " + files.Error + ").", Win32Facility | files.Error);
+        }
+    }
+
+    /// <summary>
+    /// Dateien bis zu einer Tiefe, ohne verknüpften Ordnern zu folgen. Einen Ordner, der sich nicht öffnen oder lesen lässt
+    /// (Zugriff verweigert, Laufwerk antwortet nicht), überspringt es nicht still: Es merkt sich den Fehler und liest weiter.
+    /// </summary>
+    private sealed class FilesUpToEnumerator(string directory, string searchPattern, EnumerationOptions options)
+        : FileSystemEnumerator<string>(directory, options)
+    {
+        /// <summary>Win32-Fehler des ersten Ordners, der sich nicht lesen ließ; 0: alle gelesen.</summary>
+        public int Error { get; private set; }
+
+        protected override bool ContinueOnError(int error)
+        {
+            // Inzwischen verschwunden (oder durch eine Datei ersetzt): Dort liegt nichts. Alles andere bleibt ungeklärt.
+            if (error is not (ErrorFileNotFound or ErrorPathNotFound or ErrorDirectory) && Error == 0)
+            {
+                Error = error;
+            }
+
+            return true;
+        }
+
+        protected override bool ShouldIncludeEntry(ref FileSystemEntry entry) =>
+            !entry.IsDirectory && FileSystemName.MatchesSimpleExpression(searchPattern, entry.FileName);
+
+        protected override bool ShouldRecurseIntoEntry(ref FileSystemEntry entry) => (entry.Attributes & FileAttributes.ReparsePoint) == 0;
+
+        protected override string TransformEntry(ref FileSystemEntry entry) => entry.ToFullPath();
+    }
+
+    /// <summary>
+    /// Attribute des Pfads; null, wenn er fehlt (auch sein Ordner oder Laufwerk) oder kein gültiger Pfad ist. Verweigert
+    /// Windows die Auskunft (etwa ein nicht lesbarer Ordner darüber) oder antwortet das Laufwerk nicht, wirft es
+    /// (<see cref="UnauthorizedAccessException"/>, <see cref="IOException"/>); <see cref="File.Exists"/> sagte dann nur „nein“.
+    /// </summary>
+    private static FileAttributes? AttributesOrNull(string path)
+    {
+        try
+        {
+            return File.GetAttributes(path);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException or PathTooLongException or ArgumentException or NotSupportedException
+            || (ex is IOException && (ex.HResult & unchecked((int)0xFFFF0000)) == Win32Facility
+                && (ex.HResult & 0xFFFF) is ErrorInvalidDrive or ErrorInvalidName or ErrorBadPathName or ErrorDirectory))
+        {
+            return null;
+        }
     }
 
     public IEnumerable<string> EnumerateFilesCompletely(string directory, string searchPattern)

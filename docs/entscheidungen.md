@@ -238,7 +238,10 @@ wachsenden Pausen erneut (zusammen höchstens 1,2 s, die fertige temporäre Date
 das Speichern als gescheitert, und die alte Datei bleibt ganz. Eine dabei schon gelesene fremde Änderung gilt weiter als
 neu (sonst schriebe das nächste Speichern den alten Stand darüber); „zuletzt gespielt“ und gemerkte EXEs der
 Sitzungslogik, deren Speichern scheiterte, holt das nächste Speichern nach, ein älteres „zuletzt gespielt“ nie über ein
-neueres (Prüfung 2026-10-20, `ConfigSaveTests`, `PhysicalFileSystemTests`).
+neueres. Nur im Speicher bleiben sie nicht: Nach 30 s versucht `ConfigService` es einmal von selbst erneut
+(`PendingRetryDelay`; scheitert auch das, startet kein weiterer Zeitgeber), und das Beenden speichert, was offen ist
+(`FlushPending` in `AutomationHost.DisposeAsync` und, für Abmelden und Herunterfahren, in `App.OnExit`; Prüfung
+2026-10-20, `ConfigSaveTests`, `PhysicalFileSystemTests`).
 
 **E56 Bibliothek wird bei jedem Start im Hintergrund neu eingelesen** (nach dem Start der Automatik), damit neue Spiele
 markiert erscheinen, ohne dass jemand „Neu einlesen“ drückt. Danach wird der Speicher zurückgegeben, wenn kein Fenster
@@ -1054,8 +1057,13 @@ Launcher mitten in einem Update sein.
   „nicht installiert“ macht: Das Einlesen findet Steam nicht (dann gelten alle seine Spiele als nicht installiert,
   `LibraryMerger` markiert nur bei abgestürztem Scanner nichts), oder Steam steckt in einem Update ohne „vollständig
   installiert“. Was nicht antwortet (Laufwerk, Netzwerkfreigabe, Ordner) oder nicht lesbar ist, gilt als „nicht prüfbar“
-  und bekommt ebenfalls die Warnung (ein getrenntes Netzlaufwerk ist kein „deinstalliert“); als „nicht verbunden“ gilt
-  ein Laufwerk nur, wenn Windows das so beantwortet. Jedes Laufwerk und jede Freigabe wird einmal gefragt, Ordner nur auf
+  und bekommt ebenfalls die Warnung (ein getrenntes Netzlaufwerk ist kein „deinstalliert“): auch ein Installationsordner,
+  den Windows nicht auflisten lässt (wie `C:\System Volume Information`), einer, in dem ohne lesbare EXE ein nicht
+  lesbarer Unterordner liegt, und eine gemerkte EXE oder ein Steam-Manifest in einem nicht lesbaren Ordner
+  (`File.Exists` sagt dort nur „nein“; `IFileSystem.EnumerateFilesUpTo` und `FileExistsOrThrow` melden es, Prüfung
+  2026-10-20). Als „nicht verbunden“ gilt ein Laufwerk nur, wenn Windows das so beantwortet, auch das einer gemerkten EXE
+  auf einem anderen Laufwerk, wenn sonst keine Spur da ist; antwortet die Freigabe einer gemerkten EXE nicht, ist es
+  „nicht prüfbar“. Jedes Laufwerk und jede Freigabe wird einmal gefragt, Ordner nur auf
   erreichbaren; höchstens vier Zugriffe zugleich (ein hängender hält einen Thread), alle zusammen höchstens 2 s. Dauert
   das länger als 250 ms, sagt die Hinweiszeile der Bibliothek bzw. die Karte „Prüfe …“. Wie das Einlesen „nicht
   installiert“ setzt, bleibt unverändert (ein fehlender Launcher kann auch deinstalliert sein); die Warnung lässt die
@@ -1107,8 +1115,9 @@ Launcher mitten in einem Update sein.
 - Sammel-Entfernen in derselben Karte: „Einstellungen aller nicht installierten Spiele entfernen…“ (nur Launcher-Spiele,
   ohne solche mit Sitzung; laufen alle, sagt die Karte das, statt still nichts zu tun), Rückfrage mit einem Punkt je
   Spiel: der Name, darunter gedämpft die Spur einer Installation („Laufwerk F: nicht verbunden“, „EXE‑Datei noch da“,
-  „bei Steam noch eingetragen“, „nicht prüfbar“) und was verloren geht; dazu die Warnung zu Laufwerken und Spuren und
-  das Häkchen für die Verknüpfungen. Es gilt sofort, unabhängig von
+  „bei Steam noch eingetragen“, „nicht prüfbar“) und was verloren geht (das Datum von „zuletzt gespielt“ mit geschützten
+  Leerzeichen, damit die Zeile nicht mitten darin umbricht, Prüfung 2026-10-20); dazu die Warnung zu Laufwerken und
+  Spuren und das Häkchen für die Verknüpfungen. Es gilt sofort, unabhängig von
   „Speichern“; ob ein Spiel noch entfernbar ist und keine Sitzung hat, prüft wie beim einzelnen erst das Schreiben.
   Danach werden die Karte und die Zahl der Spiele in der Navigation neu gezählt; hat ein Einlesen alle wiedergefunden,
   sagt die Meldung nur, dass sie bleiben.

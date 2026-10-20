@@ -19,7 +19,10 @@ public enum InstallSign
     /// <summary>Keine Spur: kein Programm mehr da. Ein Restordner mit Spielständen, Einstellungen oder Protokollen zählt nicht.</summary>
     None,
 
-    /// <summary>Das Laufwerk des Installationsordners ist nicht verbunden (<see cref="InstallTrace.Drive"/>, etwa „F:“).</summary>
+    /// <summary>
+    /// Das Laufwerk des Installationsordners oder einer gemerkten EXE ist nicht verbunden (<see cref="InstallTrace.Drive"/>,
+    /// etwa „F:“).
+    /// </summary>
     DriveMissing,
 
     /// <summary>Eine EXE des Spiels ist noch da: eine gemerkte oder hinzugefügte oder eine im Installationsordner.</summary>
@@ -107,10 +110,12 @@ public sealed class UninstalledGameCleanup(
     /// <item>Eine gemerkte oder hinzugefügte EXE (voller Pfad) ist noch da, oder im Installationsordner liegt bis
     /// <see cref="ExecutableSearchDepth"/> Ebenen tief eine EXE, ohne verknüpften Ordnern zu folgen (<see cref="InstallSign.Program"/>).</item>
     /// <item>Bei Steam steht <c>appmanifest_&lt;ID&gt;.acf</c> noch in der Bibliothek (<see cref="InstallSign.SteamManifest"/>).</item>
+    /// <item>Sonst: Eine gemerkte EXE liegt auf einem nicht verbundenen Laufwerk (<see cref="InstallSign.DriveMissing"/>).</item>
     /// </list>
     /// Was nicht antwortet (Laufwerk, Freigabe, Ordner) oder nicht lesbar ist, gilt als <see cref="InstallSign.Unchecked"/>,
-    /// nicht als „keine Spur“: Ein getrenntes Netzlaufwerk soll die Warnung bekommen. Höchstens <see cref="MaxParallelChecks"/>
-    /// Zugriffe gleichzeitig, alle zusammen höchstens <see cref="CheckTimeout"/> lang.
+    /// nicht als „keine Spur“: Ein getrenntes Netzlaufwerk soll die Warnung bekommen, ebenso ein Installationsordner, den
+    /// Windows nicht auflisten lässt, oder eine gemerkte EXE in einem nicht lesbaren Ordner. Höchstens
+    /// <see cref="MaxParallelChecks"/> Zugriffe gleichzeitig, alle zusammen höchstens <see cref="CheckTimeout"/> lang.
     /// </summary>
     public async Task<IReadOnlyList<InstallTrace>> CheckInstallsAsync(IReadOnlyList<GameConfig> games)
     {
@@ -156,12 +161,25 @@ public sealed class UninstalledGameCleanup(
         }
 
         var unclear = false;
+        string? missingDrive = null;
         async Task<bool> Found(string path, Func<bool> probe)
         {
-            if (RootOf(path) is { } root && await roots[root].ConfigureAwait(false) != true)
+            if (RootOf(path) is { } root)
             {
-                unclear |= await roots[root].ConfigureAwait(false) is null;
-                return false; // Laufwerk nicht verbunden: dort ist nichts
+                // Eine gemerkte EXE auf einem anderen Laufwerk: Ist es nicht verbunden, ist sie vielleicht noch dort; antwortet
+                // es nicht oder ist die Freigabe nicht erreichbar, ist es nicht zu klären.
+                var answer = await roots[root].ConfigureAwait(false);
+                if (answer == false && root.Length == 2)
+                {
+                    missingDrive ??= root;
+                    return false;
+                }
+
+                if (answer != true)
+                {
+                    unclear = true;
+                    return false;
+                }
             }
 
             var found = await probes.AskAsync(probe).ConfigureAwait(false);
@@ -169,9 +187,10 @@ public sealed class UninstalledGameCleanup(
             return found == true;
         }
 
+        // Nicht lesbar heißt „nicht zu klären“, nicht „nicht da“: FileExistsOrThrow und EnumerateFilesUpTo werfen dann.
         foreach (var exe in RememberedExecutables(game))
         {
-            if (await Found(exe, () => fileSystem.FileExists(exe)).ConfigureAwait(false))
+            if (await Found(exe, () => fileSystem.FileExistsOrThrow(exe)).ConfigureAwait(false))
             {
                 return new InstallTrace(InstallSign.Program);
             }
@@ -182,12 +201,14 @@ public sealed class UninstalledGameCleanup(
             return new InstallTrace(InstallSign.Program);
         }
 
-        if (SteamManifestOf(game, installDir) is { } manifest && await Found(manifest, () => fileSystem.FileExists(manifest)).ConfigureAwait(false))
+        if (SteamManifestOf(game, installDir) is { } manifest && await Found(manifest, () => fileSystem.FileExistsOrThrow(manifest)).ConfigureAwait(false))
         {
             return new InstallTrace(InstallSign.SteamManifest);
         }
 
-        return unclear ? new InstallTrace(InstallSign.Unchecked) : InstallTrace.None;
+        return missingDrive is not null ? InstallTrace.MissingDrive(missingDrive)
+            : unclear ? new InstallTrace(InstallSign.Unchecked)
+            : InstallTrace.None;
     }
 
     /// <summary>Gemerkte und hinzugefügte EXEs mit vollem Pfad (ein bloßer Dateiname sagt nichts über die Installation).</summary>

@@ -356,12 +356,13 @@ public sealed class UninstalledCleanupTests
     public async Task Uninstalled_install_check_counts_a_remembered_exe_that_still_exists()
     {
         // Restordner ohne EXE, aber eine gemerkte EXE (auch außerhalb des Ordners) ist noch da: vielleicht noch installiert.
-        // Gemerkte EXEs, die fehlen oder auf einem nicht verbundenen Laufwerk liegen, und bloße Dateinamen zählen nicht.
+        // Gemerkte EXEs, die fehlen, und bloße Dateinamen zählen nicht (eine auf einem nicht verbundenen Laufwerk schon, siehe
+        // Uninstalled_install_check_names_the_missing_drive_of_a_remembered_exe).
         _fs.Inner.AddDirectory(@"C:\");
         _fs.Inner.AddFile(@"C:\Spiele\Reste\Klippe\Saved\Logs\Klippe.log", "x");
         _fs.Inner.AddFile(@"C:\Werkzeuge\Starter.exe", "x");
         var withExe = Uninstalled(@"C:\Spiele\Reste", detected: [@"C:\Spiele\Reste\KlippeDemo.exe", @"C:\Werkzeuge\Starter.exe"]);
-        var gone = Uninstalled(@"C:\Spiele\Reste", detected: [@"C:\Spiele\Reste\KlippeDemo.exe", @"Z:\Weg\Spiel.exe"]);
+        var gone = Uninstalled(@"C:\Spiele\Reste", detected: [@"C:\Spiele\Reste\KlippeDemo.exe", @"C:\Werkzeuge\Alt\Starter.exe"]);
         var extra = Uninstalled(@"C:\Spiele\Fehlt");
         extra.ExtraExecutables = ["Starter.exe", @"C:\Werkzeuge\Starter.exe"];
         var nameOnly = Uninstalled(@"C:\Spiele\Fehlt");
@@ -370,6 +371,115 @@ public sealed class UninstalledCleanupTests
         var traces = await Cleanup().CheckInstallsAsync([withExe, gone, extra, nameOnly]);
 
         Assert.Equal([new InstallTrace(InstallSign.Program), InstallTrace.None, new InstallTrace(InstallSign.Program), InstallTrace.None], traces);
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_names_the_missing_drive_of_a_remembered_exe()
+    {
+        // Prüfung 2026-10-20: Eine gemerkte EXE auf einem anderen, nicht verbundenen Laufwerk galt als „nicht da“. Sie ist
+        // vielleicht noch dort („Laufwerk Z: nicht verbunden“, das erste in der Reihenfolge der EXEs); antwortet die Freigabe
+        // einer gemerkten EXE nicht, ist es nicht zu klären. Eine EXE, die noch da ist, geht beidem vor.
+        _fs.Inner.AddDirectory(@"C:\").AddDirectory(@"\\nas\spiele");
+        _fs.Inner.AddFile(@"C:\Spiele\Reste\Klippe\Saved\Logs\Klippe.log", "x");
+        _fs.Inner.AddFile(@"C:\Spiele\Da\Spiel.exe", "x");
+        var onMissingDrive = Uninstalled(@"C:\Spiele\Reste", detected: [@"Z:\Weg\Spiel.exe", @"y:\Auch weg\Spiel.exe"]);
+        var onOfflineShare = Uninstalled(@"C:\Spiele\Reste", detected: [@"\\offline\spiele\Spiel.exe"]);
+        var both = Uninstalled(@"C:\Spiele\Reste", detected: [@"\\offline\spiele\Spiel.exe", @"Z:\Weg\Spiel.exe"]);
+        var stillThere = Uninstalled(@"C:\Spiele\Da", detected: [@"Z:\Weg\Spiel.exe"]);
+        var onReachableShare = Uninstalled(@"C:\Spiele\Reste", detected: [@"\\nas\spiele\Weg\Spiel.exe"]);
+
+        var traces = await Cleanup().CheckInstallsAsync([onMissingDrive, onOfflineShare, both, stillThere, onReachableShare]);
+
+        Assert.Equal(
+            [
+                InstallTrace.MissingDrive("Z:"), new InstallTrace(InstallSign.Unchecked), InstallTrace.MissingDrive("Z:"),
+                new InstallTrace(InstallSign.Program), InstallTrace.None,
+            ],
+            traces);
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_counts_a_remembered_exe_windows_will_not_show_as_unchecked()
+    {
+        // Prüfung 2026-10-20: File.Exists sagt auch „nein“, wenn Windows die Auskunft verweigert; eine gemerkte EXE und das
+        // Steam-Manifest in einem nicht lesbaren Ordner galten so als „nicht da“. Fehlt die Datei dort wirklich, sagt Windows
+        // auch das: keine Spur.
+        _fs.Inner.AddDirectory(@"C:\").AddDirectory(@"D:\");
+        _fs.Inner.AddFile(@"C:\Spiele\Gesperrt\Spiel.exe", "x");
+        _fs.Inner.AddFile(@"D:\Steam-Bibliothek\steamapps\appmanifest_9990140.acf", "x");
+        _fs.Inner.AddFile(@"D:\Steam-Bibliothek\steamapps\common\KlippeDemo\Klippe\Saved\Logs\Klippe.log", "x");
+        var denied = new DenyingFileSystem(_fs, @"C:\Spiele\Gesperrt", @"D:\Steam-Bibliothek\steamapps");
+        var cleanup = new UninstalledGameCleanup(denied, Icons, CustomArt, _icons, _artwork, Shortcuts());
+        Assert.False(denied.FileExists(@"C:\Spiele\Gesperrt\Spiel.exe")); // so sah es die Prüfung vorher
+
+        var traces = await cleanup.CheckInstallsAsync(
+        [
+            Uninstalled(@"C:\Spiele\Fehlt", detected: [@"C:\Spiele\Gesperrt\Spiel.exe"]),
+            Uninstalled(@"C:\Spiele\Fehlt", detected: [@"C:\Spiele\Gesperrt\Fehlt.exe"]),
+            Uninstalled(@"D:\Steam-Bibliothek\steamapps\common\KlippeDemo", "9990140"),
+            Uninstalled(@"D:\Steam-Bibliothek\steamapps\common\KlippeDemo", "9990160"),
+        ]);
+
+        var notCheckable = new InstallTrace(InstallSign.Unchecked);
+        Assert.Equal([notCheckable, InstallTrace.None, notCheckable, InstallTrace.None], traces);
+    }
+
+    [Fact]
+    public async Task Uninstalled_install_check_on_the_real_disk_counts_folders_windows_will_not_show_as_unchecked()
+    {
+        // Prüfung 2026-10-20 an der echten Platte: Einen Installationsordner, den Windows nicht auflisten lässt (wie
+        // C:\System Volume Information), hielt die Prüfung für „keine EXE“, ebenso einen, in dem nur ein nicht lesbarer
+        // Unterordner liegt, und eine gemerkte EXE in einem nicht lesbaren Ordner. Das ist „nicht prüfbar“ (E90). Eigene
+        // Testordner im Temp-Ordner, die Rechte setzt AccessDenial und nimmt sie wieder zurück.
+        var dir = Path.Combine(Path.GetTempPath(), "hdrpilot-pruefung-" + Guid.NewGuid().ToString("N")[..8]);
+        string Put(string relative)
+        {
+            var path = Path.Combine(dir, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, "x");
+            return path;
+        }
+
+        var systemFolder = Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, "System Volume Information");
+        try
+        {
+            Put(@"Gesperrt\Spiel.exe");
+            Put(@"Teils\Spiel.exe");
+            Put(@"Teils\Gesperrt\Versteckt.exe");
+            Put(@"Reste\Saved\Spiel.sav");
+            Put(@"Reste\Gesperrt\Versteckt.exe");
+            var hidden = Put(@"Versteckt\Spiel.exe");
+            Put(@"Leer\Saved\Spiel.sav");
+            using (new AccessDenial()
+                .DenyListing(Path.Combine(dir, "Gesperrt")).DenyListing(Path.Combine(dir, @"Teils\Gesperrt")).DenyListing(Path.Combine(dir, @"Reste\Gesperrt"))
+                .DenyAttributes(hidden).DenyListing(Path.Combine(dir, "Versteckt")))
+            {
+                Assert.True(Directory.Exists(systemFolder), "Vorbedingung: " + systemFolder + " fehlt");
+                Assert.Throws<UnauthorizedAccessException>(() => Directory.GetFiles(systemFolder)); // da, aber nicht aufzulisten
+                var cleanup = new UninstalledGameCleanup(PhysicalFileSystem.Instance, Icons, CustomArt, _icons, _artwork, Shortcuts());
+
+                var traces = await cleanup.CheckInstallsAsync(
+                [
+                    Uninstalled(systemFolder),
+                    Uninstalled(Path.Combine(dir, "Gesperrt")),
+                    Uninstalled(Path.Combine(dir, "Teils")),
+                    Uninstalled(Path.Combine(dir, "Reste")),
+                    Uninstalled(Path.Combine(dir, "Leer"), detected: [hidden]),
+                    Uninstalled(Path.Combine(dir, "Leer"), detected: [Path.Combine(dir, @"Versteckt\Fehlt.exe")]),
+                    Uninstalled(Path.Combine(dir, "Leer")),
+                ]);
+
+                var notCheckable = new InstallTrace(InstallSign.Unchecked);
+                Assert.Equal([notCheckable, notCheckable, new InstallTrace(InstallSign.Program), notCheckable, notCheckable, InstallTrace.None, InstallTrace.None], traces);
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
     }
 
     [Fact]

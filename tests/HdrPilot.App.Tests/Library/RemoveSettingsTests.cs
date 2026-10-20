@@ -518,8 +518,9 @@ public sealed class RemoveSettingsTests
 
         var request = RemoveSettingsText.ForGame(game, InstallTrace.None, 0);
 
+        var date = LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime()).Replace(' ', RemoveSettingsText.NoBreakSpace);
         Assert.Equal(
-            [new ConfirmDetail(LibraryText.Format(LibraryStrings.RemoveSettings_LossChosenMany, 2)), new ConfirmDetail(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime())))],
+            [new ConfirmDetail(LibraryText.Format(LibraryStrings.RemoveSettings_LossChosenMany, 2)), new ConfirmDetail(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, date))],
             request.Details);
         game.Artwork = new GameArtworkChoice { Cover = "alt:cover.png" };
         game.LastPlayed = null;
@@ -545,5 +546,26 @@ public sealed class RemoveSettingsTests
             Assert.DoesNotContain("EXE-", t, StringComparison.Ordinal);
         });
         Assert.Equal("4 ausgeschlossene EXE\u2011Dateien", LibraryText.Format(LibraryStrings.RemoveSettings_LossExcludedMany, 4));
+    }
+
+    [Fact]
+    public void RemoveSettings_last_played_date_never_breaks_inside()
+    {
+        // Pr\u00fcfung 2026-10-20: In der ged\u00e4mpften Zeile unter einem Namen (Sammel-Entfernen) brach das Datum um (\u201e12. Okt.\u201c |
+        // \u201e2026\u201c). Im Hinweis stehen darin gesch\u00fctzte Leerzeichen (U+00A0); in Liste und Titelbereich bleibt es, wie es ist.
+        var game = Game(GameSource.Steam, "1304930", "The Outlast Trials", installed: false);
+        var played = new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.Zero); // in jeder Zeitzone Europas der 12.
+        game.LastPlayed = played;
+        var inList = LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime());
+        Assert.Equal("12. Okt. 2026", inList); // Gegenprobe: Liste und Titelbereich unver\u00e4ndert, mit gew\u00f6hnlichen Leerzeichen
+
+        var note = Assert.Single(RemoveSettingsText.ForGames([game], [InstallTrace.None], 0).Details).Note;
+        var single = Assert.Single(RemoveSettingsText.ForGame(game, InstallTrace.None, 0).Details).Text;
+
+        var unbreakable = "12.\u00a0Okt.\u00a02026";
+        Assert.Equal(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, unbreakable), note);
+        Assert.Equal(note, single);
+        Assert.StartsWith("Zuletzt gespielt am ", note, StringComparison.Ordinal); // davor darf es umbrechen
+        Assert.DoesNotContain(inList, note, StringComparison.Ordinal);
     }
 }

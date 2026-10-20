@@ -137,10 +137,19 @@ public static class SourceFiles
     }
 }
 
-/// <summary>Dateisystem, das beim Auflisten bestimmter Ordner den Zugriff verweigert (wie geschützte Systemordner).</summary>
+/// <summary>
+/// Dateisystem, das beim Auflisten bestimmter Ordner den Zugriff verweigert (wie geschützte Systemordner). Wie Windows sagt es
+/// für eine Datei darin, die es gibt, „Zugriff verweigert“ (<see cref="IFileSystem.FileExistsOrThrow"/>) bzw. nur „nein“
+/// (<see cref="IFileSystem.FileExists"/>); dass eine fehlt, sagt es auch dort.
+/// </summary>
 public sealed class DenyingFileSystem(IFileSystem inner, params string[] deniedDirectories) : IFileSystem
 {
-    public bool FileExists(string path) => inner.FileExists(path);
+    public bool FileExists(string path) => !IsDenied(Path.GetDirectoryName(path) ?? string.Empty) && inner.FileExists(path);
+
+    public bool FileExistsOrThrow(string path) =>
+        IsDenied(Path.GetDirectoryName(path) ?? string.Empty) && inner.FileExists(path)
+            ? throw new UnauthorizedAccessException("Zugriff verweigert: " + path)
+            : inner.FileExistsOrThrow(path);
 
     public bool DirectoryExists(string path) => inner.DirectoryExists(path);
 

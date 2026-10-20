@@ -121,6 +121,18 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Abmelden oder Herunterfahren beendet die App ohne „Beenden“ im Tray (und ohne AutomationHost.DisposeAsync): Was die
+        // Sitzungslogik nicht speichern konnte, jetzt speichern (E55). Nach „Beenden“ ist nichts mehr offen. Das Beenden darf
+        // daran nie scheitern.
+        try
+        {
+            _ = _host?.Config.FlushPending();
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+        }
+
         base.OnExit(e);
     }
 

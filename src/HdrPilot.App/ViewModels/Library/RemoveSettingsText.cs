@@ -19,6 +19,9 @@ public static class RemoveSettingsText
     /// </summary>
     public const string NoteSeparator = " · ";
 
+    /// <summary>Geschütztes Leerzeichen (U+00A0): Dort bricht keine Zeile um.</summary>
+    public const char NoBreakSpace = '\u00A0';
+
     /// <summary>Rückfrage für ein Spiel.</summary>
     /// <param name="trace">Spuren einer Installation (<see cref="UninstalledGameCleanup.CheckInstallAsync"/>).</param>
     /// <param name="shortcuts">Zahl der gefundenen HDRpilot-Verknüpfungen (0: kein Häkchen).</param>
@@ -111,8 +114,10 @@ public static class RemoveSettingsText
         AddCount(list, loss.ChosenImages, LibraryStrings.RemoveSettings_LossChosenOne, LibraryStrings.RemoveSettings_LossChosenMany);
         if (loss.LastPlayed is { } played)
         {
-            // Datum wie in Liste und Titelbereich („12. Sept. 2026“).
-            list.Add(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime())));
+            // Datum wie in Liste und Titelbereich („12. Sept. 2026“), hier mit geschützten Leerzeichen: In der gedämpften Zeile
+            // unter einem Namen (Sammel-Entfernen) brach es sonst mitten im Datum um („12. Okt.“ | „2026“).
+            var date = LibraryText.Format(LibraryStrings.When_Date, played.ToLocalTime()).Replace(' ', NoBreakSpace);
+            list.Add(LibraryText.Format(LibraryStrings.RemoveSettings_LossLastPlayed, date));
         }
 
         if (list.Count == 0)

@@ -11,7 +11,8 @@ namespace HdrPilot.Tests.Platform;
 /// Die echte Platte in einem eigenen Temp-Ordner (Prüfung 2026-10-20): Ersetzen der Konfiguration, während ein anderer Prozess
 /// sie liest (Windows meldet dann „Zugriff verweigert“, auch wenn der Leser das Löschen freigibt), begrenzte Suche nach EXEs
 /// ohne verknüpften Ordnern zu folgen, vollständiges Auflisten, das verknüpfte Ordner meldet, und derselbe Ordner auf anderem
-/// Weg (Junction, 8.3-Name, <c>\\?\</c>). Junctions legt <c>mklink /J</c> an, nur im Temp-Ordner des Tests.
+/// Weg (Junction, 8.3-Name, <c>\\?\</c>). Junctions legt <c>mklink /J</c> an, nur im Temp-Ordner des Tests; verweigerte Rechte
+/// (nicht lesbare Ordner und Dateien) setzt <see cref="AccessDenial"/> nur an eigenen Testdateien und nimmt sie wieder zurück.
 /// </summary>
 public sealed partial class PhysicalFileSystemTests : IDisposable
 {
@@ -31,7 +32,7 @@ public sealed partial class PhysicalFileSystemTests : IDisposable
 
             Directory.Delete(_dir, recursive: true);
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
     }
@@ -134,6 +135,84 @@ public sealed partial class PhysicalFileSystemTests : IDisposable
         // Die Standardfassung (Attrappen) begrenzt die Tiefe genauso.
         var memory = new InMemoryFileSystem().AddFile(@"C:\Spiel\Oben.exe", "x").AddFile(@"C:\Spiel\a\b\c\d\Tief.exe", "x").AddFile(@"C:\Spiel\a\b\c\d\e\ZuTief.exe", "x");
         Assert.Equal([@"C:\Spiel\a\b\c\d\Tief.exe", @"C:\Spiel\Oben.exe"], ((IFileSystem)memory).EnumerateFilesUpTo(@"C:\Spiel", "*.exe", 4).Order(StringComparer.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Uninstalled_exe_search_reports_folders_it_cannot_read_instead_of_skipping_them()
+    {
+        // Prüfung 2026-10-20: Einen Installationsordner, den Windows nicht auflisten lässt (wie C:\System Volume Information),
+        // übersprang die Suche still; die Prüfung vor „Einstellungen entfernen…“ hielt ihn für „keine EXE“ statt für „nicht
+        // prüfbar“ (E90). Jetzt liefert sie erst alle lesbaren Treffer und meldet danach den Ordner, den sie nicht lesen konnte.
+        var spiel = Path.Combine(_dir, "Spiel");
+        var exe = Put(@"Spiel\Spiel.exe");
+        Put(@"Spiel\Gesperrt\Versteckt.exe");
+        var gesperrt = Path.Combine(_dir, "Gesperrt");
+        Put(@"Gesperrt\Spiel.exe");
+        Put(@"Darunter\Spiel\Gesperrt\Versteckt.exe");
+        Put(@"Tief\a\b\c\d\Gesperrt\Versteckt.exe");
+        Put(@"Verborgen\Spiel\Spiel.exe");
+        using var denial = new AccessDenial()
+            .DenyListing(Path.Combine(spiel, "Gesperrt")).DenyListing(gesperrt).DenyListing(Path.Combine(_dir, @"Darunter\Spiel\Gesperrt"))
+            .DenyListing(Path.Combine(_dir, @"Tief\a\b\c\d\Gesperrt"))
+            .DenyAttributes(Path.Combine(_dir, @"Verborgen\Spiel")).DenyListing(Path.Combine(_dir, "Verborgen"));
+        Assert.True(Directory.Exists(gesperrt)); // wie System Volume Information: da, aber nicht aufzulisten
+        Assert.Throws<UnauthorizedAccessException>(() => Directory.GetFiles(gesperrt));
+        Assert.Empty(Directory.EnumerateFiles(gesperrt, "*.exe", new EnumerationOptions { IgnoreInaccessible = true })); // so sah es vorher aus
+
+        // Ein Unterordner nicht lesbar: erst der lesbare Treffer, dann der Fehler; wer beim ersten Treffer aufhört, merkt nichts.
+        var seen = new List<string>();
+        Assert.Throws<UnauthorizedAccessException>(() =>
+        {
+            foreach (var file in PhysicalFileSystem.Instance.EnumerateFilesUpTo(spiel, "*.exe", 4))
+            {
+                seen.Add(file);
+            }
+        });
+        Assert.Equal([exe], seen);
+        Assert.True(PhysicalFileSystem.Instance.EnumerateFilesUpTo(spiel, "*.exe", 4).Any());
+
+        // Der Ordner selbst oder nur ein Unterordner ohne lesbare EXE: nicht zu klären.
+        Assert.Throws<UnauthorizedAccessException>(() => PhysicalFileSystem.Instance.EnumerateFilesUpTo(gesperrt, "*.exe", 4).Any());
+        Assert.Throws<UnauthorizedAccessException>(() => PhysicalFileSystem.Instance.EnumerateFilesUpTo(Path.Combine(_dir, @"Darunter\Spiel"), "*.exe", 4).Any());
+
+        // Der Ordner, dessen Ordner darüber nicht lesbar ist und der selbst keine Auskunft gibt: Directory.Exists sagt „nein“,
+        // fehlen tut er nicht.
+        Assert.False(Directory.Exists(Path.Combine(_dir, @"Verborgen\Spiel")));
+        Assert.Throws<UnauthorizedAccessException>(() => PhysicalFileSystem.Instance.EnumerateFilesUpTo(Path.Combine(_dir, @"Verborgen\Spiel"), "*.exe", 4).Any());
+
+        // Gegenproben: Unterhalb der Suchtiefe stört ein nicht lesbarer Ordner nicht (dort wird nicht gesucht), ebenso nicht
+        // ohne Unterordner; ein fehlender Ordner und eine Datei statt eines Ordners sind leer.
+        Assert.Empty(PhysicalFileSystem.Instance.EnumerateFilesUpTo(Path.Combine(_dir, "Tief"), "*.exe", 4));
+        Assert.Equal([exe], PhysicalFileSystem.Instance.EnumerateFilesUpTo(spiel, "*.exe", 0));
+        Assert.Empty(PhysicalFileSystem.Instance.EnumerateFilesUpTo(Path.Combine(_dir, "Fehlt"), "*.exe", 4));
+        Assert.Empty(PhysicalFileSystem.Instance.EnumerateFilesUpTo(exe, "*.exe", 4));
+    }
+
+    [Fact]
+    public void Uninstalled_file_probe_tells_a_missing_file_from_one_windows_will_not_show()
+    {
+        // Prüfung 2026-10-20: File.Exists sagt auch „nein“, wenn Windows die Auskunft verweigert (eine gemerkte EXE in einem
+        // nicht lesbaren Ordner). FileExistsOrThrow wirft dann; fehlt sie wirklich, sagt Windows das auch dort.
+        var hidden = Put(@"Gesperrt\Spiel.exe");
+        var open = Put(@"Offen\Spiel.exe");
+        using var denial = new AccessDenial().DenyAttributes(hidden).DenyListing(Path.Combine(_dir, "Gesperrt"));
+        var files = PhysicalFileSystem.Instance;
+
+        Assert.False(File.Exists(hidden)); // so sah es vorher aus
+        Assert.Throws<UnauthorizedAccessException>(() => files.FileExistsOrThrow(hidden));
+        Assert.False(files.FileExistsOrThrow(Path.Combine(_dir, @"Gesperrt\Fehlt.exe")));
+
+        // Gegenproben: vorhanden, fehlend, ein Ordner, ein fehlender Ordner, eine Datei als Ordner, ein ungültiger Name und ein
+        // Laufwerk, das es nicht gibt.
+        Assert.True(files.FileExistsOrThrow(open));
+        Assert.False(files.FileExistsOrThrow(Path.Combine(_dir, @"Offen\Fehlt.exe")));
+        Assert.False(files.FileExistsOrThrow(Path.Combine(_dir, "Offen")));
+        Assert.False(files.FileExistsOrThrow(Path.Combine(_dir, @"Fehlt\Spiel.exe")));
+        Assert.False(files.FileExistsOrThrow(open + @"\Spiel.exe"));
+        Assert.False(files.FileExistsOrThrow(Path.Combine(_dir, "Spiel<1>.exe")));
+        var drives = DriveInfo.GetDrives().Select(d => char.ToUpperInvariant(d.Name[0])).ToHashSet();
+        var freeDrive = Enumerable.Range('D', 'Z' - 'D' + 1).Select(c => (char)c).First(c => !drives.Contains(c) && !Directory.Exists(c + @":\"));
+        Assert.False(files.FileExistsOrThrow(freeDrive + @":\Spiele\Spiel.exe"));
     }
 
     [Fact]

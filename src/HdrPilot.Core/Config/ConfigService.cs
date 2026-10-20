@@ -31,9 +31,11 @@ public sealed class ConfigService : ISessionConfigSource
     private readonly object _gate = new();
     private readonly Mutex _fileLock;
 
-    // Aufzeichnungen der Sitzungslogik, deren Speichern scheiterte (Datei gesperrt): je Spiel, beim nächsten Speichern nachgeholt.
+    // Aufzeichnungen der Sitzungslogik, deren Speichern scheiterte (Datei gesperrt): je Spiel, beim nächsten Speichern nachgeholt,
+    // spätestens beim einmaligen Versuch nach PendingRetryDelay oder beim Beenden (FlushPending).
     private readonly Dictionary<string, List<string>> _pendingExecutables = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DateTimeOffset> _pendingLastPlayed = new(StringComparer.OrdinalIgnoreCase);
+    private bool _retryScheduled;
     private AppConfig _current;
     private long _revision;
     private string? _lastText;
@@ -60,6 +62,13 @@ public sealed class ConfigService : ISessionConfigSource
     }
 
     public event EventHandler? Changed;
+
+    /// <summary>
+    /// So lange nach einer Aufzeichnung der Sitzungslogik, deren Speichern scheiterte (die Datei war gesperrt, etwa von einem
+    /// Sicherungs- oder Synchronisierungsprogramm), wird einmal erneut gespeichert (<see cref="FlushPending"/>). Scheitert
+    /// auch das, holt sie das nächste Speichern oder das Beenden nach.
+    /// </summary>
+    public static TimeSpan PendingRetryDelay { get; } = TimeSpan.FromSeconds(30);
 
     public AppConfig Current => Volatile.Read(ref _current);
 
@@ -223,6 +232,7 @@ public sealed class ConfigService : ISessionConfigSource
             }
 
             _logger.LogWarning("Gemerkte Spiel-EXEs nicht gespeichert, beim nächsten Speichern nachgeholt: {Error}", ex.Message);
+            SchedulePendingRetry();
         }
     }
 
@@ -265,6 +275,7 @@ public sealed class ConfigService : ISessionConfigSource
             }
 
             _logger.LogWarning("Zuletzt gespielt nicht gespeichert, beim nächsten Speichern nachgeholt: {Error}", ex.Message);
+            SchedulePendingRetry();
         }
     }
 
@@ -282,6 +293,75 @@ public sealed class ConfigService : ISessionConfigSource
                 g.LastPlayed = when;
             }
         });
+    }
+
+    /// <summary>
+    /// Speichert jetzt, was die Sitzungslogik aufzeichnete, aber nicht speichern konnte (beim Beenden und einmal nach
+    /// <see cref="PendingRetryDelay"/>); ohne Offenes schreibt es nichts. Scheitert das Speichern wieder, wirft es nicht: Das
+    /// Offene bleibt für das nächste Speichern. True, wenn nichts mehr offen ist.
+    /// </summary>
+    public bool FlushPending()
+    {
+        lock (_gate)
+        {
+            if (_pendingExecutables.Count == 0 && _pendingLastPlayed.Count == 0)
+            {
+                return true;
+            }
+        }
+
+        try
+        {
+            Update(_ => { }); // nimmt das Offene mit (ApplyPending)
+            _logger.LogInformation("Aufzeichnungen der Sitzungslogik nachträglich gespeichert.");
+            return true;
+        }
+        catch (ConfigSaveException ex)
+        {
+            _logger.LogWarning("Aufzeichnungen der Sitzungslogik weiter nicht gespeichert, beim nächsten Speichern nachgeholt: {Error}", ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>Ein Versuch nach <see cref="PendingRetryDelay"/>, solange keiner wartet (nach einer gescheiterten Aufzeichnung).</summary>
+    private void SchedulePendingRetry()
+    {
+        lock (_gate)
+        {
+            if (_retryScheduled)
+            {
+                return;
+            }
+
+            _retryScheduled = true;
+        }
+
+        _ = RetryPendingAsync();
+    }
+
+    private async Task RetryPendingAsync()
+    {
+        try
+        {
+            try
+            {
+                await _clock.Delay(PendingRetryDelay).ConfigureAwait(false);
+            }
+            finally
+            {
+                lock (_gate)
+                {
+                    _retryScheduled = false;
+                }
+            }
+
+            _ = FlushPending();
+        }
+        catch (Exception ex)
+        {
+            // Läuft unbeobachtet im Hintergrund: Ein unerwarteter Fehler darf nicht verloren gehen, die App aber nicht stören.
+            _logger.LogWarning(ex, "Erneutes Speichern der Aufzeichnungen der Sitzungslogik gescheitert.");
+        }
     }
 
     /// <summary>

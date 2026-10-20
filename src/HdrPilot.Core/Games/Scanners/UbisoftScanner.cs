@@ -12,7 +12,7 @@ namespace HdrPilot.Core.Games.Scanners;
 /// <list type="number">
 /// <item>Launcher: HKLM\SOFTWARE\Ubisoft\Launcher über die 32-Bit-Sicht (unter x64 also WOW6432Node). Fehlt der Schlüssel,
 /// gilt der Launcher als nicht installiert.</item>
-/// <item>Je Unterschlüssel von <c>Launcher\Installs\&lt;ID&gt;</c> der Wert <c>InstallDir</c> (gemessen: <c>D:/Ubisoft-Spiele/AFOP/</c>).
+/// <item>Je Unterschlüssel von <c>Launcher\Installs\&lt;ID&gt;</c> der Wert <c>InstallDir</c> (etwa <c>D:/Ubisoft-Spiele/AFOP/</c>, mit <c>/</c> und abschließendem Trenner).
 /// Ohne InstallDir (gemessen bei über Steam installierten Ubisoft-Spielen) oder mit fehlendem Ordner entfällt der Eintrag;
 /// eine Laufwerkswurzel als InstallDir wird als Fehler gemeldet und ebenfalls weggelassen.</item>
 /// <item>Name aus dem Produkt-Cache <c>cache\configuration\configurations</c> (siehe <see cref="UbisoftConfigurationCache"/>),

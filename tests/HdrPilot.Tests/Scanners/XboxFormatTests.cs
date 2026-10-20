@@ -9,7 +9,7 @@ public sealed class XboxFormatTests
 {
     [Theory]
     [InlineData("GamingRoot_C.bin", "XboxGames")]
-    [InlineData("GamingRoot_D.bin", "Xbox Bibliothek")]
+    [InlineData("GamingRoot_D.bin", "Xbox Bibliothek")] // Ordnername erfunden (vor der Veröffentlichung ersetzt)
     public void Gaming_root_real_files_are_parsed(string fixture, string expected)
     {
         var content = GamingRootFile.Parse(Fixture(fixture));

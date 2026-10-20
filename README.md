@@ -1,4 +1,5 @@
 # HDRpilot
+A sleek, 100% vibe-coded Windows app that automatically enables HDR for selected games. Features optional Auto HDR for SDR games, shortcut and Steam launch option integration, an intuitive GUI, and support for Steam, Epic Games, Ubisoft, Battle.net, GOG, and Quiver Launcher.
 
 HDRpilot schaltet Windows-HDR automatisch ein, wenn du ein ausgewähltes Spiel startest, und stellt danach den
 vorherigen Zustand wieder her. Es findet deine installierten Spiele selbst (Steam, Epic, Xbox/Game Pass, GOG,
@@ -22,6 +23,7 @@ unauffällig im Infobereich.
 
 Empfohlen ist der Setup `HDRpilot-Setup-1.5.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
 Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HDRpilot` (siehe „Ohne Installation“).
+Fertige Versionen gibt es unter [GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
 
 1. `HDRpilot-Setup-1.5.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
    Start nach („Weitere Informationen“ → „Trotzdem ausführen“).
@@ -897,6 +899,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
 `HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
 `GATES.md`.
+
+## Lizenz
+
+HDRpilot steht unter der PolyForm Strict License 1.0.0, Copyright Dante_GE. Maßgeblich ist allein der Lizenztext in
+[`LICENSE`](LICENSE); kurz gefasst:
+
+- Erlaubt ist die Nutzung für nicht-kommerzielle Zwecke, etwa privat, zum Lernen und Ausprobieren, als Hobby oder in
+  gemeinnützigen und öffentlichen Einrichtungen.
+- Nicht erlaubt sind Änderungen und darauf aufbauende Werke, jede Weitergabe (verändert oder unverändert) und die
+  kommerzielle Nutzung.
+
+Fremdbestandteile behalten ihre eigenen Lizenzen (siehe „Lizenzen von Fremdbestandteilen“). Eine Ausnahme von der
+PolyForm-Lizenz sind auch die Testdaten aus PCGamingWiki (vor allem `tests\HdrPilot.Tests\Fixtures\Pcgw\`): Sie stehen
+wie ihre Quelle unter CC BY-NC-SA 3.0.
+
+Fertige Versionen (Setup-Datei und Ordner ohne Installation) erscheinen unter
+[GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
 
 ## Lizenzen von Fremdbestandteilen
 

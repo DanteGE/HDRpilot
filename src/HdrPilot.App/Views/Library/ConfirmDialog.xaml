@@ -3,10 +3,20 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
                     xmlns:res="clr-namespace:HdrPilot.App.Resources"
+                    xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Library"
                     AutomationProperties.AutomationId="ConfirmDialog"
                     Width="480" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
                     WindowStartupLocation="CenterOwner">
-    <StackPanel x:Name="Body" Margin="26,4,26,24">
+    <!-- Zeilen: Kopf, Text, Aufzählung (gibt als einzige nach, wenn das Fenster an die Arbeitsfläche stößt), Warnung, Häkchen, Knöpfe -->
+    <Grid x:Name="Body" Margin="26,4,26,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="44" />
@@ -20,14 +30,91 @@
             <TextBlock x:Name="TitleText" Grid.Column="1" Style="{StaticResource Hp.Text.Subtitle}" Margin="16,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"
                        AutomationProperties.AutomationId="ConfirmTitle" />
         </Grid>
-        <TextBlock x:Name="MessageText" Style="{StaticResource Hp.Text.Body}" Margin="60,10,0,24" LineHeight="21"
+        <TextBlock x:Name="MessageText" Grid.Row="1" Style="{StaticResource Hp.Text.Body}" Margin="60,10,0,0" LineHeight="21"
                    Foreground="{DynamicResource Hp.Brush.TextSecondary}" AutomationProperties.AutomationId="ConfirmMessage" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+
+        <!--
+            Aufzählung (E90): was verloren geht bzw. welche Spiele betroffen sind, je Punkt auf Wunsch mit einer gedämpften Zeile
+            darunter. Eine lange Liste scrollt; dann lässt sie sich mit der Tastatur erreichen (Fokusrahmen) und behält rechts
+            Platz für die Bildlaufleiste, die sonst über dem Text läge.
+        -->
+        <DockPanel x:Name="DetailsArea" Grid.Row="2" Margin="60,16,0,0" Visibility="Collapsed">
+            <DockPanel x:Name="DetailsHeaderRow" DockPanel.Dock="Top" Margin="0,0,0,6">
+                <TextBlock x:Name="DetailsHeader" Style="{StaticResource Lib.SectionTitle}" />
+                <Border Style="{StaticResource Lib.SectionLine}" Margin="10,0,0,0" />
+            </DockPanel>
+            <Grid>
+                <ScrollViewer x:Name="DetailsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FocusVisualStyle="{x:Null}"
+                              Focusable="{Binding ComputedVerticalScrollBarVisibility, RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.IsVisible}}"
+                              IsTabStop="{Binding ComputedVerticalScrollBarVisibility, RelativeSource={RelativeSource Self}, Converter={StaticResource Lib.IsVisible}}"
+                              KeyDown="OnDetailsKeyDown" AutomationProperties.AutomationId="ConfirmDetailsScroll">
+                    <ItemsControl x:Name="DetailsList" Focusable="False" IsTabStop="False" Margin="0,0,16,0"
+                                  AutomationProperties.AutomationId="ConfirmDetails">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ConfirmDetail}">
+                                <DockPanel Margin="0,3,0,3">
+                                    <Ellipse Width="5" Height="5" Margin="2,8,11,0" VerticalAlignment="Top" Fill="{DynamicResource Hp.Brush.AccentText}" />
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Text}" FontSize="13" LineHeight="19" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                        <TextBlock Text="{Binding Note}" FontSize="12" LineHeight="17" Margin="0,1,0,0" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource Hp.Brush.TextSecondary}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Note}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+                <Border x:Name="DetailsFocus" IsHitTestVisible="False" Margin="-8,-4,-4,-4" CornerRadius="10" BorderThickness="2"
+                        BorderBrush="{DynamicResource Hp.Brush.FocusRing}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=DetailsScroll}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+            </Grid>
+        </DockPanel>
+
+        <!-- Warnung, wenn das Spiel vielleicht noch installiert ist: etwa Laufwerk nicht verbunden oder EXE noch da (E90) -->
+        <Grid x:Name="WarningArea" Grid.Row="3" Margin="60,16,0,0" Visibility="Collapsed">
+            <Border Style="{StaticResource Lib.StatusTint}" Tag="{x:Static vm:StatusKind.Warning}" />
+            <DockPanel Margin="12,9">
+                <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Warning}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                <TextBlock x:Name="WarningText" TextWrapping="Wrap" FontSize="12.5" LineHeight="18" Foreground="{DynamicResource Hp.Brush.Text}"
+                           AutomationProperties.AutomationId="ConfirmWarning" />
+            </DockPanel>
+        </Grid>
+
+        <!-- Häkchen für etwas Zusätzliches (E90: HDRpilot-Verknüpfungen), anfangs nicht gesetzt -->
+        <CheckBox x:Name="OptionBox" Grid.Row="4" Style="{StaticResource Hp.Shell.CheckCard}" Margin="60,16,0,0" Visibility="Collapsed"
+                  AutomationProperties.AutomationId="ConfirmOption">
+            <StackPanel>
+                <TextBlock x:Name="OptionText" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.Text}" />
+                <TextBlock x:Name="OptionHint" Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Visibility="Collapsed" />
+            </StackPanel>
+        </CheckBox>
+
+        <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
             <Button x:Name="CancelButton" Style="{StaticResource Hp.GhostButton}" IsCancel="True" MinWidth="110"
                     Content="{x:Static res:LibraryStrings.Dialog_Cancel}"
                     AutomationProperties.AutomationId="ConfirmCancel" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}" />
             <Button x:Name="ConfirmButton" Style="{StaticResource Lib.AccentButton}" Margin="10,0,0,0" MinWidth="130" IsDefault="True" Click="OnConfirm"
                     AutomationProperties.AutomationId="ConfirmOk" />
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </infra:ChromeWindow>

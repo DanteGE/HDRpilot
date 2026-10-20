@@ -19,8 +19,11 @@ public sealed class SetupBundle
     public const string Magic = "HDRPILOT-SETUP01";
     public const int FooterLength = 64;
 
-    /// <summary>Einträge, die das Zip enthalten darf (Pfade mit „/“); alles andere wird nie ausgepackt.</summary>
-    public static readonly IReadOnlyList<string> PayloadEntryNames = ["README.md", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"];
+    /// <summary>
+    /// Einträge, die das Zip enthalten darf (Pfade mit „/“); alles andere wird nie ausgepackt. <c>LICENSE</c> (Lizenztext
+    /// von HDRpilot, E92) gibt es ab 1.5.0; ältere Setup-Dateien ohne diesen Eintrag bleiben gültig.
+    /// </summary>
+    public static readonly IReadOnlyList<string> PayloadEntryNames = ["README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"];
 
     private SetupBundle(string path, long exeLength, long payloadLength, byte[] exeSha256)
     {

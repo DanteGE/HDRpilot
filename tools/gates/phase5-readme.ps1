@@ -18,7 +18,10 @@ function Normalize([string]$s) { ($s -replace '\s+', ' ').Trim() }
 
 # --- Fakten aus dem Quelltext ---
 $appArgs = Read-Utf8 'src\HdrPilot.App\AppArguments.cs'
-$devOnlySwitches = @('--snapshot', '--prepare', '--ready-event') # Entwicklerwerkzeug (E54) und interne Absprache Wrapper/Instanz (E75)
+$devOnlySwitches = @('--snapshot', '--prepare', '--ready-event', # Entwicklerwerkzeug (E54) und interne Absprache Wrapper/Instanz (E75)
+    '--snapshot-sizes', '--snapshot-scenes', '--snapshot-themes', '--snapshot-display', '--artwork-report', '--test-hdr-moment', # Bildschirmfotos, Messung und Prüfung der Neugestaltung (E89)
+    '--test-toolbar-search', # Prüfung der Werkzeugleiste (G10.5): Strg+F ohne Tastatureingabe
+    '--settings-probe') # Prüfung der Verträglichkeit (G11.3): Kopie der Ablage wie die Einstellungen speichern
 $appSwitches = @([regex]::Matches($appArgs, '"(--[a-z-]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Where-Object { $_ -notin $devOnlySwitches })
 
 $config = Read-Utf8 'src\HdrPilot.Core\Config\AppConfig.cs'
@@ -61,7 +64,7 @@ $setupLog = '%TEMP%\' + [regex]::Match((Read-Utf8 'src\HdrPilot.App\Setup\SetupL
 
 $uiLabels = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
 $missingResx = @()
-foreach ($resx in 'src\HdrPilot.App\Resources\ShellStrings.resx', 'src\HdrPilot.App\Resources\LibraryStrings.resx', 'src\HdrPilot.App\Resources\CommonStrings.resx', 'src\HdrPilot.App\Resources\SetupStrings.resx') {
+foreach ($resx in 'src\HdrPilot.App\Resources\ShellStrings.resx', 'src\HdrPilot.App\Resources\LibraryStrings.resx', 'src\HdrPilot.App\Resources\CommonStrings.resx', 'src\HdrPilot.App\Resources\SetupStrings.resx', 'src\HdrPilot.App\Resources\ArtworkStrings.resx') {
     if (-not (Test-Path (Join-Path $root $resx))) { $missingResx += $resx; continue }
     ([xml](Read-Utf8 $resx)).root.data | ForEach-Object { [void]$uiLabels.Add((Normalize $_.value)) }
 }

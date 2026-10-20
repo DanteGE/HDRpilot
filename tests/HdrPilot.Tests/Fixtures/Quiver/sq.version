@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<metadata>
+<id>QuiverLauncher</id>
+<title>QuiverLauncher</title>
+<description>QuiverLauncher</description>
+<authors>QuiverLauncher</authors>
+<version>3.5.1</version>
+<channel>win</channel>
+<mainExe>QuiverLauncher.exe</mainExe>
+<os>win</os>
+<rid>win-x64</rid>
+<shortcutLocations>Desktop,StartMenuRoot</shortcutLocations>
+<shortcutAumid>velopack.QuiverLauncher</shortcutAumid>
+<machineArchitecture>x64</machineArchitecture>
+</metadata>
+</package>

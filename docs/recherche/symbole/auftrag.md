@@ -34,18 +34,21 @@
    - Neue Kopie: `%APPDATA%\HDRpilot\config.json` per WMI außerhalb des Claude-Containers nach `%TEMP%` kopieren (E84).
      Im Container sieht man nur die private Kopie.
    - Ziel laut G8.2: 647 von 647 mit eigenem Symbol, mindestens 618 scharf (≥ 48 px).
-   - Vergleich: `messung-vorher/`. Das Messwerkzeug liegt unter `werkzeuge/baseline/` und braucht `HDRpilot.dll` und
-     `HdrPilot.Core.dll` aus einem Build in `..\lib`.
+   - Vergleich: die Messung vor der Änderung (Kennzahlen in `berichte/baseline.md`; die Rohdaten mit der echten
+     Spieleliste wurden vor der Veröffentlichung entfernt). Das Messwerkzeug liegt unter `werkzeuge/baseline/` und
+     braucht `HDRpilot.dll` und `HdrPilot.Core.dll` aus einem Build in `..\lib`.
 4. Zusammenführen nach `phase5/release`. Dabei G8.2 und G8.3 in `GATES.md` belegen, E86 schreiben, alle Gates neu laufen
    lassen.
 
 ## Unterlagen in diesem Ordner
 - `synthese.md`: Ergebnis der Recherche (Ausgangslage 53 Spiele ohne gutes Symbol, lokale Quellenkette).
 - `berichte/`: Einzelberichte (`baseline`, `steam`, `others`, `online`; online wurde vom Nutzer abgelehnt).
-- `messung-vorher/`: Messung vor der Änderung (`report.txt`, Allerweltssymbole und Alternativen, Index aller Symbole).
+- Die Rohdaten der Messung vor der Änderung (`messung-vorher/`: Bericht, Index aller Symbole mit Pfaden) enthielten die
+  echte Spieleliste und wurden vor der Veröffentlichung entfernt; die Kennzahlen stehen in `berichte/baseline.md`.
 - `werkzeuge/`: nur lesende Mess- und Prüfwerkzeuge der Recherche.
   - Fingerabdrücke der Allerweltssymbole: `werkzeuge/baseline/generic-refs.txt`.
-  - Die `.cmd`-Skripte enthalten feste Pfade in den alten Scratchpad. Diese vor einem Lauf anpassen.
+  - Die `.cmd`-Skripte schreiben nach `%TEMP%\HDRpilot-Recherche` (vorher ein fester Pfad im Scratchpad); den Ordner
+    vor einem Lauf anlegen.
 
 ## Ursprünglicher Auftrag an den Agenten (englisch, Pfade auf dieses Repository umgestellt)
 

@@ -86,4 +86,37 @@ public static class PathUtil
 
     public static bool PathEquals(string a, string b) =>
         string.Equals(Normalize(a), Normalize(b), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// True, wenn beide Pfade denselben Ordner meinen, auch in Schreibweisen, die <see cref="PathEquals"/> nicht erkennt: Präfix
+    /// <c>\\?\</c>, kurze 8.3-Namen, Junctions und symbolische Verknüpfungen, mit subst verbundene Laufwerke. Gibt es beide,
+    /// entscheidet ihre Kennung (Datenträger und Dateiindex, nur lesend geöffnet); sonst der Vergleich der Pfade. Wirft nicht.
+    /// </summary>
+    public static bool SameDirectory(string a, string b)
+    {
+        if (PathEquals(WithoutLongPathPrefix(a), WithoutLongPathPrefix(b)))
+        {
+            return true;
+        }
+
+        try
+        {
+            return Launchers.FileIdentity.OfPath(a) is { } first && Launchers.FileIdentity.OfPath(b) is { } second && first == second;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary><c>\\?\C:\…</c> als <c>C:\…</c>, <c>\\?\UNC\server\…</c> als <c>\\server\…</c>; sonst unverändert.</summary>
+    private static string WithoutLongPathPrefix(string path)
+    {
+        if (path.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"\\" + path[8..];
+        }
+
+        return path.StartsWith(@"\\?\", StringComparison.Ordinal) || path.StartsWith(@"\\.\", StringComparison.Ordinal) ? path[4..] : path;
+    }
 }

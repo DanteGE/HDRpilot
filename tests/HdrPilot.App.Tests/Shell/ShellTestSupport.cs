@@ -1,6 +1,9 @@
 using System.Windows;
 using System.Windows.Threading;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.AutoHdr;
@@ -52,7 +55,32 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
 
     public IHdrListService HdrList => FakeHdrList;
 
+    /// <summary>Darstellung (E89); Standard: Auslieferungszustand, dunkel.</summary>
+    public IAppearanceService Appearance { get; set; } = new StaticAppearanceService();
+
+    /// <summary>Spielbilder (E89); Standard: keine Bilder.</summary>
+    public IArtworkService Artwork { get; set; } = NullArtworkService.Instance;
+
+    /// <summary>SteamGridDB (E89); Standard: aus, nie ein Netzwerkzugriff.</summary>
+    public ISteamGridDbService SteamGridDb { get; set; } = NullSteamGridDbService.Instance;
+
+    /// <summary>Helligkeit der Bildschirme (E89); Standard: unbekannt.</summary>
+    public IDisplayLuminanceService Luminance { get; set; } = NullDisplayLuminanceService.Instance;
+
+    /// <summary>Stand für den Kopf des Tray-Menüs (Vorschau); Standard: keiner (dann aus dem HDR-Zustand).</summary>
+    public TrayState? TrayState { get; set; }
+
+    public TrayState? QueryTrayState() => TrayState;
+
     public List<string> OpenedPages { get; } = [];
+
+    /// <summary>Aufräumen des Sammel-Entfernens (E90); Standard: keins.</summary>
+    public UninstalledGameCleanup? Cleanup { get; set; }
+
+    /// <summary>Laufende und vorbereitete Sitzungen (E90: deren Spiele bleiben beim Sammel-Entfernen).</summary>
+    public List<HdrPilot.Core.Sessions.SessionInfo> SessionList { get; } = [];
+
+    public IReadOnlyList<HdrPilot.Core.Sessions.SessionInfo> Sessions => SessionList;
 
     /// <summary>Wenn gesetzt, scheitert das Öffnen einer Webseite damit.</summary>
     public Exception? OpenWebPageFailure { get; set; }
@@ -248,8 +276,11 @@ internal sealed class ThrowingTrayHost : ITrayHost
 
 /// <summary>
 /// Tests, die allein laufen müssen: Sie setzen <see cref="HdrPilot.App.Views.Shell.ShellMotion.Override"/> (DoEvents
-/// pumpt verschachtelt und ließe sonst einen parallelen Test den Schalter mitten im Test zurücksetzen) oder zählen
-/// GDI-/USER-Objekte des ganzen Testprozesses (parallele Tests würden mitzählen).
+/// pumpt verschachtelt und ließe sonst einen parallelen Test den Schalter mitten im Test zurücksetzen), zählen
+/// GDI-/USER-Objekte des ganzen Testprozesses (parallele Tests würden mitzählen), hören mit dem
+/// <see cref="BindingErrorRecorder"/> die prozessweite Bindungs-Ablaufverfolgung ab (Bindungsfehler paralleler Tests
+/// landeten sonst im falschen Test) oder messen Übergänge über die Zeit (ein paralleler Test liefe sonst verschachtelt
+/// mitten in der Messung).
 /// </summary>
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class ShellSerialCollection

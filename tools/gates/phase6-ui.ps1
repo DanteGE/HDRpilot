@@ -50,9 +50,14 @@ try {
     # Sortierung "Zuletzt gespielt"
     $sort = Find-Id $win 'SortOrder'
     $ec = $null
-    if ($sort.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ec)) { $ec.Expand(); Start-Sleep -Milliseconds 400 }
-    $entries = @($sort.FindAll([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::ListItem))))
-    $byLast = $entries | Where-Object { $_.Current.Name -match 'Zuletzt gespielt' } | Select-Object -First 1
+    if ($sort.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ec)) { $ec.Expand() }
+    # Die Einträge entstehen erst mit dem Aufklappen: bis zu 3 s darauf warten statt fest 400 ms
+    $entries = @(); $byLast = $null
+    for ($try = 0; $try -lt 30 -and -not $byLast; $try++) {
+        Start-Sleep -Milliseconds 100
+        $entries = @($sort.FindAll([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::ListItem))))
+        $byLast = $entries | Where-Object { $_.Current.Name -match 'Zuletzt gespielt' } | Select-Object -First 1
+    }
     Check ($null -ne $byLast) "Sortierung bietet 'Zuletzt gespielt' an ($(($entries | ForEach-Object { $_.Current.Name }) -join ', '))"
     if ($byLast) {
         Select-El $byLast

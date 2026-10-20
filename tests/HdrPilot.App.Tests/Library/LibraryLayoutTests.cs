@@ -1,5 +1,4 @@
 using HdrPilot.App.ViewModels.Library;
-using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Games;
 using static HdrPilot.App.Tests.Library.TestLibraryContext;
 
@@ -74,7 +73,7 @@ public sealed class LibraryLayoutTests
         Assert.Equal(0.381, vm.DetailsRatio);
         context.Dispatcher.RunDelayed();
         Assert.Equal(updates + 1, context.Updates);
-        Assert.Equal(0.381, context.Config.Settings.LibraryDetailsRatio);
+        Assert.Equal(0.381, context.Config.Settings.LibraryPaneRatio);
 
         // Gleicher Wert: nichts zu tun.
         vm.SetDetailsRatio(0.381);
@@ -83,34 +82,101 @@ public sealed class LibraryLayoutTests
         // Doppelklick (Standard) und gleich danach schließen: wird beim Schließen noch gespeichert.
         vm.SetDetailsRatio(null);
         vm.Dispose();
-        Assert.Null(context.Config.Settings.LibraryDetailsRatio);
+        Assert.Null(context.Config.Settings.LibraryPaneRatio);
         Assert.Equal(0, context.Dispatcher.PendingDelays);
+    });
+
+    [Fact]
+    public void Hero_ratio_is_saved_once_after_moving_and_on_close() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+        Assert.Null(vm.HeroRatio);
+        var updates = context.Updates;
+
+        // Mehrere Schritte mit den Pfeiltasten am Ziehgriff: ein Schreibvorgang nach der Wartezeit, vier Stellen.
+        vm.SetHeroRatio(0.4);
+        vm.SetHeroRatio(0.41234567);
+        Assert.Equal(updates, context.Updates);
+        Assert.Equal(0.4123, vm.HeroRatio);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(updates + 1, context.Updates);
+        Assert.Equal(0.4123, context.Config.Settings.LibraryHeroRatio);
+        Assert.Null(context.Config.Settings.LibraryPaneRatio); // die Breite des Detailbereichs bleibt unberührt
+
+        // Gleicher Wert: nichts zu tun. Unsinnige Werte: begrenzt bzw. Standard.
+        vm.SetHeroRatio(0.4123);
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+        vm.SetHeroRatio(7.5);
+        Assert.Equal(0.99, vm.HeroRatio);
+        vm.SetHeroRatio(double.NaN);
+        Assert.Null(vm.HeroRatio);
+
+        // Doppelklick (Standard) nach einer Änderung und gleich danach schließen: wird beim Schließen noch gespeichert.
+        vm.SetHeroRatio(0.5);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(0.5, context.Config.Settings.LibraryHeroRatio);
+        vm.SetHeroRatio(null);
+        vm.Dispose();
+        Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+    });
+
+    [Fact]
+    public void Hero_and_details_ratios_are_read_from_the_configuration_and_only_the_changed_one_is_written() => Sta.Run(() =>
+    {
+        var context = SampleContext();
+        context.ConfigService.Update(c =>
+        {
+            c.Settings.LibraryHeroRatio = 0.45;
+            c.Settings.LibraryPaneRatio = 0.3;
+        });
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+        Assert.Equal(0.45, vm.HeroRatio);
+        Assert.Equal(0.3, vm.DetailsRatio);
+
+        // Beide geändert: ein Schreibvorgang mit beiden.
+        var updates = context.Updates;
+        vm.SetHeroRatio(0.5);
+        vm.SetDetailsRatio(0.32);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(updates + 1, context.Updates);
+        Assert.Equal((0.5, 0.32), (context.Config.Settings.LibraryHeroRatio, context.Config.Settings.LibraryPaneRatio));
+
+        // Nur die Breite geändert: Die Höhe wird nicht mit dem Stand des Fensters überschrieben (und umgekehrt).
+        context.ConfigService.Update(c => c.Settings.LibraryHeroRatio = 0.6);
+        vm.SetDetailsRatio(0.33);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal((0.6, 0.33), (context.Config.Settings.LibraryHeroRatio, context.Config.Settings.LibraryPaneRatio));
+        context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = 0.4);
+        vm.SetHeroRatio(0.55);
+        vm.Dispose();
+        Assert.Equal((0.55, 0.4), (context.Config.Settings.LibraryHeroRatio, context.Config.Settings.LibraryPaneRatio));
     });
 
     [Fact]
     public void Details_ratio_is_read_from_the_configuration() => Sta.Run(() =>
     {
         var context = SampleContext();
-        context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = 0.44);
+        context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = 0.44);
         using var vm = new LibraryViewModel(context, new FakeDialogs());
 
         Assert.Equal(0.44, vm.DetailsRatio);
     });
 
-    [Theory]
-    [InlineData(1400, ToolbarMode.Wide, false)]
-    [InlineData(1100, ToolbarMode.Wide, false)]
-    [InlineData(1099, ToolbarMode.Compact, true)]
-    [InlineData(1010, ToolbarMode.Compact, true)]
-    [InlineData(1009, ToolbarMode.Stacked, false)]
-    [InlineData(600, ToolbarMode.Stacked, false)]
-    [InlineData(450, ToolbarMode.Stacked, true)]
-    public void Toolbar_mode_follows_the_available_width(double available, ToolbarMode expected, bool iconOnly)
+    [Fact]
+    public void Details_ratio_of_the_old_design_is_ignored_and_kept() => Sta.Run(() =>
     {
-        // Suche mindestens 200, Filter 600, Aktionen 300 (davon 90 Text bei „Neu einlesen“).
-        var mode = LibraryToolbarLayout.Choose(available, 200, 600, 300, 90);
+        // Gespeicherter Wert aus dem alten Design (0,42). Im neuen Design gilt die Standardbreite des Prototyps,
+        // bis der Trenner gezogen wird; der alte Wert bleibt für ältere Versionen stehen.
+        var context = SampleContext();
+        context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = 0.42);
+        var vm = new LibraryViewModel(context, new FakeDialogs());
 
-        Assert.Equal(expected, mode);
-        Assert.Equal(iconOnly, LibraryToolbarLayout.RescanIconOnly(mode, available, 200, 300));
-    }
+        Assert.Null(vm.DetailsRatio);
+        vm.SetDetailsRatio(0.3);
+        vm.Dispose();
+        Assert.Equal(0.3, context.Config.Settings.LibraryPaneRatio);
+        Assert.Equal(0.42, context.Config.Settings.LibraryDetailsRatio);
+    });
 }

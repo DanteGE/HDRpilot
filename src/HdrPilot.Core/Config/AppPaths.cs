@@ -41,6 +41,28 @@ public sealed record AppPaths(string ConfigDirectory, string DataDirectory)
     /// </summary>
     public string AutoHdrGlobalDoneFile => Path.Combine(DataDirectory, "autohdr-global.done");
 
+    /// <summary>
+    /// Spielbilder (E89): Verzeichnis index.json (Herkunft, Umgebungsfarben, Zuschnitte je Spiel) und daraus abgeleitete
+    /// Bilder (erzeugte Ersatzbilder, zugeschnittene Logos, helle HDR-Fassungen, eigene Bilder, SteamGridDB).
+    /// Maschinenbezogen wie die Symbole; gelesen wird aus den Launcher-Caches nur.
+    /// </summary>
+    public string ArtDirectory => Path.Combine(DataDirectory, "art");
+
+    /// <summary>Verzeichnis der Spielbilder (siehe <see cref="ArtDirectory"/>).</summary>
+    public string ArtIndexFile => Path.Combine(ArtDirectory, "index.json");
+
+    /// <summary>Eigene Bilder („Bild wählen…“), je Spiel und Bildart eine Datei.</summary>
+    public string CustomArtDirectory => Path.Combine(ArtDirectory, "custom");
+
+    /// <summary>SteamGridDB-API-Schlüssel des Nutzers, mit DPAPI für den Windows-Benutzer verschlüsselt (nur wenn eingetragen).</summary>
+    public string SteamGridDbKeyFile => Path.Combine(DataDirectory, "steamgriddb-key.dat");
+
+    /// <summary>
+    /// Zuletzt bei eingeschaltetem HDR gemessene Helligkeit je Bildschirm (DXGI, E89): Maximum aller Nit-Skalen, auch
+    /// wenn HDR gerade aus ist.
+    /// </summary>
+    public string DisplayLuminanceFile => Path.Combine(DataDirectory, "display-luminance.json");
+
     public static AppPaths Default(IAppEnvironment environment) => new(
         Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HDRpilot"),
         Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HDRpilot"));

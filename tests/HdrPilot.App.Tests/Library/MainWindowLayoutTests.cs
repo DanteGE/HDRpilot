@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -41,7 +42,7 @@ public sealed class MainWindowLayoutTests
             Game(GameSource.Manual, "m1", "Eigenes Spiel", isNew: false, installed: false));
         if (ratio is not null)
         {
-            context.ConfigService.Update(c => c.Settings.LibraryDetailsRatio = ratio);
+            context.ConfigService.Update(c => c.Settings.LibraryPaneRatio = ratio);
         }
 
         if (hdrSupport)
@@ -116,7 +117,7 @@ public sealed class MainWindowLayoutTests
                 Assert.False(string.IsNullOrWhiteSpace(AutomationProperties.GetName(ids[id])), "Name fehlt: " + id);
             }
 
-            var hdrChip = Assert.IsType<System.Windows.Controls.Primitives.ToggleButton>(ids["OnlyHdrCapableToggle"]);
+            var hdrChip = Assert.IsAssignableFrom<System.Windows.Controls.Primitives.ToggleButton>(ids["OnlyHdrCapableToggle"]);
             hdrChip.IsChecked = true;
             Assert.True(model.OnlyHdrCapable);
             hdrChip.IsChecked = false;
@@ -155,13 +156,17 @@ public sealed class MainWindowLayoutTests
                 .Where(b => AutomationProperties.GetAutomationId(b) == "HdrSupportBadge")
                 .ToDictionary(b => ((GameItemViewModel)b.DataContext).Key);
             Assert.Equal(4, badges.Count); // jede Zeile hat den Platz, sichtbar nur bei HDR
+            static string Text(Border badge) => WpfTestHost.Visuals(badge).OfType<TextBlock>().Single().Text;
+
+            // Spalte „HDR“ (Showcase Hero): „TEILWEISE“ bzw. „NATIV“ mit Punkt, Tooltip und Name wie bisher.
             var limited = badges["Steam:1091500"];
             Assert.Equal(Visibility.Visible, limited.Visibility);
-            Assert.Equal("HDR*", ((TextBlock)limited.Child).Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.HdrPill_Limited, Text(limited));
             Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrLimitedTooltip, limited.ToolTip);
             Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrLimitedTooltip, AutomationProperties.GetName(limited));
             Assert.Equal(Visibility.Visible, badges["Epic:Crow"].Visibility);
-            Assert.Equal("HDR", ((TextBlock)badges["Epic:Crow"].Child).Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.HdrPill_Native, Text(badges["Epic:Crow"]));
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Badge_HdrTooltip, AutomationProperties.GetName(badges["Epic:Crow"]));
             Assert.Equal(Visibility.Collapsed, badges["Gog:1"].Visibility); // laut Wiki kein HDR
             Assert.Equal(Visibility.Collapsed, badges["Manual:m1"].Visibility); // unbekannt
             window.Close();
@@ -197,19 +202,25 @@ public sealed class MainWindowLayoutTests
     {
         WpfTestHost.Run(() =>
         {
-            var (window, _, _) = Open(SteamGame(), ratio: 0.45);
+            var (window, _, _) = Open(SteamGame(), ratio: 0.3);
             var list = (ColumnDefinition)window.FindName("ListColumn");
             var details = (ColumnDefinition)window.FindName("DetailsColumn");
             Assert.True(list.Width.IsStar && details.Width.IsStar);
-            Assert.Equal(0.45, details.Width.Value / (list.Width.Value + details.Width.Value), 3);
+            Assert.Equal(0.3, details.Width.Value / (list.Width.Value + details.Width.Value), 3);
             Assert.Equal(LibraryLayout.ListMinWidth, list.MinWidth);
             Assert.Equal(LibraryLayout.DetailsMinWidth, details.MinWidth);
+            Assert.Equal(ShowcaseLayout.MaxPaneWidth, details.MaxWidth);
 
             WpfTestHost.Layout(window, new Size(1280, 800));
             var (list1, details1) = (list.ActualWidth, details.ActualWidth);
             WpfTestHost.Layout(window, new Size(1700, 800));
             Assert.True(list.ActualWidth > list1 && details.ActualWidth > details1, "beide Spalten wachsen mit");
-            Assert.Equal(0.45, details.ActualWidth / (list.ActualWidth + details.ActualWidth), 2);
+            Assert.Equal(0.3, details.ActualWidth / (list.ActualWidth + details.ActualWidth), 2);
+
+            // Showcase Hero: Der Detailbereich wächst höchstens bis 560 px (Prototyp 340–396), den Rest bekommt die Liste.
+            WpfTestHost.Layout(window, new Size(3440, 1440));
+            Assert.Equal(ShowcaseLayout.MaxPaneWidth, details.ActualWidth, 1);
+            Assert.True(list.ActualWidth > 2000, "Liste bei 3440 px: " + list.ActualWidth);
             window.Close();
         });
     }
@@ -232,7 +243,7 @@ public sealed class MainWindowLayoutTests
             var ratio = details.Width.Value / (list.Width.Value + details.Width.Value);
             Assert.True(ratio < 0.75, "Sternanteil begrenzt: " + ratio);
             Assert.Equal(0.75, model.DetailsRatio); // gemerkter Wert bleibt für größere Fenster
-            Assert.Equal(0.75, context.Config.Settings.LibraryDetailsRatio);
+            Assert.Equal(0.75, context.Config.Settings.LibraryPaneRatio);
             window.Close();
         });
     }
@@ -255,9 +266,9 @@ public sealed class MainWindowLayoutTests
             var expected = before + (2 * splitter.KeyboardIncrement);
             Assert.InRange(details.ActualWidth, expected - 1, expected + 1);
             Assert.NotNull(model.DetailsRatio);
-            Assert.Null(context.Config.Settings.LibraryDetailsRatio); // gesammelt, noch nicht gespeichert
+            Assert.Null(context.Config.Settings.LibraryPaneRatio); // gesammelt, noch nicht gespeichert
             context.Dispatcher.RunDelayed();
-            var saved = context.Config.Settings.LibraryDetailsRatio;
+            var saved = context.Config.Settings.LibraryPaneRatio;
             Assert.NotNull(saved);
             Assert.True(saved > LibraryLayout.DefaultDetailsRatio, "Detailbereich breiter gemerkt: " + saved);
 
@@ -269,44 +280,99 @@ public sealed class MainWindowLayoutTests
 
             Assert.InRange(details.ActualWidth, LibraryLayout.DetailsMinWidth - 1, LibraryLayout.DetailsMinWidth + 1);
             window.Close();
-            Assert.True(context.Config.Settings.LibraryDetailsRatio < saved, "beim Schließen gespeichert");
+            Assert.True(context.Config.Settings.LibraryPaneRatio < saved, "beim Schließen gespeichert");
         });
     }
 
     [Fact]
-    public void Toolbar_never_overflows_and_moves_filters_to_a_second_row_when_narrow()
+    public void Hero_handle_moves_with_the_keyboard_in_steps_and_enter_restores_the_standard()
     {
         WpfTestHost.Run(() =>
         {
-            var (window, _, _) = Open(SteamGame());
-            var root = (FrameworkElement)window.FindName("Root");
-            var groups = new[] { "SearchBox", "FilterGroup", "ActionGroup" }.Select(n => (FrameworkElement)window.FindName(n)).ToList();
-            var modes = new Dictionary<double, ToolbarMode>();
+            var (window, context, model) = Open(SteamGame());
+            var splitter = (HeroSplitter)window.FindName("HeroSplitter");
+            var size = new Size(1745, 982);
+            WpfTestHost.Layout(window, size);
+            var root = ((FrameworkElement)window.FindName("Root")).ActualHeight;
+            var start = window.HeroHeight;
+            Assert.Equal(Math.Round(root / 3), start);
 
-            var searchMin = ((Grid)window.FindName("ToolbarArea")).ColumnDefinitions[0].MinWidth;
-            foreach (var width in new[] { 1700.0, 1460, 1320, 1250, 1150, 1000, 1700 })
-            {
-                WpfTestHost.Layout(window, new Size(width, 800));
-                var slot = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutSlot(root);
-                var available = slot.Width - root.Margin.Left - root.Margin.Right;
-                window.UpdateToolbarLayout(available);
-                WpfTestHost.Layout(window, new Size(width, 800));
-                modes[width] = window.ToolbarMode;
+            // Pfeiltasten: Schritte von 24 px (Pfeil nach unten: Titelbereich höher), Bild ab: 96 px; sofort angewandt.
+            Press(window, splitter, Key.Down, size);
+            Press(window, splitter, Key.Down, size);
+            Assert.Equal(start + (2 * HeroSplitter.SmallStep), window.HeroHeight);
+            Press(window, splitter, Key.Up, size);
+            Assert.Equal(start + HeroSplitter.SmallStep, window.HeroHeight);
+            Press(window, splitter, Key.PageDown, size);
+            Assert.Equal(start + HeroSplitter.SmallStep + HeroSplitter.LargeStep, window.HeroHeight);
+            Assert.Equal(window.HeroHeight - ShowcaseLayout.HeroSplitterOverlap, splitter.TransformToAncestor((Visual)window.FindName("Root")).Transform(default).Y, 0.5);
+            Assert.Null(context.Config.Settings.LibraryHeroRatio); // gesammelt, noch nicht gespeichert
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(Math.Round(window.HeroHeight / root, 4), context.Config.Settings.LibraryHeroRatio);
 
-                foreach (var group in groups)
-                {
-                    var right = group.TransformToAncestor(root).Transform(new Point(group.ActualWidth, 0)).X;
-                    Assert.True(right <= available + 0.5, $"{group.Name} ragt bei {width} px hinaus: {right:0} > {available:0} ({window.ToolbarMode})");
-                }
+            // Ende und Pos1: größte und kleinste Höhe; darüber hinaus geschieht nichts.
+            Press(window, splitter, Key.End, size);
+            Assert.Equal(root - 368, window.HeroHeight); // eine Zeile Werkzeugleiste
+            Press(window, splitter, Key.PageDown, size);
+            Assert.Equal(root - 368, window.HeroHeight); // eine Zeile Werkzeugleiste
+            Press(window, splitter, Key.Home, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
+            Press(window, splitter, Key.Up, size);
+            Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
 
-                Assert.True(((FrameworkElement)window.FindName("SearchBox")).ActualWidth >= searchMin - 0.5, $"Suche behält bei {width} px ihre Mindestbreite");
-            }
+            // Eingabetaste wie Doppelklick: Standardhöhe, nichts mehr gemerkt.
+            Press(window, splitter, Key.Enter, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            window.Close();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
+        });
+    }
 
-            Assert.Equal(ToolbarMode.Wide, modes[1700]);
-            Assert.Equal(ToolbarMode.Wide, modes[window.Width]); // Standardgröße: alles in einer Zeile
-            Assert.Equal(ToolbarMode.Stacked, modes[1000]);
-            var filters = (FrameworkElement)window.FindName("FilterGroup");
-            Assert.Equal(0, Grid.GetRow(filters)); // wieder breit: eine Zeile
+    [Fact]
+    public void Hero_handle_drag_is_canceled_with_escape_like_the_column_splitter()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Prüfung 2026-10-16: Esc beim Ziehen tat nichts, die gezogene Höhe wurde beim Loslassen gemerkt. Der Trenner der
+            // Spalten (GridSplitter) bricht mit Esc ab und stellt die Breite davor wieder her; der Griff jetzt ebenso.
+            var (window, context, model) = Open(SteamGame());
+            var splitter = (HeroSplitter)window.FindName("HeroSplitter");
+            var size = new Size(1745, 982);
+            WpfTestHost.Layout(window, size);
+            var start = window.HeroHeight;
+            var delays = context.Dispatcher.PendingDelays;
+
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, 60));
+            Assert.Equal(start + 60, window.HeroHeight);
+            Press(window, splitter, Key.Escape, size);
+            Assert.Equal(start, window.HeroHeight); // sofort zurück
+            Assert.Equal(start, splitter.Value);
+
+            // Ohne echte Maus beendet erst das Loslassen das Ziehen (in der App schon Esc): nichts gemerkt.
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, 60, false));
+            WpfTestHost.Layout(window, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Maus verloren (Ziehen als abgebrochen gemeldet): ebenso zurück, nichts gemerkt.
+            splitter.RaiseEvent(new DragStartedEventArgs(0, 10));
+            splitter.RaiseEvent(new DragDeltaEventArgs(0, -48));
+            Assert.Equal(start - 48, window.HeroHeight);
+            splitter.RaiseEvent(new DragCompletedEventArgs(0, -48, true));
+            WpfTestHost.Layout(window, size);
+            Assert.Equal(start, window.HeroHeight);
+            Assert.Null(model.HeroRatio);
+            Assert.Equal(delays, context.Dispatcher.PendingDelays);
+
+            // Esc ohne Ziehen gehört nicht dem Griff (das Fenster leert damit die Suche bzw. schließt die Schublade).
+            var escape = new KeyEventArgs(Keyboard.PrimaryDevice, new TestPresentationSource(), Environment.TickCount, Key.Escape) { RoutedEvent = Keyboard.KeyDownEvent };
+            splitter.RaiseEvent(escape);
+            Assert.False(escape.Handled);
+            context.Dispatcher.RunDelayed();
+            Assert.Null(context.Config.Settings.LibraryHeroRatio);
             window.Close();
         });
     }
@@ -356,9 +422,6 @@ public sealed class MainWindowLayoutTests
                         model.SortOrder = GameSortOrder.LastPlayed;
                         model.Details!.CopySteamLaunchOptionCommand.Execute(null);
                         WpfTestHost.Layout(window, new Size(width, height));
-                        var root = (FrameworkElement)window.FindName("Root");
-                        var slot = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutSlot(root);
-                        window.UpdateToolbarLayout(slot.Width - root.Margin.Left - root.Margin.Right);
                         window.FitDetailsColumn();
                         WpfTestHost.Layout(window, new Size(width, height));
 

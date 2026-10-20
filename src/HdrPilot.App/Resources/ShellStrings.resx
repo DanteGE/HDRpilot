@@ -509,4 +509,679 @@
   <data name="PcgwLicenseLink" xml:space="preserve">
     <value>CC BY-NC-SA 3.0</value>
   </data>
+
+  <!-- Einstellungen im Showcase-Stil (E89): Navigation, Gruppen, Bibliothek -->
+  <data name="SettingsNavName" xml:space="preserve">
+    <value>Bereiche der Einstellungen</value>
+  </data>
+  <data name="NavGeneral" xml:space="preserve">
+    <value>Allgemein</value>
+  </data>
+  <data name="NavDisplays" xml:space="preserve">
+    <value>Bildschirme</value>
+  </data>
+  <data name="NavAutomation" xml:space="preserve">
+    <value>Automatik</value>
+  </data>
+  <data name="NavSearchFolders" xml:space="preserve">
+    <value>Suchordner</value>
+  </data>
+  <data name="NavHelpers" xml:space="preserve">
+    <value>Hilfsprozesse</value>
+  </data>
+  <data name="NavAppearance" xml:space="preserve">
+    <value>Darstellung</value>
+  </data>
+  <data name="NavAppearanceColors" xml:space="preserve">
+    <value>Farben</value>
+  </data>
+  <data name="NavAppearanceArtwork" xml:space="preserve">
+    <value>Bilder</value>
+  </data>
+  <data name="NavAppearanceTray" xml:space="preserve">
+    <value>Symbole und Tray</value>
+  </data>
+  <data name="NavAdvanced" xml:space="preserve">
+    <value>Erweitert</value>
+  </data>
+  <data name="NavLogs" xml:space="preserve">
+    <value>Protokolle</value>
+  </data>
+  <data name="LibraryCardOverline" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="LibraryCardSummary" xml:space="preserve">
+    <value>{0} Spiele · {1} mit HDR automatisch</value>
+  </data>
+  <data name="OpenLibrary" xml:space="preserve">
+    <value>Spielebibliothek öffnen</value>
+  </data>
+  <data name="GroupGeneralHint" xml:space="preserve">
+    <value>Start, Bildschirme, Automatik, Suche und Bibliothek. Übernommen mit „Speichern“.</value>
+  </data>
+  <data name="GroupAppearanceHint" xml:space="preserve">
+    <value>Farben, Thema, Effekte und Bilder. Wirkt auf Oberfläche, Tray-Symbol und Fenstersymbol.</value>
+  </data>
+  <data name="GroupAdvancedHint" xml:space="preserve">
+    <value>Notlösung, HDR-Liste und Protokolle. Übernommen mit „Speichern“; die Knöpfe der HDR-Liste wirken sofort.</value>
+  </data>
+  <data name="AppearanceAppliedHint" xml:space="preserve">
+    <value>Wird sofort angewendet</value>
+  </data>
+  <data name="AppearanceReset" xml:space="preserve">
+    <value>Standard</value>
+  </data>
+  <data name="AppearanceResetName" xml:space="preserve">
+    <value>Darstellung auf den Standard zurücksetzen</value>
+  </data>
+  <data name="SectionStartupHint" xml:space="preserve">
+    <value>Mit Windows starten und Hinweise im Infobereich</value>
+  </data>
+  <data name="SectionDisplaysHint" xml:space="preserve">
+    <value>Wo HDRpilot HDR schaltet</value>
+  </data>
+  <data name="SectionAutomationHint" xml:space="preserve">
+    <value>Wann HDR schaltet und wie lange es bleibt</value>
+  </data>
+  <data name="SectionSearchFoldersHint" xml:space="preserve">
+    <value>Weitere Ordner mit Spielen</value>
+  </data>
+  <data name="SectionHelpersHint" xml:space="preserve">
+    <value>Programme, die nie als Spiel zählen</value>
+  </data>
+  <data name="SectionFallback" xml:space="preserve">
+    <value>Notlösung</value>
+  </data>
+  <data name="SectionFallbackHint" xml:space="preserve">
+    <value>Wenn Windows das Umschalten verweigert</value>
+  </data>
+  <data name="SectionLogs" xml:space="preserve">
+    <value>Protokolle</value>
+  </data>
+  <data name="SectionLogsHint" xml:space="preserve">
+    <value>Was HDRpilot mitschreibt</value>
+  </data>
+  <data name="SectionHdrListHint" xml:space="preserve">
+    <value>HDR-Unterstützung der Spiele von PCGamingWiki</value>
+  </data>
+
+  <!-- Darstellung: Farbschema -->
+  <data name="SectionPalette" xml:space="preserve">
+    <value>Farbschema</value>
+  </data>
+  <data name="SectionPaletteHint" xml:space="preserve">
+    <value>Jede Farbe hat eine eigene Aufgabe</value>
+  </data>
+  <data name="PaletteModeName" xml:space="preserve">
+    <value>Anzahl Farben</value>
+  </data>
+  <data name="PaletteModeDuotone" xml:space="preserve">
+    <value>Duoton</value>
+  </data>
+  <data name="PaletteModeTritone" xml:space="preserve">
+    <value>Tritonus</value>
+  </data>
+  <data name="PaletteSwap" xml:space="preserve">
+    <value>Akzent und Atmosphäre tauschen</value>
+  </data>
+  <data name="RoleAccent" xml:space="preserve">
+    <value>Akzent</value>
+  </data>
+  <data name="RoleAccentHint" xml:space="preserve">
+    <value>Schaltflächen, Auswahl</value>
+  </data>
+  <data name="RoleAtmosphere" xml:space="preserve">
+    <value>Atmosphäre</value>
+  </data>
+  <data name="RoleAtmosphereHint" xml:space="preserve">
+    <value>Hintergrund, Leuchten</value>
+  </data>
+  <data name="RoleShine" xml:space="preserve">
+    <value>Glanz</value>
+  </data>
+  <data name="RoleShineHint" xml:space="preserve">
+    <value>HDR-Moment, Lichtstreifen</value>
+  </data>
+  <data name="ColorAutomatic" xml:space="preserve">
+    <value>automatisch</value>
+  </data>
+  <data name="ColorWellName" xml:space="preserve">
+    <value>Farbe {0} wählen</value>
+  </data>
+  <data name="ColorWellAutomaticName" xml:space="preserve">
+    <value>{0}: automatisch aus der Atmosphäre (Duoton)</value>
+  </data>
+  <data name="PresetsCaption" xml:space="preserve">
+    <value>Vorlagen</value>
+  </data>
+  <data name="PresetsName" xml:space="preserve">
+    <value>Farbvorlagen</value>
+  </data>
+  <data name="PresetCaptionDuotone" xml:space="preserve">
+    <value>{0} · Duoton, Glanz automatisch</value>
+  </data>
+  <data name="PresetCaptionTritone" xml:space="preserve">
+    <value>{0} · Tritonus, 3 Farben</value>
+  </data>
+  <data name="PresetCustom" xml:space="preserve">
+    <value>Eigene Farben</value>
+  </data>
+  <data name="PresetTagDuotone" xml:space="preserve">
+    <value>DUO</value>
+  </data>
+  <data name="PresetTagTritone" xml:space="preserve">
+    <value>TRI</value>
+  </data>
+  <data name="Preset_abendrot" xml:space="preserve">
+    <value>Abendrot</value>
+  </data>
+  <data name="Preset_cyber" xml:space="preserve">
+    <value>Cyber</value>
+  </data>
+  <data name="Preset_neongruen" xml:space="preserve">
+    <value>Neongrün</value>
+  </data>
+  <data name="Preset_royal" xml:space="preserve">
+    <value>Royal</value>
+  </data>
+  <data name="Preset_gletscher" xml:space="preserve">
+    <value>Gletscher</value>
+  </data>
+  <data name="Preset_synthwave" xml:space="preserve">
+    <value>Synthwave</value>
+  </data>
+  <data name="Preset_glut" xml:space="preserve">
+    <value>Glut</value>
+  </data>
+  <data name="Preset_polarlicht" xml:space="preserve">
+    <value>Polarlicht</value>
+  </data>
+  <data name="AutoTextOnAccentLabel" xml:space="preserve">
+    <value>Textfarbe auf Akzentflächen automatisch</value>
+  </data>
+  <data name="ContrastSample" xml:space="preserve">
+    <value>Aa</value>
+  </data>
+  <data name="ContrastOnAccent" xml:space="preserve">
+    <value>Auf Akzent</value>
+  </data>
+  <data name="ContrastAccentText" xml:space="preserve">
+    <value>Akzenttext</value>
+  </data>
+  <data name="ContrastFormat" xml:space="preserve">
+    <value>{0:0.0}:1 · {1}</value>
+  </data>
+  <data name="ContrastAaa" xml:space="preserve">
+    <value>AAA</value>
+  </data>
+  <data name="ContrastAa" xml:space="preserve">
+    <value>AA</value>
+  </data>
+  <data name="ContrastAaLarge" xml:space="preserve">
+    <value>AA groß</value>
+  </data>
+  <data name="ContrastTooLow" xml:space="preserve">
+    <value>zu niedrig</value>
+  </data>
+  <data name="BackgroundFollowsGameLabel" xml:space="preserve">
+    <value>Hintergrund folgt dem Spiel</value>
+  </data>
+  <data name="BackgroundFollowsGameHint" xml:space="preserve">
+    <value>Umgebungslicht und Leuchten übernehmen die Farben des gewählten Titelbilds – einmal pro Spiel ausgelesen</value>
+  </data>
+
+  <!-- Darstellung: Live-Vorschau -->
+  <data name="SectionPreview" xml:space="preserve">
+    <value>Live-Vorschau</value>
+  </data>
+  <data name="SectionPreviewHint" xml:space="preserve">
+    <value>Echte Bilder aus deiner Bibliothek mit deinem Schema</value>
+  </data>
+  <data name="PreviewHdr" xml:space="preserve">
+    <value>HDR</value>
+  </data>
+  <data name="PreviewHdrName" xml:space="preserve">
+    <value>HDR in der Vorschau</value>
+  </data>
+  <data name="PreviewHdrOn" xml:space="preserve">
+    <value>HDR EIN</value>
+  </data>
+  <data name="PreviewHdrOff" xml:space="preserve">
+    <value>HDR AUS</value>
+  </data>
+  <data name="PreviewNits" xml:space="preserve">
+    <value>{0} nits</value>
+  </data>
+  <data name="PreviewNitsUnknown" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="PreviewLaunch" xml:space="preserve">
+    <value>Starten</value>
+  </data>
+  <data name="PreviewDesktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="PreviewEmpty" xml:space="preserve">
+    <value>Noch keine Spiele in der Bibliothek</value>
+  </data>
+  <data name="PreviewPickName" xml:space="preserve">
+    <value>Vorschau mit {0}</value>
+  </data>
+  <data name="PreviewNeverPlayed" xml:space="preserve">
+    <value>noch nicht gespielt</value>
+  </data>
+
+  <!-- Darstellung: Thema -->
+  <data name="SectionTheme" xml:space="preserve">
+    <value>Thema</value>
+  </data>
+  <data name="ThemeCaptionSystem" xml:space="preserve">
+    <value>Folgt Windows · gerade {0}</value>
+  </data>
+  <data name="ThemeNowDark" xml:space="preserve">
+    <value>dunkel</value>
+  </data>
+  <data name="ThemeNowLight" xml:space="preserve">
+    <value>hell</value>
+  </data>
+  <data name="ThemeCaptionLight" xml:space="preserve">
+    <value>Immer hell</value>
+  </data>
+  <data name="ThemeCaptionDark" xml:space="preserve">
+    <value>Immer dunkel</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Automatisch</value>
+  </data>
+  <data name="ThemeSystemHint" xml:space="preserve">
+    <value>wie Windows</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Hell</value>
+  </data>
+  <data name="ThemeLightHint" xml:space="preserve">
+    <value>Helle Flächen, Bilder bleiben kräftig</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dunkel</value>
+  </data>
+  <data name="ThemeDarkHint" xml:space="preserve">
+    <value>Kino-Look</value>
+  </data>
+
+  <!-- Darstellung: Effekte -->
+  <data name="SectionEffects" xml:space="preserve">
+    <value>Effekte</value>
+  </data>
+  <data name="SectionEffectsHint" xml:space="preserve">
+    <value>Parallaxe, Ken-Burns-Drift, Licht beim HDR-Wechsel</value>
+  </data>
+  <data name="EffectFull" xml:space="preserve">
+    <value>Voll</value>
+  </data>
+  <data name="EffectFullHint" xml:space="preserve">
+    <value>Parallaxe, Drift, Lichtstreifen, Partikel · Partikel nur 2,5 s, Leerlauf max. 30 fps</value>
+  </data>
+  <data name="EffectReduced" xml:space="preserve">
+    <value>Reduziert</value>
+  </data>
+  <data name="EffectReducedHint" xml:space="preserve">
+    <value>Nur kurze Übergänge bis 0,3 s, keine Daueranimation</value>
+  </data>
+  <data name="EffectOff" xml:space="preserve">
+    <value>Aus</value>
+  </data>
+  <data name="EffectOffHint" xml:space="preserve">
+    <value>Keine Bewegung, sofortige Wechsel</value>
+  </data>
+  <data name="EffectEffectiveTag" xml:space="preserve">
+    <value>wirksam</value>
+  </data>
+  <data name="PauseWhilePlayingLabel" xml:space="preserve">
+    <value>Beim Spielen anhalten</value>
+  </data>
+  <data name="PauseWhilePlayingHint" xml:space="preserve">
+    <value>Solange ein Spiel läuft, steht jede Animation still</value>
+  </data>
+  <data name="PauseInBackgroundLabel" xml:space="preserve">
+    <value>Im Hintergrund anhalten</value>
+  </data>
+  <data name="PauseInBackgroundHint" xml:space="preserve">
+    <value>Minimiert, verdeckt oder nicht aktiv: 0 % GPU</value>
+  </data>
+  <data name="RespectWindowsAnimationsLabel" xml:space="preserve">
+    <value>Windows-Animationseffekte beachten</value>
+  </data>
+  <data name="RespectWindowsAnimationsHintOn" xml:space="preserve">
+    <value>Ist die Option in Windows aus, gilt mindestens „Reduziert“ · Windows: Animationen ein</value>
+  </data>
+  <data name="RespectWindowsAnimationsHintReduced" xml:space="preserve">
+    <value>Windows: Animationen aus → es gilt mindestens „Reduziert“</value>
+  </data>
+  <data name="RespectWindowsAnimationsHintIgnored" xml:space="preserve">
+    <value>Windows: Animationen aus – wird gerade nicht beachtet</value>
+  </data>
+  <data name="MinimizeToTrayLabel" xml:space="preserve">
+    <value>Nach dem Start in den Infobereich</value>
+  </data>
+  <data name="MinimizeToTrayHint" xml:space="preserve">
+    <value>Fenster schließt, HDRpilot läuft im Tray weiter</value>
+  </data>
+  <data name="EffectsPerformanceNote" xml:space="preserve">
+    <value>Minimiert, im Hintergrund und während ein Spiel läuft stehen alle Daueranimationen still; geschlossen läuft gar nichts. Keine großflächige Live-Unschärfe: Das Umgebungslicht ist Steams vorgefertigtes library_hero_blur.jpg bzw. ein gestrecktes Farbfeld.</value>
+  </data>
+
+  <!-- Darstellung: Bilder -->
+  <data name="SectionArtwork" xml:space="preserve">
+    <value>Bilder</value>
+  </data>
+  <data name="SectionArtworkHint" xml:space="preserve">
+    <value>Woher Titelbild, Logo, Cover und Symbol kommen</value>
+  </data>
+  <data name="ArtworkLocalTitle" xml:space="preserve">
+    <value>Lokal · Launcher-Caches</value>
+  </data>
+  <data name="ArtworkLocalTag" xml:space="preserve">
+    <value>Hauptquelle</value>
+  </data>
+  <data name="ArtworkLocalHint" xml:space="preserve">
+    <value>Nur lesen, kein Netzwerk. Neue Bilder erscheinen von selbst, sobald ein Launcher sie zwischenspeichert; bei Quiver nach dem nächsten Einlesen.</value>
+  </data>
+  <data name="ArtworkAlwaysOn" xml:space="preserve">
+    <value>Immer aktiv</value>
+  </data>
+  <data name="ArtworkAlwaysOnHint" xml:space="preserve">
+    <value>Lokale Bilder lassen sich nicht abschalten</value>
+  </data>
+  <data name="CoverageTableName" xml:space="preserve">
+    <value>Abdeckung mit lokalen Bildern je Launcher</value>
+  </data>
+  <data name="CoverageLauncher" xml:space="preserve">
+    <value>Launcher</value>
+  </data>
+  <data name="CoverageHero" xml:space="preserve">
+    <value>Titelbild</value>
+  </data>
+  <data name="CoverageLogo" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="CoverageCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="CoverageIcon" xml:space="preserve">
+    <value>Symbol</value>
+  </data>
+  <data name="CoverageCellName" xml:space="preserve">
+    <value>{0}, {1}: {2} genutzt, {3} gefunden, {4} Spiele</value>
+  </data>
+  <data name="CoverageLegend" xml:space="preserve">
+    <value>Zahl = genutzt / Spiele, +n = gefunden, aber nicht genutzt (etwa verschmierte Kapseln oder Engine-Logos); unter „Bild wählen…“ wählbar.</value>
+  </data>
+  <data name="CoverageLoading" xml:space="preserve">
+    <value>Bilder werden gezählt …</value>
+  </data>
+  <data name="CoverageEmpty" xml:space="preserve">
+    <value>Noch keine Spiele eingelesen.</value>
+  </data>
+  <data name="ArtworkGeneratedTitle" xml:space="preserve">
+    <value>Erzeugte Bilder</value>
+  </data>
+  <data name="ArtworkGeneratedHint" xml:space="preserve">
+    <value>Springen ein, wenn etwas fehlt – je Fall ein echtes Beispiel aus deiner Bibliothek</value>
+  </data>
+  <data name="FallbackKind_HeroFromIcon" xml:space="preserve">
+    <value>Titelbild aus Symbol</value>
+  </data>
+  <data name="FallbackKind_NameInsteadOfLogo" xml:space="preserve">
+    <value>Name statt Logo</value>
+  </data>
+  <data name="FallbackKind_CoverGenerated" xml:space="preserve">
+    <value>Cover erzeugt</value>
+  </data>
+  <data name="FallbackKind_CoverFromSmearedCapsule" xml:space="preserve">
+    <value>Kapsel verschmiert → Ausschnitt</value>
+  </data>
+  <data name="FallbackKind_Monogram" xml:space="preserve">
+    <value>Monogramm</value>
+  </data>
+  <data name="FallbackExamplesEmpty" xml:space="preserve">
+    <value>Keine Ersatzbilder nötig: Alle Bilder kommen aus den Launcher-Caches.</value>
+  </data>
+  <data name="FallbackExampleName" xml:space="preserve">
+    <value>{0}: {1} · {2}</value>
+  </data>
+  <data name="SteamGridDbTitle" xml:space="preserve">
+    <value>SteamGridDB (online)</value>
+  </data>
+  <data name="SteamGridDbTag" xml:space="preserve">
+    <value>optional</value>
+  </data>
+  <data name="SteamGridDbHint" xml:space="preserve">
+    <value>Füllt nur fehlende Bilder: {0} Titelbilder, {1} Logos, {2} Cover. Lokale Bilder bleiben unangetastet.</value>
+  </data>
+  <data name="SteamGridDbToggleName" xml:space="preserve">
+    <value>SteamGridDB verwenden</value>
+  </data>
+  <data name="SteamGridDbKeyPlaceholder" xml:space="preserve">
+    <value>API-Schlüssel von steamgriddb.com</value>
+  </data>
+  <data name="SteamGridDbKeyName" xml:space="preserve">
+    <value>SteamGridDB API-Schlüssel</value>
+  </data>
+  <data name="SteamGridDbCheck" xml:space="preserve">
+    <value>Prüfen</value>
+  </data>
+  <data name="SteamGridDbCheckName" xml:space="preserve">
+    <value>Schlüssel bei SteamGridDB prüfen und speichern</value>
+  </data>
+  <data name="SteamGridDbRunNow" xml:space="preserve">
+    <value>Fehlende Bilder jetzt laden</value>
+  </data>
+  <data name="SteamGridDbRunNowName" xml:space="preserve">
+    <value>Fehlende Bilder jetzt von SteamGridDB laden</value>
+  </data>
+  <data name="SteamGridDbRemoveKey" xml:space="preserve">
+    <value>Schlüssel entfernen</value>
+  </data>
+  <data name="SteamGridDbRemoveKeyName" xml:space="preserve">
+    <value>Gespeicherten SteamGridDB-Schlüssel entfernen</value>
+  </data>
+  <data name="SteamGridDbKeyNote" xml:space="preserve">
+    <value>Standard: aus. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben.</value>
+  </data>
+  <data name="SteamGridDbStatusName" xml:space="preserve">
+    <value>Letzter Netzwerkzugriff von SteamGridDB</value>
+  </data>
+  <data name="SteamGridDbStatusOff" xml:space="preserve">
+    <value>Aus · kein Netzwerkzugriff</value>
+  </data>
+  <data name="SteamGridDbStatusNoKey" xml:space="preserve">
+    <value>Ein · ohne Schlüssel kein Netzwerkzugriff</value>
+  </data>
+  <data name="SteamGridDbStatusUnreadable" xml:space="preserve">
+    <value>Gespeicherter Schlüssel nicht lesbar (anderes Windows-Konto?) – bitte neu eingeben</value>
+  </data>
+  <data name="SteamGridDbStatusReady" xml:space="preserve">
+    <value>Ein · Schlüssel gespeichert · noch kein Netzwerkzugriff</value>
+  </data>
+  <data name="SteamGridDbStatusRunning" xml:space="preserve">
+    <value>Lädt fehlende Bilder von SteamGridDB …</value>
+  </data>
+  <data name="SteamGridDbStatusLastRun" xml:space="preserve">
+    <value>Letzter Zugriff {0:g} · {1} Anfragen · {2} Bilder ergänzt</value>
+  </data>
+  <data name="SteamGridDbStatusError" xml:space="preserve">
+    <value>Letzter Fehler: {0}</value>
+  </data>
+  <data name="SteamGridDbChecking" xml:space="preserve">
+    <value>Prüfe den Schlüssel …</value>
+  </data>
+  <data name="SteamGridDbCheckValid" xml:space="preserve">
+    <value>Schlüssel gültig und gespeichert</value>
+  </data>
+  <data name="SteamGridDbCheckInvalid" xml:space="preserve">
+    <value>Schlüssel ungültig</value>
+  </data>
+  <data name="SteamGridDbCheckNetworkError" xml:space="preserve">
+    <value>SteamGridDB nicht erreichbar</value>
+  </data>
+  <data name="SteamGridDbCheckRateLimited" xml:space="preserve">
+    <value>Zu viele Anfragen – später erneut prüfen</value>
+  </data>
+  <data name="SteamGridDbKeyMissing" xml:space="preserve">
+    <value>Bitte zuerst einen Schlüssel eingeben</value>
+  </data>
+  <data name="SteamGridDbSaveFailed" xml:space="preserve">
+    <value>Schlüssel ließ sich nicht speichern: {0}</value>
+  </data>
+  <data name="ArtworkPerGameHint" xml:space="preserve">
+    <value>Einzelnes Spiel: Rechtsklick › „Bild wählen…“ oder „Symbol ändern…“</value>
+  </data>
+
+  <!-- Darstellung: Symbole und Tray -->
+  <data name="SectionTray" xml:space="preserve">
+    <value>Symbole und Tray</value>
+  </data>
+  <data name="SectionTrayHint" xml:space="preserve">
+    <value>Zeigen den Zustand in deinen Farben</value>
+  </data>
+  <data name="TaskbarCaption" xml:space="preserve">
+    <value>Taskleiste</value>
+  </data>
+  <data name="TaskbarName" xml:space="preserve">
+    <value>Taskleiste der Vorschau</value>
+  </data>
+  <data name="TaskbarLight" xml:space="preserve">
+    <value>Hell</value>
+  </data>
+  <data name="TaskbarDark" xml:space="preserve">
+    <value>Dunkel</value>
+  </data>
+  <data name="TrayPreviewName" xml:space="preserve">
+    <value>Vorschau von Tray-Symbol, Fenstersymbol und Taskleiste</value>
+  </data>
+  <data name="TrayStateOff" xml:space="preserve">
+    <value>HDR aus</value>
+  </data>
+  <data name="TrayStateOffHint" xml:space="preserve">
+    <value>wartet</value>
+  </data>
+  <data name="TrayStateOn" xml:space="preserve">
+    <value>HDR ein</value>
+  </data>
+  <data name="TrayStateOnHint" xml:space="preserve">
+    <value>manuell/auto</value>
+  </data>
+  <data name="TrayStatePaused" xml:space="preserve">
+    <value>Pausiert</value>
+  </data>
+  <data name="TrayStatePausedHint" xml:space="preserve">
+    <value>Automatik</value>
+  </data>
+  <data name="TrayStateRunning" xml:space="preserve">
+    <value>Spiel läuft</value>
+  </data>
+  <data name="TrayStateRunningHint" xml:space="preserve">
+    <value>HDR ein</value>
+  </data>
+  <data name="TrayRealSize" xml:space="preserve">
+    <value>Echte Größe · aus / ein</value>
+  </data>
+  <data name="TraySizePixels" xml:space="preserve">
+    <value>{0} px</value>
+  </data>
+  <data name="TrayPreviewNote" xml:space="preserve">
+    <value>„HDR aus“ (der häufigste Zustand) trägt den Verlauf Akzent → Atmosphäre als Linie, „HDR ein“ die gefüllte Kachel. Die Farben werden je Taskleiste auf mindestens 3:1 Kontrast gebracht.</value>
+  </data>
+  <data name="TrayMenuPreviewName" xml:space="preserve">
+    <value>Vorschau des Tray-Menüs</value>
+  </data>
+  <data name="TrayPreviewStatus" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="WindowIconPreviewName" xml:space="preserve">
+    <value>HDRpilot-Fenstersymbol</value>
+  </data>
+  <data name="TrayIconPreviewName" xml:space="preserve">
+    <value>HDRpilot-Tray-Symbol</value>
+  </data>
+
+  <!-- Farbwähler für eigene Farben -->
+  <data name="ColorPickerTitle" xml:space="preserve">
+    <value>Farbe wählen</value>
+  </data>
+  <data name="ColorPickerField" xml:space="preserve">
+    <value>Sättigung und Helligkeit</value>
+  </data>
+  <data name="ColorPickerHue" xml:space="preserve">
+    <value>Farbton</value>
+  </data>
+  <data name="ColorPickerHex" xml:space="preserve">
+    <value>Hex</value>
+  </data>
+  <data name="ColorPickerHexName" xml:space="preserve">
+    <value>Farbe als Hex-Wert (#RRGGBB)</value>
+  </data>
+  <data name="ColorPickerApply" xml:space="preserve">
+    <value>Übernehmen</value>
+  </data>
+  <data name="ColorPickerCancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="ColorPickerInvalid" xml:space="preserve">
+    <value>Bitte als #RRGGBB eingeben</value>
+  </data>
+
+  <!-- Datum in der Live-Vorschau (wie in der Bibliothek) -->
+  <data name="RelativeToday" xml:space="preserve">
+    <value>heute, {0:HH:mm}</value>
+  </data>
+  <data name="RelativeYesterday" xml:space="preserve">
+    <value>gestern, {0:HH:mm}</value>
+  </data>
+  <data name="RelativeDays" xml:space="preserve">
+    <value>vor {0} Tagen</value>
+  </data>
+  <data name="RelativeOneWeek" xml:space="preserve">
+    <value>vor 1 Woche</value>
+  </data>
+  <data name="RelativeWeeks" xml:space="preserve">
+    <value>vor {0} Wochen</value>
+  </data>
+  <data name="RelativeDate" xml:space="preserve">
+    <value>{0:d. MMM yyyy}</value>
+  </data>
+  <data name="NavLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="SectionLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+    <comment>Karte mit „Nicht installierte Spiele ausblenden“ und dem Sammel-Entfernen (E90)</comment>
+  </data>
+  <data name="SectionLibraryHint" xml:space="preserve">
+    <value>Nicht installierte Spiele ausblenden oder ihre Einstellungen entfernen</value>
+  </data>
+  <data name="HideUninstalledLabel" xml:space="preserve">
+    <value>Nicht installierte Spiele ausblenden</value>
+  </data>
+  <data name="HideUninstalledHint" xml:space="preserve">
+    <value>Sie zählen dann in der Bibliothek nicht mit. „HDR automatisch“ wirkt für sie weiter.</value>
+  </data>
+  <data name="UninstalledCount" xml:space="preserve">
+    <value>zurzeit {0}</value>
+    <comment>{0} = Zahl der nicht installierten Spiele</comment>
+  </data>
+  <data name="UninstalledCountName" xml:space="preserve">
+    <value>Nicht installierte Spiele zurzeit: {0}</value>
+    <comment>Für Bildschirmleser; {0} = Anzahl</comment>
+  </data>
+  <data name="RemoveUninstalledButton" xml:space="preserve">
+    <value>Einstellungen aller nicht installierten Spiele entfernen…</value>
+  </data>
+  <data name="RemoveUninstalledHint" xml:space="preserve">
+    <value>Entfernt nach einer Rückfrage, was HDRpilot zu diesen Spielen gespeichert hat, sofort und unabhängig von „Speichern“. An Spielen und Launchern ändert sich nichts; selbst hinzugefügte Spiele bleiben.</value>
+  </data>
+  <data name="RemoveUninstalledNone" xml:space="preserve">
+    <value>Zurzeit gibt es keine nicht installierten Spiele aus Launchern.</value>
+  </data>
 </root>

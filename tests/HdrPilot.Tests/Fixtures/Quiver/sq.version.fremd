@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<metadata>
+<id>AnderesProgramm</id>
+<title>AnderesProgramm</title>
+<description>Ein anderes Programm mit Velopack (Beispiel)</description>
+<authors>Beispiel</authors>
+<version>1.2.0</version>
+<channel>win</channel>
+<mainExe>AnderesProgramm.exe</mainExe>
+<os>win</os>
+<rid>win-x64</rid>
+</metadata>
+</package>

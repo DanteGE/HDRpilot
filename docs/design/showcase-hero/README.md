@@ -1,7 +1,9 @@
 # Neugestaltung „Showcase Hero“: Stand für die spätere Umsetzung
 
 Stand 2026-10-14. Der Nutzer hat die Richtung „Showcase Hero“ gewählt und den lokalen Prototyp v4 mit
-„Sieht gut aus“ abgenommen. Er soll später in WPF umgesetzt werden. Noch gibt es keinen App-Code dafür.
+„Sieht gut aus“ abgenommen. Inzwischen ist er in WPF umgesetzt (Zweig `feature/showcase`, E89 in
+`docs/entscheidungen.md`, Berichte der Teile in `umsetzung-*.md`); dieser Ordner bleibt die Vorlage für Aussehen und
+Verhalten.
 
 ## Inhalt dieses Ordners
 
@@ -36,10 +38,25 @@ Online liegen alle Entwurfsrunden zum Vergleich (privat, nur für den Nutzer):
   soll premium, detailreich und kräftig sichtbar sein. Schlichte Entwürfe hat der Nutzer als „nicht professionell
   genug, Effekte zu dezent“ verworfen.
 - **Ansichten:**
-  - **Liste** ist der Standard und Pflicht: kompakt, sortierbar, mit „HDR automatisch“ je Zeile und einem schlanken
-    Titelbereich des gewählten Spiels oben.
+  - **Liste** ist der Standard und Pflicht: kompakt, sortierbar, mit „HDR automatisch“ je Zeile und dem Titelbereich
+    des gewählten Spiels oben. Dessen Höhe stellt der Nutzer per Ziehgriff zwischen Titelbereich und Liste ein
+    (Wunsch vom 2026-10-16, gemerkt, Doppelklick: Standard). Standard ist ein Drittel der Fensterhöhe; beim Scrollen
+    bleibt die Höhe, wie sie ist (anders als im Prototyp, der auf 120 px einklappt).
   - Dazu **Regal** (Titelbild und Kachelreihe) und **Raster**.
   - Die gewählte Ansicht wird gemerkt.
+  - **Werkzeugleiste** über der Liste, „Fließleiste mit Lichtnaht“ (Wunsch vom 2026-10-17, abgenommene Vorschau
+    `prototyp/leiste.html`, Konzept `werkzeugleiste-vorschlaege.md`; ersetzt die gefüllten Zeilen vom 2026-10-16):
+    - Filter als Symbol-Schalter 40×40 mit ihrer Zahl im Knopf (Mini-Schalter, Plaketten „NEU“ und „HDR“), Ansicht und
+      „Spiel hinzufügen“ als Symbole, zu jedem Element ein Tooltip nach 1 s (auch bei Tastaturfokus); Alt+A/N/H.
+    - Sie passt sich stufenlos an: erst gibt die Suche nach, dann Suche, Quelle und Sortierung anteilig, dann zeigt die
+      Sortierung nur ihr Symbol; erst unter 806 px Listenbreite zwei Zeilen an der Gruppengrenze. Die Schwellen gelten
+      bei jeder Skalierung bei denselben Fenstergrößen, Knöpfe und Abstände liegen auf ganzen Bildschirmpixeln (auch bei
+      110 %). Bewegt werden nur diese Schritte, und nur solange der Nutzer an einer Kante zieht.
+    - Eine Lasche rechts, 8 px über der Leiste (so viel wie zwischen den Knöpfen), blendet sie aus (auch
+      Strg+Umschalt+F, Strg+F1, Menü der Leiste). Eingeklappt sitzt eine Kapsel auf der Bildkante, die Suche oder die
+      aktiven Filter zeigt; gefiltert läuft eine Lichtnaht die Kante entlang. Strg+F blendet die Leiste wieder ein.
+      Gemerkt wird der Zustand (`settings.libraryToolbarCollapsed`); der Titelbereich springt nie, der Fokus geht nie
+      verloren, im hohen Kontrast gelten Systemfarben.
 - **Bilder:**
   - Echte Bilder aus den lokalen Launcher-Caches, nur gelesen.
   - Bei fehlenden Bildern erzeugt HDRpilot ein Ersatzbild. Per Rechtsklick lässt sich „Bild wählen…“.

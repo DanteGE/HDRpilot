@@ -5,11 +5,14 @@ using System.IO;
 using System.Windows.Input;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
+using HdrPilot.App.Services;
+using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Sessions;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace HdrPilot.App.ViewModels.Shell;
 
@@ -30,6 +33,8 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
 
     private readonly IShellContext _context;
     private readonly IFolderPicker _folderPicker;
+    private readonly ILogger _logger;
+    private readonly IConfirmDialogs? _confirm;
     private readonly RelayCommand _removeSearchFolderCommand;
 
     /// <summary>restartBufferSeconds fehlt in config.json: Der Standard bleibt ungeschrieben, solange er nicht geändert wird.</summary>
@@ -51,17 +56,32 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private bool _patternErrorShown;
     private bool _hasChanges;
     private bool _disposed;
+    private bool _hideUninstalled;
+    private int _uninstalledCount;
+    private int _removableCount;
+    private bool _removingUninstalled;
+    private string? _libraryMessage;
+    private bool _libraryMessageIsError;
+    private string _librarySummary = string.Empty;
 
-    public SettingsViewModel(IShellContext context, IFolderPicker folderPicker)
+    /// <param name="logger">Protokoll für Fehler beim Laden der Bilder und beim sofortigen Speichern der Darstellung.</param>
+    /// <param name="confirm">Rückfrage des Sammel-Entfernens (E90); ohne sie gibt es kein Sammel-Entfernen.</param>
+    public SettingsViewModel(IShellContext context, IFolderPicker folderPicker, ILogger? logger = null, IConfirmDialogs? confirm = null)
     {
         _context = context;
         _folderPicker = folderPicker;
+        _logger = logger ?? NullLogger.Instance;
+        _confirm = confirm;
         _removeSearchFolderCommand = new RelayCommand(RemoveSearchFolder, () => SelectedSearchFolder is not null);
+        RemoveUninstalledCommand = new AsyncRelayCommand(
+            RemoveUninstalledAsync,
+            () => _removableCount > 0 && !_removingUninstalled && _confirm is not null && _context.Cleanup is not null);
         SaveCommand = new RelayCommand(() => Save());
         CancelCommand = new RelayCommand(Cancel);
         AddSearchFolderCommand = new RelayCommand(AddSearchFolder);
         ResetHelperPatternsCommand = new RelayCommand(ResetHelperPatterns);
         OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
+        OpenLibraryCommand = new RelayCommand(OpenLibrary);
 
         var s = context.Config.Current.Settings;
         _pollIntervalMs = Math.Clamp(s.PollIntervalMs, PollIntervalMin, PollIntervalMax);
@@ -73,6 +93,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _notifications = s.Notifications;
         _hotkeyFallback = s.HotkeyFallback;
         _hdrListSync = s.HdrListSync;
+        _hideUninstalled = s.HideUninstalledGames;
         _logLevel = LogLevelOption.Clamp(s.LogLevel);
         foreach (var folder in s.SearchFolders.Where(f => !string.IsNullOrWhiteSpace(f)))
         {
@@ -87,6 +108,8 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _original = Capture();
         context.HdrStateChanged += OnHdrStateChanged;
         HdrList = new HdrListViewModel(context.HdrList, context.OpenWebPage);
+        Appearance = new AppearancePageViewModel(context, _logger);
+        RefreshUninstalled();
     }
 
     /// <summary>Speichern oder Abbrechen: Fenster soll sich schließen.</summary>
@@ -103,6 +126,22 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     public ICommand ResetHelperPatternsCommand { get; }
 
     public ICommand OpenLogFolderCommand { get; }
+
+    /// <summary>„Spielebibliothek öffnen“ unten in der Navigation.</summary>
+    public ICommand OpenLibraryCommand { get; }
+
+    /// <summary>Seite „Darstellung“: wirkt und speichert sofort, unabhängig von „Speichern“ und „Abbrechen“.</summary>
+    public AppearancePageViewModel Appearance { get; }
+
+    /// <summary>
+    /// „651 Spiele · 28 mit HDR automatisch“ in der Karte unten in der Navigation; wie in der Bibliothek ohne ausgeblendete
+    /// nicht installierte Spiele (E90, nach gespeichertem Stand). Neu gezählt nach dem Sammel-Entfernen.
+    /// </summary>
+    public string LibrarySummary
+    {
+        get => _librarySummary;
+        private set => SetProperty(ref _librarySummary, value);
+    }
 
     public ObservableCollection<DisplayOptionViewModel> Displays { get; } = [];
 
@@ -248,6 +287,63 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     /// <summary>Abschnitt „HDR-Liste (PCGamingWiki)“: Stand, „Jetzt abgleichen“, Konto (wirkt sofort).</summary>
     public HdrListViewModel HdrList { get; }
 
+    // ---------- Karte „Bibliothek“ (E90) ----------
+
+    /// <summary>„Nicht installierte Spiele ausblenden“ (AppSettings.HideUninstalledGames), wird mit „Speichern“ übernommen.</summary>
+    public bool HideUninstalledGames
+    {
+        get => _hideUninstalled;
+        set
+        {
+            if (SetProperty(ref _hideUninstalled, value))
+            {
+                UpdateChanges();
+            }
+        }
+    }
+
+    /// <summary>Nicht installierte Spiele zurzeit (auch selbst hinzugefügte mit fehlendem Ordner): so viele blendet der Schalter aus.</summary>
+    public int UninstalledCount => _uninstalledCount;
+
+    /// <summary>„zurzeit 5“ neben dem Schalter.</summary>
+    public string UninstalledCountText => string.Format(CultureInfo.CurrentCulture, ShellStrings.UninstalledCount, _uninstalledCount);
+
+    /// <summary>Für Bildschirmleser: „Nicht installierte Spiele zurzeit: 5“.</summary>
+    public string UninstalledCountName => string.Format(CultureInfo.CurrentCulture, ShellStrings.UninstalledCountName, _uninstalledCount);
+
+    /// <summary>Nicht installierte Spiele aus Launchern, deren Einstellungen sich entfernen lassen.</summary>
+    public int RemovableCount => _removableCount;
+
+    public bool HasRemovable => _removableCount > 0;
+
+    /// <summary>
+    /// „Einstellungen aller nicht installierten Spiele entfernen…“: nach einer Rückfrage mit allen Namen sofort, unabhängig
+    /// von „Speichern“ (<see cref="RemoveUninstalledAsync"/>).
+    /// </summary>
+    public AsyncRelayCommand RemoveUninstalledCommand { get; }
+
+    /// <summary>Ergebnis des Sammel-Entfernens in der Karte; null ohne.</summary>
+    public string? LibraryMessage
+    {
+        get => _libraryMessage;
+        private set
+        {
+            if (SetProperty(ref _libraryMessage, value))
+            {
+                OnPropertyChanged(nameof(HasLibraryMessage));
+            }
+        }
+    }
+
+    public bool HasLibraryMessage => !string.IsNullOrEmpty(_libraryMessage);
+
+    /// <summary>Die Meldung der Karte ist ein Fehler oder eine Warnung (Datei nicht löschbar, Speichern gescheitert).</summary>
+    public bool LibraryMessageIsError
+    {
+        get => _libraryMessageIsError;
+        private set => SetProperty(ref _libraryMessageIsError, value);
+    }
+
     public ObservableCollection<string> SearchFolders { get; } = [];
 
     public bool HasSearchFolders => SearchFolders.Count > 0;
@@ -385,6 +481,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 s.Notifications = _notifications;
                 s.HotkeyFallback = _hotkeyFallback;
                 s.HdrListSync = _hdrListSync;
+                s.HideUninstalledGames = _hideUninstalled;
                 s.SearchFolders = folders;
                 s.LogLevel = _logLevel;
                 s.HelperExecutablePatterns = patterns;
@@ -445,6 +542,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _disposed = true;
         _context.HdrStateChanged -= OnHdrStateChanged;
         HdrList.Dispose();
+        Appearance.Dispose();
         foreach (var d in Displays)
         {
             d.PropertyChanged -= OnDisplayChanged;
@@ -486,6 +584,18 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     }
 
     private void ResetHelperPatterns() => HelperPatternsText = HelperPatternList.DefaultText;
+
+    private void OpenLibrary()
+    {
+        try
+        {
+            _context.OpenLibrary();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or System.ComponentModel.Win32Exception)
+        {
+            _logger.LogWarning(ex, "Spielebibliothek ließ sich nicht öffnen.");
+        }
+    }
 
     private void OpenLogFolder()
     {
@@ -625,7 +735,8 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _hdrListSync,
         JoinFolders(SearchFolders),
         _logLevel,
-        _helperPatterns.IsValid ? string.Join("\n", _helperPatterns.Patterns) : "\u0000" + _helperPatternsText);
+        _helperPatterns.IsValid ? string.Join("\n", _helperPatterns.Patterns) : "\u0000" + _helperPatternsText,
+        _hideUninstalled);
 
     private sealed record Snapshot(
         string Targets,
@@ -639,5 +750,142 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         bool HdrListSync,
         string Folders,
         LogLevel LogLevel,
-        string Patterns);
+        string Patterns,
+        bool HideUninstalled);
+
+    /// <summary>
+    /// Zahlen der Karte „Bibliothek“ und der Navigation aus dem aktuellen Stand der Konfiguration (beim Öffnen und nach dem
+    /// Sammel-Entfernen). Die Zahl der Spiele unten in der Navigation zählt wie die Bibliothek nach dem gespeicherten
+    /// „Nicht installierte Spiele ausblenden“.
+    /// </summary>
+    private void RefreshUninstalled()
+    {
+        var config = _context.Config.Current;
+        _uninstalledCount = LibraryCleanup.CountNotInstalled(config);
+        _removableCount = LibraryCleanup.Removable(config).Count;
+        var listed = config.Games.Where(g => !config.Settings.HideUninstalledGames || g.IsInstalled).ToList();
+        LibrarySummary = string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummary, listed.Count, listed.Count(g => g.HdrAuto));
+        OnPropertyChanged(nameof(UninstalledCount));
+        OnPropertyChanged(nameof(UninstalledCountText));
+        OnPropertyChanged(nameof(UninstalledCountName));
+        OnPropertyChanged(nameof(RemovableCount));
+        OnPropertyChanged(nameof(HasRemovable));
+        RemoveUninstalledCommand.RaiseCanExecuteChanged();
+    }
+
+    private bool HasSession(string key) => _context.Sessions.Any(s => string.Equals(s.GameKey, key, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Sammel-Entfernen (E90): alle nicht installierten Launcher-Spiele ohne laufende oder vorbereitete Sitzung; laufen alle,
+    /// sagt die Karte das. Vor der Rückfrage im Hintergrund ihre HDRpilot-Verknüpfungen und, alle zugleich, ob sie vielleicht
+    /// noch installiert sind (Laufwerk, EXE, Steam); dauert das länger als <see cref="LibraryViewModel.CheckingDelay"/>, steht in
+    /// der Karte, dass geprüft wird. Die Rückfrage nennt jedes Spiel mit dem, was verloren geht, und darunter die Spur einer
+    /// Installation, warnt dann und bietet die Verknüpfungen per Häkchen an. Geprüft wird beim Schreiben
+    /// (<see cref="LibraryCleanup.RemoveNotInstalled"/>): Inzwischen wiedergefundene oder laufende Spiele bleiben. Danach räumt
+    /// <see cref="UninstalledGameCleanup"/> je entferntes Spiel auf.
+    /// </summary>
+    private async Task RemoveUninstalledAsync()
+    {
+        if (_confirm is not { } confirm || _context.Cleanup is not { } cleanup)
+        {
+            return;
+        }
+
+        var removable = LibraryCleanup.Removable(_context.Config.Current);
+        var games = removable.Where(g => !HasSession(g.Key)).ToList();
+        if (games.Count == 0)
+        {
+            if (removable.Count > 0)
+            {
+                // Alle laufen gerade (etwa vom wieder verbundenen Laufwerk gestartet): sagen statt still nichts tun.
+                LibraryMessageIsError = true;
+                LibraryMessage = removable.Count == 1
+                    ? LibraryText.Format(LibraryStrings.RemoveSettings_Running, removable[0].Name)
+                    : LibraryText.Format(LibraryStrings.RemoveAll_RunningMany, removable.Count);
+            }
+
+            RefreshUninstalled();
+            return;
+        }
+
+        _removingUninstalled = true;
+        RemoveUninstalledCommand.RaiseCanExecuteChanged();
+        LibraryMessage = null; // eine Meldung vom letzten Mal gilt nicht mehr
+        try
+        {
+            var shortcutSearch = Task.Run(() => games.ToDictionary(g => g.Key, g => cleanup.FindShortcuts(g.Key), StringComparer.OrdinalIgnoreCase));
+            var installCheck = cleanup.CheckInstallsAsync(games);
+            var prepared = Task.WhenAll(shortcutSearch, installCheck);
+            if (await Task.WhenAny(prepared, Task.Delay(LibraryViewModel.CheckingDelay)) != prepared)
+            {
+                LibraryMessageIsError = false;
+                LibraryMessage = LibraryStrings.RemoveAll_Checking;
+            }
+
+            var traces = await installCheck;
+            var shortcuts = await shortcutSearch;
+            if (LibraryMessage == LibraryStrings.RemoveAll_Checking)
+            {
+                LibraryMessage = null;
+            }
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            var answer = confirm.Confirm(RemoveSettingsText.ForGames(games, traces, shortcuts.Values.Sum(s => s.Count)));
+            if (!answer.Confirmed || _disposed)
+            {
+                return;
+            }
+
+            var keys = games.Select(g => g.Key).ToList();
+            IReadOnlyList<GameConfig> removed = [];
+            try
+            {
+                await Task.Run(() => _context.Config.Update(c => removed = LibraryCleanup.RemoveNotInstalled(c, keys, HasSession)));
+            }
+            catch (IOException ex)
+            {
+                LibraryMessageIsError = true;
+                LibraryMessage = string.Format(CultureInfo.CurrentCulture, ShellStrings.SaveFailed, ex.Message);
+                return;
+            }
+
+            var failed = 0;
+            var remaining = _context.Config.Current;
+            foreach (var game in removed)
+            {
+                IReadOnlyCollection<GameShortcut> chosen = answer.OptionChecked && shortcuts.TryGetValue(game.Key, out var found) ? found : [];
+                failed += (await Task.Run(() => cleanup.DeleteData(game, chosen, remaining))).Failed.Count;
+            }
+
+            // Ohne entferntes Spiel nur, dass alle bleiben (nicht „Einstellungen von 0 Spielen entfernt“).
+            var parts = new List<string>();
+            if (removed.Count > 0)
+            {
+                parts.Add(removed.Count == 1 ? LibraryStrings.RemoveAll_DoneOne : LibraryText.Format(LibraryStrings.RemoveAll_DoneMany, removed.Count));
+            }
+
+            var kept = keys.Count - removed.Count;
+            if (kept > 0)
+            {
+                parts.Add(kept == 1 ? LibraryStrings.RemoveAll_KeptOne : LibraryText.Format(LibraryStrings.RemoveAll_KeptMany, kept));
+            }
+
+            if (failed > 0)
+            {
+                parts.Add(LibraryText.FilesFailed(failed));
+            }
+
+            LibraryMessageIsError = kept > 0 || failed > 0;
+            LibraryMessage = string.Join(" ", parts);
+        }
+        finally
+        {
+            _removingUninstalled = false;
+            RefreshUninstalled();
+        }
+    }
 }

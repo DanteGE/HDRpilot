@@ -1,7 +1,11 @@
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.HdrSupport;
+using HdrPilot.Core.Sessions;
 
 namespace HdrPilot.App.ViewModels.Shell;
 
@@ -19,6 +23,18 @@ public interface IShellContext
     /// <summary>HDR-Liste von PCGamingWiki: Stand, „Jetzt abgleichen“, Konto.</summary>
     IHdrListService HdrList { get; }
 
+    /// <summary>Darstellung (E89): Seite „Darstellung“ liest und ändert sie, Änderungen gelten sofort.</summary>
+    IAppearanceService Appearance { get; }
+
+    /// <summary>Spielbilder (E89): Abdeckung je Launcher, Beispiele der Ersatzbilder, Bilder der Live-Vorschau.</summary>
+    IArtworkService Artwork { get; }
+
+    /// <summary>SteamGridDB (E89): Schalter, Schlüssel, Stand des Netzwerkzugriffs.</summary>
+    ISteamGridDbService SteamGridDb { get; }
+
+    /// <summary>Echte Helligkeitswerte der Bildschirme (E89) für die Vorschau.</summary>
+    IDisplayLuminanceService Luminance { get; }
+
     /// <summary>Öffnet eine https-Adresse im Standardbrowser (Links zu PCGamingWiki).</summary>
     void OpenWebPage(string url);
 
@@ -32,6 +48,23 @@ public interface IShellContext
 
     /// <summary>Nach dem Speichern: Tray auffrischen; bei geänderten Suchordnern im Hintergrund neu einlesen.</summary>
     void OnSettingsSaved(bool searchFoldersChanged);
+
+    /// <summary>„Spielebibliothek öffnen“ in der Navigation der Einstellungen (E89). Standard: nichts (Tests).</summary>
+    void OpenLibrary()
+    {
+    }
+
+    /// <summary>Stand wie im Kopf des echten Tray-Menüs (HDR, Pause, laufende Spiele) für dessen Vorschau. Standard: null.</summary>
+    TrayState? QueryTrayState() => null;
+
+    /// <summary>
+    /// Aufräumen nach „Einstellungen aller nicht installierten Spiele entfernen…“ (E90): eigene Symbole, Bilder,
+    /// Verknüpfungen und die Prüfungen davor. Standard: keins (dann gibt es kein Sammel-Entfernen).
+    /// </summary>
+    UninstalledGameCleanup? Cleanup => null;
+
+    /// <summary>Laufende und vorbereitete Sitzungen: Deren Spiele lässt das Sammel-Entfernen aus (E90). Standard: keine.</summary>
+    IReadOnlyList<SessionInfo> Sessions => [];
 }
 
 /// <summary>Ordnerauswahl (Dialog). In Tests eine Attrappe.</summary>

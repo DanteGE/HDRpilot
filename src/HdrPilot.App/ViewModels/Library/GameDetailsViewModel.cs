@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.Core.Artwork;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.HdrSupport;
@@ -26,8 +28,9 @@ public enum DetailMessageArea
 
 /// <summary>
 /// Detailbereich des gewählten Spiels: Start über HdrPilot, Verknüpfungen, Steam-Startoption (nur Steam), Automatik,
-/// Bildschirm, Zurückstellen, Bild („Windows Auto HDR“, E88), EXE-Dateien (mit Herkunft) und Entfernen (nur manuelle
-/// Spiele). Änderungen gehen sofort in die Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
+/// Bildschirm, Zurückstellen, Bild („Windows Auto HDR“, E88), EXE-Dateien (mit Herkunft) und ganz unten Entfernen (manuelle
+/// Spiele) bzw. „Einstellungen entfernen…“ (nicht installierte Launcher-Spiele, E90). Änderungen gehen sofort in die
+/// Konfiguration. Die Rückmeldung einer Aktion steht bei ihrem Abschnitt.
 /// </summary>
 public sealed class GameDetailsViewModel : ObservableObject
 {
@@ -44,6 +47,8 @@ public sealed class GameDetailsViewModel : ObservableObject
     private bool _isLaunching;
     private bool _suppressWrites;
     private bool _steamOfferOpen;
+    private GameArtwork? _artwork;
+    private IReadOnlyList<ArtworkTileViewModel> _artworkTiles;
 
     internal GameDetailsViewModel(LibraryViewModel owner, GameItemViewModel item)
     {
@@ -62,8 +67,10 @@ public sealed class GameDetailsViewModel : ObservableObject
         CreateStartMenuShortcutCommand = new AsyncRelayCommand(() => CreateShortcutAsync(desktop: false), () => CanLaunchGame);
         CopySteamLaunchOptionCommand = new RelayCommand(CopySteamLaunchOption, () => IsSteam);
         RemoveGameCommand = new AsyncRelayCommand(RemoveGameAsync, () => Item.IsManual);
+        RemoveSettingsCommand = new AsyncRelayCommand(() => _owner.RemoveSettingsAsync(Item), () => Item.IsRemovable && !Item.IsRunning);
 
         Executables.ReplaceAll(BuildExecutables(_config, HelperPatterns));
+        _artworkTiles = ArtworkTileViewModel.For(item, null);
         RefreshDisplays();
 
         // „HDR automatisch“ (Liste oder Details) und die HDR-Angabe laut PCGamingWiki steuern die Hinweise unter
@@ -72,6 +79,114 @@ public sealed class GameDetailsViewModel : ObservableObject
     }
 
     public GameItemViewModel Item { get; }
+
+    // ---------- Spielprofil und Bilder (E89) ----------
+
+    /// <summary>
+    /// „Steam · GoWEDay-Steam.exe“ (Haupt-EXE: Hilfs- und Startprogramme nach hinten), „Quiver · mehrere EXE“ (ohne
+    /// Start-Befehl und gemerkte EXE, mehrere mögliche: kein Dateiname, der nur zufällig vorne stünde) bzw. „Steam · keine EXE
+    /// erkannt“.
+    /// </summary>
+    public string ProfileSubtitle => SeveralExecutablesWithoutChoice
+        ? LibraryText.Format(LibraryStrings.Profile_SubtitleSeveralExe, Item.SourceName)
+        : MainExecutable is { } exe
+            ? LibraryText.Format(LibraryStrings.Profile_Subtitle, Item.SourceName, exe)
+            : LibraryText.Format(LibraryStrings.Profile_SubtitleNoExe, Item.SourceName);
+
+    /// <summary>Kein Start-Befehl, keine beim Spielen gemerkte EXE und mehr als eine mögliche Haupt-EXE.</summary>
+    private bool SeveralExecutablesWithoutChoice =>
+        !CanLaunchGame
+        && !Executables.Any(e => e.Origin == ExecutableOrigin.Detected && !e.IsExcluded)
+        && Executables.Count(e => !e.IsExcluded && !e.IsHelper && !LauncherName(e.FileName)) > 1;
+
+    /// <summary>Dateiname der Haupt-EXE (null ohne bekannte EXE).</summary>
+    public string? MainExecutable => Executables
+        .Where(e => !e.IsExcluded)
+        .OrderBy(e => e.IsHelper || LauncherName(e.FileName) ? 1 : 0)
+        .ThenByDescending(e => GameBinary(e.Path) ? 1 : 0)
+        .Select(e => e.FileName)
+        .FirstOrDefault();
+
+    /// <summary>Startbefehl, wie HDRpilot ihn ausführt (Adresse oder Pfad mit Argumenten); leer ohne Befehl.</summary>
+    public string LaunchCommandText => string.IsNullOrWhiteSpace(_config.LaunchCommand)
+        ? string.Empty
+        : string.IsNullOrWhiteSpace(_config.LaunchArguments) ? _config.LaunchCommand! : _config.LaunchCommand + " " + _config.LaunchArguments;
+
+    public bool HasLaunchCommandText => LaunchCommandText.Length > 0;
+
+    /// <summary>„EXE-DATEIEN · 2“.</summary>
+    public string ExecutablesHeader => LibraryText.Format(LibraryStrings.Details_ExecutablesCount, LibraryStrings.Details_SectionExecutables, Executables.Count);
+
+    /// <summary>Vorschau-Kacheln Titelbild, Logo, Cover und Symbol (Abschnitt „BILDER“).</summary>
+    public IReadOnlyList<ArtworkTileViewModel> ArtworkTiles => _artworkTiles;
+
+    /// <summary>Cover klein im Kopf des Detailbereichs (null: Ersatzfläche aus dem Namen).</summary>
+    public System.Windows.Media.ImageSource? CoverPreview => _artwork?.Cover?.Image;
+
+    /// <summary>„Lokal aus dem Steam-Cache · nichts heruntergeladen“ (vom Bilddienst); leer, solange die Bilder laden.</summary>
+    public string ArtworkSummary => _artwork?.Summary.Description ?? string.Empty;
+
+    public bool HasArtworkSummary => ArtworkSummary.Length > 0;
+
+    /// <summary>„Titelbild erzeugt · Name statt Logo · Cover erzeugt“; leer, wenn alles aus einer Quelle kommt.</summary>
+    public string GeneratedSummary
+    {
+        get
+        {
+            if (_artwork is not { } art)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            if (art.Summary.Hero is ArtworkOrigin.Generated or ArtworkOrigin.None)
+            {
+                parts.Add(LibraryStrings.Artwork_HeroGenerated);
+            }
+
+            if (art.Summary.LogoIsName)
+            {
+                parts.Add(LibraryStrings.Artwork_NameInsteadOfLogo);
+            }
+
+            if (art.Summary.CoverFromSmear)
+            {
+                parts.Add(LibraryStrings.Artwork_CoverFromSmear);
+            }
+            else if (art.Summary.Cover is ArtworkOrigin.Generated or ArtworkOrigin.None)
+            {
+                parts.Add(LibraryStrings.Artwork_CoverGenerated);
+            }
+
+            if (art.Summary.Icon == ArtworkOrigin.Generated)
+            {
+                parts.Add(LibraryStrings.Artwork_Monogram);
+            }
+
+            return string.Join(LibraryStrings.Separator, parts);
+        }
+    }
+
+    public bool HasGeneratedSummary => GeneratedSummary.Length > 0;
+
+    /// <summary>Bildsatz des Spiels ist geladen (aus dem Titelbereich übernommen).</summary>
+    internal void SetArtwork(GameArtwork artwork)
+    {
+        _artwork = artwork;
+        _artworkTiles = ArtworkTileViewModel.For(Item, artwork);
+        OnPropertyChanged(nameof(ArtworkTiles));
+        OnPropertyChanged(nameof(CoverPreview));
+        OnPropertyChanged(nameof(ArtworkSummary));
+        OnPropertyChanged(nameof(HasArtworkSummary));
+        OnPropertyChanged(nameof(GeneratedSummary));
+        OnPropertyChanged(nameof(HasGeneratedSummary));
+    }
+
+    private static bool LauncherName(string file) =>
+        System.Text.RegularExpressions.Regex.IsMatch(file, @"(start_protected_game|launcher|prelauncher|anticheat|helper|crash|unins|setup|redist|battleye|easyanti|gamelaunchhelper|^play[a-z0-9]+\.exe$)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static bool GameBinary(string path) =>
+        System.Text.RegularExpressions.Regex.IsMatch(path, @"shipping|win64|x64|\\bin\\", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     public string InstallDir => _config.InstallDir;
 
@@ -87,6 +202,51 @@ public sealed class GameDetailsViewModel : ObservableObject
     /// noch eine Verknüpfung anlegen; die Erkennung beim Spielen wirkt trotzdem.
     /// </summary>
     public bool CanLaunchGame => !string.IsNullOrWhiteSpace(_config.LaunchCommand);
+
+    /// <summary>
+    /// Hinweis ohne Start-Befehl (unter „Mit HDR starten“): bei Quiver-Spielen der Weg über Quiver (mehrere Kandidaten, eine
+    /// sehr tief liegende EXE oder ein Startskript, das HDRpilot nicht ausführt, E91), sonst der allgemeine Hinweis für eigene
+    /// Einträge.
+    /// </summary>
+    public string NoLaunchText => Item.Source == GameSource.Quiver ? LibraryStrings.Launch_NoCommandQuiver : LibraryStrings.Launch_NoCommand;
+
+    /// <summary>Quiver-Spiel, das per Windows Installer installiert wurde (E91): Hinweis, welcher Ordner als Installationsordner gilt.</summary>
+    public bool ShowWindowsInstallerHint => Item.Source == GameSource.Quiver && string.Equals(_config.InstallKind, InstallKinds.WindowsInstaller, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Dasselbe Spiel zweimal in der Bibliothek (E91): ein früher von Hand eingetragenes Spiel, das HDRpilot jetzt auch aus
+    /// Quiver liest (der eigene Eintrag zeigt auf den Quiver-Spielordner oder einen Ordner darin). Beide Einträge nennen den
+    /// anderen; HDRpilot entfernt nichts von selbst. Leer ohne solchen Eintrag.
+    /// </summary>
+    public string DuplicateHint
+    {
+        get
+        {
+            if (Item.Source is not (GameSource.Quiver or GameSource.Manual) || string.IsNullOrWhiteSpace(_config.InstallDir))
+            {
+                return string.Empty;
+            }
+
+            var quiver = Item.Source == GameSource.Quiver;
+            foreach (var other in _owner.Context.Config.Games)
+            {
+                if (other.Source != (quiver ? GameSource.Manual : GameSource.Quiver) || string.IsNullOrWhiteSpace(other.InstallDir))
+                {
+                    continue;
+                }
+
+                var (quiverDir, manualDir) = quiver ? (_config.InstallDir, other.InstallDir) : (other.InstallDir, _config.InstallDir);
+                if (PathUtil.IsUnder(manualDir, quiverDir))
+                {
+                    return LibraryText.Format(quiver ? LibraryStrings.Details_DuplicateOfManual : LibraryStrings.Details_DuplicateOfQuiver, other.Name);
+                }
+            }
+
+            return string.Empty;
+        }
+    }
+
+    public bool HasDuplicateHint => DuplicateHint.Length > 0;
 
     public string? LastPlayedText => _config.LastPlayed is { } t
         ? LibraryText.Format(LibraryStrings.Details_LastPlayed, t.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
@@ -256,6 +416,18 @@ public sealed class GameDetailsViewModel : ObservableObject
 
     public AsyncRelayCommand RemoveGameCommand { get; }
 
+    /// <summary>
+    /// „Einstellungen entfernen…“ ganz unten (E90): nur nicht installierte Launcher-Spiele, gesperrt während einer Sitzung
+    /// (<see cref="LibraryViewModel.RemoveSettingsAsync"/>).
+    /// </summary>
+    public AsyncRelayCommand RemoveSettingsCommand { get; }
+
+    /// <summary>Der Knopf „Einstellungen entfernen…“ erscheint (nicht installiertes Launcher-Spiel).</summary>
+    public bool CanRemoveSettings => Item.IsRemovable;
+
+    /// <summary>Hinweis „Nicht mehr gefunden“; bei Launcher-Spielen mit dem Hinweis, dass sich die Einstellungen ganz unten entfernen lassen.</summary>
+    public string NotInstalledText => Item.IsRemovable ? LibraryStrings.Details_NotInstalledRemovable : LibraryStrings.Details_NotInstalled;
+
     /// <summary>Ausschlussliste für Hilfsprozesse aus der Konfiguration (null: Standardliste).</summary>
     private IReadOnlyList<string>? HelperPatterns => _owner.Context.Config.Settings.HelperExecutablePatterns;
 
@@ -278,7 +450,10 @@ public sealed class GameDetailsViewModel : ObservableObject
                         path,
                         origin,
                         game.ExcludedExecutables.Any(x => ExcludeMatches(x, path)),
-                        HelperExecutables.IsHelper(path, helperPatterns)));
+                        HelperExecutables.IsHelper(path, helperPatterns))
+                    {
+                        ShortFolder = ExecutableItemViewModel.Shorten(System.IO.Path.GetDirectoryName(path) ?? string.Empty, game.InstallDir),
+                    });
                 }
             }
         }
@@ -355,8 +530,19 @@ public sealed class GameDetailsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasInstallDir));
         OnPropertyChanged(nameof(LastPlayedText));
         OnPropertyChanged(nameof(HasLastPlayed));
+        OnPropertyChanged(nameof(ProfileSubtitle));
+        OnPropertyChanged(nameof(MainExecutable));
+        OnPropertyChanged(nameof(DuplicateHint));
+        OnPropertyChanged(nameof(HasDuplicateHint));
+        OnPropertyChanged(nameof(ExecutablesHeader));
+        OnPropertyChanged(nameof(LaunchCommandText));
+        OnPropertyChanged(nameof(HasLaunchCommandText));
+        OnPropertyChanged(nameof(CanLaunchGame));
+        OnPropertyChanged(nameof(ShowWindowsInstallerHint));
         RelearnExeCommand.RaiseCanExecuteChanged();
         LaunchCommand.RaiseCanExecuteChanged();
+        CreateDesktopShortcutCommand.RaiseCanExecuteChanged();
+        CreateStartMenuShortcutCommand.RaiseCanExecuteChanged();
     }
 
     /// <summary>Ein anderes Spiel ist gewählt oder das Fenster geschlossen: nicht mehr auf die Zeile hören.</summary>
@@ -380,6 +566,14 @@ public sealed class GameDetailsViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsAutoHdrSubdued));
                 OnPropertyChanged(nameof(ShowAutoHdrNativeHint));
                 OnPropertyChanged(nameof(AutoHdrNativeHint));
+                break;
+            case nameof(GameItemViewModel.IsRemovable):
+                OnPropertyChanged(nameof(CanRemoveSettings));
+                OnPropertyChanged(nameof(NotInstalledText));
+                RemoveSettingsCommand.RaiseCanExecuteChanged();
+                break;
+            case nameof(GameItemViewModel.IsRunning):
+                RemoveSettingsCommand.RaiseCanExecuteChanged();
                 break;
         }
     }
@@ -599,6 +793,7 @@ public sealed class GameDetailsViewModel : ObservableObject
     {
         IsLaunching = true;
         ShowMessage(LibraryStrings.Launch_Running, StatusKind.Info, DetailMessageArea.Launch);
+        _owner.OnLaunchStarting(); // solange der Start läuft, rechnet die Bibliothek keine helle Fassung
         try
         {
             var outcome = await _owner.Context.LaunchAsync(Item.Key);
@@ -610,6 +805,7 @@ public sealed class GameDetailsViewModel : ObservableObject
                         : LibraryStrings.Launch_StartedPlain,
                     StatusKind.Success,
                     DetailMessageArea.Launch);
+                _owner.OnLaunchSucceeded(); // auf Wunsch schließt das Fenster („Nach dem Start in den Infobereich“)
             }
             else
             {
@@ -623,6 +819,7 @@ public sealed class GameDetailsViewModel : ObservableObject
         finally
         {
             IsLaunching = false;
+            _owner.OnLaunchFinished();
         }
     }
 

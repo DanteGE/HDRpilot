@@ -1,4 +1,7 @@
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -25,7 +28,19 @@ public interface ILibraryContext : IDisposable
 
     IGameIconService Icons { get; }
 
+    /// <summary>Spielbilder (E89): Titelbild, Logo, Cover, Farbfeld, Umgebungsfarben, eigene Bilder.</summary>
+    IArtworkService Artwork { get; }
+
+    /// <summary>Echte Helligkeitswerte der Bildschirme (E89) für die Anzeige im Kopf.</summary>
+    IDisplayLuminanceService Luminance { get; }
+
+    /// <summary>Darstellung (E89): Palette, Thema, Effektstufe, Pausenregeln.</summary>
+    IAppearanceService Appearance { get; }
+
     IShortcutService Shortcuts { get; }
+
+    /// <summary>Aufräumen nach „Einstellungen entfernen…“ (E90): eigene Symbole, Bilder, Verknüpfungen und Prüfungen davor.</summary>
+    UninstalledGameCleanup Cleanup { get; }
 
     IUiDispatcher Ui { get; }
 
@@ -74,6 +89,14 @@ public interface ILibraryContext : IDisposable
 
     void ShowSettings();
 
+    /// <summary>
+    /// Ordner im Explorer öffnen („Installationsordner öffnen“, E89). Der Aufrufer prüft vorher, dass es ihn gibt.
+    /// Standard: nichts (Attrappen).
+    /// </summary>
+    void OpenFolder(string path)
+    {
+    }
+
     /// <summary>Konfiguration wurde geändert (von der Oberfläche, der Automatik oder dem Einlesen).</summary>
     event EventHandler? ConfigChanged;
 
@@ -97,6 +120,50 @@ public interface IUiDispatcher
     IDisposable Delay(TimeSpan delay, Action action);
 }
 
+/// <summary>
+/// Rückfrage mit Aufzählung, Warnung und Häkchen (E90, „Einstellungen entfernen…“): Was verloren geht bzw. welche Spiele
+/// betroffen sind, eine Warnung in eigener Fläche und ein Häkchen für etwas Zusätzliches (ohne <see cref="OptionText"/>
+/// keins, sonst anfangs nicht gesetzt). Der Fokus liegt immer auf „Abbrechen“.
+/// </summary>
+public sealed record ConfirmRequest(string Title, string Message, string ConfirmText, bool IsDanger)
+{
+    /// <summary>Überschrift über der Aufzählung, etwa „Verloren geht“; null ohne Überschrift.</summary>
+    public string? DetailsHeader { get; init; }
+
+    /// <summary>Aufzählung (je Eintrag ein Punkt, auf Wunsch mit einer Zeile darunter); leer: keine.</summary>
+    public IReadOnlyList<ConfirmDetail> Details { get; init; } = [];
+
+    /// <summary>Warnung in eigener Fläche, etwa „Laufwerk F: ist nicht verbunden …“; null: keine.</summary>
+    public string? Warning { get; init; }
+
+    /// <summary>Text des Häkchens, etwa „Auch die 2 HDRpilot-Verknüpfungen löschen“; null: kein Häkchen.</summary>
+    public string? OptionText { get; init; }
+
+    /// <summary>Erklärung unter dem Text des Häkchens; null: keine.</summary>
+    public string? OptionHint { get; init; }
+}
+
+/// <summary>
+/// Punkt der Aufzählung einer <see cref="ConfirmRequest"/>: der Text und darunter, kleiner und gedämpft, eine Ergänzung
+/// (beim Sammel-Entfernen der Name des Spiels und was bei ihm verloren geht); ohne <see cref="Note"/> nur der Text.
+/// </summary>
+public sealed record ConfirmDetail(string Text, string? Note = null)
+{
+    /// <summary>Für Bildschirmleser: Text und Ergänzung in einem.</summary>
+    public string Spoken => Note is null ? Text : Text + ": " + Note;
+
+    public override string ToString() => Spoken;
+}
+
+/// <summary>Antwort auf eine <see cref="ConfirmRequest"/>: bestätigt, und ob das Häkchen gesetzt war.</summary>
+public readonly record struct ConfirmAnswer(bool Confirmed, bool OptionChecked);
+
+/// <summary>Rückfragen mit Aufzählung und Häkchen (Bibliothek und Einstellungen; in Tests ersetzbar).</summary>
+public interface IConfirmDialogs
+{
+    ConfirmAnswer Confirm(ConfirmRequest request);
+}
+
 /// <summary>Rückfragen und Dateiauswahl der Spielebibliothek (in Tests ersetzbar).</summary>
 public interface ILibraryDialogs
 {
@@ -109,6 +176,17 @@ public interface ILibraryDialogs
 
     bool Confirm(string title, string message, string confirmText, bool isDanger);
 
+    /// <summary>
+    /// Rückfrage mit Aufzählung, Warnung und Häkchen (E90). Standard: einfache Rückfrage ohne Aufzählung und Häkchen.
+    /// </summary>
+    ConfirmAnswer Confirm(ConfirmRequest request) => new(Confirm(request.Title, request.Message, request.ConfirmText, request.IsDanger), false);
+
     /// <summary>Zeigt den Dialog „Spiel hinzufügen“. True, wenn bestätigt (Ergebnis in <see cref="AddGameViewModel.Result"/>).</summary>
     bool ShowAddGame(AddGameViewModel viewModel);
+
+    /// <summary>Bilddatei für „Bild wählen…“ → „Eigene Datei…“ wählen; null bei Abbruch. Standard: keine Auswahl.</summary>
+    string? PickArtworkFile(string? initialDirectory) => null;
+
+    /// <summary>Zeigt den Dialog „Bild wählen…“. True, wenn „Übernehmen“ gewählt wurde. Standard: nicht gezeigt.</summary>
+    bool ShowArtworkPicker(ArtworkPickerViewModel viewModel) => false;
 }

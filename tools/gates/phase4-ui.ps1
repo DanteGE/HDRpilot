@@ -70,9 +70,14 @@ try {
     Start-Sleep -Milliseconds 600
     $filter = Find-Id $win 'SourceFilter'
     $ec = $null
-    if ($filter.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ec)) { $ec.Expand(); Start-Sleep -Milliseconds 400 }
-    $entries = @($filter.FindAll([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::ListItem))))
-    $gog = $entries | Where-Object { $_.Current.Name -match 'GOG' } | Select-Object -First 1
+    if ($filter.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ec)) { $ec.Expand() }
+    # Die Einträge entstehen erst mit dem Aufklappen (Popup, Vorlagen): bis zu 3 s darauf warten statt fest 400 ms
+    $entries = @(); $gog = $null
+    for ($try = 0; $try -lt 30 -and -not $gog; $try++) {
+        Start-Sleep -Milliseconds 100
+        $entries = @($filter.FindAll([Windows.Automation.TreeScope]::Descendants, (New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::ListItem))))
+        $gog = $entries | Where-Object { $_.Current.Name -match 'GOG' } | Select-Object -First 1
+    }
     Check ($null -ne $gog) "Quellenfilter bietet GOG an ($($entries.Count) Einträge: $(($entries | ForEach-Object { $_.Current.Name }) -join ', '))"
     if ($gog) {
         Select-El $gog

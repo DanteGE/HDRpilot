@@ -82,9 +82,10 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             Schaltet HDR und bestätigt den Zustand durch erneutes Lesen.
             <auswahl>: primary (Standard), all, Nummer aus "hdr status", Teil des Namens oder monitorDevicePath.
 
-        hdrpilot scan [--source <quelle>] [--search "<ordner>;<ordner>"]
-            Gibt alle gefundenen Spiele und die Fehler je Scanner als JSON aus.
-            <quelle>: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet
+        hdrpilot scan [--source <quelle>] [--search "<ordner>;<ordner>"] [--config-dir <ordner>]
+            Gibt alle gefundenen Spiele und die Fehler je Scanner als JSON aus (nur lesen).
+            <quelle>: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver
+            Mit --config-dir zählen Suchordner und gelernte Quiver-Ordner dieser Ablage mit.
 
         hdrpilot games list [--json]
         hdrpilot games import
@@ -96,7 +97,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             Überwacht Spielstarts im Vordergrund (wie die App, ohne Oberfläche). Beenden mit Strg+C.
         hdrpilot run <schlüssel>
             Start über HDRpilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
-        games, watch und run: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HDRpilot, für Tests).
+        scan, games, watch und run: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HDRpilot, für Tests).
 
         Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
                     4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden
@@ -104,7 +105,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
 
     private async Task<int> RunScanAsync(CliArguments args, CancellationToken cancellationToken)
     {
-        var unknown = args.UnknownOptions("--source", "--search").ToList();
+        var unknown = args.UnknownOptions("--source", "--search", "--config-dir").ToList();
         if (unknown.Count > 0 || args.Positional.Count > 1)
         {
             return Usage("Unbekannte Option oder Argument für scan.");
@@ -121,14 +122,23 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             scanners = scanners.Where(s => s.Source == source).ToList();
         }
 
-        var searchFolders = (args.Get("--search") ?? string.Empty)
+        IReadOnlyList<string> searchFolders = (args.Get("--search") ?? string.Empty)
             .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var report = await new LibraryScanner(scanners).ScanAsync(new ScanOptions { SearchFolders = searchFolders }, cancellationToken).ConfigureAwait(false);
+        IReadOnlyList<string> quiverFolders = [];
+        if (args.Get("--config-dir") is not null && ReadConfigReadOnly(ResolvePaths(args)) is { } config)
+        {
+            // Wie das Einlesen der App: Suchordner und gelernte Quiver-Ordner (E91) der Ablage, nur gelesen.
+            searchFolders = [.. config.Settings.SearchFolders, .. searchFolders];
+            quiverFolders = config.Settings.QuiverFolders ?? [];
+        }
+
+        var options = new ScanOptions { SearchFolders = searchFolders, QuiverFolders = quiverFolders };
+        var report = await new LibraryScanner(scanners).ScanAsync(options, cancellationToken).ConfigureAwait(false);
 
         var output = new ScanOutput(
             report.Games.Select(g => new ScanGame(
                 g.Key, g.Source, g.SourceId, g.Name, g.InstallDir, g.Executables, g.LaunchCommand, g.LaunchArguments, g.LaunchWorkingDirectory,
-                g.IconCandidates)).ToList(),
+                g.IconCandidates, g.CoverCandidates, g.InstallKind, g.LastPlayed)).ToList(),
             report.Scanners.Select(s => new ScanScanner(
                 s.Result.Source, s.Result.ScannerName, s.Result.LauncherDetected, s.Result.Games.Count,
                 (long)s.Duration.TotalMilliseconds, s.Result.Errors)).ToList());
@@ -136,11 +146,35 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         return ExitCodes.Ok;
     }
 
+    /// <summary>
+    /// Konfiguration nur lesen (für scan): Fehlt die Datei oder ist sie nicht lesbar, null; anders als beim Öffnen über
+    /// <see cref="ConfigService"/> wird nichts angelegt und nichts als „defekt“ gesichert.
+    /// </summary>
+    private AppConfig? ReadConfigReadOnly(AppPaths paths)
+    {
+        var text = new ConfigStore(services.FileSystem, paths.ConfigFile, services.Clock).TryReadText();
+        if (text is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<AppConfig>(text, ConfigJson.Options);
+        }
+        catch (JsonException ex)
+        {
+            stderr.WriteLine($"Hinweis: Konfiguration {paths.ConfigFile} nicht lesbar ({ex.Message}); ohne ihre Ordner eingelesen.");
+            return null;
+        }
+    }
+
     private sealed record ScanOutput(IReadOnlyList<ScanGame> Games, IReadOnlyList<ScanScanner> Scanners);
 
     private sealed record ScanGame(
         string Key, GameSource Source, string SourceId, string Name, string InstallDir, IReadOnlyList<string> Executables,
-        string? LaunchCommand, string? LaunchArguments, string? LaunchWorkingDirectory, IReadOnlyList<string> IconCandidates);
+        string? LaunchCommand, string? LaunchArguments, string? LaunchWorkingDirectory, IReadOnlyList<string> IconCandidates,
+        IReadOnlyList<string> CoverCandidates, string? InstallKind, DateTimeOffset? LastPlayed);
 
     private sealed record ScanScanner(
         GameSource Source, string Name, bool LauncherDetected, int GameCount, long DurationMs, IReadOnlyList<ScanError> Errors);

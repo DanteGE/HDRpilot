@@ -2,12 +2,77 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:lib="clr-namespace:HdrPilot.App.Views.Library">
     <!--
-        Library: Stile der Spielebibliothek (Hauptfenster und ihre Dialoge). Farben nur über DynamicResource aus
-        Tokens.Dark/Light.xaml. Alle Schlüssel beginnen mit "Lib.", es gibt keine impliziten Stile (andere Fenster
-        bleiben unberührt). Animationen sind kurz und laufen nur, wenn Windows Animationen erlaubt
-        (lib:LibraryMotion); Listenzeilen haben keine Effekte (DropShadow/Blur), nur Flächen und Verläufe.
+        Library: Stile der Spielebibliothek im Stil „Showcase Hero“ (E89; Hauptfenster und seine Dialoge). Farben nur über
+        DynamicResource aus den Schlüsseln von Theming/ThemeKeys.cs (die Darstellung erzeugt sie aus Palette und Thema);
+        was die Bibliothek zusätzlich braucht, steht hier als „Lib.“-Schlüssel. Keine impliziten Stile (andere Fenster
+        bleiben unberührt). Keine Effekte (BlurEffect, DropShadowEffect), keine Mischmodi: Leuchten und Schatten sind
+        Verläufe und geschichtete Flächen. Übergänge laufen nur, wenn lib:LibraryMotion sie erlaubt (Effektstufe und
+        Windows-Animationseffekte).
     -->
     <lib:BoolToVisibilityConverter x:Key="Lib.BoolToVisibility" />
+    <lib:IsVisibleConverter x:Key="Lib.IsVisible" />
+    <lib:ScaleConverter x:Key="Lib.Scale" />
+
+    <!-- Titelschrift (gleich Hp.Font.Display der Darstellung: Bahnschrift, mitgeliefert mit Windows) -->
+    <FontFamily x:Key="Lib.Font.Display">Bahnschrift, Segoe UI Variable Display, Segoe UI</FontFamily>
+
+    <!-- Flächen über dem Titelbild: in hell und dunkel dunkles Glas mit heller Schrift (Prototyp .glass, .hbar) -->
+    <SolidColorBrush x:Key="Lib.Brush.HeaderGlass" Color="#A30A0B11" />
+    <SolidColorBrush x:Key="Lib.Brush.HeaderGlassHover" Color="#CC1E202C" />
+    <SolidColorBrush x:Key="Lib.Brush.HeaderLine" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.HeaderLineStrong" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.ArtChip" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.ArtChipLine" Color="#24FFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.ArtCaption" Color="#FFA9AEC2" />
+    <SolidColorBrush x:Key="Lib.Brush.ArtMuted" Color="#FF8D92A8" />
+    <SolidColorBrush x:Key="Lib.Brush.ArtDark" Color="#73060810" />
+    <!-- Läuft (Starten-Schaltfläche, Statuspunkt) und Pause (Bernstein) -->
+    <LinearGradientBrush x:Key="Lib.Brush.Running" StartPoint="0,0.4" EndPoint="1,0.6">
+        <GradientStop Color="#FF2BD67B" Offset="0" />
+        <GradientStop Color="#FF12A35A" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Lib.Brush.Ok" Color="#FF3DDC84" />
+    <SolidColorBrush x:Key="Lib.Brush.Amber" Color="#FFFFB020" />
+    <SolidColorBrush x:Key="Lib.Brush.AmberText" Color="#FFFFC453" />
+    <SolidColorBrush x:Key="Lib.Brush.AmberRing" Color="#BFFFB020" />
+    <!-- Kachel: dunkle Ecken unter Name und Schalter, Lichthof unter der Maus -->
+    <LinearGradientBrush x:Key="Lib.Brush.TileScrim" StartPoint="0.5,1" EndPoint="0.5,0">
+        <GradientStop Color="#F205060A" Offset="0" />
+        <GradientStop Color="#8C05060A" Offset="0.5" />
+        <GradientStop Color="#0005060A" Offset="1" />
+    </LinearGradientBrush>
+    <!--
+        Pinsel, die das Bibliotheksfenster je Thema und Spielfarbe in seinen eigenen Ressourcen ersetzt (MainWindow.xaml.cs);
+        hier die Werte für dunkel, solange es das noch nicht getan hat.
+    -->
+    <!-- Gewählte Listenzeile: dunkel ein Verlauf in der Spielfarbe, hell Akzent 14 % -->
+    <SolidColorBrush x:Key="Lib.Brush.RowSelection" Color="#24FF8A3D" />
+    <!-- Fläche der Liste (dunkel: Fenstergrund 55 %, hell: Weiß 62 %) -->
+    <SolidColorBrush x:Key="Lib.Brush.ListCard" Color="#8C120B12" />
+    <!-- Detailbereich als Schublade im Regal: deckend (MainWindow färbt nach dem Spiel) -->
+    <SolidColorBrush x:Key="Lib.Brush.Drawer" Color="#FF0B0C12" />
+    <!-- Leuchten im Detailbereich (Spielfarben oben links, Zweitfarbe unten rechts) -->
+    <SolidColorBrush x:Key="Lib.Brush.PaneGlow" Color="Transparent" />
+    <!-- Automatik-Karte im Regal -->
+    <LinearGradientBrush x:Key="Lib.Brush.Card" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#D112131B" Offset="0" />
+        <GradientStop Color="#DB090A0F" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Lib.Brush.CardLine" Color="#21FFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.CardText" Color="#FFF4F5FA" />
+    <SolidColorBrush x:Key="Lib.Brush.CardSecondary" Color="#FFB4B9CB" />
+    <SolidColorBrush x:Key="Lib.Brush.CardMuted" Color="#FF8D92A8" />
+    <!-- Ränder der Kachelreihe im Regal laufen in den Fenstergrund aus -->
+    <SolidColorBrush x:Key="Lib.Brush.ShelfFadeLeft" Color="Transparent" />
+    <SolidColorBrush x:Key="Lib.Brush.ShelfFadeRight" Color="Transparent" />
+    <!-- Name statt Logo: Weiß, unten in die helle Spielfarbe; darüber der wandernde Glanz -->
+    <SolidColorBrush x:Key="Lib.Brush.HeroTitle" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.HeroSheen" Color="Transparent" />
+    <LinearGradientBrush x:Key="Lib.Brush.GeneratedShade" StartPoint="0.5,0" EndPoint="0.5,1">
+        <GradientStop Color="#0D05060A" Offset="0" />
+        <GradientStop Color="#4005060A" Offset="0.48" />
+        <GradientStop Color="#DB05060A" Offset="1" />
+    </LinearGradientBrush>
 
     <!-- Symbol aus Segoe Fluent Icons -->
     <Style x:Key="Lib.Glyph" TargetType="TextBlock">
@@ -17,16 +82,30 @@
         <Setter Property="TextOptions.TextRenderingMode" Value="Grayscale" />
     </Style>
 
-    <!-- Kleine Überschrift in Großbuchstaben: wie Hp.Text.Overline, aber kontrastreicher (lesbar in hell und dunkel) -->
-    <Style x:Key="Lib.Overline" TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Overline}">
-        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+    <!-- Kleine Überschrift in Großbuchstaben (Prototyp .cap2/.lb) -->
+    <Style x:Key="Lib.Overline" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextMuted}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
     <Style x:Key="Lib.SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource Lib.Overline}">
-        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Margin" Value="0,0,10,0" />
     </Style>
 
-    <!-- Farbe je Quelle (Text, Symbol) -->
+    <!-- Kleine Überschrift über dem Titelbild (Prototyp .ov): hell, mit Linie davor (die Linie setzt die Vorlage) -->
+    <Style x:Key="Lib.ArtOverline" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Farbe je Quelle (Text) -->
     <Style x:Key="Lib.SourceText" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Source.Manual}" />
         <Style.Triggers>
@@ -51,12 +130,49 @@
             <DataTrigger Binding="{Binding Source}" Value="BattleNet">
                 <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Source.BattleNet}" />
             </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Farbpunkt je Quelle (Prototyp .sr i/.srcp i) -->
+    <Style x:Key="Lib.SourceDot" TargetType="Ellipse">
+        <Setter Property="Width" Value="7" />
+        <Setter Property="Height" Value="7" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Manual}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Source}" Value="Steam">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Steam}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Epic">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Epic}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Xbox">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Xbox}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Gog">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Gog}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Ubisoft">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Ubisoft}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="EA">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.EA}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="BattleNet">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.BattleNet}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                <Setter Property="Fill" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!-- Getönte Kachel je Quelle (Hintergrund des Spielsymbols) -->
     <Style x:Key="Lib.SourceTile" TargetType="Border">
-        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Opacity" Value="0.16" />
         <Setter Property="Background" Value="{DynamicResource Hp.Brush.Source.Manual}" />
         <Style.Triggers>
@@ -81,13 +197,16 @@
             <DataTrigger Binding="{Binding Source}" Value="BattleNet">
                 <Setter Property="Background" Value="{DynamicResource Hp.Brush.Source.BattleNet}" />
             </DataTrigger>
+            <DataTrigger Binding="{Binding Source}" Value="Quiver">
+                <Setter Property="Background" Value="{DynamicResource Hp.Brush.Source.Quiver}" />
+            </DataTrigger>
         </Style.Triggers>
     </Style>
 
-    <!-- Ersatzsymbol je Quelle, nur solange kein EXE-Symbol geladen ist (DataContext: GameItemViewModel) -->
+    <!-- Ersatzsymbol je Quelle, nur solange kein Symbol geladen ist (DataContext: GameItemViewModel) -->
     <Style x:Key="Lib.SourceGlyph" TargetType="TextBlock" BasedOn="{StaticResource Lib.SourceText}">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Icons}" />
-        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontSize" Value="16" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Text" Value="&#xE7FC;" />
@@ -105,27 +224,64 @@
         </Style.Triggers>
     </Style>
 
-    <!-- Suchfeld: Lupe, Platzhalter (Tag), Verlaufsrahmen bei Fokus -->
+    <!-- Tastenkappe (Prototyp kbd) -->
+    <Style x:Key="Lib.Kbd" TargetType="Border">
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="5,2,5,3" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="0,0,0,1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextElement.FontFamily" Value="{DynamicResource Hp.Font.Mono}" />
+        <Setter Property="TextElement.FontSize" Value="10.5" />
+        <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+    </Style>
+
+    <!-- Zähler in Chips und Auswahllisten (Prototyp .ct) -->
+    <Style x:Key="Lib.Count" TargetType="Border">
+        <Setter Property="CornerRadius" Value="9" />
+        <Setter Property="Padding" Value="7,2,7,3" />
+        <Setter Property="Margin" Value="8,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="TextElement.FontFamily" Value="{DynamicResource Hp.Font.Mono}" />
+        <Setter Property="TextElement.FontSize" Value="10.5" />
+        <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+    </Style>
+
+    <!-- Glasfläche der Werkzeugleiste (Suche, Auswahllisten, Chips, Schaltflächen) -->
+    <Style x:Key="Lib.FieldFrame" TargetType="Border">
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Glass}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Suchfeld: Lupe, Platzhalter (Tag), „Strg+F“, Rahmen in Akzentfarbe bei Fokus -->
     <Style x:Key="Lib.SearchBox" TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="CaretBrush" Value="{DynamicResource Hp.Brush.Text}" />
-        <Setter Property="SelectionBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="38,0,36,0" />
+        <Setter Property="Padding" Value="38,0,70,0" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="10" BorderThickness="1"
-                                Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}" />
-                        <Border x:Name="FocusFrame" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
-                        <TextBlock x:Name="SearchGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE721;" Margin="14,0,0,0" HorizontalAlignment="Left"
-                                   Foreground="{DynamicResource Hp.Brush.TextMuted}" />
-                        <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}" Margin="39,0,12,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                        <Border x:Name="Body" Style="{StaticResource Lib.FieldFrame}" />
+                        <Border x:Name="FocusFrame" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" />
+                        <Border x:Name="FocusHalo" CornerRadius="15" Margin="-3" BorderThickness="3" BorderBrush="{DynamicResource Hp.Brush.AccentSoft}" Opacity="0" />
+                        <TextBlock x:Name="SearchGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xE721;" FontSize="14" Margin="14,0,0,0" HorizontalAlignment="Left"
+                                   Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                        <!-- Platz wie der eingegebene Text: rechts nur so viel, wie der Hinweis „Strg+F“ gerade braucht (Werkzeugleiste) -->
+                        <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}" Margin="{TemplateBinding Padding}" Padding="1,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextMuted}" Visibility="Collapsed" />
                         <ScrollViewer x:Name="PART_ContentHost" Style="{x:Null}" VerticalAlignment="Center" Focusable="False"
                                       HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
@@ -135,11 +291,12 @@
                             <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="FocusFrame" Property="Opacity" Value="1" />
-                            <Setter TargetName="SearchGlyph" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="FocusHalo" Property="Opacity" Value="1" />
+                            <Setter TargetName="SearchGlyph" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -153,13 +310,15 @@
     <!-- Eingabefeld der Dialoge -->
     <Style x:Key="Lib.TextBox" TargetType="TextBox" BasedOn="{StaticResource Lib.SearchBox}">
         <Setter Property="Padding" Value="12,0,12,0" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Grid>
                         <Border x:Name="Body" CornerRadius="10" BorderThickness="1"
-                                Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}" />
-                        <Border x:Name="FocusFrame" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                                Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" />
+                        <Border x:Name="FocusFrame" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                         <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}" Margin="13,0,12,0" VerticalAlignment="Center" IsHitTestVisible="False"
                                    TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextMuted}" Visibility="Collapsed" />
                         <ScrollViewer x:Name="PART_ContentHost" Style="{x:Null}" VerticalAlignment="Center" Focusable="False"
@@ -170,7 +329,7 @@
                             <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="FocusFrame" Property="Opacity" Value="1" />
@@ -181,10 +340,12 @@
         </Setter>
     </Style>
 
-    <!-- Auswahlliste im HdrPilot-Stil (Popup deckend, mit Schatten nur am Popup) -->
+    <!-- Eintrag einer Auswahlliste (Prototyp .mi): Fläche beim Überfahren, Akzent 22 % gewählt -->
     <Style x:Key="Lib.ComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
-        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="10,8" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -193,17 +354,15 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
                     <Grid Margin="0,1">
-                        <Border x:Name="Body" CornerRadius="8" Background="Transparent" />
-                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" HorizontalAlignment="Left" Margin="0,7" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Body" CornerRadius="10" Background="Transparent" />
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
-                            <Setter TargetName="Bar" Property="Opacity" Value="1" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.AccentSoft}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -216,15 +375,39 @@
         <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}" />
     </Style>
 
+    <!-- Aufklappfläche (Menüs, Auswahllisten): deckend, Schatten als geschichtete Flächen statt Effekt -->
+    <Style x:Key="Lib.PopupBody" TargetType="Border">
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="6" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Menu}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.LineStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style x:Key="Lib.PopupShadow" TargetType="Border">
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Margin" Value="-4,2,-4,-10" />
+        <Setter Property="IsHitTestVisible" Value="False" />
+        <Setter Property="Background">
+            <Setter.Value>
+                <RadialGradientBrush RadiusX="0.56" RadiusY="0.58" Center="0.5,0.56" GradientOrigin="0.5,0.56">
+                    <GradientStop Color="#59000000" Offset="0.7" />
+                    <GradientStop Color="#00000000" Offset="1" />
+                </RadialGradientBrush>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Auswahlliste der Werkzeugleiste (Quelle, Sortierung): Glasfläche, Pfeil am rechten Ende, Rahmen beim Öffnen -->
     <Style x:Key="Lib.ComboBox" TargetType="ComboBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="14,0,38,0" />
+        <Setter Property="Padding" Value="12,0,34,0" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="MaxDropDownHeight" Value="360" />
+        <Setter Property="MaxDropDownHeight" Value="380" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource Lib.ComboBoxItem}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -234,9 +417,8 @@
                                       IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
                             <ToggleButton.Template>
                                 <ControlTemplate TargetType="ToggleButton">
-                                    <Border x:Name="Body" CornerRadius="10" BorderThickness="1"
-                                            Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}">
-                                        <TextBlock x:Name="Chevron" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="11" HorizontalAlignment="Right" Margin="0,0,14,0"
+                                    <Border x:Name="Body" Style="{StaticResource Lib.FieldFrame}">
+                                        <TextBlock x:Name="Chevron" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="10" HorizontalAlignment="Right" Margin="0,0,13,0"
                                                    Foreground="{DynamicResource Hp.Brush.TextSecondary}" RenderTransformOrigin="0.5,0.5">
                                             <TextBlock.RenderTransform>
                                                 <RotateTransform Angle="0" />
@@ -245,8 +427,7 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
-                                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
                                         </Trigger>
                                         <Trigger Property="IsChecked" Value="True">
                                             <Setter TargetName="Chevron" Property="RenderTransform">
@@ -254,7 +435,7 @@
                                                     <RotateTransform Angle="180" />
                                                 </Setter.Value>
                                             </Setter>
-                                            <Setter TargetName="Chevron" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                                            <Setter TargetName="Chevron" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -264,19 +445,17 @@
                                           Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           VerticalAlignment="Center" HorizontalAlignment="Stretch" />
-                        <Border x:Name="FocusFrame" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" IsHitTestVisible="False" />
-                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" Focusable="False"
+                        <Border x:Name="FocusFrame" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" IsHitTestVisible="False" />
+                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="8" AllowsTransparency="True" Focusable="False"
                                IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="None">
-                            <Border Margin="0,0,14,16" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
-                                    CornerRadius="12" BorderThickness="1" Padding="5"
-                                    Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.35" Color="{DynamicResource Hp.Color.Shadow}" />
-                                </Border.Effect>
-                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
-                                </ScrollViewer>
-                            </Border>
+                            <Grid Margin="6,0,6,14" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                <Border Style="{StaticResource Lib.PopupShadow}" />
+                                <Border Style="{StaticResource Lib.PopupBody}" MinWidth="236" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -298,37 +477,44 @@
         </Setter>
     </Style>
 
-    <!-- Filter-Chip (ToggleButton). Eingeschaltet: Verlaufsrahmen in BorderBrush. -->
+    <!--
+        Filter-Chip (ToggleButton, Prototyp .ch): Glasfläche; eingeschaltet Akzent 18 % mit Rahmen und leuchtendem Hof,
+        der Zähler wird zum Verlauf. Der Inhalt füllt den Chip (Werkzeugleiste: Symbol und Text links, Zähler rechts), auch
+        wenn die Leiste ihn streckt.
+    -->
     <Style x:Key="Lib.Chip" TargetType="ToggleButton">
-        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Accent}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="14,0,16,0" />
+        <Setter Property="Padding" Value="11,0,10,0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="20" BorderThickness="1"
-                                Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}" />
-                        <Border x:Name="On" CornerRadius="20" BorderThickness="1.5" BorderBrush="{TemplateBinding BorderBrush}"
-                                Background="{DynamicResource Hp.Brush.SurfaceSelected}" Opacity="0" />
-                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Center" RecognizesAccessKey="True" />
+                        <Border x:Name="Halo" CornerRadius="16" Margin="-4" Background="{DynamicResource Hp.Brush.AccentSoft}" Opacity="0" />
+                        <Border x:Name="Body" Style="{StaticResource Lib.FieldFrame}" />
+                        <Border x:Name="On" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0">
+                            <Border.Background>
+                                <SolidColorBrush Color="{DynamicResource Hp.Color.C1}" Opacity="0.18" />
+                            </Border.Background>
+                        </Border>
+                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" RecognizesAccessKey="True" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
-                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="On" Property="Opacity" Value="1" />
-                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="0.55" />
                         </Trigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
@@ -352,36 +538,145 @@
         </Setter>
     </Style>
 
-    <!--
-        Kennzeichen „HDR“ in der Spieleliste (HDR laut PCGamingWiki): Umriss in Akzentfarbe; eingeschränktes HDR
-        („HDR*“) zurückhaltender. Kein Effekt, keine Animation (Listenzeilen).
-    -->
-    <Style x:Key="Lib.HdrBadge" TargetType="Border" BasedOn="{StaticResource Hp.Badge}">
-        <Setter Property="Padding" Value="5,0,5,1" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
-        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+    <!-- Zähler im Chip: eingeschaltet als Verlauf in Akzentfarben (DataContext egal, Bezug auf den Chip) -->
+    <Style x:Key="Lib.ChipCount" TargetType="Border" BasedOn="{StaticResource Lib.Count}">
         <Style.Triggers>
-            <DataTrigger Binding="{Binding HdrSupport}" Value="Limited">
-                <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
+            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Hp.Brush.Accent}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="Lib.ChipGlyph" TargetType="TextBlock" BasedOn="{StaticResource Lib.Glyph}">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        Kennzeichen „HDR“ in der Liste (HDR laut PCGamingWiki): „NATIV“ mit leuchtendem Punkt in Glanzfarbe, „TEILWEISE“
+        auf heller Fläche, „MOD“ nur umrandet (Prototyp .hp). DataContext: GameItemViewModel.
+    -->
+    <Style x:Key="Lib.HdrBadge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="8,0,8,0" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.LineStrong}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="TextElement.FontSize" Value="10" />
+        <Setter Property="TextElement.FontWeight" Value="Bold" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding HdrSupport}" Value="Native">
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.2" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="BorderBrush">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.5" />
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HdrSupport}" Value="ModOnly">
+                <Setter Property="Background" Value="Transparent" />
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
 
     <!--
-        Kennzeichen „AUTO HDR“ hinter dem Namen (E88: „Windows Auto HDR“ für das Spiel an, nur Anzeige). Bewusst anders als
-        „HDR“ laut PCGamingWiki (rosa Umriss) und als der Schalter: violett getönte Fläche mit Sonnen-Symbol. Die Farben
-        (dritte Akzentfarbe, Hp.Color.Accent3) setzt die Zeilenvorlage selbst: Ein Pinsel mit DynamicResource im Stil wäre
-        für alle Zeilen geteilt und folgte dem Wechsel zwischen hell und dunkel nicht sicher.
+        Kennzeichen „AUTO HDR“ hinter dem Namen (E88: „Windows Auto HDR“ für das Spiel an, nur Anzeige): Fläche im
+        Akzentverlauf mit Text in Kontrastfarbe (Prototyp .bd.g). Die Farben setzt die Vorlage je Zeile.
     -->
     <Style x:Key="Lib.AutoHdrBadge" TargetType="Border">
-        <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Padding" Value="5,0,6,1" />
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="6,0,6,1" />
+        <Setter Property="Height" Value="19" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="TextElement.FontSize" Value="9.5" />
         <Setter Property="TextElement.FontWeight" Value="Bold" />
+    </Style>
+
+    <!-- „NEU“: weiße Fläche, dunkle Schrift (im hellen Thema umgekehrt) -->
+    <Style x:Key="Lib.NewBadge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="6,0,6,1" />
+        <Setter Property="Height" Value="19" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.WindowBackground}" />
+        <Setter Property="TextElement.FontSize" Value="9.5" />
+        <Setter Property="TextElement.FontWeight" Value="Bold" />
+    </Style>
+
+    <!-- Kennzeichen über dem Titelbild (Prototyp .kd): HDR-Angabe, umrandet; „Natives HDR“ in Glanzfarbe -->
+    <Style x:Key="Lib.ArtTag" TargetType="Border">
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="9,0" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="#38FFFFFF" />
+        <Setter Property="Background" Value="#6B080A10" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextElement.Foreground" Value="#FFE8EAF2" />
+        <Setter Property="TextElement.FontSize" Value="10.5" />
+        <Setter Property="TextElement.FontWeight" Value="Bold" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsHdrNative}" Value="True">
+                <Setter Property="BorderBrush">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource Hp.Color.Ambient3}" Opacity="0.7" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="TextElement.Foreground" Value="#FFFFFFFF" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Kennzeichen im Detailbereich (Prototyp .tg2): HDR-Angabe neben „Windows Auto HDR“ -->
+    <Style x:Key="Lib.Tag" TargetType="Border">
+        <Setter Property="CornerRadius" Value="5" />
+        <Setter Property="Padding" Value="6,2,6,3" />
+        <Setter Property="Margin" Value="8,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="TextElement.FontSize" Value="10" />
+        <Setter Property="TextElement.FontWeight" Value="Bold" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding HdrSupport}" Value="Native">
+                <Setter Property="Background">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.22" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="BorderBrush">
+                    <Setter.Value>
+                        <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.45" />
+                    </Setter.Value>
+                </Setter>
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HdrSupport}" Value="Unknown">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.LineStrong}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.TextMuted}" />
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Auf-/Zuklappen (eingeschaltet = offen): Pfeil dreht sich -->
@@ -411,11 +706,11 @@
                             </Setter>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
                             <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -432,7 +727,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Body" CornerRadius="10" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="8,6">
+                    <Border x:Name="Body" CornerRadius="12" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" Padding="8,6">
                         <DockPanel>
                             <TextBlock x:Name="Chevron" DockPanel.Dock="Right" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="11" Margin="12,0,2,0"
                                        Foreground="{TemplateBinding Foreground}" RenderTransformOrigin="0.5,0.5">
@@ -452,11 +747,11 @@
                             </Setter>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
                             <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -464,26 +759,122 @@
         </Setter>
     </Style>
 
-    <!-- Pause-Chip: eingeschaltet in Warnfarbe -->
-    <Style x:Key="Lib.PauseChip" TargetType="ToggleButton" BasedOn="{StaticResource Lib.Chip}">
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Warning}" />
-        <Style.Triggers>
-            <Trigger Property="IsChecked" Value="True">
-                <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Warning}" />
-            </Trigger>
-        </Style.Triggers>
+    <!-- Schaltfläche der Kopfzeile über dem Titelbild: dunkles Glas, helle Schrift (Prototyp .pl.glass, .ib.glass) -->
+    <Style x:Key="Lib.GlassButton" TargetType="ButtonBase">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="13,0,15,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ButtonBase">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="14" Background="{StaticResource Lib.Brush.HeaderGlass}" BorderBrush="{StaticResource Lib.Brush.HeaderLine}" BorderThickness="1" />
+                        <Border x:Name="Ring" CornerRadius="14" BorderThickness="1" BorderBrush="{StaticResource Lib.Brush.AmberRing}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="16" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{StaticResource Lib.Brush.HeaderGlassHover}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                        <Trigger Property="ToggleButton.IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                            <Setter Property="Foreground" Value="{StaticResource Lib.Brush.AmberText}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Lib.GlassIconButton" TargetType="ButtonBase" BasedOn="{StaticResource Lib.GlassButton}">
+        <Setter Property="Width" Value="44" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Icons}" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+
+    <!-- Pause-Schalter der Kopfzeile: eingeschaltet in Bernstein (Prototyp .pz.on) -->
+    <Style x:Key="Lib.PauseChip" TargetType="ToggleButton" BasedOn="{StaticResource Lib.GlassButton}" />
+
+    <!--
+        „HDR einschalten“ in der Kapsel (Prototyp .hb): Akzentverlauf mit Kontrastschrift und Glanzkante; bei
+        eingeschaltetem HDR (Tag = True) als Glas („HDR ausschalten“).
+    -->
+    <Style x:Key="Lib.HdrButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Padding" Value="13,0,17,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Glow" CornerRadius="18" Margin="-6,-2,-6,-10" IsHitTestVisible="False">
+                            <Border.Background>
+                                <RadialGradientBrush RadiusX="0.55" RadiusY="0.6" Center="0.5,0.62" GradientOrigin="0.5,0.62">
+                                    <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border x:Name="Body" CornerRadius="13" Background="{DynamicResource Hp.Brush.Accent}" />
+                        <Border x:Name="Shine" CornerRadius="13" BorderThickness="0,1,0,0" BorderBrush="#73FFFFFF" />
+                        <Border x:Name="Focus" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="0.92" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="#1FFFFFFF" />
+                            <Setter TargetName="Shine" Property="BorderThickness" Value="1" />
+                            <Setter TargetName="Shine" Property="BorderBrush" Value="#33FFFFFF" />
+                            <Setter TargetName="Glow" Property="Opacity" Value="0" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!--
-        Akzent-Schaltfläche wie Hp.AccentButton (Verlauf, Leuchten beim Überfahren), aber Anheben und Einblenden des
-        Leuchtens nur, wenn Windows Animationen erlaubt; sonst leuchtet sie beim Überfahren ohne Bewegung.
+        Akzent-Schaltfläche (Starten, Übernehmen): Verlauf Akzent → Atmosphäre, Glanzkante oben, weicher Hof aus einem
+        Verlauf (kein Effekt). Anheben beim Überfahren nur bei erlaubten Übergängen.
     -->
     <Style x:Key="Lib.AccentButton" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="FontSize" Value="14" />
-        <Setter Property="Padding" Value="18,9" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="16,0" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
@@ -496,35 +887,38 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Grid>
-                        <Border x:Name="Glow" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0">
-                            <Border.Effect>
-                                <BlurEffect Radius="14" />
-                            </Border.Effect>
+                        <Border x:Name="Glow" CornerRadius="16" Margin="-8,-2,-8,-12" Opacity="0.55" IsHitTestVisible="False">
+                            <Border.Background>
+                                <RadialGradientBrush RadiusX="0.52" RadiusY="0.6" Center="0.5,0.64" GradientOrigin="0.5,0.64">
+                                    <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
                         </Border>
-                        <Border x:Name="Body" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.Text}" Opacity="0" />
+                        <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.Accent}" />
+                        <Border CornerRadius="12" BorderThickness="0,1,0,0" BorderBrush="#66FFFFFF" />
+                        <Border x:Name="Focus" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
+                                <Condition Binding="{Binding IsFull, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
                             </MultiDataTrigger.Conditions>
                             <MultiDataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0.75" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.02" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.02" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </MultiDataTrigger.EnterActions>
                             <MultiDataTrigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0.55" Duration="0:0:0.25" />
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.25" />
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.25" />
                                     </Storyboard>
@@ -534,18 +928,23 @@
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
+                                <Condition Binding="{Binding IsFull, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
                             </MultiDataTrigger.Conditions>
-                            <Setter TargetName="Glow" Property="Opacity" Value="0.6" />
+                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
                         </MultiDataTrigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Body" Property="Opacity" Value="0.85" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Focus" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="Running">
+                            <Setter TargetName="Body" Property="Background" Value="{StaticResource Lib.Brush.Running}" />
+                            <Setter TargetName="Glow" Property="Opacity" Value="0" />
+                            <Setter Property="Foreground" Value="#FFFFFFFF" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.45" />
+                            <Setter Property="Opacity" Value="0.5" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -553,39 +952,118 @@
         </Setter>
     </Style>
 
-    <!-- Kleinere Schaltflächen -->
-    <Style x:Key="Lib.SmallGhostButton" TargetType="Button" BasedOn="{StaticResource Hp.GhostButton}">
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="Padding" Value="11,7" />
-    </Style>
-    <!-- Schaltfläche der Werkzeugleiste: gefüllt wie Suchfeld und Chips, Rahmen leuchtet beim Überfahren -->
-    <Style x:Key="Lib.ToolbarButton" TargetType="Button">
+    <!-- Schaltfläche im Detailbereich (Prototyp .pbtn): leichte Fläche mit feiner Linie -->
+    <Style x:Key="Lib.PaneButton" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
         <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="Padding" Value="12,0" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="10" BorderThickness="1"
-                                Background="{DynamicResource Hp.Brush.SurfaceInput}" BorderBrush="{DynamicResource Hp.Brush.Border}" />
-                        <Border x:Name="Glow" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <Border x:Name="Focus" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
-                            <Setter TargetName="Glow" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
+                            <Setter TargetName="Body" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Schaltfläche über dem Titelbild (Regal: Desktop, Startmenü; Prototyp .gb) -->
+    <Style x:Key="Lib.ArtButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="50" />
+        <Setter Property="Padding" Value="17,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="15" Background="#730C0D14" BorderBrush="#29FFFFFF" BorderThickness="1" />
+                        <Border x:Name="Focus" CornerRadius="17" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="#2EFFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Große Starten-Schaltfläche im Regal (Prototyp .play) -->
+    <Style x:Key="Lib.PlayButton" TargetType="Button" BasedOn="{StaticResource Lib.AccentButton}">
+        <Setter Property="Height" Value="50" />
+        <Setter Property="Padding" Value="22,0,28,0" />
+        <Setter Property="FontSize" Value="15" />
+    </Style>
+
+    <!-- Kleinere Schaltflächen -->
+    <Style x:Key="Lib.SmallGhostButton" TargetType="Button" BasedOn="{StaticResource Lib.PaneButton}">
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Padding" Value="11,0" />
+    </Style>
+
+    <!-- Schaltfläche der Werkzeugleiste (Glas wie Suchfeld und Chips) -->
+    <Style x:Key="Lib.ToolbarButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="11,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" Style="{StaticResource Lib.FieldFrame}" />
+                        <Border x:Name="Focus" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="0.8" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -597,7 +1075,8 @@
     </Style>
     <Style x:Key="Lib.ToolbarIconButton" TargetType="Button" BasedOn="{StaticResource Lib.ToolbarButton}">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Icons}" />
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="Width" Value="40" />
         <Setter Property="Padding" Value="0" />
     </Style>
@@ -605,20 +1084,103 @@
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Danger}" />
     </Style>
     <Style x:Key="Lib.LinkButton" TargetType="Button">
-        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
-        <Setter Property="FontSize" Value="13" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Body" Background="Transparent" Padding="2">
+                    <Border x:Name="Body" Background="Transparent" Padding="2" CornerRadius="6" BorderThickness="1" BorderBrush="Transparent">
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Ansicht wählen (Prototyp .seg.v): Liste, Raster, Regal; gewählt im Akzentverlauf -->
+    <Style x:Key="Lib.SegmentFrame" TargetType="Border">
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="3" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Glass}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style x:Key="Lib.SegmentRadio" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="MinWidth" Value="38" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Grid Background="Transparent">
+                        <Border x:Name="On" CornerRadius="9" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="9" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="On" Property="Opacity" Value="1" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Spaltenkopf der Liste (sortierbar): aktiv mit Pfeil und kräftiger Schrift -->
+    <Style x:Key="Lib.ColumnHeader" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextMuted}" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Body" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" CornerRadius="6" Padding="2,4">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentPresenter VerticalAlignment="Center" />
+                            <TextBlock x:Name="Chevron" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="8" Margin="6,1,0,0" Opacity="0" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="Tag" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                            <Setter TargetName="Chevron" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -627,25 +1189,35 @@
     </Style>
 
     <!--
-        Schalter für Listenzeilen: wie Hp.ToggleSwitch (gleiches Aussehen und Gleiten), aber ohne Effekte,
-        weil er in jeder sichtbaren Zeile steht.
+        Schalter (Prototyp .sw): Spur als leichte Fläche mit Linie, eingeschaltet im Akzentverlauf mit weichem Hof; Knopf
+        gleitet (bei erlaubten Übergängen). Auch für Listenzeilen (ohne Hof) und Kacheln (klein).
     -->
-    <Style x:Key="Lib.RowToggleSwitch" TargetType="CheckBox" BasedOn="{StaticResource Hp.ToggleSwitch}">
+    <Style x:Key="Lib.ToggleSwitch" TargetType="CheckBox">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <Grid Width="46" Height="24" Background="Transparent">
-                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" />
-                        <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOn}" Opacity="0" />
-                        <Border x:Name="FocusRing" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
-                        <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleThumb}" HorizontalAlignment="Left" Margin="3,0,0,0">
+                    <Grid Width="44" Height="24" Background="Transparent">
+                        <Border x:Name="Halo" CornerRadius="16" Margin="-5,-4,-5,-6" Opacity="0" IsHitTestVisible="False">
+                            <Border.Background>
+                                <RadialGradientBrush RadiusX="0.5" RadiusY="0.55">
+                                    <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0.2" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
+                        <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="FocusRing" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0.9" Visibility="Collapsed" />
+                        <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleOff}" HorizontalAlignment="Left" Margin="3,0,0,0"
+                                 Stroke="#26000000" StrokeThickness="1">
                             <Ellipse.RenderTransform>
                                 <TranslateTransform X="0" />
                             </Ellipse.RenderTransform>
                         </Ellipse>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <!-- Mit Animationen: Knopf gleitet. Ohne (Windows-Einstellung): sofort umgestellt. -->
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
@@ -654,7 +1226,77 @@
                             <MultiDataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="22" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="20" Duration="0:0:0.2" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="Halo" Storyboard.TargetProperty="Opacity" To="0.45" Duration="0:0:0.3" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                            <MultiDataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.2" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="Halo" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.ExitActions>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="Thumb" Property="Margin" Value="23,0,0,0" />
+                            <Setter TargetName="TrackOn" Property="Opacity" Value="1" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="0.45" />
+                        </MultiDataTrigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Thumb" Property="Fill" Value="#FFFFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TrackOff" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Schalter der Listenzeilen: wie Lib.ToggleSwitch, ohne Hof (in jeder sichtbaren Zeile) -->
+    <Style x:Key="Lib.RowToggleSwitch" TargetType="CheckBox">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid Width="44" Height="24" Background="Transparent">
+                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1" />
+                        <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="FocusRing" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0.9" Visibility="Collapsed" />
+                        <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleOff}" HorizontalAlignment="Left" Margin="3,0,0,0"
+                                 Stroke="#26000000" StrokeThickness="1">
+                            <Ellipse.RenderTransform>
+                                <TranslateTransform X="0" />
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="20" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
                                         <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" />
                                     </Storyboard>
                                 </BeginStoryboard>
@@ -673,11 +1315,17 @@
                                 <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
                                 <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
                             </MultiDataTrigger.Conditions>
-                            <Setter TargetName="Thumb" Property="Margin" Value="25,0,0,0" />
+                            <Setter TargetName="Thumb" Property="Margin" Value="23,0,0,0" />
                             <Setter TargetName="TrackOn" Property="Opacity" Value="1" />
                         </MultiDataTrigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Thumb" Property="Fill" Value="#FFFFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TrackOff" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                        </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="FocusRing" Property="Opacity" Value="0.9" />
+                            <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4" />
@@ -688,64 +1336,27 @@
         </Setter>
     </Style>
 
-    <!--
-        Großer Schalter im Detailbereich: wie Hp.ToggleSwitch mit Leuchten (nur ein Element, Effekt erlaubt),
-        aber Gleiten und Leuchten nur, wenn Windows Animationen erlaubt.
-    -->
-    <Style x:Key="Lib.ToggleSwitch" TargetType="CheckBox" BasedOn="{StaticResource Hp.ToggleSwitch}">
+    <!-- Kleiner Schalter auf Kacheln (Prototyp .sw.xs): aus als dunkles Glas über dem Bild -->
+    <Style x:Key="Lib.TileToggleSwitch" TargetType="CheckBox">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <Grid Width="46" Height="24" Background="Transparent">
-                        <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" />
-                        <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOn}" Opacity="0">
-                            <Border.Effect>
-                                <DropShadowEffect Color="{DynamicResource Hp.Color.Glow}" BlurRadius="12" ShadowDepth="0" Opacity="0.75" />
-                            </Border.Effect>
-                        </Border>
-                        <Border x:Name="FocusRing" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
-                        <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleThumb}" HorizontalAlignment="Left" Margin="3,0,0,0">
-                            <Ellipse.RenderTransform>
-                                <TranslateTransform X="0" />
-                            </Ellipse.RenderTransform>
-                        </Ellipse>
+                    <Grid Width="34" Height="20" Background="Transparent">
+                        <Border x:Name="TrackOff" CornerRadius="10" Background="#8C0A0B10" BorderBrush="#4DFFFFFF" BorderThickness="1" />
+                        <Border x:Name="TrackOn" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="FocusRing" CornerRadius="12" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0.9" Visibility="Collapsed" />
+                        <Ellipse x:Name="Thumb" Width="14" Height="14" Fill="#FFC9CCD8" HorizontalAlignment="Left" Margin="3,0,0,0" />
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
-                            </MultiDataTrigger.Conditions>
-                            <MultiDataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="22" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
-                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.EnterActions>
-                            <MultiDataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
-                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.16" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.ExitActions>
-                        </MultiDataTrigger>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
-                            </MultiDataTrigger.Conditions>
-                            <Setter TargetName="Thumb" Property="Margin" Value="25,0,0,0" />
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Thumb" Property="Margin" Value="17,0,0,0" />
+                            <Setter TargetName="Thumb" Property="Fill" Value="#FFFFFFFF" />
                             <Setter TargetName="TrackOn" Property="Opacity" Value="1" />
-                        </MultiDataTrigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="FocusRing" Property="Opacity" Value="0.9" />
                         </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.4" />
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusRing" Property="Visibility" Value="Visible" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -790,72 +1401,68 @@
     </Style>
 
     <!--
-        Zeile der Spieleliste: beim Überfahren hebt sie sich leicht an und bekommt einen Verlaufsrahmen,
-        die Auswahl zeigt einen Akzentbalken. Keine Effekte, nur Flächen.
+        Zeile der Spieleliste (Prototyp .row, 46 px): Fläche beim Überfahren; gewählt dunkel ein Verlauf in der Spielfarbe
+        (Tag der Zeile, siehe Vorlage) mit Leiste Akzent → Glanz am linken Rand, hell Akzent 14 % mit Ring. Keine Effekte.
     -->
     <Style x:Key="Lib.GameRow" TargetType="ListBoxItem">
         <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
-        <Setter Property="Padding" Value="12,7,14,7" />
-        <Setter Property="Margin" Value="0,0,6,3" />
+        <Setter Property="Padding" Value="12,0,16,0" />
+        <Setter Property="Height" Value="46" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Grid x:Name="Root" Background="Transparent">
-                        <Grid.RenderTransform>
-                            <TranslateTransform />
-                        </Grid.RenderTransform>
-                        <Border x:Name="Body" CornerRadius="12" Background="Transparent" />
-                        <Border x:Name="Selected" CornerRadius="12" BorderThickness="1" Opacity="0"
-                                Background="{DynamicResource Hp.Brush.SurfaceSelected}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" />
-                        <Border x:Name="HoverFrame" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
-                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" HorizontalAlignment="Left" Margin="0,12" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
-                        <Border x:Name="FocusFrame" CornerRadius="12" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
-                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        <Border x:Name="Body" Background="Transparent" />
+                        <Border x:Name="Selected" Opacity="0" Background="{DynamicResource Lib.Brush.RowSelection}" />
+                        <Border x:Name="SelectedRing" Opacity="0" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.SelectionRing}" />
+                        <Border x:Name="Bar" Width="3" CornerRadius="0,3,3,0" HorizontalAlignment="Left" Margin="0,7" Opacity="0" Background="{DynamicResource Hp.Brush.AccentShine}" />
+                        <Border x:Name="FocusFrame" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" />
+                        <Border Height="1" VerticalAlignment="Bottom" Margin="12,0" Background="{DynamicResource Hp.Brush.Line}" Opacity="0.6" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
                         </Trigger>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
-                            </MultiDataTrigger.Conditions>
-                            <Setter TargetName="HoverFrame" Property="Opacity" Value="0.6" />
-                        </MultiDataTrigger>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
-                            </MultiDataTrigger.Conditions>
-                            <MultiDataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="-2" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                        <DoubleAnimation Storyboard.TargetName="HoverFrame" Storyboard.TargetProperty="Opacity" To="0.6" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.EnterActions>
-                            <MultiDataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" To="0" Duration="0:0:0.22" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                        <DoubleAnimation Storyboard.TargetName="HoverFrame" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.ExitActions>
-                        </MultiDataTrigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Selected" Property="Opacity" Value="1" />
                             <Setter TargetName="Bar" Property="Opacity" Value="1" />
                         </Trigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding (lib:GameListColumns.LightTheme), RelativeSource={RelativeSource Self}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter TargetName="SelectedRing" Property="Opacity" Value="1" />
+                        </MultiDataTrigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="FocusFrame" Property="Opacity" Value="0.7" />
+                            <Setter TargetName="FocusFrame" Property="Opacity" Value="1" />
                         </Trigger>
                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Kachel in Raster und Regal (Container): ohne eigenen Rahmen; die Vorlage zeichnet Cover, Ring und Schalter.
+        Anheben beim Überfahren (−10 px, 1,035) und bei Auswahl (−5 px) nur bei Effektstufe „Voll“ animiert.
+    -->
+    <Style x:Key="Lib.Tile" TargetType="ListBoxItem">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <ContentPresenter />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -865,29 +1472,27 @@
     <Style x:Key="Lib.PlainRow" TargetType="ListBoxItem">
         <Setter Property="AutomationProperties.Name" Value="{Binding}" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
-        <Setter Property="Padding" Value="10,7" />
-        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="Margin" Value="0,0,0,6" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
                     <Grid>
-                        <Border x:Name="Body" CornerRadius="9" Background="Transparent" BorderThickness="1" BorderBrush="Transparent" />
-                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" HorizontalAlignment="Left" Margin="0,8" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Body" CornerRadius="10" Background="{DynamicResource Hp.Brush.Surface1}" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Line}" />
                         <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
-                            <Setter TargetName="Bar" Property="Opacity" Value="1" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SelectionFill}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.SelectionRing}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -903,8 +1508,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
                     <Grid>
-                        <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.Warning}" Opacity="0.1" />
-                        <Border CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Warning}" Opacity="0.7" />
+                        <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.Glass}" />
+                        <Border CornerRadius="14" Background="{DynamicResource Hp.Brush.Warning}" Opacity="0.1" />
+                        <Border CornerRadius="14" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.Warning}" Opacity="0.7" />
                         <DockPanel>
                             <ToggleButton x:Name="HeaderToggle" Style="{x:Null}" DockPanel.Dock="Top" Focusable="True" Cursor="Hand" FocusVisualStyle="{x:Null}"
                                           HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -968,7 +1574,7 @@
     </Style>
     <Style x:Key="Lib.StatusGlyph" TargetType="TextBlock" BasedOn="{StaticResource Lib.Glyph}">
         <Setter Property="Text" Value="&#xE946;" />
-        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="Success">
                 <Setter Property="Text" Value="&#xE73E;" />
@@ -986,12 +1592,11 @@
     </Style>
 
     <!--
-        Trenner zwischen Spieleliste und Detailbereich: in Ruhe nur ein dezenter Griff, beim Überfahren, Ziehen oder
-        mit Tastaturfokus leuchtet er in der Akzentfarbe und eine feine Linie zeigt die Kante. Mit Tastatur bedienbar
-        (Pfeiltasten links/rechts). Keine Effekte, Einblenden nur, wenn Windows Animationen erlaubt.
+        Trenner zwischen Spieleliste und Detailbereich: in Ruhe ein dezenter Griff, beim Überfahren, Ziehen oder mit
+        Tastaturfokus leuchtet er in der Akzentfarbe. Mit Tastatur bedienbar (Pfeiltasten links/rechts).
     -->
     <Style x:Key="Lib.Splitter" TargetType="GridSplitter">
-        <Setter Property="Width" Value="16" />
+        <Setter Property="Width" Value="24" />
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
         <Setter Property="ResizeDirection" Value="Columns" />
@@ -1008,52 +1613,24 @@
             <Setter.Value>
                 <ControlTemplate TargetType="GridSplitter">
                     <Grid Background="{TemplateBinding Background}">
-                        <Border x:Name="Line" Width="1" HorizontalAlignment="Center" Margin="0,18" Background="{DynamicResource Hp.Brush.BorderStrong}" Opacity="0" />
+                        <Border x:Name="Line" Width="1" HorizontalAlignment="Center" Margin="0,18" Background="{DynamicResource Hp.Brush.LineStrong}" Opacity="0" />
                         <Border x:Name="Rest" Width="4" Height="36" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Background="{DynamicResource Hp.Brush.BorderStrong}" Opacity="0.7" />
+                                Background="{DynamicResource Hp.Brush.LineStrong}" />
                         <Border x:Name="Grip" Width="4" Height="52" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
                                 Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
-                            </MultiDataTrigger.Conditions>
-                            <MultiDataTrigger.EnterActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Grip" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                        <DoubleAnimation Storyboard.TargetName="Line" Storyboard.TargetProperty="Opacity" To="0.8" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Out}" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.EnterActions>
-                            <MultiDataTrigger.ExitActions>
-                                <BeginStoryboard>
-                                    <Storyboard>
-                                        <!-- FillBehavior Stop: danach gilt wieder der Grundwert (bei Tastaturfokus sichtbar) -->
-                                        <DoubleAnimation Storyboard.TargetName="Grip" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22" FillBehavior="Stop" />
-                                        <DoubleAnimation Storyboard.TargetName="Line" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22" FillBehavior="Stop" />
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </MultiDataTrigger.ExitActions>
-                        </MultiDataTrigger>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
-                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
-                            </MultiDataTrigger.Conditions>
+                        <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Grip" Property="Opacity" Value="1" />
                             <Setter TargetName="Line" Property="Opacity" Value="0.8" />
-                        </MultiDataTrigger>
-                        <!-- Ziehen und Tastaturfokus: Griff fest sichtbar -->
+                        </Trigger>
                         <Trigger Property="IsDragging" Value="True">
                             <Setter TargetName="Grip" Property="Opacity" Value="1" />
                             <Setter TargetName="Line" Property="Opacity" Value="0.8" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Grip" Property="Opacity" Value="1" />
-                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Hp.Brush.FocusRing}" />
                             <Setter TargetName="Line" Property="Opacity" Value="0.8" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -1062,41 +1639,105 @@
         </Setter>
     </Style>
 
-    <!-- Karte des Detailbereichs (Abschnitt) -->
+    <!--
+        Ziehgriff unter dem Titelbereich der Liste (lib:HeroSplitter): wie Lib.Splitter, nur waagerecht. In Ruhe ein dezenter
+        Griff in der Mitte der Liste, beim Überfahren, Ziehen oder mit Tastaturfokus leuchtet er in der Akzentfarbe, dazu eine
+        feine Linie über die Breite der Liste. Mit Tastatur bedienbar (Pfeiltasten oben/unten, siehe HeroSplitter).
+    -->
+    <Style x:Key="Lib.HeroSplitter" TargetType="lib:HeroSplitter">
+        <Setter Property="Height" Value="{x:Static lib:ShowcaseLayout.HeroSplitterHeight}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Cursor" Value="SizeNS" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="IsTabStop" Value="True" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:HeroSplitter">
+                    <!--
+                        Griff und Linie in der Mitte: genau auf der Unterkante des Titelbilds (ShowcaseLayout.HeroSplitterOverlap);
+                        die Linie endet 12 px vor Lasche bzw. Kapsel der Werkzeugleiste (LineMargin, gesetzt vom Fenster)
+                    -->
+                    <Grid Background="{TemplateBinding Background}">
+                        <Border x:Name="Line" Height="1" VerticalAlignment="Center" Margin="{TemplateBinding LineMargin}" Background="{DynamicResource Hp.Brush.LineStrong}" Opacity="0" />
+                        <Border x:Name="Rest" Width="36" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource Hp.Brush.LineStrong}" />
+                        <Border x:Name="Grip" Width="52" Height="4" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Abschnitt des Detailbereichs (Prototyp .sec): ohne eigene Fläche, Überschrift mit auslaufender Linie -->
     <Style x:Key="Lib.Section" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource Hp.Brush.SurfaceInput}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Border}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+    <Style x:Key="Lib.SectionLine" TargetType="Border">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background">
+            <Setter.Value>
+                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                    <GradientStop Color="{DynamicResource Hp.Color.AccentText}" Offset="0" />
+                    <GradientStop Color="#00000000" Offset="1" />
+                </LinearGradientBrush>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Opacity" Value="0.35" />
+    </Style>
+
+    <!-- Zeile mit Schalter im Detailbereich (Prototyp .rw): Fläche beim Überfahren -->
+    <Style x:Key="Lib.SwitchRow" TargetType="Border">
         <Setter Property="CornerRadius" Value="12" />
-        <Setter Property="Padding" Value="14,12" />
-        <Setter Property="Margin" Value="0,0,0,12" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="Margin" Value="-8,0,0,0" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Background" Value="Transparent" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <!--
-        Kontextmenü der Bibliothek (Rechtsklick auf ein Spiel, Klick auf das große Symbol): abgerundet, App-Verlauf als
-        Hintergrund, Schatten auf einem eigenen Element hinter dem Menü (Texte bleiben ClearType-scharf). Nur geöffnet sichtbar,
-        kostet also nichts in der Liste.
+        Kontextmenü der Bibliothek (Rechtsklick, Umschalt+F10, Klick auf das Symbol): deckende Menüfläche, Schatten aus
+        einem Verlauf darunter (kein Effekt). Nur geöffnet sichtbar, kostet also nichts in der Liste.
     -->
     <Style x:Key="Lib.ContextMenu" TargetType="ContextMenu">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="HasDropShadow" Value="False" />
-        <Setter Property="MinWidth" Value="230" />
+        <Setter Property="MinWidth" Value="268" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
-                    <Grid Margin="6,4,12,14">
-                        <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.WindowBackground}">
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4" Color="{DynamicResource Hp.Color.Shadow}" />
-                            </Border.Effect>
-                        </Border>
-                        <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.WindowBackground}" BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" BorderThickness="1">
-                            <Grid>
-                                <Border CornerRadius="12" Background="{DynamicResource Hp.Brush.BackgroundGlow}" />
-                                <ItemsPresenter Margin="5" KeyboardNavigation.DirectionalNavigation="Cycle" KeyboardNavigation.TabNavigation="Cycle" />
-                            </Grid>
+                    <Grid Margin="8,4,12,18">
+                        <Border Style="{StaticResource Lib.PopupShadow}" />
+                        <Border Style="{StaticResource Lib.PopupBody}">
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" KeyboardNavigation.TabNavigation="Cycle" />
                         </Border>
                     </Grid>
                 </ControlTemplate>
@@ -1104,34 +1745,243 @@
         </Setter>
     </Style>
 
-    <!-- Eintrag im Kontextmenü: Symbol links, Leiste und Fläche beim Überfahren wie im Tray-Menü -->
+    <!-- Eintrag im Kontextmenü (Prototyp .mi): Symbol links, Haken rechts für Schalter, Tastenkürzel grau -->
     <Style x:Key="Lib.MenuItem" TargetType="MenuItem">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="Padding" Value="10,8" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Height" Value="34" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
                     <Grid Background="Transparent" Margin="0,1">
-                        <Border x:Name="Hover" CornerRadius="8" Background="{DynamicResource Hp.Brush.SurfaceHover}" Opacity="0" />
-                        <Border x:Name="Bar" Width="3" CornerRadius="1.5" Margin="2,8" HorizontalAlignment="Left" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Hover" CornerRadius="10" Background="{DynamicResource Hp.Brush.Surface1}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
                         <Grid Margin="{TemplateBinding Padding}">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="28" />
+                                <ColumnDefinition Width="26" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <ContentPresenter x:Name="IconHost" ContentSource="Icon" VerticalAlignment="Center" HorizontalAlignment="Left"
                                               TextElement.Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                             <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
+                            <TextBlock x:Name="Gesture" Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="16,0,0,0" VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="10.5" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                            <TextBlock x:Name="Check" Grid.Column="2" Style="{StaticResource Lib.Glyph}" Text="&#xE73E;" FontSize="13" Margin="16,0,0,0"
+                                       Foreground="{DynamicResource Hp.Brush.AccentText}" Visibility="Collapsed" />
                         </Grid>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Hover" Property="Opacity" Value="1" />
-                            <Setter TargetName="Bar" Property="Opacity" Value="1" />
-                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="IconHost" Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsCheckable" Value="True" />
+                                <Condition Property="IsChecked" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </MultiTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Lib.MenuSeparator" TargetType="Separator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1" Margin="6,5" Background="{DynamicResource Hp.Brush.Line}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Kachel im Abschnitt „BILDER“ als Schaltfläche (Titelbild, Logo, Cover; das Symbol öffnet „Symbol ändern…“):
+        beim Überfahren leuchtet der Rahmen.
+    -->
+    <Style x:Key="Lib.IconButton" TargetType="Button">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid Background="Transparent">
+                        <ContentPresenter />
+                        <Border x:Name="Glow" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
+                            <Setter TargetName="Glow" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Rund: Blättern im Regal (Prototyp .nv) -->
+    <Style x:Key="Lib.RoundButton" TargetType="Button">
+        <Setter Property="Width" Value="42" />
+        <Setter Property="Height" Value="42" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Icons}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Ellipse Margin="-3,0,-3,-8" IsHitTestVisible="False">
+                            <Ellipse.Fill>
+                                <RadialGradientBrush>
+                                    <GradientStop Color="#55000000" Offset="0.6" />
+                                    <GradientStop Color="#00000000" Offset="1" />
+                                </RadialGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <Ellipse x:Name="Body" Fill="{DynamicResource Hp.Brush.Menu}" Stroke="{DynamicResource Hp.Brush.Line}" StrokeThickness="1" />
+                        <Ellipse x:Name="Focus" Margin="-3" Stroke="{DynamicResource Hp.Brush.FocusRing}" StrokeThickness="2" Visibility="Collapsed" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Fill" Value="{DynamicResource Hp.Brush.Surface3}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0" />
+                            <Setter Property="IsHitTestVisible" Value="False" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Karte (Detailbereich, Automatik-Karte, Dialog): Panelfläche, feine Linie, Glanzkante oben -->
+    <Style x:Key="Lib.Panel" TargetType="Border">
+        <Setter Property="CornerRadius" Value="24" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Panel}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Wahl im Dialog „Bild wählen…“ (Prototyp .cho) -->
+    <Style x:Key="Lib.ChoiceItem" TargetType="ListBoxItem">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="Margin" Value="0,0,12,12" />
+        <Setter Property="Width" Value="150" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <Border x:Name="Ring" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                        <ContentPresenter />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="0.7" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Werkzeugleiste „Fließleiste mit Lichtnaht“ (abgenommene Vorschau leiste.html, Wunsch des Nutzers 2026-10-17): Filter
+        als Symbolknöpfe mit Zähler, Ansicht und „Spiel hinzufügen“ nur als Symbol, Tooltips Lib.ToolTip, Lasche/Kapsel
+        (ToolbarToggle, im Code gebaut) und ihr Menü. Werte für dunkel; hell ersetzt das Fenster die Lib.Brush.Tab…- und
+        Lib.Brush.CountBadge…-Pinsel (MainWindow.xaml.cs).
+    -->
+    <SolidColorBrush x:Key="Lib.Brush.TabGlass" Color="#D10E0F16" />
+    <SolidColorBrush x:Key="Lib.Brush.TabLine" Color="#24FFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.CountBadge" Color="#26FFFFFF" />
+    <SolidColorBrush x:Key="Lib.Brush.CountBadgeLine" Color="Transparent" />
+    <SolidColorBrush x:Key="Lib.Brush.NewBadge" Color="#FFFF94B9" />
+    <SolidColorBrush x:Key="Lib.Brush.NewBadgeText" Color="#FF14070C" />
+
+    <!--
+        Filter als Symbolknopf 40×40 (lib:FilterToggle, Vorschau .f-flt): Glas wie Lib.FieldFrame; an: Fläche C1 18 %, Rahmen
+        AccentStrong, Hof AccentSoft und gefülltes Symbol (Übergänge im Code nach der Effektstufe). Symbol 2 px unter der Mitte,
+        Zähler-Plakette innen oben rechts (2 px Abstand, 12 hoch). Tastaturfokus: Ring 2 px mit −3 Abstand. Gedrückt: 0,96.
+    -->
+    <Style x:Key="Lib.FilterToggle" TargetType="lib:FilterToggle">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:FilterToggle">
+                    <Grid x:Name="Root" Background="Transparent" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform />
+                        </Grid.RenderTransform>
+                        <Border x:Name="PART_Halo" CornerRadius="16" Margin="-4" Background="{DynamicResource Hp.Brush.AccentSoft}" Opacity="0" IsHitTestVisible="False" />
+                        <Border x:Name="Body" Style="{StaticResource Lib.FieldFrame}" />
+                        <Border x:Name="PART_On" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" IsHitTestVisible="False">
+                            <Border.Background>
+                                <SolidColorBrush Color="{DynamicResource Hp.Color.C1}" Opacity="0.18" />
+                            </Border.Background>
+                        </Border>
+                        <Grid x:Name="PART_Icon" Width="30" Height="18" Margin="5,13,5,9" IsHitTestVisible="False">
+                            <lib:FilterGlyph x:Name="PART_Glyph" Kind="{TemplateBinding Kind}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             Stroke="{DynamicResource Hp.Brush.TextSecondary}" Fill="{DynamicResource Hp.Brush.Accent}"
+                                             OnForeground="{DynamicResource Hp.Brush.TextOnAccent}" />
+                        </Grid>
+                        <Border x:Name="PART_Badge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0" MinWidth="13" Height="12" Padding="3,0"
+                                CornerRadius="6" BorderBrush="{DynamicResource Lib.Brush.CountBadgeLine}" IsHitTestVisible="False">
+                            <TextBlock x:Name="PART_BadgeText" FontSize="9" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Typography.NumeralAlignment="Tabular" Margin="0,-1,0,0" />
+                        </Border>
+                        <Border x:Name="Focus" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" IsHitTestVisible="False" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                            <Setter TargetName="PART_Glyph" Property="Stroke" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.96" ScaleY="0.96" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -1143,34 +1993,309 @@
     </Style>
 
     <!--
-        Großes Spielsymbol im Detailbereich als Schaltfläche: Klick öffnet das Menü „Symbol ändern…“. Beim Überfahren
-        leuchtet der Rahmen und ein Stift-Abzeichen erscheint (nur Flächen, keine Effekte).
+        Tooltip der Werkzeugleiste (Lib.ToolTip, Vorschau .tip): deckend Hp.Brush.Menu, Rahmen LineStrong, Radius 12,
+        Innenabstand 12/9, höchstens 300 breit; Schatten als Lib.PopupShadow-Fläche, kein DropShadowEffect. Mittig unter dem
+        Element mit 8 px Abstand. Erscheint nach 1000 ms, der des Nachbarknopfs sofort innerhalb von 400 ms (ToolTipService),
+        auch bei Tastaturfokus. Einblenden: Voll 140 ms (Deckkraft, Y 4 → 0), Reduziert 100 ms nur Deckkraft, Aus sofort.
     -->
-    <Style x:Key="Lib.IconButton" TargetType="Button">
+    <Style x:Key="Lib.ToolTip" TargetType="ToolTip">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Placement" Value="Bottom" />
+        <Setter Property="lib:ToolbarTipPlacement.Centered" Value="True" />
+        <Setter Property="DataContext" Value="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Grid x:Name="Root" Margin="10,4,10,16">
+                        <Grid.RenderTransform>
+                            <TranslateTransform />
+                        </Grid.RenderTransform>
+                        <Border Style="{StaticResource Lib.PopupShadow}" CornerRadius="16" />
+                        <Border CornerRadius="12" Padding="12,9,12,10" MaxWidth="300" Background="{DynamicResource Hp.Brush.Menu}"
+                                BorderBrush="{DynamicResource Hp.Brush.LineStrong}" BorderThickness="1">
+                            <ContentPresenter />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsOpen, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding IsFull, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.14" EasingFunction="{StaticResource Hp.Ease.Out}" FillBehavior="Stop" />
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="4" To="0" Duration="0:0:0.14" EasingFunction="{StaticResource Hp.Ease.Out}" FillBehavior="Stop" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                        </MultiDataTrigger>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsOpen, RelativeSource={RelativeSource Self}}" Value="True" />
+                                <Condition Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
+                                <Condition Binding="{Binding IsFull, Source={x:Static lib:LibraryMotion.Instance}}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <MultiDataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Root" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.1" FillBehavior="Stop" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </MultiDataTrigger.EnterActions>
+                        </MultiDataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Inhalt eines Tooltips: Titel mit Tastenkappe, Erklärung, Fußzeile (Mono 11, Anfang hervorgehoben); leere Teile entfallen -->
+    <Style x:Key="Lib.ToolbarTip" TargetType="lib:ToolbarTip">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:ToolbarTip">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{TemplateBinding Title}" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Hp.Brush.Text}" />
+                            <Border x:Name="Key" Style="{StaticResource Lib.Kbd}" Margin="8,0,0,0" Height="17" Padding="5,0,5,1">
+                                <TextBlock Text="{TemplateBinding Shortcut}" VerticalAlignment="Center" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock x:Name="Body" Text="{TemplateBinding Text}" Margin="0,4,0,0" FontSize="12" LineHeight="16.8" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                        <Border x:Name="Foot" Margin="0,7,0,0" Padding="0,7,0,0" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Hp.Brush.Line}">
+                            <TextBlock FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="11" LineHeight="14.3" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}">
+                                <Run Text="{Binding FooterLead, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.AccentText}" /><Run Text="{Binding Footer, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" />
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Shortcut" Value="">
+                            <Setter TargetName="Key" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Body" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Footer" Value="" />
+                                <Condition Property="FooterLead" Value="" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Foot" Property="Visibility" Value="Collapsed" />
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Sortierung der Werkzeugleiste (wie Lib.ComboBox): Symbol und Beschriftung der gewählten Sortierung. Unterhalb von 914
+        Listenbreite nur das Symbol (lib:ToolbarPanel.IconOnly, 60 breit); die Beschriftung weicht dabei nach links aus
+        (Teil „Label“, Deckkraft und Versatz setzt das Fenster).
+    -->
+    <Style x:Key="Lib.SortComboBox" TargetType="ComboBox" BasedOn="{StaticResource Lib.ComboBox}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="Toggle" Style="{x:Null}" Focusable="False" ClickMode="Press" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Body" Style="{StaticResource Lib.FieldFrame}">
+                                        <TextBlock x:Name="Chevron" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="10" HorizontalAlignment="Right" Margin="0,0,13,0"
+                                                   Foreground="{DynamicResource Hp.Brush.TextSecondary}" RenderTransformOrigin="0.5,0.5">
+                                            <TextBlock.RenderTransform>
+                                                <RotateTransform Angle="0" />
+                                            </TextBlock.RenderTransform>
+                                        </TextBlock>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                                <Setter.Value>
+                                                    <RotateTransform Angle="180" />
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter TargetName="Chevron" Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <Grid x:Name="ContentSite" IsHitTestVisible="False" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" ClipToBounds="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Width="16" TextAlignment="Center" FontSize="14" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
+                                       Text="{Binding SelectedItem.Glyph, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <TextBlock x:Name="Label" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Text="{Binding SelectedItem.Label, RelativeSource={RelativeSource TemplatedParent}}" />
+                        </Grid>
+                        <Border x:Name="FocusFrame" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" Opacity="0" IsHitTestVisible="False" />
+                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="8" AllowsTransparency="True" Focusable="False"
+                               IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="None">
+                            <Grid Margin="6,0,6,14" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                <Border Style="{StaticResource Lib.PopupShadow}" />
+                                <Border Style="{StaticResource Lib.PopupBody}" MinWidth="236" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsEnabled, Source={x:Static lib:LibraryMotion.Instance}}" Value="True">
+                            <Setter TargetName="PART_Popup" Property="PopupAnimation" Value="Fade" />
+                        </DataTrigger>
+                        <Trigger Property="lib:ToolbarPanel.IconOnly" Value="True">
+                            <Setter TargetName="ContentSite" Property="Margin" Value="14,0,0,0" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="FocusFrame" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter TargetName="FocusFrame" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Ansicht nur als Symbol (Vorschau .f-seg .sb): 38×32, gewählt in TextOnAccent auf der gleitenden Fläche (MainWindow) -->
+    <Style x:Key="Lib.SegmentIconRadio" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="Width" Value="38" />
+        <Setter Property="Height" Value="32" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Button">
+                <ControlTemplate TargetType="RadioButton">
                     <Grid Background="Transparent">
-                        <ContentPresenter />
-                        <Border x:Name="Glow" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
-                        <Border x:Name="Badge" Width="22" Height="22" CornerRadius="11" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-5,-5"
-                                Background="{DynamicResource Hp.Brush.AccentSolid}" BorderBrush="{DynamicResource Hp.Brush.WindowBackground}" BorderThickness="2" Opacity="0">
-                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE70F;" FontSize="10" HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource Hp.Brush.TextOnAccent}" />
-                        </Border>
+                        <Border x:Name="Focus" CornerRadius="9" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Glow" Property="Opacity" Value="0.85" />
-                            <Setter TargetName="Badge" Property="Opacity" Value="1" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
-                            <Setter TargetName="Badge" Property="Opacity" Value="1" />
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
                         </Trigger>
                     </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Eintrag im Menü der Werkzeugleiste (Vorschau .mi): bei Filtern Haken links, Zahl (Tag, Mono) und Tastenkappe rechts;
+        „Leiste aus-/einblenden“ und „Alle Filter zurücksetzen“ ohne Haken-Spalte.
+    -->
+    <Style x:Key="Lib.ToolbarMenuItem" TargetType="MenuItem" BasedOn="{StaticResource Lib.MenuItem}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid Background="Transparent" Margin="0,1">
+                        <Border x:Name="Hover" CornerRadius="10" Background="{DynamicResource Hp.Brush.Surface1}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <Grid Margin="{TemplateBinding Padding}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="Check" Style="{StaticResource Lib.Glyph}" Text="&#xE73E;" FontSize="11" Width="14" Margin="0,0,10,0"
+                                       Foreground="{DynamicResource Hp.Brush.AccentText}" Opacity="0" />
+                            <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
+                            <TextBlock x:Name="Count" Grid.Column="2" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Margin="16,0,0,0" VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                            <Border x:Name="Key" Grid.Column="3" Style="{StaticResource Lib.Kbd}" Margin="10,0,0,0" Height="17" Padding="5,0,5,1">
+                                <TextBlock Text="{TemplateBinding InputGestureText}" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Hover" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsCheckable" Value="False">
+                            <Setter TargetName="Check" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Check" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="InputGestureText" Value="">
+                            <Setter TargetName="Key" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ✕ der Kapsel: eigener Knopf 24×24 „Suche und Filter zurücksetzen“ (nur eingeklappt und gefiltert) -->
+    <Style x:Key="Lib.CapsuleReset" TargetType="Button">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="12" Background="Transparent" />
+                        <Border x:Name="Focus" CornerRadius="12" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE711;" FontSize="9" HorizontalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Tastaturfokus von Lasche und Kapsel: Ring 2 px um die Fläche -->
+    <Style x:Key="Lib.TabFocus" TargetType="Control">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-2" CornerRadius="13" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" />
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

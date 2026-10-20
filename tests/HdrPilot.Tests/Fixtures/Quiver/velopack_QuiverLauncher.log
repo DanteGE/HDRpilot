@@ -1,0 +1,31 @@
+[stub:15512] [19:11:37] [INFO] --
+[stub:15512] [19:11:37] [INFO] Starting Velopack Stub (at "D:\\Spielordner\\QuiverLauncher-win-Portable\\QuiverLauncher.exe")
+[stub:15512] [19:11:37] [INFO] Stub about to start Update.exe ("D:\\Spielordner\\QuiverLauncher-win-Portable\\Update.exe") with args: ["start", "--"]
+[stub:15512] [19:11:37] [INFO] Successfully started Update.exe
+[update:9116] [19:11:37] [INFO] --
+[update:9116] [19:11:37] [INFO] Starting Velopack Updater (1.2.0)
+[update:9116] [19:11:37] [INFO]     Location: "D:\\Spielordner\\QuiverLauncher-win-Portable\\Update.exe"
+[update:9116] [19:11:37] [INFO]     CWD: "D:\\Spielordner\\QuiverLauncher-win-Portable"
+[update:9116] [19:11:37] [INFO]     Verbose: false
+[update:9116] [19:11:37] [INFO]     Silent: false
+[update:9116] [19:11:37] [INFO]     Root Directory: None
+[update:9116] [19:11:37] [INFO]     Log File: "C:\\Users\\Test\\AppData\\Local\\velopack\\velopack_QuiverLauncher.log"
+[update:9116] [19:11:37] [INFO]     Context: IAmUpdateExe
+[update:9116] [19:11:37] [INFO] Command: Start
+[update:9116] [19:11:37] [INFO]     Wait: NoWait
+[update:9116] [19:11:37] [INFO]     Exe Name: None
+[update:9116] [19:11:37] [INFO]     Exe Args: None
+[update:9116] [19:11:37] [INFO] Auto-locating app manifest...
+[update:9116] [19:11:37] [INFO] Root directory 'D:\Spielordner\QuiverLauncher-win-Portable' writable: true
+[update:9116] [19:11:37] [INFO] Using root packages directory: D:\Spielordner\QuiverLauncher-win-Portable\packages
+[update:9116] [19:11:37] [INFO] About to launch: '"D:\\Spielordner\\QuiverLauncher-win-Portable\\current\\QuiverLauncher.exe"' in dir '"D:\\Spielordner\\QuiverLauncher-win-Portable\\current"'
+[lib-csharp:13820] [19:11:37] [Information] Initializing WindowsVelopackLocator
+[lib-csharp:13820] [19:11:37] [Information] WindowsVelopackLocator: Update.exe in parent dir, Located valid manifest file at: D:\Spielordner\QuiverLauncher-win-Portable\current\sq.version
+[lib-csharp:13820] [19:11:37] [Information] Root directory is writable, using packages directory: D:\Spielordner\QuiverLauncher-win-Portable\packages
+[lib-csharp:13820] [19:11:37] [Information] Initialized WindowsVelopackLocator for QuiverLauncher v3.5.1
+[lib-csharp:13820] [19:11:37] [Information] Starting VelopackApp.Run (library version 1.2.0).
+[lib-csharp:13820] [19:11:37] [Information] Setting current process explicit AppUserModelID to 'velopack.QuiverLauncher'
+[lib-csharp:13820] [19:11:40] [Warning] No staging userId in file 'D:\Spielordner\QuiverLauncher-win-Portable\packages\.betaId', creating a new one.
+[lib-csharp:13820] [19:11:40] [Information] Generated new staging userId: 00000000-1111-2222-3333-444444444444
+[lib-csharp:13820] [19:11:40] [Debug] Retrieving latest release feed.
+[lib-csharp:13820] [19:11:41] [Information] No updates, remote version (3.5.1) is not newer than current version (3.5.1) and / or downgrade is not enabled.

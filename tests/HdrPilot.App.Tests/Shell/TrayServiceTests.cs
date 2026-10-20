@@ -51,14 +51,20 @@ public sealed partial class TrayServiceTests
         var secondHandle = surface.Icon!.Handle;
         Assert.True(IsLiveIcon(secondHandle));
 
-        // Nur das Spiel ändert sich: Tooltip neu, Symbol bleibt.
+        // Ein Spiel startet mit HDR: neues Symbol (Abzeichen „Spiel läuft“, E89).
         RefreshAndWait(service, surface, host, host.State with { ActiveGames = ["Cyberpunk 2077"] });
-        Assert.Equal(2, surface.IconSets);
-
-        // Pause: neues Symbol (Pause-Balken).
-        RefreshAndWait(service, surface, host, host.State with { Paused = true });
         Assert.Equal(3, surface.IconSets);
         Assert.False(IsLiveIcon(secondHandle), "altes HICON nicht freigegeben");
+        var thirdHandle = surface.Icon!.Handle;
+
+        // Nur das Spiel ändert sich: Tooltip neu, Symbol bleibt.
+        RefreshAndWait(service, surface, host, host.State with { ActiveGames = ["Hades II"] });
+        Assert.Equal(3, surface.IconSets);
+
+        // Pause: neues Symbol (Pause-Abzeichen).
+        RefreshAndWait(service, surface, host, host.State with { Paused = true });
+        Assert.Equal(4, surface.IconSets);
+        Assert.False(IsLiveIcon(thirdHandle), "altes HICON nicht freigegeben");
 
         // Abfrage im Hintergrund, Symbol und Tooltip aber immer auf dem UI-Thread.
         Assert.Equal([WpfTestHost.Dispatcher.Thread.ManagedThreadId], surface.Threads);

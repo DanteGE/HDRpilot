@@ -5,6 +5,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Resources;
+using HdrPilot.App.Services;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
@@ -18,13 +19,20 @@ namespace HdrPilot.App.ViewModels.Library;
 /// <para>
 /// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
 /// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert und sortiert wird über eine
-/// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung und Breite des Detailbereichs
-/// merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryDetailsRatio). Die HDR-Unterstützung
-/// laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“) wird beim Öffnen und nach jedem Abgleich aus dem
-/// Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
+/// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung, Breite des Detailbereichs und Höhe
+/// des Titelbereichs der Liste merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryPaneRatio,
+/// AppSettings.LibraryHeroRatio). Die HDR-Unterstützung laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“)
+/// wird beim Öffnen und nach jedem Abgleich aus dem Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
+/// </para>
+/// <para>
+/// Nicht installierte Spiele (E90): Mit AppSettings.HideUninstalledGames stehen sie nicht in der Grundmenge
+/// <see cref="Games"/> und zählen nirgends mit (Kopf, Quellen, Kapsel, Leerzustand); ihre Zeilen bleiben für Automatik und
+/// laufende Sitzungen erhalten. „Einstellungen entfernen…“ nimmt ein nicht installiertes Launcher-Spiel nach einer
+/// Rückfrage heraus (<see cref="RemoveSettingsAsync"/>). Verlässt das gewählte Spiel die Liste (entfernt oder
+/// ausgeblendet), wird sein Nachbar gewählt.
 /// </para>
 /// </summary>
-public sealed class LibraryViewModel : ObservableObject, IDisposable
+public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 {
     public static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(150);
     public static readonly TimeSpan StatusDuration = TimeSpan.FromSeconds(5);
@@ -32,8 +40,17 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>„Angesehen“ wird gesammelt gespeichert (Blättern mit den Pfeiltasten schreibt nicht je Spiel).</summary>
     public static readonly TimeSpan SeenDelay = TimeSpan.FromMilliseconds(400);
 
-    /// <summary>Die Spaltenbreite wird gesammelt gespeichert (Verschieben mit den Pfeiltasten schreibt nicht je Schritt).</summary>
+    /// <summary>
+    /// Spaltenbreite und Höhe des Titelbereichs werden gesammelt gespeichert (Verschieben mit den Pfeiltasten schreibt nicht
+    /// je Schritt).
+    /// </summary>
     public static readonly TimeSpan LayoutDelay = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    /// Dauert die Prüfung vor der Rückfrage „Einstellungen entfernen…“ länger (Laufwerk, EXE, Verknüpfungen; E90), sagt die
+    /// Hinweiszeile, dass geprüft wird; kürzer bliebe sie nur ein Flackern.
+    /// </summary>
+    public static readonly TimeSpan CheckingDelay = TimeSpan.FromMilliseconds(250);
 
     private static readonly StringComparer NameOrder = StringComparer.Create(CultureInfo.CurrentCulture, ignoreCase: true);
     private static readonly CompareInfo SearchCompare = CultureInfo.InvariantCulture.CompareInfo;
@@ -41,13 +58,18 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     private readonly ILibraryContext _context;
     private readonly ILibraryDialogs _dialogs;
     private readonly Dictionary<string, GameItemViewModel> _byKey = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Zeilen in <see cref="Games"/> (die Grundmenge); ausgeblendete nicht installierte Spiele nur in <see cref="_byKey"/>.</summary>
+    private readonly HashSet<GameItemViewModel> _listed = [];
     private readonly CancellationTokenSource _lifetime = new();
     private readonly SourceFilterOption _allSources;
     private readonly HashSet<string> _seenPending = new(StringComparer.OrdinalIgnoreCase);
     private IDisposable? _seenDelay;
     private IDisposable? _layoutDelay;
     private bool _layoutPending;
+    private bool _heroPending;
     private double? _detailsRatio;
+    private double? _heroRatio;
     private SortOption _selectedSort;
 
     private AppConfig? _syncedConfig;
@@ -55,6 +77,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     private bool _syncQueued;
     private bool _refreshing;
     private bool _disposed;
+    private bool _hideUninstalled;
+    private bool _removingSettings;
+    private int _selectionFollows;
     private IDisposable? _searchDelay;
     private IDisposable? _statusDelay;
     private string _candidateSignature = string.Empty;
@@ -69,6 +94,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     private IReadOnlyDictionary<string, HdrSupportStatus> _hdrSupport = new Dictionary<string, HdrSupportStatus>();
     private int _hdrSupportRun;
     private GameItemViewModel? _selectedGame;
+    private GameItemViewModel? _displacedGame;
     private GameDetailsViewModel? _details;
 
     private int _totalCount;
@@ -94,12 +120,13 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _selectedSource = _allSources;
         SourceOptions = [_allSources];
 
-        // Sortierung und Spaltenbreite aus der Konfiguration (unbekannte oder fehlende Werte: Standard).
+        // Sortierung, Spaltenbreite und Höhe des Titelbereichs aus der Konfiguration (unbekannte oder fehlende Werte: Standard).
         var settings = _context.Config.Settings;
         SortOptions = GameSorting.CreateOptions();
         var order = GameSorting.Parse(settings.LibrarySortOrder);
         _selectedSort = SortOptions.First(o => o.Order == order);
-        _detailsRatio = settings.LibraryDetailsRatio;
+        _detailsRatio = settings.LibraryPaneRatio;
+        _heroRatio = settings.LibraryHeroRatio;
 
         GamesView = new ListCollectionView(Games) { Filter = Matches };
         ApplySortToView();
@@ -115,6 +142,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         DismissStatusCommand = new RelayCommand(() => StatusMessage = null);
         ChangeIconCommand = new AsyncRelayCommand(ChangeIconAsync, () => _selectedGame is not null);
         ResetIconCommand = new AsyncRelayCommand(ResetIconAsync, () => _selectedGame is { HasCustomIcon: true });
+        RemoveSettingsCommand = new AsyncRelayCommand(
+            () => _selectedGame is { } item ? RemoveSettingsAsync(item) : Task.CompletedTask,
+            () => _selectedGame is { IsRemovable: true, IsRunning: false });
 
         _context.ConfigChanged += OnConfigChanged;
         _context.HdrStateChanged += OnHdrStateChanged;
@@ -122,6 +152,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.HdrSupportChanged += OnHdrSupportChanged;
 
         _isScanning = _context.IsScanning;
+        InitializeShowcase(settings);
         SyncFromConfig(); // startet auch die Suche nach Vorschlägen
         RefreshHdrState();
         RefreshScanErrors();
@@ -130,6 +161,14 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     /// <summary>Das Fenster soll dieses Spiel in den sichtbaren Bereich holen (nach dem Hinzufügen).</summary>
     public event EventHandler<GameItemViewModel>? RevealRequested;
+
+    /// <summary>
+    /// Die Auswahl ist der Liste gefolgt: Suche oder Filtern (erster Treffer, keiner oder die vorherige zurück, siehe
+    /// <see cref="SelectedGame"/>) oder das gewählte Spiel hat die Liste verlassen (entfernt oder ausgeblendet, dann der
+    /// Nachbar, E90). Das Fenster holt sie in den sichtbaren Bereich, und lag der Fokus auf der verschwundenen Zeile, folgt
+    /// er ihr.
+    /// </summary>
+    public event EventHandler? SelectionFollowedFilter;
 
     public BulkObservableCollection<GameItemViewModel> Games { get; } = [];
 
@@ -165,6 +204,12 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     /// <summary>„Symbol zurücksetzen“: eigenes Symbol des gewählten Spiels löschen, wieder automatisch.</summary>
     public AsyncRelayCommand ResetIconCommand { get; }
+
+    /// <summary>
+    /// „Einstellungen entfernen…“ für das gewählte Spiel (Kontextmenü, Taste Entf; E90): nur nicht installierte
+    /// Launcher-Spiele ohne laufende oder vorbereitete Sitzung (<see cref="RemoveSettingsAsync"/>).
+    /// </summary>
+    public AsyncRelayCommand RemoveSettingsCommand { get; }
 
     internal ILibraryContext Context => _context;
 
@@ -268,6 +313,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _selectedSort = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(SortOrder));
+            OnSortChanged();
             ApplySortToView();
 
             // Immer schreiben: Ein Vergleich mit der gespeicherten Konfiguration könnte während eines noch laufenden
@@ -283,7 +329,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         set => SelectedSortOption = SortOptions.First(o => o.Order == value);
     }
 
-    // ---------- Spaltenbreite ----------
+    // ---------- Spaltenbreite, Höhe des Titelbereichs ----------
 
     /// <summary>Gemerkter Anteil des Detailbereichs (null: Standard). Das Fenster begrenzt ihn auf seine Größe.</summary>
     public double? DetailsRatio => _detailsRatio;
@@ -306,25 +352,50 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _layoutDelay = _context.Ui.Delay(LayoutDelay, FlushLayout);
     }
 
+    /// <summary>Gemerkte Höhe des Titelbereichs der Liste als Anteil der Fensterhöhe (null: Standard, ein Drittel).</summary>
+    public double? HeroRatio => _heroRatio;
+
+    /// <summary>
+    /// Neue Höhe des Titelbereichs der Liste nach dem Ziehen am Griff oder per Tastatur (null: zurück zum Standard). Auf
+    /// vier Stellen gerundet (bei 1440 px Fensterhöhe unter 0,1 px), gespeichert wie <see cref="SetDetailsRatio"/>.
+    /// </summary>
+    public void SetHeroRatio(double? ratio)
+    {
+        double? value = ratio is { } r && double.IsFinite(r) ? Math.Round(Math.Clamp(r, 0.01, 0.99), 4) : null;
+        if (_disposed || Nullable.Equals(value, _heroRatio))
+        {
+            return;
+        }
+
+        _heroRatio = value;
+        _heroPending = true;
+        _layoutDelay?.Dispose();
+        _layoutDelay = _context.Ui.Delay(LayoutDelay, FlushLayout);
+    }
+
     // ---------- Auswahl und Details ----------
 
+    /// <summary>
+    /// Gewähltes Spiel (Titelbereich und Details). Selbst gewählt gilt es als angesehen. Fällt es durch Suche oder Filter
+    /// aus der Liste, folgt die Auswahl leise der Liste (Entscheidung des Nutzers 2026-10-19, ersetzt die Regel aus Phase 4,
+    /// nach der Neufiltern die Auswahl nie verschob): erster Treffer, ohne Treffer keiner; steht das verdrängte Spiel
+    /// wieder in der Liste, kehrt es zurück (<see cref="FollowFilter"/>).
+    /// </summary>
     public GameItemViewModel? SelectedGame
     {
         get => _selectedGame;
         set
         {
             // Beim Neufiltern ändert die Liste die Auswahl nur als Nebenwirkung (null, oder bei einer mit dem
-            // aktuellen Element verbundenen Liste das erste Element): Details bleiben stehen, nichts gilt als angesehen.
+            // aktuellen Element verbundenen Liste das erste Element): Das ist keine Wahl, welches Spiel dann gilt, legt
+            // FollowFilter fest, und nichts gilt als angesehen.
             if (_refreshing || ReferenceEquals(value, _selectedGame))
             {
                 return;
             }
 
-            _selectedGame = value;
-            OnPropertyChanged();
-            ChangeIconCommand.RaiseCanExecuteChanged();
-            ResetIconCommand.RaiseCanExecuteChanged();
-            Details = value is null ? null : new GameDetailsViewModel(this, value);
+            _displacedGame = null; // selbst gewählt: Das vom Filter verdrängte Spiel kehrt nicht mehr zurück.
+            ShowSelection(value);
             if (value is { IsNew: true })
             {
                 MarkSeen(value);
@@ -394,6 +465,48 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
     public bool IsFilterEmpty => _totalCount > 0 && _visibleCount == 0;
 
+    /// <summary>
+    /// Ausgeblendete nicht installierte Spiele (E90, AppSettings.HideUninstalledGames): Sie zählen nicht mit, nur der Tooltip
+    /// von „Zurücksetzen“ und der Leerzustand nennen sie. 0 ohne Ausblenden.
+    /// </summary>
+    public int HiddenCount => _byKey.Count - _listed.Count;
+
+    /// <summary>Leere Liste: „Noch keine Spiele“, sind alle Spiele ausgeblendet „Nur nicht installierte Spiele“.</summary>
+    public string EmptyTitle => HiddenCount > 0 ? LibraryStrings.List_EmptyHiddenTitle : LibraryStrings.List_EmptyTitle;
+
+    /// <summary>Erklärung der leeren Liste; mit ausgeblendeten Spielen, wie viele es sind und wo sie sich einblenden lassen.</summary>
+    public string EmptyText => HiddenCount switch
+    {
+        0 => LibraryStrings.List_EmptyText,
+        1 => LibraryStrings.List_EmptyHiddenTextOne,
+        var hidden => LibraryText.Format(LibraryStrings.List_EmptyHiddenTextMany, hidden),
+    };
+
+    /// <summary>
+    /// Erklärung zu „Keine Spiele für diese Auswahl“: Würden ausgeblendete nicht installierte Spiele zu Suche, Quelle und
+    /// Filtern passen (E90), nennt sie, wie viele und wo sie sich einblenden lassen; „Filter zurücksetzen“ holt sie nicht.
+    /// </summary>
+    public string NoMatchText => HiddenCount == 0 ? LibraryStrings.List_NoMatchText : _byKey.Values.Count(i => !_listed.Contains(i) && Matches(i)) switch
+    {
+        0 => LibraryStrings.List_NoMatchText,
+        1 => LibraryStrings.List_NoMatchHiddenOne,
+        var matching => LibraryText.Format(LibraryStrings.List_NoMatchHiddenMany, matching),
+    };
+
+    /// <summary>
+    /// Detailbereich ohne gewähltes Spiel: „Wähle ein Spiel“ mit Erklärung. Passt zu Suche, Quelle und Filtern kein Spiel (die
+    /// Liste zeigt „Keine Spiele für diese Auswahl“) oder ist die Liste leer („Noch keine Spiele“, auch wenn alle Spiele
+    /// ausgeblendet sind), gibt es nichts zu wählen: dann je ein neutraler Hinweis.
+    /// </summary>
+    public string DetailsEmptyTitle => IsLibraryEmpty ? LibraryStrings.Details_EmptyLibraryTitle
+        : IsFilterEmpty ? LibraryStrings.Details_NoMatchTitle
+        : LibraryStrings.Details_EmptyTitle;
+
+    /// <summary>Erklärung unter <see cref="DetailsEmptyTitle"/>.</summary>
+    public string DetailsEmptyText => IsLibraryEmpty ? LibraryStrings.Details_EmptyLibraryText
+        : IsFilterEmpty ? LibraryStrings.Details_NoMatchText
+        : LibraryStrings.Details_EmptyText;
+
     // ---------- HDR-Status und Schnellaktionen ----------
 
     public bool IsHdrOn
@@ -421,7 +534,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _hdrStatusText, value);
     }
 
-    public string HdrToggleText => _isHdrOn ? LibraryStrings.Hdr_TurnOff : LibraryStrings.Hdr_TurnOn;
+    /// <summary>„HDR einschalten“ / „HDR ausschalten“; folgt wie die Kapsel auch der HDR-Vorschau der Bildschirmfotos.</summary>
+    public string HdrToggleText => ShowsHdrOn ? LibraryStrings.Hdr_TurnOff : LibraryStrings.Hdr_TurnOn;
 
     public string? ActiveSessionText
     {
@@ -553,9 +667,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     /// <summary>Wählt ein Spiel aus und holt es in den sichtbaren Bereich (setzt bei Bedarf die Filter zurück).</summary>
     public void SelectGame(string key)
     {
-        if (!_byKey.TryGetValue(key, out var item))
+        if (!_byKey.TryGetValue(key, out var item) || !_listed.Contains(item))
         {
-            return;
+            return; // unbekannt oder ausgeblendet (E90)
         }
 
         if (!GamesView.Contains(item))
@@ -579,8 +693,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         var targetsChanged = _syncedConfig is { } previous
             && !previous.Settings.TargetDisplays.SequenceEqual(cfg.Settings.TargetDisplays, StringComparer.OrdinalIgnoreCase);
         _syncedConfig = cfg;
+        _hideUninstalled = cfg.Settings.HideUninstalledGames;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var added = new List<GameItemViewModel>();
+        var entering = new List<GameItemViewModel>();
         var renamed = false;
         var lastPlayedChanged = false;
         foreach (var game in cfg.Games)
@@ -592,7 +707,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
             if (_byKey.TryGetValue(game.Key, out var item))
             {
-                renamed |= !string.Equals(item.Name, game.Name, StringComparison.Ordinal);
+                renamed |= _listed.Contains(item) && !string.Equals(item.Name, game.Name, StringComparison.Ordinal);
                 lastPlayedChanged |= item.Config.LastPlayed != game.LastPlayed;
                 item.Apply(game);
             }
@@ -600,12 +715,16 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             {
                 item = new GameItemViewModel(this, game) { HdrSupport = _hdrSupport.GetValueOrDefault(game.Key) };
                 _byKey[game.Key] = item;
-                added.Add(item);
             }
 
             if (_seenPending.Contains(game.Key))
             {
                 item.IsNew = false; // „Angesehen“ ist schon vorgemerkt, nur noch nicht gespeichert.
+            }
+
+            if (IsListed(item) && !_listed.Contains(item))
+            {
+                entering.Add(item); // neu, wieder installiert oder nicht mehr ausgeblendet
             }
         }
 
@@ -615,36 +734,60 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             _byKey.Remove(item.Key);
         }
 
+        // Verlassen die Liste: aus der Bibliothek entfernt oder (nicht installiert) ausgeblendet (E90).
+        var leaving = _listed.Where(i => !_byKey.ContainsKey(i.Key) || !IsListed(i)).ToHashSet();
+
+        // Verlässt das gewählte Spiel die Liste, gilt vor dem Neufiltern sein Nachbar (sonst gälte es als vom Filter
+        // verdrängt); leise wie beim Filtern, ohne „angesehen“.
+        var follows = _selectionFollows;
+        GameItemViewModel? gone = null;
+        if (_selectedGame is { } selected && (leaving.Contains(selected) || !_byKey.ContainsKey(selected.Key)))
+        {
+            gone = selected;
+            ShowSelection(Neighbour(selected, leaving));
+        }
+
+        if (_displacedGame is not null && (!_byKey.ContainsKey(_displacedGame.Key) || leaving.Contains(_displacedGame)))
+        {
+            _displacedGame = null;
+        }
+
+        _listed.ExceptWith(leaving);
+        _listed.UnionWith(entering);
+
         // Nach „Zuletzt gespielt“ sortiert: ein geändertes Datum (Spiel beendet, Steam eingelesen) verschiebt die Zeile.
         var resort = lastPlayedChanged && SortOrder == GameSortOrder.LastPlayed;
-        if (renamed || added.Count + removed.Count > 12)
+        var followed = false;
+        if (renamed || entering.Count + leaving.Count > 12)
         {
             _refreshing = true;
             try
             {
-                Games.ReplaceAll(_byKey.Values.OrderBy(g => g.Name, NameOrder).ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase));
+                Games.ReplaceAll(_listed.OrderBy(g => g.Name, NameOrder).ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase));
             }
             finally
             {
                 _refreshing = false;
             }
 
-            RefreshView();
+            followed = RefreshView();
         }
-        else if (added.Count + removed.Count > 0 || resort)
+        else if (entering.Count + leaving.Count > 0 || resort)
         {
             _refreshing = true;
             try
             {
-                foreach (var item in removed)
+                foreach (var item in leaving)
                 {
                     Games.Remove(item);
                 }
 
-                foreach (var item in added)
+                foreach (var item in entering)
                 {
                     Games.Insert(InsertIndex(item), item);
                 }
+
+                followed = !resort && FollowFilter(); // etwa ein neues Spiel, das zu Suche und Filtern passt, ohne andere Treffer
             }
             finally
             {
@@ -653,27 +796,27 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
             if (resort)
             {
-                RefreshView(); // Die Sicht ordnet geänderte Zeilen nicht von selbst neu ein.
+                followed = RefreshView(); // Die Sicht ordnet geänderte Zeilen nicht von selbst neu ein.
             }
             else
             {
                 UpdateVisibleCount();
+                if (followed)
+                {
+                    RaiseSelectionFollowed();
+                }
             }
         }
 
-        if (_selectedGame is not null && !_byKey.ContainsKey(_selectedGame.Key))
-        {
-            _selectedGame = null;
-            OnPropertyChanged(nameof(SelectedGame));
-            Details = null;
-        }
-        else if (_selectedGame is not null)
+        if (_selectedGame is not null)
         {
             _details?.Apply(_selectedGame.Config);
+            _hero?.Refresh(IsPaused);
         }
 
         ChangeIconCommand.RaiseCanExecuteChanged();
         ResetIconCommand.RaiseCanExecuteChanged();
+        RemoveSettingsCommand.RaiseCanExecuteChanged();
 
         if (targetsChanged)
         {
@@ -685,6 +828,22 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
 
         UpdateCounts();
+
+        if (gone is not null)
+        {
+            // Hatte das verschwundene Spiel in der alten Ansicht keinen bleibenden Nachbarn, zeigt die Liste jetzt aber Spiele
+            // (seine Quelle fiel als letzte weg und es gilt wieder „Alle“, oder ein Einlesen brachte zugleich ein passendes
+            // Spiel): sein Nachbar in der Ansicht, wie sie jetzt ist, statt eines leeren Titelbereichs.
+            if (_selectedGame is null && GamesView.Count > 0)
+            {
+                ShowSelection(NeighbourInView(gone));
+            }
+
+            if (_selectionFollows == follows)
+            {
+                RaiseSelectionFollowed(); // Fokus der verschwundenen Zeile zum Nachbarn
+            }
+        }
 
         var signature = CandidateSignature(cfg);
         if (!string.Equals(signature, _candidateSignature, StringComparison.Ordinal))
@@ -763,6 +922,12 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
             }
         }
 
+        if (changed)
+        {
+            HdrCapableCount = Games.Count(i => HdrSupportValues.IsHdrCapable(i.HdrSupport)); // ausgeblendete zählen nicht (E90)
+            _hero?.Refresh(IsPaused);
+        }
+
         if (changed && (_onlyHdrCapable || SortOrder == GameSortOrder.HdrSupport))
         {
             RefreshView();
@@ -777,7 +942,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
 
         FlushSeen(); // Vorgemerktes „angesehen“ nicht verlieren.
-        FlushLayout(); // ebenso eine gerade verschobene Spaltenbreite
+        FlushLayout(); // ebenso eine gerade verschobene Spaltenbreite bzw. Höhe des Titelbereichs
         _disposed = true;
         _lifetime.Cancel();
         _searchDelay?.Dispose();
@@ -787,7 +952,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         _context.ScanStateChanged -= OnScanStateChanged;
         _context.HdrSupportChanged -= OnHdrSupportChanged;
         _details?.Detach();
+        DisposeShowcase();
         RevealRequested = null;
+        SelectionFollowedFilter = null;
         _context.Dispose();
     }
 
@@ -866,6 +1033,109 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// „Einstellungen entfernen…“ (E90; Kontextmenü, Taste Entf, Knopf ganz unten im Detailbereich): nur für nicht installierte
+    /// Launcher-Spiele ohne laufende oder vorbereitete Sitzung. Vor der Rückfrage sucht HDRpilot im Hintergrund die
+    /// HDRpilot-Verknüpfungen und prüft, ob das Spiel vielleicht noch installiert ist (Laufwerk, EXE, Steam,
+    /// <see cref="UninstalledGameCleanup.CheckInstallsAsync"/>); dauert das länger als <see cref="CheckingDelay"/>, sagt die
+    /// Hinweiszeile es. Die Rückfrage nennt, was verloren geht, warnt bei jeder Spur einer Installation und bietet die
+    /// Verknüpfungen per Häkchen an. Entfernt wird erst nach „Entfernen“
+    /// und nur, wenn das Spiel beim Schreiben noch entfernbar ist (<see cref="LibraryCleanup.RemoveNotInstalled"/>); danach
+    /// räumt <see cref="UninstalledGameCleanup"/> Symbol, eigene Bilder und gewählte Verknüpfungen auf, und die Liste wählt
+    /// den Nachbarn.
+    /// </summary>
+    internal async Task RemoveSettingsAsync(GameItemViewModel item)
+    {
+        if (_disposed || _removingSettings)
+        {
+            return; // eine Rückfrage zur Zeit (sie pumpt Nachrichten)
+        }
+
+        var key = item.Key;
+        if (_context.Config.FindGame(key) is not { } game)
+        {
+            return;
+        }
+
+        if (!LibraryCleanup.IsRemovable(game))
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.RemoveSettings_Kept, item.Name), StatusKind.Warning);
+            return;
+        }
+
+        if (HasSession(key))
+        {
+            ShowStatus(LibraryText.Format(LibraryStrings.RemoveSettings_Running, item.Name), StatusKind.Warning);
+            return;
+        }
+
+        _removingSettings = true;
+        try
+        {
+            var cleanup = _context.Cleanup;
+            var shortcutSearch = Task.Run(() => cleanup.FindShortcuts(key));
+            var installCheck = cleanup.CheckInstallAsync(game);
+            var checking = LibraryText.Format(LibraryStrings.RemoveSettings_Checking, item.Name);
+            var prepared = Task.WhenAll(shortcutSearch, installCheck);
+            if (await Task.WhenAny(prepared, Task.Delay(CheckingDelay)) != prepared)
+            {
+                ShowStatus(checking, StatusKind.Info); // etwa ein getrenntes Netzlaufwerk: bis zu 2 s
+            }
+
+            var trace = await installCheck;
+            var shortcuts = await shortcutSearch;
+            if (StatusMessage == checking)
+            {
+                StatusMessage = null;
+            }
+
+            if (_disposed)
+            {
+                return;
+            }
+
+            var answer = _dialogs.Confirm(RemoveSettingsText.ForGame(game, trace, shortcuts.Count));
+            if (!answer.Confirmed || _disposed)
+            {
+                return;
+            }
+
+            // Geprüft wird beim Schreiben: Hat ein Einlesen das Spiel inzwischen wiedergefunden oder läuft es, bleibt alles.
+            IReadOnlyList<GameConfig> removed = [];
+            if (!await WriteAsync(c => removed = LibraryCleanup.RemoveNotInstalled(c, [key], HasSession)))
+            {
+                return; // Fehler steht schon in der Hinweiszeile
+            }
+
+            if (removed.Count == 0)
+            {
+                ShowStatus(LibraryText.Format(LibraryStrings.RemoveSettings_Kept, item.Name), StatusKind.Warning);
+                return;
+            }
+
+            var gone = removed[0];
+            IReadOnlyCollection<GameShortcut> chosen = answer.OptionChecked ? shortcuts : [];
+            var remaining = _context.Config;
+            var result = await Task.Run(() => cleanup.DeleteData(gone, chosen, remaining));
+            var done = result.DeletedShortcuts switch
+            {
+                0 => LibraryText.Format(LibraryStrings.RemoveSettings_Done, gone.Name),
+                1 => LibraryText.Format(LibraryStrings.RemoveSettings_DoneShortcutOne, gone.Name),
+                var count => LibraryText.Format(LibraryStrings.RemoveSettings_DoneShortcutsMany, gone.Name, count),
+            };
+            ShowStatus(
+                result.Failed.Count == 0 ? done : done + " " + LibraryText.FilesFailed(result.Failed.Count),
+                result.Failed.Count == 0 ? StatusKind.Success : StatusKind.Warning);
+        }
+        finally
+        {
+            _removingSettings = false;
+        }
+    }
+
+    /// <summary>Läuft für das Spiel eine Sitzung oder ist eine vorbereitet (Start über HDRpilot, Steam-Startoption, Frühwarnung)?</summary>
+    private bool HasSession(string key) => _context.Sessions.Any(s => string.Equals(s.GameKey, key, StringComparison.OrdinalIgnoreCase));
+
     internal void ShowStatus(string message, StatusKind kind)
     {
         if (_disposed)
@@ -910,13 +1180,16 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         return true;
     }
 
-    private void RefreshView()
+    /// <summary>Sicht neu filtern und ordnen; die Auswahl folgt (<see cref="FollowFilter"/>). True, wenn sie gefolgt ist.</summary>
+    private bool RefreshView()
     {
+        bool followed;
         _refreshing = true;
         try
         {
             GamesView.Refresh();
-            OnPropertyChanged(nameof(SelectedGame));
+            followed = FollowFilter();
+            OnPropertyChanged(nameof(SelectedGame)); // die Liste wieder auf die Auswahl setzen (Neufiltern hat ihre geändert)
         }
         finally
         {
@@ -924,6 +1197,121 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
 
         UpdateVisibleCount();
+        if (followed)
+        {
+            RaiseSelectionFollowed();
+        }
+
+        return followed;
+    }
+
+    /// <summary>Meldet dem Fenster, dass die Auswahl der Liste gefolgt ist (<see cref="SelectionFollowedFilter"/>), und zählt mit.</summary>
+    private void RaiseSelectionFollowed()
+    {
+        _selectionFollows++;
+        SelectionFollowedFilter?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Gehört das Spiel in die Grundmenge <see cref="Games"/>? Nicht, wenn es nicht installiert und ausgeblendet ist (E90).</summary>
+    private bool IsListed(GameItemViewModel item) => !_hideUninstalled || item.IsInstalled;
+
+    /// <summary>
+    /// Nachbar eines Spiels, das die Liste verlässt (entfernt oder ausgeblendet, E90): das nächste bleibende in der
+    /// Reihenfolge der Ansicht, am Ende das vorige; ohne bleibendes (oder nicht in der Ansicht) null.
+    /// </summary>
+    private GameItemViewModel? Neighbour(GameItemViewModel item, HashSet<GameItemViewModel> leaving)
+    {
+        var index = GamesView.IndexOf(item);
+        if (index < 0)
+        {
+            return null;
+        }
+
+        for (var i = index + 1; i < GamesView.Count; i++)
+        {
+            if (GamesView.GetItemAt(i) is GameItemViewModel next && !leaving.Contains(next))
+            {
+                return next;
+            }
+        }
+
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (GamesView.GetItemAt(i) is GameItemViewModel previous && !leaving.Contains(previous))
+            {
+                return previous;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Nachbar eines Spiels, das nicht mehr in der Ansicht steht, nach seinem Platz in deren Reihenfolge: das erste Spiel, das
+    /// danach käme, sonst das letzte; null bei leerer Ansicht.
+    /// </summary>
+    private GameItemViewModel? NeighbourInView(GameItemViewModel gone)
+    {
+        var order = GameSorting.Comparer(SortOrder);
+        GameItemViewModel? last = null;
+        foreach (var item in GamesView.OfType<GameItemViewModel>())
+        {
+            if (order.Compare(item, gone) > 0)
+            {
+                return item;
+            }
+
+            last = item;
+        }
+
+        return last;
+    }
+
+    /// <summary>
+    /// Auswahl nach dem Neufiltern (Entscheidung des Nutzers 2026-10-19): Steht das vom Filter verdrängte Spiel wieder in der
+    /// Liste, kehrt es zurück. Sonst bleibt ein noch sichtbares gewähltes Spiel; fällt es heraus, gilt der erste Treffer in
+    /// der Reihenfolge der Liste, ohne Treffer keiner, und das Spiel wird als verdrängt gemerkt (ein schon verdrängtes bleibt
+    /// es). Leise: nichts gilt als angesehen, nichts wird gespeichert. Ohne Auswahl und ohne verdrängtes Spiel bleibt es so.
+    /// </summary>
+    /// <returns>true, wenn sich die Auswahl geändert hat.</returns>
+    private bool FollowFilter()
+    {
+        var current = _selectedGame;
+        GameItemViewModel? next;
+        if (_displacedGame is { } displaced && GamesView.Contains(displaced))
+        {
+            next = displaced;
+            _displacedGame = null;
+        }
+        else if (current is not null ? GamesView.Contains(current) : _displacedGame is null)
+        {
+            return false; // noch zu sehen, oder nichts gewählt und nichts verdrängt: bleibt
+        }
+        else
+        {
+            _displacedGame ??= current;
+            next = GamesView.Count > 0 ? GamesView.GetItemAt(0) as GameItemViewModel : null;
+        }
+
+        if (ReferenceEquals(next, current))
+        {
+            return false;
+        }
+
+        ShowSelection(next);
+        return true;
+    }
+
+    /// <summary>Spiel zeigen (Liste, Titelbereich, Details, Befehle), ohne es als angesehen zu markieren; null: keins.</summary>
+    private void ShowSelection(GameItemViewModel? item)
+    {
+        _selectedGame = item;
+        OnPropertyChanged(nameof(SelectedGame));
+        ChangeIconCommand.RaiseCanExecuteChanged();
+        ResetIconCommand.RaiseCanExecuteChanged();
+        RemoveSettingsCommand.RaiseCanExecuteChanged();
+        Details = item is null ? null : new GameDetailsViewModel(this, item);
+        OnSelectionChanged(item);
     }
 
     /// <summary>
@@ -950,14 +1338,30 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
     {
         _layoutDelay?.Dispose();
         _layoutDelay = null;
-        if (!_layoutPending)
+        if (!_layoutPending && !_heroPending)
         {
             return;
         }
 
+        // Nur, was sich geändert hat: Die andere Angabe bleibt, wie sie in der Konfiguration steht.
+        var pane = _layoutPending;
+        var hero = _heroPending;
         _layoutPending = false;
+        _heroPending = false;
         var ratio = _detailsRatio;
-        _ = WriteAsync(c => c.Settings.LibraryDetailsRatio = ratio);
+        var heroRatio = _heroRatio;
+        _ = WriteAsync(c =>
+        {
+            if (pane)
+            {
+                c.Settings.LibraryPaneRatio = ratio;
+            }
+
+            if (hero)
+            {
+                c.Settings.LibraryHeroRatio = heroRatio;
+            }
+        });
     }
 
     private void UpdateVisibleCount()
@@ -965,7 +1369,13 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         VisibleCount = GamesView.Count;
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(IsFilterEmpty));
+        OnPropertyChanged(nameof(NoMatchText));
+        OnPropertyChanged(nameof(DetailsEmptyTitle));
+        OnPropertyChanged(nameof(DetailsEmptyText));
         OnPropertyChanged(nameof(IsLibraryEmpty));
+        OnPropertyChanged(nameof(ViewSummaryText));
+        OnPropertyChanged(nameof(ListHeaderText));
+        RaiseToolbarTexts();
     }
 
     private int InsertIndex(GameItemViewModel item)
@@ -1001,12 +1411,20 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         TotalCount = Games.Count;
         HdrAutoCount = auto;
         NewCount = fresh;
+        HdrCapableCount = Games.Count(g => HdrSupportValues.IsHdrCapable(g.HdrSupport));
         OnPropertyChanged(nameof(TotalText));
         OnPropertyChanged(nameof(HdrAutoText));
         OnPropertyChanged(nameof(NewText));
+        OnPropertyChanged(nameof(ViewSummaryText));
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(IsLibraryEmpty));
         OnPropertyChanged(nameof(IsFilterEmpty));
+        OnPropertyChanged(nameof(HiddenCount));
+        OnPropertyChanged(nameof(EmptyTitle));
+        OnPropertyChanged(nameof(EmptyText));
+        OnPropertyChanged(nameof(NoMatchText));
+        OnPropertyChanged(nameof(DetailsEmptyTitle));
+        OnPropertyChanged(nameof(DetailsEmptyText));
 
         _allSources.Count = Games.Count;
         var index = 1;
@@ -1039,6 +1457,8 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
             index++;
         }
+
+        RaiseToolbarTexts();
     }
 
     private void ApplyRunningFlags()
@@ -1052,12 +1472,16 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         ActiveSessionText = running.Count == 0
             ? null
             : LibraryText.Format(LibraryStrings.Hdr_ActiveSessions, string.Join(", ", _context.Sessions.Select(s => s.GameName)));
+        IsGameRunning = running.Count > 0;
+        RemoveSettingsCommand.RaiseCanExecuteChanged(); // während einer Sitzung gesperrt (E90)
+        UpdateAutomationState();
     }
 
     private void RefreshHdrState()
     {
         Displays = _context.GetDisplays();
         Targets = _context.TargetDisplays();
+        var wasOn = _isHdrOn;
         IsHdrOn = Targets.Any(d => d.HdrEnabled);
         CanToggleHdr = Targets.Any(d => d.HdrSupported);
         var names = string.Join(", ", Targets.Select(d => d.FriendlyName));
@@ -1072,6 +1496,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(IsPaused));
         ApplyRunningFlags();
         _details?.RefreshDisplays();
+        _hero?.Refresh(IsPaused);
+        RefreshNits();
+        OnHdrStateRefreshed(wasOn);
     }
 
     private void RefreshScanErrors()
@@ -1332,6 +1759,9 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         {
             DeleteCustomIconQuietly(item.Key, name); // nicht eingetragen (Schreibfehler, Spiel entfernt): keine verwaiste Datei
         }
+
+        // Auch die Bilder: Symbol im Titelbereich und in „Bilder“, daraus erzeugte Titelbilder, Cover und Vorschaubilder.
+        _context.Artwork.Forget(item.Key);
     }
 
     /// <summary>
@@ -1353,6 +1783,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
 
         DeleteCustomIconQuietly(item.Key, name);
         RefreshIcon(item);
+        _context.Artwork.Forget(item.Key);
         ShowStatus(LibraryText.Format(LibraryStrings.Icon_ResetDone, item.Name), StatusKind.Success);
     }
 
@@ -1390,7 +1821,7 @@ public sealed class LibraryViewModel : ObservableObject, IDisposable
         }
     }
 
-    private string? SafeDirectory(string path)
+    internal string? SafeDirectory(string path)
     {
         try
         {

@@ -1,0 +1,726 @@
+using System.ComponentModel;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
+using HdrPilot.App.Infrastructure.Effects;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Tests.Library;
+using HdrPilot.App.Tests.Shell;
+using HdrPilot.App.Theming;
+using HdrPilot.App.ViewModels.Library;
+using HdrPilot.App.Views.Library;
+using HdrPilot.App.Views.Shell;
+using HdrPilot.Core.Config;
+using HdrPilot.Core.Games;
+using HdrPilot.Tests.TestSupport;
+using static HdrPilot.App.Tests.Library.TestLibraryContext;
+
+namespace HdrPilot.App.Tests.Effects;
+
+/// <summary>
+/// Effekte nach der unabhängigen Prüfung (G10.10): Der HDR-Moment blendet die helle Fassung des gerade sichtbaren Bildplatzes
+/// ein (auch wenn sie erst nach dem Öffnen kam), nach dem Moment (auch einem verzögerten oder abgebrochenen) folgt die helle
+/// Ebene dem HDR-Zustand und blendet dabei weich über (auch nach dem Spielwechsel, bei mehrfacher Meldung und wenn der
+/// Zustand im selben Bild kippt), Partikel takten mit höchstens 60 Bildern pro Sekunde über eine Zeitleiste, Dauer-Effekte
+/// laufen nur, wenn etwas sie zeigt, und die Stufe gilt auch für Einstellungen und Tray-Menü.
+/// Läuft allein: Die Prüfungen messen Übergänge über die Zeit und setzen <see cref="ShellMotion.Level"/>, und DoEvents pumpt
+/// den gemeinsamen Dispatcher verschachtelt; ein paralleler Test liefe sonst mitten in einer Messung (eine Überblendung war
+/// dann schon fertig, ein Moment schon vorbei).
+/// </summary>
+[Collection(ShellSerialCollection.Name)]
+public sealed class EffectReviewTests
+{
+    private static readonly MotionContext Shown = new(WindowVisible: true, Minimized: false, Active: true, GameRunning: false, PauseInBackground: true, PauseWhilePlaying: true);
+
+    private static (MainWindow Window, LibraryViewModel Model, FakeArtworkService Art, TestLibraryContext Context) Open(Action<FakeArtworkService>? setup = null, FakeLuminanceService? luminance = null)
+    {
+        var merged = Application.Current.Resources.MergedDictionaries;
+        if (!merged.Any(d => d.Source?.OriginalString.EndsWith("/Themes/Library.xaml", StringComparison.Ordinal) == true))
+        {
+            merged.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HdrPilot;component/Themes/Library.xaml", UriKind.Absolute) });
+        }
+
+        var art = new FakeArtworkService();
+        art.WithHero.Add("Steam:1091500");
+        art.WithHero.Add("Epic:Crow");
+        setup?.Invoke(art);
+        var context = new TestLibraryContext(
+            Game(GameSource.Steam, "1091500", "Cyberpunk 2077", isNew: false),
+            Game(GameSource.Epic, "Crow", "Dead Island 2", isNew: false))
+        {
+            Artwork = art,
+            Appearance = new StaticAppearanceService(new AppearanceSettings()),
+        };
+        if (luminance is not null)
+        {
+            context.Luminance = luminance;
+        }
+
+        var model = new LibraryViewModel(context, new FakeDialogs());
+        model.SelectedGame = model.Games[0];
+        context.Dispatcher.RunDelayed();
+        var window = new MainWindow();
+        window.Attach(model);
+        WpfTestHost.Layout(window, new Size(1600, 1000));
+        window.Motion!.SetWindowState(visible: true, minimized: false, active: true);
+        return (window, model, art, context);
+    }
+
+    private static IEnumerable<DependencyObject> Targets(Storyboard board) => board.Children.Select(Storyboard.GetTarget);
+
+    [Fact]
+    public void Effect_hdr_moment_looks_up_the_bright_variant_when_it_plays_not_when_the_window_opens()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Teile wie im Fenster: geholt, bevor ein Bild geladen ist.
+            var stage = new HeroStage();
+            stage.Measure(new Size(1600, 300));
+            stage.Arrange(new Rect(0, 0, 1600, 300));
+            var parts = stage.MomentParts(new System.Windows.Controls.Border());
+            using var player = new HdrMomentPlayer(parts, new TimelineFrameClock(), new StopwatchEffectTime());
+            var scene = stage.MomentScene([Colors.Orange]);
+
+            stage.Show(null, Artwork("A"), TimeSpan.Zero);
+            Assert.Equal(HdrMomentKind.Full, player.Play(EffectLevel.Full, Shown, scene, transientBoost: true));
+            var first = stage.CurrentBoostLayer();
+            Assert.NotNull(first);
+            Assert.Contains(first, Targets(player.Board!));
+
+            // Nächstes Bild im anderen Platz: dessen helle Fassung, nicht mehr die des ersten.
+            stage.Show(null, Artwork("B"), TimeSpan.Zero);
+            Assert.Equal(HdrMomentKind.Full, player.Play(EffectLevel.Full, Shown, scene, transientBoost: true));
+            var second = stage.CurrentBoostLayer();
+            Assert.NotSame(first, second);
+            Assert.Contains(second!, Targets(player.Board!));
+            Assert.DoesNotContain(first, Targets(player.Board!));
+        });
+    }
+
+    [Fact]
+    public void Effect_test_moment_loads_the_bright_variant_first_and_fades_it()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, art, context) = Open();
+            var stage = window.HeroStage;
+            Assert.Null(stage.ShownBoost); // HDR aus: keine helle Fassung geladen
+
+            // Prüfung --test-hdr-moment: erst die helle Fassung holen, dann spielen.
+            var played = window.PlayTestHdrMomentAsync();
+            Assert.True(played.IsCompleted);
+            Assert.Equal(HdrMomentKind.Full, played.Result);
+            Assert.NotNull(stage.ShownBoost);
+            Assert.Contains(stage.CurrentBoostLayer()!, Targets(window.Moment!.Board!));
+            Assert.Equal(7, window.Moment.Board!.Children.Count); // Streifen (2), Linie (2), Blitz, Rand und helle Fassung
+
+            // Anderes Spiel: der Moment blendet dessen helle Fassung ein.
+            model.SelectedGame = model.Games[1];
+            context.Dispatcher.RunDelayed();
+            Assert.Equal(HdrMomentKind.Full, window.PlayTestHdrMomentAsync().Result);
+            Assert.Contains(stage.CurrentBoostLayer()!, Targets(window.Moment.Board!));
+
+            // Je Spiel einmal geholt: vor dem Moment oder schon vorab (aktives Fenster, Auswahl zur Ruhe gekommen).
+            Assert.Equal(["Steam:1091500", "Epic:Crow"], art.BoostRequests.Concat(art.PrefetchRequests));
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_reduced_test_moment_fades_the_bright_variant()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _, context) = Open();
+            context.Appearance.Update(s => s.EffectLevel = "Reduced");
+
+            Assert.Equal(HdrMomentKind.Reduced, window.PlayTestHdrMomentAsync().Result);
+
+            var fade = Assert.Single(window.Moment!.Board!.Children);
+            Assert.Same(window.HeroStage.CurrentBoostLayer(), Storyboard.GetTarget(fade));
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_stays_on_after_a_delayed_hdr_moment()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Befund der Nachprüfung: Der Moment wartet kurz auf die helle Fassung. Kamen in der Zeit neue Helligkeitswerte
+            // (der HDR-Zustand wird dann erneut angewandt), fiel die helle Ebene am Ende des Moments auf 0, HDR blieb an.
+            var luminance = new FakeLuminanceService();
+            var (window, _, art, context) = Open(luminance: luminance);
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+            art.PendingBoost = new TaskCompletionSource<Services.Artwork.ArtworkImage?>();
+
+            SetHdr(context, on: true);
+            Assert.False(window.Moment!.IsPlaying); // wartet auf die helle Fassung
+            luminance.Set(Nits());
+            context.Dispatcher.RunDelayed(); // Frist abgelaufen
+            Assert.True(PumpUntil(() => window.Moment.IsPlaying, 5), "Moment spielte nicht");
+            Assert.Equal(HdrMomentKind.Full, window.Moment.LastKind);
+
+            FinishMoment(window);
+            Assert.Equal(1, layer.Opacity);
+
+            // HDR aus nach dem Moment: die Ebene blendet aus.
+            SetHdr(context, on: false);
+            PumpFor(1.5);
+            Assert.Equal(0, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_hdr_off_while_the_moment_waits_plays_no_moment()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, art, context) = Open();
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+            art.PendingBoost = new TaskCompletionSource<Services.Artwork.ArtworkImage?>();
+
+            // HDR an und wieder aus, während der Moment auf die helle Fassung wartet: Danach spielt keiner, die Ebene bleibt aus
+            // (im selben Bild an und aus: sie war nie zu sehen, blitzt also auch nicht auf).
+            SetHdr(context, on: true);
+            SetHdr(context, on: false);
+            context.Dispatcher.RunDelayed();
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value < 0.01), Format(shown));
+            Assert.False(window.Moment!.IsPlaying);
+            Assert.Equal(HdrMomentKind.None, window.Moment.LastKind);
+            Assert.Equal(0, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_hdr_off_during_the_moment_ends_with_the_bright_layer_off()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _, context) = Open();
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+
+            // Helle Fassung schnell da: der Moment spielt sofort; HDR geht mitten im Moment wieder aus.
+            SetHdr(context, on: true);
+            Assert.True(window.Moment!.IsPlaying);
+            PumpFor(0.3);
+            SetHdr(context, on: false);
+            FinishMoment(window);
+            Assert.Equal(0, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_stays_on_when_the_moment_is_cut_short()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _, context) = Open();
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+            var motion = window.Motion!;
+
+            // Minimiert mitten im Moment: er bricht ab; wiederhergestellt ist die helle Ebene da, solange HDR an ist.
+            SetHdr(context, on: true);
+            Assert.True(window.Moment!.IsPlaying);
+            PumpFor(0.3);
+            motion.SetWindowState(visible: true, minimized: true, active: false);
+            Assert.False(window.Moment.IsPlaying);
+            motion.SetWindowState(visible: true, minimized: false, active: true);
+            PumpFor(1.5);
+            Assert.Equal(1, layer.Opacity);
+
+            // Effekte „Aus“ mitten im nächsten Moment: ebenso.
+            SetHdr(context, on: false);
+            SetHdr(context, on: true);
+            Assert.True(window.Moment.IsPlaying);
+            PumpFor(0.3);
+            context.Appearance.Update(s => s.EffectLevel = "Off");
+            Assert.False(window.Moment.IsPlaying);
+            PumpFor(1.5);
+            Assert.Equal(1, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_test_moment_with_hdr_on_leaves_the_bright_layer_on()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _, _, context) = Open();
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+            SetHdr(context, on: true);
+            FinishMoment(window);
+            Assert.Equal(1, layer.Opacity);
+
+            // Prüf-Moment (--test-hdr-moment) bei HDR an: Er blendet die helle Fassung nur für seine Dauer ein, danach gilt
+            // wieder der HDR-Zustand.
+            Assert.Equal(HdrMomentKind.Full, window.PlayTestHdrMoment());
+            FinishMoment(window);
+            Assert.Equal(1, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_falls_back_to_the_hdr_state_when_another_animation_lets_go()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var stage = new HeroStage();
+            stage.Measure(new Size(1600, 300));
+            stage.Arrange(new Rect(0, 0, 1600, 300));
+            stage.Show(null, Artwork("A"), TimeSpan.Zero);
+            var layer = stage.CurrentBoostLayer()!;
+
+            foreach (var on in new[] { true, false, true })
+            {
+                // Übergang läuft; eine andere Animation (Prüf-Moment, entferntes Storyboard) übernimmt die Ebene und lässt sie los.
+                stage.SetHdr(on, TimeSpan.FromSeconds(1.2));
+                layer.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.5, TimeSpan.FromSeconds(1)));
+                layer.BeginAnimation(UIElement.OpacityProperty, null);
+                Assert.Equal(on ? 1 : 0, layer.Opacity);
+            }
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_fades_in_when_the_hdr_state_comes_several_times_in_one_frame()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Befund der Nachprüfung: Ein Abgleich meldet ShowsHdrOn dreimal hintereinander. Animierte vorher nichts die Ebene
+            // (gleich nach Show), meldete WPF bis zum nächsten Bild schon ihr Ziel; der zweite Aufruf ersetzte den Übergang
+            // durch einen von 1 nach 1, die helle Ebene sprang an.
+            var (stage, layer) = ShownStage(hdr: false);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpFor(0.2);
+            Assert.True(layer.Opacity < 0.3, "nach 0,2 s schon " + Format(layer.Opacity));
+            PumpFor(1.3);
+            Assert.Equal(1, layer.Opacity);
+        });
+    }
+
+    [Theory]
+    [InlineData("Full")]
+    [InlineData("Reduced")]
+    public void Effect_bright_layer_fades_after_a_game_switch(string level)
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Befund der Nachprüfung: Nach jedem Spielwechsel sprang die helle Ebene bei HDR an sofort auf 1 (statt 1,2 s
+            // bzw. 0,3 s) und bei HDR aus sofort auf 0; Schleier, Leuchten und Strahlen blendeten weiter.
+            var (window, model, _, context) = Open();
+            context.Appearance.Update(s => s.EffectLevel = level);
+            model.SelectedGame = model.Games[1];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+            Assert.Equal(0, layer.Opacity);
+
+            SetHdr(context, on: true);
+            var rising = Sample(layer, 0.1);
+            Assert.True(rising.Count > 0 && rising[0].Value < 0.5 && rising.All(s => s.At > 0.15 || s.Value < 1), "HDR an: " + Format(rising));
+            PumpFor(1.5);
+            Assert.Equal(1, layer.Opacity);
+
+            // Spielwechsel bei HDR an: Die Ebene des neuen Bilds steht gleich auf 1 und blendet bei HDR aus.
+            model.SelectedGame = model.Games[0];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            layer = window.HeroStage.CurrentBoostLayer()!;
+            Assert.Equal(1, layer.Opacity);
+            SetHdr(context, on: false);
+            var falling = Sample(layer, 0.1);
+            Assert.True(falling.Count > 0 && falling[0].Value > 0.5 && falling.All(s => s.At > 0.15 || s.Value > 0), "HDR aus: " + Format(falling));
+            PumpFor(1.5);
+            Assert.Equal(0, layer.Opacity);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_hdr_switched_back_in_one_frame_after_a_game_switch_leaves_the_bright_layer_as_it_was()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, _, context) = Open();
+            model.SelectedGame = model.Games[1];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            var layer = window.HeroStage.CurrentBoostLayer()!;
+
+            // HDR an und gleich wieder aus (zwei Abgleiche im selben Bild, jeder wendet den Zustand mehrmals an): kein Aufblitzen.
+            SetHdr(context, on: true);
+            SetHdr(context, on: false);
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value < 0.01), "an, aus: " + Format(shown));
+
+            // Bei HDR an zum nächsten Spiel, dann aus und gleich wieder an: Die Ebene bleibt stehen.
+            SetHdr(context, on: true);
+            PumpFor(1.5);
+            model.SelectedGame = model.Games[0];
+            context.Dispatcher.RunDelayed();
+            PumpFor(1.2);
+            layer = window.HeroStage.CurrentBoostLayer()!;
+            Assert.Equal(1, layer.Opacity);
+            SetHdr(context, on: false);
+            SetHdr(context, on: true);
+            shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value > 0.99), "aus, an: " + Format(shown));
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_on_and_off_in_one_frame_stays_off()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // An und aus im selben Bild: Die Ebene war nie zu sehen, also blitzt sie auch nicht auf (blendete sonst von 1 aus).
+            var (stage, layer) = ShownStage(hdr: false);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value < 0.01), Format(shown));
+            Assert.Equal(0, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_off_and_on_in_one_frame_fades_from_what_is_shown()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Aus und an im selben Bild bei voller Ebene: Sie bleibt stehen (fiel sonst auf 0 und blendete neu ein).
+            var (stage, layer) = ShownStage(hdr: true);
+            Assert.Equal(1, layer.Opacity);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown.All(s => s.Value > 0.99), Format(shown));
+            Assert.Equal(1, layer.Opacity);
+
+            // Mitten im Einblenden: Es geht dort weiter, wo die Ebene gerade steht.
+            stage.SetHdr(false, TimeSpan.Zero);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpFor(0.4);
+            var before = layer.Opacity;
+            Assert.InRange(before, 0.02, 0.98);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            shown = Sample(layer, 1.5);
+            Assert.True(shown.Count > 0 && shown[0].Value >= before - 0.01, Format(before) + " → " + Format(shown));
+            Assert.Equal(1, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_fades_out_from_a_state_set_at_once()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Ein sofort gesetzter Zustand (Öffnen, Thema) zwischen zwei Übergängen im selben Bild gilt: Der nächste Übergang
+            // beginnt bei ihm, nicht am Anfang des ersetzten.
+            var (stage, layer) = ShownStage(hdr: false);
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            stage.SetHdr(true, TimeSpan.Zero);
+            Assert.Equal(1, layer.Opacity);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(layer, 0.2);
+            Assert.True(shown.Count > 0 && shown[0].Value > 0.9, Format(shown));
+            PumpFor(1.3);
+            Assert.Equal(0, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_late_bright_image_fades_in_when_hdr_goes_off_in_the_same_frame()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Bild ohne helle Fassung bei HDR an sofort gezeigt; im selben Bild geht HDR aus und die helle Fassung kommt nach.
+            // Die Ebene ist noch voll zu sehen (ihr Ausblenden hatte noch kein Bild), also blendet die Fassung über das warme
+            // Licht, statt in voller Stärke aufzuspringen.
+            var artwork = Artwork("A");
+            var stage = new HeroStage();
+            stage.Measure(new Size(1600, 300));
+            stage.Arrange(new Rect(0, 0, 1600, 300));
+            stage.SetHdr(true, TimeSpan.Zero);
+            stage.Show(null, artwork with { HeroBoost = null }, TimeSpan.Zero);
+            stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
+            stage.Show(null, artwork, TimeSpan.FromSeconds(1.2));
+            var shown = Sample(stage.CurrentBoostImageLayer, 0.2);
+            Assert.True(shown.Count > 0 && shown[0].Value < 0.1, Format(shown));
+        });
+    }
+
+    [Fact]
+    public void Effect_bright_layer_fade_runs_on_when_the_same_state_comes_again()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Neue Helligkeitswerte melden ShowsHdrOn später noch einmal: Der laufende Übergang bleibt, statt neu zu beginnen.
+            var (stage, layer) = ShownStage(hdr: false);
+            var start = DateTime.UtcNow;
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpFor(0.5);
+            Assert.True(layer.Opacity < 0.99, Format(layer.Opacity));
+            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+            PumpUntil(() => DateTime.UtcNow - start >= TimeSpan.FromSeconds(1.45), 5);
+            Assert.Equal(1, layer.Opacity);
+        });
+    }
+
+    [Fact]
+    public void Effect_selection_ring_runs_only_where_tiles_draw_it_and_the_sheen_only_over_a_name()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, _, context) = Open(art => art.WithLogo.Add("Epic:Crow"));
+            Effect(window, "SelectionRing").Let(e => Assert.False(e.IsRunning)); // Liste: kein Kachelring zu sehen
+            Effect(window, "TitleSheen").Let(e => Assert.True(e.IsRunning)); // Name in der Titelschrift
+
+            model.SetViewMode(LibraryViewMode.Grid, persist: false);
+            Effect(window, "SelectionRing").Let(e => Assert.True(e.IsRunning));
+            Assert.Equal(EffectPolicy.ContinuousFrameRate, Timeline.GetDesiredFrameRate(Effect(window, "SelectionRing").Board!));
+
+            // Spiel mit Logo: der Glanz-Text ist ausgeblendet, also steht auch seine Animation.
+            model.SelectedGame = model.Games[1];
+            context.Dispatcher.RunDelayed();
+            Assert.True(model.Hero!.HasLogo);
+            Effect(window, "TitleSheen").Let(e => Assert.False(e.IsRunning));
+
+            model.SetViewMode(LibraryViewMode.List, persist: false);
+            Effect(window, "SelectionRing").Let(e => Assert.False(e.IsRunning));
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Effect_particles_are_clocked_by_a_60_fps_timeline_that_runs_only_while_subscribed() => Sta.Run(async () =>
+    {
+        // Eigener UI-Thread: Andere Tests auf dem gemeinsamen WPF-Thread liefen sonst in der Wartezeit dazwischen.
+        var clock = new TimelineFrameClock();
+        Assert.Equal(EffectPolicy.OneShotFrameRate, Timeline.GetDesiredFrameRate(clock.Timeline));
+        Assert.Null(clock.Clock);
+
+        var ticks = 0;
+        EventHandler onFrame = (_, _) => ticks++;
+        clock.Frame += onFrame;
+        Assert.Equal(1, clock.Subscribers);
+        Assert.NotNull(clock.Clock);
+
+        // Ohne angezeigtes Fenster zeichnet WPF im Test nicht von selbst: Nur hier (nie in der App) hält ein Empfänger von
+        // CompositionTarget.Rendering die Zeichenschleife am Laufen, damit die Uhr der Zeitleiste tickt.
+        var rendered = 0;
+        EventHandler pump = (_, _) => rendered++;
+        CompositionTarget.Rendering += pump;
+        try
+        {
+            await Task.Delay(500);
+            Assert.True(rendered > 0, "Zeichenschleife lief nicht");
+            Assert.InRange(ticks, 3, 40);
+
+            clock.Frame -= onFrame;
+            Assert.Equal(0, clock.Subscribers);
+            Assert.Null(clock.Clock);
+            var after = ticks;
+            await Task.Delay(200);
+            Assert.Equal(after, ticks); // abgemeldet: kein Takt mehr
+        }
+        finally
+        {
+            CompositionTarget.Rendering -= pump;
+        }
+    });
+
+    [Fact]
+    public void Effect_no_view_hooks_composition_target_rendering()
+    {
+        var app = SourceFiles.InRepository("src", "HdrPilot.App");
+        var hits = Directory.EnumerateFiles(app, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            .Where(f => File.ReadAllLines(f).Any(l => l.Contains("CompositionTarget.Rendering", StringComparison.Ordinal) && !l.TrimStart().StartsWith("//", StringComparison.Ordinal) && !l.TrimStart().StartsWith("///", StringComparison.Ordinal)))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        Assert.Empty(hits); // sonst zeichnete WPF jedes Bild in der Bildwiederholrate des Bildschirms
+    }
+
+    [Theory]
+    [InlineData(EffectLevel.Off, true, true, false)]
+    [InlineData(EffectLevel.Reduced, true, true, true)]
+    [InlineData(EffectLevel.Full, false, true, true)] // „Windows-Animationseffekte beachten“ aus: wirksam Voll
+    [InlineData(EffectLevel.Full, true, false, false)] // ohne Hardware-Darstellung nie
+    public void Effect_shell_motion_follows_the_effective_level(EffectLevel level, bool windowsAnimations, bool hardware, bool expected)
+    {
+        Assert.Equal(expected, ShellMotion.Allowed(level, windowsAnimations, hardware));
+    }
+
+    [Fact]
+    public void Effect_shell_motion_without_appearance_follows_windows()
+    {
+        Assert.True(ShellMotion.Allowed(null, windowsAnimations: true, hardwareRendering: true));
+        Assert.False(ShellMotion.Allowed(null, windowsAnimations: false, hardwareRendering: true));
+    }
+
+    [Fact]
+    public void Effect_shell_motion_level_switches_settings_dialogs_and_tray_menu_off()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var events = 0;
+            void Handler(object? sender, PropertyChangedEventArgs e) => events++;
+            ShellMotion.StaticPropertyChanged += Handler;
+            try
+            {
+                ShellMotion.Level = EffectLevel.Off;
+                Assert.False(ShellMotion.IsEnabled);
+                Assert.False(HdrPilot.App.Infrastructure.Motion.Instance.IsEnabled); // Schalter und Karten in Controls.xaml
+                ShellMotion.Level = EffectLevel.Reduced;
+                Assert.Equal((RenderCapability.Tier >> 16) > 0, ShellMotion.IsEnabled);
+                Assert.Equal(2, events);
+            }
+            finally
+            {
+                ShellMotion.Level = null;
+                ShellMotion.StaticPropertyChanged -= Handler;
+            }
+        });
+    }
+
+    [Fact]
+    public void Effect_library_motion_follows_the_level_not_only_windows()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var motion = HdrPilot.App.Views.Library.LibraryMotion.Instance;
+            var before = motion.Level;
+            try
+            {
+                motion.SetLevel(EffectLevel.Off);
+                Assert.False(motion.IsEnabled);
+                motion.SetLevel(EffectLevel.Full);
+                Assert.Equal(HdrPilot.App.Views.Library.LibraryMotion.HardwareRendering, motion.IsFull);
+            }
+            finally
+            {
+                motion.SetLevel(before);
+            }
+        });
+    }
+
+    private static ContinuousEffect Effect(MainWindow window, string name) => window.Motion!.Effects.Single(e => e.Name == name);
+
+    private static void SetHdr(TestLibraryContext context, bool on)
+    {
+        context.Hdr.Displays[0].HdrOn = on;
+        context.RaiseHdrStateChanged();
+    }
+
+    private static DisplayNits Nits() =>
+        new(FakeHdrController.Primary, "MSI MAG 341CQP", 456, 285, 0.04, 10, HdrActive: true, PeakMeasuredWithHdr: true);
+
+    /// <summary>
+    /// Pumpt die Nachrichten des WPF-Threads, bis <paramref name="done"/> gilt (höchstens <paramref name="seconds"/>). Nur hier
+    /// (nie in der App) hält ein Empfänger von CompositionTarget.Rendering die Zeichenschleife am Laufen: Das Fenster wird
+    /// nie angezeigt, ohne sie tickten seine Storyboards nicht.
+    /// </summary>
+    private static bool PumpUntil(Func<bool> done, double seconds)
+    {
+        EventHandler pump = (_, _) => { };
+        CompositionTarget.Rendering += pump;
+        try
+        {
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(seconds);
+            while (!done())
+            {
+                if (DateTime.UtcNow > deadline)
+                {
+                    return false;
+                }
+
+                WpfTestHost.DoEvents();
+                Thread.Sleep(15);
+            }
+
+            return true;
+        }
+        finally
+        {
+            CompositionTarget.Rendering -= pump;
+        }
+    }
+
+    private static void PumpFor(double seconds) => PumpUntil(() => false, seconds);
+
+    /// <summary>Deckkraft von <paramref name="layer"/> in jedem Bild für <paramref name="seconds"/> (Sekunden seit dem Aufruf, Wert).</summary>
+    private static List<(double At, double Value)> Sample(UIElement layer, double seconds)
+    {
+        var start = DateTime.UtcNow;
+        var samples = new List<(double At, double Value)>();
+        EventHandler record = (_, _) => samples.Add(((DateTime.UtcNow - start).TotalSeconds, layer.Opacity));
+        CompositionTarget.Rendering += record;
+        try
+        {
+            PumpFor(seconds);
+        }
+        finally
+        {
+            CompositionTarget.Rendering -= record;
+        }
+
+        return samples;
+    }
+
+    private static string Format(double value) => value.ToString("0.00", CultureInfo.InvariantCulture);
+
+    private static string Format(List<(double At, double Value)> samples) =>
+        string.Join(" ", samples.Take(16).Select(s => Format(s.At) + "s:" + Format(s.Value)));
+
+    /// <summary>Titelbereich ohne Fenster, Bild mit heller Fassung sofort gezeigt (vorher animierte nichts ihre Ebene).</summary>
+    private static (HeroStage Stage, FrameworkElement Layer) ShownStage(bool hdr)
+    {
+        var stage = new HeroStage();
+        stage.Measure(new Size(1600, 300));
+        stage.Arrange(new Rect(0, 0, 1600, 300));
+        stage.SetHdr(hdr, TimeSpan.Zero);
+        stage.Show(null, Artwork("A"), TimeSpan.Zero);
+        return (stage, stage.CurrentBoostLayer()!);
+    }
+
+    /// <summary>Moment ans Ende spulen, warten, bis er abgebaut ist, und laufende Übergänge (höchstens 1,2 s) auslaufen lassen.</summary>
+    private static void FinishMoment(MainWindow window)
+    {
+        window.Moment!.Board?.SkipToFill(window.HeroStage);
+        Assert.True(PumpUntil(() => window.Moment.Board is null, 5), "Moment endete nicht");
+        PumpFor(1.5);
+    }
+
+    /// <summary>Satz mit Titelbild und heller Fassung (kleine, erzeugte Bilder).</summary>
+    private static Services.Artwork.GameArtwork Artwork(string key) => new(
+        key,
+        new Services.Artwork.ArtworkImage(FakeArtworkService.Solid(32, 9, Colors.DarkOrange), Core.Artwork.ArtworkKind.Hero, Core.Artwork.ArtworkOrigin.Launcher, 32, 9, "Steam"),
+        new Services.Artwork.ArtworkImage(FakeArtworkService.Solid(32, 9, Colors.Moccasin), Core.Artwork.ArtworkKind.Hero, Core.Artwork.ArtworkOrigin.Launcher, 32, 9, "Steam"),
+        null,
+        null,
+        null,
+        null,
+        Core.Artwork.AmbientColors.FromName(key),
+        Services.Artwork.ArtworkSummary.Empty);
+}
+
+/// <summary>Kleine Hilfe für Prüfungen an einem Wert.</summary>
+internal static class LetExtensions
+{
+    public static void Let<T>(this T value, Action<T> check) => check(value);
+}

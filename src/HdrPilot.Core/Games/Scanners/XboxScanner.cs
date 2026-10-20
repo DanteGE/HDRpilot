@@ -10,7 +10,7 @@ namespace HdrPilot.Core.Games.Scanners;
 /// Spiele der Xbox-App und des Game Pass (Microsoft GDK, „modifizierbare“ Installation in einem eigenen Spieleordner).
 /// <list type="number">
 /// <item>Auf jedem festen Laufwerk die versteckte Datei <c>.GamingRoot</c> lesen; sie nennt den Spieleordner des
-/// Laufwerks (am Zielrechner <c>C:\XboxGames</c> und <c>D:\Xbox Bibliothek</c>).</item>
+/// Laufwerks (meist <c>C:\XboxGames</c>, der Name ist aber frei wählbar, etwa <c>D:\Xbox Bibliothek</c>).</item>
 /// <item>Je Unterordner <c>&lt;Spiel&gt;\Content\MicrosoftGame.config</c> lesen. Ordner ohne diese Datei (etwa
 /// <c>GameSave</c>) sind keine Spiele, Zusatzinhalte (DLC-Merkmale in Config oder Paketmanifest) ebenfalls nicht.</item>
 /// <item>Installationsordner ist <c>&lt;Spiel&gt;\Content</c>: Dorthin zeigt der Paketordner unter WindowsApps, dort liegen

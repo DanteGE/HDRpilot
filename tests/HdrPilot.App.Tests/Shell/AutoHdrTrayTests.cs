@@ -167,7 +167,13 @@ public sealed class AutoHdrTrayTests
         {
             var menu = new TrayMenu { DataContext = new TrayMenuViewModel(new FakeTrayHost(), TrayState.Initial, ex => throw ex) };
             WpfTestHost.DoEvents();
-            var icons = menu.Items.OfType<MenuItem>().ToDictionary(AutomationProperties.GetAutomationId, i => ((TextBlock)i.Icon).Text);
+            // Symbole sind Linien-Symbole (E89) oder Glyphen; „Auto HDR“ behält die Glyphe des Listen-Kennzeichens.
+            var icons = menu.Items.OfType<MenuItem>().ToDictionary(AutomationProperties.GetAutomationId, i => i.Icon switch
+            {
+                TextBlock t => t.Text,
+                HdrPilot.App.Views.Shell.LineIcon l => "linie:" + l.Data,
+                _ => "ohne",
+            });
 
             Assert.Equal(AppGlyphs.AutoHdr, icons["TrayAutoHdr"]);
             Assert.Single(icons.Values, v => v == AppGlyphs.AutoHdr);

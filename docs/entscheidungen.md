@@ -9,8 +9,8 @@ Getroffene Entscheidungen mit Begründung. Neueste zuletzt. „(gemessen)“ hei
 **E2 Werkzeuge installiert:** .NET SDK 10.0.401 und Git per winget, wingdi.h aus dem NuGet-Paket
 `Microsoft.Windows.SDK.CPP` (nur entpackt, nicht installiert). Alle drei fehlten; der Nutzer hat jeweils zugestimmt.
 
-**E3 Git-Identität nur lokal im Repository** (`user.name` = Dante_GE, `user.email` = Konto-Adresse), weil keine globale
-Git-Konfiguration existierte. Keine globale Einstellung verändert.
+**E3 Git-Identität nur lokal im Repository** (`user.name` = Dante_GE, `user.email` = die Noreply-Adresse von GitHub),
+weil keine globale Git-Konfiguration existierte. Keine globale Einstellung verändert.
 
 **E4 Zwei EXE-Namen in getrennten Ordnern.** Die Kommandozeile heißt wie im Auftrag `hdrpilot.exe`, die App
 `HdrPilot.exe`. Windows unterscheidet Groß-/Kleinschreibung nicht; beide dürfen deshalb nie im selben Ordner liegen.
@@ -231,7 +231,17 @@ Steuerelemente (Schalter, Akzent-Knopf) über `Motion.Instance`.
 als PNG (für die Durchsicht der Oberfläche ohne Bildschirm-Aufnahme). Kein Teil der normalen Bedienung.
 
 **E55 Speicherfehler der Konfiguration sind sichtbar:** `ConfigService` wirft `ConfigSaveException` und übernimmt die
-Änderung nicht; Oberfläche und Tray melden „nicht gespeichert“ statt still einen anderen Zustand anzuzeigen.
+Änderung nicht; Oberfläche und Tray melden „nicht gespeichert“ statt still einen anderen Zustand anzuzeigen. Hält ein
+anderer Prozess `config.json` gerade offen (Kommandozeile, Prüfskript, Virenscanner), verweigert Windows das atomare
+Ersetzen mit „Zugriff verweigert“, auch wenn er das Löschen freigibt; `FileReplace` versucht es dann nach kurzen,
+wachsenden Pausen erneut (zusammen höchstens 1,2 s, die fertige temporäre Datei bleibt so lange liegen), erst danach gilt
+das Speichern als gescheitert, und die alte Datei bleibt ganz. Eine dabei schon gelesene fremde Änderung gilt weiter als
+neu (sonst schriebe das nächste Speichern den alten Stand darüber); „zuletzt gespielt“ und gemerkte EXEs der
+Sitzungslogik, deren Speichern scheiterte, holt das nächste Speichern nach, ein älteres „zuletzt gespielt“ nie über ein
+neueres. Nur im Speicher bleiben sie nicht: Nach 30 s versucht `ConfigService` es einmal von selbst erneut
+(`PendingRetryDelay`; scheitert auch das, startet kein weiterer Zeitgeber), und das Beenden speichert, was offen ist
+(`FlushPending` in `AutomationHost.DisposeAsync` und, für Abmelden und Herunterfahren, in `App.OnExit`; Prüfung
+2026-10-20, `ConfigSaveTests`, `PhysicalFileSystemTests`).
 
 **E56 Bibliothek wird bei jedem Start im Hintergrund neu eingelesen** (nach dem Start der Automatik), damit neue Spiele
 markiert erscheinen, ohne dass jemand „Neu einlesen“ drückt. Danach wird der Speicher zurückgegeben, wenn kein Fenster
@@ -778,3 +788,476 @@ Absturz), G9.7 (Filter `AutoHdrSteam`, Steam als Attrappe oder Testordner), G9.9
 Dienst über einem Schlüssel im Speicher; `phase6-traymenu.ps1` prüft den Eintrag an einer Testinstanz mit Testwurzel,
 läuft aber nur am echten Desktop mit Zustimmung). RTX HDR gehört nicht zu HDRpilot und bleibt zurückgestellt (`docs/recherche/auto-hdr-rtx-hdr.md`), ebenso die
 Intensität (`AutoHDRStrength`) und das Erzwingen für nicht zugelassene Spiele (`D3DBehaviors`).
+
+**E89 Neugestaltung „Showcase Hero“ (Wunsch des Nutzers 2026-10-14/15, G10):** Der Nutzer hat die Richtung „Showcase
+Hero“ gewählt und den Prototyp v4 abgenommen (`docs/design/showcase-hero/`); seine vier Anmerkungen (Raster im Vollbild,
+Reihenfolge Liste/Raster/Regal, Nit-Skala bis zur echten HDR-Spitze, Anordnung der Seite „Darstellung“) gehören zu den
+Kriterien. Umgesetzt wird in drei parallelen Teilen auf einem gemeinsamen Gerüst (Verträge, Konfigurationsfelder,
+Verdrahtung, Bildschirmfotos): Bilder und Bildschirmwerte, Darstellung und Einstellungen, Bibliothek und Effekte.
+
+Bilder (G10.3) kommen nur lesend aus den lokalen Launcher-Caches: Steam `appcache\librarycache` (deutsche Varianten
+zuerst), GOG Galaxy `webcache`, Ubisoft `cache\assets`, Xbox-Paketbilder und für Epic und EA das Symbol aus der EXE. Fehlt
+ein Bild, erzeugt HDRpilot ein Ersatzbild (Farbfeld aus dem Symbol mit dem Namen als Umriss-Muster, Cover, Monogramm);
+verschmierte Steam-Kapseln ersetzt ein Ausschnitt aus dem Titelbild, Logos werden auf ihren sichtbaren Teil zugeschnitten.
+Umgebungsfarben und die helle „HDR“-Fassung werden je Bild einmal berechnet und unter `%LOCALAPPDATA%\HDRpilot\art\`
+gespeichert (Verzeichnis `index.json`). Neue Bilder erscheinen von selbst; die Cache-Ordner werden nur beobachtet,
+solange ein Fenster offen ist. Eigene Bilder („Bild wählen…“) stehen je Bildart als Kennzeichen in `games[].artwork`
+(`gen`, `alt:<Datei>`, `custom:<Datei>`, nur schlichte Dateinamen, sonst automatisch) und liegen in `art\custom\`.
+
+SteamGridDB (G10.4) ist die einzige Ausnahme von „nur lokal“: standardmäßig aus (`settings.artwork.steamGridDb`), nur mit
+eigenem API-Schlüssel (mit DPAPI verschlüsselt in `steamgriddb-key.dat`, wie das PCGamingWiki-Bot-Passwort), füllt nur
+lokal fehlende Bilder und zeigt den Netzwerkzugriff in den Einstellungen an. Ist es aus oder fehlt der Schlüssel, gibt es
+keinen Netzwerkzugriff dafür; mit `--config-dir` läuft es nie von selbst.
+
+Bildschirmwerte (G10.7) kommen über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv),
+gelesen nur nach einem HDR- oder Bildschirmwechsel und nur, solange ein Fenster sie zeigt. Das Maximum jeder Nit-Skala ist
+die höchste Nit-Zahl des Bildschirms bei eingeschaltetem HDR (beim MAG 341C 456), zuletzt mit HDR gemessen und in
+`display-luminance.json` gemerkt, nie ein fester Wert wie 1000.
+
+Darstellung (G10.1, G10.2, G10.8): Duoton und Tritonus mit acht Vorlagen (Standard „Abendrot“) und eigenen Farben, Thema
+Automatisch, Hell oder Dunkel, gespeichert in `settings.appearance` (Werte als Text, Unbekanntes gilt als Standard). Alle
+Farb-Ressourcen werden aus der Palette abgeleitet und vorab gemischt (Schlüssel in `Theming/ThemeKeys.cs`, Rechnung in
+OKLab); Text auf Akzentflächen hält mindestens 4,5:1, Bedienelemente 3:1. Tray- und Fenstersymbol tragen die
+Palettenfarben und werden nur bei Farb-, Zustands- oder Taskleisten-Themawechsel neu gezeichnet. Die Seite „Darstellung“
+ordnet ihre Bereiche in einem Raster mit Höchstbreite je Bereich und mehreren Spalten bei breiten Fenstern an; ihre
+Änderungen gelten sofort.
+
+Bibliothek (G10.5): Ansichten Liste (Standard), Raster und Regal, überall in dieser Reihenfolge (Umschalter, Strg+1/2/3,
+Menüs), gemerkt in `settings.libraryView`. Das Raster berechnet Spaltenzahl und Kachelgröße aus der verfügbaren Breite
+(nichts gestreckt oder abgeschnitten, auch bei 3440×1440). Alle bisherigen Funktionen, AutomationIds und Tastenkürzel
+bleiben.
+
+Effekte (G10.6, G10.9) sind allgemeine Ebenen, die mit jedem Bild funktionieren, keine Animation je Spiel. Stufen Voll,
+Reduziert (Übergänge bis 0,3 s, keine Dauer-Animation) und Aus; ist die Windows-Option „Animationseffekte“ aus, gilt
+mindestens „Reduziert“. Dauer-Effekte laufen mit höchstens 30 fps und stehen bei minimiertem oder inaktivem Fenster und
+während eines Spiels still; bei geschlossenem Fenster läuft nichts. Der HDR-Moment dauert höchstens 2,5 s (höchstens 160
+Partikel), danach ist keine Bildschleife mehr angemeldet. Kein BlurEffect, kein DropShadowEffect, keine Mischmodi:
+Leuchten und weiche Flächen sind vorab berechnete Bilder oder Verläufe. Schriften sind Windows-Schriften (Bahnschrift,
+Segoe UI Variable, Cascadia Mono); eine eingebettete OFL-Schrift nur mit Zustimmung des Nutzers und Eintrag in den
+Lizenzhinweisen.
+
+Prüfung: Bildschirmfotos über `--snapshot` mit `--snapshot-sizes` (`review` = 1280×800, 1920×1080, 3440×1440),
+`--snapshot-scenes` und `--snapshot-themes` (Dateien `<fenster>-<zustand>-<B>x<H>-<thema>.png`, auch größer als der
+Bildschirm); Abdeckungsmessung über `--artwork-report`; `--test-hdr-moment` lässt eine Testinstanz den HDR-Moment ohne
+HDR-Schaltung spielen. Neue Gates `phase10-ui.ps1`, `phase10-settings-ui.ps1` und `phase10-gpu.ps1` (misst die
+Grafikkartenlast der Testinstanz; ohne aktiven Bildschirm meldet es UMGEBUNG und gilt nicht als bestanden).
+
+Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht oder ihn genauer fasst:
+- Bilder: Reihenfolge je Bildart eigene Wahl → Launcher-Bild → SteamGridDB (nur eingeschaltet, nur wenn das Bild fehlt)
+  → erzeugtes Bild. Das erzeugte Titelbild (1920×620) enthält kein Symbol, weil der Titelbereich je Ansicht 186 bis
+  über 1000 px hoch ist; die Bibliothek zeigt das Symbol (höchstens 1,5-fach vergrößert) links vom Namen. Ein Xbox-Kachelbild
+  wird dagegen rechts der Mitte eingezeichnet. Zusätzlich gibt es ein erzeugtes Kopfbild (460×215) als Vorschaubild der
+  Liste. Die helle Fassung entsteht nur bei aktivem Fenster und ohne laufendes oder startendes Spiel (siehe unten,
+  „Ruhezustand“), in Stufenbreiten bis 2560 px (JPEG, `art\boost`, höchstens 300 MB); dekodierte Bilder im Speicher
+  höchstens 192 MB, die Bildsätze des Titelbereichs (höchstens sieben) eingerechnet. Kennung je Spiel per SHA-256
+  (gekürzt) über Wahl,
+  Symbol-Hinweise, Installationsordner sowie Pfad, Größe und Änderungszeit jeder gefundenen Datei. Ein zweites eigenes
+  Bild derselben Art ersetzt das erste unter demselben Namen; scheitert das Speichern der Konfiguration, bleibt jede
+  Datei liegen, auf die sie noch zeigt. Gemessen an einer Kopie der Bibliothek (651 Spiele): Steam Titelbild 631/636,
+  Logo 628, Cover 628 genutzt plus 3 verschmierte Kapseln (Blue Estate, Dustforce, Homesick), GOG 5/5, Ubisoft
+  vollständig, Xbox Kachelbild 2/2, Epic und EA Symbol aus der EXE; erster Lauf 10,4 s, danach unter 1 s.
+- SteamGridDB: Schlüsselanteil der DPAPI `HDRpilot.SteamGridDB.v1`; gefragt wird nur nach unbewegten Bildern ohne
+  NSFW- oder Spaß-Markierung, eine verschmierte Kapsel zählt als fehlendes Cover. Ausschalten, „Schlüssel entfernen“
+  und ein Spielstart halten auch einen laufenden Lauf sofort an; ausgeschaltet gelten seine Bilder nicht (die Dateien
+  bleiben für ein erneutes Einschalten). Keine Weiterleitungen; die Namenssuche nimmt nur einen Treffer mit gleichem
+  Namen. In den Einstellungen gibt es „Fehlende Bilder jetzt laden“ und „Schlüssel entfernen“.
+- Bildschirmwerte: Nach `Invalidate` liest HDRpilot DXGI nur, wenn sich Bildschirme, HDR-Zustand oder Zielbildschirm
+  wirklich geändert haben. Meldet DXGI 0 nits (etwa bei ausgeschaltetem Bildschirm), gilt der Wert als unbekannt („—“),
+  überschreibt keine gemerkte Spitze und wird beim nächsten Öffnen oder Melden erneut gelesen.
+- Einstellungen: eine scrollende Seite mit Navigation; Raster je Gruppe mit Bereichen höchstens 760 px breit, Spalten
+  mindestens 520 px, Abstand 24 px, höchstens drei Spalten (1280×800 eine, 1920×1080 zwei, 3440×1440 drei Spalten).
+  „Abbrechen“ nimmt Änderungen der Darstellung nicht zurück. Farbwechsel blenden bei offenem Fenster 0,9 s über
+  („Reduziert“ 0,3 s, „Aus“ sofort).
+- Symbole: „HDR aus“ ist die Sonne als Linie im Verlauf Akzent → Atmosphäre ohne Kachel (je Taskleiste auf 3:1
+  gebracht), „HDR an“ die gefüllte Kachel, „Automatik pausiert“ mit gelbem und „Spiel läuft“ mit grünem Abzeichen
+  (Pause geht vor); unter 24 px eine am Pixelraster ausgerichtete, vereinfachte Glyphe.
+- Bibliothek: Der Detailbereich behält den Trenner, ist aber höchstens 560 px breit (Doppelklick: 23 %); gemerkt wird
+  die Aufteilung erst nach dem Ziehen (`settings.libraryPaneRatio`), die der alten Oberfläche (`libraryDetailsRatio`)
+  gilt nicht mehr. Der Titelbereich im Regal ist mindestens Fensterhöhe − 462 px hoch (in sehr hohen Fenstern genau so
+  hoch, damit unter der Kachelreihe kein leeres Band bleibt) und gibt in niedrigen Fenstern bis 440 px nach (Logo
+  bzw. Name werden dann kleiner), damit die Kachelreihe ganz über der Statuszeile und die Werkzeugleiste unter der
+  Automatik-Karte steht; erst unter 712 px Fensterhöhe werden die Kacheln kleiner als 200 px (höchstens bis 100 px).
+  Die Werkzeugleiste bricht in Zeilen um (siehe unten). Der Startknopf heißt sichtbar „Starten“, für Bildschirmleser
+  weiter „Mit HDR starten“. Neu im Spielmenü: „Installationsordner öffnen“. Die Schublade im Regal ist deckend (keine
+  Unschärfe; schon 3 % Durchsicht ließen die Kopfzeile als Geisterschrift durchscheinen); die Polarlichter des Prototyps
+  sind nicht umgesetzt. Im Dialog „Bild wählen…“ verschwindet die Liste des vorigen Reiters beim Wechsel sofort, damit
+  eine Wahl nie für die falsche Bildart gilt.
+- Sichtprüfung (Bildschirmfotos aller Ansichten, hell und dunkel, 1100×680 bis 3440×1440): Der schmale Titelbereich von
+  Liste und Raster zeigt wie im Prototyp rechts „Starten“ und „Beim Start …“; wird es eng, weicht erst die Angabe, dann
+  der Knopf, danach bricht ein langer Name um bzw. wird das Logo kleiner, und erst unter 300 px fallen Kennzeile und
+  Angaben weg (nie abgeschnitten). Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte
+  passt; ein langer Name bricht dort links der Karte neben der Symbol-Kachel in höchstens zwei Zeilen um und endet dann
+  mit „…“ (vorher brach er erst bei 820 px um und wurde in schmalen Fenstern, etwa 1280×800 bei 110 %, ohne „…“
+  abgeschnitten; Prüfung 2026-10-20). Ist die Liste so breit, dass „Spiel“ über 640 px bekäme (Vollbild), wachsen
+  „Quelle“, „Zuletzt gespielt“ und „HDR“ gleichmäßig mit. Das Spielmenü hat oben Vorschau, Name und „Quelle · zuletzt
+  gespielt“ wie im Prototyp. Die Lichtlinie des HDR-Moments hat einen weichen Schein und verglimmt rasch. Für
+  Bildschirmfotos bei ausgeschaltetem Monitor setzt `--snapshot-display "Name;Spitze;Vollbild;Minimum;Bit"` feste
+  Bildschirmwerte ein; die Zustände `nativ-hdr` und `kontextmenue` (das Menü wird ohne Popup über das Fenster
+  gezeichnet) kamen dazu.
+- Nach der unabhängigen Prüfung (G10.10): Die Effektstufe gilt auch für Einstellungen, Dialoge und Tray-Menü („Aus“:
+  keine Bewegung), Kacheln und Hinweise der Bibliothek folgen der wirksamen Stufe statt nur der Windows-Option. Dauer-
+  Effekte laufen nur, solange etwas sie zeigt (Auswahlring nur in Raster und Regal, Glanz nur über dem Namen, die
+  Vorschau der Einstellungen nur im sichtbaren Teil); im Hintergrund halten sie ihre Werte und geben ihre Uhren frei (ein
+  nur angehaltenes Storyboard ließ WPF weiter takten, gemessen etwa 1 % eines Kerns). Die Partikel des HDR-Moments
+  takten über eine Zeitleiste mit 60 Bildern pro Sekunde statt über CompositionTarget.Rendering (sonst in der
+  Bildwiederholrate des Bildschirms); der Moment sucht die Ebene der hellen Fassung erst beim Abspielen. Nach dem
+  Schließen räumt der Bilddienst Bilder und Einträge von Spielen auf, die nicht mehr in der Bibliothek stehen; „Symbol
+  ändern…“ erneuert auch die Bilder. Eigene Bilder bis 32 MB und 100 Megapixel (beim Dekodieren verkleinert), größere
+  melden „zu groß“. Die Werte der Bildschirm-Kapsel nennen für Bildschirmleser, was sie sind („Spitze in Nits: 456“);
+  die Ansichten haben die Linien-Symbole des Prototyps; die Vorschau des Tray-Menüs gleicht dem echten Menü.
+- Nach der erneuten Prüfung (Speicher, Ruhezustand, Messgrenze): Nach dem Schließen eines Fensters gibt HDRpilot den
+  Speicher in zwei Schritten zurück: sofort wie bisher und genau einmal, wenn der Bilddienst aufgeräumt hat (laufende
+  Ladevorgänge beendet, was sie noch ablegten, verworfen), mindestens 2 s vergangen sind und kein Fenster mehr offen ist.
+  Dann zeichnet ein 1×1-Hilfsfenster hinter dem Desktop drei Bilder (WPF hält die Texturen eines geschlossenen Fensters
+  samt Grafikgerät, bis wieder gezeichnet wird; gemessen rund 230 MB im Grafiktreiber), und ein gründlicher GC verdichtet
+  auch den großen Objektspeicher. Gemessen nach 80 gewählten Spielen: festgeschrieben vorher rund 380 MB auch nach 40 s,
+  jetzt rund 140 MB nach wenigen Sekunden (im Infobereich vor dem Öffnen rund 160 MB). Nichts davon läuft wiederholt. Die
+  helle Fassung („Ruhezustand“) berechnet HDRpilot nur bei sichtbarem, aktivem Fenster und nie, solange ein Spiel läuft
+  oder über die Bibliothek startet (auch der Bilddienst rechnet sie dann nicht): 1,5 s nachdem die Auswahl samt Titelbild
+  steht, vorab mit niedriger Priorität (sichtbare Bilder gehen vor, eine normale Anfrage zieht sie vor), bei HDR an
+  sofort. Der HDR-Moment wartet höchstens 0,3 s auf eine noch ladende Fassung; kommt sie später, blendet sie über das
+  warme Licht (0,6 s, „Reduziert“ 0,3 s, „Aus“ sofort). `phase10-gpu.ps1` misst Teil 1 erst, wenn das Laden der Bilder
+  fertig ist, verlangt höchstens 1 % eines Kerns und laut Protokoll 0 Uhren der Dauer-Effekte, solange sie angehalten
+  oder minimiert sind (Stufe Debug: „Effekte: … Uhren n“, „Bilder: nichts mehr in Arbeit.“).
+- Höhe des Titelbereichs in der Liste (Wunsch des Nutzers 2026-10-16, G10.5): Ein Ziehgriff (`HeroSplitter`) auf der
+  Grenze zwischen Titelbild und Liste stellt sie ein. Gemerkt wird der Anteil an der Fensterhöhe
+  (`settings.libraryHeroRatio`, ohne Eintrag gilt der Standard) erst nach dem Ziehen oder einer Taste, nie nach einem
+  bloßen Klick. Standard ist ein Drittel der Fensterhöhe (vorher clamp(H·0,22; 180; 240), bei 1440 px also nur 240 px),
+  mindestens 186 px (unter dem Kopf bleibt die 72 px hohe Symbol-Kachel eines Spiels ohne Logo ganz; mit 180 px war sie
+  unten abgeschnitten), höchstens H − 328 − Höhe der Werkzeugleiste (H − 368, − 416 bzw. − 464 bei einer bis drei
+  Zeilen): Darunter bleiben Werkzeugleiste, Kopf der Liste, fünf ganze Zeilen und die Statuszeile; Hinweise über der
+  Liste (Fehler beim Einlesen, Vorschläge, auch aufgeklappt) gehen davon ab. In kleineren Fenstern (oder mit Hinweisen
+  bzw. mehr Zeilen der Werkzeugleiste) wird die Höhe begrenzt, der gemerkte Anteil bleibt. Beim Scrollen
+  klappt der Titelbereich nicht mehr auf 120 px zusammen („Größe bleibt“). Bedienung: Ziehen ohne Animation, Pfeiltasten
+  oben/unten 24 px, Bild auf/ab 96 px, Pos1/Ende kleinste bzw. größte Höhe, Doppelklick und Eingabetaste zurück zum
+  Standard (mit der Bewegung beim Wechsel der Ansicht). Esc bricht das Ziehen ab wie beim Trenner der Spalten. Endet
+  ein Ziehen ohne Änderung (an der Ausgangslage losgelassen, Esc, Maus verloren), gilt wieder die gemerkte Höhe. Für die
+  UI-Automation ist der Griff ein Thumb mit Wertebereich (RangeValue, Höhe in Pixeln) und Auslösen (Invoke wie
+  Doppelklick). Der Griff liegt mit seiner Mitte genau auf der Unterkante des Titelbilds (Trefferfläche 20 px, je 10 px
+  darüber und darunter). Die Werkzeugleiste hat oben so viel Luft wie unten bis zum Inhalt (Wunsch des Nutzers
+  2026-10-16): in der Liste 10 px unter dem Titelbild, im Raster 22 px wie bis zur ersten Kachelreihe (10 px und der
+  Innenabstand des Rasters); Regal unverändert. Damit die erste Kachelreihe des Rasters auch in niedrigen Fenstern ganz
+  zu sehen bleibt (1000×620 und 1178×620 mit umgebrochener Werkzeugleiste, die Startgröße auf 1920×1080 bei 150 %), gibt
+  dort sein Titelbereich nach, höchstens bis 186 px. Der dunkle Verlauf am unteren Rand des Titelbilds reicht 2 px über
+  den Rand: Fällt die Unterkante nicht auf ganze Bildschirmpixel, stand dort sonst eine 1 px hohe helle Linie. Neuer
+  Zustand `liste-gescrollt` für Bildschirmfotos; eine gemerkte Höhe in der Ablage gilt auch dort.
+- Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17, abgenommene Vorschau
+  `docs/design/showcase-hero/prototyp/leiste.html` mit der Lasche 8 px über der Leiste, Konzept
+  `werkzeugleiste-vorschlaege.md`; Nachprüfung 2026-10-19): Sie ersetzt die gefüllten Zeilen vom 2026-10-16 (Elemente
+  immer ausgeschrieben, bis zu fünf Zeilen, `ToolbarFlowPanel`), die es nicht mehr gibt. Die drei Filter sind
+  Symbol-Schalter 40×40 (Mini-Schalter für „HDR automatisch“, Plaketten „NEU“ und „HDR“ 26×13) mit ihrer Zahl als
+  Abzeichen im Knopf, Alt+A/N/H; die Ansicht ist ein Symbol-Segment (122 px), „Spiel hinzufügen“ ein Symbolknopf (40 px).
+  Jedes Element hat einen Tooltip (Name, Kürzel, Erklärung, Zahl bzw. Zustand), 1 s Verzögerung, 400 ms zum Nachbarn,
+  auch bei Tastaturfokus, mittig 8 px darunter. Die Leiste passt sich stufenlos an die Breite der Liste an
+  (`ToolbarLayout`, reine Funktion): ab 1154 px alles bequem (Suche 320, der Rest wird Abstand zwischen den Gruppen), bis
+  1070 gibt die Suche nach (bis 236), bis 914 geben Suche, Quelle und Sortierung anteilig nach (68 : 52 : 36, bis
+  168/136/160), bis 806 zeigt die Sortierung nur ihr Symbol (einziger Schritt, Abstand vor der Ansicht dann mindestens
+  16 statt 24 px); darunter zwei Zeilen an der Gruppengrenze (oben Suche, Quelle und Sortierung gefüllt, unten links die
+  Filter, rechts die Aktionen), nur unter 410 px drei. Die Tastenkappe „Strg+F“ weicht unter 204 px Suchbreite. Die
+  Schwellen gelten geräteunabhängig, bei jeder Skalierung bei denselben Fenstergrößen (1366×768 bei 110 % hat eine Liste
+  von 807 und ist einzeilig wie bei 100 %; vorher verschoben sich die Schwellen dort um knapp 2 px). Erst danach wird auf
+  Gerätepixel verteilt: Abstände round(8 · Skalierung), Knöpfe und Höhe round(40 · Skalierung) (bei 110 %, 106 dpi, 44
+  statt 44,17 px), die Ansicht aufgerundet, die Felder durch fortlaufendes Runden; was das an einer Schwelle kostet
+  (höchstens zwei Pixel), trägt der Abstand vor der Ansicht. Weil Fensterrahmen (1 px) und Rand (32 px) bei 110 % neben
+  dem Pixelraster liegen (36,44 px) und die App kein Layout-Rounding nutzt (es fürs ganze Fenster einzuschalten verschob
+  Titelbereich, Spalten und Kacheln anderer Teile), rücken die Elemente über ihre RenderTransform um den Bruchteil auf
+  ganze Pixel des Fensters, die rechte Kante auf den Pixel nächst der Kante der Liste; Rahmen innen ganz (Layout-Rounding
+  nur in den Elementen). Lasche, Kapsel und ✕ liegen auf denselben Pixeln. Die Leiste selbst und alles um sie herum
+  behalten ihre Lage, die Luft (Liste 10, Raster 22) bleibt im Layout genau; gegen Bildkante und Liste, die nicht auf
+  ganzen Pixeln liegen, weicht das Gezeichnete höchstens einen halben Pixel ab.
+  Hysterese gilt nur, solange der Nutzer zieht: am Fensterrand (`WM_SIZING` zwischen `WM_ENTERSIZEMOVE` und
+  `WM_EXITSIZEMOVE`; Verschieben an der Titelleiste samt Wiederherstellen eines maximierten Fensters zählt nicht) oder am
+  Trenner zum Detailbereich: eine Zeile erst wieder ab 838 (806 + 32, wie `TH.oneBack` der Vorschau), die Beschriftung
+  der Sortierung ab 938, die Tastenkappe ab 216. Nur dann werden die Schritte bewegt (Zeilenwechsel als Morph,
+  Sortier-Schritt); alles andere folgt dem Rand im selben Layout-Durchgang, und Maximieren, Einrasten, DPI-Wechsel (auch
+  während des Ziehens) und Start zeigen sofort den Endzustand. Die beim Ziehen gemerkten zwei Zeilen gelten auch
+  eingeklappt weiter (sonst rechnete der Titelbereich eingeklappt mit einer Zeile und die Liste spränge beim Ausklappen
+  um 48 px). Die Elemente werden nur angeordnet, nie umgehängt: Die Tab-Reihenfolge folgt der sichtbaren, beim Umbrechen
+  geht kein Fokus verloren. Was von der Höhe der Leiste abhängt (größter Titelbereich der Liste, Titelbereich des
+  Rasters, Lage des Trenners), nimmt ihre ausgeklappte Höhe.
+  Ein- und ausblenden: Lasche 36×18 rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen);
+  beim Überfahren wächst sie zu „Leiste ausblenden · Strg+Umschalt+F“. Eingeklappt sitzt eine Kapsel (24 px hoch) mittig
+  auf der Bildkante, rechtsbündig mit der Liste (Liste 10 px, Raster 22 px darunter); sie zeigt „Suchen Strg+F“ (11 px
+  zwischen Wort und Tastenkappe) oder die aktiven Filter (Suchbegriff, Quelle, Mini-Symbole, „x/652“, was nicht passt als
+  „+2“) mit „Suche und Filter zurücksetzen“ (✕, nur eingeklappt und gefiltert da, sonst auch nicht im Automationsbaum),
+  gefiltert dazu die Lichtnaht entlang der Bildkante. Die Leuchtlinie des Ziehgriffs endet 12 px vor Lasche bzw. Kapsel.
+  Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel, Strg+Umschalt+F, Strg+F1, Strg+F (blendet dauerhaft
+  ein und sucht) und das Menü der Leiste (Rechtsklick auf freie Fläche, Umschalt+F10 bzw. Menütaste: ein-/ausblenden,
+  die drei Filter mit Zahl und Kürzel, alle zurücksetzen). Gemerkt in `settings.libraryToolbarCollapsed` (ohne Eintrag
+  ausgeklappt); beim Start ohne Bewegung. Der Titelbereich springt nie: Höhe und Bereich des Griffs rechnen immer mit der
+  ausgeklappten Leiste; die Liste gewinnt 38 bzw. 86 px. Im Regal ist die Leiste immer einzeilig; die Lasche sitzt wie im
+  Konzept in der 22-px-Fuge zwischen Leiste und Kachelreihe (eine beim Überfahren angehobene Kachel gleitet so lange mit
+  ihrer Ecke unter die Lasche: über der Leiste stieße sie an die Automatik-Karte, unter den Kacheln wäre sie zum Teil
+  nicht mehr anklickbar); eingeklappt steht die Kapsel mittig in der früheren Leistenzeile (mindestens 16 px unter der
+  Automatik-Karte), die Kachelreihe bleibt, Logo und Knöpfe sinken 32 px (im Konzept 40: dann liefe die Lichtnaht 4 px
+  unter den Knöpfen wie eine Unterstreichung).
+  Bewegung (`MotionChannels`, `ToolbarChoreography`, Zeiten aus `leiste.js`): Einfalten „Voll“ 740 ms (Welle der
+  Elemente zur Lasche, Liste gleitet, Lasche wird Kapsel, Lichtstreif und Hof als „Zündung“), Ausfalten 620 ms (von der
+  Suche aus, wenn Strg+F es auslöst); „Reduziert“ höchstens 300 ms Überblenden ohne Wege (das alte Bild über einen
+  `VisualBrush`, `ElementBitmap`; das ✕ blendet mit der Kapsel); „Aus“, minimiert, unsichtbar oder während eines Spiels
+  sofort. Jede Bewegung lässt sich unterbrechen und läuft vom aktuellen Wert weiter. Ändern sich eingeklappt die Filter
+  (Vorschau `refresh`), gleitet die Breite der Kapsel vom jetzigen Wert neu (160 ms), die Naht zieht sich mit CubicEase In
+  zurück, Hof und Naht folgen dem Filterzustand auch mitten in der Zündung; nur während die Lasche gerade zur Kapsel wird,
+  wird lediglich das Ziel der Breite nachgeführt (die Vorschau schnitte diese Bewegung ab). Gleicher Inhalt (etwa nach
+  dem Sortieren) baut nichts neu und bewegt nichts. Die Liste steht sofort an ihrem Endplatz und wird nur verschoben
+  (FLIP: Inhalt per Verschiebung, Hintergrund der Karte per Skalierung von unten); bewegt werden nur Deckkraft und
+  Transformationen, dazu Breite und Höhe der Lasche. Der Bildtakt ist nur angemeldet, solange etwas läuft (danach 0
+  Anmeldungen).
+  Zugänglichkeit: Die Lasche ist ein Knopf mit Aus-/Einklappen (ExpandCollapse), Name „Werkzeugleiste“, ItemStatus
+  „Keine Filter“ bzw. „Gefiltert: … – x von y“, Hilfetext mit den Kürzeln; der Wechsel wird als Mitteilung angesagt.
+  Der Fokus geht nie verloren: Lag er beim Einklappen in der Leiste, geht er auf die Kapsel, ebenso, wenn das ✕ mit dem
+  Fokus verschwindet (Filter zurückgesetzt) oder beim Ausklappen keinen Fokus mehr nimmt; in einem nicht aktiven Fenster
+  gilt das für den Fokus, den es beim Aktivieren wiederherstellt, niemandem wird er genommen. Eingeklappt ist die Leiste
+  weder in der Tab-Reihenfolge noch im Automationsbaum. Im hohen Kontrast sind Fläche, Rahmen und alles in Lasche,
+  Kapsel und ✕ in Systemfarben (Text, Tastenkappen, Mini-Symbole, Zahl), Naht und Streif in der Markierungsfarbe ohne
+  Schein. Prüfung: `test.ps1 -Filter
+  "FullyQualifiedName~Toolbar|FullyQualifiedName~Showcase|FullyQualifiedName~MainWindowLayout"` (Leiter und Schwellen
+  bei 96, 106, 120 und 144 dpi, Hysterese, Kurven, Zustände, Fokus, hoher Kontrast, Peer, Geometrie bei 14 Fenstergrößen
+  von 1000×620 bis 3440×1440 samt den echten Größen bei 110 %, Kanten auf ganzen Pixeln des Fensters), `phase10-ui.ps1`
+  (eine Zeile bei 1600×1000, zwei im schmalen Fenster, Zeilen nach der Schwelle auch bei 1366×768, Knöpfe und Abstände
+  genau im Pixelraster, Ein-/Ausklappen per UI-Automation, gemerkt auch nach Neustart, Kapsel und Liste in Liste und
+  Regal, kein unsichtbares ✕, Strg+F über `--test-toolbar-search` ohne Tastatureingabe); Zustände für Bildschirmfotos
+  `liste-gefiltert`, `liste-/raster-/regal-eingeklappt` (auch `-gefiltert`), `liste-tooltip`, `liste-lasche`,
+  `liste-menue-leiste`, `liste-einklappen-t120`, `-t600`, `liste-ausklappen-t140` und im hohen Kontrast
+  `liste-eingeklappt-kontrast` (auch `-gefiltert-kontrast`).
+- Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19, G10.5; ersetzt die Regel aus Phase 4, nach der Neufiltern
+  die Auswahl nie verschob, sodass Titelbereich und Details ein Spiel zeigen konnten, das nicht in der Liste stand):
+  Fällt das gewählte Spiel durch Suche, Quelle oder einen Filter aus der Liste, zeigen Liste, Titelbereich und Details
+  leise den ersten Treffer in der Reihenfolge der Liste (nicht als „gesehen“ markiert, nichts gespeichert); ohne Treffer
+  ist kein Spiel gewählt, und die Liste zeigt „Keine Spiele für diese Auswahl“ mit „Filter zurücksetzen“. Das verdrängte
+  Spiel kehrt zurück, sobald es wieder in der Liste steht (auch noch gefiltert, ebenso nach dem ✕ der Kapsel), und wird
+  dabei in den sichtbaren Bereich geholt; wählt der Nutzer selbst ein anderes Spiel oder verschwindet es aus der
+  Bibliothek, kehrt es nicht mehr zurück. Sortierung und Wechsel der Ansicht ändern die Auswahl nicht; findet ein
+  Einlesen bei leerer Liste ein passendes Spiel, wird es gezeigt. Der Fokus geht dabei nicht verloren: Lag er auf der
+  verschwundenen Zeile bzw. Kachel, folgt er der Auswahl (ohne Treffer auf „Filter zurücksetzen“); in Suche, Leiste,
+  Detailbereich und Menüs bleibt er. Prüfung: `test.ps1 -Filter "FullyQualifiedName~SelectionFollowsFilter"`,
+  `phase10-ui.ps1` (Filter „Neu“, Suche ohne Treffer, Zurücksetzen in der Kapsel); Zustände `liste-ohne-treffer` und
+  `regal-ohne-treffer` für Bildschirmfotos. Ohne gewähltes Spiel zeigt das Regal keine Automatik-Karte (ihre Schalter
+  hätten kein Spiel und speicherten nichts; Prüfung 2026-10-20), und ohne Treffer verschwindet die Stelle „1–7 von 651“
+  unten rechts, statt „0–0 von 0“ zu zeigen. Ohne Treffer sagt auch der Detailbereich nicht mehr „Wähle ein Spiel“
+  (es gibt nichts zu wählen), sondern neutral „Kein Spiel gewählt“; ist nur nichts gewählt, bleibt es bei „Wähle ein
+  Spiel“ mit der Erklärung (Prüfung 2026-10-20). Ebenso bei leerer Liste („Noch keine Spiele“, auch wenn alle Spiele
+  ausgeblendet sind): dort sagt der Detailbereich „Noch kein Spiel in der Liste“ (Gegenprüfung 2026-10-20).
+
+**E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
+2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und
+allen Einstellungen in der Bibliothek, und „HDR automatisch“ und Windows Auto HDR wirken für sie weiter (E38). Neu lässt
+sich gezielt entfernen, was HDRpilot zu einem solchen Spiel gespeichert hat, und nicht installierte Spiele lassen sich
+ausblenden. Von selbst entfernt HDRpilot nie etwas: „Nicht installiert“ kann auch ein nicht verbundenes Laufwerk oder ein
+Launcher mitten in einem Update sein.
+- „Einstellungen entfernen…“ gibt es nur bei nicht installierten Launcher-Spielen (`LibraryCleanup.IsRemovable`: nicht
+  installiert und nicht manuell): im Spielmenü nach „Installationsordner öffnen“ (rot, mit „Entf“) und als roter Knopf
+  ganz unten im Detailbereich, dessen Hinweis „Nicht installiert“ darauf verweist. Selbst hinzugefügte Spiele behalten
+  „Aus der Bibliothek entfernen“. Die Taste Entf öffnet nur die jeweilige Rückfrage. Die Rückfrage (`ConfirmDialog`, neu
+  mit Abschnitt „VERLOREN GEHT“, Warnung und optionalem Häkchen) nennt, was verloren geht („HDR automatisch“, Windows
+  Auto HDR, eigener Bildschirm, „Nach dem Spiel zurückstellen“ aus, gemerkte, hinzugefügte und ausgeschlossene
+  EXE-Dateien, eigenes Symbol, eigene Bilder, per „Bild wählen…“ gewählte Bilder ohne eigene Datei, zuletzt gespielt mit
+  dem Datum wie in der Liste; sonst „Nur der Eintrag in der Bibliothek, keine eigenen Einstellungen“), warnt, wenn das
+  Spiel vielleicht noch installiert ist, und hat den Fokus auf „Abbrechen“.
+- Vielleicht noch installiert (Prüfung 2026-10-20, `UninstalledGameCleanup.CheckInstallsAsync`, nur lesend, nur Namen):
+  Als Spur zählt nur, was auf ein Programm deutet. Das Laufwerk des Installationsordners ist nicht verbunden; eine
+  gemerkte oder hinzugefügte EXE (voller Pfad) ist noch da; im Installationsordner liegt bis vier Ebenen tief eine EXE
+  (ohne verknüpften Ordnern zu folgen); bei Steam steht `appmanifest_<ID>.acf` noch in `steamapps` der Bibliothek. Ein
+  Restordner mit Spielständen, Einstellungen und Protokollen zählt nicht (echte Daten: VEIN Demo hinterließ 13 solche
+  Dateien und keine EXE, die Rückfrage warnte dort zu Unrecht). Das fängt ab, was ein installiertes Spiel fälschlich zu
+  „nicht installiert“ macht: Das Einlesen findet Steam nicht (dann gelten alle seine Spiele als nicht installiert,
+  `LibraryMerger` markiert nur bei abgestürztem Scanner nichts), oder Steam steckt in einem Update ohne „vollständig
+  installiert“. Was nicht antwortet (Laufwerk, Netzwerkfreigabe, Ordner) oder nicht lesbar ist, gilt als „nicht prüfbar“
+  und bekommt ebenfalls die Warnung (ein getrenntes Netzlaufwerk ist kein „deinstalliert“): auch ein Installationsordner,
+  den Windows nicht auflisten lässt (wie `C:\System Volume Information`), einer, in dem ohne lesbare EXE ein nicht
+  lesbarer Unterordner liegt, und eine gemerkte EXE oder ein Steam-Manifest in einem nicht lesbaren Ordner
+  (`File.Exists` sagt dort nur „nein“; `IFileSystem.EnumerateFilesUpTo` und `FileExistsOrThrow` melden es, Prüfung
+  2026-10-20). Als „nicht verbunden“ gilt ein Laufwerk nur, wenn Windows das so beantwortet, auch das einer gemerkten EXE
+  auf einem anderen Laufwerk, wenn sonst keine Spur da ist; antwortet die Freigabe einer gemerkten EXE nicht, ist es
+  „nicht prüfbar“. Jedes Laufwerk und jede Freigabe wird einmal gefragt, Ordner nur auf
+  erreichbaren; höchstens vier Zugriffe zugleich (ein hängender hält einen Thread), alle zusammen höchstens 2 s. Dauert
+  das länger als 250 ms, sagt die Hinweiszeile der Bibliothek bzw. die Karte „Prüfe …“. Wie das Einlesen „nicht
+  installiert“ setzt, bleibt unverändert (ein fehlender Launcher kann auch deinstalliert sein); die Warnung lässt die
+  Wahl.
+- Die Rückfrage passt immer auf die Arbeitsfläche: Reicht die Höhe nicht, gibt nur die Aufzählung nach und scrollt (bis
+  340 px hoch; alles, was bei einem Spiel verloren gehen kann, passt ohne Scrollen; „EXE‑Datei“ mit geschütztem
+  Bindestrich, damit keine Zeile mit „Dateien“ beginnt). Eine scrollende Aufzählung ist ein Halt der Tabulatortaste mit
+  Fokusrahmen, scrollt mit den Pfeiltasten (Enter löst dort nicht „Entfernen“ aus) und lässt rechts Platz für die
+  Bildlaufleiste. Bildschirmleser hören Text, Warnung und Aufzählung als Hilfe des Fensters und von
+  „Abbrechen“; der Knopf des Sammel-Entfernens hat seine Erklärung als Hilfe.
+- Gelöscht werden nur: der Eintrag in `config.json` samt allen Schaltern, das eigene Symbol (`icons\<Stamm>.png` nach
+  `CustomIcons.FileNameFor`), der Eintrag im Symbol-Cache (`icon-cache.json`), die eigenen Bilder
+  (`art\custom\<Stamm>-hero.jpg`, `-logo.png`, `-cover.jpg`; Namen aus dem Schlüssel, nie aus `config.json`) und nur mit
+  Häkchen die HDRpilot-Verknüpfungen des Spiels samt ihrer .ico. Als solche gilt nur eine .lnk direkt auf dem Desktop
+  oder im Startmenü-Ordner „HDRpilot“ mit dem Ziel `HDRpilot.exe` (Dateiname) und genau den Argumenten, die
+  `ShortcutService` schreibt (`--run "<Schlüssel>"`, in Testinstanzen mit deren `--config-dir`; Groß- und Kleinschreibung
+  egal); vor dem Löschen wird jede erneut gelesen. Die .ico neben dem eigenen Symbol fällt nur, wenn eine gelöschte
+  Verknüpfung sie zeigte und keine andere mehr (`IShortcutService.IsIconInUse`, nur lesend: auch Unterordner von Desktop
+  und Startmenü, gemeinsamer Desktop und gemeinsames Startmenü, angeheftete Verknüpfungen der Taskleiste). Lässt sich
+  das nicht ganz klären, bleibt sie: ein nicht lesbarer Ordner, ein verknüpfter Ordner (Junction, symbolische
+  Verknüpfung; dem wird nicht gefolgt) oder eine nicht lesbare Verknüpfung; nur eine inzwischen verschwundene zählt
+  nicht. Eine Datei, die ein verbliebener Eintrag noch nennt (nur in einer von Hand geänderten `config.json`), bleibt.
+  Erzeugte Bilder (`gen`, `boost`, `logo`, `sgdb`, `index.json`) räumt wie bisher das Aufräumen beim Schließen des
+  Fensters ab, die HDR-Liste der nächste Abgleich. Dateien von Spielen, Launchern und Steam fasst HDRpilot nie an. Ohne
+  Häkchen bleiben Verknüpfungen liegen; `--run` meldet dann ein unbekanntes Spiel, bis es wieder eingelesen ist.
+- Wettläufe: Ob das Spiel noch nicht installiert ist und keine Sitzung läuft oder vorbereitet wird, prüft
+  `LibraryCleanup.RemoveNotInstalled` erst im Update-Lambda von `ConfigService.Update` (unter dessen Sperre). Findet ein
+  Einlesen das Spiel während der Rückfrage wieder oder beginnt eine Sitzung, bleibt alles („… ist inzwischen wieder
+  installiert oder läuft. Nichts entfernt.“); Dateien werden erst nach erfolgreichem Speichern gelöscht. Solange das Spiel
+  läuft, ist der Befehl gesperrt.
+- Auswahl danach: Verschwindet das gewählte Spiel aus der Liste, wird leise der Nachbar gewählt (das nächste Spiel in der
+  Reihenfolge der Liste, am Ende das vorige; nicht als gesehen markiert). Das gilt für jedes Verschwinden, auch beim
+  Entfernen eines selbst hinzugefügten Spiels und beim Ausblenden; vorher war danach kein Spiel gewählt und der
+  Titelbereich leer. Fällt dabei die gewählte Quelle weg (ihr letztes Spiel ging), zeigt die Liste wieder alle Spiele, und
+  gewählt ist das, das dort auf das verschwundene folgt (Prüfung 2026-10-20). Ein wieder installiertes Spiel kommt beim
+  nächsten Einlesen als neu zurück, „HDR automatisch“ aus.
+- Ausblenden: `settings.hideUninstalledGames` (ohne Eintrag aus; ältere Versionen übergehen das unbekannte Feld), Schalter
+  „Nicht installierte Spiele ausblenden“ in der neuen Karte „Bibliothek“ der Einstellungen nach „Suchordner“ (Gruppe
+  Allgemein, übernommen mit „Speichern“), daneben „zurzeit n“. Ausgeblendet werden alle nicht installierten Spiele, auch
+  selbst hinzugefügte, deren Ordner fehlt. Sie fehlen in der Grundmenge der Liste (`Games`; `_byKey` behält alle) und
+  zählen damit nirgends mit: Zahl im Kopf, Quellen, Zahlen der Filter, Kapsel „x/y“, Zahl der Spiele in der Navigation
+  der Einstellungen. Ausblenden ist kein Filter (`IsFiltered` bleibt aus, keine Lichtnaht); die Zahl nennen nur die Karte
+  und der Tooltip von „Zurücksetzen“ (kein eigener Eintrag im Menü der Leiste). Sind alle Spiele ausgeblendet, zeigt die
+  Liste „Nur nicht installierte Spiele“ mit dem Weg zum Schalter („Einstellungen › Bibliothek“, wie in der Navigation
+  der Einstellungen und im Tooltip von „Zurücksetzen“). Die Sitzungslogik sieht weiter alle Spiele: „HDR automatisch“
+  und Auto HDR wirken auch für ausgeblendete, ein laufendes steht in der Statuszeile. Findet die Suche
+  nur ausgeblendete Spiele, sagt „Keine Spiele für diese Auswahl“, wie viele passen würden und wo sie sich einblenden
+  lassen; die Zahl im Kopf zählt sie weiter nicht mit (Entscheidung des Nutzers).
+- Sammel-Entfernen in derselben Karte: „Einstellungen aller nicht installierten Spiele entfernen…“ (nur Launcher-Spiele,
+  ohne solche mit Sitzung; laufen alle, sagt die Karte das, statt still nichts zu tun), Rückfrage mit einem Punkt je
+  Spiel: der Name, darunter gedämpft die Spur einer Installation („Laufwerk F: nicht verbunden“, „EXE‑Datei noch da“,
+  „bei Steam noch eingetragen“, „nicht prüfbar“) und was verloren geht (das Datum von „zuletzt gespielt“ mit geschützten
+  Leerzeichen, damit die Zeile nicht mitten darin umbricht, Prüfung 2026-10-20); dazu die Warnung zu Laufwerken und
+  Spuren und das Häkchen für die Verknüpfungen. Es gilt sofort, unabhängig von
+  „Speichern“; ob ein Spiel noch entfernbar ist und keine Sitzung hat, prüft wie beim einzelnen erst das Schreiben.
+  Danach werden die Karte und die Zahl der Spiele in der Navigation neu gezählt; hat ein Einlesen alle wiedergefunden,
+  sagt die Meldung nur, dass sie bleiben.
+- Prüfung: G11.1 (`test.ps1 -Filter
+  "FullyQualifiedName~Uninstalled|FullyQualifiedName~RemoveSettings|FullyQualifiedName~LibraryCleanup"`; ein
+  Attrappen-Dateisystem belegt, was gelöscht wird, echte .lnk in Temp-Ordnern den Abgleich der Verknüpfungen), G11.2
+  (`phase11-uninstalled-ui.ps1` an einer Testinstanz mit einem eigenen Spiel, einem Launcher-Spiel auf einem nicht
+  verbundenen Laufwerk und einem mit fehlendem Ordner; Testinstanzen protokollieren den Fokus offener Rückfragen unter
+  „Prüfung“; Zustände `hauptfenster-nicht-installiert`, `-kontextmenue-nicht-installiert`, `-rueckfrage-entfernen`,
+  `-rueckfrage-entfernen-verknuepfungen`, `einstellungen-bibliothek` und `-rueckfrage-alle` für Bildschirmfotos), G11.3
+  (`phase11-migration.ps1`: eine nur lesend kopierte echte Ablage, über den Entwicklerschalter `--settings-probe` ohne
+  Einlesen und Automatik zweimal wie in den Einstellungen gespeichert; nur `hideUninstalledGames` unterscheidet sich, der
+  Hash der echten Ablage bleibt gleich; der Bericht nennt je entfernbares Spiel die Spur einer Installation, nur lesend
+  in den echten Spielordnern geprüft). `--settings-probe`, `--snapshot` und `--artwork-report` beenden sich mit
+  Exit-Code 2, wenn `--config-dir` auf die echte Konfiguration oder den echten Datenordner zeigt, auch anders geschrieben
+  oder auf anderem Weg dorthin (`\\?\`, 8.3-Name, Junction, subst: bei vorhandenen Ordnern entscheidet ihre Kennung,
+  `PathUtil.SameDirectory`, `AppArguments.HasOwnConfigDir`).
+
+**E91 Quiver Launcher als eigene Quelle (Wunsch des Nutzers 2026-10-18, Entscheidungen 2026-10-19, G12):** Spiele des
+portablen Quiver Launchers (MIT, Velopack; beim Nutzer 3.5.1 mit „Black“) erscheinen von selbst mit der Quelle „Quiver“,
+bekommen „HDR automatisch“ wie alle anderen und starten über „Mit HDR starten“ direkt. HDRpilot liest dafür nur Dateien
+von Quiver, geteilt geöffnet (`IFileSystem.ReadShared`, `FileShare.ReadWrite | Delete`), schreibt nichts dorthin,
+startet Quiver nie und nutzt keinen Code von Quiver. Einzelheiten und Messungen: `docs/scanner/quiver.md`.
+- Quelle: `GameSource.Quiver` am Ende der Aufzählung, Schlüssel `Quiver:<folderName>` (Trenner, ein Name aus nur `.`,
+  `..` irgendwo im Namen, ungültige Zeichen und Punkt oder Leerzeichen am Ende abgelehnt, nichts abgeschnitten). Kommt
+  ein Spiel in zwei Quiver-Ordnern vor (etwa beim Umzug von 2.4.x auf 3.x, MIGRATING.md von Quiver), gilt der Ordner im
+  Aufbau ab 3.0, dann der zuletzt gespielte, dann der zuerst gefundene; der Rest steht im Protokoll. Steht ein Spiel
+  zugleich als eigener Eintrag in der Bibliothek (früher von Hand eingetragen, Ordner im Quiver-Spielordner), nennen
+  beide Einträge in den Details den anderen; entfernt wird nichts von selbst. Bezeichnung „Quiver“, eigene Farbe (Pink,
+  `Hp.Brush.Source.Quiver`, hell und dunkel) in Liste, Kacheln, Regal, Details, Filter und Kapsel.
+- Ordner finden (`QuiverRootFinder`), günstigste Quellen zuerst: gelernte Ordner (`settings.quiverFolders`, ohne
+  Oberfläche, fehlt ohne Eintrag ganz), das Protokoll von Velopack (`%LOCALAPPDATA%\velopack\velopack_QuiverLauncher.log`,
+  nur die letzten 256 KB), Suchordner samt direkten Unterordnern, `%LOCALAPPDATA%\QuiverLauncher` und ein
+  Uninstall-Eintrag unter HKCU. Erst wenn das nichts findet, Downloads (bekannter Ordner), Desktop, Dokumente,
+  Benutzerordner und feste Laufwerke bis zwei Ebenen, höchstens 1500 Ordner, ohne System- und Programmordner, nur auf
+  festen Laufwerken und ohne verknüpften Ordnern zu folgen (nie über eine Verknüpfung auf eine Netzfreigabe), Ende beim
+  ersten Treffer (gemessen ohne Quiver: 134 ms beim ersten, 72 ms beim zweiten Lauf). Im Protokoll von Velopack zählen
+  je Zeile erst Pfade in Anführungszeichen, dann die übrigen; ein `'` im Pfad bleibt erhalten. Erkannt wird ein Ordner
+  nur an `current\sq.version` mit der Kennung QuiverLauncher (andere Velopack-Programme fallen heraus) oder an der alten
+  Struktur bis 2.4.x. Die MuiCache wird nicht gelesen (Nutzungsverlauf).
+- Ordner lernen (`QuiverFolderLearner`): Sieht die Prozessüberwachung `QuiverLauncher.exe` oder `Quiver.exe` aus einem
+  Quiver-Ordner, trägt HDRpilot ihn in `quiverFolders` ein und liest 5 s später neu ein (App und `hdrpilot watch`). Jeder
+  EXE-Pfad wird nur einmal geprüft (E31); scheitert das Speichern (Datei gesperrt), versucht es der nächste Start von
+  Quiver erneut (Prüfung 2026-10-20). Nur dieses Lernen schreibt, das Einlesen selbst bleibt rein lesend.
+- Bibliothek: `apps.json` (Name: `customDisplayName`, `name`, `project`, `folderName`), aus `settings.json` nur
+  `AppsPath` (absolut, auch eine Laufwerkswurzel wie `G:\`, die Quiver unverändert nimmt); Spielordner `installPath`
+  oder `<Apps>\<folderName>`. Installiert wie in Quiver (Ordner da, keine `install-incomplete.txt`, irgendwo eine EXE,
+  BAT oder CMD; gesucht bis 16 Ebenen, höchstens 3000 Ordner, an der Grenze gilt es als installiert, nie als „Nicht
+  installiert“). Start-EXE: `selected_executable.txt` (nur innerhalb des Spielordners, vor jeder Suche gelesen), sonst
+  der einzige Kandidat oben, sonst der einzige bis drei Ebenen tief, ohne Hilfsprogramme. Startskripte (BAT, CMD) zählen
+  wie in Quiver als Kandidaten, gestartet werden sie nie: Ist das Skript der einzige Kandidat, gibt es keinen
+  Start-Befehl statt der EXE am Skript vorbei. Gesucht wird Ebene für Ebene nur nach Namen; verknüpfte Ordner und Ordner
+  von Wine/Proton betritt die Suche nicht, nur EXE, BAT und CMD zählen (höchstens 256). Bei mehreren Kandidaten oder
+  einer tieferen EXE gibt es keinen Start-Befehl (E61); die Profilzeile sagt „Quiver · mehrere EXE“, die Details nennen
+  den Grund und den Weg über Quiver und „Neu einlesen“. Per Windows Installer installierte Spiele
+  (`windows-installer.json`, Phase `Linked`): Ordner der verknüpften EXE als Installationsordner, mit Hinweis in den
+  Details. „Zuletzt gespielt“ aus `LastPlayed.txt`; Werte vor 2000 oder mehr als einen Tag in der Zukunft zählen nicht
+  (Quiver schreibt im Kalender der Kultur, unter Thai etwa das Jahr 2569).
+- Start: die EXE direkt mit ihrem Ordner als Arbeitsordner und ohne Argumente, wie Quiver selbst laut
+  `quiver-launch.log`; nicht über `QuiverLauncher.exe --run` (Konsolenfenster, Updatesuche im Netz, schreibt in Quivers
+  Einstellungen). Erkennung beim Spielen über den Spielordner. Eine Frühwarnung oder eine Startoption wie bei Steam gibt
+  es für Quiver nicht: Beim Start aus Quiver schaltet HDR erst mit dem Spielprozess.
+- Bilder: nur lokal aus `<Quiver>\Cache` (eigenes Cover, gemeinsamer Zwischenspeicher `Images\<MD5 der Adresse>` samt
+  den verkleinerten Kopien, die Quiver über quiverlauncher.com lädt, älterer Speicher je Spiel), nur Dateien mit Bildkopf,
+  als `coverCandidates` je Spiel in `config.json`; dekodiert wird in der App (WebP über Windows). Titelbild und Logo
+  erzeugt HDRpilot, das Symbol kommt aus der Spiel-EXE; kein Logo und kein Programmsymbol von Quiver. Ein (fast)
+  quadratisches Cover (Höhe unter 1,2 × Breite, bei „Black“ 480 × 480) steht wie das Kachelbild eines Xbox-Spiels ganz
+  oben in einem erzeugten Cover im Hochformat und rechts im erzeugten Titelbild, statt beschnitten zu werden; die Farben
+  kommen dann daraus. Wie ein Kachelbild füllt seine Mitte auch das erzeugte Kopfbild, das Vorschaubild der Liste
+  (vorher nur Farbfeld und Monogramm, bei „Black“ „BL“; Prüfung 2026-10-20). Es steht in `index.json` unter eigenem
+  Namen (`header-square`), sodass ein früher erzeugtes Kopfbild ohne das Cover neu gezeichnet wird. Den Cache-Ordner
+  beobachtet HDRpilot nicht, neue Bilder kommen mit dem nächsten Einlesen. SteamGridDB (nur eingeschaltet) fragt wie bei
+  anderen Spielen ohne Steam-ID nach dem Namen.
+- HDR-Liste: Quiver-Spiele gleicht HDRpilot nicht mit PCGamingWiki ab (`HdrListSync.Skips`): Der Name träfe meist das
+  Originalspiel, und so gehen ihre Namen nicht ans Netz. Sie stehen als „unbekannt“ und zählen im Stand nicht mit.
+- Vorschläge aus Suchordnern übergehen den Quiver-Ordner und alles darin. `hdrpilot scan` kennt `--source Quiver` und
+  `--config-dir` (liest dann Suchordner und gelernte Quiver-Ordner der Ablage, nur lesend) und gibt `coverCandidates`,
+  `installKind` und `lastPlayed` mit aus.
+- Verträglichkeit (G12.3): Bisher hielt jede Version eine `config.json` mit einer unbekannten Quelle für defekt
+  (`JsonStringEnumConverter`), sicherte sie als „defekt“ und begann leer. `AppConfigConverter` legt Spiele mit einer
+  unbekannten Quelle beiseite, liest den Rest wie bisher und schreibt sie beim Speichern unverändert wieder ans Ende von
+  `games`; nichts wird als „defekt“ gesichert. Auch ihre eigenen Bilder und Logos bleiben: Das Aufräumen der Bilder
+  nach dem Schließen zählt ihre Schlüssel mit (`AppConfig.AllGameKeys`). Neue Felder (`coverCandidates`, `installKind`,
+  `quiverFolders`) fehlen ohne Wert, die Datei bleibt sonst gleich. HDRpilot 1.4.0 hat das noch nicht und hielte eine
+  Datei mit einem Quiver-Spiel für defekt; der Setup installiert eine ältere Version nur auf ausdrücklichen Wunsch (E83),
+  README und Bekannte Grenzen sagen das.
+- Geteilt lesen, Restrisiko: Solange HDRpilot eine Datei offen hat, scheitert das Ersetzen durch Verschieben einer
+  anderen darüber (`MoveFileEx`) mit „Zugriff verweigert“, auch mit Freigabe zum Löschen (nachgemessen). So ersetzt
+  Quiver `windows-installer.json` und Bilder im älteren Speicher `Cache\Icons`. HDRpilot hält solche Dateien deshalb nur
+  so lange offen, wie das Lesen dauert (beim Einlesen höchstens 4 KB, in der App das Bild bis in den Speicher, dekodiert
+  wird danach); trifft Quiver genau diesen Moment, scheitert dieser eine Schritt von Quiver einmal.
+- Nach der Prüfung (2026-10-20): Die Prüfung des Bildkopfs und die Regel für die verkleinerten Kopien von SteamGridDB
+  sind eigenständig neu geschrieben (vorher zu nah am Quelltext von Quiver); nachgebildet sind nur Namen, Adressen und
+  Dateiformate.
+- Prüfung: G12.1 (`test.ps1 -Filter "FullyQualifiedName~Quiver" -MinTests 30`; Beispieldateien mit erfundenen Pfaden,
+  Wächter gegen Schreiben und Netz), G12.2 (`phase2-scanner-tests.ps1`), G12.3 (`-Filter
+  "FullyQualifiedName~UnknownSource"`, Gegenprobe mit dem bisherigen Konverter), G12.4 (`phase12-quiver-scan.ps1`: echtes
+  System, nur lesend, in der Shell und außerhalb des Containers, Dateiliste des Quiver-Ordners vorher und nachher gleich),
+  G12.5 (`phase12-quiver-ui.ps1`: Testinstanz mit Quiver-Ordner aus Beispieldateien, Quelle in Filter und Kapsel, Cover
+  aus dem Cache, „Mit HDR starten“ startet ein harmloses Prüfprogramm direkt mit seinem Ordner als Arbeitsordner, ohne
+  echtes HDR; Zustände `hauptfenster-quiver-liste`, `-raster`, `-regal`, `-regal-details`, `-gefiltert` und `-kapsel`
+  für Bildschirmfotos). Der Livetest mit „Black“ (G12.7) steht aus und läuft nur mit dem Nutzer.
+
+**E92 Veröffentlichung auf GitHub (Vorgaben des Nutzers 2026-10-20, G13):** HDRpilot erscheint im öffentlichen
+Repository `DanteGE/HDRpilot`, als Version 1.5.0.
+- Lizenz: PolyForm Strict 1.0.0 (`LICENSE`, Hinweis „Copyright Dante_GE“). Erlaubt ist nicht-kommerzielle Nutzung,
+  nicht erlaubt sind Änderungen, Weitergabe und kommerzielle Nutzung. Fremdbestandteile behalten ihre Lizenzen; die
+  Testdaten aus PCGamingWiki stehen als Ausnahme unter CC BY-NC-SA 3.0 (README, Abschnitt „Lizenz“). Fertige Versionen
+  erscheinen über GitHub Releases. `LICENSE` liegt jeder Auslieferung bei: im Ordner ohne Installation und im Paket der
+  Setup-Datei (Eintrag `LICENSE`, installiert neben README und Lizenzhinweisen, beim Entfernen gelöscht); Setup-Dateien
+  vor 1.5.0 ohne diesen Eintrag bleiben gültig.
+- Name und Adresse: überall „Dante_GE“, die Git-Identität mit der Noreply-Adresse von GitHub. In den Programmdaten nur
+  `Authors` und `Copyright` („© Dante_GE“); Firma und Produkt bleiben „HDRpilot“, ebenso der Herausgeber im Eintrag
+  unter „Installierte Apps“. Die Kennung beim Abruf von PCGamingWiki und SteamGridDB nennt nur Name und Version, keinen
+  Link auf das Projekt.
+- Das README beginnt mit der englischen Einleitung aus dem GitHub-Repository; `funding.yml` bleibt, wie der Nutzer sie
+  dort angelegt hat.
+- Keine lokalen Pfade: Notizordner von Sitzungen heißen `<Notizordner>`, Profilordner `%USERPROFILE%`, `%APPDATA%`,
+  `%LOCALAPPDATA%` und `%TEMP%`, Arbeitskopien stehen repo-relativ. Echte Installationsordner des Prüfrechners sind in
+  Dokumenten, Tests und Beispieldateien durch erfundene ersetzt, Laufwerk und Aufbau bleiben (`D:\Steam-Bibliothek`,
+  `F:\Steam-Bibliothek`, `D:\Anwendungen`, `D:\Programmordner`, `D:\GOG-Spiele`, `F:\GOG-Spiele`, `D:\Ubisoft-Spiele`,
+  `D:\Xbox Bibliothek`, `D:\Spielordner`; in der Battle.net-Beispieldatei gleich lange Pfade auf K: und J:).
+- Echte Spielelisten entfernt: `docs/recherche/symbole/messung-vorher/` gelöscht, die vollständigen Tabellen in
+  `docs/scanner/` durch erfundene Beispielzeilen ersetzt, Aufzählungen einer ganzen Bibliothek oder Klasse (GOG- und
+  Epic-Bericht, Symbol-Berichte) durch Anzahlen, Namen früher installierter, inzwischen deinstallierter Spiele entfernt
+  (EA, Ubisoft, Xbox, Abgleich Phase 2). Einzelne Spiele bleiben als Beleg eines technischen Befunds genannt, wie in den
+  Beispieldateien und Tests, die nach Wunsch des Nutzers bleiben (dort mit erfundenen Pfaden). Die Arbeitsprotokolle
+  (`docs/stand.md`, `docs/uebergabe/`, Berichte, `GATES.md`) bleiben, bereinigt; `docs/umgebung.md` beschreibt die
+  Testumgebung nur noch allgemein.
+- Prüfung: G13.3 `publish-check.ps1` über alle verfolgten Dateien (Profilpfade auch URL-kodiert, Ordner von
+  Claude-Sitzungen, private Links, frühere Mail-Adresse, echte Installationsordner mit Laufwerk und unverwechselbare
+  Ordnernamen auch ohne, Kennungen samt Treiberstand, Stichproben aus den entfernten Spielelisten; persönliche Werte
+  nur als SHA-256, Positivkontrolle bei jedem Lauf). Die Geschichte wird vor dem Hochladen umgeschrieben (eigener Lauf
+  außerhalb dieses Repositorys; alte Fassungen der bereinigten Dateien werden dabei ausdrücklich ersetzt, nicht nur
+  per Regel) und mit `publish-check.ps1 -History` geprüft (G13.5): jede Blob-Version, jeder Pfadname, jede Nachricht
+  sowie Autor und Committer jedes Commits (nur Dante_GE mit der Noreply-Adresse, als Committer auch GitHub selbst),
+  mit eigener Positivkontrolle an einem Wegwerf-Repository.

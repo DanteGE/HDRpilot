@@ -3,6 +3,9 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
@@ -116,6 +119,9 @@ public static class SourceFiles
 {
     public static string MainWindowXaml => Path.Combine(RepositoryRoot(), "src", "HdrPilot.App", "MainWindow.xaml");
 
+    /// <summary>Datei im Projektordner, Teile relativ zur Wurzel (für Prüfungen am Quelltext).</summary>
+    public static string InRepository(params string[] parts) => Path.Combine([RepositoryRoot(), .. parts]);
+
     private static string RepositoryRoot([System.Runtime.CompilerServices.CallerFilePath] string thisFile = "") =>
         FindUp(Path.GetDirectoryName(thisFile)) ?? FindUp(AppContext.BaseDirectory)
         ?? throw new DirectoryNotFoundException("Projektordner (HdrPilot.slnx) nicht gefunden.");
@@ -131,10 +137,19 @@ public static class SourceFiles
     }
 }
 
-/// <summary>Dateisystem, das beim Auflisten bestimmter Ordner den Zugriff verweigert (wie geschützte Systemordner).</summary>
+/// <summary>
+/// Dateisystem, das beim Auflisten bestimmter Ordner den Zugriff verweigert (wie geschützte Systemordner). Wie Windows sagt es
+/// für eine Datei darin, die es gibt, „Zugriff verweigert“ (<see cref="IFileSystem.FileExistsOrThrow"/>) bzw. nur „nein“
+/// (<see cref="IFileSystem.FileExists"/>); dass eine fehlt, sagt es auch dort.
+/// </summary>
 public sealed class DenyingFileSystem(IFileSystem inner, params string[] deniedDirectories) : IFileSystem
 {
-    public bool FileExists(string path) => inner.FileExists(path);
+    public bool FileExists(string path) => !IsDenied(Path.GetDirectoryName(path) ?? string.Empty) && inner.FileExists(path);
+
+    public bool FileExistsOrThrow(string path) =>
+        IsDenied(Path.GetDirectoryName(path) ?? string.Empty) && inner.FileExists(path)
+            ? throw new UnauthorizedAccessException("Zugriff verweigert: " + path)
+            : inner.FileExistsOrThrow(path);
 
     public bool DirectoryExists(string path) => inner.DirectoryExists(path);
 
@@ -157,6 +172,77 @@ public sealed class DenyingFileSystem(IFileSystem inner, params string[] deniedD
     public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
 
     private bool IsDenied(string directory) => deniedDirectories.Any(d => HdrPilot.Core.Util.PathUtil.PathEquals(d, directory));
+}
+
+/// <summary>
+/// Dateisystem, dessen Prüfung bestimmter Ordner (DirectoryExists, Auflisten) hängt, bis <see cref="Release"/> aufgerufen ist,
+/// längstens 30 s: ein getrenntes Netzlaufwerk oder eine anlaufende Platte (E90, Prüfung vor „Einstellungen entfernen…“).
+/// </summary>
+public sealed class HangingFileSystem(IFileSystem inner, params string[] hanging) : IFileSystem
+{
+    private readonly ManualResetEventSlim _released = new();
+    private int _waiting;
+
+    public void Release() => _released.Set();
+
+    /// <summary>Höchstzahl der Zugriffe, die gleichzeitig hingen.</summary>
+    public int MaxWaiting { get; private set; }
+
+    /// <summary>Ordner, die erst nach dieser Zeit antworten (eine anlaufende Platte), statt zu hängen.</summary>
+    public Dictionary<string, TimeSpan> Slow { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public bool FileExists(string path) => inner.FileExists(path);
+
+    public bool DirectoryExists(string path)
+    {
+        Hang(path);
+        return inner.DirectoryExists(path);
+    }
+
+    public string ReadAllText(string path) => inner.ReadAllText(path);
+
+    public byte[] ReadAllBytes(string path) => inner.ReadAllBytes(path);
+
+    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern = "*", bool recursive = false)
+    {
+        Hang(directory);
+        return inner.EnumerateFiles(directory, searchPattern, recursive);
+    }
+
+    private void Hang(string path)
+    {
+        if (Slow.FirstOrDefault(s => HdrPilot.Core.Util.PathUtil.PathEquals(s.Key, path)) is { Key: not null } slow)
+        {
+            Thread.Sleep(slow.Value);
+            return;
+        }
+
+        if (!hanging.Any(h => HdrPilot.Core.Util.PathUtil.PathEquals(h, path)))
+        {
+            return;
+        }
+
+        lock (_released)
+        {
+            MaxWaiting = Math.Max(MaxWaiting, ++_waiting);
+        }
+
+        _released.Wait(TimeSpan.FromSeconds(30));
+        lock (_released)
+        {
+            _waiting--;
+        }
+    }
+
+    public IEnumerable<string> EnumerateDirectories(string directory, string searchPattern = "*", bool recursive = false) => inner.EnumerateDirectories(directory, searchPattern, recursive);
+
+    public void CreateDirectory(string path) => inner.CreateDirectory(path);
+
+    public void WriteAllTextAtomic(string path, string contents) => inner.WriteAllTextAtomic(path, contents);
+
+    public void DeleteFile(string path) => inner.DeleteFile(path);
+
+    public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
 }
 
 public sealed class FakeDialogs : ILibraryDialogs
@@ -190,7 +276,40 @@ public sealed class FakeDialogs : ILibraryDialogs
         return Answers.Count > 0 && Answers.Dequeue();
     }
 
+    /// <summary>Rückfragen mit Aufzählung und Häkchen (E90), in der Reihenfolge des Öffnens.</summary>
+    public List<ConfirmRequest> Requests { get; } = [];
+
+    /// <summary>Ob das Häkchen gesetzt wird (je Rückfrage mit Häkchen; leer: nicht gesetzt).</summary>
+    public Queue<bool> OptionAnswers { get; } = new();
+
+    public ConfirmAnswer Confirm(ConfirmRequest request)
+    {
+        Requests.Add(request);
+        Confirms.Add((request.Title, request.Message));
+        WhileConfirmOpen?.Invoke();
+        var confirmed = Answers.Count > 0 && Answers.Dequeue();
+        var option = request.OptionText is not null && OptionAnswers.Count > 0 && OptionAnswers.Dequeue();
+        return new ConfirmAnswer(confirmed, confirmed && option);
+    }
+
     public bool ShowAddGame(AddGameViewModel viewModel) => OnAddGame?.Invoke(viewModel) ?? false;
+
+    /// <summary>Antworten für „Bild wählen…“ → „Eigene Datei…“ (null: abgebrochen).</summary>
+    public Queue<string?> ArtworkFiles { get; } = new();
+
+    public string? PickArtworkFile(string? initialDirectory) => ArtworkFiles.Count > 0 ? ArtworkFiles.Dequeue() : null;
+
+    /// <summary>Geöffnete Dialoge „Bild wählen…“.</summary>
+    public List<ArtworkPickerViewModel> Pickers { get; } = [];
+
+    /// <summary>Was der Dialog tut (Standard: abbrechen).</summary>
+    public Func<ArtworkPickerViewModel, bool>? OnArtworkPicker { get; set; }
+
+    public bool ShowArtworkPicker(ArtworkPickerViewModel viewModel)
+    {
+        Pickers.Add(viewModel);
+        return OnArtworkPicker?.Invoke(viewModel) ?? false;
+    }
 }
 
 public sealed class FakeIcons : IGameIconService
@@ -224,6 +343,17 @@ public sealed class FakeIcons : IGameIconService
 
     public void Forget(string gameKey) => Forgotten.Add(gameKey);
 
+    /// <summary>Spiele, deren Symbol samt Eintrag in icon-cache.json vergessen wurde (E90).</summary>
+    public List<string> ForgottenGames { get; } = [];
+
+    public void ForgetGame(string gameKey)
+    {
+        lock (ForgottenGames)
+        {
+            ForgottenGames.Add(gameKey);
+        }
+    }
+
     public string SaveCustomIcon(GameConfig game, string sourcePath)
     {
         if (SaveFailure is not null)
@@ -252,6 +382,31 @@ public sealed class FakeShortcuts : IShortcutService
     public string CreateDesktopShortcut(GameConfig game) => Create("Desktop", game);
 
     public string CreateStartMenuShortcut(GameConfig game) => Create("Startmenü", game);
+
+    /// <summary>Vorhandene HDRpilot-Verknüpfungen je Spielschlüssel (E90; die Attrappe liest nie die echte Platte).</summary>
+    public Dictionary<string, List<GameShortcut>> Existing { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Gelöschte Verknüpfungen.</summary>
+    public List<GameShortcut> Deleted { get; } = [];
+
+    public IReadOnlyList<GameShortcut> FindFor(string gameKey)
+    {
+        lock (Existing)
+        {
+            return Existing.TryGetValue(gameKey, out var list) ? list.ToList() : [];
+        }
+    }
+
+    public IReadOnlyList<GameShortcut> Delete(string gameKey, IReadOnlyCollection<GameShortcut> shortcuts)
+    {
+        lock (Existing)
+        {
+            var list = Existing.TryGetValue(gameKey, out var found) ? found : [];
+            var gone = shortcuts.Where(s => list.Remove(s)).ToList();
+            Deleted.AddRange(gone);
+            return gone;
+        }
+    }
 
     private string Create(string kind, GameConfig game)
     {
@@ -373,6 +528,9 @@ public sealed class TestLibraryContext : ILibraryContext
 
     public LaunchOutcome NextLaunch { get; set; } = new(true, "gestartet", new DateTimeOffset(2026, 10, 7, 12, 0, 1, TimeSpan.Zero), null);
 
+    /// <summary>Gesetzt: der nächste Start wartet auf diese Quelle (Tests: Start läuft noch).</summary>
+    public TaskCompletionSource<LaunchOutcome>? PendingLaunch { get; set; }
+
     public Exception? FailNextUpdate { get; set; }
 
     public int Updates { get; private set; }
@@ -403,7 +561,28 @@ public sealed class TestLibraryContext : ILibraryContext
 
     public IGameIconService Icons => FakeIcons;
 
+    /// <summary>Spielbilder (E89); Standard: keine Bilder.</summary>
+    public IArtworkService Artwork { get; set; } = NullArtworkService.Instance;
+
+    /// <summary>Helligkeit der Bildschirme (E89); Standard: unbekannt.</summary>
+    public IDisplayLuminanceService Luminance { get; set; } = NullDisplayLuminanceService.Instance;
+
+    /// <summary>Darstellung (E89); Standard: Auslieferungszustand, dunkel, Animationen erlaubt.</summary>
+    public IAppearanceService Appearance { get; set; } = new StaticAppearanceService();
+
     public IShortcutService Shortcuts => FakeShortcuts;
+
+    /// <summary>Ordner der eigenen Symbole in der Ablage im Speicher (E90).</summary>
+    public const string IconDirectory = @"C:\Data\icons";
+
+    /// <summary>Ordner der eigenen Bilder in der Ablage im Speicher (E90).</summary>
+    public const string CustomArtDirectory = @"C:\Data\art\custom";
+
+    /// <summary>Aufräumen über die Ablage im Speicher und die Attrappen (E90).</summary>
+    public UninstalledGameCleanup Cleanup => new(CleanupFiles ?? Files, IconDirectory, CustomArtDirectory, FakeIcons, Artwork, FakeShortcuts);
+
+    /// <summary>Dateisystem nur für das Aufräumen und die Prüfung davor (etwa ein hängendes Laufwerk); null: <see cref="Files"/>.</summary>
+    public IFileSystem? CleanupFiles { get; set; }
 
     public IUiDispatcher Ui => Dispatcher;
 
@@ -511,10 +690,15 @@ public sealed class TestLibraryContext : ILibraryContext
     public Task<LaunchOutcome> LaunchAsync(string gameKey)
     {
         Launched.Add(gameKey);
-        return Task.FromResult(NextLaunch);
+        return PendingLaunch?.Task ?? Task.FromResult(NextLaunch);
     }
 
     public void ShowSettings() => SettingsShown++;
+
+    /// <summary>Geöffnete Installationsordner („Installationsordner öffnen“; die Attrappe startet nichts).</summary>
+    public List<string> OpenedFolders { get; } = [];
+
+    public void OpenFolder(string path) => OpenedFolders.Add(path);
 
     public void RaiseHdrStateChanged() => HdrStateChanged?.Invoke(this, EventArgs.Empty);
 

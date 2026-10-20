@@ -1,9 +1,13 @@
 using System.Diagnostics;
+using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
+using HdrPilot.App.Theming;
 using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.AutoHdr;
@@ -20,7 +24,9 @@ namespace HdrPilot.App;
 /// Zentrale der App: hält die Automatik (<see cref="AutomationHost"/>), die Dienste und die Fenster.
 /// Fenster werden beim Schließen vollständig freigegeben, damit im Hintergrund nur Tray und Überwachung laufen.
 /// Teilklassen: AppServices.Library.cs (Spieleliste, Symbole, Verknüpfungen), AppServices.Shell.cs
-/// (Tray, Einstellungen, Autostart, Bildschirmereignisse) und AppServices.HdrList.cs (HDR-Liste von PCGamingWiki).
+/// (Tray, Einstellungen, Autostart, Bildschirmereignisse), AppServices.HdrList.cs (HDR-Liste von PCGamingWiki),
+/// AppServices.Appearance.cs (Darstellung: Farben, Thema, Effekte) und AppServices.Artwork.cs (Spielbilder, SteamGridDB,
+/// Helligkeit der Bildschirme), E89.
 /// </summary>
 public sealed partial class AppServices : IAsyncDisposable
 {
@@ -28,6 +34,7 @@ public sealed partial class AppServices : IAsyncDisposable
     private Window? _mainWindow;
     private Window? _settingsWindow;
     private int _scanRunning;
+    private UiMemoryRelease? _memoryRelease;
 
     public AppServices(AutomationHost host, Dispatcher dispatcher, SingleInstance? instance)
     {
@@ -40,15 +47,33 @@ public sealed partial class AppServices : IAsyncDisposable
         Environment = SystemEnvironment.Instance;
 
         CreateHdrList();
+        Appearance = CreateAppearanceService();
         Icons = CreateIconService();
+        Artwork = CreateArtworkService();
+        SteamGridDb = CreateSteamGridDbService();
+        Luminance = CreateDisplayLuminanceService();
         Shortcuts = CreateShortcutService();
+        GameCleanup = new UninstalledGameCleanup(FileSystem, Paths.IconDirectory, Paths.CustomArtDirectory, Icons, Artwork, Shortcuts, LoggerFactory.CreateLogger("Bibliothek"));
         Autostart = CreateAutostartService();
         DisplayEvents = CreateDisplayEventsService();
         Tray = CreateTrayService();
 
         host.Sessions.Notification += OnSessionNotification;
         host.Sessions.StateChanged += (_, _) => RaiseHdrStateChanged();
+        host.QuiverFolders.Learned += OnQuiverFolderLearned;
         DisplayEvents.DisplaysChanged += OnDisplaysChanged;
+    }
+
+    /// <summary>
+    /// Quiver gestartet und sein Ordner neu gelernt (E91): nach kurzer Pause neu einlesen, damit seine Spiele erscheinen.
+    /// Kommt auf dem Thread der Überwachung; das Einlesen läuft ohnehin im Hintergrund.
+    /// </summary>
+    private void OnQuiverFolderLearned(object? sender, string folder) => _ = RescanLaterAsync();
+
+    private async Task RescanLaterAsync()
+    {
+        await Task.Delay(AutomationHost.RescanDelayAfterQuiverLearned).ConfigureAwait(false);
+        await RescanAsync().ConfigureAwait(false);
     }
 
     public AutomationHost Host { get; }
@@ -78,7 +103,22 @@ public sealed partial class AppServices : IAsyncDisposable
 
     public IGameIconService Icons { get; }
 
+    /// <summary>Darstellung: Farbschema, Thema, Effektstufe (E89).</summary>
+    public IAppearanceService Appearance { get; }
+
+    /// <summary>Spielbilder aus lokalen Launcher-Caches samt Ersatzbildern und eigenen Bildern (E89).</summary>
+    public IArtworkService Artwork { get; }
+
+    /// <summary>SteamGridDB (optional, Standard aus) für lokal fehlende Bilder (E89).</summary>
+    public ISteamGridDbService SteamGridDb { get; }
+
+    /// <summary>Echte Helligkeitswerte der Bildschirme über DXGI (E89); nur Bildschirmfotos setzen feste Werte ein.</summary>
+    public IDisplayLuminanceService Luminance { get; private set; }
+
     public IShortcutService Shortcuts { get; }
+
+    /// <summary>Aufräumen nach „Einstellungen entfernen…“ nicht installierter Spiele (E90), für Bibliothek und Einstellungen.</summary>
+    public UninstalledGameCleanup GameCleanup { get; }
 
     public IAutostartService Autostart { get; }
 
@@ -116,6 +156,9 @@ public sealed partial class AppServices : IAsyncDisposable
 
         // HDR-Liste von PCGamingWiki: einmaliger Zeitgeber, später im Hintergrund (AppServices.HdrList.cs).
         StartHdrList();
+
+        // SteamGridDB (E89): nur eingeschaltet, mit Schlüssel und normaler Ablage; mit --config-dir nie von selbst ins Netz.
+        SteamGridDb.ScheduleStartup(UsesDefaultPaths);
 
         // Ohne offenes Fenster läuft HdrPilot nur als Tray: Anlauf-Speicher gleich zurückgeben.
         _ = Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () =>
@@ -177,6 +220,18 @@ public sealed partial class AppServices : IAsyncDisposable
             if (args.RunGameKey is { } key)
             {
                 await LaunchAsync(key);
+            }
+
+            // Prüfung (G10.9): HDR-Moment ohne echte HDR-Schaltung, nur in Testinstanzen mit eigener Ablage.
+            if (args.TestHdrMoment && !UsesDefaultPaths)
+            {
+                PlayTestHdrMoment();
+            }
+
+            // Prüfung (G10.5): Strg+F in der Bibliothek ohne Tastatureingabe, ebenso nur in Testinstanzen.
+            if (args.TestToolbarSearch && !UsesDefaultPaths)
+            {
+                RunTestToolbarSearch();
             }
         }
         catch (Exception ex)
@@ -291,7 +346,7 @@ public sealed partial class AppServices : IAsyncDisposable
             _mainWindow.Closed += (_, _) =>
             {
                 _mainWindow = null;
-                ReleaseUiMemory();
+                MemoryRelease.WindowClosed();
             };
             _mainWindow.Show();
         }
@@ -313,7 +368,7 @@ public sealed partial class AppServices : IAsyncDisposable
             _settingsWindow.Closed += (_, _) =>
             {
                 _settingsWindow = null;
-                ReleaseUiMemory();
+                MemoryRelease.WindowClosed();
             };
             _settingsWindow.Show();
         }
@@ -321,11 +376,24 @@ public sealed partial class AppServices : IAsyncDisposable
         BringToFront(_settingsWindow);
     }
 
-    /// <summary>Entwicklung: Fenster hell und dunkel unsichtbar als PNG rendern (siehe SnapshotRenderer).</summary>
-    public Task RenderSnapshotsAsync(string directory) => SnapshotRenderer.RenderAsync(
-        System.Windows.Application.Current,
-        [("hauptfenster", CreateMainWindow), ("einstellungen", CreateSettingsWindow)],
-        directory);
+    /// <summary>
+    /// Entwicklung: Fenster in ihren Zuständen hell und dunkel unsichtbar als PNG rendern (siehe SnapshotRenderer). Die
+    /// Zustände liefern die Teilklassen: Bibliothek (AppServices.Library.cs) und Einstellungen (AppServices.Shell.cs).
+    /// </summary>
+    public Task<IReadOnlyList<string>> RenderSnapshotsAsync(string directory, SnapshotPlan plan)
+    {
+        if (plan.Display is { } display)
+        {
+            // Vor dem ersten Fenster: Kapsel, Skala und Vorschau zeigen die vorgegebenen Werte (Monitor aus, DXGI ohne Werte).
+            Luminance.Dispose();
+            Luminance = new FixedDisplayLuminanceService(display);
+        }
+
+        var scenes = new List<SnapshotScene>();
+        AddLibrarySnapshotScenes(scenes);
+        AddSettingsSnapshotScenes(scenes);
+        return SnapshotRenderer.RenderAsync(System.Windows.Application.Current, scenes, plan, directory);
+    }
 
     public void OpenLogFolder()
     {
@@ -347,12 +415,18 @@ public sealed partial class AppServices : IAsyncDisposable
         DisplayEvents.Dispose();
         StopHdrList();
         Tray.Dispose();
+        SteamGridDb.Dispose();
+        Artwork.Dispose();
+        Luminance.Dispose();
+        Appearance.Dispose();
         await Host.DisposeAsync();
         Instance?.Dispose();
     }
 
     public void RaiseHdrStateChanged() => RaiseOnUi(() =>
     {
+        // Helligkeitswerte nur nach HDR- oder Bildschirmwechsel neu lesen (E89); ohne offenes Fenster liest der Dienst nichts.
+        Luminance.Invalidate();
         Tray.Refresh();
         HdrStateChanged?.Invoke(this, EventArgs.Empty);
     });
@@ -400,12 +474,64 @@ public sealed partial class AppServices : IAsyncDisposable
         window.Activate();
     }
 
-    /// <summary>Nach dem Schließen eines Fensters: Speicher zurückgeben, damit HdrPilot im Hintergrund schlank bleibt.</summary>
-    private static void ReleaseUiMemory()
+    /// <summary>
+    /// Nach dem Schließen eines Fensters: sofort und noch einmal, wenn alles zur Ruhe gekommen ist (Bilddienst aufgeräumt,
+    /// Grafikspeicher freigegeben, siehe <see cref="UiMemoryRelease"/>). Nichts läuft wiederholt.
+    /// </summary>
+    private UiMemoryRelease MemoryRelease => _memoryRelease ??= new UiMemoryRelease(new UiMemoryReleaseOptions
+    {
+        AnyWindowOpen = () => _mainWindow is not null || _settingsWindow is not null,
+        CleanupFinished = () => Artwork.WhenReleasedAsync(),
+        FlushGraphics = FlushGraphicsMemoryAsync,
+        Collect = thorough =>
+        {
+            if (!thorough)
+            {
+                ReleaseUiMemory();
+                return;
+            }
+
+            using var process = Process.GetCurrentProcess();
+            var before = process.PrivateMemorySize64;
+            ReleaseUiMemory(thorough: true);
+            process.Refresh();
+            _logger.LogDebug("Speicher nach dem Schließen zurückgegeben: {Before} MB → {After} MB festgeschrieben.", before / (1024 * 1024), process.PrivateMemorySize64 / (1024 * 1024));
+        },
+        UiIdle = async () => await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.ApplicationIdle),
+    });
+
+    /// <summary>Grafikspeicher geschlossener Fenster freigeben (Hilfsfenster hinter dem Desktop); Fehler nur ins Protokoll.</summary>
+    private async Task FlushGraphicsMemoryAsync()
+    {
+        try
+        {
+            await GraphicsMemoryFlush.RunAsync();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or ExternalException)
+        {
+            _logger.LogDebug("Grafikspeicher nicht freigegeben: {Error}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Speicher zurückgeben, damit HdrPilot im Hintergrund schlank bleibt. <paramref name="thorough"/> (einmal, wenn nach dem
+    /// Schließen alles zur Ruhe gekommen ist): auch den Speicher großer Objekte verdichten und freien Speicher des GC an
+    /// Windows zurückgeben.
+    /// </summary>
+    private static void ReleaseUiMemory(bool thorough = false)
     {
         GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, blocking: true, compacting: true);
         GC.WaitForPendingFinalizers();
-        GC.Collect();
+        if (thorough)
+        {
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+        }
+        else
+        {
+            GC.Collect();
+        }
+
         using var process = Process.GetCurrentProcess();
         SetProcessWorkingSetSize(process.Handle, -1, -1);
     }
@@ -428,4 +554,28 @@ public sealed partial class AppServices : IAsyncDisposable
     private partial IDisplayEventsService CreateDisplayEventsService();
 
     private partial Window CreateSettingsWindow();
+
+    // Showcase Hero (E89): Darstellung (AppServices.Appearance.cs), Spielbilder, SteamGridDB und Helligkeit
+    // (AppServices.Artwork.cs).
+    private partial IAppearanceService CreateAppearanceService();
+
+    private partial IArtworkService CreateArtworkService();
+
+    private partial ISteamGridDbService CreateSteamGridDbService();
+
+    private partial IDisplayLuminanceService CreateDisplayLuminanceService();
+
+    /// <summary>Entwicklung (G10.3): Abdeckung mit lokalen Bildern als JSON schreiben (AppServices.Artwork.cs).</summary>
+    public partial Task WriteArtworkReportAsync(string path);
+
+    /// <summary>Zustände der Bibliothek für Bildschirmfotos (AppServices.Library.cs).</summary>
+    partial void AddLibrarySnapshotScenes(List<SnapshotScene> scenes);
+
+    /// <summary>Zustände der Einstellungen für Bildschirmfotos (AppServices.Shell.cs).</summary>
+    partial void AddSettingsSnapshotScenes(List<SnapshotScene> scenes);
+
+    /// <summary>Prüfung: HDR-Moment im offenen Hauptfenster abspielen, ohne HDR zu schalten (AppServices.Library.cs).</summary>
+    partial void PlayTestHdrMoment();
+
+    partial void RunTestToolbarSearch();
 }

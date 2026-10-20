@@ -95,7 +95,15 @@ public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock cloc
         s.PollIntervalMs = Math.Clamp(s.PollIntervalMs, 250, 10_000);
         s.GracePeriodSeconds = Math.Clamp(s.GracePeriodSeconds, 0, 600);
         s.LaunchTimeoutSeconds = Math.Clamp(s.LaunchTimeoutSeconds, 10, 1800);
+        s.Appearance ??= new AppearanceSettings();
+        s.Artwork ??= new ArtworkSettings();
+        if (s.QuiverFolders is { } quiverFolders)
+        {
+            // Nur vorhandene Einträge, jeder Ordner einmal; eine leere Liste bleibt leer (sie fehlte nur, wenn nie etwas gelernt wurde).
+            s.QuiverFolders = quiverFolders.Where(f => !string.IsNullOrWhiteSpace(f)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        }
 
+        config.UnknownSourceGames ??= [];
         config.Games ??= [];
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         config.Games = config.Games
@@ -110,6 +118,10 @@ public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock cloc
             g.ExcludedExecutables ??= [];
             g.ExtraExecutables ??= [];
             g.IconCandidates ??= [];
+            if (g.CoverCandidates is { } covers)
+            {
+                g.CoverCandidates = covers.Count(c => !string.IsNullOrWhiteSpace(c)) == 0 ? null : covers.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+            }
 
             // Nur ein schlichter Dateiname im Symbolordner, nie ein Pfad (eine von Hand geänderte Datei darf nicht
             // auf fremde Dateien zeigen, „Symbol zurücksetzen“ löscht die genannte Datei).
@@ -117,6 +129,9 @@ public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock cloc
             {
                 g.CustomIcon = null;
             }
+
+            // Eigene Bildwahl: nur gültige Kennzeichen mit schlichten Dateinamen (E89), sonst automatisch.
+            g.Artwork = GameArtworkChoice.Normalize(g.Artwork);
         }
     }
 

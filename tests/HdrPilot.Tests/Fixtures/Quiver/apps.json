@@ -1,0 +1,24 @@
+{
+  "apps": [
+    {
+      "name": "Black",
+      "folderName": "Black-BlackXBERecomp",
+      "installPath": null,
+      "appIconUrl": "https://cdn2.steamgriddb.com/grid/df6f08b0faeb3094ca257cafd49dbcd9.png",
+      "repository": "TGP482/BLACK-XBERecomp",
+      "preferredVersion": null,
+      "skippedUpdateVersion": null,
+      "project": "Black - XBE Recomp",
+      "tags": [
+        "recomp",
+        "og xbox",
+        "xbox",
+        "recompilation",
+        "keyboard and mouse",
+        "unlocked framerate",
+        "increased internal resolution",
+        "controller support"
+      ]
+    }
+  ]
+}

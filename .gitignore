@@ -12,3 +12,8 @@ TestResults/
 .worktrees/
 # Messdaten aus Systemtests
 tools/out/
+# Werkzeuge und Editoren (lokal, nie ins Repo)
+.claude/
+.vscode/
+.idea/
+*.binlog

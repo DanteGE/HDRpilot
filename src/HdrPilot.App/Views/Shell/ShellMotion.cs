@@ -4,15 +4,15 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 
 namespace HdrPilot.App.Views.Shell;
 
 /// <summary>
-/// Bewegung im Shell-Bereich. Alles läuft nur, wenn Windows „Animationseffekte“ erlaubt
-/// (<see cref="SystemParameters.ClientAreaAnimation"/>) und die Grafikkarte rendert (RenderCapability.Tier &gt; 0).
-/// Sonst stehen alle Elemente sofort im Endzustand. Es gibt keine Dauer-Animationen außer über
-/// <see cref="AmbientAnimation"/>, die nur bei sichtbarem und aktivem Fenster läuft.
+/// Bewegung im Shell-Bereich (Einstellungen, Dialoge, Tray-Menü). Sie folgt der wirksamen Effektstufe der Darstellung
+/// (<see cref="Level"/>, E89: „Aus“ heißt keine Bewegung; ob Windows „Animationseffekte“ beachtet wird, steckt schon in der
+/// Stufe). Ohne Darstellung (Setup) gilt die Windows-Einstellung (<see cref="SystemParameters.ClientAreaAnimation"/>). Immer
+/// nur, wenn die Grafikkarte rendert (RenderCapability.Tier &gt; 0); sonst stehen alle Elemente sofort im Endzustand. Es
+/// gibt keine Dauer-Animationen außer über <see cref="AmbientAnimation"/>, die nur bei sichtbarem und aktivem Fenster läuft.
 /// </summary>
 public static class ShellMotion
 {
@@ -23,7 +23,11 @@ public static class ShellMotion
     private static readonly Duration LeaveDuration = new(TimeSpan.FromMilliseconds(240));
     private static readonly IEasingFunction EaseOut = Freeze(new CubicEase { EasingMode = EasingMode.EaseOut });
 
+    /// <summary>Deckkraft des Leuchtens hinter einer überfahrenen Karte.</summary>
+    public const double HoverGlowOpacity = 0.22;
+
     private static bool? _override;
+    private static Theming.EffectLevel? _level;
 
     static ShellMotion()
     {
@@ -40,7 +44,28 @@ public static class ShellMotion
     public static event EventHandler<PropertyChangedEventArgs>? StaticPropertyChanged;
 
     /// <summary>True, wenn Zier-Animationen laufen dürfen.</summary>
-    public static bool IsEnabled => _override ?? (SystemParameters.ClientAreaAnimation && (RenderCapability.Tier >> 16) > 0);
+    public static bool IsEnabled => _override ?? Allowed(_level, SystemParameters.ClientAreaAnimation, (RenderCapability.Tier >> 16) > 0);
+
+    /// <summary>
+    /// Wirksame Effektstufe der Darstellung (setzt die App bei jeder Änderung); null ohne Darstellung (Setup): dann die
+    /// Windows-Einstellung.
+    /// </summary>
+    public static Theming.EffectLevel? Level
+    {
+        get => _level;
+        set
+        {
+            if (_level != value)
+            {
+                _level = value;
+                RaiseIsEnabledChanged();
+            }
+        }
+    }
+
+    /// <summary>Regel hinter <see cref="IsEnabled"/> (für Tests offen): Stufe nicht „Aus“, ohne Stufe Windows; nie ohne Hardware.</summary>
+    public static bool Allowed(Theming.EffectLevel? level, bool windowsAnimations, bool hardwareRendering) =>
+        hardwareRendering && (level is { } known ? known != Theming.EffectLevel.Off : windowsAnimations);
 
     /// <summary>Erzwingt Animationen an oder aus (Tests, Bildschirmfotos). Null: Windows-Einstellung.</summary>
     public static bool? Override
@@ -118,7 +143,10 @@ public static class ShellMotion
 
     private static void OnMouseLeave(object sender, MouseEventArgs e) => SetHover((Control)sender, hover: false);
 
-    /// <summary>Karte anheben (2 px), Verlaufsrahmen und Leuchten einblenden. Unschärfe nur, solange überfahren.</summary>
+    /// <summary>
+    /// Karte anheben (2 px), Verlaufsrahmen und Leuchten einblenden. Das Leuchten ist ein vorab gezeichneter radialer
+    /// Verlauf (E89: kein BlurEffect); ohne Animationseffekte erscheint nur der Rahmen, sofort und ohne Anheben.
+    /// </summary>
     private static void SetHover(Control control, bool hover)
     {
         if (control.Template is null)
@@ -135,15 +163,7 @@ public static class ShellMotion
 
         if (control.Template.FindName("PART_Glow", control) is UIElement glow)
         {
-            if (hover && animate)
-            {
-                glow.Effect ??= new BlurEffect { Radius = 20, RenderingBias = RenderingBias.Performance };
-                To(glow, UIElement.OpacityProperty, 0.4, duration, animate: true);
-            }
-            else
-            {
-                To(glow, UIElement.OpacityProperty, 0, duration, animate, onCompleted: () => glow.Effect = null);
-            }
+            To(glow, UIElement.OpacityProperty, hover && animate ? HoverGlowOpacity : 0, duration, animate);
         }
 
         if (control.Template.FindName("Root", control) is UIElement root)

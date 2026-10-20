@@ -1,6 +1,9 @@
 using System.Windows.Threading;
 using HdrPilot.App.Services;
+using HdrPilot.App.Services.Artwork;
+using HdrPilot.App.Services.Display;
 using HdrPilot.App.Setup;
+using HdrPilot.App.Theming;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -20,6 +23,8 @@ public sealed class AppLibraryContext : ILibraryContext
     private readonly AppServices _services;
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private readonly ILogger _logger;
+    private readonly IDisposable _artworkLease;
+    private readonly IDisposable _luminanceLease;
     private bool _disposed;
 
     public AppLibraryContext(AppServices services)
@@ -27,6 +32,10 @@ public sealed class AppLibraryContext : ILibraryContext
         _services = services;
         _logger = services.LoggerFactory.CreateLogger("Library");
         Ui = new WpfUiDispatcher(services.Dispatcher);
+
+        // Bilder und Bildschirmwerte nur, solange das Fenster offen ist (E89): im Hintergrund kein Speicher, kein Lesen.
+        _artworkLease = services.Artwork.Acquire();
+        _luminanceLease = services.Luminance.Acquire();
         services.Config.Changed += OnConfigChanged;
         services.HdrStateChanged += OnHdrStateChanged;
         services.ScanStateChanged += OnScanStateChanged;
@@ -51,7 +60,15 @@ public sealed class AppLibraryContext : ILibraryContext
 
     public IGameIconService Icons => _services.Icons;
 
+    public IArtworkService Artwork => _services.Artwork;
+
+    public IDisplayLuminanceService Luminance => _services.Luminance;
+
+    public IAppearanceService Appearance => _services.Appearance;
+
     public IShortcutService Shortcuts => _services.Shortcuts;
+
+    public UninstalledGameCleanup Cleanup => _services.GameCleanup;
 
     public IUiDispatcher Ui { get; }
 
@@ -141,6 +158,18 @@ public sealed class AppLibraryContext : ILibraryContext
 
     public void ShowSettings() => _services.ShowSettingsWindow();
 
+    /// <summary>„Installationsordner öffnen“: der Explorer zeigt den Ordner (nur ein bestehender Ordner, geprüft vom Aufrufer).</summary>
+    public void OpenFolder(string path)
+    {
+        if (!FileSystem.DirectoryExists(path))
+        {
+            return;
+        }
+
+        _logger.LogInformation("Installationsordner wird geöffnet: {Path}", path);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + path + "\"") { UseShellExecute = true })?.Dispose();
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -158,8 +187,10 @@ public sealed class AppLibraryContext : ILibraryContext
         ScanStateChanged = null;
         HdrSupportChanged = null;
 
-        // Symbole gehören zum Fenster: im Hintergrund kein Bildspeicher.
+        // Symbole und Bilder gehören zum Fenster: im Hintergrund kein Bildspeicher.
         _services.Icons.ClearCache();
+        _artworkLease.Dispose();
+        _luminanceLease.Dispose();
     }
 
     // ConfigService.Changed kann von einem Hintergrund-Thread kommen (Speichern, Automatik, Einlesen).

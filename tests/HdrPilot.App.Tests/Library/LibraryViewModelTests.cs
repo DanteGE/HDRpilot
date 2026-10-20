@@ -135,7 +135,9 @@ public sealed class LibraryViewModelTests
         vm.SelectedGame = vm.Games.Single(g => g.Key == "Epic:Crow");
         Assert.Equal(updates, context.Updates);
         Assert.Equal(0, vm.NewCount);
-        Assert.Equal(1, context.Dispatcher.PendingDelays);
+
+        // Gesammelt: das Speichern der Markierungen und (schnelles Blättern) das Laden des Titelbilds, je einmal.
+        Assert.Equal(2, context.Dispatcher.PendingDelays);
 
         // Ein Abgleich mit einer Änderung von außen (etwa Einlesen oder Automatik) holt die Markierung nicht zurück.
         context.ConfigService.Update(c => c.FindGame("Steam:1091500")!.LastPlayed = DateTimeOffset.UnixEpoch);
@@ -165,38 +167,58 @@ public sealed class LibraryViewModelTests
     });
 
     [Fact]
-    public void Refiltering_never_moves_the_selection_or_marks_games_seen() => Sta.Run(() =>
+    public void Refiltering_moves_a_hidden_selection_to_the_first_match_without_marking_it_seen() => Sta.Run(() =>
     {
+        // Entscheidung des Nutzers 2026-10-19 (ersetzt die Regel aus Phase 4, nach der Neufiltern die Auswahl nie verschob):
+        // Titelbereich und Details folgen der Liste, leise; mehr dazu in SelectionFollowsFilterTests.
         var context = SampleContext();
         using var vm = new LibraryViewModel(context, new FakeDialogs());
         var cyberpunk = vm.Games.Single(g => g.Key == "Steam:1091500");
         var pokemon = vm.Games.Single(g => g.Key == "Steam:123");
 
-        // Wie eine mit dem aktuellen Element verbundene Liste: Neufiltern setzt das aktuelle Element auf den ersten Treffer.
+        // Wie eine mit dem aktuellen Element verbundene Liste: Neufiltern setzt das aktuelle Element auf den ersten Treffer;
+        // diese Nebenwirkung ist keine Wahl.
         vm.GamesView.CurrentChanged += (_, _) => vm.SelectedGame = vm.GamesView.CurrentItem as GameItemViewModel;
         vm.GamesView.MoveCurrentTo(cyberpunk);
         Assert.Same(cyberpunk, vm.SelectedGame);
+        var updates = context.Updates;
 
         vm.SearchText = "pokemon";
         context.Dispatcher.RunDelayed();
 
-        Assert.Same(pokemon, vm.GamesView.CurrentItem); // die Sicht ist weitergerückt …
-        Assert.Same(cyberpunk, vm.SelectedGame);         // … die Auswahl nicht
+        Assert.Same(pokemon, vm.SelectedGame); // der einzige Treffer …
+        Assert.Same(pokemon, vm.Details?.Item);
+        Assert.Same(pokemon, vm.Hero?.Item);
+        context.Dispatcher.RunDelayed();
+        Assert.True(pokemon.IsNew);            // … nicht als angesehen markiert, nichts gespeichert
+        Assert.True(context.Config.FindGame("Steam:123")!.IsNew);
+        Assert.Equal(updates, context.Updates);
+
+        // Ohne Filter steht Cyberpunk wieder in der Liste und kehrt zurück (die Sicht bleibt bei Pokémon).
+        vm.SearchText = string.Empty;
+        context.Dispatcher.RunDelayed();
+        Assert.Same(pokemon, vm.GamesView.CurrentItem);
+        Assert.Same(cyberpunk, vm.SelectedGame);
         Assert.Same(cyberpunk, vm.Details?.Item);
         Assert.True(pokemon.IsNew);
-        Assert.True(context.Config.FindGame("Steam:123")!.IsNew);
+        Assert.Equal(updates, context.Updates);
     });
 
     [Fact]
     public void Main_window_list_does_not_follow_the_current_item_of_the_view()
     {
         // Eine ListCollectionView, die nicht die Standardsicht ist, würde die ListBox sonst mit dem aktuellen Element
-        // verbinden: Jede Suche wählte dann den ersten Treffer aus und markierte ihn als angesehen.
+        // verbinden: Jede Suche wählte dann den ersten Treffer aus und markierte ihn als angesehen. Showcase Hero: drei
+        // Ansichten (Liste, Raster, Regal); GamesView bekommt nur die aktive, im Code (MainWindow.Activate, geprüft in
+        // ShowcaseViewsTests), damit eine ausgeblendete Ansicht die Auswahl nie auf null schreibt.
         var xaml = System.Xml.Linq.XDocument.Load(SourceFiles.MainWindowXaml);
-        var list = xaml.Descendants().Single(e => (string?)e.Attribute(System.Xml.Linq.XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml")) == "GameList");
-
-        Assert.Equal("{Binding GamesView}", (string?)list.Attribute("ItemsSource"));
-        Assert.Equal("False", (string?)list.Attribute("IsSynchronizedWithCurrentItem"));
+        foreach (var name in new[] { "GameList", "GameGrid", "GameShelf" })
+        {
+            var list = xaml.Descendants().Single(e => (string?)e.Attribute(System.Xml.Linq.XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml")) == name);
+            Assert.Equal("False", (string?)list.Attribute("IsSynchronizedWithCurrentItem"));
+            Assert.Null(list.Attribute("ItemsSource"));
+            Assert.Null(list.Attribute("SelectedItem"));
+        }
     }
 
     [Fact]
@@ -251,9 +273,10 @@ public sealed class LibraryViewModelTests
         Assert.Equal("Epic:Crow", vm.SelectedGame?.Key);
         Assert.Contains(vm.SourceOptions, o => o.Source == GameSource.Gog);
 
+        // Das gewählte Spiel verschwindet: Sein Nachbar in der Liste ist gewählt (E90; vorher keins).
         context.ConfigService.Update(c => c.Games.RemoveAll(g => g.Key == "Epic:Crow"));
-        Assert.Null(vm.SelectedGame);
-        Assert.Null(vm.Details);
+        Assert.Equal("Eigenes Spiel", vm.SelectedGame?.Name);
+        Assert.Same(vm.SelectedGame, vm.Details?.Item);
         Assert.DoesNotContain(vm.SourceOptions, o => o.Source == GameSource.Epic);
     });
 

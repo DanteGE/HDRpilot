@@ -66,6 +66,18 @@ public partial class App : Application
             return;
         }
 
+        if (args.ArtworkReport is { } artworkReport)
+        {
+            await RunArtworkReportModeAsync(args, artworkReport);
+            return;
+        }
+
+        if (args.SettingsProbe is { } settingsProbe)
+        {
+            await RunSettingsProbeModeAsync(args, settingsProbe);
+            return;
+        }
+
         var instanceId = SingleInstance.IdFor(args.ConfigDir);
         var instance = SingleInstance.TryAcquire(instanceId);
         if (instance is null)
@@ -109,15 +121,41 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Abmelden oder Herunterfahren beendet die App ohne „Beenden“ im Tray (und ohne AutomationHost.DisposeAsync): Was die
+        // Sitzungslogik nicht speichern konnte, jetzt speichern (E55). Nach „Beenden“ ist nichts mehr offen. Das Beenden darf
+        // daran nie scheitern.
+        try
+        {
+            _ = _host?.Config.FlushPending();
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+        }
+
         base.OnExit(e);
     }
 
-    /// <summary>Entwicklung: Bildschirmfotos der Fenster rendern (eigene Ablage nötig), dann beenden.</summary>
+    /// <summary>
+    /// Entwicklung: Bildschirmfotos der Fenster rendern (eigene Ablage nötig), dann beenden. Mit --snapshot-sizes,
+    /// --snapshot-scenes und --snapshot-themes in festen Größen und Zuständen (E89); ungültige Angaben: Exit-Code 2.
+    /// </summary>
     private async Task RunSnapshotModeAsync(AppArguments args, string snapshotDir)
     {
-        if (args.ConfigDir is null)
+        if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
         {
-            Shutdown(2); // nie gegen die echte Konfiguration
+            Shutdown(2); // nie gegen die echte Konfiguration oder den echten Datenordner
+            return;
+        }
+
+        SnapshotPlan plan;
+        try
+        {
+            plan = SnapshotPlan.Parse(args.SnapshotSizes, args.SnapshotScenes, args.SnapshotThemes, args.SnapshotDisplay);
+        }
+        catch (FormatException)
+        {
+            Shutdown(2);
             return;
         }
 
@@ -127,7 +165,7 @@ public partial class App : Application
         _services = new AppServices(_host, Dispatcher, instance: null);
         try
         {
-            await _services.RenderSnapshotsAsync(System.IO.Path.GetFullPath(snapshotDir));
+            await _services.RenderSnapshotsAsync(System.IO.Path.GetFullPath(snapshotDir), plan);
         }
         catch (Exception ex)
         {
@@ -139,6 +177,70 @@ public partial class App : Application
 
         await _services.DisposeAsync();
         Shutdown(0);
+    }
+
+    /// <summary>
+    /// Entwicklung (G10.3): Abdeckung der Bibliothek mit lokalen Bildern als JSON schreiben (eigene Ablage nötig, Launcher-Caches
+    /// nur lesend), dann beenden.
+    /// </summary>
+    private async Task RunArtworkReportModeAsync(AppArguments args, string reportFile)
+    {
+        if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
+        {
+            Shutdown(2); // nie gegen die echte Konfiguration oder den echten Datenordner
+            return;
+        }
+
+        ThemeManager.Initialize(this);
+        var paths = AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir));
+        _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
+        _services = new AppServices(_host, Dispatcher, instance: null);
+        try
+        {
+            await _services.WriteArtworkReportAsync(System.IO.Path.GetFullPath(reportFile));
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+            await _services.DisposeAsync();
+            Shutdown(1);
+            return;
+        }
+
+        await _services.DisposeAsync();
+        Shutdown(0);
+    }
+
+    /// <summary>
+    /// Prüfung (E90, G11.3): Konfiguration der eigenen Ablage laden, wie die Einstellungen speichern (unverändert, dann mit
+    /// umgeschaltetem „Nicht installierte Spiele ausblenden“), Bericht schreiben, beenden. Nie gegen die echte Konfiguration;
+    /// ohne Automatik, Einlesen und Fenster (wie die Bildschirmfotos).
+    /// </summary>
+    private async Task RunSettingsProbeModeAsync(AppArguments args, string reportFile)
+    {
+        if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
+        {
+            Shutdown(2); // nie gegen die echte Konfiguration oder den echten Datenordner
+            return;
+        }
+
+        ThemeManager.Initialize(this);
+        var paths = AppPaths.InDirectory(System.IO.Path.GetFullPath(args.ConfigDir));
+        _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
+        _services = new AppServices(_host, Dispatcher, instance: null);
+        int code;
+        try
+        {
+            code = _services.WriteSettingsProbe(System.IO.Path.GetFullPath(reportFile)) ? 0 : 1;
+        }
+        catch (Exception ex)
+        {
+            LogFatal(ex);
+            code = 1;
+        }
+
+        await _services.DisposeAsync();
+        Shutdown(code);
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

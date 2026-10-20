@@ -162,6 +162,24 @@ public sealed class GameIconService : IGameIconService
         _byGame.TryRemove(gameKey, out _);
     }
 
+    /// <summary>
+    /// Spiel aus der Bibliothek entfernt (E90): Symbol vergessen und die gemerkte Wahl aus icon-cache.json nehmen (sofort
+    /// geschrieben). Ohne offenes Fenster (nichts im Speicher) gibt die gemerkte Wahl danach ihren Speicher wieder frei.
+    /// </summary>
+    public void ForgetGame(string gameKey)
+    {
+        Forget(gameKey);
+        _choices.Remove(gameKey);
+        if (_byGame.IsEmpty)
+        {
+            _choices.Release();
+        }
+        else
+        {
+            _choices.Flush();
+        }
+    }
+
     /// <summary>Erzeugt das eigene Symbol aus einer Bild- oder EXE-Datei; liefert den Namen für <see cref="GameConfig.CustomIcon"/>.</summary>
     public string SaveCustomIcon(GameConfig game, string sourcePath) =>
         (_customIcons ?? throw new InvalidOperationException("Kein Ordner für eigene Symbole festgelegt.")).Save(game.Key, sourcePath);

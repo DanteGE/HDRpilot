@@ -356,7 +356,10 @@ public sealed class HdrListSettingsTests
                     WpfTestHost.DoEvents();
                     WpfTestHost.Layout(window, new Size(1080, 2200));
                     var section = (FrameworkElement)window.FindName("HdrListSection");
-                    Assert.True(section.ActualHeight > 200 && section.ActualWidth > 900, $"Abschnitt {section.ActualWidth}x{section.ActualHeight}");
+                    // Eine Karte im Raster der Einstellungen (E89): volle Spaltenbreite, nie breiter als die Höchstbreite.
+                    var grid = (Views.Shell.SettingsGridPanel)window.FindName("AdvancedGrid");
+                    Assert.True(section.ActualHeight > 200 && Math.Abs(section.ActualWidth - grid.Columns.Width) < 0.5 && section.ActualWidth >= Views.Shell.SettingsGridLayout.MinColumnWidth - 80 && section.ActualWidth <= Views.Shell.SettingsGridLayout.MaxColumnWidth + 0.5,
+                        $"Abschnitt {section.ActualWidth}x{section.ActualHeight}, Spalte {grid.Columns.Width}");
                     SaveForReview((Visual)VisualTreeHelper.GetChild(window, 0), $"einstellungen-hdrliste-{suffix}.png");
                     window.Close();
                 }

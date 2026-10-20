@@ -117,4 +117,119 @@ public sealed class AppArgumentsTests
         Assert.Null(AppArguments.Parse(["--autohdr-test-root"]).AutoHdrTestRoot);
         Assert.Null(AppArguments.Parse(["--", "--autohdr-test-root", "x"]).AutoHdrTestRoot);
     }
+
+    [Fact]
+    public void Snapshot_options_are_parsed_but_never_forwarded()
+    {
+        // E89: Größen, Zustände und Themen der Bildschirmfotos gehören zum Bildschirmfoto-Lauf, nie zu einer laufenden Instanz.
+        var args = AppArguments.Parse(["--snapshot", @"C:\shots", "--config-dir", @"C:\t", "--snapshot-sizes", "1280x800,3440x1440", "--snapshot-scenes", "hauptfenster", "--snapshot-themes", "hell", "--snapshot-display", "MAG 341C OLED;456;254;0;10"]);
+        Assert.Equal(@"C:\shots", args.SnapshotDir);
+        Assert.Equal("1280x800,3440x1440", args.SnapshotSizes);
+        Assert.Equal("hauptfenster", args.SnapshotScenes);
+        Assert.Equal("hell", args.SnapshotThemes);
+        Assert.Equal("MAG 341C OLED;456;254;0;10", args.SnapshotDisplay);
+        Assert.Empty(args.Unknown);
+        Assert.False(args.HasCommand);
+        Assert.Empty(args.ToForwardedArgs());
+
+        // Gegenprobe: ohne Wert unbekannt, nach "--" Spielbefehl.
+        Assert.Null(AppArguments.Parse(["--snapshot-sizes"]).SnapshotSizes);
+        Assert.Null(AppArguments.Parse(["--", "--snapshot-sizes", "1280x800"]).SnapshotSizes);
+    }
+
+    [Fact]
+    public void Artwork_report_is_parsed_but_never_forwarded()
+    {
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--artwork-report", @"C:\out\bilder.json"]);
+        Assert.Equal(@"C:\out\bilder.json", args.ArtworkReport);
+        Assert.False(args.HasCommand);
+        Assert.Empty(args.ToForwardedArgs());
+        Assert.Null(AppArguments.Parse(["--artwork-report"]).ArtworkReport);
+    }
+
+    [Fact]
+    public void Test_hdr_moment_is_a_command_and_forwarded_to_the_test_instance()
+    {
+        // G10.9: das Messskript lässt die laufende Testinstanz den HDR-Moment spielen, ohne HDR zu schalten.
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--test-hdr-moment"]);
+        Assert.True(args.TestHdrMoment);
+        Assert.True(args.HasCommand);
+        Assert.Equal(["--test-hdr-moment"], args.ToForwardedArgs());
+        Assert.True(AppArguments.Parse(args.ToForwardedArgs()).TestHdrMoment);
+
+        // Gegenprobe: nach "--" gehört es zum Spielbefehl.
+        Assert.False(AppArguments.Parse(["--", "--test-hdr-moment"]).TestHdrMoment);
+    }
+
+    [Fact]
+    public void Test_toolbar_search_is_a_command_and_forwarded_to_the_test_instance()
+    {
+        // G10.5: phase10-ui.ps1 lässt die laufende Testinstanz Strg+F ausführen, ohne eine Taste zu senden.
+        var args = AppArguments.Parse(["--config-dir", @"C:\t", "--test-toolbar-search"]);
+        Assert.True(args.TestToolbarSearch);
+        Assert.True(args.HasCommand);
+        Assert.Equal(["--test-toolbar-search"], args.ToForwardedArgs());
+        Assert.True(AppArguments.Parse(args.ToForwardedArgs()).TestToolbarSearch);
+        Assert.False(AppArguments.Parse(["--", "--test-toolbar-search"]).TestToolbarSearch);
+        Assert.False(AppArguments.Parse(["--test-hdr-moment"]).TestToolbarSearch);
+    }
+
+    [Theory]
+    [InlineData(@"C:\Temp\hdrpilot-probe", true)]
+    [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot\Kopie", true)] // Unterordner: eigene config.json
+    [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot", false)] // die echte Konfiguration
+    [InlineData(@"c:\users\test\appdata\roaming\hdrpilot\", false)] // dieselbe, anders geschrieben
+    [InlineData(@"C:/Users/Test/AppData/Roaming/HDRpilot", false)]
+    [InlineData(@"C:\Users\Test\AppData\Roaming\HDRpilot\Kopie\..", false)]
+    [InlineData(@"\\?\C:\Users\Test\AppData\Roaming\HDRpilot", false)] // mit Präfix für lange Pfade
+    [InlineData(@"C:\Users\Test\AppData\Local\HDRpilot", false)] // der echte Datenordner (Protokolle, Symbole, Bilder)
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    public void Developer_modes_run_only_with_an_own_config_dir(string? configDir, bool own)
+    {
+        // E90, Prüfung: --settings-probe (wie --snapshot und --artwork-report) speichert die Konfiguration seiner Ablage; gegen
+        // die echte Ablage oder den echten Datenordner beendet sich die App mit Exit-Code 2, statt sie zu verändern.
+        var defaults = new HdrPilot.Core.Config.AppPaths(@"C:\Users\Test\AppData\Roaming\HDRpilot", @"C:\Users\Test\AppData\Local\HDRpilot");
+        var args = AppArguments.Parse(configDir is null ? ["--settings-probe", @"C:\Temp\bericht.json"] : ["--settings-probe", @"C:\Temp\bericht.json", "--config-dir", configDir]);
+
+        Assert.Equal(@"C:\Temp\bericht.json", args.SettingsProbe);
+        Assert.Equal(own, args.HasOwnConfigDir(defaults));
+    }
+
+    [Fact]
+    public void Developer_modes_refuse_the_real_config_dir_behind_a_junction()
+    {
+        // Prüfung 2026-10-20: „auch anders geschrieben“ heißt auch auf anderem Weg dorthin. Eine Junction (wie ein mit subst
+        // verbundenes Laufwerk oder ein 8.3-Name) führt zum echten Ordner; verglichen wird der Ordner selbst, nicht der Pfad.
+        var root = Path.Combine(Path.GetTempPath(), "hdrpilot-ablage-" + Guid.NewGuid().ToString("N")[..8]);
+        var real = Path.Combine(root, "Roaming", "HDRpilot");
+        var data = Path.Combine(root, "Local", "HDRpilot");
+        var link = Path.Combine(root, "Umweg");
+        Directory.CreateDirectory(real);
+        Directory.CreateDirectory(data);
+        try
+        {
+            var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/d /c mklink /J \"{link}\" \"{real}\"") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true };
+            using (var mklink = System.Diagnostics.Process.Start(start)!)
+            {
+                mklink.StandardOutput.ReadToEnd();
+                Assert.True(mklink.WaitForExit(10_000));
+            }
+
+            Assert.NotNull(new DirectoryInfo(link).LinkTarget);
+            var defaults = new HdrPilot.Core.Config.AppPaths(real, data);
+
+            Assert.False(AppArguments.Parse(["--settings-probe", "b.json", "--config-dir", link]).HasOwnConfigDir(defaults));
+            Assert.True(AppArguments.Parse(["--settings-probe", "b.json", "--config-dir", Path.Combine(root, "Testablage")]).HasOwnConfigDir(defaults));
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+            {
+                Directory.Delete(link); // nur die Verknüpfung, nie ihr Ziel
+            }
+
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }

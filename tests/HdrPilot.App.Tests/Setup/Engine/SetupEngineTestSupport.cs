@@ -67,26 +67,30 @@ public sealed class SetupHarness : IDisposable
         return match.Success ? Version.Parse(match.Groups[1].Value) : null;
     }
 
-    /// <summary>Setup-Datei einer Version: EXE-Attrappe, README, Lizenzhinweise und Kommandozeile mit Versionstext.</summary>
-    public SetupBundle Bundle(string version)
+    /// <summary>
+    /// Setup-Datei einer Version: EXE-Attrappe, README, Lizenztext, Lizenzhinweise und Kommandozeile mit Versionstext.
+    /// <paramref name="withLicense"/> = false baut eine Setup-Datei wie vor 1.5.0, ohne Eintrag <c>LICENSE</c>.
+    /// </summary>
+    public SetupBundle Bundle(string version, bool withLicense = true)
     {
         var build = Path.Combine(Root, "Build", version + "-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(Path.Combine(build, "cli"));
         var exe = Path.Combine(build, "HDRpilot.exe");
         File.WriteAllBytes(exe, ExeBytes(version));
         File.WriteAllText(Path.Combine(build, "README.md"), "README " + version);
+        File.WriteAllText(Path.Combine(build, "LICENSE"), "LICENSE " + version);
         File.WriteAllText(Path.Combine(build, "THIRD-PARTY-NOTICES.txt"), "NOTICES " + version);
         File.WriteAllText(Path.Combine(build, "cli", "hdrpilot.exe"), "CLI " + version);
         var output = Path.Combine(build, "HDRpilot-Setup-" + version + ".exe");
-        SetupBundle.Write(
-            exe,
-            new Dictionary<string, string>
-            {
-                ["README.md"] = Path.Combine(build, "README.md"),
-                ["THIRD-PARTY-NOTICES.txt"] = Path.Combine(build, "THIRD-PARTY-NOTICES.txt"),
-                ["cli/hdrpilot.exe"] = Path.Combine(build, "cli", "hdrpilot.exe"),
-            },
-            output);
+        var payload = new Dictionary<string, string> { ["README.md"] = Path.Combine(build, "README.md") };
+        if (withLicense)
+        {
+            payload["LICENSE"] = Path.Combine(build, "LICENSE");
+        }
+
+        payload["THIRD-PARTY-NOTICES.txt"] = Path.Combine(build, "THIRD-PARTY-NOTICES.txt");
+        payload["cli/hdrpilot.exe"] = Path.Combine(build, "cli", "hdrpilot.exe");
+        SetupBundle.Write(exe, payload, output);
         return SetupBundle.TryOpen(output) ?? throw new InvalidOperationException("Setup-Datei der Tests ungültig.");
     }
 

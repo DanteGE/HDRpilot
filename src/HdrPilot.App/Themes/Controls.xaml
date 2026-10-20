@@ -3,16 +3,18 @@
                     xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
                     xmlns:res="clr-namespace:HdrPilot.App.Resources">
     <!--
-        Gemeinsame Bausteine im Gamer-Stil. Alle Farben kommen aus Tokens.Dark/Light.xaml (DynamicResource),
-        damit hell/dunkel zur Laufzeit wechselt. Animationen laufen nur bei Zustandswechseln (kurz),
-        nie dauerhaft im Hintergrund.
+        Gemeinsame Bausteine im Showcase-Stil (E89). Alle Farben kommen aus den Farb-Ressourcen der Darstellung
+        (Theming/ThemeKeys.cs, DynamicResource), damit Thema und Farbschema zur Laufzeit wechseln. Animationen laufen nur bei
+        Zustandswechseln (kurz), nie dauerhaft im Hintergrund. Kein BlurEffect, kein DropShadowEffect: Leuchten und Schatten
+        sind vorab gezeichnete Verläufe (radial bzw. linear) hinter dem Element.
     -->
     <FontFamily x:Key="Hp.Font.Text">Segoe UI Variable Text, Segoe UI</FontFamily>
-    <FontFamily x:Key="Hp.Font.Display">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="Hp.Font.Display">Bahnschrift, Segoe UI</FontFamily>
     <FontFamily x:Key="Hp.Font.Icons">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
     <CubicEase x:Key="Hp.Ease.Out" EasingMode="EaseOut" />
     <QuarticEase x:Key="Hp.Ease.Snappy" EasingMode="EaseOut" />
+    <BackEase x:Key="Hp.Ease.Spring" EasingMode="EaseOut" Amplitude="0.35" />
 
     <!-- Texte -->
     <Style x:Key="Hp.Text.Title" TargetType="TextBlock">
@@ -41,17 +43,17 @@
     </Style>
     <Style x:Key="Hp.Text.Overline" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="10.5" />
+        <Setter Property="FontWeight" Value="Bold" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextMuted}" />
     </Style>
 
-    <!-- Karte -->
+    <!-- Karte (Prototyp: pnl, mit feinem Rand und Innenlicht oben) -->
     <Style x:Key="Hp.Card" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Border}" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Panel}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.Line}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="CornerRadius" Value="18" />
         <Setter Property="Padding" Value="16" />
     </Style>
 
@@ -60,21 +62,26 @@
         <Setter Property="CornerRadius" Value="6" />
         <Setter Property="Padding" Value="7,2" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.BorderStrong}" />
-        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Hp.Brush.LineStrong}" />
+        <Setter Property="Background" Value="{DynamicResource Hp.Brush.Surface1}" />
     </Style>
     <Style x:Key="Hp.Badge.New" TargetType="Border" BasedOn="{StaticResource Hp.Badge}">
         <Setter Property="Background" Value="{DynamicResource Hp.Brush.Accent}" />
         <Setter Property="BorderThickness" Value="0" />
     </Style>
 
-    <!-- Akzent-Schaltfläche: Verlauf, beim Überfahren leichtes Anheben und Leuchten -->
+    <!--
+        Akzent-Schaltfläche (.pbtn.pri): Verlauf Akzent → Atmosphäre, Text in der Textfarbe auf Akzent (mindestens 4,5:1),
+        Lichtkante oben, darunter ein weiches Leuchten in der Atmosphäre (radialer Verlauf statt Schatten-Effekt). Beim
+        Überfahren hebt sie sich leicht an und das Leuchten wird kräftiger.
+    -->
     <Style x:Key="Hp.AccentButton" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnAccent}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="Padding" Value="18,9" />
+        <Setter Property="MinHeight" Value="38" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
@@ -87,15 +94,19 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Grid>
-                        <Border x:Name="Glow" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0">
-                            <Border.Effect>
-                                <BlurEffect Radius="14" />
-                            </Border.Effect>
+                        <Border x:Name="Glow" Margin="6,10,6,-12" CornerRadius="16" Opacity="0.55" IsHitTestVisible="False">
+                            <Border.Background>
+                                <RadialGradientBrush GradientOrigin="0.5,0.35" Center="0.5,0.35" RadiusX="0.55" RadiusY="0.7">
+                                    <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0" />
+                                    <GradientStop Color="Transparent" Offset="1" />
+                                </RadialGradientBrush>
+                            </Border.Background>
                         </Border>
-                        <Border x:Name="Body" CornerRadius="10" Background="{DynamicResource Hp.Brush.Accent}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.Accent}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
                         </Border>
-                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.Text}" Opacity="0" />
+                        <Border CornerRadius="12" BorderThickness="0,1,0,0" BorderBrush="#66FFFFFF" IsHitTestVisible="False" />
+                        <Border x:Name="Focus" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <!-- Mit Animationseffekten: Anheben und Leuchten weich einblenden. -->
@@ -107,7 +118,7 @@
                             <MultiDataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0.75" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1.03" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1.03" Duration="0:0:0.18" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                     </Storyboard>
@@ -116,7 +127,7 @@
                             <MultiDataTrigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                                        <DoubleAnimation Storyboard.TargetName="Glow" Storyboard.TargetProperty="Opacity" To="0.55" Duration="0:0:0.25" />
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.25" />
                                         <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.25" />
                                     </Storyboard>
@@ -129,13 +140,13 @@
                                 <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
                                 <Condition Binding="{Binding IsEnabled, Source={x:Static infra:Motion.Instance}}" Value="False" />
                             </MultiDataTrigger.Conditions>
-                            <Setter TargetName="Glow" Property="Opacity" Value="0.75" />
+                            <Setter TargetName="Glow" Property="Opacity" Value="1" />
                         </MultiDataTrigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Body" Property="Opacity" Value="0.85" />
+                            <Setter TargetName="Body" Property="Opacity" Value="0.88" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Focus" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -146,31 +157,36 @@
         </Setter>
     </Style>
 
-    <!-- Zurückhaltende Schaltfläche: transparent, Rahmen, Hover-Fläche -->
+    <!-- Zurückhaltende Schaltfläche (.pbtn): leichte Fläche, feiner Rand, beim Überfahren kräftigere Fläche -->
     <Style x:Key="Hp.GhostButton" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
-        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontSize" Value="13.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Padding" Value="14,8" />
+        <Setter Property="MinHeight" Value="36" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Body" CornerRadius="10" Background="Transparent" BorderThickness="1"
-                            BorderBrush="{DynamicResource Hp.Brush.BorderStrong}" Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.Surface1}" BorderThickness="1"
+                                BorderBrush="{DynamicResource Hp.Brush.LineStrong}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                        </Border>
+                        <Border x:Name="Focus" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceHover}" />
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentSolid}" />
+                            <Setter TargetName="Focus" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SurfaceSelected}" />
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface3}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
@@ -185,12 +201,14 @@
     <Style x:Key="Hp.IconButton" TargetType="Button" BasedOn="{StaticResource Hp.GhostButton}">
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Icons}" />
         <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="Normal" />
         <Setter Property="Padding" Value="9" />
     </Style>
 
     <!--
-        HDR-Schalter: CheckBox als animierter Schalter. Spur bekommt den HDR-Verlauf, der Knopf gleitet
-        (150 ms, Easing) und leuchtet im eingeschalteten Zustand.
+        Schalter (.sw): CheckBox als Schalter 44×24. Aus: helle Fläche mit Rand, Knopf in der Aus-Farbe. Ein: Spur im Verlauf der
+        Bedienelemente (mindestens 3:1 gegen Fläche und Hintergrund), weißer Knopf, weiches Leuchten in der Atmosphäre. Der
+        Knopf federt mit Animationseffekten in 0,45 s hinüber, ohne sofort.
     -->
     <Style x:Key="Hp.ToggleSwitch" TargetType="CheckBox">
         <Setter Property="Cursor" Value="Hand" />
@@ -200,27 +218,40 @@
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
                     <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Grid Width="46" Height="24" VerticalAlignment="Center">
-                            <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" />
-                            <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOn}" Opacity="0">
-                                <Border.Effect>
-                                    <DropShadowEffect Color="{DynamicResource Hp.Color.Glow}" BlurRadius="0" ShadowDepth="0" Opacity="0.9" />
-                                </Border.Effect>
+                        <Grid Width="44" Height="24" VerticalAlignment="Center">
+                            <Border x:Name="Halo" Margin="-8,-6" CornerRadius="18" Opacity="0" IsHitTestVisible="False">
+                                <Border.Background>
+                                    <RadialGradientBrush>
+                                        <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0.35" />
+                                        <GradientStop Color="Transparent" Offset="1" />
+                                    </RadialGradientBrush>
+                                </Border.Background>
                             </Border>
-                            <Border x:Name="FocusRing" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.AccentSolid}" Opacity="0" />
-                            <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="{DynamicResource Hp.Brush.ToggleThumb}" HorizontalAlignment="Left" Margin="3,0,0,0">
-                                <Ellipse.RenderTransform>
+                            <Border x:Name="TrackOff" CornerRadius="12" Background="{DynamicResource Hp.Brush.HdrOff}" BorderThickness="1" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" />
+                            <Border x:Name="TrackOn" CornerRadius="12" Background="{DynamicResource Hp.Brush.ToggleOn}" Opacity="0" />
+                            <Border x:Name="TrackShine" CornerRadius="12" BorderThickness="0,1,0,0" BorderBrush="#59FFFFFF" Opacity="0" />
+                            <Border x:Name="FocusRing" CornerRadius="15" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                            <Grid x:Name="Knob" Width="18" Height="18" HorizontalAlignment="Left" Margin="3,0,0,0">
+                                <Grid.RenderTransform>
                                     <TranslateTransform X="0" />
-                                </Ellipse.RenderTransform>
-                                <Ellipse.Effect>
-                                    <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.35" Color="{DynamicResource Hp.Color.Shadow}" />
-                                </Ellipse.Effect>
-                            </Ellipse>
+                                </Grid.RenderTransform>
+                                <!-- Schatten des Knopfs als weicher Verlauf, leicht nach unten versetzt -->
+                                <Ellipse Margin="-2,0,-2,-3" IsHitTestVisible="False">
+                                    <Ellipse.Fill>
+                                        <RadialGradientBrush Center="0.5,0.6" GradientOrigin="0.5,0.6">
+                                            <GradientStop Color="#55000000" Offset="0.55" />
+                                            <GradientStop Color="#00000000" Offset="1" />
+                                        </RadialGradientBrush>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <Ellipse x:Name="KnobOff" Fill="{DynamicResource Hp.Brush.ToggleOff}" />
+                                <Ellipse x:Name="KnobOn" Fill="{DynamicResource Hp.Brush.ToggleThumb}" Opacity="0" />
+                            </Grid>
                         </Grid>
                         <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
                     </StackPanel>
                     <ControlTemplate.Triggers>
-                        <!-- Mit Animationseffekten: Knopf gleitet, Spur und Leuchten blenden ein. -->
+                        <!-- Mit Animationseffekten: Knopf federt, Spur und Leuchten blenden ein. -->
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>
                                 <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
@@ -229,18 +260,22 @@
                             <MultiDataTrigger.EnterActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="22" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
-                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16" />
-                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)" To="14" Duration="0:0:0.3" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                                        <DoubleAnimation Storyboard.TargetName="Knob" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="20" Duration="0:0:0.42" EasingFunction="{StaticResource Hp.Ease.Spring}" />
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.25" />
+                                        <DoubleAnimation Storyboard.TargetName="TrackShine" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.25" />
+                                        <DoubleAnimation Storyboard.TargetName="KnobOn" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="Halo" Storyboard.TargetProperty="Opacity" To="0.55" Duration="0:0:0.35" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </MultiDataTrigger.EnterActions>
                             <MultiDataTrigger.ExitActions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimation Storyboard.TargetName="Thumb" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.16" EasingFunction="{StaticResource Hp.Ease.Snappy}" />
-                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.16" />
-                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="(UIElement.Effect).(DropShadowEffect.BlurRadius)" To="0" Duration="0:0:0.16" />
+                                        <DoubleAnimation Storyboard.TargetName="Knob" Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)" To="0" Duration="0:0:0.42" EasingFunction="{StaticResource Hp.Ease.Spring}" />
+                                        <DoubleAnimation Storyboard.TargetName="TrackOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="TrackShine" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="KnobOn" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2" />
+                                        <DoubleAnimation Storyboard.TargetName="Halo" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.2" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </MultiDataTrigger.ExitActions>
@@ -251,11 +286,17 @@
                                 <Condition Binding="{Binding IsChecked, RelativeSource={RelativeSource Self}}" Value="True" />
                                 <Condition Binding="{Binding IsEnabled, Source={x:Static infra:Motion.Instance}}" Value="False" />
                             </MultiDataTrigger.Conditions>
-                            <Setter TargetName="Thumb" Property="Margin" Value="25,0,0,0" />
+                            <Setter TargetName="Knob" Property="Margin" Value="23,0,0,0" />
                             <Setter TargetName="TrackOn" Property="Opacity" Value="1" />
+                            <Setter TargetName="TrackShine" Property="Opacity" Value="1" />
+                            <Setter TargetName="KnobOn" Property="Opacity" Value="1" />
+                            <Setter TargetName="Halo" Property="Opacity" Value="0.55" />
                         </MultiDataTrigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TrackOff" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                        </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="FocusRing" Property="Opacity" Value="0.9" />
+                            <Setter TargetName="FocusRing" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4" />
@@ -266,10 +307,10 @@
         </Setter>
     </Style>
 
-    <!-- Titelleisten-Knöpfe des eigenen Fensterrahmens -->
+    <!-- Titelleisten-Knöpfe des eigenen Fensterrahmens (Windows 11: 46×32) -->
     <Style x:Key="Hp.CaptionButton" TargetType="Button">
         <Setter Property="Width" Value="46" />
-        <Setter Property="Height" Value="34" />
+        <Setter Property="Height" Value="32" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Icons}" />
         <Setter Property="FontSize" Value="10" />
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextSecondary}" />
@@ -300,7 +341,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Body" Property="Background" Value="#FFE81123" />
+                            <Setter TargetName="Body" Property="Background" Value="#FFC42B1C" />
                             <Setter Property="Foreground" Value="White" />
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -310,8 +351,9 @@
     </Style>
 
     <!--
-        Fenster mit eigenem Rahmen: Verlaufshintergrund mit Akzent-Schimmer, eigene Titelleiste.
-        Fenster leiten von infra:ChromeWindow ab (Befehle für Minimieren/Maximieren/Schließen, runde Ecken).
+        Fenster mit eigenem Rahmen: Hintergrund mit zwei weichen Leuchten (Atmosphäre rechts oben, Akzent links unten),
+        Titelleiste 32 px wie Windows 11. Mit ContentUnderTitleBar beginnt der Inhalt am oberen Rand (Titelbild der
+        Bibliothek); Titel und Fensterknöpfe stehen dann hell über dem Bild. Fenster leiten von infra:ChromeWindow ab.
     -->
     <Style x:Key="Hp.ChromeWindowStyle" TargetType="infra:ChromeWindow">
         <Setter Property="Background" Value="{DynamicResource Hp.Brush.WindowBackground}" />
@@ -320,20 +362,22 @@
         <Setter Property="FontSize" Value="14" />
         <Setter Property="WindowChrome.WindowChrome">
             <Setter.Value>
-                <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+                <WindowChrome CaptionHeight="32" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
             </Setter.Value>
         </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="infra:ChromeWindow">
-                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Hp.Brush.Border}" BorderThickness="1">
+                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1">
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="40" />
+                                <RowDefinition Height="32" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
                             <Border Grid.RowSpan="2" Background="{DynamicResource Hp.Brush.BackgroundGlow}" IsHitTestVisible="False" />
-                            <DockPanel Grid.Row="0" Background="{DynamicResource Hp.Brush.TitleBar}">
+                            <Border Grid.RowSpan="2" Background="{DynamicResource Hp.Brush.BackgroundGlow2}" IsHitTestVisible="False" />
+                            <ContentPresenter x:Name="Body" Grid.Row="1" />
+                            <DockPanel x:Name="TitleBar" Grid.Row="0" Background="{DynamicResource Hp.Brush.TitleBar}">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                                     <Button x:Name="PART_Minimize" Style="{StaticResource Hp.CaptionButton}" Content="&#xE921;" Command="SystemCommands.MinimizeWindowCommand"
                                             AutomationProperties.AutomationId="CaptionMinimize" AutomationProperties.Name="{x:Static res:CommonStrings.CaptionMinimize}" />
@@ -341,18 +385,26 @@
                                             AutomationProperties.AutomationId="CaptionMaximize" AutomationProperties.Name="{x:Static res:CommonStrings.CaptionMaximize}" />
                                     <Button x:Name="PART_Restore" Style="{StaticResource Hp.CaptionButton}" Content="&#xE923;" Command="SystemCommands.RestoreWindowCommand" Visibility="Collapsed"
                                             AutomationProperties.AutomationId="CaptionRestore" AutomationProperties.Name="{x:Static res:CommonStrings.CaptionRestore}" />
-                                    <Button Style="{StaticResource Hp.CaptionCloseButton}" Content="&#xE8BB;" Command="SystemCommands.CloseWindowCommand"
+                                    <Button x:Name="PART_Close" Style="{StaticResource Hp.CaptionCloseButton}" Content="&#xE8BB;" Command="SystemCommands.CloseWindowCommand"
                                             AutomationProperties.AutomationId="CaptionClose" AutomationProperties.Name="{x:Static res:CommonStrings.CaptionClose}" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
-                                    <Image Source="{TemplateBinding Icon}" Width="18" Height="18" Margin="0,0,10,0" />
-                                    <TextBlock Text="{TemplateBinding Title}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.TextSecondary}" VerticalAlignment="Center" />
+                                    <Image Source="{TemplateBinding Icon}" Width="16" Height="16" Margin="0,0,10,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                    <TextBlock x:Name="TitleText" Text="{TemplateBinding Title}" FontSize="12" Foreground="{DynamicResource Hp.Brush.TextSecondary}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </DockPanel>
-                            <ContentPresenter Grid.Row="1" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="ContentUnderTitleBar" Value="True">
+                            <Setter TargetName="Body" Property="Grid.Row" Value="0" />
+                            <Setter TargetName="Body" Property="Grid.RowSpan" Value="2" />
+                            <Setter TargetName="TitleText" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                            <Setter TargetName="PART_Minimize" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                            <Setter TargetName="PART_Maximize" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                            <Setter TargetName="PART_Restore" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                            <Setter TargetName="PART_Close" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                        </Trigger>
                         <Trigger Property="WindowState" Value="Maximized">
                             <Setter TargetName="Frame" Property="BorderThickness" Value="0" />
                             <Setter TargetName="Frame" Property="Margin" Value="7" />

@@ -239,12 +239,12 @@ public sealed class EpicScannerTests
     [Fact]
     public void Path_case_and_trailing_separator_differences_are_tolerated()
     {
-        AddManifestJson("x.item", Mutate("rdr2.item", m => m["InstallLocation"] = @"d:\Anwendungen\epic games\REDDEADREDEMPTION2\"));
+        AddManifestJson("x.item", Mutate("rdr2.item", m => m["InstallLocation"] = @"d:\anwendungen\epic games\REDDEADREDEMPTION2\"));
         AddRdr2Files();
 
         var game = Assert.Single(Scan().Games);
 
-        Assert.Equal(@"d:\Anwendungen\epic games\REDDEADREDEMPTION2", game.InstallDir);
+        Assert.Equal(@"d:\anwendungen\epic games\REDDEADREDEMPTION2", game.InstallDir);
         Assert.Equal(2, game.Executables.Count);
     }
 

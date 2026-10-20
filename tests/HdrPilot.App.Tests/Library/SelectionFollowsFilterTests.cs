@@ -252,10 +252,26 @@ public sealed class SelectionFollowsFilterTests
         Assert.Equal(LibraryStrings.Details_EmptyText, vm.DetailsEmptyText);
         Assert.Contains(nameof(LibraryViewModel.DetailsEmptyTitle), raised);
 
-        // Leere Bibliothek: kein Filter ohne Treffer, der Detailbereich erklärt sich wie bisher.
-        using var empty = new LibraryViewModel(new TestLibraryContext(), new FakeDialogs());
+        // Leere Bibliothek (Gegenprüfung 2026-10-20): kein Filter ohne Treffer, aber ebenso nichts zu wählen. Der Detailbereich
+        // sagt das mit eigenem Text („Noch kein Spiel in der Liste“), nicht „Wähle ein Spiel“ und nicht „wieder“ wie ohne Treffer.
+        var emptyContext = new TestLibraryContext();
+        using var empty = new LibraryViewModel(emptyContext, new FakeDialogs());
+        Assert.True(empty.IsLibraryEmpty);
         Assert.False(empty.IsFilterEmpty);
+        Assert.Equal("Noch kein Spiel in der Liste", empty.DetailsEmptyTitle);
+        Assert.Equal(LibraryStrings.Details_EmptyLibraryText, empty.DetailsEmptyText);
+        Assert.DoesNotContain("Wähle", empty.DetailsEmptyTitle + empty.DetailsEmptyText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("wieder", empty.DetailsEmptyText, StringComparison.Ordinal);
+
+        // Kommt ein Spiel dazu, gilt wieder „Wähle ein Spiel“ (bzw. es ist gewählt), und beide Texte melden sich.
+        var emptyRaised = new List<string?>();
+        empty.PropertyChanged += (_, e) => emptyRaised.Add(e.PropertyName);
+        emptyContext.ConfigService.Update(c => c.Games.Add(Game(GameSource.Steam, "1", "Hades")));
+        Assert.False(empty.IsLibraryEmpty);
         Assert.Equal(LibraryStrings.Details_EmptyTitle, empty.DetailsEmptyTitle);
+        Assert.Equal(LibraryStrings.Details_EmptyText, empty.DetailsEmptyText);
+        Assert.Contains(nameof(LibraryViewModel.DetailsEmptyTitle), emptyRaised);
+        Assert.Contains(nameof(LibraryViewModel.DetailsEmptyText), emptyRaised);
     });
 
     [Fact]

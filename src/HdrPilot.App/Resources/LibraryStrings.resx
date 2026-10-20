@@ -336,6 +336,13 @@
   <data name="Details_NoMatchText" xml:space="preserve">
     <value>Sobald die Liste wieder Spiele zeigt, stehen hier die Einstellungen des gewählten Spiels.</value>
   </data>
+  <data name="Details_EmptyLibraryTitle" xml:space="preserve">
+    <value>Noch kein Spiel in der Liste</value>
+    <comment>Detailbereich bei leerer Liste (die Liste zeigt dann „Noch keine Spiele“ bzw. „Nur nicht installierte Spiele“): es gibt nichts zu wählen</comment>
+  </data>
+  <data name="Details_EmptyLibraryText" xml:space="preserve">
+    <value>Sobald die Liste Spiele zeigt, stehen hier die Einstellungen des gewählten Spiels.</value>
+  </data>
   <data name="Details_NotInstalled" xml:space="preserve">
     <value>Dieses Spiel wurde beim letzten Einlesen nicht mehr gefunden. Die Einstellungen bleiben erhalten.</value>
   </data>

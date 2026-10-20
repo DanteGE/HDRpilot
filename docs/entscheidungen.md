@@ -888,11 +888,12 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Angaben weg (nie abgeschnitten). Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte
   passt; ein langer Name bricht dort links der Karte neben der Symbol-Kachel in höchstens zwei Zeilen um und endet dann
   mit „…“ (vorher brach er erst bei 820 px um und wurde in schmalen Fenstern, etwa 1280×800 bei 110 %, ohne „…“
-  abgeschnitten; Prüfung 2026-10-20). Ist die Liste so breit, dass „Spiel“ über 640 px bekäme (Vollbild), wachsen „Quelle“, „Zuletzt gespielt“ und
-  „HDR“ gleichmäßig mit. Das Spielmenü hat oben Vorschau, Name und „Quelle · zuletzt gespielt“ wie im Prototyp. Die
-  Lichtlinie des HDR-Moments hat einen weichen Schein und verglimmt rasch. Für Bildschirmfotos bei ausgeschaltetem
-  Monitor setzt `--snapshot-display "Name;Spitze;Vollbild;Minimum;Bit"` feste Bildschirmwerte ein; die Zustände
-  `nativ-hdr` und `kontextmenue` (das Menü wird ohne Popup über das Fenster gezeichnet) kamen dazu.
+  abgeschnitten; Prüfung 2026-10-20). Ist die Liste so breit, dass „Spiel“ über 640 px bekäme (Vollbild), wachsen
+  „Quelle“, „Zuletzt gespielt“ und „HDR“ gleichmäßig mit. Das Spielmenü hat oben Vorschau, Name und „Quelle · zuletzt
+  gespielt“ wie im Prototyp. Die Lichtlinie des HDR-Moments hat einen weichen Schein und verglimmt rasch. Für
+  Bildschirmfotos bei ausgeschaltetem Monitor setzt `--snapshot-display "Name;Spitze;Vollbild;Minimum;Bit"` feste
+  Bildschirmwerte ein; die Zustände `nativ-hdr` und `kontextmenue` (das Menü wird ohne Popup über das Fenster
+  gezeichnet) kamen dazu.
 - Nach der unabhängigen Prüfung (G10.10): Die Effektstufe gilt auch für Einstellungen, Dialoge und Tray-Menü („Aus“:
   keine Bewegung), Kacheln und Hinweise der Bibliothek folgen der wirksamen Stufe statt nur der Windows-Option. Dauer-
   Effekte laufen nur, solange etwas sie zeigt (Auswahlring nur in Raster und Regal, Glanz nur über dem Namen, die
@@ -1035,7 +1036,8 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   hätten kein Spiel und speicherten nichts; Prüfung 2026-10-20), und ohne Treffer verschwindet die Stelle „1–7 von 651“
   unten rechts, statt „0–0 von 0“ zu zeigen. Ohne Treffer sagt auch der Detailbereich nicht mehr „Wähle ein Spiel“
   (es gibt nichts zu wählen), sondern neutral „Kein Spiel gewählt“; ist nur nichts gewählt, bleibt es bei „Wähle ein
-  Spiel“ mit der Erklärung (Prüfung 2026-10-20).
+  Spiel“ mit der Erklärung (Prüfung 2026-10-20). Ebenso bei leerer Liste („Noch keine Spiele“, auch wenn alle Spiele
+  ausgeblendet sind): dort sagt der Detailbereich „Noch kein Spiel in der Liste“ (Gegenprüfung 2026-10-20).
 
 **E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
 2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und
@@ -1192,8 +1194,9 @@ startet Quiver nie und nutzt keinen Code von Quiver. Einzelheiten und Messungen:
   oben in einem erzeugten Cover im Hochformat und rechts im erzeugten Titelbild, statt beschnitten zu werden; die Farben
   kommen dann daraus. Wie ein Kachelbild füllt seine Mitte auch das erzeugte Kopfbild, das Vorschaubild der Liste
   (vorher nur Farbfeld und Monogramm, bei „Black“ „BL“; Prüfung 2026-10-20). Es steht in `index.json` unter eigenem
-  Namen (`header-square`), sodass ein früher erzeugtes Kopfbild ohne das Cover neu gezeichnet wird. Den Cache-Ordner beobachtet HDRpilot nicht, neue Bilder kommen mit dem nächsten Einlesen.
-  SteamGridDB (nur eingeschaltet) fragt wie bei anderen Spielen ohne Steam-ID nach dem Namen.
+  Namen (`header-square`), sodass ein früher erzeugtes Kopfbild ohne das Cover neu gezeichnet wird. Den Cache-Ordner
+  beobachtet HDRpilot nicht, neue Bilder kommen mit dem nächsten Einlesen. SteamGridDB (nur eingeschaltet) fragt wie bei
+  anderen Spielen ohne Steam-ID nach dem Namen.
 - HDR-Liste: Quiver-Spiele gleicht HDRpilot nicht mit PCGamingWiki ab (`HdrListSync.Skips`): Der Name träfe meist das
   Originalspiel, und so gehen ihre Namen nicht ans Netz. Sie stehen als „unbekannt“ und zählen im Stand nicht mit.
 - Vorschläge aus Suchordnern übergehen den Quiver-Ordner und alles darin. `hdrpilot scan` kennt `--source Quiver` und

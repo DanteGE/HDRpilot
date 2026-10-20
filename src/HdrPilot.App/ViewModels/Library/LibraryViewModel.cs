@@ -495,12 +495,17 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Detailbereich ohne gewähltes Spiel: „Wähle ein Spiel“ mit Erklärung. Passt zu Suche, Quelle und Filtern kein Spiel (die
-    /// Liste zeigt „Keine Spiele für diese Auswahl“), gibt es nichts zu wählen: dann ein neutraler Hinweis.
+    /// Liste zeigt „Keine Spiele für diese Auswahl“) oder ist die Liste leer („Noch keine Spiele“, auch wenn alle Spiele
+    /// ausgeblendet sind), gibt es nichts zu wählen: dann je ein neutraler Hinweis.
     /// </summary>
-    public string DetailsEmptyTitle => IsFilterEmpty ? LibraryStrings.Details_NoMatchTitle : LibraryStrings.Details_EmptyTitle;
+    public string DetailsEmptyTitle => IsLibraryEmpty ? LibraryStrings.Details_EmptyLibraryTitle
+        : IsFilterEmpty ? LibraryStrings.Details_NoMatchTitle
+        : LibraryStrings.Details_EmptyTitle;
 
     /// <summary>Erklärung unter <see cref="DetailsEmptyTitle"/>.</summary>
-    public string DetailsEmptyText => IsFilterEmpty ? LibraryStrings.Details_NoMatchText : LibraryStrings.Details_EmptyText;
+    public string DetailsEmptyText => IsLibraryEmpty ? LibraryStrings.Details_EmptyLibraryText
+        : IsFilterEmpty ? LibraryStrings.Details_NoMatchText
+        : LibraryStrings.Details_EmptyText;
 
     // ---------- HDR-Status und Schnellaktionen ----------
 

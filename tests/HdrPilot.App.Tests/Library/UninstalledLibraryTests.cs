@@ -111,6 +111,10 @@ public sealed class UninstalledLibraryTests
         Assert.Equal(LibraryStrings.List_EmptyHiddenTitle, vm.EmptyTitle);
         Assert.Equal(LibraryText.Format(LibraryStrings.List_EmptyHiddenTextMany, 2), vm.EmptyText);
 
+        // Auch der Detailbereich bittet nicht, ein Spiel zu wählen (Gegenprüfung 2026-10-20): Die Liste ist leer.
+        Assert.Equal(LibraryStrings.Details_EmptyLibraryTitle, vm.DetailsEmptyTitle);
+        Assert.Equal(LibraryStrings.Details_EmptyLibraryText, vm.DetailsEmptyText);
+
         context.ConfigService.Update(c => c.Games.RemoveAll(g => g.SourceId == "2082470"));
         Assert.Equal(LibraryStrings.List_EmptyHiddenTextOne, vm.EmptyText);
 

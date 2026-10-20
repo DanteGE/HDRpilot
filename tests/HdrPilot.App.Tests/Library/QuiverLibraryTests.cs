@@ -331,6 +331,30 @@ public sealed class QuiverLibraryTests
         Assert.False(StripesAt(plain, x0: 0, scale: Width / 480.0, y: 10), "ohne quadratisches Bild keine Streifen in der Vorschau");
     }
 
+    [Fact]
+    public async Task Quiver_square_cover_counts_as_generated_header_and_cover_in_the_report()
+    {
+        // Gegenprüfung 2026-10-20: Der Bericht (--artwork-report) zählte das aus dem quadratischen Cover erzeugte Kopfbild und
+        // Cover nicht mit, obwohl HDRpilot beide zeichnet. Gegenprobe: Mit einem Cover im Hochformat ist nur das Kopfbild erzeugt.
+        using var art = new ArtworkFixture();
+        string QuiverCover(string name, int width, int height)
+        {
+            var image = ArtworkFixture.Image(width, height, (x, _) => ((byte)0, (byte)(x / Stripe % 2 == 0 ? 255 : 110), (byte)0, (byte)255));
+            var path = Path.ChangeExtension(art.Save(Path.Combine(art.Root, "Quiver", "Cache", "Images", name + ".png"), image), null);
+            File.Move(path + ".png", path);
+            return path;
+        }
+
+        var black = new GameConfig { Source = GameSource.Quiver, SourceId = "Black-BlackXBERecomp", Name = "Black", CoverCandidates = [QuiverCover("8C8FC6677FB84678288E4615E4E470A5", 480, 480)] };
+        var high = new GameConfig { Source = GameSource.Quiver, SourceId = "Hoch", Name = "Hoch", CoverCandidates = [QuiverCover("BBBB", 300, 450)] };
+
+        var square = await art.Service().BuildReportAsync([black], Ct);
+        Assert.Equal((1, 1, 1), (square.GeneratedHeroes, square.GeneratedHeaders, square.GeneratedCovers));
+
+        var portrait = await art.Service().BuildReportAsync([high], Ct);
+        Assert.Equal((1, 1, 0), (portrait.GeneratedHeroes, portrait.GeneratedHeaders, portrait.GeneratedCovers));
+    }
+
     /// <summary>Breite der Streifen der quadratischen Vorlage (480 px): gerade Streifen hellgrün, ungerade dunkelgrün.</summary>
     private const int Stripe = 40;
 

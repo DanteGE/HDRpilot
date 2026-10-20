@@ -174,7 +174,7 @@ public sealed partial class ArtworkService
     {
         Generator.Hero => (ArtworkRenderer.HeroWidth, ArtworkRenderer.HeroHeight),
         Generator.CoverFromHero or Generator.CoverFromField or Generator.CoverFromSquare => (ArtworkRenderer.CoverWidth, ArtworkRenderer.CoverHeight),
-        Generator.Header => (ArtworkRenderer.HeaderWidth, ArtworkRenderer.HeaderHeight),
+        Generator.Header or Generator.HeaderFromSquare => (ArtworkRenderer.HeaderWidth, ArtworkRenderer.HeaderHeight),
         Generator.Monogram => (ArtworkRenderer.IconSize, ArtworkRenderer.IconSize),
         _ => null,
     };

@@ -212,6 +212,34 @@ public sealed class SelectionFollowsFilterWindowTests
     }
 
     [Fact]
+    public void With_an_empty_library_the_details_pane_does_not_ask_to_choose_a_game()
+    {
+        // Gegenprüfung 2026-10-20: Auch bei leerer Liste („Noch keine Spiele“) gibt es nichts zu wählen; der Detailbereich
+        // sagt das mit eigenem Text statt „Wähle ein Spiel – Hier legst du fest …“.
+        WpfTestHost.Run(() =>
+        {
+            EnsureLibraryResources();
+            var model = new LibraryViewModel(new TestLibraryContext(), new FakeDialogs());
+            var window = new MainWindow();
+            window.Attach(model);
+            Arrange(window);
+            TextBlock Placeholder(string id) => WpfTestHost.Visuals(Named<FrameworkElement>(window, "DetailsPanel")).OfType<TextBlock>()
+                .Single(t => System.Windows.Automation.AutomationProperties.GetAutomationId(t) == id);
+            var title = Placeholder("DetailsEmptyTitle");
+            var text = Placeholder("DetailsEmptyText");
+
+            Assert.True(model.IsLibraryEmpty);
+            Assert.Equal(Visibility.Visible, Named<FrameworkElement>(window, "EmptyLibrary").Visibility);
+            Assert.Equal(Visibility.Collapsed, Named<FrameworkElement>(window, "NoMatch").Visibility);
+            Assert.Equal(Visibility.Visible, Assert.IsType<StackPanel>(title.Parent).Visibility);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Details_EmptyLibraryTitle, title.Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Details_EmptyLibraryText, text.Text);
+            Assert.DoesNotContain("Wähle", title.Text + text.Text, StringComparison.OrdinalIgnoreCase);
+            window.Close();
+        });
+    }
+
+    [Fact]
     public void In_the_grid_the_focus_follows_from_the_hidden_tile_to_the_first_match()
     {
         WpfTestHost.Run(() =>

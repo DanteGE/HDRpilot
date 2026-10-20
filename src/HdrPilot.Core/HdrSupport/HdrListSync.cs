@@ -65,9 +65,18 @@ public sealed class HdrListSync(HdrSupportCache cache, IClock clock, ILogger? lo
 
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
+    /// <summary>
+    /// Quellen, die der Abgleich auslässt (E91): Quiver-Spiele sind meist Nachbauten oder Portierungen („Black - XBE Recomp“);
+    /// der Name träfe die Seite des Originalspiels, dessen HDR-Angabe für den Nachbau nicht gilt. Sie bleiben „unbekannt“, und
+    /// ihre Namen gehen nie an PCGamingWiki.
+    /// </summary>
+    public static bool Skips(GameSource source) => source == GameSource.Quiver;
+
     /// <param name="force">„Jetzt abgleichen“: auch innerhalb einer Stunde nach dem letzten Abgleich.</param>
     public HdrListRunResult Run(IReadOnlyList<HdrListGame> games, PcgwAccount? account, Func<PcgwClient> createClient, bool force, CancellationToken cancellationToken)
     {
+        // Ausgelassene Quellen zählen nirgends mit; ein früheres Ergebnis für sie räumt Prune weg (sie gelten als „unbekannt“).
+        games = games.Where(g => !Skips(g.Source)).ToList();
         var data = cache.Load();
         var started = clock.UtcNow;
         if (!force && data.LastRunAt is { } last && last <= started && started - last < MinRunInterval)

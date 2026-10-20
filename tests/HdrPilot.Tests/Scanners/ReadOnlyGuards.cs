@@ -21,6 +21,11 @@ internal sealed class ReadOnlyFileSystem(IFileSystem inner) : IFileSystem
 
     public IReadOnlyList<string> GetFixedDriveRoots() => inner.GetFixedDriveRoots();
 
+    public IEnumerable<string> EnumerateFilesUpTo(string directory, string searchPattern, int maxDepth) =>
+        inner.EnumerateFilesUpTo(directory, searchPattern, maxDepth);
+
+    public SharedRead ReadShared(string path, int maxBytes, bool fromEnd = false) => inner.ReadShared(path, maxBytes, fromEnd);
+
     public void CreateDirectory(string path) => throw new InvalidOperationException("Scanner dürfen keine Ordner anlegen: " + path);
 
     public void WriteAllTextAtomic(string path, string contents) => throw new InvalidOperationException("Scanner dürfen nicht schreiben: " + path);

@@ -22,6 +22,9 @@ public enum LauncherCache
 
     /// <summary>Bilder im Paket eines Xbox-Spiels (<c>&lt;Spielordner&gt;\Resources</c>).</summary>
     Xbox,
+
+    /// <summary>Bildzwischenspeicher des Quiver Launchers (<c>&lt;Quiver&gt;\Cache</c>, E91); am Ende, damit die Zahlenwerte bleiben.</summary>
+    Quiver,
 }
 
 /// <summary>Ein gefundenes Launcher-Bild.</summary>
@@ -169,6 +172,8 @@ public sealed record ArtworkRoots(string? SteamRoot, string? GogWebCache, string
 /// in <c>cache\assets</c>.</item>
 /// <item>Xbox: <c>&lt;Spielordner&gt;\Resources\Square480x480Logo*.png</c> ist das deckende Kachelbild;
 /// <c>SplashScreen*.png</c> nur als Wahlmöglichkeit (oft Engine-Logo oder Titelkarte).</item>
+/// <item>Quiver (E91): nur das Cover, aus den Cover-Hinweisen des Scanners (<see cref="GameConfig.CoverCandidates"/>, Dateien
+/// im Zwischenspeicher von Quiver, meist WebP ohne Endung); die erste noch vorhandene gilt, weitere stehen in „Bild wählen…“.</item>
 /// </list>
 /// Epic, EA, Battle.net und manuelle Spiele haben keinen Bildcache (Symbol aus der EXE, Rest erzeugt).
 /// </summary>
@@ -215,6 +220,7 @@ public sealed class ArtworkLocator
                 GameSource.Gog => Gog(game.SourceId),
                 GameSource.Ubisoft => Ubisoft(game.SourceId),
                 GameSource.Xbox => Xbox(game.InstallDir),
+                GameSource.Quiver => Quiver(game.CoverCandidates),
                 _ => LocatedArtwork.None,
             };
         }
@@ -529,6 +535,22 @@ public sealed class ArtworkLocator
         var tile = Best("Square480x480Logo") is { } t ? new LocatedImage(ArtworkKind.Icon, t, LauncherCache.Xbox) : null;
         var splash = Best("SplashScreen") is { } s ? new LocatedImage(ArtworkKind.Hero, s, LauncherCache.Xbox) : null;
         return new LocatedArtwork(null, null, null, null, null, null, null, tile, splash is null ? [] : [splash]);
+    }
+
+    /// <summary>
+    /// Cover eines Quiver-Spiels: die erste noch vorhandene Datei der Cover-Hinweise (lokal, wie Symbol-Hinweise), die übrigen
+    /// als Wahlmöglichkeit. Ohne Hinweise <see cref="LocatedArtwork.None"/>.
+    /// </summary>
+    private LocatedArtwork Quiver(IReadOnlyList<string>? candidates)
+    {
+        var covers = (candidates ?? [])
+            .Where(c => IconFiles.IsLocalPath(c) && _fileSystem.FileExists(c))
+            .Take(IconFiles.MaxCandidates)
+            .Select(c => new LocatedImage(ArtworkKind.Cover, PathUtil.Normalize(c), LauncherCache.Quiver))
+            .ToList();
+        return covers.Count == 0
+            ? LocatedArtwork.None
+            : new LocatedArtwork(null, null, covers[0], null, null, null, null, null, covers.Skip(1).ToList());
     }
 
     /// <summary>„Name.png“ oder „Name.scale-200.png“ (und weitere Qualifizierer des Pakets).</summary>

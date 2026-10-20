@@ -1,0 +1,26 @@
+{
+  "FirstStartup": false,
+  "UseGridView": true,
+  "IconSize": 124,
+  "PrimaryColor": "#18181b",
+  "Platform": 0,
+  "HiddenApps": [],
+  "ManuallyHiddenApps": [],
+  "AppsPath": "",
+  "GitHubApiToken": "",
+  "SortBy": "LastPlayed",
+  "CustomAppListLocation": "",
+  "DesktopWindowPlacement": {
+    "Width": 1324.5283018867924,
+    "Height": 720,
+    "X": 412,
+    "Y": 168,
+    "Maximized": false
+  },
+  "CloseAfterLaunch": false,
+  "BackgroundUpdateCheckEnabled": false,
+  "UsageDataEnabled": false,
+  "LinuxWindowsLaunchCommand": "",
+  "UserAppTags": {},
+  "UserAppDisplayNames": {}
+}

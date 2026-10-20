@@ -2,6 +2,7 @@ using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.AutoHdr;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Core.Games.Scanners.Quiver;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Launchers;
 using HdrPilot.Core.Logging;
@@ -116,6 +117,9 @@ public sealed class AutomationHost : IAsyncDisposable
         LauncherSignals = LauncherSignalService.Create(
             Config, Sessions, fileSystem, registry, environment, clock, LoggerFactory.CreateLogger("LauncherSignals"));
 
+        // Quiver Launcher (E91): seinen Ordner lernen, sobald er startet; die App liest danach verzögert neu ein.
+        QuiverFolders = new QuiverFolderLearner(fileSystem, Config, LoggerFactory.CreateLogger("Quiver"));
+
         Config.Changed += OnConfigChanged;
 
         // Änderungen anderer Prozesse (etwa "hdrpilot games set") ohne Abfrageschleife bemerken.
@@ -153,6 +157,15 @@ public sealed class AutomationHost : IAsyncDisposable
 
     /// <summary>Windows Auto HDR: globaler Schalter um bekannte Spielstarts, Umschalten durch den Nutzer (E88).</summary>
     public IAutoHdrService AutoHdr => _autoHdr;
+
+    /// <summary>Lernt den Ordner des Quiver Launchers aus den Prozessstarts (E91); <see cref="QuiverFolderLearner.Learned"/> meldet neue.</summary>
+    public QuiverFolderLearner QuiverFolders { get; }
+
+    /// <summary>
+    /// Pause zwischen dem Lernen eines Quiver-Ordners und dem Einlesen (E91): Quiver liest beim Start seine Bibliothek und legt
+    /// fehlende Ordner an; danach wird gelesen, nicht mittendrin.
+    /// </summary>
+    public static TimeSpan RescanDelayAfterQuiverLearned { get; } = TimeSpan.FromSeconds(5);
 
     public CompositeLoggerFactory LoggerFactory { get; }
 
@@ -196,7 +209,7 @@ public sealed class AutomationHost : IAsyncDisposable
     {
         var scanners = ScannerCatalog.CreateAll(_fileSystem, _registry, _environment, LoggerFactory);
         var report = await new LibraryScanner(scanners, LoggerFactory.CreateLogger("Scan"))
-            .ScanAsync(new ScanOptions { SearchFolders = Config.Current.Settings.SearchFolders }, cancellationToken)
+            .ScanAsync(ScanOptionsFor(Config.Current), cancellationToken)
             .ConfigureAwait(false);
         var summary = Config.ApplyScan(report, _fileSystem);
         _logger.LogInformation(
@@ -204,6 +217,13 @@ public sealed class AutomationHost : IAsyncDisposable
             report.Games.Count, summary.Added, summary.NoLongerInstalled, report.AllErrors.Count);
         return (report, summary);
     }
+
+    /// <summary>Einstellungen des Einlesens aus der Konfiguration: Suchordner und gelernte Quiver-Ordner (E91).</summary>
+    public static ScanOptions ScanOptionsFor(AppConfig config) => new()
+    {
+        SearchFolders = config.Settings.SearchFolders,
+        QuiverFolders = config.Settings.QuiverFolders ?? [],
+    };
 
     public async ValueTask DisposeAsync()
     {
@@ -245,10 +265,14 @@ public sealed class AutomationHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Ein Zyklus der Prozessüberwachung; die Frühwarnung prüft im selben Takt mit (kein eigener Zeitgeber).</summary>
-    private Task OnPollAsync(ProcessChanges changes, CancellationToken cancellationToken)
+    /// <summary>
+    /// Ein Zyklus der Prozessüberwachung; die Frühwarnung prüft im selben Takt mit (kein eigener Zeitgeber), das Lernen des
+    /// Quiver-Ordners sieht die neuen Prozesse. Intern für den Test der Verdrahtung.
+    /// </summary>
+    internal Task OnPollAsync(ProcessChanges changes, CancellationToken cancellationToken)
     {
         LauncherSignals.Tick();
+        QuiverFolders.Observe(changes.Started);
         return Sessions.UpdateAsync(changes, cancellationToken);
     }
 

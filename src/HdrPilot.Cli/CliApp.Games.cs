@@ -52,7 +52,7 @@ public sealed partial class CliApp
             {
                 var config = OpenConfig(paths);
                 var report = await new LibraryScanner(services.CreateScanners())
-                    .ScanAsync(new ScanOptions { SearchFolders = config.Current.Settings.SearchFolders }, cancellationToken)
+                    .ScanAsync(Core.Hosting.AutomationHost.ScanOptionsFor(config.Current), cancellationToken)
                     .ConfigureAwait(false);
                 var summary = config.ApplyScan(report, services.FileSystem);
                 stdout.WriteLine($"{report.Games.Count} Spiele eingelesen: {summary.Added} neu, {summary.Updated} aktualisiert, {summary.NoLongerInstalled} nicht mehr installiert.");
@@ -175,6 +175,9 @@ public sealed partial class CliApp
 
         var level = args.Has("--verbose") ? LogLevel.Debug : LogLevel.Information;
         await using var host = services.CreateHost(ResolvePaths(args), new TextWriterLoggerProvider(stdout, () => level));
+
+        // Quiver gestartet und sein Ordner neu gelernt (E91): wie die App nach kurzer Pause neu einlesen.
+        host.QuiverFolders.Learned += (_, _) => _ = RescanLaterAsync(host, cancellationToken);
         await host.StartAsync(cancellationToken).ConfigureAwait(false);
         var s = host.Config.Current.Settings;
         stdout.WriteLine($"Überwachung läuft (Intervall {s.PollIntervalMs} ms, Nachlaufzeit {s.GracePeriodSeconds} s, Protokoll {host.Paths.LogDirectory}). Beenden mit Strg+C.");
@@ -189,6 +192,24 @@ public sealed partial class CliApp
         }
 
         return ExitCodes.Ok;
+    }
+
+    /// <summary>Einlesen nach <see cref="Core.Hosting.AutomationHost.RescanDelayAfterQuiverLearned"/>; Fehler kommen ins Protokoll, nie nach außen.</summary>
+    private static async Task RescanLaterAsync(Core.Hosting.AutomationHost host, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(Core.Hosting.AutomationHost.RescanDelayAfterQuiverLearned, cancellationToken).ConfigureAwait(false);
+            await host.RescanAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Strg+C: kein Einlesen mehr.
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ObjectDisposedException)
+        {
+            host.LoggerFactory.CreateLogger("Quiver").LogWarning(ex, "Einlesen nach dem gelernten Quiver-Ordner fehlgeschlagen.");
+        }
     }
 
     private async Task<int> RunLaunchAsync(CliArguments args, CancellationToken cancellationToken)

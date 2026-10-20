@@ -120,7 +120,7 @@ public sealed class HdrListService : IHdrListService, IDisposable
     public HdrListStatus GetStatus()
     {
         var data = _cache.Load();
-        var games = _config().Games;
+        var games = _config().Games.Where(g => !HdrListSync.Skips(g.Source)).ToList();
         var checkedGames = games.Count(g => data.Games.TryGetValue(g.Key, out var e) && string.Equals(e.Name, g.Name, StringComparison.Ordinal));
         var (user, unreadable) = StoredAccount();
 

@@ -33,6 +33,8 @@ public static class LibraryMerger
                     InstallDir = entry.InstallDir,
                     KnownExecutables = [.. entry.Executables],
                     IconCandidates = [.. entry.IconCandidates],
+                    CoverCandidates = Covers(entry),
+                    InstallKind = entry.InstallKind,
                     LaunchCommand = entry.LaunchCommand,
                     LaunchArguments = entry.LaunchArguments,
                     LaunchWorkingDirectory = entry.LaunchWorkingDirectory,
@@ -56,6 +58,8 @@ public static class LibraryMerger
             game.InstallDir = entry.InstallDir;
             game.KnownExecutables = [.. entry.Executables];
             game.IconCandidates = [.. entry.IconCandidates];
+            game.CoverCandidates = Covers(entry);
+            game.InstallKind = entry.InstallKind;
             game.LaunchCommand = entry.LaunchCommand;
             game.LaunchArguments = entry.LaunchArguments;
             game.LaunchWorkingDirectory = entry.LaunchWorkingDirectory;
@@ -106,4 +110,7 @@ public static class LibraryMerger
     /// </summary>
     internal static DateTimeOffset? Later(DateTimeOffset? existing, DateTimeOffset? scanned) =>
         existing is null ? scanned : scanned is null || existing >= scanned ? existing : scanned;
+
+    /// <summary>Cover-Hinweise des Scanners (E91); keine: null, damit Spiele ohne solche Hinweise kein leeres Feld bekommen.</summary>
+    private static List<string>? Covers(GameEntry entry) => entry.CoverCandidates.Count > 0 ? [.. entry.CoverCandidates] : null;
 }

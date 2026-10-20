@@ -1,4 +1,5 @@
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Games.Scanners.Quiver;
 using HdrPilot.Core.Util;
 
 namespace HdrPilot.Core.Games;
@@ -21,6 +22,8 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
     /// Fehlende Suchordner werden still übersprungen; Ordner, die einem bekannten Installationsordner entsprechen,
     /// darunter oder darüber liegen, ebenso. Nicht lesbare Unterordner werden ausgelassen. Ist der Suchordner eine
     /// Laufwerkswurzel, sind Windows-Systemordner (<c>$RECYCLE.BIN</c> u. ä., <c>System Volume Information</c>) keine Kandidaten.
+    /// Der Ordner des Quiver Launchers und alles darin ist nie ein Kandidat (E91): Quiver selbst ist kein Spiel, seine Spiele
+    /// liest der Quiver-Scanner.
     /// </summary>
     public IReadOnlyList<GameCandidate> FindCandidates(
         IReadOnlyList<string> searchFolders, IEnumerable<string> knownInstallDirs, CancellationToken cancellationToken = default)
@@ -51,6 +54,11 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
                 continue;
             }
 
+            if (InsideQuiver(root))
+            {
+                continue;
+            }
+
             var isDriveRoot = PathUtil.PathEquals(Path.GetPathRoot(root) ?? string.Empty, root);
             foreach (var folder in SafeDirectories(root).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
             {
@@ -58,7 +66,8 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
                 if (!seen.Add(folder)
                     || (isDriveRoot && IsWindowsSystemFolder(Path.GetFileName(folder)))
                     || roots.Any(r => PathUtil.PathEquals(r, folder))
-                    || known.Any(k => PathUtil.IsUnder(folder, k) || PathUtil.IsUnder(k, folder)))
+                    || known.Any(k => PathUtil.IsUnder(folder, k) || PathUtil.IsUnder(k, folder))
+                    || QuiverRoot.Detect(fileSystem, folder, requireLibrary: false) != QuiverLayout.None)
                 {
                     continue;
                 }
@@ -110,6 +119,27 @@ public sealed class SearchFolderCandidateFinder(IFileSystem fileSystem)
         }
 
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// True, wenn der Suchordner ein Quiver-Ordner ist oder darin liegt (etwa dessen Apps-Ordner): geprüft am Kennzeichen von
+    /// Quiver im Suchordner und bis zu drei Ordnern darüber.
+    /// </summary>
+    private bool InsideQuiver(string folder)
+    {
+        var current = folder;
+        for (var i = 0; i < 4 && !string.IsNullOrEmpty(current); i++)
+        {
+            if (QuiverRoot.Detect(fileSystem, current, requireLibrary: false) != QuiverLayout.None)
+            {
+                return true;
+            }
+
+            var parent = Path.GetDirectoryName(current);
+            current = parent is null || PathUtil.PathEquals(parent, current) ? null : parent;
+        }
+
+        return false;
     }
 
     /// <summary>

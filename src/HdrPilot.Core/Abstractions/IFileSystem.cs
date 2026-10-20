@@ -49,6 +49,26 @@ public interface IFileSystem
     /// </summary>
     IEnumerable<string> EnumerateFilesCompletely(string directory, string searchPattern) =>
         EnumerateFiles(directory, searchPattern, recursive: true);
+
+    /// <summary>
+    /// Liest höchstens <paramref name="maxBytes"/> Bytes vom Anfang (oder mit <paramref name="fromEnd"/> vom Ende) einer Datei,
+    /// die einem anderen Programm gehört: Geöffnet wird mit Freigabe zum Lesen, Schreiben und Löschen, damit es die Datei
+    /// währenddessen schreiben, ersetzen oder löschen darf (Quiver, Velopack, E91). <see cref="SharedRead.Length"/> ist die
+    /// Länge der ganzen Datei. Wirft wie <see cref="ReadAllBytes"/>. Standard: <see cref="ReadAllBytes"/>, gekürzt.
+    /// </summary>
+    SharedRead ReadShared(string path, int maxBytes, bool fromEnd = false)
+    {
+        var all = ReadAllBytes(path);
+        var count = Math.Min(all.Length, Math.Max(0, maxBytes));
+        return new SharedRead(fromEnd ? all[(all.Length - count)..] : all[..count], all.Length);
+    }
+}
+
+/// <summary>Ergebnis von <see cref="IFileSystem.ReadShared"/>: gelesene Bytes und Länge der ganzen Datei.</summary>
+public readonly record struct SharedRead(byte[] Bytes, long Length)
+{
+    /// <summary>Die ganze Datei wurde gelesen.</summary>
+    public bool IsComplete => Bytes.Length == Length;
 }
 
 public sealed class PhysicalFileSystem : IFileSystem
@@ -139,6 +159,21 @@ public sealed class PhysicalFileSystem : IFileSystem
                     ? true
                     : throw new IOException("Verknüpfter Ordner, nicht verfolgt: " + entry.ToFullPath()),
         };
+    }
+
+    public SharedRead ReadShared(string path, int maxBytes, bool fromEnd = false)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 4096, FileOptions.SequentialScan);
+        var length = stream.Length;
+        var count = (int)Math.Min(length, Math.Max(0, maxBytes));
+        if (fromEnd && length > count)
+        {
+            stream.Seek(length - count, SeekOrigin.Begin);
+        }
+
+        var buffer = new byte[count];
+        var read = stream.ReadAtLeast(buffer, count, throwOnEndOfStream: false);
+        return new SharedRead(read == count ? buffer : buffer[..read], length);
     }
 
     public void CreateDirectory(string path) => Directory.CreateDirectory(path);

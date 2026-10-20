@@ -13,6 +13,12 @@ public enum GameSource
     EA,
     BattleNet,
     Manual,
+
+    /// <summary>
+    /// Quiver Launcher (E91). Steht am Ende, damit die Zahlenwerte der älteren Quellen gleich bleiben; ältere Versionen
+    /// kennen den Namen nicht (siehe <see cref="Config.ConfigJson"/>: unbekannte Quellen werden tolerant gelesen).
+    /// </summary>
+    Quiver,
 }
 
 public static class GameKey
@@ -56,8 +62,32 @@ public sealed record GameEntry
     /// </summary>
     public IReadOnlyList<string> IconCandidates { get; init; } = [];
 
+    /// <summary>
+    /// Cover-Hinweise des Launchers, beste Quelle zuerst (Quiver, E91): absolute Pfade auf Bilder im lokalen Zwischenspeicher
+    /// des Launchers, die beim Einlesen existierten und einen Bildkopf haben, höchstens <see cref="IconFiles.MaxCandidates"/>.
+    /// Leer bei Quellen, deren Bilder <c>ArtworkLocator</c> selbst findet.
+    /// </summary>
+    public IReadOnlyList<string> CoverCandidates { get; init; } = [];
+
+    /// <summary>
+    /// Art der Installation, wenn sie vom üblichen Spielordner des Launchers abweicht; sonst null. Bisher nur
+    /// <see cref="InstallKinds.WindowsInstaller"/> (Quiver: per Windows Installer installiert, E91). Text statt Aufzählung,
+    /// damit ein unbekannter Wert eine Konfiguration nie unlesbar macht.
+    /// </summary>
+    public string? InstallKind { get; init; }
+
     [JsonIgnore]
     public string Key => GameKey.Create(Source, SourceId);
+}
+
+/// <summary>Werte von <see cref="GameEntry.InstallKind"/>.</summary>
+public static class InstallKinds
+{
+    /// <summary>
+    /// Per Windows Installer (MSI) installiert: Das Programm liegt in seinem eigenen Ordner, der Launcher kennt nur die
+    /// verknüpfte EXE. Als Installationsordner gilt der Ordner dieser EXE.
+    /// </summary>
+    public const string WindowsInstaller = "WindowsInstaller";
 }
 
 /// <summary>Nicht-fataler Fehler eines Scanners, etwa eine defekte Manifestdatei.</summary>
@@ -81,6 +111,12 @@ public sealed record ScanOptions
 {
     /// <summary>Vom Nutzer angegebene Suchordner (EA-Erkennung, Kandidaten-Vorschläge).</summary>
     public IReadOnlyList<string> SearchFolders { get; init; } = [];
+
+    /// <summary>
+    /// Bekannte Ordner des Quiver Launchers (E91): gelernt, sobald Quiver lief (versteckte Einstellung
+    /// <c>quiverFolders</c>), oder vom Aufrufer genannt. Der Quiver-Scanner prüft sie zuerst.
+    /// </summary>
+    public IReadOnlyList<string> QuiverFolders { get; init; } = [];
 
     public static ScanOptions Default { get; } = new();
 }

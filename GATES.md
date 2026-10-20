@@ -376,17 +376,17 @@ Prototyp v4 unter `docs/design/showcase-hero/prototyp/`. Die vier Anmerkungen de
 Reihenfolge Liste/Raster/Regal, Nit-Skala bis zur echten HDR-Spitze, Anordnung der Seite „Darstellung“) gelten als Teil der
 Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
 
-- [ ] G10.1: Farben und Themen: Duoton und Tritonus mit 8 Vorgaben und eigenen Farben, Hell/Dunkel/Automatisch (Automatisch folgt Windows), gespeichert in der Konfiguration (alte Konfigurationen laden unverändert); alle Farb-Ressourcen der Oberfläche werden aus der Palette abgeleitet (Akzent, Atmosphäre, Glanz; Mischfarben vorab berechnet), Text auf Akzentflächen hält den Kontrast automatisch (mindestens 4,5:1 für Text, 3:1 für Bedienelemente); per Unit-Tests mit Gegenproben belegt
+- [x] G10.1: Farben und Themen: Duoton und Tritonus mit 8 Vorgaben und eigenen Farben, Hell/Dunkel/Automatisch (Automatisch folgt Windows), gespeichert in der Konfiguration (alte Konfigurationen laden unverändert); alle Farb-Ressourcen der Oberfläche werden aus der Palette abgeleitet (Akzent, Atmosphäre, Glanz; Mischfarben vorab berechnet), Text auf Akzentflächen hält den Kontrast automatisch (mindestens 4,5:1 für Text, 3:1 für Bedienelemente); per Unit-Tests mit Gegenproben belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Palette|FullyQualifiedName~Theme" -MinTests 20
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 auf phase5/release nach der Zusammenführung (3d53ff2, Stand gleich feature/library-toolbar 7c4b822): exit 0, TESTS_OK 121.
 
-- [ ] G10.2: Tray-Symbol und Fenstersymbol in den Palettenfarben, Zustände HDR an, HDR aus und Automatik pausiert, in den Größen 16 bis 256 px, neu erzeugt nur bei Farb- oder Taskleisten-Themawechsel (nie im Leerlauf); per Unit-Tests mit Gegenproben belegt
+- [x] G10.2: Tray-Symbol und Fenstersymbol in den Palettenfarben, Zustände HDR an, HDR aus und Automatik pausiert, in den Größen 16 bis 256 px, neu erzeugt nur bei Farb- oder Taskleisten-Themawechsel (nie im Leerlauf); per Unit-Tests mit Gegenproben belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~TrayIcon|FullyQualifiedName~WindowIcon" -MinTests 8
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 30.
 
-- [ ] G10.3: Spielbilder aus lokalen Quellen, nur lesend:
+- [x] G10.3: Spielbilder aus lokalen Quellen, nur lesend:
   - Quellen: Steam `librarycache` (Titelbild, Logo mit deutscher Variante bevorzugt, Cover, unscharfes Titelbild), GOG-Galaxy-Cache, Ubisoft-Cache, Xbox-Paketbilder, Symbol aus der EXE (Epic, EA).
   - Erzeugte Ersatzbilder: Titelbild, Cover und Monogramm, gespeichert unter `%LocalAppData%\HDRpilot\art`.
   - Verschmierte Steam-Cover werden erkannt und durch einen Ausschnitt aus dem Titelbild ersetzt; Logos werden auf ihren sichtbaren Teil zugeschnitten.
@@ -395,14 +395,14 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
   - Belegt per Unit-Tests mit Gegenproben und einer Messung an einer Kopie der echten Bibliothek (Abdeckung je Launcher wie im Prototyp: Steam Titelbild ≥ 631 von 636).
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Artwork" -MinTests 30
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 123. Messung an einer Kopie der Bibliothek (2026-10-16, `--artwork-report`, Ergebnis in `docs/design/showcase-hero/umsetzung-core.md`): Steam Titelbild 631 von 636 Spielen.
 
-- [ ] G10.4: SteamGridDB optional: standardmäßig aus, nur mit eigenem API-Schlüssel (verschlüsselt gespeichert wie das PCGamingWiki-Bot-Passwort), füllt nur fehlende Bilder, klare Anzeige des Netzwerkzugriffs; ist es aus, gibt es nachweislich keinen Netzwerkzugriff dafür; per Unit-Tests mit Attrappe (nie das echte Netz in Tests) belegt
+- [x] G10.4: SteamGridDB optional: standardmäßig aus, nur mit eigenem API-Schlüssel (verschlüsselt gespeichert wie das PCGamingWiki-Bot-Passwort), füllt nur fehlende Bilder, klare Anzeige des Netzwerkzugriffs; ist es aus, gibt es nachweislich keinen Netzwerkzugriff dafür; per Unit-Tests mit Attrappe (nie das echte Netz in Tests) belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDb" -MinTests 8
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 40.
 
-- [ ] G10.5: Bibliothek im neuen Design:
+- [x] G10.5: Bibliothek im neuen Design:
   - Ansichten in der Reihenfolge **Liste, Raster, Regal**; Liste ist der Standard, die Wahl wird gemerkt.
   - Liste: virtualisiert, sortierbar, „HDR automatisch“ je Zeile, Titelbereich des gewählten Spiels oben.
   - Höhe des Titelbereichs (Wunsch des Nutzers 2026-10-16):
@@ -426,25 +426,25 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
   - Belegt per UI-Automation an einer Testinstanz und Bildern bei 1280×800, 1920×1080 und 3440×1440 in hell und dunkel.
   CHECK: ps tools\gates\phase10-ui.ps1
   EXPECT: PHASE10_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE10_UI_OK (306 Prüfungen an einer Testinstanz mit eigener Ablage, 54 Bilder: je 18 bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel; Auswahl beim Filtern und Detailbereich ohne Treffer eingeschlossen).
 
-- [ ] G10.6: Effekte wie im Prototyp: langsamer Zoom und Tiefenwirkung des Titelbilds, Überblendung beim Spielwechsel, Umgebungsfarbe, HDR-Moment (Lichtstreifen, helle Fassung, Partikel höchstens 2,5 s, leuchtender Rand). Stufen Voll, Reduziert und Aus; die Windows-Option „Animationseffekte“ wird beachtet. Dauer-Effekte laufen mit höchstens 30 fps und pausieren bei minimiertem oder inaktivem Fenster und während eines Spiels; bei geschlossenem Fenster läuft nichts. Ohne BlurEffect, DropShadowEffect und Mischmodi; per Unit-Tests mit Gegenproben belegt (Steuerung der Effekte)
+- [x] G10.6: Effekte wie im Prototyp: langsamer Zoom und Tiefenwirkung des Titelbilds, Überblendung beim Spielwechsel, Umgebungsfarbe, HDR-Moment (Lichtstreifen, helle Fassung, Partikel höchstens 2,5 s, leuchtender Rand). Stufen Voll, Reduziert und Aus; die Windows-Option „Animationseffekte“ wird beachtet. Dauer-Effekte laufen mit höchstens 30 fps und pausieren bei minimiertem oder inaktivem Fenster und während eines Spiels; bei geschlossenem Fenster läuft nichts. Ohne BlurEffect, DropShadowEffect und Mischmodi; per Unit-Tests mit Gegenproben belegt (Steuerung der Effekte)
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Effect|FullyQualifiedName~Motion" -MinTests 15
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 108.
 
-- [ ] G10.7: Echte Bildschirmwerte über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv), gelesen nur bei HDR- oder Bildschirmwechsel; das „Maximum“ jeder Nit-Skala ist die höchste Nit-Zahl des Bildschirms bei aktivem HDR (nie ein fester Wert wie 1000); per Unit-Tests mit Attrappe belegt
+- [x] G10.7: Echte Bildschirmwerte über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv), gelesen nur bei HDR- oder Bildschirmwechsel; das „Maximum“ jeder Nit-Skala ist die höchste Nit-Zahl des Bildschirms bei aktivem HDR (nie ein fester Wert wie 1000); per Unit-Tests mit Attrappe belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~DisplayLuminance" -MinTests 6
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 15.
 
-- [ ] G10.8: Einstellungen im neuen Design mit Seite „Darstellung“:
+- [x] G10.8: Einstellungen im neuen Design mit Seite „Darstellung“:
   - Inhalt: Farben Duoton/Tritonus mit Vorgaben und eigenem Farbwähler, Thema, Effektstufe, Bilder (lokal, SteamGridDB optional), Vorschau von Tray-Symbol und Tray-Menü.
   - Anordnung: Raster mit Höchstbreite je Bereich und mehreren Spalten bei breiten Fenstern, damit im Vollbild nichts in die Länge gezogen wird (Anmerkung des Nutzers).
   - Belegt per UI-Automation und Bildern bei 1280×800, 1920×1080 und 3440×1440.
   CHECK: ps tools\gates\phase10-settings-ui.ps1
   EXPECT: PHASE10_SETTINGS_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE10_SETTINGS_UI_OK (28 Prüfungen: alle 7 Bereiche bei 1280×800, 1920×1080 und maximiert gefunden, innerhalb des Fensters und in der Höchstbreite, ab 1920 px Farbschema und Live-Vorschau nebeneinander; 24 Bilder in genauer Pixelgröße).
 
 - [ ] G10.9: Leistung, gemessen am echten Desktop mit eingeschaltetem Bildschirm:
   - Bei geschlossenem Fenster bleibt der Leerlauf wie bisher (`phase3-idle.ps1`).
@@ -454,21 +454,21 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
   - Ohne aktiven Bildschirm meldet das Gate UMGEBUNG und gilt nicht als bestanden.
   CHECK: ps tools\gates\phase10-gpu.ps1
   EXPECT: PHASE10_GPU_OK
-  EVIDENCE: pending
+  EVIDENCE: pending. Auf dem Stand 1.5.0 nicht gemessen: `phase10-gpu.ps1` braucht den echten Desktop mit eingeschaltetem Bildschirm und läuft nur zusammen mit dem Nutzer. Früherer Lauf 2026-10-16 auf feature/showcase (vor Werkzeugleiste, Phase 11 und Quiver): PHASE10_GPU_OK, Liste in Ruhe 1,2 % GPU, HDR-Moment Spitze rund 24 % GPU, minimiert 0,2 % CPU.
 
-- [ ] G10.10: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (auch die bisherigen UI-Gates nach Anpassung), Anti-Cheat-Architekturtest grün, README und E89 passen zu den resx-Texten, unabhängige Prüfung mit Gegenprüfung
+- [x] G10.10: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (auch die bisherigen UI-Gates nach Anpassung), Anti-Cheat-Architekturtest grün, README und E89 passen zu den resx-Texten, unabhängige Prüfung mit Gegenprüfung
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 auf phase5/release nach der Zusammenführung (3d53ff2), nacheinander, alle exit 0: BUILD_OK_0_WARNINGS, TESTS_OK 3409, Anti-Cheat-Architekturtest mit dem Filter von G5.4 TESTS_OK 47, die bisherigen UI-Gates nach Anpassung (PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK) sowie PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE11_UI_OK, PHASE12_QUIVER_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE6_NAME_OK, PHASE5_README_OK (README stimmt mit dem Quelltext überein, 0 Probleme; Gegenproben 15 von 15 und 3 von 3). Unabhängige Prüfungen mit Gegenprüfung: Showcase Hero (`docs/stand.md`), Abschlussprüfung von feature/library-toolbar mit Korrekturen 864aa2d, c8e6f10, a98953a und Prüfung von 1.5.0 (7c4b822).
 
 - [ ] G10.11: Abnahme durch den Nutzer am echten System (Aussehen, Effekte, Bedienung, Vollbild bei 3440×1440)
-  EVIDENCE: pending
+  EVIDENCE: pending. Abnahme durch den Nutzer am echten System steht aus (Vorführung, siehe `docs/stand.md`).
 
 ## Phase 11: Nicht installierte Spiele (Wunsch des Nutzers 2026-10-18, E90)
 
 Scope: Bei nicht installierten Launcher-Spielen lassen sich die HDRpilot-Daten des Spiels entfernen (Kontextmenü und ganz unten im Detailbereich), und eine Einstellung blendet nicht installierte Spiele aus. Entscheidungen des Nutzers 2026-10-19: Entfernt werden Einstellungen, eigene Bilder und Symbole; HDRpilot-Verknüpfungen nur per Häkchen in der Rückfrage. Ausgeblendete Spiele zählen nicht mit (Kopf, Quellen, Kapsel), „HDR automatisch“ wirkt weiter; die Karte „Bibliothek“ in den Einstellungen zeigt die Anzahl und bietet „Einstellungen aller nicht installierten Spiele entfernen…“ mit Namensliste und Rückfrage. Spiel-, Launcher- und Steam-Dateien werden nie angefasst. Plan: `docs/uebergabe/wuensche-2026-10-18-plan.md`.
 
-- [ ] G11.1: Kern und Bibliothek, per Unit-Tests mit Gegenproben belegt:
+- [x] G11.1: Kern und Bibliothek, per Unit-Tests mit Gegenproben belegt:
   - Entfernt wird nur bei nicht installiert, nicht manuell und ohne laufende oder vorbereitete Sitzung; geprüft wird erst beim Schreiben (findet ein Einlesen das Spiel dazwischen wieder, bleibt alles).
   - Gelöscht werden nur der Eintrag, das eigene Symbol (PNG), der Eintrag im Symbol-Cache, die eigenen Bilder und, nur mit Häkchen, die exakt passenden HDRpilot-Verknüpfungen (Ziel HDRpilot.exe, genau `--run "<Schlüssel>"`) samt deren .ico; ein Attrappen-Dateisystem belegt, dass sonst nichts gelöscht wird.
   - Nach einer Neuinstallation erscheint das Spiel als neu, „HDR automatisch“ ist aus.
@@ -476,66 +476,66 @@ Scope: Bei nicht installierten Launcher-Spielen lassen sich die HDRpilot-Daten d
   - Ausblenden: Zähler, Quellen, Kapsel und Leerzustand stimmen, „HDR automatisch“ ordnet ausgeblendete Spiele weiter zu, nach dem Entfernen wird der Nachbar gewählt.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Uninstalled|FullyQualifiedName~RemoveSettings|FullyQualifiedName~LibraryCleanup" -MinTests 25
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 auf phase5/release nach der Zusammenführung (3d53ff2): exit 0, TESTS_OK 109.
 
-- [ ] G11.2: Oberfläche an einer Testinstanz (Testablage mit 2 nicht installierten Launcher-Spielen und 1 manuellem):
+- [x] G11.2: Oberfläche an einer Testinstanz (Testablage mit 2 nicht installierten Launcher-Spielen und 1 manuellem):
   - Menüeintrag und Knopf erscheinen nur bei nicht installierten Launcher-Spielen; die Rückfrage nennt, was verloren geht (etwa „HDR automatisch ist an“), warnt bei fehlendem Laufwerk und hat den Fokus auf „Abbrechen“.
   - „Abbrechen“ lässt die Testablage byteweise gleich, „Entfernen“ nimmt genau ein Spiel heraus.
   - Ausblenden und Speichern senkt die Zählung um 2; das Sammel-Entfernen nennt beide Namen und entfernt nur sie.
   - Bilder bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel.
   CHECK: ps tools\gates\phase11-uninstalled-ui.ps1
   EXPECT: PHASE11_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE11_UI_OK (99 Prüfungen an einer Testinstanz; Testablage mit einem Steam-Spiel auf einem nicht verbundenen Laufwerk, einem Epic-Spiel, dessen Ordner nur noch Reste ohne EXE enthält, und einem eigenen Spiel; „Abbrechen“ lässt die Testablage byteweise gleich; 24 Bilder bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel).
 
-- [ ] G11.3: Verträglichkeit an einer Kopie der echten Ablage (nur lesend kopiert): lädt ohne Warnung, zählt die nicht installierten Spiele; nach Umschalten und Speichern unterscheidet sich die Datei nur in `hideUninstalledGames`; die echte Ablage ist vorher und nachher gleich (Hash).
+- [x] G11.3: Verträglichkeit an einer Kopie der echten Ablage (nur lesend kopiert): lädt ohne Warnung, zählt die nicht installierten Spiele; nach Umschalten und Speichern unterscheidet sich die Datei nur in `hideUninstalledGames`; die echte Ablage ist vorher und nachher gleich (Hash).
   CHECK: ps tools\gates\phase11-migration.ps1
   EXPECT: PHASE11_MIGRATION_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE11_MIGRATION_OK (Kopie der echten Ablage, nur lesend kopiert: lädt ohne Ladefehler, 5 nicht installierte Spiele gezählt, nichts als „defekt“ gesichert; nach Umschalten und Speichern unterscheidet sich die Datei nur in `settings.hideUninstalledGames`, keine andere Einstellung verloren; echte Ablage vorher und nachher gleich, SHA-256).
 
-- [ ] G11.4: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und UI-Gates grün, README und E90 passen zu den Texten.
+- [x] G11.4: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und UI-Gates grün, README und E90 passen zu den Texten.
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE5_README_OK (0 Probleme); dazu BUILD_OK_0_WARNINGS, TESTS_OK 3409 und alle UI-Gates grün (siehe G10.10).
 
 - [ ] G11.5: Abnahme durch den Nutzer am echten System
-  EVIDENCE: pending
+  EVIDENCE: pending. Abnahme durch den Nutzer am echten System steht aus (Vorführung, siehe `docs/stand.md`).
 
 ## Phase 12: Quiver Launcher (Wunsch des Nutzers 2026-10-18, E91)
 
 Scope: Spiele des Quiver Launchers (portabel, MIT, bei dem Nutzer v3.5.1 mit „Black“) werden als eigene Quelle „Quiver“ erkannt, mit Cover aus Quivers lokalem Cache, und mit „HDR automatisch“ versehen. Entscheidungen des Nutzers 2026-10-19: eigene Quelle, Quiver-Ordner selbst finden bzw. merken, sobald Quiver läuft; „Mit HDR starten“ startet die Spiel-EXE direkt wie Quiver selbst; kein PCGamingWiki-Abgleich für Quiver-Spiele. Nur lesend an Quiver-Dateien, kein Netzwerk, keine GPL-Abhängigkeiten. Unbekannte Quellen in der Konfiguration werden künftig tolerant gelesen. Plan: `docs/uebergabe/wuensche-2026-10-18-plan.md`.
 
-- [ ] G12.1: Scanner mit Beispieldateien (erfundene Pfade): Ordner gefunden über Velopack-Protokoll, Suchordner, Downloads und gelernten Ordner; ein fremdes Velopack-Programm ist kein Treffer; `AppsPath` und `installPath` beachtet; `selected_executable.txt` gewinnt, zeigt sie aus dem Spielordner heraus, wird sie ignoriert; mehrere EXE ohne Wahl ergeben keinen Start-Befehl; `folderName` mit `..` wird abgelehnt; Cover-Cache-Name stimmt; nichts geschrieben, kein Netzwerk.
+- [x] G12.1: Scanner mit Beispieldateien (erfundene Pfade): Ordner gefunden über Velopack-Protokoll, Suchordner, Downloads und gelernten Ordner; ein fremdes Velopack-Programm ist kein Treffer; `AppsPath` und `installPath` beachtet; `selected_executable.txt` gewinnt, zeigt sie aus dem Spielordner heraus, wird sie ignoriert; mehrere EXE ohne Wahl ergeben keinen Start-Befehl; `folderName` mit `..` wird abgelehnt; Cover-Cache-Name stimmt; nichts geschrieben, kein Netzwerk.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~Quiver" -MinTests 30
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 auf phase5/release nach der Zusammenführung (3d53ff2): exit 0, TESTS_OK 171.
 
-- [ ] G12.2: Pflichttests je Scanner (fehlender Launcher ergibt leer ohne Fehler, defekte und unvollständige Daten).
+- [x] G12.2: Pflichttests je Scanner (fehlender Launcher ergibt leer ohne Fehler, defekte und unvollständige Daten).
   CHECK: ps tools\gates\phase2-scanner-tests.ps1
   EXPECT: PHASE2_SCANNER_TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 574, PHASE2_SCANNER_TESTS_OK.
 
-- [ ] G12.3: Verträglichkeit: eine Konfiguration mit unbekannter Quelle lädt, alle übrigen Spiele und Einstellungen bleiben, nichts wird als „defekt“ gesichert; Gegenprobe mit dem bisherigen Konverter schlägt fehl.
+- [x] G12.3: Verträglichkeit: eine Konfiguration mit unbekannter Quelle lädt, alle übrigen Spiele und Einstellungen bleiben, nichts wird als „defekt“ gesichert; Gegenprobe mit dem bisherigen Konverter schlägt fehl.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~UnknownSource" -MinTests 3
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, TESTS_OK 13.
 
-- [ ] G12.4: Echtes System, nur lesend: `hdrpilot scan --source Quiver` liefert „Black“ mit der Spiel-EXE ohne Fehler; die Dateiliste des Quiver-Ordners (Größen, Zeitstempel) ist vorher und nachher gleich.
+- [x] G12.4: Echtes System, nur lesend: `hdrpilot scan --source Quiver` liefert „Black“ mit der Spiel-EXE ohne Fehler; die Dateiliste des Quiver-Ordners (Größen, Zeitstempel) ist vorher und nachher gleich.
   CHECK: ps tools\gates\phase12-quiver-scan.ps1
   EXPECT: PHASE12_QUIVER_SCAN_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE12_QUIVER_SCAN_OK (in der Sitzung und außerhalb des Containers je 1 Quiver-Spiel „Black“ mit Start-EXE, Arbeitsordner und Cover aus Quivers Zwischenspeicher, ohne Fehler, eigene Ablage leer; Dateiliste des Quiver-Ordners vorher und nachher gleich, 304 Einträge, 0 Unterschiede).
 
-- [ ] G12.5: Testinstanz: Quelle „Quiver“ in Filter und Kapsel, Cover aus dem Cache der Beispieldateien, „Mit HDR starten“ startet ein harmloses Prüfprogramm direkt mit seinem Ordner als Arbeitsordner und die Sitzung erkennt es; Bilder bei drei Größen, hell und dunkel.
+- [x] G12.5: Testinstanz: Quelle „Quiver“ in Filter und Kapsel, Cover aus dem Cache der Beispieldateien, „Mit HDR starten“ startet ein harmloses Prüfprogramm direkt mit seinem Ordner als Arbeitsordner und die Sitzung erkennt es; Bilder bei drei Größen, hell und dunkel.
   CHECK: ps tools\gates\phase12-quiver-ui.ps1
   EXPECT: PHASE12_QUIVER_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE12_QUIVER_UI_OK (66 Prüfungen an einer Testinstanz mit erfundenem Quiver-Ordner und harmlosem Prüfprogramm, ohne echten Bildschirm; 36 Bilder bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel).
 
-- [ ] G12.6: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und UI-Gates grün, README, E91 und `docs/scanner/quiver.md` passen zu den Texten.
+- [x] G12.6: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und UI-Gates grün, README, E91 und `docs/scanner/quiver.md` passen zu den Texten.
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-21 (phase5/release, 3d53ff2): exit 0, PHASE5_README_OK (0 Probleme); dazu BUILD_OK_0_WARNINGS, TESTS_OK 3409 und alle UI-Gates grün (siehe G10.10).
 
 - [ ] G12.7: Livetest mit „Black“ nur mit dem Nutzer: aus Quiver gestartet schaltet HDR ein, nach dem Ende wird zurückgestellt; danach Abnahme durch den Nutzer.
-  EVIDENCE: pending
+  EVIDENCE: pending. Livetest mit „Black“ und Abnahme nur zusammen mit dem Nutzer; steht aus.
 
 ## Phase 13: Veröffentlichung auf GitHub (Vorgaben des Nutzers 2026-10-20, E92)
 
@@ -559,7 +559,7 @@ Scope: HDRpilot 1.5.0 im öffentlichen Repository `DanteGE/HDRpilot`. Lizenz Pol
 - [x] G13.4: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün.
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
-  EVIDENCE: 2026-10-20 auf feature/library-toolbar nach dem Zusammenführen von phase5/release, nacheinander, alle exit 0: BUILD_OK_0_WARNINGS, TESTS_OK 3405 (erster Lauf nur mit dem bekannten zeitabhängigen Fall in EffectReviewTests rot, Wiederholung grün), PHASE2_SCANNER_TESTS_OK (574), PHASE12_QUIVER_SCAN_OK, PHASE12_QUIVER_UI_OK, PHASE11_UI_OK, PHASE11_MIGRATION_OK, PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK, PUBLISH_CHECK_OK. Nicht ausgeführt, weil sie echtes HDR schalten oder Eingaben senden: phase1-*, phase3-standin, phase4-run, phase4-crash, phase6-wrap, phase6-traymenu, phase10-gpu; ebenso nicht phase2-scan, phase5-publish und phase7-*. Nach den Funden der Prüfung (2026-10-21, Stand des Commits „Release 1.5.0: Funde der Prüfung“), nacheinander, alle exit 0 im ersten Lauf, ohne Wiederholung: BUILD_OK_0_WARNINGS, TESTS_OK 3409, PHASE2_SCANNER_TESTS_OK (574), PHASE12_QUIVER_SCAN_OK, PHASE12_QUIVER_UI_OK, PHASE11_UI_OK, PHASE11_MIGRATION_OK, PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK (samt ausgelieferter Datei), PUBLISH_CHECK_OK; nach den letzten Änderungen am Skript publish-check.ps1 und an GATES.md publish-check.ps1 und phase5-readme.ps1 erneut grün. Nicht ausgeführt wie oben.
+  EVIDENCE: 2026-10-20 auf feature/library-toolbar nach dem Zusammenführen von phase5/release, nacheinander, alle exit 0: BUILD_OK_0_WARNINGS, TESTS_OK 3405 (erster Lauf nur mit dem bekannten zeitabhängigen Fall in EffectReviewTests rot, Wiederholung grün), PHASE2_SCANNER_TESTS_OK (574), PHASE12_QUIVER_SCAN_OK, PHASE12_QUIVER_UI_OK, PHASE11_UI_OK, PHASE11_MIGRATION_OK, PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK, PUBLISH_CHECK_OK. Nicht ausgeführt, weil sie echtes HDR schalten oder Eingaben senden: phase1-*, phase3-standin, phase4-run, phase4-crash, phase6-wrap, phase6-traymenu, phase10-gpu; ebenso nicht phase2-scan, phase5-publish und phase7-*. Nach den Funden der Prüfung (2026-10-21, Stand des Commits „Release 1.5.0: Funde der Prüfung“), nacheinander, alle exit 0 im ersten Lauf, ohne Wiederholung: BUILD_OK_0_WARNINGS, TESTS_OK 3409, PHASE2_SCANNER_TESTS_OK (574), PHASE12_QUIVER_SCAN_OK, PHASE12_QUIVER_UI_OK, PHASE11_UI_OK, PHASE11_MIGRATION_OK, PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK (samt ausgelieferter Datei), PUBLISH_CHECK_OK; nach den letzten Änderungen am Skript publish-check.ps1 und an GATES.md publish-check.ps1 und phase5-readme.ps1 erneut grün. Nicht ausgeführt wie oben. Nach der Zusammenführung in phase5/release (2026-10-21, Merge-Commit 3d53ff2, Baum gleich 7c4b822) auf dem Stand mit den Nachweisen G10 bis G12, nacheinander, alle exit 0: BUILD_OK_0_WARNINGS, TESTS_OK 3409, die Testfilter der Gates G5.4, G10.1–G10.4, G10.6, G10.7, G11.1, G12.1 und G12.3, PHASE2_SCANNER_TESTS_OK (574), PHASE12_QUIVER_SCAN_OK, PHASE12_QUIVER_UI_OK, PHASE11_UI_OK, PHASE11_MIGRATION_OK, PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK, PUBLISH_CHECK_OK. Nicht ausgeführt wie oben.
 
 - [ ] G13.5: Geschichte aller veröffentlichten Zweige mit denselben Regeln umgeschrieben (Autor und Committer Dante_GE mit Noreply-Adresse; alte Fassungen der bereinigten Dateien ausdrücklich behandelt, `messung-vorher/` aus allen Versionen entfernt, siehe `docs/stand.md`), Restesuche über alle Commits, Nachrichten, Pfadnamen und Blob-Versionen ohne Treffer (im umgeschriebenen Repository nach `git gc --prune=now`, für jeden Zweig, der hochgeladen wird), mit `origin/main` zusammengeführt (ohne Überschreiben) und hochgeladen.
   CHECK: ps tools\gates\publish-check.ps1 -History * (im umgeschriebenen Repository: alle Refs, also die hochzuladenden Zweige und origin/main)

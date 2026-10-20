@@ -1,6 +1,6 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-20. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-21. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Veröffentlichung auf GitHub (Wunsch des Nutzers 2026-10-20)
@@ -28,10 +28,13 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
     Spielelisten und prüft mit `-History` die ganze Geschichte (Autor, Committer, Nachrichten, Pfadnamen, jede
     Blob-Version); Aufzählungen der Bibliothek und Namen früher installierter Spiele in den Berichten entfernt (E92);
     `LICENSE` liegt Ordner und Setup bei; Kommentare zu den Kennungen der Abrufe auf „HDRpilot/<Version>“ korrigiert.
+  - Zusammenführung (2026-10-21): `feature/library-toolbar` per Merge-Commit (ohne Vorspulen) in `phase5/release`,
+    ohne Konflikte, weil `phase5/release` dort schon enthalten war; danach `main` vorgespult. Nachweise der
+    ausführbaren Gates G10 bis G12 in `GATES.md` eingetragen; offen bleiben dort nur die Messung G10.9 mit
+    eingeschaltetem Bildschirm und die Abnahmen G10.11, G11.5 und G12.7 mit dem Nutzer.
 - **Ablauf (offen ab Schritt 5):**
   1. Abschlussprüfung von `feature/library-toolbar` (erledigt).
-  2. Merge nach `phase5/release` und `main` (`phase5/release` ist schon in `feature/library-toolbar` zusammengeführt;
-     beide Zweige können vorspulen).
+  2. Merge nach `phase5/release` und `main` (erledigt 2026-10-21).
   3. 1.5.0 setzen (erledigt).
   4. LICENSE und README-Kopf einfügen (erledigt).
   5. Verlauf bereinigen: Werkzeug aus dem Lauf `publish-prep`, getestet an einer Kopie; dazu die erfundenen
@@ -102,8 +105,13 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
     4. Dem Nutzer die neuen Funktionen zeigen: Leiste, Auswahl beim Filtern, nicht installierte Spiele, Quiver.
     5. Danach Zusammenführung, 1.5.0, Setup bauen (nicht installieren), G12.7 als Livetest mit „Black“ nur mit
        dem Nutzer.
-- **Danach:** Abschlussprüfung, Stand sichern. Zusammenführung, 1.5.0 und
-  Setup erst, nachdem der Nutzer die neuen Funktionen gesehen hat.
+  - **Stand 2026-10-21:** Phase-11-Fund behoben (0101229: nicht lesbare Ordner gelten als „nicht prüfbar“);
+    Abschlussprüfung von `feature/library-toolbar` mit Korrekturen und Gegenprüfung (864aa2d, c8e6f10, a98953a);
+    Zusammenführung und 1.5.0 erledigt (siehe oben). Offen: Schritt 4 und G12.7 mit dem Nutzer; die Setup-Datei erst
+    aus dem umgeschriebenen Repository bauen.
+- **Danach (Plan vom 2026-10-20):** Abschlussprüfung, Stand sichern. Zusammenführung, 1.5.0 und Setup erst, nachdem
+  der Nutzer die neuen Funktionen gesehen hat. Zusammenführung und 1.5.0 kamen mit dem Ablauf der Veröffentlichung
+  (oben) früher; die Vorführung beim Nutzer steht noch aus, die Setup-Datei ist noch nicht gebaut.
 - **Wunsch des Nutzers:** gründlich bleiben, Tempo ist zweitrangig.
 
 ## Neue Wünsche des Nutzers (2026-10-18)

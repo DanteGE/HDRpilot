@@ -190,7 +190,8 @@ Datei ist zu, bevor dekodiert wird (siehe 10).
 Die Prozessüberwachung meldet neu gestartete Prozesse. Heißt einer `QuiverLauncher.exe` (`…\current\` oder der Starter
 darüber) oder `Quiver.exe` und trägt der Ordner darüber das Kennzeichen von Quiver (Bibliothek darf noch fehlen), trägt
 HDRpilot ihn in `settings.quiverFolders` ein und liest 5 s später neu ein (App und `hdrpilot watch`). Jeder EXE-Pfad wird
-nur einmal geprüft (E31), ein schon bekannter Ordner schreibt nichts. Ohne gelernten Ordner fehlt das Feld in
+nur einmal geprüft (E31), ein schon bekannter Ordner schreibt nichts; scheitert das Speichern (Datei gesperrt), versucht
+es der nächste Start von Quiver erneut, nicht erst ein Neustart von HDRpilot. Ohne gelernten Ordner fehlt das Feld in
 `config.json` ganz, ältere Versionen sehen es nicht. Die Einstellung hat keine Oberfläche; einen verschobenen Ordner
 lernt HDRpilot beim nächsten Start von Quiver neu (der alte bleibt in der Liste und wird übersprungen, solange er kein
 Quiver-Ordner ist).

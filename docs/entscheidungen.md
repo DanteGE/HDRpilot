@@ -1160,7 +1160,8 @@ startet Quiver nie und nutzt keinen Code von Quiver. Einzelheiten und Messungen:
   Struktur bis 2.4.x. Die MuiCache wird nicht gelesen (Nutzungsverlauf).
 - Ordner lernen (`QuiverFolderLearner`): Sieht die Prozessüberwachung `QuiverLauncher.exe` oder `Quiver.exe` aus einem
   Quiver-Ordner, trägt HDRpilot ihn in `quiverFolders` ein und liest 5 s später neu ein (App und `hdrpilot watch`). Jeder
-  EXE-Pfad wird nur einmal geprüft (E31); nur dieses Lernen schreibt, das Einlesen selbst bleibt rein lesend.
+  EXE-Pfad wird nur einmal geprüft (E31); scheitert das Speichern (Datei gesperrt), versucht es der nächste Start von
+  Quiver erneut (Prüfung 2026-10-20). Nur dieses Lernen schreibt, das Einlesen selbst bleibt rein lesend.
 - Bibliothek: `apps.json` (Name: `customDisplayName`, `name`, `project`, `folderName`), aus `settings.json` nur
   `AppsPath` (absolut, auch eine Laufwerkswurzel wie `G:\`, die Quiver unverändert nimmt); Spielordner `installPath`
   oder `<Apps>\<folderName>`. Installiert wie in Quiver (Ordner da, keine `install-incomplete.txt`, irgendwo eine EXE,

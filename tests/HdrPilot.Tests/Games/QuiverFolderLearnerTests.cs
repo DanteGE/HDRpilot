@@ -143,6 +143,25 @@ public sealed class QuiverFolderLearnerTests
     }
 
     [Fact]
+    public void Quiver_folder_is_learned_at_the_next_start_after_saving_failed()
+    {
+        // Gegenstück zu „jeder EXE-Pfad nur einmal“: Scheiterte das Speichern (Konfiguration gesperrt), gilt der Pfad nicht als
+        // geprüft. Der nächste Start von Quiver (neue Prozess-ID, derselbe Pfad) lernt den Ordner, nicht erst ein Neustart der App.
+        AddQuiver(Root);
+        _fs.FailWriting(ConfigPath, new IOException("Datei gesperrt"));
+        _learner.Observe([Process(Root + @"\current\QuiverLauncher.exe")]);
+        Assert.Null(_config.Current.Settings.QuiverFolders);
+        Assert.Empty(_learned);
+
+        _fs.FailWriting(ConfigPath, null);
+        _learner.Observe([Process(Root + @"\current\QuiverLauncher.exe", 43)]);
+
+        Assert.Equal([Root], _config.Current.Settings.QuiverFolders);
+        Assert.Equal([Root], _learned);
+        Assert.Contains("\"quiverFolders\"", _fs.ReadAllText(ConfigPath), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Quiver_learned_folder_is_scanned_without_other_hints()
     {
         AddQuiver(Root);

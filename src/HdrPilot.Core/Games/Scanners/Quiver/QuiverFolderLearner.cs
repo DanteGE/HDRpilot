@@ -12,8 +12,9 @@ namespace HdrPilot.Core.Games.Scanners.Quiver;
 /// (Velopack) oder <c>Quiver.exe</c> (bis 2.4.x) und trägt der Ordner darüber das Kennzeichen von Quiver
 /// (<see cref="QuiverRoot.Detect"/>, Bibliothek darf noch fehlen), merkt HDRpilot ihn in der versteckten Einstellung
 /// <c>quiverFolders</c> und meldet <see cref="Learned"/>; die App liest dann verzögert neu ein. Jeder EXE-Pfad wird nur
-/// einmal geprüft (wie jeder Prozess nur einmal zugeordnet wird, E31), ein schon bekannter Ordner schreibt nichts. Die
-/// MuiCache (Liste ausgeführter Programme) wird bewusst nicht gelesen. Wirft nie.
+/// einmal geprüft (wie jeder Prozess nur einmal zugeordnet wird, E31), ein schon bekannter Ordner schreibt nichts; scheitert
+/// das Speichern, versucht es der nächste Start von Quiver erneut. Die MuiCache (Liste ausgeführter Programme) wird bewusst
+/// nicht gelesen. Wirft nie.
 /// </summary>
 public sealed class QuiverFolderLearner(IFileSystem fileSystem, ConfigService config, ILogger? logger = null)
 {
@@ -78,7 +79,8 @@ public sealed class QuiverFolderLearner(IFileSystem fileSystem, ConfigService co
             _checked.Clear();
         }
 
-        if (!_checked.Add(PathUtil.Normalize(exePath)) || FolderOf(exePath) is not { } folder)
+        var path = PathUtil.Normalize(exePath);
+        if (!_checked.Add(path) || FolderOf(exePath) is not { } folder)
         {
             return;
         }
@@ -95,14 +97,25 @@ public sealed class QuiverFolderLearner(IFileSystem fileSystem, ConfigService co
         }
 
         var added = false;
-        config.Update(c =>
+        try
         {
-            if (!Known(c, folder))
+            config.Update(c =>
             {
-                (c.Settings.QuiverFolders ??= []).Add(folder);
-                added = true;
-            }
-        });
+                if (!Known(c, folder))
+                {
+                    (c.Settings.QuiverFolders ??= []).Add(folder);
+                    added = true;
+                }
+            });
+        }
+        catch
+        {
+            // Nicht gespeichert (etwa Konfiguration gesperrt): Der Pfad gilt als nicht geprüft, damit der nächste Start von
+            // Quiver den Ordner lernt und nicht erst ein Neustart der App. Die Warnung schreibt der Aufrufer.
+            _checked.Remove(path);
+            throw;
+        }
+
         if (added)
         {
             _logger.LogInformation("Quiver: Ordner {Folder} gelernt (Quiver gestartet).", folder);

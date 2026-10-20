@@ -275,9 +275,11 @@ einen Ordner trägst du dort ein oder, einfacher, startest Quiver einmal, währe
 
 Im Bereich **Bibliothek** entfernt **Einstellungen aller nicht installierten Spiele entfernen…** auf einmal, was
 **Einstellungen entfernen…** bei jedem einzelnen nicht installierten Spiel aus einem Launcher entfernen würde. Die
-Rückfrage nennt alle betroffenen Spiele, unter jedem, was verloren geht, und warnt bei nicht verbundenen Laufwerken
-und noch vorhandenen Ordnern. Das gilt sofort und unabhängig von **Speichern**; selbst hinzugefügte und gerade laufende
-Spiele bleiben (laufen alle, sagt die Karte das).
+Rückfrage nennt alle betroffenen Spiele, unter jedem, was verloren geht, und warnt, wenn Spiele vielleicht noch
+installiert sind; warum, steht unter dem Namen des Spiels: Laufwerk nicht verbunden, EXE-Datei noch da, bei Steam noch
+eingetragen oder nicht prüfbar (Laufwerk bzw. Ordner antworten nicht oder sind nicht lesbar). Ein Restordner nur mit
+Spielständen, Einstellungen und Protokollen zählt nicht. Das gilt sofort und unabhängig von **Speichern**; selbst
+hinzugefügte und gerade laufende Spiele bleiben (laufen alle, sagt die Karte das).
 
 Links führt eine Navigation durch die Bereiche (**Allgemein**, **Bildschirme**, **Automatik**, **Suchordner**,
 **Bibliothek**, **Hilfsprozesse**, **Darstellung** mit **Farben**, **Bilder** und **Symbole und Tray**, **Erweitert**,
@@ -838,8 +840,9 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   der Hinweis „Keine Spiele für diese Auswahl“.
 - **Ein installiertes Spiel heißt „Nicht installiert“:** Liegt es auf einem Laufwerk, das gerade nicht verbunden ist,
   steckt es im Launcher mitten in einem Update, oder hat das Einlesen den Launcher nicht gefunden (siehe Protokoll)?
-  Dann nicht „Einstellungen entfernen…“ wählen (die Rückfrage warnt, wenn Laufwerk fehlt oder Ordner noch da ist):
-  Nach dem Verbinden bzw. dem Update und „Neu einlesen“ gelten seine Einstellungen wieder.
+  Dann nicht „Einstellungen entfernen…“ wählen (die Rückfrage warnt, wenn das Laufwerk nicht verbunden ist, eine EXE
+  des Spiels noch da ist, Steam es noch als installiert führt oder sich das nicht prüfen lässt; ein Restordner nur mit
+  Spielständen zählt nicht): Nach dem Verbinden bzw. dem Update und „Neu einlesen“ gelten seine Einstellungen wieder.
 - **Protokoll:** Infobereich → „Protokollordner öffnen“. Für mehr Einzelheiten unter Einstellungen → Erweitert die
   Protokollstufe auf „Ausführlich“ stellen. Jede Schaltung steht dort mit Auslöser, Bildschirm, Zustand vorher und
   nachher.

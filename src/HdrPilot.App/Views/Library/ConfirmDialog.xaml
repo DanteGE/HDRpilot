@@ -90,7 +90,7 @@
             </Grid>
         </DockPanel>
 
-        <!-- Warnung, etwa Laufwerk nicht verbunden oder Ordner noch da (E90) -->
+        <!-- Warnung, wenn das Spiel vielleicht noch installiert ist: etwa Laufwerk nicht verbunden oder EXE noch da (E90) -->
         <Grid x:Name="WarningArea" Grid.Row="3" Margin="60,16,0,0" Visibility="Collapsed">
             <Border Style="{StaticResource Lib.StatusTint}" Tag="{x:Static vm:StatusKind.Warning}" />
             <DockPanel Margin="12,9">

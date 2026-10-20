@@ -1,12 +1,12 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-18. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-20. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Veröffentlichung auf GitHub (Wunsch des Nutzers 2026-10-20)
-- **Ziel:** öffentliches Repository https://github.com/DanteGE/HDRpilot. Dort liegen schon zwei Commits des Nutzers
-  („Initial commit“ mit englischer Kurz-README, „Create funding.yml“ mit `ko_fi: Dante_GE`). Beide bleiben erhalten:
-  zusammenführen, nie überschreiben.
+- **Ziel:** öffentliches Repository https://github.com/DanteGE/HDRpilot. Dort liegen schon drei Commits des Nutzers
+  („Initial commit“ mit englischer Kurz-README, „Create funding.yml“, „Update funding.yml“). Alle bleiben erhalten:
+  zusammenführen, nie überschreiben; `funding.yml` bleibt, wie der Nutzer sie angelegt hat.
 - **Vorgaben des Nutzers:**
   1. GitHub-noreply-Adresse statt der bisherigen Mail-Adresse: `115689511+DanteGE@users.noreply.github.com`.
   2. Keine lokalen Pfade, auch nicht in alten Versionen.
@@ -17,13 +17,20 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   - Lokale Git-Identität Dante_GE mit noreply-Adresse.
   - Remote `origin` eingetragen.
   - Anmeldung bei GitHub eingerichtet und ohne Übertragung geprüft.
-- **Ablauf:**
-  1. Abschlussprüfung von `feature/library-toolbar`.
-  2. Merge nach `phase5/release` und `main`.
-  3. 1.5.0 setzen (Empfehlung; der Nutzer hat nicht widersprochen).
-  4. LICENSE und README-Kopf einfügen.
-  5. Verlauf bereinigen: Werkzeug aus dem Lauf `publish-prep`, getestet an einer Kopie.
-  6. Restesuche über alle Versionen.
+  - Auf `feature/library-toolbar` (2026-10-20, nach der letzten Gegenprüfung): Restfunde behoben (leere Liste im
+    Detailbereich, Bericht zählt quadratische Bilder), `phase5/release` hereingeholt, Version 1.5.0 mit Autor und
+    Copyright in den Programmdaten, `LICENSE`, README mit englischer Einleitung und Abschnitt „Lizenz“, `.gitignore`
+    um Werkzeugordner ergänzt, Arbeitsstand bereinigt (E92) und Gate `publish-check.ps1` (G13.3). Alle Gates ohne echte
+    HDR-Umschaltung grün (G13.4).
+- **Ablauf (offen ab Schritt 5):**
+  1. Abschlussprüfung von `feature/library-toolbar` (erledigt).
+  2. Merge nach `phase5/release` und `main` (`phase5/release` ist schon in `feature/library-toolbar` zusammengeführt;
+     beide Zweige können vorspulen).
+  3. 1.5.0 setzen (erledigt).
+  4. LICENSE und README-Kopf einfügen (erledigt).
+  5. Verlauf bereinigen: Werkzeug aus dem Lauf `publish-prep`, getestet an einer Kopie; dazu die erfundenen
+     Installationsordner und die entfernten Spielelisten aus E92 auch in allen alten Versionen.
+  6. Restesuche über alle Versionen (`publish-check.ps1 -Rev <Commit>` prüft einen Commit ohne Auschecken).
   7. Mit `origin/main` zusammenführen und hochladen.
   8. Die Setup-Installation bleibt beim Nutzer.
 

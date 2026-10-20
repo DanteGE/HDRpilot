@@ -1226,3 +1226,28 @@ startet Quiver nie und nutzt keinen Code von Quiver. Einzelheiten und Messungen:
   aus dem Cache, „Mit HDR starten“ startet ein harmloses Prüfprogramm direkt mit seinem Ordner als Arbeitsordner, ohne
   echtes HDR; Zustände `hauptfenster-quiver-liste`, `-raster`, `-regal`, `-regal-details`, `-gefiltert` und `-kapsel`
   für Bildschirmfotos). Der Livetest mit „Black“ (G12.7) steht aus und läuft nur mit dem Nutzer.
+
+**E92 Veröffentlichung auf GitHub (Vorgaben des Nutzers 2026-10-20, G13):** HDRpilot erscheint im öffentlichen
+Repository `DanteGE/HDRpilot`, als Version 1.5.0.
+- Lizenz: PolyForm Strict 1.0.0 (`LICENSE`, Hinweis „Copyright Dante_GE“). Erlaubt ist nicht-kommerzielle Nutzung,
+  nicht erlaubt sind Änderungen, Weitergabe und kommerzielle Nutzung. Fremdbestandteile behalten ihre Lizenzen; die
+  Testdaten aus PCGamingWiki stehen als Ausnahme unter CC BY-NC-SA 3.0 (README, Abschnitt „Lizenz“). Fertige Versionen
+  erscheinen über GitHub Releases.
+- Name und Adresse: überall „Dante_GE“, die Git-Identität mit der Noreply-Adresse von GitHub. In den Programmdaten nur
+  `Authors` und `Copyright` („© Dante_GE“); Firma und Produkt bleiben „HDRpilot“, ebenso der Herausgeber im Eintrag
+  unter „Installierte Apps“. Die Kennung beim Abruf von PCGamingWiki und SteamGridDB nennt nur Name und Version, keinen
+  Link auf das Projekt.
+- Das README beginnt mit der englischen Einleitung aus dem GitHub-Repository; `funding.yml` bleibt, wie der Nutzer sie
+  dort angelegt hat.
+- Keine lokalen Pfade: Notizordner von Sitzungen heißen `<Notizordner>`, Profilordner `%USERPROFILE%`, `%APPDATA%`,
+  `%LOCALAPPDATA%` und `%TEMP%`, Arbeitskopien stehen repo-relativ. Echte Installationsordner des Prüfrechners sind in
+  Dokumenten, Tests und Beispieldateien durch erfundene ersetzt, Laufwerk und Aufbau bleiben (`D:\Steam-Bibliothek`,
+  `F:\Steam-Bibliothek`, `D:\Anwendungen`, `D:\Programmordner`, `D:\GOG-Spiele`, `F:\GOG-Spiele`, `D:\Ubisoft-Spiele`,
+  `D:\Xbox Bibliothek`, `D:\Spielordner`; in der Battle.net-Beispieldatei gleich lange Pfade auf K: und J:).
+- Echte Spielelisten entfernt: `docs/recherche/symbole/messung-vorher/` gelöscht, die vollständigen Tabellen in
+  `docs/scanner/` durch erfundene Beispielzeilen ersetzt. Die Arbeitsprotokolle (`docs/stand.md`, `docs/uebergabe/`,
+  Berichte, `GATES.md`) bleiben, bereinigt; `docs/umgebung.md` beschreibt die Testumgebung nur noch allgemein.
+- Prüfung: G13.3 `publish-check.ps1` über alle verfolgten Dateien (Profilpfade, Ordner von Claude-Sitzungen, private
+  Links, frühere Mail-Adresse, echte Installationsordner und Kennungen; persönliche Werte nur als SHA-256,
+  Positivkontrolle bei jedem Lauf). Die Geschichte wird vor dem Hochladen mit denselben Regeln umgeschrieben (eigener
+  Lauf außerhalb dieses Repositorys).

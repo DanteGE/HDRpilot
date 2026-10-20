@@ -536,3 +536,32 @@ Scope: Spiele des Quiver Launchers (portabel, MIT, bei dem Nutzer v3.5.1 mit „
 
 - [ ] G12.7: Livetest mit „Black“ nur mit dem Nutzer: aus Quiver gestartet schaltet HDR ein, nach dem Ende wird zurückgestellt; danach Abnahme durch den Nutzer.
   EVIDENCE: pending
+
+## Phase 13: Veröffentlichung auf GitHub (Vorgaben des Nutzers 2026-10-20, E92)
+
+Scope: HDRpilot 1.5.0 im öffentlichen Repository `DanteGE/HDRpilot`. Lizenz PolyForm Strict 1.0.0, Name überall „Dante_GE“ mit der Noreply-Adresse von GitHub, keine lokalen Pfade, keine Spuren von Claude-Sitzungen, keine echten Installationsordner und Spielelisten des Prüfrechners, auch nicht in alten Versionen. Die Commits des Nutzers auf GitHub (README, `funding.yml`) bleiben erhalten.
+
+- [x] G13.1: Version 1.5.0 (App, Kommandozeile, Setup-Datei `HDRpilot-Setup-1.5.0.exe`), in den Programmdaten `Authors` Dante_GE und Copyright „© Dante_GE“; Firma, Produkt und Herausgeber bleiben „HDRpilot“.
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: 2026-10-20 auf feature/library-toolbar: phase5-readme.ps1 exit 0, PHASE5_README_OK (Setup-Datei HDRpilot-Setup-1.5.0.exe aus Directory.Build.props). Gebaute HDRpilot.dll und hdrpilot.dll (FileVersionInfo): Produkt HDRpilot 1.5.0, Datei 1.5.0.0, Firma HDRpilot, Copyright „© Dante_GE“.
+
+- [x] G13.2: `LICENSE` (PolyForm Strict 1.0.0 mit „Required Notice: Copyright Dante_GE“) unverändert; README oben mit der englischen Einleitung aus dem GitHub-Repository, Abschnitt „Lizenz“ (Fremdbestandteile, PCGamingWiki-Testdaten unter CC BY-NC-SA 3.0) und Hinweis auf GitHub Releases; `.gitignore` schließt `.claude/`, `.vscode/`, `.idea/` und `*.binlog` aus.
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: 2026-10-20: LICENSE byte-gleich mit der vorbereiteten Fassung (SHA-256 7bf1fa5b…); die ersten zwei README-Zeilen byte-gleich mit README.md aus origin/main; phase5-readme.ps1 exit 0, PHASE5_README_OK (0 Probleme, Gegenproben 15 von 15 und 3 von 3); git check-ignore trifft .claude/, .vscode/, .idea/ und *.binlog.
+
+- [x] G13.3: Keine lokalen Pfade, Claude-Ordner, privaten Links, frühere Mail-Adresse, echten Installationsordner oder Kennungen in den verfolgten Dateien; Positivkontrolle bei jedem Lauf.
+  CHECK: ps tools\gates\publish-check.ps1
+  EXPECT: PUBLISH_CHECK_OK
+  EVIDENCE: 2026-10-20: publish-check.ps1 exit 0, PUBLISH_CHECK_OK (721 verfolgte Dateien, 0 Treffer; Positivkontrolle 14 von 14, 14 erlaubte Schreibweisen ohne Treffer, UTF-16LE erkannt). Gegenproben außerhalb des Repositorys: eine Datei mit den echten Werten in allen 21 Zeilen erkannt, ebenso die alten Fassungen von product-with-games.db (beide Pfade), velopack_QuiverLauncher.log (10 Zeilen) und umgebung.md (3 Kennungen); -Rev c8e6f10 (vor der Bereinigung) 1648 Treffer, -Rev HEAD 0. Die erste Gesamtrunde fand einen Treffer im Skript selbst (Muster des Scratchpad-Pfads), behoben und erneut grün.
+
+- [x] G13.4: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün.
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: 2026-10-20 auf feature/library-toolbar nach dem Zusammenführen von phase5/release, nacheinander, alle exit 0: BUILD_OK_0_WARNINGS, TESTS_OK 3405 (erster Lauf nur mit dem bekannten zeitabhängigen Fall in EffectReviewTests rot, Wiederholung grün), PHASE2_SCANNER_TESTS_OK (574), PHASE12_QUIVER_SCAN_OK, PHASE12_QUIVER_UI_OK, PHASE11_UI_OK, PHASE11_MIGRATION_OK, PHASE10_UI_OK, PHASE10_SETTINGS_UI_OK, PHASE4_UI_OK/PHASE4_PERSIST_OK, PHASE6_UI_OK, PHASE8_ICONS_OK, PHASE9_AUTOHDR_UI_OK, PHASE3_IDLE_OK, PHASE4_RESOURCES_OK, PHASE5_README_OK, PHASE6_NAME_OK, PUBLISH_CHECK_OK. Nicht ausgeführt, weil sie echtes HDR schalten oder Eingaben senden: phase1-*, phase3-standin, phase4-run, phase4-crash, phase6-wrap, phase6-traymenu, phase10-gpu; ebenso nicht phase2-scan, phase5-publish und phase7-*.
+
+- [ ] G13.5: Geschichte aller veröffentlichten Zweige mit denselben Regeln umgeschrieben (Autor und Committer Dante_GE mit Noreply-Adresse), Restesuche über alle Versionen ohne Treffer, mit `origin/main` zusammengeführt (ohne Überschreiben) und hochgeladen.
+  CHECK: ps tools\gates\publish-check.ps1 -Rev <jeder veröffentlichte Commit>
+  EXPECT: PUBLISH_CHECK_OK
+  EVIDENCE: pending

@@ -9,8 +9,8 @@ Getroffene Entscheidungen mit Begründung. Neueste zuletzt. „(gemessen)“ hei
 **E2 Werkzeuge installiert:** .NET SDK 10.0.401 und Git per winget, wingdi.h aus dem NuGet-Paket
 `Microsoft.Windows.SDK.CPP` (nur entpackt, nicht installiert). Alle drei fehlten; der Nutzer hat jeweils zugestimmt.
 
-**E3 Git-Identität nur lokal im Repository** (`user.name` = Dante_GE, `user.email` = Konto-Adresse), weil keine globale
-Git-Konfiguration existierte. Keine globale Einstellung verändert.
+**E3 Git-Identität nur lokal im Repository** (`user.name` = Dante_GE, `user.email` = die Noreply-Adresse von GitHub),
+weil keine globale Git-Konfiguration existierte. Keine globale Einstellung verändert.
 
 **E4 Zwei EXE-Namen in getrennten Ordnern.** Die Kommandozeile heißt wie im Auftrag `hdrpilot.exe`, die App
 `HdrPilot.exe`. Windows unterscheidet Groß-/Kleinschreibung nicht; beide dürfen deshalb nie im selben Ordner liegen.

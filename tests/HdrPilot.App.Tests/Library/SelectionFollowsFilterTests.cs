@@ -229,6 +229,36 @@ public sealed class SelectionFollowsFilterTests
     });
 
     [Fact]
+    public void Without_a_match_the_details_text_is_neutral_and_follows_the_filter() => Sta.Run(() =>
+    {
+        // Prüfung 2026-10-20: Ohne Treffer bat der Detailbereich „Wähle ein Spiel“, obwohl die Liste nichts zum Wählen zeigt.
+        var context = SampleContext();
+        using var vm = new LibraryViewModel(context, new FakeDialogs());
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        Assert.Equal(LibraryStrings.Details_EmptyTitle, vm.DetailsEmptyTitle);
+        Assert.Equal(LibraryStrings.Details_EmptyText, vm.DetailsEmptyText);
+
+        Search(vm, "gibt es nicht");
+        Assert.True(vm.IsFilterEmpty);
+        Assert.Equal("Kein Spiel gewählt", vm.DetailsEmptyTitle);
+        Assert.Equal(LibraryStrings.Details_NoMatchText, vm.DetailsEmptyText);
+        Assert.Contains(nameof(LibraryViewModel.DetailsEmptyTitle), raised);
+        Assert.Contains(nameof(LibraryViewModel.DetailsEmptyText), raised);
+
+        raised.Clear();
+        vm.ClearFilters();
+        Assert.Equal(LibraryStrings.Details_EmptyTitle, vm.DetailsEmptyTitle);
+        Assert.Equal(LibraryStrings.Details_EmptyText, vm.DetailsEmptyText);
+        Assert.Contains(nameof(LibraryViewModel.DetailsEmptyTitle), raised);
+
+        // Leere Bibliothek: kein Filter ohne Treffer, der Detailbereich erklärt sich wie bisher.
+        using var empty = new LibraryViewModel(new TestLibraryContext(), new FakeDialogs());
+        Assert.False(empty.IsFilterEmpty);
+        Assert.Equal(LibraryStrings.Details_EmptyTitle, empty.DetailsEmptyTitle);
+    });
+
+    [Fact]
     public void Source_filter_and_the_three_toolbar_filters_move_and_restore_the_selection() => Sta.Run(() =>
     {
         var context = SampleContext();

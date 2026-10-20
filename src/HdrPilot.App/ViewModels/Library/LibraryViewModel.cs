@@ -493,6 +493,15 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var matching => LibraryText.Format(LibraryStrings.List_NoMatchHiddenMany, matching),
     };
 
+    /// <summary>
+    /// Detailbereich ohne gewähltes Spiel: „Wähle ein Spiel“ mit Erklärung. Passt zu Suche, Quelle und Filtern kein Spiel (die
+    /// Liste zeigt „Keine Spiele für diese Auswahl“), gibt es nichts zu wählen: dann ein neutraler Hinweis.
+    /// </summary>
+    public string DetailsEmptyTitle => IsFilterEmpty ? LibraryStrings.Details_NoMatchTitle : LibraryStrings.Details_EmptyTitle;
+
+    /// <summary>Erklärung unter <see cref="DetailsEmptyTitle"/>.</summary>
+    public string DetailsEmptyText => IsFilterEmpty ? LibraryStrings.Details_NoMatchText : LibraryStrings.Details_EmptyText;
+
     // ---------- HDR-Status und Schnellaktionen ----------
 
     public bool IsHdrOn
@@ -1356,6 +1365,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ResultText));
         OnPropertyChanged(nameof(IsFilterEmpty));
         OnPropertyChanged(nameof(NoMatchText));
+        OnPropertyChanged(nameof(DetailsEmptyTitle));
+        OnPropertyChanged(nameof(DetailsEmptyText));
         OnPropertyChanged(nameof(IsLibraryEmpty));
         OnPropertyChanged(nameof(ViewSummaryText));
         OnPropertyChanged(nameof(ListHeaderText));
@@ -1407,6 +1418,8 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(EmptyTitle));
         OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(NoMatchText));
+        OnPropertyChanged(nameof(DetailsEmptyTitle));
+        OnPropertyChanged(nameof(DetailsEmptyText));
 
         _allSources.Count = Games.Count;
         var index = 1;

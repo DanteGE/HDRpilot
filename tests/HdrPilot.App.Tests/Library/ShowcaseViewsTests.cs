@@ -368,6 +368,79 @@ public sealed class ShowcaseViewsTests
         });
     }
 
+    [Theory]
+    [InlineData(1000, 620)] // kleinstes Fenster
+    [InlineData(1164, 727)] // 1280×800 bei 110 %: hier stand „HDRpilot Quiver-Prüfs“, rechts abgeschnitten
+    [InlineData(1280, 800)]
+    [InlineData(1745, 982)] // 1920×1080 bei 110 %
+    [InlineData(1920, 1080)]
+    [InlineData(3127, 1309)] // 3440×1440 bei 110 %
+    [InlineData(3440, 1440)]
+    public void Shelf_title_wraps_left_of_the_card_into_at_most_two_lines_and_then_ends_with_an_ellipsis(double width, double height)
+    {
+        // Prüfung 2026-10-20: Im Regal brach der Name erst bei 820 px um; daneben steht die Symbol-Kachel, und rechts beginnt die
+        // Automatik-Karte. In schmalen Fenstern wurde ein langer Name deshalb ohne „…“ abgeschnitten.
+        WpfTestHost.Run(() =>
+        {
+            const string Long = "HDRpilot Quiver-Prüfspiel";
+            const string VeryLong = "Ein sehr langer Spielname, der auch in zwei Zeilen nicht passt: Die Rückkehr des Prüfspiels";
+            GameConfig[] games = [Game(GameSource.Quiver, "q1", Long, isNew: false), Game(GameSource.Steam, "s1", VeryLong, isNew: false), Game(GameSource.Steam, "s2", "Black", isNew: false), .. ManyGames(4)];
+            var size = new Size(width, height);
+            var (window, model, _) = Open(new TestLibraryContext(games), LibraryViewMode.Shelf, size);
+            var content = Named<FrameworkElement>(window, "HeroContent");
+            var heroLarge = Named<FrameworkElement>(window, "HeroLarge");
+            var title = Named<FrameworkElement>(window, "LargeTitle");
+            var card = Named<FrameworkElement>(window, "AutomationCard");
+
+            foreach (var (key, name) in new[] { ("Quiver:q1", Long), ("Steam:s1", VeryLong), ("Steam:s2", "Black") })
+            {
+                model.SelectedGame = model.Games.First(g => g.Key == key);
+                Arrange(window, size);
+                window.FitCompactHero();
+                Arrange(window, size);
+                Assert.True(model.Hero!.ShowName && model.Hero.ShowIconTile, "Name mit Symbol-Kachel (ohne Logo, erzeugtes Titelbild)");
+                var text = WpfTestHost.Visuals(title).OfType<TextBlock>().First(t => t.Name == "LargeName");
+                Assert.Equal(name, text.Text);
+
+                // Ganz zu sehen: links der Automatik-Karte, innerhalb des Titelbereichs (nicht vom Layout abgeschnitten).
+                var visible = Named<FrameworkElement>(window, "Root").ActualWidth - content.Margin.Left - content.Margin.Right;
+                var bounds = text.TransformToAncestor(content).TransformBounds(new Rect(text.RenderSize));
+                var right = text.TransformToAncestor(window).TransformBounds(new Rect(text.RenderSize)).Right;
+                var cardLeft = card.TransformToAncestor(window).Transform(default).X;
+                Assert.True(bounds.Right <= visible + 0.5, $"{width}×{height} „{name}“: endet bei {bounds.Right:0}, sichtbar {visible:0} px (Umbruchbreite {window.LargeNameWidth:0})");
+                Assert.True(right <= cardLeft, $"{width}×{height} „{name}“: endet bei {right:0}, Karte beginnt bei {cardLeft:0}");
+                Assert.True(title.DesiredSize.Width <= visible + 0.5, $"{width}×{height} „{name}“: Titel will {title.DesiredSize.Width:0} px, sichtbar {visible:0} px");
+
+                // Höchstens zwei Zeilen (je 70 px), über Angaben und Knöpfen, nie darauf.
+                var lines = (int)Math.Round(text.ActualHeight / 70);
+                Assert.InRange(lines, 1, 2);
+                var below = Named<FrameworkElement>(window, "LargeMeta") is { Visibility: Visibility.Visible } meta ? meta : Named<FrameworkElement>(window, "LargeActions");
+                var textBottom = text.TransformToAncestor(heroLarge).TransformBounds(new Rect(text.RenderSize)).Bottom;
+                Assert.True(textBottom <= VisualTreeHelper.GetOffset(below).Y + 0.5, $"{width}×{height} „{name}“: Name endet bei {textBottom:0}, darunter beginnt {below.Name} bei {VisualTreeHelper.GetOffset(below).Y:0}");
+
+                // Was nicht in zwei Zeilen passt, endet mit „…“ (der ganze Name bräuchte mehr Zeilen); ein kurzer bleibt einzeilig.
+                var full = new FormattedText(name, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch), text.FontSize, Brushes.White, 1.0)
+                {
+                    MaxTextWidth = window.LargeNameWidth,
+                    LineHeight = text.LineHeight,
+                };
+                var needed = (int)Math.Round(full.Height / text.LineHeight);
+                Assert.Equal(Math.Min(needed, 2), lines);
+                Assert.Equal(TextTrimming.CharacterEllipsis, text.TextTrimming);
+                if (name == VeryLong)
+                {
+                    Assert.True(needed > 2, $"{width}×{height}: der lange Name bräuchte {needed} Zeilen");
+                }
+                else if (name == "Black")
+                {
+                    Assert.Equal(1, lines);
+                }
+            }
+
+            window.Close();
+        });
+    }
+
     [Fact]
     public void Compact_hero_offers_launch_while_there_is_room_and_never_cuts_the_name()
     {

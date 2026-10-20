@@ -141,7 +141,10 @@ public static class ArtworkRenderer
         });
     }
 
-    /// <summary>Vorschaubild der Liste ohne Kopf- und Titelbild (460×215): Farbfeld mit Symbol, Kachelbild oder Monogramm.</summary>
+    /// <summary>
+    /// Vorschaubild der Liste ohne Kopf- und Titelbild (460×215): Farbfeld mit Symbol oder Monogramm; ein Kachelbild (Xbox) oder
+    /// quadratisches Cover (Quiver) füllt stattdessen die ganze Fläche (Mitte, oben und unten beschnitten).
+    /// </summary>
     public static BitmapSource Header(BgraImage field, BitmapSource? icon, int iconPx, bool iconIsTile, string monogram)
     {
         return Render(HeaderWidth, HeaderHeight, dc =>

@@ -190,14 +190,17 @@ public sealed partial class ArtworkService
         {
             Generator.Hero => ArtworkKind.Hero,
             Generator.CoverFromHero or Generator.CoverFromField or Generator.CoverFromSquare => ArtworkKind.Cover,
-            Generator.Header => ArtworkKind.Header,
+            Generator.Header or Generator.HeaderFromSquare => ArtworkKind.Header,
             Generator.Monogram => ArtworkKind.Icon,
             _ => throw new ArgumentOutOfRangeException(nameof(generator), generator, "Kein erzeugtes Bild."),
         };
+
+        // Eigener Name je Art der Erzeugung: Ein früher anders erzeugtes Bild (etwa ein Vorschaubild nur mit Monogramm) gilt
+        // dann nicht mehr und wird neu gezeichnet.
         var name = NameOf(kind) + generator switch
         {
             Generator.CoverFromHero => "-hero",
-            Generator.CoverFromSquare => "-square",
+            Generator.CoverFromSquare or Generator.HeaderFromSquare => "-square",
             _ => string.Empty,
         };
         var file = ArtworkFiles.GeneratedFileName(state.Key, kind);
@@ -245,7 +248,11 @@ public sealed partial class ArtworkService
             case Generator.CoverFromField:
             case Generator.CoverFromSquare:
                 return ArtworkRenderer.CoverFromField(name, field, Icon(256), state.Icon.Px, isTile, PixelAnalysis.Monogram(name));
+            case Generator.HeaderFromSquare when !isTile && state.SquareArt is { } square && TryDecode(square, ArtworkRenderer.HeaderWidth) is { } picture:
+                // Quadratisches Cover (Quiver) wie ein Kachelbild (Xbox) über die ganze Fläche, wie im Titelbild und im Cover.
+                return ArtworkRenderer.Header(field, picture, picture.PixelWidth, iconIsTile: true, PixelAnalysis.Monogram(name));
             case Generator.Header:
+            case Generator.HeaderFromSquare:
                 return ArtworkRenderer.Header(field, Icon(256), state.Icon.Px, isTile, PixelAnalysis.Monogram(name));
             default:
                 return ArtworkRenderer.Monogram(PixelAnalysis.Monogram(name), AmbientColors.FromName(name));

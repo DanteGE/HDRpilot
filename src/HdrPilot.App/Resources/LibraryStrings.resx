@@ -329,6 +329,13 @@
   <data name="Details_EmptyText" xml:space="preserve">
     <value>Hier legst du fest, ob HDRpilot HDR für ein Spiel automatisch einschaltet, auf welchem Bildschirm und welche EXE-Dateien zum Spiel gehören.</value>
   </data>
+  <data name="Details_NoMatchTitle" xml:space="preserve">
+    <value>Kein Spiel gewählt</value>
+    <comment>Detailbereich, wenn zu Suche, Quelle und Filtern kein Spiel passt (die Liste zeigt dann „Keine Spiele für diese Auswahl“): es gibt nichts zu wählen</comment>
+  </data>
+  <data name="Details_NoMatchText" xml:space="preserve">
+    <value>Sobald die Liste wieder Spiele zeigt, stehen hier die Einstellungen des gewählten Spiels.</value>
+  </data>
   <data name="Details_NotInstalled" xml:space="preserve">
     <value>Dieses Spiel wurde beim letzten Einlesen nicht mehr gefunden. Die Einstellungen bleiben erhalten.</value>
   </data>

@@ -290,6 +290,47 @@ public sealed class QuiverLibraryTests
         Assert.False(StripesAt(other.Hero!.Image, x0: 0.37 * other.Hero.PixelWidth, scale: other.Hero.PixelHeight / 480.0, y: other.Hero.PixelHeight / 2), "ohne quadratisches Bild keine Streifen im Titelbild");
     }
 
+    [Fact]
+    public async Task Quiver_square_cover_is_also_the_picture_in_the_list()
+    {
+        // Liste mit Bildern (Querformat-Vorschau, Kopfbild 460 × 215): Ohne Kopf- und Titelbild zeigte sie bei „Black“ nur Farbfeld
+        // und Monogramm („BL“), obwohl Titelbild und Cover das quadratische Bild zeigen. Jetzt füllt es die Vorschau wie ein
+        // Kachelbild (Xbox): die Mitte über die ganze Breite.
+        using var art = new ArtworkFixture();
+        var green = ArtworkFixture.Image(480, 480, (x, _) => ((byte)0, (byte)(x / Stripe % 2 == 0 ? 255 : 110), (byte)0, (byte)255));
+        var cover = Path.ChangeExtension(art.Save(Path.Combine(art.Root, "Quiver", "Cache", "Images", "8C8FC6677FB84678288E4615E4E470A5.png"), green), null);
+        File.Move(cover + ".png", cover);
+        var game = new GameConfig { Source = GameSource.Quiver, SourceId = "Black-BlackXBERecomp", Name = "Black", CoverCandidates = [cover] };
+        var service = art.Service();
+        var index = Path.Combine(art.ArtDirectory, "index.json");
+        var file = Path.Combine(art.ArtDirectory, ArtworkFiles.GeneratedFolder, ArtworkFiles.GeneratedFileName(game.Key, ArtworkKind.Header));
+        const int Width = HdrPilot.App.Services.Artwork.ArtworkRenderer.HeaderWidth;
+
+        var header = await service.GetImageAsync(game, ArtworkKind.Header, Width, Ct);
+        service.FlushIndex();
+
+        var picture = Assert.IsAssignableFrom<System.Windows.Media.Imaging.BitmapSource>(header);
+        Assert.Equal((Width, HdrPilot.App.Services.Artwork.ArtworkRenderer.HeaderHeight), (picture.PixelWidth, picture.PixelHeight));
+        Assert.True(StripesAt(picture, x0: 0, scale: Width / 480.0, y: 10), "Vorschau oben mit den Streifen der Vorlage");
+        Assert.True(StripesAt(picture, x0: 0, scale: Width / 480.0, y: picture.PixelHeight / 2), "Vorschau in der Mitte mit den Streifen der Vorlage (statt Monogramm)");
+        Assert.True(File.Exists(file));
+        Assert.Contains("\"header-square\"", File.ReadAllText(index), StringComparison.Ordinal);
+
+        // Bestand: Eine früher nur mit Monogramm gezeichnete Vorschau (unter „header“ vermerkt) gilt nicht mehr, sie wird neu
+        // gezeichnet.
+        File.WriteAllText(index, File.ReadAllText(index).Replace("\"header-square\"", "\"header\"", StringComparison.Ordinal));
+        art.Save(file, ArtworkFixture.Image(Width, 215, (_, _) => ((byte)0, (byte)0, (byte)0, (byte)255)));
+        var redrawn = Assert.IsAssignableFrom<System.Windows.Media.Imaging.BitmapSource>(await art.Service().GetImageAsync(game, ArtworkKind.Header, Width, Ct));
+        Assert.True(StripesAt(redrawn, x0: 0, scale: Width / 480.0, y: 10), "alte Vorschau ersetzt");
+
+        // Gegenprobe: Mit einem Cover im Hochformat bleibt es bei Farbfeld und Monogramm (keine Streifen).
+        var portrait = Path.ChangeExtension(art.Save(Path.Combine(art.Root, "Quiver", "Cache", "Images", "BBBB.png"), ArtworkFixture.Image(300, 450, (x, _) => ((byte)0, (byte)(x / Stripe % 2 == 0 ? 255 : 110), (byte)0, (byte)255))), null);
+        File.Move(portrait + ".png", portrait);
+        var high = new GameConfig { Source = GameSource.Quiver, SourceId = "Hoch", Name = "Hoch", CoverCandidates = [portrait] };
+        var plain = Assert.IsAssignableFrom<System.Windows.Media.Imaging.BitmapSource>(await art.Service().GetImageAsync(high, ArtworkKind.Header, Width, Ct));
+        Assert.False(StripesAt(plain, x0: 0, scale: Width / 480.0, y: 10), "ohne quadratisches Bild keine Streifen in der Vorschau");
+    }
+
     /// <summary>Breite der Streifen der quadratischen Vorlage (480 px): gerade Streifen hellgrün, ungerade dunkelgrün.</summary>
     private const int Stripe = 40;
 

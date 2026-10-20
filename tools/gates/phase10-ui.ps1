@@ -20,7 +20,8 @@
 #     ausgeklappt, gemerkt, Fokus auf der Suche (Prüfung 2026-10-19)
 #   - Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19): Fällt das gewählte Spiel mit „Neu“ heraus, zeigen Liste
 #     und Details leise den ersten Treffer (bleibt neu, nichts gespeichert); eine Suche ohne Treffer lässt kein Spiel
-#     gewählt und zeigt „Keine Spiele für diese Auswahl“; nach dem Zurücksetzen in der Kapsel ist das Spiel wieder gewählt
+#     gewählt und zeigt „Keine Spiele für diese Auswahl“, der Detailbereich dazu „Kein Spiel gewählt“ statt „Wähle ein
+#     Spiel“; nach dem Zurücksetzen in der Kapsel ist das Spiel wieder gewählt
 #   - Pixelraster und Schwellen (Prüfung 2026-10-19): Symbolknöpfe und Abstände genau round(40 bzw. 8 · Skalierung)
 #     Bildschirmpixel, Zahl der Zeilen nach der Listenbreite (806/410) bei jeder Skalierung, auch bei 1366×768
 #   - Raster: gleich große Kacheln über die ganze Breite, keine leere Spalte rechts, nichts ragt hinaus, bei jeder Größe
@@ -408,6 +409,10 @@ try {
         Set-Text $search 'xqz kein Spiel'
         Check (Wait-Until { $null -eq (Detail-Name $win) -and $null -ne (Find-Id $win 'ResetFiltersButton' 300) } 3000) ('Ohne Treffer kein Spiel gewählt (Details: „{0}“), „Filter zurücksetzen“ da' -f (Detail-Name $win))
         Check ((Selected-Rows $win).Count -eq 0 -and $null -ne (Find-Name $win 'Keine Spiele für diese Auswahl')) 'Ohne Treffer: keine Zeile gewählt, Hinweis „Keine Spiele für diese Auswahl“'
+        # Detailbereich dazu neutral, nicht „Wähle ein Spiel“ (es gibt nichts zu wählen; Prüfung 2026-10-20)
+        $emptyTitle = Find-Id $win 'DetailsEmptyTitle' 2000
+        $emptyName = if ($emptyTitle) { [string]$emptyTitle.Current.Name } else { '<fehlt>' }
+        Check ($emptyName -eq 'Kein Spiel gewählt' -and $null -eq (Find-Name $win 'Wähle ein Spiel' 300)) ('Ohne Treffer: Detailbereich „{0}“, kein „Wähle ein Spiel“' -f $emptyName)
         Set-Text $search ''
         Check (Wait-Until { (Detail-Name $win) -eq $firstNew -and $null -eq (Find-Id $win 'ResetFiltersButton' 300) } 3000) ('Suche geleert: wieder „{0}“ („{1}“)' -f $firstNew, (Detail-Name $win))
 

@@ -38,6 +38,12 @@ public sealed partial class ArtworkService
         /// <summary>Cover im Hochformat aus einem (fast) quadratischen Bild des Launchers (Quiver): das Bild ganz, oben.</summary>
         CoverFromSquare,
         Header,
+
+        /// <summary>
+        /// Vorschaubild der Liste aus einem (fast) quadratischen Bild des Launchers (Quiver): das Bild über die ganze Fläche wie
+        /// ein Kachelbild (Xbox), wie es auch im Titelbild und im Cover steht (sonst nur Farbfeld und Monogramm).
+        /// </summary>
+        HeaderFromSquare,
         Monogram,
 
         /// <summary>Farbfeld aus den gemerkten Pixeln.</summary>
@@ -212,11 +218,13 @@ public sealed partial class ArtworkService
         {
             cover = cover with { Generate = Generator.CoverFromSquare };
         }
+
+        var squareArt = located.Cover is { } automatic && squareCovers.Contains(automatic.Path);
         var header = located.Header is { } h
             ? new ArtSpec(ArtworkKind.Header, h.Path, ArtworkOrigin.Launcher, CacheLabel(h.Cache), Generator.None)
             : hero.File is not null
                 ? hero with { Kind = ArtworkKind.Header }
-                : new ArtSpec(ArtworkKind.Header, null, ArtworkOrigin.Generated, ArtworkStrings.Source_Generated, Generator.Header);
+                : new ArtSpec(ArtworkKind.Header, null, ArtworkOrigin.Generated, ArtworkStrings.Source_Generated, squareArt ? Generator.HeaderFromSquare : Generator.Header);
         var field = hero.Origin == ArtworkOrigin.Launcher && located.Hero is { Cache: LauncherCache.Steam } && hero.File == located.Hero.Path && located.Field is { } blur
             ? new ArtSpec(ArtworkKind.Field, blur.Path, ArtworkOrigin.Launcher, CacheLabel(blur.Cache), Generator.None)
             : new ArtSpec(ArtworkKind.Field, null, hero.File is null ? ArtworkOrigin.Generated : hero.Origin, hero.Label, Generator.Field);
@@ -240,7 +248,7 @@ public sealed partial class ArtworkService
             Field = field,
             IconSpec = iconSpec,
             Ambient = ambient,
-            Summary = Summary(game, hero, logo, cover, iconSpec, icon, smeared, located.Cover is { } automatic && squareCovers.Contains(automatic.Path)),
+            Summary = Summary(game, hero, logo, cover, iconSpec, icon, smeared, squareArt),
             IsHypothetical = hypothetical,
         };
     }

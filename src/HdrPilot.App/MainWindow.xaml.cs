@@ -44,6 +44,19 @@ public partial class MainWindow : ChromeWindow
     public const double MaxCompactName = 560;
 
     /// <summary>
+    /// Breitester Name im großen Titelbereich (Regal), bevor er umbricht: der Platz links der Automatik-Karte ohne die
+    /// Symbol-Kachel (gesetzt von <see cref="FitCompactHero"/>). Nach zwei Zeilen endet er mit „…“.
+    /// </summary>
+    public static readonly DependencyProperty LargeNameWidthProperty = DependencyProperty.Register(
+        nameof(LargeNameWidth), typeof(double), typeof(MainWindow), new PropertyMetadata(MaxLargeName));
+
+    /// <summary>Name im großen Titelbereich höchstens so breit (wie bisher fest im XAML).</summary>
+    public const double MaxLargeName = 820;
+
+    /// <summary>Symbol-Kachel vor dem Namen im großen Titelbereich (128 px und 24 px Abstand, nur bei erzeugtem Titelbild).</summary>
+    private const double LargeIconTile = 152;
+
+    /// <summary>
     /// Kleinste Breite für Logo bzw. Namen im schmalen Titelbereich (ohne Symbol-Kachel), bevor Kennzeile und Angaben weichen:
     /// schmaler bräche ein langer Name in vier Zeilen um und würde winzig.
     /// </summary>
@@ -178,6 +191,12 @@ public partial class MainWindow : ChromeWindow
     {
         get => (double)GetValue(CompactNameWidthProperty);
         set => SetValue(CompactNameWidthProperty, value);
+    }
+
+    public double LargeNameWidth
+    {
+        get => (double)GetValue(LargeNameWidthProperty);
+        set => SetValue(LargeNameWidthProperty, value);
     }
 
     /// <summary>Gerade aktive Ansicht, wie sie angeordnet ist.</summary>
@@ -892,8 +911,9 @@ public partial class MainWindow : ChromeWindow
     /// rechts. Reicht die Breite nicht, entfällt zuerst „Beim Start …“, dann der Knopf (der Detailbereich hat beides immer).
     /// Danach wird der Name umbrochen bzw. das Logo verkleinert, damit Kennzeile und Angaben daneben Platz behalten; erst wenn
     /// dem Titel dann weniger als <see cref="MinCompactTitle"/> bliebe, fallen auch diese weg. Nie wird der Name abgeschnitten.
-    /// Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte passt. Gemessen wird die
-    /// gewünschte Breite ohne Begrenzung.
+    /// Im Regal entfällt „Beim Start …“, wenn die Knopfzeile nicht neben die Automatik-Karte passt, und der Name bricht links
+    /// der Karte um (<see cref="LargeNameWidth"/>, höchstens zwei Zeilen, dann „…“). Gemessen wird die gewünschte Breite ohne
+    /// Begrenzung.
     /// </summary>
     public void FitCompactHero()
     {
@@ -906,6 +926,11 @@ public partial class MainWindow : ChromeWindow
         {
             return;
         }
+
+        // Regal: Der Name bricht links der Automatik-Karte um (neben der Symbol-Kachel), höchstens in zwei Zeilen, dann „…“;
+        // vorher brach er erst bei 820 px um und wurde in schmalen Fenstern rechts abgeschnitten.
+        var largeIcon = _viewModel?.Hero?.ShowIconTile == true ? LargeIconTile : 0;
+        LargeNameWidth = Math.Clamp(Math.Floor(room - largeIcon), 1, MaxLargeName);
 
         // Regal: „Beim Start …“ nur, wenn die Knopfzeile links neben der Automatik-Karte Platz hat (sonst abgeschnitten).
         LargeLaunchChip.Visibility = Visibility.Visible;
@@ -1412,6 +1437,9 @@ public partial class MainWindow : ChromeWindow
             ApplyAmbient(instant: false);
             Hero.Show(_hero, _hero?.Artwork, HeroTransition());
             UpdateSheen();
+
+            // Mit dem Bild kann die Symbol-Kachel vor dem Namen kommen oder gehen (Umbruchbreite im Regal).
+            QueueCompactHero();
         }
     }
 

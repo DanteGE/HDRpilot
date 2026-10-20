@@ -729,11 +729,18 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Visibility="{Binding ShowName, Converter={StaticResource Lib.BoolToVisibility}}">
                     <ContentControl Width="128" Height="128" Margin="0,0,24,0" Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource HeroIconTile}"
                                     Visibility="{Binding ShowIconTile, Converter={StaticResource Lib.BoolToVisibility}}" />
+                    <!--
+                        Umbruchbreite vom Fenster (FitCompactHero: Platz links der Automatik-Karte, ohne die Symbol-Kachel): ein langer
+                        Name bricht in höchstens zwei Zeilen um und endet dann mit „…“, statt rechts abgeschnitten zu werden. Zeilen
+                        fest 70 px (die natürliche Zeilenhöhe der Titelschrift wie bisher), zwei davon samt etwas Luft für Rundungen.
+                    -->
                     <Viewbox StretchDirection="DownOnly" MaxHeight="150" HorizontalAlignment="Left" VerticalAlignment="Center">
-                        <Grid MaxWidth="820">
-                            <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="58" FontWeight="Bold" TextWrapping="Wrap" LineHeight="60"
+                        <Grid MaxWidth="{Binding LargeNameWidth, RelativeSource={RelativeSource AncestorType=Window}}">
+                            <TextBlock x:Name="LargeName" Text="{Binding Name}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="58" FontWeight="Bold" TextWrapping="Wrap"
+                                       LineHeight="70" LineStackingStrategy="BlockLineHeight" MaxHeight="146" TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource Lib.Brush.HeroTitle}" />
-                            <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="58" FontWeight="Bold" TextWrapping="Wrap" LineHeight="60"
+                            <TextBlock Text="{Binding Name}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="58" FontWeight="Bold" TextWrapping="Wrap"
+                                       LineHeight="70" LineStackingStrategy="BlockLineHeight" MaxHeight="146" TextTrimming="CharacterEllipsis"
                                        Foreground="{DynamicResource Lib.Brush.HeroSheen}" OpacityMask="{Binding SheenMask, RelativeSource={RelativeSource AncestorType=Window}}" IsHitTestVisible="False" />
                         </Grid>
                     </Viewbox>
@@ -1521,7 +1528,7 @@
                     <ScrollViewer x:Name="DetailsPanel" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False"
                                   AutomationProperties.AutomationId="DetailsPanel" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_Name}">
                         <Grid Margin="18,16,18,18">
-                            <!-- Nichts gewählt -->
+                            <!-- Nichts gewählt; ohne Treffer (Liste: „Keine Spiele für diese Auswahl“) ein neutraler Hinweis statt „Wähle ein Spiel“ -->
                             <StackPanel VerticalAlignment="Center" Margin="12,70,12,0"
                                         Visibility="{Binding HasDetails, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}">
                                 <Grid Width="84" Height="84" HorizontalAlignment="Center">
@@ -1529,8 +1536,10 @@
                                     <Border CornerRadius="24" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.AccentStrong}" />
                                     <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE7FC;" FontSize="36" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.AccentText}" />
                                 </Grid>
-                                <TextBlock Style="{StaticResource Hp.Text.Subtitle}" Text="{x:Static res:LibraryStrings.Details_EmptyTitle}" HorizontalAlignment="Center" Margin="0,20,0,8" />
-                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_EmptyText}" TextAlignment="Center" FontSize="13" LineHeight="20" />
+                                <TextBlock Style="{StaticResource Hp.Text.Subtitle}" Text="{Binding DetailsEmptyTitle}" HorizontalAlignment="Center" Margin="0,20,0,8"
+                                           AutomationProperties.AutomationId="DetailsEmptyTitle" />
+                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding DetailsEmptyText}" TextAlignment="Center" FontSize="13" LineHeight="20"
+                                           AutomationProperties.AutomationId="DetailsEmptyText" />
                             </StackPanel>
 
                             <!-- Gewähltes Spiel -->

@@ -147,8 +147,9 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   dasselbe Kürzel oder Strg+F (sucht dann gleich) blendet die Leiste wieder ein. HDRpilot merkt sich, ob sie aus- oder
   eingeblendet ist.
 - Fällt das gewählte Spiel durch Suche oder Filter aus der Liste, zeigen Titelbild und Details den ersten Treffer (er
-  bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“.
-  Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen der Filter, ist es wieder gewählt.
+  bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“
+  und in den Details „Kein Spiel gewählt“. Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen
+  der Filter, ist es wieder gewählt.
   Verschwindet das gewählte Spiel ganz aus der Liste (entfernt oder ausgeblendet), ist das nächste gewählt, am Ende der
   Liste das vorige; fällt damit auch die gewählte Quelle weg, zeigt die Liste wieder alle Spiele, und gewählt ist das,
   das dort auf das verschwundene folgt.
@@ -431,7 +432,8 @@ als Muster, ein Cover aus Titelbild oder Symbol mit dem Namen, statt eines Logos
 Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte Kapselbilder als einziges Cover) erkennt HDRpilot und
 ersetzt sie durch einen Ausschnitt aus dem Titelbild. Quadratische Cover von Quiver (wie meist, 480 × 480) beschneidet
 es nicht, sondern setzt sie ganz oben in ein Cover im Hochformat und rechts in das erzeugte Titelbild, wie das
-Kachelbild eines Xbox-Spiels; die Farben kommen dann aus diesem Bild. Logos schneidet es auf ihren sichtbaren Teil zu.
+Kachelbild eines Xbox-Spiels; wie dieses füllt ihre Mitte auch das Vorschaubild in der Liste, und die Farben kommen
+aus diesem Bild. Logos schneidet es auf ihren sichtbaren Teil zu.
 Umgebungsfarben berechnet es je Bild einmal, die hellere Fassung des Titelbilds nur bei aktivem Bibliotheksfenster und
 nie, solange ein Spiel läuft oder startet: kurz nachdem die Auswahl zur Ruhe gekommen ist, mit niedriger Priorität,
 damit sie bereitliegt, wenn HDR angeht. Beides legt es mit den Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab.

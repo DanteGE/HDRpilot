@@ -10,7 +10,8 @@
 #     Ordner, Cover-Hinweis die Datei im Zwischenspeicher
 #   - Quelle „Quiver“ im Quellenfilter (Liste zeigt danach nur Quiver-Spiele) und in der eingeklappten Kapsel (ItemStatus)
 #   - Das Cover kommt aus dem Zwischenspeicher (art\index.json: Herkunft Quiver, genau diese Datei, 480 × 480) und steht
-#     ganz in einem erzeugten Cover im Hochformat (cover-square, 600 × 900), nicht links und rechts abgeschnitten
+#     ganz in einem erzeugten Cover im Hochformat (cover-square, 600 × 900), nicht links und rechts abgeschnitten; seine
+#     Mitte füllt das Vorschaubild der Liste (header-square, 460 × 215) statt Farbfeld und Monogramm
 #   - „Starten“ startet das Prüfprogramm direkt (Arbeitsordner = sein Ordner, ohne Argumente), die Sitzung erkennt seinen
 #     Prozess, merkt die EXE und endet nach der Nachlaufzeit
 #   - Bildschirmfotos (Liste, Raster, Regal, Regal mit Schublade, gefiltert, Kapsel) bei 1280×800, 1920×1080 und 3440×1440,
@@ -206,7 +207,7 @@ try {
         $entry = ($text | ConvertFrom-Json).games.$key
         $script:located = if ($entry) { $entry.located.cover } else { $null }
         $script:generated = if ($entry -and $entry.generated) { $entry.generated } else { $null }
-        return $null -ne $script:located -and $null -ne $script:generated -and $null -ne $script:generated.'cover-square'
+        return $null -ne $script:located -and $null -ne $script:generated -and $null -ne $script:generated.'cover-square' -and $null -ne $script:generated.'header-square'
     } 15000)
     $located = $script:located
     $coverText = if ($located) { '{0} ({1}, {2} × {3})' -f $located.path, $located.source, $located.w, $located.h } else { 'nicht im Verzeichnis' }
@@ -215,6 +216,10 @@ try {
     $squareFile = if ($script:generated) { $script:generated.'cover-square' } else { $null }
     $squareSize = if ($squareFile) { Png-Size (Join-Path $cfg "art\gen\$squareFile") } else { $null }
     Check ($squareFile -and $squareSize -eq '600x900') ('Quadratisches Cover im Hochformat gesetzt: {0} ({1})' -f $squareFile, $squareSize)
+    # Vorschaubild der Liste (Kopfbild) aus demselben Bild statt nur Farbfeld und Monogramm (Prüfung 2026-10-20)
+    $headerFile = if ($script:generated) { $script:generated.'header-square' } else { $null }
+    $headerSize = if ($headerFile) { Png-Size (Join-Path $cfg "art\gen\$headerFile") } else { $null }
+    Check ($headerFile -and $headerSize -eq '460x215') ('Vorschaubild der Liste aus dem quadratischen Cover: {0} ({1})' -f $headerFile, $headerSize)
 
     # --- „Starten“: Prüfprogramm direkt, Arbeitsordner = sein Ordner; die Sitzung erkennt es ---
     $launch = Find-Id $win 'LaunchButton' 3000

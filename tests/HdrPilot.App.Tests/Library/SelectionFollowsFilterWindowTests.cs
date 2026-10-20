@@ -170,6 +170,47 @@ public sealed class SelectionFollowsFilterWindowTests
         });
     }
 
+    [Theory]
+    [InlineData(LibraryViewMode.List)]
+    [InlineData(LibraryViewMode.Grid)]
+    public void Without_a_match_the_details_pane_does_not_ask_to_choose_a_game(LibraryViewMode view)
+    {
+        // Prüfung 2026-10-20: Ohne Treffer stand im Detailbereich „Wähle ein Spiel – Hier legst du fest …“, obwohl es nichts zu
+        // wählen gibt; die Liste sagt „Keine Spiele für diese Auswahl“. Jetzt ein neutraler Hinweis; ist nur nichts gewählt,
+        // bleibt es bei „Wähle ein Spiel“.
+        WpfTestHost.Run(() =>
+        {
+            var (window, model) = Open(view);
+            TextBlock Placeholder(string id) => WpfTestHost.Visuals(Named<FrameworkElement>(window, "DetailsPanel")).OfType<TextBlock>()
+                .Single(t => System.Windows.Automation.AutomationProperties.GetAutomationId(t) == id);
+            var title = Placeholder("DetailsEmptyTitle");
+            var text = Placeholder("DetailsEmptyText");
+            var panel = Assert.IsType<StackPanel>(title.Parent);
+
+            model.SearchText = "xqz";
+            model.ApplySearch();
+            Arrange(window);
+            Assert.True(model.IsFilterEmpty);
+            Assert.Equal(Visibility.Visible, panel.Visibility);
+            Assert.Equal(Visibility.Visible, Named<FrameworkElement>(window, "NoMatch").Visibility);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Details_NoMatchTitle, title.Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Details_NoMatchText, text.Text);
+            Assert.DoesNotContain("Wähle", title.Text + text.Text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Hier legst du fest", text.Text, StringComparison.Ordinal);
+
+            // Mit Treffern und ohne Wahl: wieder „Wähle ein Spiel“ mit der Erklärung.
+            model.ClearFiltersCommand.Execute(null);
+            Arrange(window);
+            Assert.Equal(Visibility.Collapsed, panel.Visibility);
+            model.SelectedGame = null;
+            Arrange(window);
+            Assert.Equal(Visibility.Visible, panel.Visibility);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Details_EmptyTitle, title.Text);
+            Assert.Equal(HdrPilot.App.Resources.LibraryStrings.Details_EmptyText, text.Text);
+            window.Close();
+        });
+    }
+
     [Fact]
     public void In_the_grid_the_focus_follows_from_the_hidden_tile_to_the_first_match()
     {

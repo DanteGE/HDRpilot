@@ -27,6 +27,28 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   - Erst die Restfunde aus Phase 11, dazu ein Nebenfund: Liest ein anderer Prozess `config.json` beim Ersetzen, kann
     eine Speicherung verloren gehen. Danach Gegenprüfung.
   - Dann Phase 12 Quiver, Prüfung aus drei Blickwinkeln, Korrektur und Gegenprüfung.
+- **Pausiert am 2026-10-20 auf Wunsch des Nutzers, Lauf 2 fast fertig.** Stand
+  `feature/library-toolbar` b238cf1, Arbeitsordner `.worktrees/s12-bar` sauber.
+  - **Fertig:**
+    - Restfunde Phase 11 einschließlich robusterem Speichern, mit Gegenprüfung.
+    - Phase 12 Quiver: 28728a7, c1adc4c, 1145b61, 381e7c5, e0d3925.
+    - Prüfung aus drei Blickwinkeln: 25 Funde, alle bestätigt und behoben in b238cf1. Alle Gates grün, TESTS_OK
+      3380 nach einem bekannten Wackler.
+  - **Abgebrochen:** die letzte Gegenprüfung von Lauf 2 (Quiver nach der Korrektur). Neu starten; der
+    Prüf-Arbeitsordner `rv12-recheck` ist entfernt.
+  - **Offen aus der Gegenprüfung Phase 11 (klein):** Ein Spielordner, den Windows nicht auflisten lässt, zählt beim
+    Entfernen als „kein Zeichen“ statt „nicht prüfbar“. Ursache: `IgnoreInaccessible` in
+    `PhysicalFileSystem.EnumerateFilesUpTo`; dazu `UninstalledGameCleanup.cs` um Z. 180 und 268. Dazu drei sehr kleine
+    Hinweise im Bericht des Laufs.
+  - **Hinweis zur Korrektur:** Ein fast quadratisches Quiver-Cover steht jetzt auch im erzeugten Titelbild, wie bei
+    Xbox. Den Nutzer fragen, ob das so bleiben soll.
+  - **Nächste Schritte:**
+    1. Gegenprüfung von Lauf 2 nachholen.
+    2. Den kleinen Phase-11-Fund beheben.
+    3. Abschlussprüfung aller Gates auf `feature/library-toolbar`.
+    4. Dem Nutzer die neuen Funktionen zeigen: Leiste, Auswahl beim Filtern, nicht installierte Spiele, Quiver.
+    5. Danach Zusammenführung, 1.5.0, Setup bauen (nicht installieren), G12.7 als Livetest mit „Black“ nur mit
+       dem Nutzer.
 - **Danach:** Abschlussprüfung, Stand sichern. Zusammenführung, 1.5.0 und
   Setup erst, nachdem der Nutzer die neuen Funktionen gesehen hat.
 - **Wunsch des Nutzers:** gründlich bleiben, Tempo ist zweitrangig.

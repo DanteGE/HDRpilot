@@ -3,6 +3,65 @@
 Zuletzt aktualisiert: 2026-10-21. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
+## Stand 2026-10-21 und offene Fragen an den Nutzer (nächste Sitzung zuerst)
+Auf Wunsch des Nutzers gesichert. Er bat darum, Fragen bis zu einem gemeinsamen
+Durchlauf zu sammeln.
+
+**Stand:**
+- `main` = `phase5/release` = 3614e02, Version 1.5.0.
+- Enthalten: Showcase Hero, Werkzeugleiste, Auswahl beim Filtern, nicht installierte Spiele, Quiver, Lizenz, README und
+  Bereinigung der aktuellen Dateien. Release-Builds ohne lokale Pfade (PathMap und ContinuousIntegrationBuild).
+- Alle Gates ohne echte HDR-Umschaltung grün, zuletzt `TESTS_OK 3409` und `PHASE7_SETUP_OK`.
+- **Noch nicht hochgeladen:**
+  - Die unabhängige Endkontrolle der bereinigten Kopie fand keine persönlichen Reste, gab aber keine Freigabe. Grund
+    war ein Wackeltest; inzwischen läuft der Testlauf auch wieder grün.
+  - Außerdem steht Frage 1 aus. Sie würde den bereinigten Verlauf noch ändern, deshalb erst danach hochladen.
+- **Bereinigungswerkzeug, Inventar, Lizenzentwurf und Pfadtabelle:** liegen in `.git/hdrpilot-publish/` im
+  Hauptordner des Repositorys. Sie werden nie hochgeladen, weil sie die zu ersetzenden persönlichen Muster enthalten.
+- **Ablauf zum Hochladen:**
+  1. Frischer Klon von `main`.
+  2. `tool/rewrite.pl` mit `--remap-messages`, den Drops und Regeln; danach `tool/verify.pl`, bis `VERIFY_OK`.
+  3. Mit `origin/main` zusammenführen (README: unsere, sie enthält die GitHub-Einleitung wörtlich oben).
+  4. `git gc --prune=now`.
+  5. Unabhängige Restesuche, Build und Tests, `publish-check.ps1`.
+  6. Hochladen ausschließlich aus der bereinigten Kopie. Im Original ist die Push-Adresse von `origin` absichtlich
+     gesperrt.
+- **Anmeldung:** liegt im Git Credential Manager (DanteGE).
+
+**Fragen an den Nutzer, jeweils mit Empfehlung:**
+1. **Echte Spielordner an Standardorten** in Tests und Doku: Spiele unter `C:\XboxGames`,
+   `…\Steam\steamapps\common`, `C:\Program Files\EA Games` und `…\GOG Galaxy\Games` (Namen hier vor der Veröffentlichung
+   entfernt). Sie verraten nur, dass einzelne Spiele installiert sind.
+   - Empfehlung: vor dem ersten Hochladen durch erfundene Namen ersetzen. Das ist nur ein weiterer automatischer
+     Bereinigungslauf, nach dem Hochladen ginge es nur noch durch Überschreiben des öffentlichen Verlaufs.
+2. **Monitormodelle und Produktcodes** in Tests und Doku: „MAG 341C OLED“, „Odyssey G7“, `MSI3DD0`, `UID4353`.
+   - Empfehlung: lassen. Das sind Produktcodes, keine eindeutigen Kennungen.
+3. **Arbeitsordner nach dem Hochladen:** Der öffentliche Verlauf hat andere Commit-Kennungen als der lokale.
+   - Empfehlung: Den bisherigen Ordner als privates Archiv umbenennen, etwa „HdrPilot-privat“, und ab dann in einem
+     frischen Klon von GitHub weiterarbeiten. Sonst muss vor jedem Hochladen erneut bereinigt werden.
+4. **LICENSE** auch ins Setup und ins portable Paket aufnehmen. Empfehlung: ja.
+5. **Dateieigenschaften der EXE:** Copyright zeigt „© Dante_GE“, „Firma“ bleibt „HDRpilot“. Empfehlung: so lassen.
+6. **Release 1.5.0:** GitHub-Release mit Setup erst nach der Abnahme durch den Nutzer; Installation von 1.5.0 nur
+   mit seinem Ja (Einstellungen der Vorversion erhalten).
+7. **Aus früheren Runden, bei der Sichtabnahme (G10.11) klären:**
+   - Erzeugte Cover enthalten den Spielnamen, der unter Quellenpunkt und Schalter der gewählten Kachel liegt.
+   - Das quadratische Quiver-Cover steht auch im erzeugten Titelbild.
+   - Die Lasche im Regal liegt über der angehobenen Kachel. Dazu sagte der Nutzer am 2026-10-19 „notieren,
+     erstmal so lassen“.
+8. **Abnahmen nur mit dem Nutzer:**
+   - G10.9: GPU-Messung mit eingeschaltetem Monitor.
+   - G10.11: Sichtabnahme.
+   - G11.5: nicht installierte Spiele.
+   - G12.7: Livetest mit „Black“.
+   - G9.8: Auto-HDR-Livetest.
+   - Echtes Tray-Gate.
+
+**Technisch offen:**
+- Zwei Wackeltests: `EffectReviewTests` (Zeitmessung) und `HdrListServiceTests.Empty_password_reuses…` („Sequence
+  contains more than one matching element“, vielleicht ein echter Wettlauf zweier Anmeldungen). Gründlich klären.
+- Die Source-Link-Adresse in Release-Builds nennt den Commit des lokalen, unbereinigten Repositorys. Das ist kein
+  Pfad, löst auf GitHub aber erst nach dem Umstieg auf den öffentlichen Verlauf auf (Frage 3).
+
 ## Veröffentlichung auf GitHub (Wunsch des Nutzers 2026-10-20)
 - **Ziel:** öffentliches Repository https://github.com/DanteGE/HDRpilot. Dort liegen schon drei Commits des Nutzers
   („Initial commit“ mit englischer Kurz-README, „Create funding.yml“, „Update funding.yml“). Alle bleiben erhalten:

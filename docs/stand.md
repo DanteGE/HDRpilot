@@ -56,6 +56,22 @@ Durchlauf zu sammeln.
    - G9.8: Auto-HDR-Livetest.
    - Echtes Tray-Gate.
 
+**Antworten des Nutzers 2026-10-21** (jeweils die Empfehlung):
+1. Echte Spielordner an Standardorten werden vor dem Hochladen durch erfundene Namen ersetzt, in allen Versionen.
+   Die Zuordnung liegt in `.git/hdrpilot-publish/gamepaths-map.tsv`.
+2. Monitornamen und Produktcodes bleiben.
+3. Nach dem Hochladen wird der bisherige Ordner als privates Archiv umbenannt („HdrPilot-privat“), gelöscht wird
+   nichts. Dann wird GitHub an den gewohnten Ort geklont.
+4. Die LICENSE kommt ins Setup und ins portable Paket.
+5. „Firma“ bleibt „HDRpilot“.
+6. Release und Installation erst nach der Abnahme.
+
+**In Arbeit:**
+- `fix/flaky-tests` (`.worktrees/s13-flaky`): Ursache der zwei Wackeltests.
+- `release/publish-paths` (`.worktrees/s13-pub`): erfundene Spielordner und LICENSE in den Paketen.
+- Danach: Zusammenführen und Veröffentlichungslauf (frischer Klon, Bereinigung samt Spielordner-Zuordnung,
+  unabhängige Kontrolle). Dann Hochladen, dann Ordnerwechsel.
+
 **Technisch offen:**
 - Zwei Wackeltests: `EffectReviewTests` (Zeitmessung) und `HdrListServiceTests.Empty_password_reuses…` („Sequence
   contains more than one matching element“, vielleicht ein echter Wettlauf zweier Anmeldungen). Gründlich klären.

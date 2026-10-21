@@ -18,4 +18,14 @@
     <!-- Symbole in der Assembly: keine losen .pdb-Dateien neben der EXE, Stapelverfolgungen behalten Datei und Zeile. -->
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+  <!--
+    Release (tools\publish.ps1 und damit die Setup-Datei) ohne lokale Pfade (E92): Der Ordner dieser Datei, die Wurzel
+    des Repositorys, erscheint in der eingebetteten PDB, in Stapelverfolgungen und in CallerFilePath als "/_/".
+    ContinuousIntegrationBuild schaltet DeterministicSourcePaths ein, damit auch Source Link die Wurzel als "/_/" nennt;
+    PathMap wirkt auch ohne Git (etwa in einer Kopie ohne .git). Debug bleibt bei den echten Pfaden (Debugger, Tests).
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+  </PropertyGroup>
 </Project>

@@ -1246,6 +1246,15 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
   Dokumenten, Tests und Beispieldateien durch erfundene ersetzt, Laufwerk und Aufbau bleiben (`D:\Steam-Bibliothek`,
   `F:\Steam-Bibliothek`, `D:\Anwendungen`, `D:\Programmordner`, `D:\GOG-Spiele`, `F:\GOG-Spiele`, `D:\Ubisoft-Spiele`,
   `D:\Xbox Bibliothek`, `D:\Spielordner`; in der Battle.net-Beispieldatei gleich lange Pfade auf K: und J:).
+- Programmdateien ohne lokale Pfade (2026-10-21): Release-Builds (`tools\publish.ps1`, damit auch die Setup-Datei)
+  bilden die Wurzel des Repositorys auf `/_/` ab (`Directory.Build.props`, nur für `Release`: `PathMap` und
+  `ContinuousIntegrationBuild`, damit auch Source Link und Quellen aus NuGet-Paketen abgebildet werden). Eingebettete
+  PDB, Stapelverfolgungen und `CallerFilePath` nennen `/_/src/…` statt des Arbeitsordners; `PathMap` wirkt auch in
+  einer Kopie ohne `.git`. Debug behält die echten Pfade für Debugger und Tests. Kein Code braucht zur Laufzeit echte
+  Quellpfade: Nur `SourceFiles` der App-Tests nimmt `CallerFilePath` und sucht sonst vom Ausgabeordner aus (in Release
+  nachgeprüft). Geprüft mit `tools\publish.ps1`: HDRpilot.exe, cli\hdrpilot.exe und die Setup-Datei samt aller Einträge
+  der Single-File-Pakete und der entpackten PDB, als Bytes und UTF-16, ohne Repository-, Profil- und
+  Notizordner-Pfad; Gegenprobe: Der Debug-Build enthält sie weiterhin.
 - Echte Spielelisten entfernt: `docs/recherche/symbole/messung-vorher/` gelöscht, die vollständigen Tabellen in
   `docs/scanner/` durch erfundene Beispielzeilen ersetzt, Aufzählungen einer ganzen Bibliothek oder Klasse (GOG- und
   Epic-Bericht, Symbol-Berichte) durch Anzahlen, Namen früher installierter, inzwischen deinstallierter Spiele entfernt

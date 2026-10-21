@@ -174,7 +174,7 @@ public sealed class ArtworkStoreTests
 
         Assert.Equal(["Steam:553850"], ArtworkWatchMap.GameKeysFor(@"C:\Steam\appcache\librarycache\553850\abc\library_hero.jpg", roots));
         Assert.Equal(["Steam:553850"], ArtworkWatchMap.GameKeysFor(@"c:/steam/appcache/librarycache/553850", roots));
-        Assert.Equal(["Gog:1999999901"], ArtworkWatchMap.GameKeysFor(@"C:\ProgramData\GOG.com\Galaxy\webcache\4698\gog\1999999901\x_glx_logo.webp", roots));
+        Assert.Equal(["Gog:1999999901"], ArtworkWatchMap.GameKeysFor(@"C:\ProgramData\GOG.com\Galaxy\webcache\1234\gog\1999999901\x_glx_logo.webp", roots));
         Assert.Equal(["Ubisoft:4740", "Ubisoft:5000"], ArtworkWatchMap.GameKeysFor(@"C:\Ubi\cache\assets\D491.jpg", roots, owners));
 
         // Gegenproben: Dateien ohne Spiel, fremde Ordner und das Overlay von GOG Galaxy.

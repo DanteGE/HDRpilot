@@ -72,6 +72,28 @@ Durchlauf zu sammeln.
 - Danach: Zusammenführen und Veröffentlichungslauf (frischer Klon, Bereinigung samt Spielordner-Zuordnung,
   unabhängige Kontrolle). Dann Hochladen, dann Ordnerwechsel.
 
+**Pausiert am 2026-10-21 abends** (der Nutzer spielt, der PC muss frei sein; nichts läuft mehr). Zwei Zwischenstände
+liegen lokal, beide ungeprüft und vor dem Weitermachen durchzusehen:
+- `release/publish-paths` (`.worktrees/s13-pub`, 8e79c99): erfundene Spielordner und LICENSE in den Paketen.
+- `fix/flaky-tests` (`.worktrees/s13-flaky`, 2adf500): Wackeltests; braucht Windows.
+
+**Lastgrenzen (Beschwerde des Nutzers):**
+- Immer nur ein Agent, der baut oder testet.
+- Niedrige Priorität und 4 Kerne: Befehle beginnen mit
+  `[System.Diagnostics.Process]::GetCurrentProcess().PriorityClass = 'BelowNormal'; $env:DOTNET_PROCESSOR_COUNT = '4'`.
+- Keine Stresstests und keine künstliche Last; am Ende `dotnet build-server shutdown`.
+- Vor schweren Läufen fragen, ob es gerade passt.
+
+**Weitermachen:**
+1. Den Lauf `anonymize-and-publish-gentle` neu starten. Seine Schritte: Zwischenstand fertigstellen, Prüfung, Merge,
+   Bereinigung des Verlaufs, unabhängige Kontrolle. Er ist in der Sitzung gespeichert; in einer neuen Sitzung mit
+   denselben Vorgaben neu aufsetzen.
+2. Bei FREIGABE den bereinigten Stand hochladen.
+3. Danach fragt der Nutzer womöglich wieder nach einem Umzug in eine Cloud-Sitzung. Was dort geht und was nicht,
+   wurde am 2026-10-21 erklärt: kein WPF-Start, keine Oberflächen-Gates, kein Setup, keine Abnahmen.
+4. Ordnerwechsel: den alten Ordner in „HdrPilot-privat“ umbenennen und GitHub klonen. Das geht nur außerhalb der
+   laufenden Sitzung.
+
 **Technisch offen:**
 - Zwei Wackeltests: `EffectReviewTests` (Zeitmessung) und `HdrListServiceTests.Empty_password_reuses…` („Sequence
   contains more than one matching element“, vielleicht ein echter Wettlauf zweier Anmeldungen). Gründlich klären.

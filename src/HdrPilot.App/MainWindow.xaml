@@ -335,6 +335,12 @@
             Kennzeichen, beim Überfahren und bei Auswahl Name, Quelle und der Schalter „HDR automatisch“, sonst ein kleines
             Sonnen-Zeichen, wenn er an ist. Gewählt: gestrichelter Ring im Takt (nur Stufe „Voll“). Nur 2D, keine Effekte.
         -->
+        <!-- Maske des Hofs unter der gewählten Kachel: Ellipse, ganz in ihrer Fläche ausgeblendet -->
+        <RadialGradientBrush x:Key="Lib.Brush.TileHaloMask" RadiusX="0.5" RadiusY="0.5" Center="0.5,0.5" GradientOrigin="0.5,0.5">
+            <GradientStop Color="#FF000000" Offset="0.6" />
+            <GradientStop Color="#70000000" Offset="0.8" />
+            <GradientStop Color="#00000000" Offset="1" />
+        </RadialGradientBrush>
         <DataTemplate x:Key="GameTileTemplate" DataType="{x:Type vm:GameItemViewModel}">
             <Grid x:Name="TileRoot" RenderTransformOrigin="0.5,0.5" Background="Transparent">
                 <Grid.RenderTransform>
@@ -343,13 +349,16 @@
                         <TranslateTransform Y="0" />
                     </TransformGroup>
                 </Grid.RenderTransform>
-                <!-- Hof unter der gewählten Kachel (Verlauf, kein Schatten-Effekt) -->
-                <Border x:Name="SelectedHalo" CornerRadius="22" Margin="-10,-6,-10,-16" Opacity="0" IsHitTestVisible="False">
+                <!--
+                    Hof unter der gewählten Kachel (Verlauf, kein Schatten-Effekt; Prototyp: box-shadow 0 22px 50px −14px): eine
+                    Ellipse, die ganz in ihrer Fläche ausläuft (14 px neben, 32 px unter der Kachel), damit nichts hart abbricht
+                    (Wunsch des Nutzers 2026-10-22: vorher endete das Leuchten 16 px unter der Kachel an einer Kante). Raster und
+                    Regal haben unten so viel Innenabstand. Fläche in der zweiten Akzentfarbe (folgt dem Farbschema), die Maske
+                    blendet sie aus, ohne dass der Verlauf zum Rand hin dunkel wird.
+                -->
+                <Border x:Name="SelectedHalo" Margin="-14,6,-14,-32" Opacity="0" IsHitTestVisible="False" OpacityMask="{StaticResource Lib.Brush.TileHaloMask}">
                     <Border.Background>
-                        <RadialGradientBrush RadiusX="0.56" RadiusY="0.56" Center="0.5,0.56" GradientOrigin="0.5,0.56">
-                            <GradientStop Color="{DynamicResource Hp.Color.C2}" Offset="0.55" />
-                            <GradientStop Color="#00000000" Offset="1" />
-                        </RadialGradientBrush>
+                        <SolidColorBrush Color="{DynamicResource Hp.Color.C2}" />
                     </Border.Background>
                 </Border>
                 <Border x:Name="Card" CornerRadius="16" Background="#FF0D0E14">
@@ -494,7 +503,14 @@
                     <Setter TargetName="SelectRim" Property="Opacity" Value="1" />
                     <Setter TargetName="TileSwitch" Property="Visibility" Value="Visible" />
                 </DataTrigger>
-                <!-- Stufe „Voll“: Kachel hebt sich beim Überfahren (−10 px, 1,035), Bild zoomt leicht, Glanz unter der Maus -->
+                <!--
+                    Stufe „Voll“: Kachel hebt sich beim Überfahren (−10 px, 1,035), Bild zoomt leicht, Glanz unter der Maus. Ohne
+                    Platz nach oben (erste Reihe des Rasters, nach dem Scrollen die oberste; VirtualizingTilePanel.RisesOnHover)
+                    wächst sie nach unten, statt halb unter der Werkzeugleiste zu verschwinden (Wunsch des Nutzers 2026-10-22).
+                -->
+                <DataTrigger Binding="{Binding (lib:VirtualizingTilePanel.RisesOnHover), RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False">
+                    <Setter TargetName="TileRoot" Property="RenderTransformOrigin" Value="0.5,0" />
+                </DataTrigger>
                 <MultiDataTrigger>
                     <MultiDataTrigger.Conditions>
                         <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True" />
@@ -504,7 +520,6 @@
                     <MultiDataTrigger.EnterActions>
                         <BeginStoryboard>
                             <Storyboard>
-                                <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" To="-10" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                 <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1.035" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                 <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1.035" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" />
                                 <DoubleAnimation Storyboard.TargetName="CoverArt" Storyboard.TargetProperty="(Border.Background).(ImageBrush.RelativeTransform).(ScaleTransform.ScaleX)" To="1.06" Duration="0:0:0.8" EasingFunction="{StaticResource Hp.Ease.Out}" />
@@ -515,11 +530,31 @@
                     <MultiDataTrigger.ExitActions>
                         <BeginStoryboard>
                             <Storyboard>
-                                <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" To="0" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" FillBehavior="Stop" />
                                 <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" FillBehavior="Stop" />
                                 <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[0].(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" FillBehavior="Stop" />
                                 <DoubleAnimation Storyboard.TargetName="CoverArt" Storyboard.TargetProperty="(Border.Background).(ImageBrush.RelativeTransform).(ScaleTransform.ScaleX)" To="1" Duration="0:0:0.5" FillBehavior="Stop" />
                                 <DoubleAnimation Storyboard.TargetName="CoverArt" Storyboard.TargetProperty="(Border.Background).(ImageBrush.RelativeTransform).(ScaleTransform.ScaleY)" To="1" Duration="0:0:0.5" FillBehavior="Stop" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </MultiDataTrigger.ExitActions>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True" />
+                        <Condition Binding="{Binding IsFull, Source={x:Static lib:LibraryMotion.Instance}}" Value="True" />
+                        <Condition Binding="{Binding (lib:VirtualizingTilePanel.RisesOnHover), RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <MultiDataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" To="-10" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </MultiDataTrigger.EnterActions>
+                    <MultiDataTrigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetName="TileRoot" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[1].(TranslateTransform.Y)" To="0" Duration="0:0:0.45" EasingFunction="{StaticResource Hp.Ease.Out}" FillBehavior="Stop" />
                             </Storyboard>
                         </BeginStoryboard>
                     </MultiDataTrigger.ExitActions>
@@ -1074,11 +1109,13 @@
             </Grid.ColumnDefinitions>
 
             <!--
-                Ziehgriff zwischen Titelbereich und Liste (nur Liste, Wunsch des Nutzers 2026-10-16): direkt unter dem Inhalt
-                des Titelbereichs, über der Werkzeugleiste. Lage, Bereich und Merken (AppSettings.LibraryHeroRatio) setzt
-                MainWindow.xaml.cs; in der Tab-Reihenfolge vor der Werkzeugleiste.
+                Ziehgriff zwischen Titelbereich und Inhalt (Wunsch des Nutzers 2026-10-16, seit 2026-10-22 in allen drei
+                Ansichten): mittig auf der Bildkante, unter dem Inhalt des Titelbereichs; im Regal zwischen Werkzeugleiste und
+                Kachelreihe, deshalb über der Liste (ZIndex 2, unter Lasche und Kapsel). Lage, Bereich und Merken je Ansicht
+                (AppSettings.LibraryHeroRatio, LibraryGridHeroRatio, LibraryShelfHeroRatio) setzt MainWindow.xaml.cs; in der
+                Tab-Reihenfolge vor der Werkzeugleiste.
             -->
-            <lib:HeroSplitter x:Name="HeroSplitter" Style="{StaticResource Lib.HeroSplitter}" Margin="0,100,0,0"
+            <lib:HeroSplitter x:Name="HeroSplitter" Style="{StaticResource Lib.HeroSplitter}" Margin="0,100,0,0" Panel.ZIndex="2"
                               Moved="OnHeroSplitterMoved" Committed="OnHeroSplitterCommitted" Discarded="OnHeroSplitterDiscarded" ResetRequested="OnHeroSplitterReset"
                               AutomationProperties.AutomationId="HeroSplitter" AutomationProperties.Name="{x:Static res:LibraryStrings.HeroSplitter_Name}"
                               AutomationProperties.HelpText="{x:Static res:LibraryStrings.HeroSplitter_Help}"
@@ -1443,32 +1480,40 @@
                             <TranslateTransform />
                         </ListBox.RenderTransform>
                         <ListBox.ItemsPanel>
-                            <!-- Innenabstand oben wie ShowcaseLayout.GridPaddingTop: danach richtet sich die Luft über der Werkzeugleiste -->
+                            <!--
+                                Innenabstand oben wie ShowcaseLayout.GridPaddingTop (Platz für den Ring; danach richtet sich die Luft
+                                über der Werkzeugleiste), unten 32 für das Leuchten unter der gewählten Kachel der letzten Reihe
+                            -->
                             <ItemsPanelTemplate>
-                                <lib:VirtualizingTilePanel Arrangement="Grid" Gap="16" Padding="4,12,4,24" />
+                                <lib:VirtualizingTilePanel Arrangement="Grid" Gap="16" Padding="4,7,4,32" />
                             </ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                     </ListBox>
 
-                    <!-- Regal: eine Kachelreihe über die ganze Breite, seitenweise blättern -->
+                    <!--
+                        Regal: eine Kachelreihe über die ganze Breite, seitenweise blättern. Sie beginnt an der Unterkante der
+                        Werkzeugleiste und reicht 10 px unter die Spalten (bis zur Statuszeile): Innenabstand oben 29 (Kachel 12 unter
+                        der Bildkante, Platz zum Anheben, ShowcaseLayout.ShelfPaddingTop), unten 32 (22 und ShowcaseLayout.ShelfGlowRoom
+                        für das Leuchten). Die Knöpfe zum Blättern bleiben mittig zur Kachel.
+                    -->
                     <Grid x:Name="ShelfArea" Visibility="Collapsed">
-                        <ListBox x:Name="GameShelf" Style="{StaticResource Lib.ListBox}"
+                        <ListBox x:Name="GameShelf" Style="{StaticResource Lib.ListBox}" Margin="0,0,0,-10"
                                  ScrollViewer.HorizontalScrollBarVisibility="Hidden" ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                  IsSynchronizedWithCurrentItem="False"
                                  ItemContainerStyle="{StaticResource GameTileWithMenu}" ItemTemplate="{StaticResource GameTileTemplate}"
                                  AutomationProperties.AutomationId="GameShelf" AutomationProperties.Name="{x:Static res:LibraryStrings.Shelf_Name}">
                             <ListBox.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <lib:VirtualizingTilePanel Arrangement="Shelf" Gap="18" Padding="32,12,32,22" />
+                                    <lib:VirtualizingTilePanel Arrangement="Shelf" Gap="18" Padding="32,29,32,32" />
                                 </ItemsPanelTemplate>
                             </ListBox.ItemsPanel>
                         </ListBox>
                         <Border Width="32" HorizontalAlignment="Left" IsHitTestVisible="False" Background="{DynamicResource Lib.Brush.ShelfFadeLeft}" />
                         <Border Width="32" HorizontalAlignment="Right" IsHitTestVisible="False" Background="{DynamicResource Lib.Brush.ShelfFadeRight}" />
-                        <Button x:Name="ShelfPrevButton" Style="{StaticResource Lib.RoundButton}" Content="&#xE76B;" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0,0,10"
+                        <Button x:Name="ShelfPrevButton" Style="{StaticResource Lib.RoundButton}" Content="&#xE76B;" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,17,0,10"
                                 Click="OnShelfPrevious" AutomationProperties.AutomationId="ShelfPrevButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Shelf_Previous}"
                                 ToolTip="{x:Static res:LibraryStrings.Shelf_Previous}" />
-                        <Button x:Name="ShelfNextButton" Style="{StaticResource Lib.RoundButton}" Content="&#xE76C;" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,10"
+                        <Button x:Name="ShelfNextButton" Style="{StaticResource Lib.RoundButton}" Content="&#xE76C;" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,17,12,10"
                                 Click="OnShelfNext" AutomationProperties.AutomationId="ShelfNextButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Shelf_Next}"
                                 ToolTip="{x:Static res:LibraryStrings.Shelf_Next}" />
                         <TextBlock x:Name="ShelfPosition" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,32,0" FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="11"

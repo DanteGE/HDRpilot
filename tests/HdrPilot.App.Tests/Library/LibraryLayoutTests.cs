@@ -155,6 +155,51 @@ public sealed class LibraryLayoutTests
     });
 
     [Fact]
+    public void Each_view_remembers_its_own_hero_height_and_only_the_changed_one_is_written() => Sta.Run(() =>
+    {
+        // Wunsch des Nutzers 2026-10-22: Raster und Regal haben einen eigenen Ziehgriff und merken ihre Höhe getrennt.
+        var context = SampleContext();
+        context.ConfigService.Update(c =>
+        {
+            c.Settings.LibraryHeroRatio = 0.45;
+            c.Settings.LibraryShelfHeroRatio = 0.6;
+        });
+        var vm = new LibraryViewModel(context, new FakeDialogs());
+        Assert.Equal(0.45, vm.HeroRatioFor(LibraryViewMode.List));
+        Assert.Equal(0.45, vm.HeroRatio);
+        Assert.Null(vm.HeroRatioFor(LibraryViewMode.Grid));
+        Assert.Equal(0.6, vm.HeroRatioFor(LibraryViewMode.Shelf));
+
+        // Raster gezogen: nur seine Höhe, auf vier Stellen, ein Schreibvorgang; Liste und Regal bleiben.
+        var updates = context.Updates;
+        vm.SetHeroRatio(LibraryViewMode.Grid, 0.27123);
+        Assert.Equal(0.2712, vm.HeroRatioFor(LibraryViewMode.Grid));
+        Assert.Equal(0.45, vm.HeroRatio);
+        context.Dispatcher.RunDelayed();
+        Assert.Equal(updates + 1, context.Updates);
+        var s = context.Config.Settings;
+        Assert.Equal((0.45, 0.2712, 0.6), (s.LibraryHeroRatio, s.LibraryGridHeroRatio, s.LibraryShelfHeroRatio));
+
+        // Regal zurück auf den Standard: Die Höhe der Liste, inzwischen anders in der Konfiguration, wird nicht überschrieben.
+        context.ConfigService.Update(c => c.Settings.LibraryHeroRatio = 0.5);
+        vm.SetHeroRatio(LibraryViewMode.Shelf, null);
+        context.Dispatcher.RunDelayed();
+        s = context.Config.Settings;
+        Assert.Equal((0.5, 0.2712, (double?)null), (s.LibraryHeroRatio, s.LibraryGridHeroRatio, s.LibraryShelfHeroRatio));
+
+        // Gleicher Wert: nichts zu tun. Zwei Ansichten geändert und gleich geschlossen: beim Schließen gespeichert.
+        vm.SetHeroRatio(LibraryViewMode.Grid, 0.2712);
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+        vm.SetHeroRatio(LibraryViewMode.Grid, 0.3);
+        vm.SetHeroRatio(LibraryViewMode.Shelf, 7.5);
+        Assert.Equal(0.99, vm.HeroRatioFor(LibraryViewMode.Shelf));
+        vm.Dispose();
+        s = context.Config.Settings;
+        Assert.Equal((0.5, 0.3, 0.99), (s.LibraryHeroRatio, s.LibraryGridHeroRatio, s.LibraryShelfHeroRatio));
+        Assert.Equal(0, context.Dispatcher.PendingDelays);
+    });
+
+    [Fact]
     public void Details_ratio_is_read_from_the_configuration() => Sta.Run(() =>
     {
         var context = SampleContext();

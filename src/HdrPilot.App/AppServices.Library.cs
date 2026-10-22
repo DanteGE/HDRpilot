@@ -149,6 +149,13 @@ public sealed partial class AppServices
         scenes.Add(new SnapshotScene("hauptfenster", "quiver-gefiltert", () => LibraryScene(LibraryViewMode.List), w => SelectQuiverAsync(w, filter: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "quiver-kapsel", () => LibraryScene(LibraryViewMode.Grid), w => SelectQuiverAsync(w, filter: true, collapse: true)) { Settle = LibrarySettle });
 
+        // Rückmeldung des Nutzers 2026-10-22: Lasche beim Überfahren auch in Raster und Regal (mittig auf der Bildkante), Kacheln
+        // wie überfahren (die gewählte erste und eine zweite; im Raster wächst die erste Reihe nach unten, im Regal steigen sie).
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-lasche", () => LibraryScene(LibraryViewMode.Grid), HoverTabAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-lasche", () => LibraryScene(LibraryViewMode.Shelf), HoverTabAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-ueberfahren", () => LibraryScene(LibraryViewMode.Grid), w => HoverTilesAsync(w, secondRow: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-ueberfahren", () => LibraryScene(LibraryViewMode.Shelf), w => HoverTilesAsync(w, secondRow: false)) { Settle = LibrarySettle });
+
         // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
@@ -270,6 +277,20 @@ public sealed partial class AppServices
         if (window is MainWindow main)
         {
             main.FreezeToolbarMotion(collapse, milliseconds);
+        }
+
+        await Task.Delay(400);
+    }
+
+    /// <summary>
+    /// Kacheln wie beim Überfahren (ohne Maus): die erste (gewählt) und im Raster die zweite der zweiten Reihe, im Regal die vierte.
+    /// </summary>
+    private static async Task HoverTilesAsync(Window window, bool secondRow)
+    {
+        if (window is MainWindow main)
+        {
+            var columns = secondRow && MainWindow.FindTilePanel((System.Windows.Controls.ListBox)main.FindName("GameGrid")) is { } grid ? grid.Columns : 2;
+            main.PreviewTileHover(0, columns + 1);
         }
 
         await Task.Delay(400);

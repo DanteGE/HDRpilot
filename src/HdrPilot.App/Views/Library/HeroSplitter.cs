@@ -8,8 +8,8 @@ using System.Windows.Input;
 namespace HdrPilot.App.Views.Library;
 
 /// <summary>
-/// Ziehgriff am unteren Rand des Titelbereichs der Liste (Wunsch des Nutzers 2026-10-16): stellt dessen Höhe in
-/// geräteunabhängigen Pixeln ein. Mit der Maus ziehen (Esc bricht ab, wie beim Trenner der Spalten); Pfeiltasten oben/unten
+/// Ziehgriff am unteren Rand des Titelbereichs (Wunsch des Nutzers 2026-10-16, seit 2026-10-22 in Liste, Raster und Regal,
+/// jede Ansicht mit ihrer eigenen Höhe): stellt dessen Höhe in geräteunabhängigen Pixeln ein. Mit der Maus ziehen (Esc bricht ab, wie beim Trenner der Spalten); Pfeiltasten oben/unten
 /// in Schritten von <see cref="SmallStep"/>, Bild auf/ab in Schritten von <see cref="LargeStep"/>, Pos1/Ende kleinste bzw.
 /// größte Höhe; Doppelklick und Eingabetaste setzen auf den Standard zurück. Für die UI-Automation ein Griff mit
 /// Wertebereich (RangeValue), lesbar und setzbar ohne echte Eingaben; Auslösen (Invoke) setzt wie der Doppelklick zurück.

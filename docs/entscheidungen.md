@@ -1246,6 +1246,11 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
   Dokumenten, Tests und Beispieldateien durch erfundene ersetzt, Laufwerk und Aufbau bleiben (`D:\Steam-Bibliothek`,
   `F:\Steam-Bibliothek`, `D:\Anwendungen`, `D:\Programmordner`, `D:\GOG-Spiele`, `F:\GOG-Spiele`, `D:\Ubisoft-Spiele`,
   `D:\Xbox Bibliothek`, `D:\Spielordner`; in der Battle.net-Beispieldatei gleich lange Pfade auf K: und J:).
+  Spielordner an Standardorten (`C:\XboxGames`, `…\Steam\steamapps\common`, `C:\Program Files\EA Games`,
+  `…\GOG Galaxy\Games`) tragen samt Kennungen (AppID, contentID, Paketname) erfundene Spielnamen, auch in den
+  Beispieldateien (Wunsch des Nutzers 2026-10-21). Die Steam-Beispieldateien der Werkzeuge (Steamworks Shared, SteamVR,
+  Wallpaper Engine) behalten AppID und Ordnernamen, weil `SteamAppFilter` sie braucht; Zeitstempel, Größen und
+  Build-Nummern darin und ihre Größen in `libraryfolders.vdf` sind erfunden (2026-10-22).
 - Programmdateien ohne lokale Pfade (2026-10-21): Release-Builds (`tools\publish.ps1`, damit auch die Setup-Datei)
   bilden die Wurzel des Repositorys auf `/_/` ab (`Directory.Build.props`, nur für `Release`: `PathMap` und
   `ContinuousIntegrationBuild`, damit auch Source Link und Quellen aus NuGet-Paketen abgebildet werden). Eingebettete

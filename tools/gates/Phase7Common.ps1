@@ -325,7 +325,7 @@ function Update-SetupFile([string]$setup) {
 # Prüft eine Setup-Datei gegen das Format und die portable Auslieferung. Problems leer = in Ordnung.
 function Test-SetupBundle([string]$setup, [string]$portableDir) {
     $problems = New-Object System.Collections.ArrayList
-    $info = [pscustomobject]@{ Problems = $problems; ExeLength = [long]0; PayloadLength = [long]0; ExeHash = ''; Entries = @(); AsInvoker = $false }
+    $info = [pscustomobject]@{ Problems = $problems; ExeLength = [long]0; PayloadLength = [long]0; ExeHash = ''; Entries = @(); EntryHashes = @{}; AsInvoker = $false }
     if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { [void]$problems.Add("Setup-Datei fehlt: $setup"); return $info }
 
     $footer = [HdrPilotGates.SetupFile]::ReadFooter($setup)
@@ -349,6 +349,7 @@ function Test-SetupBundle([string]$setup, [string]$portableDir) {
         if ($actual -cne $expected) { [void]$problems.Add("Paket: Einträge $actual statt genau $expected") }
         foreach ($pair in $pairs) {
             $name, $hash = $pair -split '\|'
+            $info.EntryHashes[$name] = $hash
             $portable = Join-Path $portableDir ($name -replace '/', '\')
             if ($hash -ne (Get-Sha $portable)) { [void]$problems.Add("Paket: $name weicht von der portablen Datei ab") }
         }

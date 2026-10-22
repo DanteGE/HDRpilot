@@ -65,10 +65,10 @@ Menükopf) und der Kopf der Einstellungen.
 
 ### Ohne Installation
 
-1. Den Ordner `HDRpilot` (mit `HDRpilot.exe` und `cli\hdrpilot.exe`) an einen dauerhaften Ort legen, etwa nach
-   `%LOCALAPPDATA%\Programs\HDRpilot\`. Autostart, Verknüpfungen und Steam-Startoptionen zeigen auf diesen Ort.
-   Verschiebst du die EXE später, korrigiert HDRpilot den Autostart-Eintrag beim nächsten Start selbst; Verknüpfungen
-   und Steam-Startoptionen musst du neu anlegen.
+1. Den Ordner `HDRpilot` (mit `HDRpilot.exe`, `cli\hdrpilot.exe`, README, Lizenztext `LICENSE` und Lizenzhinweisen)
+   an einen dauerhaften Ort legen, etwa nach `%LOCALAPPDATA%\Programs\HDRpilot\`. Autostart, Verknüpfungen und
+   Steam-Startoptionen zeigen auf diesen Ort. Verschiebst du die EXE später, korrigiert HDRpilot den
+   Autostart-Eintrag beim nächsten Start selbst; Verknüpfungen und Steam-Startoptionen musst du neu anlegen.
 2. `HDRpilot.exe` starten (SmartScreen wie oben). Es öffnet sich kein Fenster: HDRpilot meldet sich kurz im
    Infobereich und liest deine Spiele ein. Ein Doppelklick auf das Symbol oder ein zweiter Start der EXE öffnet die
    Spielebibliothek; weiter wie oben in Schritt 4.
@@ -876,9 +876,9 @@ Ohne Installation:
 1. In den Einstellungen **Mit Windows starten** ausschalten und gegebenenfalls **Konto entfernen**.
 2. In Steam die Startoption `--wrap -- %command%` bei den Spielen wieder löschen, bei denen du sie eingetragen hast.
 3. Warten, bis kein Spiel mehr läuft und HDR zurückgestellt ist, dann im Infobereich **HDRpilot beenden**.
-4. `HDRpilot.exe` und den Ordner `cli` löschen, dazu die Ordner `%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`,
-   `%TEMP%\.net\HDRpilot`, den Startmenü-Ordner `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot` und die
-   „(HDR)“-Verknüpfungen auf dem Desktop.
+4. Den Ordner `HDRpilot` löschen (`HDRpilot.exe`, `cli`, README, `LICENSE` und Lizenzhinweise), dazu die Ordner
+   `%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`, `%TEMP%\.net\HDRpilot`, den Startmenü-Ordner
+   `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot` und die „(HDR)“-Verknüpfungen auf dem Desktop.
 
 ## Aus dem Quelltext bauen
 

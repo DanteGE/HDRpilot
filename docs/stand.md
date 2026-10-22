@@ -1,9 +1,38 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-21. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-22. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
-## Stand 2026-10-21 und offene Fragen an den Nutzer (nächste Sitzung zuerst)
+## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
+- **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (a902beb), darauf dieser Stand;
+  Version 1.5.0.
+- **Anonymisierung fertig** (Antworten 1 und 4 unten, E92):
+  - Spielordner an Standardorten tragen in Tests, Beispieldateien und Doku erfundene Namen und Kennungen.
+  - Die Beispieldateien der Steam-Werkzeuge behalten AppID und Ordner; Zeitstempel, Größen und Build-Nummern darin
+    sind erfunden.
+  - Spielordner in Bibliotheken an anderen Orten liegen hinter schon ersetzten Wurzeln und bleiben (Entscheidung des
+    Nutzers 2026-10-22: „So lassen“).
+  - `LICENSE` liegt dem Setup und dem portablen Paket bei, `phase7-setup.ps1` prüft das (G13.2).
+  - Die Zuordnung echt zu erfunden für alle alten Versionen liegt in `.git/hdrpilot-publish/gamepaths-map.tsv`, mit
+    Reihenfolge (GP-D1 vor allen Namensregeln) und Umbenennungen alter Beispieldateien (GP-R1 bis GP-R7).
+- **Gates nach der Zusammenführung** (niedrige Priorität, nacheinander, exit 0): `BUILD_OK_0_WARNINGS`,
+  `TESTS_OK 3409`, `PUBLISH_CHECK_OK` (G13.3, G13.4).
+- **Als Nächstes: Veröffentlichung** nach dem Ablauf unten (frischer Klon, Verlauf umschreiben, unabhängige Kontrolle,
+  mit `origin/main` zusammenführen, hochladen). Vorher im Werkzeug nachrüsten:
+  - Die Regeln der Zuordnung kommen nach `HdrRules.pm`.
+  - `rewrite.pl` benennt GP-R1 bis GP-R7 um, `verify.pl` (C4) lässt genau diese Umbenennungen zu.
+  - Alte Fassungen von `docs/scanner/steam.md` werden auf die bereinigte festgesetzt.
+- **Danach** zieht die Arbeit in eine Cloud-Sitzung um. Dort gibt es keinen WPF-Start, keine Oberflächen-Gates, kein
+  Setup und keine Abnahmen. Der Ordnerwechsel („HdrPilot-privat“, GitHub klonen) geht nur außerhalb der laufenden
+  Sitzung.
+- **Wackeltests:** Der Zwischenstand bleibt lokal auf `fix/flaky-tests` (`.worktrees/s13-flaky`, 2adf500, ungeprüft).
+  Er braucht Windows und zieht deshalb nicht mit in die Cloud-Sitzung. Auf diesem Zweig mit aufnehmen:
+  `UninstalledCleanupTests.Uninstalled_install_check_without_an_answer_warns_instead_of_counting_as_gone` (Grenze
+  1,75 × CheckTimeout = 3,5 s, unter niedriger Priorität einmal knapp überschritten).
+- **Lastgrenzen:** niedrige Priorität, höchstens 12 von 24 Threads (`$env:DOTNET_PROCESSOR_COUNT = '12'`, bei einem
+  parallelen Lauf je 6), immer nur ein Bau oder Testlauf, am Ende `dotnet build-server shutdown`.
+
+## Stand 2026-10-21 und Fragen an den Nutzer (beantwortet)
 Auf Wunsch des Nutzers gesichert. Er bat darum, Fragen bis zu einem gemeinsamen
 Durchlauf zu sammeln.
 
@@ -66,37 +95,14 @@ Durchlauf zu sammeln.
 5. „Firma“ bleibt „HDRpilot“.
 6. Release und Installation erst nach der Abnahme.
 
-**In Arbeit:**
-- `fix/flaky-tests` (`.worktrees/s13-flaky`): Ursache der zwei Wackeltests.
-- `release/publish-paths` (`.worktrees/s13-pub`): erfundene Spielordner und LICENSE in den Paketen.
-- Danach: Zusammenführen und Veröffentlichungslauf (frischer Klon, Bereinigung samt Spielordner-Zuordnung,
-  unabhängige Kontrolle). Dann Hochladen, dann Ordnerwechsel.
-
-**Pausiert am 2026-10-21 abends** (der Nutzer spielt, der PC muss frei sein; nichts läuft mehr). Zwei Zwischenstände
-liegen lokal, beide ungeprüft und vor dem Weitermachen durchzusehen:
-- `release/publish-paths` (`.worktrees/s13-pub`, 8e79c99): erfundene Spielordner und LICENSE in den Paketen.
-- `fix/flaky-tests` (`.worktrees/s13-flaky`, 2adf500): Wackeltests; braucht Windows.
-
-**Lastgrenzen (Beschwerde des Nutzers):**
-- Immer nur ein Agent, der baut oder testet.
-- Niedrige Priorität und 4 Kerne: Befehle beginnen mit
-  `[System.Diagnostics.Process]::GetCurrentProcess().PriorityClass = 'BelowNormal'; $env:DOTNET_PROCESSOR_COUNT = '4'`.
-- Keine Stresstests und keine künstliche Last; am Ende `dotnet build-server shutdown`.
-- Vor schweren Läufen fragen, ob es gerade passt.
-
-**Weitermachen:**
-1. Den Lauf `anonymize-and-publish-gentle` neu starten. Seine Schritte: Zwischenstand fertigstellen, Prüfung, Merge,
-   Bereinigung des Verlaufs, unabhängige Kontrolle. Er ist in der Sitzung gespeichert; in einer neuen Sitzung mit
-   denselben Vorgaben neu aufsetzen.
-2. Bei FREIGABE den bereinigten Stand hochladen.
-3. Danach fragt der Nutzer womöglich wieder nach einem Umzug in eine Cloud-Sitzung. Was dort geht und was nicht,
-   wurde am 2026-10-21 erklärt: kein WPF-Start, keine Oberflächen-Gates, kein Setup, keine Abnahmen.
-4. Ordnerwechsel: den alten Ordner in „HdrPilot-privat“ umbenennen und GitHub klonen. Das geht nur außerhalb der
-   laufenden Sitzung.
+**In Arbeit, Pausieren, Lastgrenzen und Weitermachen vom 2026-10-21:** überholt, siehe Stand 2026-10-22 oben.
+`release/publish-paths` ist zusammengeführt. Vor schweren Läufen weiter fragen, ob es gerade passt; keine
+Stresstests und keine künstliche Last.
 
 **Technisch offen:**
-- Zwei Wackeltests: `EffectReviewTests` (Zeitmessung) und `HdrListServiceTests.Empty_password_reuses…` („Sequence
-  contains more than one matching element“, vielleicht ein echter Wettlauf zweier Anmeldungen). Gründlich klären.
+- Wackeltests: `EffectReviewTests` (Zeitmessung), `HdrListServiceTests.Empty_password_reuses…` („Sequence
+  contains more than one matching element“, vielleicht ein echter Wettlauf zweier Anmeldungen) und seit 2026-10-22
+  der Fall in `UninstalledCleanupTests` (oben). Gründlich klären, auf `fix/flaky-tests`.
 - Die Source-Link-Adresse in Release-Builds nennt den Commit des lokalen, unbereinigten Repositorys. Das ist kein
   Pfad, löst auf GitHub aber erst nach dem Umstieg auf den öffentlichen Verlauf auf (Frage 3).
 

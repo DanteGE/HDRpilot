@@ -82,6 +82,20 @@ public sealed class GapScrollBarTests(ITestOutputHelper output)
 
     private static Thumb Pill(GapScrollBar bar) => Assert.IsAssignableFrom<Thumb>(bar.Track.Thumb);
 
+    /// <summary>Das getroffene Element liegt in <paramref name="ancestor"/> (oder ist es).</summary>
+    private static bool Inside(DependencyObject? hit, DependencyObject ancestor)
+    {
+        for (var node = hit; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, ancestor))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>Oberkante der Pille in Koordinaten der Leiste.</summary>
     private static double PillTop(GapScrollBar bar) => Pill(bar).TranslatePoint(default, bar).Y;
 
@@ -133,6 +147,23 @@ public sealed class GapScrollBarTests(ITestOutputHelper output)
             var expected = Math.Max(GapScrollBar.MinThumbLength, track.Height * host.ViewportHeight / host.ExtentHeight);
             Assert.Equal(expected, pill.Height, 1.0);
             Assert.Equal(track.Top, pill.Top, 1.0);
+
+            // Treffer: Die Pille hat Vorrang vor der Linie (Zeiger Pfeil), daneben und darüber ist der Spalt der Trenner
+            // (Doppelpfeil); den Trenner selbst erreicht die Maus nicht mehr, er zeigt in Ruhe nichts (kein Griff, der wie
+            // eine Bildlaufleiste aussieht), mit Tastaturfokus die Linie.
+            // (Ohne angezeigtes Fenster ist nichts IsVisible, deshalb der Treffer im visuellen Baum statt InputHitTest.)
+            static DependencyObject? Hit(Visual root, Point at) => VisualTreeHelper.HitTest(root, at)?.VisualHit;
+            var middle = PillTop(bar) + (Pill(bar).ActualHeight / 2);
+            Assert.True(Inside(Hit(bar, new Point(bar.ActualWidth / 2, middle)), Pill(bar)), "Pille hat Vorrang");
+            Assert.False(Inside(Hit(bar, new Point(2, middle)), Pill(bar)), "neben der Pille: Spalt");
+            Assert.NotNull(Hit(bar, new Point(2, middle)));
+            Assert.NotNull(Hit(bar, new Point(bar.ActualWidth / 2, 4)));
+            Assert.False(Inside(Hit(bar, new Point(bar.ActualWidth / 2, 4)), Pill(bar)));
+            Assert.Equal(Cursors.Arrow, Pill(bar).Cursor);
+            Assert.Equal(Cursors.SizeWE, bar.Cursor);
+            var keyboardSplitter = Named<GridSplitter>(window, "LibrarySplitter");
+            Assert.All(WpfTestHost.Visuals(keyboardSplitter).OfType<Border>(), b => Assert.Equal(0, b.Opacity));
+            Assert.Null(keyboardSplitter.Template.FindName("Rest", keyboardSplitter));
 
             // Gescrollt: Pille anteilig in der Bahn, Wert wie der Versatz.
             host.ScrollToVerticalOffset(host.ScrollableHeight / 2);

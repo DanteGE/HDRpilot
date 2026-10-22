@@ -15,6 +15,7 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   - `LICENSE` liegt dem Setup und dem portablen Paket bei, `phase7-setup.ps1` prüft das (G13.2).
   - Die Zuordnung echt zu erfunden für alle alten Versionen liegt in `.git/hdrpilot-publish/gamepaths-map.tsv`, mit
     Reihenfolge (GP-D1 vor allen Namensregeln) und Umbenennungen alter Beispieldateien (GP-R1 bis GP-R7).
+  - Nachgezogen (Prüfung 2026-10-22): Xbox-Testordner und kopierte Werte der Beispieldateien erfunden, Gate erweitert.
 - **Gates nach der Zusammenführung** (niedrige Priorität, nacheinander, exit 0): `BUILD_OK_0_WARNINGS`,
   `TESTS_OK 3409`, `PUBLISH_CHECK_OK` (G13.3, G13.4).
 - **Als Nächstes: Veröffentlichung** nach dem Ablauf unten (frischer Klon, Verlauf umschreiben, unabhängige Kontrolle,

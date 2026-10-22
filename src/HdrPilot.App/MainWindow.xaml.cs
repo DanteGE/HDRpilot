@@ -69,6 +69,9 @@ public partial class MainWindow : ChromeWindow
     private static readonly TimeSpan DrawerMotion = TimeSpan.FromSeconds(0.55);
     private static readonly TimeSpan PointerDuration = TimeSpan.FromSeconds(0.6);
 
+    /// <summary>Rückweg der Tiefenwirkung, wenn der Zeiger Titelbild oder Fenster verlässt (etwas ruhiger als das Folgen).</summary>
+    internal static readonly TimeSpan PointerReturnDuration = TimeSpan.FromSeconds(0.8);
+
     private readonly TimelineFrameClock _frameClock = new();
     private readonly StopwatchEffectTime _effectTime = new();
     private LibraryViewModel? _viewModel;
@@ -1838,7 +1841,11 @@ public partial class MainWindow : ChromeWindow
         shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(4 * Math.Clamp(py, -1, 1), PointerDuration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
     }
 
-    private void ResetPointer()
+    /// <summary>
+    /// Zeiger verlässt Titelbild oder Fenster: Bildebenen und Inhalt (Titel, Kennzeichen, Knöpfe) gleiten gemeinsam zurück,
+    /// statt zu springen (Wunsch des Nutzers 2026-10-22). Ohne Dauer-Effekte (Stufe, minimiert, Spiel läuft) sofort.
+    /// </summary>
+    internal void ResetPointer()
     {
         if (!_pointerActive)
         {
@@ -1846,9 +1853,16 @@ public partial class MainWindow : ChromeWindow
         }
 
         _pointerActive = false;
-        var duration = _motion?.ContinuousAllowed == true ? PointerDuration : TimeSpan.Zero;
+        var duration = _motion?.ContinuousAllowed == true ? PointerReturnDuration : TimeSpan.Zero;
         Hero.SetPointer(0, 0, duration);
         var shift = OwnShift(HeroContent);
+        if (duration > TimeSpan.Zero)
+        {
+            shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, duration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
+            shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, duration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
+            return;
+        }
+
         shift.BeginAnimation(TranslateTransform.XProperty, null);
         shift.BeginAnimation(TranslateTransform.YProperty, null);
         shift.X = 0;

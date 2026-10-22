@@ -882,6 +882,29 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Unschärfe; schon 3 % Durchsicht ließen die Kopfzeile als Geisterschrift durchscheinen); die Polarlichter des Prototyps
   sind nicht umgesetzt. Im Dialog „Bild wählen…“ verschwindet die Liste des vorigen Reiters beim Wechsel sofort, damit
   eine Wahl nie für die falsche Bildart gilt.
+- Bildlaufleiste im Spalt (Wunsch des Nutzers 2026-10-22, Rückmeldung zum Testbuild 1.5.0): Die Pille im Spalt zwischen
+  Liste bzw. Raster und Detailbereich sah wie eine Bildlaufleiste aus, die echte war winzig und blendete sich aus. Jetzt
+  ist die Pille die Bildlaufleiste der aktiven Ansicht (`GapScrollBar`, eine `ScrollBar` über dem Trenner): Länge nach
+  sichtbarem Anteil (sichtbare durch gesamte Höhe, mindestens 36 px wie der frühere Griff), ihre Bahn reicht genau über
+  den sichtbaren Bereich (Liste: die Zeilen unter dem Kopf, Raster: ab der ersten Kachelreihe bis zum unteren Rand), ohne
+  Bildlauf ist sie weg. Die Pille ziehen scrollt pixelgenau, ein Klick über bzw. unter sie blättert eine Seite (weich
+  0,35 s, „Reduziert“ 0,3 s, „Aus“ sofort; folgt ein Klick, zählt die nächste Seite ab dem Ziel; Mausrad, Tasten und ein
+  Klick in die Ansicht beenden das Blättern), das Mausrad im Spalt scrollt die Ansicht. Die eigenen Bildlaufleisten von
+  Liste und Raster sind aus (`VerticalScrollBarVisibility="Hidden"`: Mausrad, Tastatur und das ScrollPattern der Liste
+  bleiben). Das Regal ist unverändert. Der Spalt bleibt der Trenner: Beim Überfahren außerhalb der Pille erscheint die
+  feine Linie (Zeiger mit Doppelpfeil), waagerecht ziehen ändert die Breite (über die Zieh-Ereignisse von
+  `LibrarySplitter`, der wie bisher rechnet, begrenzt, die Hysterese der Werkzeugleiste auslöst und die Aufteilung
+  merkt), Esc bricht ab, Doppelklick setzt zurück. Weil Bahn und Linie dieselbe Fläche sind, entscheidet die Bewegung:
+  Erst ab der Zieh-Schwelle von Windows waagerecht wird gezogen, darunter ist es ein Klick; wer vorher senkrecht über die
+  Schwelle rutscht, blättert nicht. Halten blättert nicht wiederholt (sonst blätterte die Liste, wer die Linie greift und
+  kurz wartet, bevor er zieht), und der zweite Klick eines Doppelklicks nimmt das Blättern des ersten zurück. Die Pille
+  hat Vorrang vor der Linie; ihre Trefferfläche ist 12 px breit in der Mitte des 24-px-Spalts, daneben bleibt die Linie
+  auch auf der Höhe einer langen Pille zu greifen. Tastatur (Pfeiltasten, Tab-Reihenfolge) und UI-Automation der Breite
+  bleiben beim Trenner, der mit Tastaturfokus die Linie in der Fokusfarbe zeigt; die Leiste nimmt nie den Fokus (nach
+  einem Klick also kein Fokusring) und ist für die UI-Automation eine Bildlaufleiste mit Wertebereich („Bildlaufleiste
+  der Spiele“, `LibraryScrollBar`). Beim Ein- und Ausklappen der Werkzeugleiste gleitet die Pille mit dem Inhalt. Prüfung:
+  `test.ps1 -Filter "FullyQualifiedName~GapScrollBar"`; Zustände `liste-spalt` (Linie wie beim Überfahren) und
+  `raster-gescrollt` für Bildschirmfotos.
 - Sichtprüfung (Bildschirmfotos aller Ansichten, hell und dunkel, 1100×680 bis 3440×1440): Der schmale Titelbereich von
   Liste und Raster zeigt wie im Prototyp rechts „Starten“ und „Beim Start …“; wird es eng, weicht erst die Angabe, dann
   der Knopf, danach bricht ein langer Name um bzw. wird das Logo kleiner, und erst unter 300 px fallen Kennzeile und

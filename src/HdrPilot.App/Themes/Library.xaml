@@ -1592,8 +1592,10 @@
     </Style>
 
     <!--
-        Trenner zwischen Spieleliste und Detailbereich: in Ruhe ein dezenter Griff, beim Überfahren, Ziehen oder mit
-        Tastaturfokus leuchtet er in der Akzentfarbe. Mit Tastatur bedienbar (Pfeiltasten links/rechts).
+        Trenner zwischen Spieleliste und Detailbereich für Tastatur und UI-Automation (Pfeiltasten links/rechts); mit
+        Tastaturfokus zeigt er die feine Linie in der Fokusfarbe. Die Maus erreicht ihn nicht: Über ihm liegt die
+        Bildlaufleiste im Spalt (Lib.GapScrollBar), die für die Maus Linie, Ziehen und Doppelklick übernimmt. Einen ruhenden
+        Griff gibt es nicht mehr; er sah wie eine Bildlaufleiste aus (Wunsch des Nutzers 2026-10-22).
     -->
     <Style x:Key="Lib.Splitter" TargetType="GridSplitter">
         <Setter Property="Width" Value="24" />
@@ -1613,25 +1615,95 @@
             <Setter.Value>
                 <ControlTemplate TargetType="GridSplitter">
                     <Grid Background="{TemplateBinding Background}">
-                        <Border x:Name="Line" Width="1" HorizontalAlignment="Center" Margin="0,18" Background="{DynamicResource Hp.Brush.LineStrong}" Opacity="0" />
-                        <Border x:Name="Rest" Width="4" Height="36" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Background="{DynamicResource Hp.Brush.LineStrong}" />
-                        <Border x:Name="Grip" Width="4" Height="52" CornerRadius="2" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
+                        <Border x:Name="Line" Width="2" HorizontalAlignment="Center" Margin="0,18" Background="{DynamicResource Hp.Brush.FocusRing}" Opacity="0" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Line" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Pille der Bildlaufleiste im Spalt: in Ruhe dezent (4 px, wie der frühere Griff), beim Überfahren und Ziehen 6 px breit
+        in der Akzentfarbe. Trefferfläche 12 px breit in der Mitte des Spalts: Daneben bleibt die Linie des Trenners auch auf
+        der Höhe einer langen Pille zu greifen.
+    -->
+    <Style x:Key="Lib.GapThumb" TargetType="Thumb">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Cursor" Value="Arrow" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Width="12" HorizontalAlignment="Center" Background="Transparent">
+                        <Border x:Name="Pill" Width="4" CornerRadius="2" HorizontalAlignment="Center" Background="{DynamicResource Hp.Brush.LineStrong}" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
-                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                            <Setter TargetName="Pill" Property="Width" Value="6" />
+                            <Setter TargetName="Pill" Property="CornerRadius" Value="3" />
+                            <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Hp.Brush.Accent}" />
                         </Trigger>
                         <Trigger Property="IsDragging" Value="True">
-                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
+                            <Setter TargetName="Pill" Property="Width" Value="6" />
+                            <Setter TargetName="Pill" Property="CornerRadius" Value="3" />
+                            <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Hp.Brush.Accent}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Bildlaufleiste im Spalt zwischen Liste bzw. Raster und Detailbereich (lib:GapScrollBar, Wunsch des Nutzers 2026-10-22):
+        Die Pille ist die Bildlaufleiste der aktiven Ansicht, ihre Bahn reicht so weit wie deren sichtbarer Bereich
+        (TrackMargin); ohne Bildlauf blendet Track sie aus. Der ganze Spalt nimmt die Maus an (für den Trenner darunter):
+        Beim Überfahren außerhalb der Pille erscheint die feine Linie, beim Ziehen der Breite in der Akzentfarbe.
+    -->
+    <Style x:Key="Lib.GapScrollBar" TargetType="lib:GapScrollBar">
+        <Setter Property="Orientation" Value="Vertical" />
+        <Setter Property="Width" Value="Auto" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Cursor" Value="SizeWE" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="ContextMenuService.IsEnabled" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:GapScrollBar">
+                    <Grid Background="{TemplateBinding Background}" UseLayoutRounding="True">
+                        <Border x:Name="Line" Width="1" HorizontalAlignment="Center" Margin="0,18" Background="{DynamicResource Hp.Brush.LineStrong}"
+                                Opacity="0" IsHitTestVisible="False" />
+                        <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="{TemplateBinding TrackMargin}">
+                            <Track.Thumb>
+                                <Thumb x:Name="Pill" Style="{StaticResource Lib.GapThumb}" />
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True" />
+                                <Condition SourceName="Pill" Property="IsMouseOver" Value="False" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        </MultiTrigger>
+                        <Trigger Property="ShowsLine" Value="True">
                             <Setter TargetName="Line" Property="Opacity" Value="0.8" />
                         </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Grip" Property="Opacity" Value="1" />
-                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource Hp.Brush.FocusRing}" />
-                            <Setter TargetName="Line" Property="Opacity" Value="0.8" />
+                        <Trigger Property="IsResizing" Value="True">
+                            <Setter TargetName="Line" Property="Opacity" Value="1" />
+                            <Setter TargetName="Line" Property="Background" Value="{DynamicResource Hp.Brush.Accent}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

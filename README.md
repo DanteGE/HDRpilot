@@ -103,8 +103,12 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   - **Regal**: großes Titelbild mit **Starten**, **Desktop** und **Startmenü**, darunter eine Reihe Cover zum Blättern
     und rechts die Karte „AUTOMATIK“ mit den wichtigsten Schaltern (nur, wenn ein Spiel gewählt ist). **Details** (oder
     die Taste I) öffnet alle Details als Schublade, Esc schließt sie.
-- In Liste und Raster stehen rechts die Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit
-  den Pfeiltasten verschieben, per Doppelklick zurücksetzen); die Breite merkt sich HDRpilot, höchstens 560 px.
+- In Liste und Raster stehen rechts die Details zum gewählten Spiel. Im Spalt dazwischen sitzt die Bildlaufleiste der
+  Liste bzw. des Rasters: Die Pille zeigt, wo du bist und wie viel davon zu sehen ist. Ziehen scrollt, ein Klick über
+  oder unter die Pille blättert eine Seite, das Mausrad scrollt auch im Spalt; passt alles ins Fenster, ist sie weg. Die
+  Breite der Details änderst du an der feinen Linie, die beim Überfahren des Spalts erscheint: waagerecht ziehen (Esc
+  bricht ab), mit Fokus auf dem Trenner die Pfeiltasten, Doppelklick setzt zurück; die Breite merkt sich HDRpilot,
+  höchstens 560 px.
 - Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR
   automatisch“, Esc leert die Suche, Entf fragt bei einem nicht installierten Spiel aus einem Launcher, ob seine
   Einstellungen weg sollen, bei einem selbst hinzugefügten, ob es aus der Bibliothek soll (siehe unten). Rechtsklick,

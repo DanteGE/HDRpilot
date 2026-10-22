@@ -589,6 +589,7 @@ public partial class MainWindow : ChromeWindow
         ListCard.Visibility = view == LibraryViewMode.List ? Visibility.Visible : Visibility.Collapsed;
         GameGrid.Visibility = view == LibraryViewMode.Grid ? Visibility.Visible : Visibility.Collapsed;
         ShelfArea.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLibraryScroll(view);
 
         // Spalten: im Regal nimmt die Liste die ganze Breite, der Detailbereich wird zur Schublade.
         Grid.SetColumnSpan(ListArea, shelf ? 3 : 1);

@@ -1428,6 +1428,7 @@
                             <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{DynamicResource Hp.Brush.Line}" />
                             <!-- Nicht mit dem aktuellen Element der Sicht verbinden: Neufiltern darf die Auswahl nicht verschieben. -->
                             <ListBox x:Name="GameList" Grid.Row="1" Style="{StaticResource Lib.ListBox}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Hidden"
                                      IsSynchronizedWithCurrentItem="False"
                                      ItemContainerStyle="{StaticResource GameRowWithMenu}" ItemTemplate="{StaticResource GameRowTemplate}"
                                      AutomationProperties.AutomationId="GameList" AutomationProperties.Name="{x:Static res:LibraryStrings.List_Name}" />
@@ -1436,6 +1437,7 @@
 
                     <!-- Raster: Spalten und Kachelgröße nach der Breite (RasterLayout), virtualisiert -->
                     <ListBox x:Name="GameGrid" Style="{StaticResource Lib.ListBox}" Visibility="Collapsed"
+                             ScrollViewer.VerticalScrollBarVisibility="Hidden"
                              IsSynchronizedWithCurrentItem="False"
                              ItemContainerStyle="{StaticResource GameTileWithMenu}" ItemTemplate="{StaticResource GameTileTemplate}"
                              AutomationProperties.AutomationId="GameGrid" AutomationProperties.Name="{x:Static res:LibraryStrings.Grid_Name}">
@@ -1510,6 +1512,19 @@
                           DragCompleted="OnSplitterDragCompleted" KeyUp="OnSplitterKeyUp" MouseDoubleClick="OnSplitterDoubleClick"
                           AutomationProperties.AutomationId="LibrarySplitter" AutomationProperties.Name="{x:Static res:LibraryStrings.Splitter_Name}"
                           ToolTip="{x:Static res:LibraryStrings.Splitter_Tooltip}" ToolTipService.InitialShowDelay="900" />
+
+            <!--
+                Bildlaufleiste von Liste bzw. Raster im selben Spalt, über dem Trenner (Wunsch des Nutzers 2026-10-22): Die Pille
+                ist die Bildlaufleiste; der Spalt bleibt für die Maus der Trenner (feine Linie beim Überfahren, waagerecht ziehen,
+                Doppelklick). Tastatur und UI-Automation der Breite bleiben beim Trenner; nie in der Tab-Reihenfolge. Welche
+                Ansicht sie führt, setzt MainWindow.Scroll.cs.
+            -->
+            <lib:GapScrollBar x:Name="LibraryScroll" Grid.Column="1" Style="{StaticResource Lib.GapScrollBar}"
+                              Margin="{Binding Margin, ElementName=LibrarySplitter}" Visibility="{Binding Visibility, ElementName=LibrarySplitter}"
+                              Splitter="{Binding ElementName=LibrarySplitter}" ResetRequested="OnLibraryScrollReset"
+                              ToolTip="{x:Static res:LibraryStrings.ScrollGap_Tooltip}" ToolTipService.InitialShowDelay="900"
+                              AutomationProperties.AutomationId="LibraryScrollBar" AutomationProperties.Name="{x:Static res:LibraryStrings.ScrollGap_Name}"
+                              AutomationProperties.HelpText="{x:Static res:LibraryStrings.ScrollGap_Tooltip}" />
 
             <!-- Regal: Abdunklung hinter der Schublade (Klick schließt) -->
             <Border x:Name="DrawerShade" Grid.ColumnSpan="3" Margin="0,-40,0,-40" Background="#80040509" Opacity="0" IsHitTestVisible="False"

@@ -5,7 +5,9 @@
 # prüft am Ende, dass er Byte für Byte gleich geblieben ist.
 #   - Abschnitt „BILD“ unter „HDR automatisch“: Schalter DetailAutoHdr schreibt autoHdr und lässt hdrAuto stehen; das
 #     Schalten allein ändert in Windows nichts (Testwurzel unverändert)
-#   - Hinweis „wirkt nur beim Start über HDRpilot“ immer sichtbar; Hinweis „HDR automatisch aus“ folgt hdrAuto, nicht
+#   - Erklärung und Hinweise zugeklappt hinter „Mehr erfahren“ (AutoHdrInfoToggle, Aus-/Einklappen; Rückmeldung des
+#     Nutzers 2026-10-22), zugeklappt steht nur „HDR automatisch aus“ bei eingeschaltetem Auto HDR; aufgeklappt (gilt für
+#     das Fenster) der Hinweis „wirkt nur beim Start über HDRpilot“; Hinweis „HDR automatisch aus“ folgt hdrAuto, nicht
 #     autoHdr; Hinweis auf eigenes HDR (Native/Limited) nur dort, Schalter dort trotzdem bedienbar
 #   - Kennzeichen AUTO HDR nur in der Zeile des Spiels, jede Zeile hat genau einen Schalter (HdrAutoToggle)
 #   - Einstellungen ohne Notlösung und ohne „Auto-HDR-Einträge zurücknehmen“
@@ -151,6 +153,18 @@ function Show-Picture($win) {
 
 function Hint-Shown($win, [string]$id) { Show-Picture $win; return Shown (Find-Id $win $id 1000) }
 
+# Erklärungen zu „Windows Auto HDR“ auf- bzw. zuklappen („Mehr erfahren“, Aus-/Einklappen ohne Eingabe); true, wenn der
+# Knopf danach den verlangten Zustand meldet
+function Set-AutoHdrInfo($win, [bool]$expanded) {
+    Show-Picture $win
+    $more = Find-Id $win 'AutoHdrInfoToggle' 3000
+    $ec = $null
+    if (-not $more -or -not $more.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$ec)) { return $false }
+    if ($expanded) { $ec.Expand() } else { $ec.Collapse() }
+    $want = if ($expanded) { 'Expanded' } else { 'Collapsed' }
+    return (Wait-Until { $ec.Current.ExpandCollapseState -eq $want } 3000)
+}
+
 # Einstellungen öffnen; das Fenster hängt je nach Besitzer unter dem Desktop oder unter dem Hauptfenster (wie phase4-ui)
 function Open-Settings($win, [int]$processId) {
     Invoke-El (Find-Id $win 'SettingsButton')
@@ -212,7 +226,14 @@ try {
     Check ($null -ne $toggle -and $toggle.Current.IsEnabled -and (Get-Toggle $toggle) -eq 'Off') 'A: Schalter DetailAutoHdr vorhanden, bedienbar, aus'
     Check ($toggle -and $toggle.Current.Name -eq (Read-LibraryText 'Details_AutoHdr')) "A: Schalter heißt '$($toggle.Current.Name)'"
     $startHint = Read-LibraryText 'Details_AutoHdrStartHint'
-    Check ((Hint-Shown $win 'DetailAutoHdrStartHint') -and (Normalize (Get-Text (Find-Id $win 'DetailAutoHdrStartHint' 1000))) -eq (Normalize $startHint)) "A: Hinweis sichtbar, auch vor dem Einschalten: '$startHint'"
+    # Zugeklappt (Rückmeldung des Nutzers 2026-10-22): keine Erklärung, kein Hinweis (Auto HDR ist noch aus)
+    Show-Picture $win
+    $more = Find-Id $win 'AutoHdrInfoToggle' 3000
+    $moreEc = $null
+    Check ($more -and $more.TryGetCurrentPattern([Windows.Automation.ExpandCollapsePattern]::Pattern, [ref]$moreEc) -and $moreEc.Current.ExpandCollapseState -eq 'Collapsed' -and $more.Current.Name -eq (Read-LibraryText 'Details_AutoHdrInfoName')) 'A: „Mehr erfahren“ (AutoHdrInfoToggle) zugeklappt, mit Aus-/Einklappen'
+    Check (-not (Hint-Shown $win 'DetailAutoHdrStartHint') -and -not (Hint-Shown $win 'DetailAutoHdrNeedsHdrHint')) 'A: zugeklappt keine Hinweise (Auto HDR aus)'
+    Check (Set-AutoHdrInfo $win $true) 'A: Erklärungen aufgeklappt'
+    Check ((Hint-Shown $win 'DetailAutoHdrStartHint') -and (Normalize (Get-Text (Find-Id $win 'DetailAutoHdrStartHint' 1000))) -eq (Normalize $startHint)) "A: Hinweis aufgeklappt sichtbar, auch vor dem Einschalten: '$startHint'"
     Check ($startHint -match 'über HDRpilot' -and $startHint -match 'Verknüpfung' -and $startHint -match 'Steam-Startoption') 'Hinweis nennt Starten, Verknüpfung und Steam-Startoption'
     Check (Hint-Shown $win 'DetailAutoHdrNeedsHdrHint') 'A: Hinweis „HDR automatisch aus“ sichtbar'
     Check (-not (Hint-Shown $win 'DetailAutoHdrNativeHint')) 'A: kein Hinweis auf eigenes HDR (laut Wiki unbekannt)'
@@ -222,6 +243,10 @@ try {
     $on = Wait-Until { $g = Find-GameConfig (Read-Config $cfg) $a.Key; $g.autoHdr -eq $true }
     $g = Find-GameConfig (Read-Config $cfg) $a.Key
     Check ($on -and $g.hdrAuto -eq $false) "A eingeschaltet: config.json autoHdr=$($g.autoHdr), hdrAuto=$($g.hdrAuto)"
+    # Zugeklappt bleibt „HDR automatisch aus“ stehen, solange Auto HDR an ist (die Wahl liefe sonst ins Leere)
+    Check (Set-AutoHdrInfo $win $false) 'A: Erklärungen zugeklappt'
+    Check ((Hint-Shown $win 'DetailAutoHdrNeedsHdrHint') -and -not (Hint-Shown $win 'DetailAutoHdrStartHint')) 'A: zugeklappt mit Auto HDR an: nur der Hinweis „HDR automatisch aus“'
+    Check (Set-AutoHdrInfo $win $true) 'A: wieder aufgeklappt (gilt fürs Fenster, auch für B und C)'
     Check (Wait-Until { Badge-Shown (Find-Row $win 'Auto HDR Test') }) 'A: Kennzeichen AUTO HDR erscheint in seiner Zeile'
     Check (-not (Badge-Shown (Find-Row $win 'Natives HDR Test'))) 'B: kein Kennzeichen (Gegenprobe)'
     # Im ganzen Fenster genau ein Kennzeichen, und das in der Zeile von A (keine Spalte, nichts im Kopf der Liste)

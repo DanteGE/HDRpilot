@@ -280,7 +280,14 @@ public sealed class GameDetailsViewModel : ObservableObject
         get => _autoHdr;
         set
         {
-            if (SetProperty(ref _autoHdr, value) && !_suppressWrites)
+            if (!SetProperty(ref _autoHdr, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsAutoHdrNeedsHdrEssential));
+            OnPropertyChanged(nameof(ShowAutoHdrNeedsHdrLine));
+            if (!_suppressWrites)
             {
                 var saved = _owner.WriteGameAsync(Item.Key, g => g.AutoHdr = value);
                 if (value && IsSteam)
@@ -289,6 +296,34 @@ public sealed class GameDetailsViewModel : ObservableObject
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Erklärung und Hinweise unter „Windows Auto HDR“ aufgeklappt („Mehr erfahren“, Rückmeldung des Nutzers 2026-10-22).
+    /// Gilt für das Fenster, nicht je Spiel (<see cref="LibraryViewModel.IsAutoHdrInfoExpanded"/>).
+    /// </summary>
+    public bool IsAutoHdrInfoExpanded
+    {
+        get => _owner.IsAutoHdrInfoExpanded;
+        set => _owner.IsAutoHdrInfoExpanded = value;
+    }
+
+    /// <summary>
+    /// Der Hinweis „HDR automatisch ist aus …“ bleibt auch zugeklappt stehen, wenn er zu einer Wahl des Nutzers gehört, die
+    /// sonst still ins Leere liefe: Auto HDR an, „HDR automatisch“ aus. Startet das Spiel dann nicht über „Starten“, eine
+    /// „(HDR)“-Verknüpfung oder die Steam-Startoption (etwa aus dem Launcher mit Frühwarnung), muss Windows-HDR schon an
+    /// sein. Alle anderen Texte sind Erklärung oder Rat (eigenes HDR zeigt schon das Kennzeichen neben dem Titel) und klappen zu.
+    /// </summary>
+    public bool IsAutoHdrNeedsHdrEssential => _autoHdr && !Item.HdrAuto;
+
+    /// <summary>Hinweis „HDR automatisch ist aus …“ zu sehen: aufgeklappt wie bisher, zugeklappt nur, wenn er nötig ist.</summary>
+    public bool ShowAutoHdrNeedsHdrLine => ShowAutoHdrNeedsHdrHint && (IsAutoHdrInfoExpanded || IsAutoHdrNeedsHdrEssential);
+
+    /// <summary>Die Bibliothek hat „Mehr erfahren“ umgeschaltet (für alle Spiele des Fensters).</summary>
+    internal void OnAutoHdrInfoExpandedChanged()
+    {
+        OnPropertyChanged(nameof(IsAutoHdrInfoExpanded));
+        OnPropertyChanged(nameof(ShowAutoHdrNeedsHdrLine));
     }
 
     /// <summary>
@@ -561,6 +596,8 @@ public sealed class GameDetailsViewModel : ObservableObject
         {
             case nameof(GameItemViewModel.HdrAuto):
                 OnPropertyChanged(nameof(ShowAutoHdrNeedsHdrHint));
+                OnPropertyChanged(nameof(IsAutoHdrNeedsHdrEssential));
+                OnPropertyChanged(nameof(ShowAutoHdrNeedsHdrLine));
                 break;
             case nameof(GameItemViewModel.HdrSupport):
                 OnPropertyChanged(nameof(IsAutoHdrSubdued));

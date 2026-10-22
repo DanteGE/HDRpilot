@@ -4,15 +4,20 @@ using HdrPilot.Core.Games;
 
 namespace HdrPilot.App.ViewModels.Library;
 
-/// <summary>Eintrag im Quellen-Filter: „Alle“ oder eine Quelle mit Anzahl.</summary>
+/// <summary>
+/// Eintrag im Quellen-Filter: „Alle“ oder eine Quelle mit Anzahl. Dieselben Einträge stehen im Quellenmenü am Titel des
+/// Kopfs (<see cref="Title"/>, gewählt mit Haken: <see cref="IsSelected"/>, Wunsch des Nutzers 2026-10-22).
+/// </summary>
 public sealed class SourceFilterOption : ObservableObject
 {
     private int _count;
+    private bool _isSelected;
 
     public SourceFilterOption(GameSource? source, int count)
     {
         Source = source;
         Label = source is { } s ? LibraryText.SourceName(s) : LibraryStrings.Filter_All;
+        Title = LibraryText.SourceTitle(source);
         _count = count;
     }
 
@@ -20,6 +25,9 @@ public sealed class SourceFilterOption : ObservableObject
     public GameSource? Source { get; }
 
     public string Label { get; }
+
+    /// <summary>Titel im Kopf und Eintrag im Quellenmenü: „Alle Spiele“, „Steam-Spiele“ …</summary>
+    public string Title { get; }
 
     public int Count
     {
@@ -29,12 +37,32 @@ public sealed class SourceFilterOption : ObservableObject
             if (SetProperty(ref _count, value))
             {
                 OnPropertyChanged(nameof(AutomationName));
+                OnPropertyChanged(nameof(MenuName));
+            }
+        }
+    }
+
+    /// <summary>Gerade gewählte Quelle (Haken im Quellenmenü); setzt nur die Bibliothek.</summary>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        internal set
+        {
+            if (SetProperty(ref _isSelected, value))
+            {
+                OnPropertyChanged(nameof(MenuStatus));
             }
         }
     }
 
     /// <summary>Name für Bildschirmleser und UI-Automation: „Alle“ bzw. „Steam (631)“.</summary>
     public string AutomationName => Source is null ? Label : LibraryText.Format(LibraryStrings.Filter_SourceWithCount, Label, Count);
+
+    /// <summary>Name des Eintrags im Quellenmenü: „Alle Spiele (651)“, „Steam-Spiele (631)“.</summary>
+    public string MenuName => LibraryText.Format(LibraryStrings.Filter_SourceWithCount, Title, Count);
+
+    /// <summary>Zustand im Quellenmenü für Bildschirmleser: „gewählt“ bzw. leer.</summary>
+    public string MenuStatus => _isSelected ? LibraryStrings.SourceMenu_Selected : string.Empty;
 
     public override string ToString() => AutomationName;
 }

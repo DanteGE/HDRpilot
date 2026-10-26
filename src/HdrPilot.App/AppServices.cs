@@ -8,6 +8,7 @@ using HdrPilot.App.Services;
 using HdrPilot.App.Services.Artwork;
 using HdrPilot.App.Services.Display;
 using HdrPilot.App.Theming;
+using HdrPilot.App.ViewModels;
 using HdrPilot.App.Wrapper;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.AutoHdr;
@@ -354,7 +355,10 @@ public sealed partial class AppServices : IAsyncDisposable
         BringToFront(_mainWindow);
     }
 
-    public void ShowSettingsWindow()
+    public void ShowSettingsWindow() => ShowSettingsWindow(SettingsTarget.Start);
+
+    /// <summary>Einstellungen öffnen (oder nach vorn holen) und, für <see cref="SettingsTarget.Artwork"/>, zum Schlüsselfeld springen.</summary>
+    public void ShowSettingsWindow(SettingsTarget target)
     {
         Dispatcher.VerifyAccess();
         if (_settingsWindow is null)

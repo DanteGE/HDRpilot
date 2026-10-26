@@ -923,11 +923,23 @@ public sealed partial class LibraryViewModel
         }
 
         var picker = new ArtworkPickerViewModel(this, item, kind is ArtworkKind.Logo or ArtworkKind.Cover ? kind : ArtworkKind.Hero);
-        var load = picker.LoadAsync();
-        if (_dialogs.ShowArtworkPicker(picker))
+        try
         {
-            await load;
-            await picker.ApplyAsync();
+            var load = picker.LoadAsync();
+            if (_dialogs.ShowArtworkPicker(picker))
+            {
+                // Bilder von SteamGridDB hat „Übernehmen“ schon im offenen Dialog geladen (E93); hier wird nur gespeichert.
+                await load;
+                picker.CommitMatch(await picker.ApplyWithOutcomeAsync());
+            }
+            else if (picker.SettingsRequested)
+            {
+                _context.ShowSettings(SettingsTarget.Artwork);
+            }
+        }
+        finally
+        {
+            picker.Dispose(); // nur der Online-Teil
         }
     }
 }

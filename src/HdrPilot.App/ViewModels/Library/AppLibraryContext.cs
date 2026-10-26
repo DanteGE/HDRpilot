@@ -28,8 +28,15 @@ public sealed class AppLibraryContext : ILibraryContext
     private bool _disposed;
 
     public AppLibraryContext(AppServices services)
+        : this(services, null)
+    {
+    }
+
+    /// <summary>Nur für Bildschirmfotos: SteamGridDB über den Testdaten-Lieferanten statt des echten Dienstes (E93).</summary>
+    internal AppLibraryContext(AppServices services, ISteamGridDbService? steamGridDb)
     {
         _services = services;
+        SteamGridDb = steamGridDb ?? services.SteamGridDb;
         _logger = services.LoggerFactory.CreateLogger("Library");
         Ui = new WpfUiDispatcher(services.Dispatcher);
 
@@ -61,6 +68,8 @@ public sealed class AppLibraryContext : ILibraryContext
     public IGameIconService Icons => _services.Icons;
 
     public IArtworkService Artwork => _services.Artwork;
+
+    public ISteamGridDbService SteamGridDb { get; }
 
     public IDisplayLuminanceService Luminance => _services.Luminance;
 
@@ -157,6 +166,8 @@ public sealed class AppLibraryContext : ILibraryContext
     public Task<LaunchOutcome> LaunchAsync(string gameKey) => _services.LaunchAsync(gameKey);
 
     public void ShowSettings() => _services.ShowSettingsWindow();
+
+    public void ShowSettings(SettingsTarget target) => _services.ShowSettingsWindow(target);
 
     /// <summary>„Installationsordner öffnen“: der Explorer zeigt den Ordner (nur ein bestehender Ordner, geprüft vom Aufrufer).</summary>
     public void OpenFolder(string path)

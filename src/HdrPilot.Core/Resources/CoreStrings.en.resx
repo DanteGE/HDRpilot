@@ -162,4 +162,7 @@
   <data name="ConfigSaveFailed" xml:space="preserve">
     <value>Configuration {0} couldn't be saved: {1}</value>
   </data>
+  <data name="GameNotInConfig" xml:space="preserve">
+    <value>Game not in the configuration: {0}</value>
+  </data>
 </root>

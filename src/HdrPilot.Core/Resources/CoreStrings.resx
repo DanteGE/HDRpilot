@@ -169,4 +169,8 @@
     <value>Konfiguration {0} ließ sich nicht speichern: {1}</value>
     <comment>E95: erscheint in „Die Einstellungen ließen sich nicht speichern: …“; {0} = Pfad, {1} = Grund</comment>
   </data>
+  <data name="GameNotInConfig" xml:space="preserve">
+    <value>Spiel nicht in der Konfiguration: {0}</value>
+    <comment>E95: kann in der Kommandozeile erscheinen; {0} = Schlüssel des Spiels</comment>
+  </data>
 </root>

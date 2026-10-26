@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using HdrPilot.App.Resources;
 
 namespace HdrPilot.App.Setup.UI;
 
@@ -56,7 +57,7 @@ public static partial class UninstallHandoff
                 info.ArgumentList.Add(argument);
             }
 
-            using var process = Process.Start(info) ?? throw new InvalidOperationException("Kopie zum Entfernen wurde nicht gestartet.");
+            using var process = Process.Start(info) ?? throw new InvalidOperationException(SetupStrings.UninstallCopyNotStarted);
             log.Info(string.Create(CultureInfo.InvariantCulture, $"Entfernen geht weiter in {copy} (PID {process.Id}): {string.Join(' ', arguments)}"));
             return copy;
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using HdrPilot.Cli;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -28,6 +29,10 @@ public sealed class EnglishOutputTests
             Assert.Equal("HDR turned on", CoreStrings.NotifyHdrEnabledTitle);
             Assert.Equal("on", CoreStrings.WordOn);
             Assert.Equal("Steam manifest damaged: {0}", ScanStrings.Steam_ManifestDamaged);
+
+            // Platzhalter wie im deutschen Text: Spiel und Name des Bildschirms.
+            Assert.Equal("Testspiel: HDR turned on on display \"Monitor A\".", string.Format(CultureInfo.CurrentCulture, CoreStrings.NotifyHdrEnabledMessage, "Testspiel", "Monitor A"));
+            Assert.Equal("HDR turned off again on display \"Monitor A\".", string.Format(CultureInfo.CurrentCulture, CoreStrings.NotifyHdrRestoredMessage, "Monitor A"));
         }
 
         using (TestCulture.Use("en-GB"))
@@ -70,6 +75,22 @@ public sealed class EnglishOutputTests
 
         var deutsch = Assert.Throws<ArgumentException>(() => ManualGames.Create(fs, @"Spielordner\Testspiel"));
         Assert.StartsWith("Der Pfad muss vollständig sein (mit Laufwerk), nicht relativ: \"Spielordner\\Testspiel\".", deutsch.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Unknown_game_is_named_in_the_language_of_the_interface()
+    {
+        // Die Meldung kann über „Unerwarteter Fehler: {0}“ der Kommandozeile erscheinen (Spiel inzwischen entfernt).
+        var clock = new FakeClock();
+        var config = new ConfigService(new ConfigStore(new InMemoryFileSystem(), ConfigFile, clock, newConfigLanguage: () => "en"), clock);
+        using (TestCulture.Use("en-US"))
+        {
+            var error = Assert.Throws<KeyNotFoundException>(() => config.UpdateGame("Manual:fehlt", g => g.HdrAuto = true));
+            Assert.Equal("Game not in the configuration: Manual:fehlt", error.Message);
+        }
+
+        var deutsch = Assert.Throws<KeyNotFoundException>(() => config.UpdateGame("Manual:fehlt", g => g.HdrAuto = true));
+        Assert.Equal("Spiel nicht in der Konfiguration: Manual:fehlt", deutsch.Message);
     }
 
     [Fact]

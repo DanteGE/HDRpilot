@@ -201,7 +201,7 @@ public sealed class ConfigService : ISessionConfigSource
 
     public void UpdateGame(string gameKey, Action<GameConfig> mutate) => Update(c =>
     {
-        var game = c.FindGame(gameKey) ?? throw new KeyNotFoundException("Spiel nicht in der Konfiguration: " + gameKey);
+        var game = c.FindGame(gameKey) ?? throw new KeyNotFoundException(string.Format(System.Globalization.CultureInfo.CurrentCulture, Resources.CoreStrings.GameNotInConfig, gameKey));
         mutate(game);
     });
 

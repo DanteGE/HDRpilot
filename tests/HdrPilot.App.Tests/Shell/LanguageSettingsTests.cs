@@ -7,6 +7,7 @@ using HdrPilot.App.Services;
 using HdrPilot.App.ViewModels.Shell;
 using HdrPilot.App.Views.Shell;
 using HdrPilot.Core.Config;
+using HdrPilot.Core.Sessions;
 using HdrPilot.Tests.TestSupport;
 
 namespace HdrPilot.App.Tests.Shell;
@@ -162,6 +163,91 @@ public sealed class LanguageSettingsTests
         Assert.Equal(1, ctx.RestartCalls);
         Assert.Equal(ShellStrings.RestartFailed, vm.ErrorMessage);
         Assert.Equal("en", ctx.Config.Current.Settings.Language);
+    }
+
+    [Fact]
+    public async Task Restart_now_is_locked_while_a_game_session_runs()
+    {
+        // Ein Neustart mitten in einer Sitzung überließe das Zurückstellen von HDR der neuen Instanz: gesperrt, mit Hinweis.
+        var (vm, ctx) = Create();
+        vm.Language = "en";
+        Assert.False(vm.LanguageRestartBlocked);
+        Assert.True(vm.RestartNowCommand.CanExecute(null));
+
+        var changed = new List<string?>();
+        var canExecuteChanged = 0;
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        vm.RestartNowCommand.CanExecuteChanged += (_, _) => canExecuteChanged++;
+        ctx.SessionList.Add(new SessionInfo("Manual:testspiel", "Testspiel", SessionPhase.Running, SessionTrigger.ProcessDetected, DateTimeOffset.UnixEpoch, [], [7]));
+        ctx.RaiseHdrStateChanged();
+
+        Assert.True(vm.LanguageRestartBlocked);
+        Assert.Contains(nameof(SettingsViewModel.LanguageRestartBlocked), changed);
+        Assert.True(canExecuteChanged > 0);
+        Assert.False(vm.RestartNowCommand.CanExecute(null));
+        vm.RestartNowCommand.Execute(null);
+        await WaitFor(vm.RestartNowCommand);
+        Assert.Equal(0, ctx.RestartCalls);
+        Assert.Equal("de", ctx.Config.Current.Settings.Language); // auch nichts gespeichert
+        Assert.True(vm.HasChanges);
+
+        // „Speichern“ geht weiter; nach dem Spiel ist der Neustart wieder frei.
+        ctx.SessionList.Clear();
+        ctx.RaiseHdrStateChanged();
+        Assert.False(vm.LanguageRestartBlocked);
+        Assert.True(vm.RestartNowCommand.CanExecute(null));
+        vm.RestartNowCommand.Execute(null);
+        await WaitFor(vm.RestartNowCommand);
+        Assert.Equal(1, ctx.RestartCalls);
+        Assert.Equal("en", ctx.LanguageAtRestart);
+    }
+
+    [Fact]
+    public void Restart_now_is_locked_while_a_game_is_being_prepared()
+    {
+        var (vm, ctx) = Create();
+        ctx.SessionList.Add(new SessionInfo("Steam:1", "Testspiel", SessionPhase.Launching, SessionTrigger.SteamLaunchOption, DateTimeOffset.UnixEpoch, [], []));
+        vm.Language = "en";
+
+        Assert.True(vm.LanguageRestartBlocked); // schon beim Öffnen der Einstellungen
+        Assert.False(vm.RestartNowCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Settings_window_explains_why_restart_is_locked()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var config = ShellTestFactory.NewConfig(new InMemoryFileSystem());
+            var context = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new ConfigOnlyAutostartService(config));
+            var window = new SettingsWindow();
+            var vm = new SettingsViewModel(context, new FakeFolderPicker());
+            window.Attach(vm);
+            vm.Language = "en";
+            WpfTestHost.DoEvents();
+            WpfTestHost.Layout(window, new Size(1280, 900));
+
+            var button = Find<Button>(window, "LanguageRestartButton");
+            var hint = Find<TextBlock>(window, "LanguageRestartBlockedHint");
+            Assert.True(button.IsEnabled);
+            Assert.False(IsShown(hint));
+
+            context.SessionList.Add(new SessionInfo("Manual:testspiel", "Testspiel", SessionPhase.Running, SessionTrigger.ProcessDetected, DateTimeOffset.UnixEpoch, [], [7]));
+            context.RaiseHdrStateChanged();
+            WpfTestHost.DoEvents();
+            WpfTestHost.Layout(window, new Size(1280, 900));
+            Assert.False(button.IsEnabled);
+            Assert.True(IsShown(hint));
+            Assert.Equal(ShellStrings.LanguageRestartBlocked, hint.Text);
+
+            context.SessionList.Clear();
+            context.RaiseHdrStateChanged();
+            WpfTestHost.DoEvents();
+            Assert.True(button.IsEnabled);
+            Assert.False(IsShown(hint));
+
+            window.Close();
+        });
     }
 
     [Fact]

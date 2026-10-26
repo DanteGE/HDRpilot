@@ -279,6 +279,10 @@
   <data name="LanguageRestartNow" xml:space="preserve">
     <value>Jetzt neu starten</value>
   </data>
+  <data name="LanguageRestartBlocked" xml:space="preserve">
+    <value>Ein Spiel läuft gerade. Neu starten geht nach dem Spiel, damit HDRpilot HDR wie gewohnt zurückstellt; „Speichern“ übernimmt die Sprache schon jetzt.</value>
+    <comment>Unter „Jetzt neu starten“, solange eine Sitzung läuft (Knopf gesperrt, E95)</comment>
+  </data>
   <data name="RestartFailed" xml:space="preserve">
     <value>HDRpilot ließ sich nicht neu starten. Die Einstellungen sind gespeichert; die neue Sprache gilt nach dem nächsten Start.</value>
   </data>

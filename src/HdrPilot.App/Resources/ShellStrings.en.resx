@@ -254,6 +254,9 @@
   <data name="LanguageRestartNow" xml:space="preserve">
     <value>Restart now</value>
   </data>
+  <data name="LanguageRestartBlocked" xml:space="preserve">
+    <value>A game is running. You can restart after the game, so HDRpilot restores HDR as usual; “Save” already stores the language.</value>
+  </data>
   <data name="RestartFailed" xml:space="preserve">
     <value>HDRpilot couldn't be restarted. Your settings are saved; the new language takes effect the next time it starts.</value>
   </data>

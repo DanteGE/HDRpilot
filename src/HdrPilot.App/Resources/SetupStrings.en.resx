@@ -155,6 +155,9 @@
   <data name="SetupErrorRefusedArguments" xml:space="preserve">
     <value>These command-line options aren't valid ({0}); nothing was changed. Details are in {1}.</value>
   </data>
+  <data name="SetupDetailCopyFiles" xml:space="preserve">
+    <value>Copying files ({0})</value>
+  </data>
   <data name="SetupErrorContainer" xml:space="preserve">
     <value>The setup is running in the container of another app ({0}). Windows would redirect registry entries and settings there, and HDRpilot would only be half installed. Nothing was changed. Please start the setup file by double-clicking it in File Explorer.</value>
   </data>
@@ -235,6 +238,9 @@
   </data>
   <data name="UninstallErrorFilesInUse" xml:space="preserve">
     <value>A file couldn't be removed because it's currently in use: {0}. Delete it manually later.</value>
+  </data>
+  <data name="UninstallCopyNotStarted" xml:space="preserve">
+    <value>The copy for uninstalling didn't start</value>
   </data>
   <data name="UninstallCloseButton" xml:space="preserve">
     <value>Done</value>

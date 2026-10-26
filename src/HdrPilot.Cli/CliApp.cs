@@ -35,13 +35,13 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>Text aus <see cref="CliStrings"/> mit Werten, formatiert wie die Oberfläche (E95).</summary>
+    private static string Text(string template, params object?[] args) => string.Format(System.Globalization.CultureInfo.CurrentCulture, template, args);
+
     /// <summary>
     /// Sprache der Ausgaben (E95): die der Ablage (<c>--config-dir</c> oder die normale), ohne config.json nach der
     /// Anzeigesprache von Windows wie bei einer neuen Konfiguration (<see cref="UiLanguage.ForStartup"/>). Liest nur.
     /// </summary>
-    /// <summary>Text aus <see cref="CliStrings"/> mit Werten, formatiert wie die Oberfläche (E95).</summary>
-    private static string Text(string template, params object?[] args) => string.Format(System.Globalization.CultureInfo.CurrentCulture, template, args);
-
     internal static string LanguageFor(IReadOnlyList<string> args, IFileSystem fileSystem, IAppEnvironment environment, Func<string>? newConfigLanguage = null)
     {
         try

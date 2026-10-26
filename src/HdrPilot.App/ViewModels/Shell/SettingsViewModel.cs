@@ -672,7 +672,10 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private static string DisplayName(DisplayInfo d) =>
         string.IsNullOrWhiteSpace(d.FriendlyName) ? DisplayOptionViewModel.NameFromPath(d.MonitorDevicePath) : d.FriendlyName;
 
-    /// <summary>Bildschirm angesteckt, abgezogen oder HDR umgeschaltet: Kennzeichen auffrischen, Auswahl behalten.</summary>
+    /// <summary>
+    /// Bildschirm angesteckt, abgezogen oder HDR umgeschaltet: Kennzeichen auffrischen, Auswahl behalten. Kommt auch, wenn eine
+    /// Sitzung beginnt oder endet (Sperre von „Jetzt neu starten“).
+    /// </summary>
     private void OnHdrStateChanged(object? sender, EventArgs e)
     {
         if (_disposed)
@@ -705,6 +708,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         }
 
         OnPropertyChanged(nameof(DisplaysSummary));
+        RefreshLanguageRestart();
     }
 
     private void OnDisplayChanged(object? sender, PropertyChangedEventArgs e)

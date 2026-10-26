@@ -710,6 +710,12 @@
   <data name="Icon_SaveFailed" xml:space="preserve">
     <value>The icon couldn't be saved: {0}</value>
   </data>
+  <data name="Icon_NoFolder" xml:space="preserve">
+    <value>No folder for custom icons is set.</value>
+  </data>
+  <data name="Icon_Unreadable" xml:space="preserve">
+    <value>The file contains no readable image or icon: {0}</value>
+  </data>
   <data name="View_Name" xml:space="preserve">
     <value>View</value>
   </data>

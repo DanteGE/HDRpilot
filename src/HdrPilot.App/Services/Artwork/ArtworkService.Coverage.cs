@@ -115,6 +115,49 @@ public sealed partial class ArtworkService
 
     public void SetSteamGridDbGameId(GameConfig game, long id) => WithEntry(game.Key, e => (e.SteamGridDb ??= new IndexedSteamGridDb()).GameId = id);
 
+    /// <summary>
+    /// Neue, vom Nutzer gewählte Zuordnung (E93): Unter der Sperre des Verzeichnisses werden die Bilder und Fehlanzeigen der
+    /// alten Zuordnung vergessen und die ID gesetzt; danach (außerhalb der Sperre) die Dateien in art\sgdb gelöscht, das Spiel
+    /// im Speicher vergessen und gemeldet. Gleiche ID: nichts.
+    /// </summary>
+    public void ReplaceSteamGridDbGame(GameConfig game, long id)
+    {
+        List<string>? files = null;
+        WithEntry(game.Key, e =>
+        {
+            var sgdb = e.SteamGridDb ??= new IndexedSteamGridDb();
+            if (sgdb.GameId == id)
+            {
+                return;
+            }
+
+            files = [.. sgdb.Files.Values];
+            sgdb.Files.Clear();
+            sgdb.Checked.Clear();
+            sgdb.GameId = id;
+        });
+        if (files is null)
+        {
+            return;
+        }
+
+        var folder = Path.Combine(_options.ArtDirectory, ArtworkFiles.SteamGridDbFolder);
+        foreach (var file in files.Where(f => f.Length > 0 && Path.GetFileName(f) == f))
+        {
+            try
+            {
+                _fileSystem.DeleteFile(Path.Combine(folder, file));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogWarning("Bilder: Bild der alten SteamGridDB-Zuordnung {File} nicht gelöscht: {Message}", file, ex.Message);
+            }
+        }
+
+        ForgetInMemory(game.Key);
+        Raise(game.Key);
+    }
+
     /// <summary>Letzter Lauf von SteamGridDB (höchstens einmal am Tag nach dem Start).</summary>
     public DateTimeOffset? SteamGridDbLastRun
     {

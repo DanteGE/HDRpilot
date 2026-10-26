@@ -63,6 +63,36 @@ public static class ArtworkImaging
     }
 
     /// <summary>
+    /// Bild aus Bytes (etwa eine Vorschau oder ein gewähltes Bild von SteamGridDB, E93) in höchstens
+    /// <paramref name="maxWidth"/> Pixeln Breite, mit denselben Regeln wie <see cref="Decode(string, int)"/>: höchstens
+    /// <see cref="MaxFileBytes"/>, Größe aus dem Kopf vor dem Dekodieren, eingefroren, auf jedem Thread.
+    /// </summary>
+    public static BitmapSource Decode(byte[] data, int maxWidth)
+    {
+        if (data.LongLength > MaxFileBytes)
+        {
+            throw new ImageTooLargeException("Bild ist zu groß: " + data.LongLength + " Byte.");
+        }
+
+        using var stream = new MemoryStream(data, writable: false);
+        var (width, _) = FrameSize(stream, maxWidth);
+        stream.Position = 0;
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+        image.StreamSource = stream;
+        if (maxWidth > 0 && maxWidth < width)
+        {
+            image.DecodePixelWidth = maxWidth;
+        }
+
+        image.EndInit();
+        image.Freeze();
+        return image;
+    }
+
+    /// <summary>
     /// Bild in höchstens <paramref name="maxWidth"/> Pixeln Breite (Seitenverhältnis bleibt, nie größer als das Original),
     /// eingefroren. .ico und .exe über Windows (größtes passendes Symbol, höchstens 256 px).
     /// </summary>
@@ -212,9 +242,11 @@ public static class ArtworkImaging
 
     /// <summary>
     /// Prüft Bytes (etwa einen Download) als Bild, ohne sie ganz zu dekodieren: Größe aus dem Kopf (höchstens
-    /// <paramref name="maxPixels"/>), dann ein kleines Vorschaubild, damit auch die Pixeldaten lesbar sind.
+    /// <paramref name="maxPixels"/>), dann ein kleines Vorschaubild, damit auch die Pixeldaten lesbar sind. Mit
+    /// <paramref name="saveWidth"/> &gt; 0 auch so, wie das Speichern als eigenes Bild es verlangt (in dieser Breite höchstens
+    /// <see cref="MaxPixels"/>): Was das Speichern ablehnte, scheitert so schon hier.
     /// </summary>
-    public static (int Width, int Height) Validate(byte[] data, long maxPixels)
+    public static (int Width, int Height) Validate(byte[] data, long maxPixels, int saveWidth = 0)
     {
         if (data.LongLength > MaxFileBytes)
         {
@@ -226,6 +258,11 @@ public static class ArtworkImaging
         if ((long)width * height > maxPixels)
         {
             throw new ImageTooLargeException("Bild hat zu viele Pixel: " + width + " × " + height + ".");
+        }
+
+        if (saveWidth > 0)
+        {
+            CheckSize(width, height, saveWidth);
         }
 
         stream.Position = 0;

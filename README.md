@@ -219,7 +219,7 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     mit **Wieder aufnehmen** zurückholen. **Neu lernen** vergisst die beim Spielen erkannten EXEs.
   - Abschnitt „BILDER“: Titelbild, Logo, Cover und Symbol des Spiels; ein Klick öffnet **Bild wählen…**, beim Symbol
     das Menü mit **Symbol ändern…**. Darunter steht, woher die Bilder kommen, etwa „Lokal aus dem Steam-Cache · nichts
-    heruntergeladen“ oder „Eigene Datei · nur auf diesem PC“.
+    heruntergeladen“ oder „Eigenes Bild · nur auf diesem PC“.
   - **Aus der Bibliothek entfernen**: nur für selbst hinzugefügte Spiele.
   - **Einstellungen entfernen…** (ganz unten, rot): nur für nicht installierte Spiele aus Launchern, auch per
     Rechtsklick oder Entf. Nach einer Rückfrage vergisst HDRpilot, was es zu dem Spiel gespeichert hat: den Eintrag

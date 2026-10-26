@@ -270,7 +270,7 @@ public sealed class ArtworkServiceTests : IDisposable
         Assert.Equal((600, 900), (cover.PixelWidth, cover.PixelHeight));
         Assert.Equal(ArtworkOrigin.Custom, artwork.Summary.Hero);
         Assert.Equal(ArtworkOrigin.Custom, artwork.Summary.Cover);
-        Assert.Equal("Eigene Datei · nur auf diesem PC", artwork.Summary.Description);
+        Assert.Equal("Eigenes Bild · nur auf diesem PC", artwork.Summary.Description);
         Assert.True(File.Exists(source), "die gewählte Datei bleibt unverändert");
 
         // Löschen nur eigener Dateien: eine fremde Datei im selben Ordner bleibt.

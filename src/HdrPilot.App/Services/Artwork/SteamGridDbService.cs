@@ -27,6 +27,12 @@ public interface ISteamGridDbArtwork
 
     void SetSteamGridDbGameId(GameConfig game, long id);
 
+    /// <summary>
+    /// Vom Nutzer in „Bild wählen…“ geänderte Zuordnung (E93): Ist die ID neu, gelten die bisher automatisch geladenen Bilder
+    /// und Fehlanzeigen dieses Spiels nicht mehr (gelöscht und vergessen). Standard: nur die ID merken.
+    /// </summary>
+    void ReplaceSteamGridDbGame(GameConfig game, long id) => SetSteamGridDbGameId(game, id);
+
     DateTimeOffset? SteamGridDbLastRun { get; set; }
 
     /// <summary>Bild speichern (art\sgdb) und die Änderung melden; InvalidDataException für kein Bild.</summary>

@@ -225,7 +225,7 @@
     <value>Suggestions from your search folders</value>
   </data>
   <data name="Candidates_Hint" xml:space="preserve">
-    <value>Nothing is added without you. Added games switch HDR on launch.</value>
+    <value>Nothing is added without you. Added games have HDR on launch turned on.</value>
   </data>
   <data name="Candidates_Toggle" xml:space="preserve">
     <value>Expand or collapse suggestions</value>
@@ -651,7 +651,7 @@
     <value>Leave empty to use the file or folder name.</value>
   </data>
   <data name="AddGame_AutoHint" xml:space="preserve">
-    <value>Manually added games switch HDR on launch: the switch is on right away.</value>
+    <value>Manually added games have HDR on launch turned on right away.</value>
   </data>
   <data name="AddGame_Confirm" xml:space="preserve">
     <value>Add</value>
@@ -897,25 +897,25 @@
     <value>I</value>
   </data>
   <data name="Effects_Full" xml:space="preserve">
-    <value>Effects full</value>
+    <value>Effects: Full</value>
   </data>
   <data name="Effects_FullPauseBoth" xml:space="preserve">
-    <value>Effects full · pause in the background and while playing</value>
+    <value>Effects: Full · pausing in the background and while playing</value>
   </data>
   <data name="Effects_FullPauseBackground" xml:space="preserve">
-    <value>Effects full · pause in the background</value>
+    <value>Effects: Full · pausing in the background</value>
   </data>
   <data name="Effects_FullPausePlaying" xml:space="preserve">
-    <value>Effects full · pause while playing</value>
+    <value>Effects: Full · pausing while playing</value>
   </data>
   <data name="Effects_Reduced" xml:space="preserve">
-    <value>Effects reduced</value>
+    <value>Effects: Reduced</value>
   </data>
   <data name="Effects_ReducedByWindows" xml:space="preserve">
-    <value>Effects reduced (Windows setting)</value>
+    <value>Effects: Reduced (Windows setting)</value>
   </data>
   <data name="Effects_Off" xml:space="preserve">
-    <value>Effects off</value>
+    <value>Effects: Off</value>
   </data>
   <data name="Effects_PausedGame" xml:space="preserve">
     <value>Effects paused while the game is running</value>

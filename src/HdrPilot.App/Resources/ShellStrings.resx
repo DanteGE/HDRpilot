@@ -585,7 +585,7 @@
     <value>Spielebibliothek öffnen</value>
   </data>
   <data name="GroupGeneralHint" xml:space="preserve">
-    <value>Start, Bildschirme, Automatik, Suche und Bibliothek. Übernommen mit „Speichern“.</value>
+    <value>Start, Sprache, Bildschirme, Automatik, Suche und Bibliothek. Übernommen mit „Speichern“.</value>
   </data>
   <data name="GroupAppearanceHint" xml:space="preserve">
     <value>Farben, Thema, Effekte und Bilder. Wirkt auf Oberfläche, Tray-Symbol und Fenstersymbol.</value>
@@ -603,7 +603,7 @@
     <value>Darstellung auf den Standard zurücksetzen</value>
   </data>
   <data name="SectionStartupHint" xml:space="preserve">
-    <value>Mit Windows starten und Hinweise im Infobereich</value>
+    <value>Mit Windows starten, Hinweise im Infobereich und Sprache</value>
   </data>
   <data name="SectionDisplaysHint" xml:space="preserve">
     <value>Wo HDRpilot HDR schaltet</value>

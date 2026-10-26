@@ -546,7 +546,7 @@
     <value>Open game library</value>
   </data>
   <data name="GroupGeneralHint" xml:space="preserve">
-    <value>Startup, displays, automation, search and library. Applied with “Save”.</value>
+    <value>Startup, language, displays, automation, search and library. Applied with “Save”.</value>
   </data>
   <data name="GroupAppearanceHint" xml:space="preserve">
     <value>Colors, theme, effects and images. Affects the interface, tray icon and window icon.</value>
@@ -564,7 +564,7 @@
     <value>Reset appearance to default</value>
   </data>
   <data name="SectionStartupHint" xml:space="preserve">
-    <value>Start with Windows and notifications in the notification area</value>
+    <value>Start with Windows, notifications in the notification area and language</value>
   </data>
   <data name="SectionDisplaysHint" xml:space="preserve">
     <value>Where HDRpilot switches HDR</value>
@@ -843,7 +843,7 @@
     <value>Windows: animations off – currently not respected</value>
   </data>
   <data name="MinimizeToTrayLabel" xml:space="preserve">
-    <value>Go to the notification area after launch</value>
+    <value>Close to the notification area after launch</value>
   </data>
   <data name="MinimizeToTrayHint" xml:space="preserve">
     <value>The window closes, HDRpilot keeps running in the tray</value>

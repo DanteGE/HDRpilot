@@ -1,6 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:lib="clr-namespace:HdrPilot.App.Views.Library">
+                    xmlns:lib="clr-namespace:HdrPilot.App.Views.Library"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    mc:Ignorable="po">
     <!--
         Library: Stile der Spielebibliothek im Stil „Showcase Hero“ (E89; Hauptfenster und seine Dialoge). Farben nur über
         DynamicResource aus den Schlüsseln von Theming/ThemeKeys.cs (die Darstellung erzeugt sie aus Palette und Thema);
@@ -2536,6 +2540,310 @@
             <Setter.Value>
                 <ControlTemplate>
                     <Border Margin="-2" CornerRadius="13" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        „Bild wählen…“ mit SteamGridDB (E93): Kacheln je Bildart in einer Form für lokale und Online-Bilder, Schachbrett unter
+        Logos, Bildlaufleiste im rechten Rand des Dialogs, Spielwahl, Einträge der Spielwahl. Fokusringe nur bei Bedienung mit
+        der Tastatur (lib:FocusCue). Im hohen Kontrast ersetzt der Dialog die Pinsel (DialogContrast) und zeigt Rahmen um
+        Platten und Hinweise (Lib.ContrastFrameThickness, sonst 0).
+    -->
+    <SolidColorBrush x:Key="Lib.Brush.ContrastFrame" Color="Transparent" />
+    <Thickness x:Key="Lib.ContrastFrameThickness">0</Thickness>
+    <sys:Double x:Key="Lib.StatusTintOpacity">0.14</sys:Double>
+
+    <!-- Schachbrett unter Logos (8-px-Felder in zwei mittleren Grautönen): weiße und schwarze Logos bleiben lesbar (etwa 5:1 und 4:1) -->
+    <DrawingBrush x:Key="Lib.LogoPlate" Viewport="0,0,16,16" ViewportUnits="Absolute" TileMode="Tile" po:Freeze="True">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#FF6B6F78">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,16,16" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FF7C8089">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="0,0,8,8" />
+                            <RectangleGeometry Rect="8,8,8,8" />
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <!-- Schmale Bildlaufleiste (8 DIP Spur, 6 DIP Griff, ohne Pfeile, Spur durchsichtig) -->
+    <Style x:Key="Lib.DialogScrollThumb" TargetType="Thumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="Pill" Width="6" CornerRadius="3" Background="{DynamicResource Hp.Brush.LineStrong}" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Hp.Brush.TextMuted}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Pill" Property="Background" Value="{DynamicResource Hp.Brush.TextMuted}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Lib.DialogScrollPage" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="Lib.DialogScrollBar" TargetType="ScrollBar">
+        <Setter Property="Width" Value="8" />
+        <Setter Property="MinWidth" Value="8" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource Lib.DialogScrollPage}" Command="ScrollBar.PageUpCommand" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource Lib.DialogScrollPage}" Command="ScrollBar.PageDownCommand" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource Lib.DialogScrollThumb}" MinHeight="24" />
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Bildlaufbereich der Dialogmitte: Der Inhalt behält seine Breite, die Leiste steht mittig in einem 20-DIP-Streifen, der
+        in den rechten Rand des Dialogs reicht (der Bereich hat dafür rechts −20 Rand).
+    -->
+    <Style x:Key="Lib.DialogScroll" TargetType="ScrollViewer">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="20" />
+                        </Grid.ColumnDefinitions>
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" CanContentScroll="{TemplateBinding CanContentScroll}" />
+                        <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1" Style="{StaticResource Lib.DialogScrollBar}" Orientation="Vertical" HorizontalAlignment="Center"
+                                   Maximum="{TemplateBinding ScrollableHeight}" ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Value="{Binding VerticalOffset, Mode=OneWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Kachel in „Bild wählen…“ (lokal und online, E93): Breite je Bildart (Cover 130, Titelbild und Logo 200; mit 10 DIP Abstand
+        füllen 6 bzw. 4 Kacheln genau 830 DIP), Radius 16, Auswahlring sofort, Fokusring nur bei Tastaturbedienung.
+    -->
+    <Style x:Key="Lib.PickerTile" TargetType="ListBoxItem">
+        <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}" />
+        <Setter Property="AutomationProperties.HelpText" Value="{Binding AutomationHelp}" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="Margin" Value="0,0,10,10" />
+        <Setter Property="Width" Value="200" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <ContentPresenter />
+                        <Border x:Name="Ring" CornerRadius="16" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.SelectionRing}" Visibility="Collapsed" />
+                        <Border x:Name="Focus" CornerRadius="19" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Ring" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.6" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Kind}" Value="Cover">
+                <Setter Property="Width" Value="130" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Knopf im Dialog „Bild wählen…“ (wie Lib.PaneButton, Fokusring nur bei Tastaturbedienung) -->
+    <Style x:Key="Lib.PickerButton" TargetType="Button">
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="12" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+                        <Border x:Name="Focus" CornerRadius="14" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Verweis im Dialog „Bild wählen…“ („Zu den Einstellungen“), Fokusring nur bei Tastaturbedienung -->
+    <Style x:Key="Lib.PickerLink" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Body" Background="Transparent" Padding="3,2" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Spielwahl „Spiel: … ▾“ (lib:ExpandToggle): Text mit Winkel, der beim Aufklappen dreht -->
+    <Style x:Key="Lib.MatchToggle" TargetType="lib:ExpandToggle">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:ExpandToggle">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="10" Padding="10,5" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <ContentPresenter VerticalAlignment="Center" />
+                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="10" Margin="8,1,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform Angle="{Binding ChevronAngle, RelativeSource={RelativeSource TemplatedParent}}" />
+                                    </TextBlock.RenderTransform>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="Focus" CornerRadius="12" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Eintrag der Spielwahl: „Name (Jahr)“, gedämpft „verifiziert“, Häkchen beim gewählten -->
+    <Style x:Key="Lib.MatchEntry" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Body" CornerRadius="8" Padding="10,6" Background="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <Border x:Name="Focus" CornerRadius="8" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

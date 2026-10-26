@@ -1,11 +1,11 @@
 # HDRpilot Phase 9: Windows Auto HDR per game (G9.1 to G9.6, E88): design, skeleton, work split
 
 Branch `feature/autohdr`. Skeleton worktree: `.worktrees\s10-autohdr`.
-Skeleton commit: `62dfed3` "Auto HDR: Entwurf und Gerüst (G9)", on top of `76ebc17`. Both leaves start from that commit,
+Skeleton commit: `13ec86b` "Auto HDR: Entwurf und Gerüst (G9)", on top of `b2187c3`. Both leaves start from that commit,
 work in parallel, and touch only the files they own (section 15). The gates are in `GATES.md` section "Phase 9" (G9.1
 to G9.6). G9.6 is the later experiment with the user and is out of scope.
 
-Skeleton verification on 62dfed3:
+Skeleton verification on 13ec86b:
 - build.ps1 gave BUILD_OK_0_WARNINGS.
 - test.ps1 gave TESTS_OK 2210 (base 2193, plus 17 new).
 - test.ps1 with filter `AutoHdr` gave TESTS_OK 17. The filters `AutoHdrRegistry` and `AutoHdrGlobal` still count 0.
@@ -659,7 +659,7 @@ The gate never starts a game, never switches HDR (no running game, so HdrAuto to
 
 - **Both leaves:** `build.ps1` (BUILD_OK_0_WARNINGS) and `test.ps1` (TESTS_OK). Known pre-existing flakiness:
   `TrayServiceTests.Many_state_changes_do_not_leak_gdi_or_user_handles` measures process-wide GDI objects and fails
-  about 1 run in 3 on the unchanged base (verified on 76ebc17). Rerun before blaming your change; never "fix" it by
+  about 1 run in 3 on the unchanged base (verified on b2187c3). Rerun before blaming your change; never "fix" it by
   weakening it inside this feature.
 - **CORE:**
   - `test.ps1 -Filter "FullyQualifiedName~AutoHdrRegistry" -MinTests 15` (G9.2)

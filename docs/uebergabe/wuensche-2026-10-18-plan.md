@@ -1,6 +1,6 @@
 # Plan: Die zwei Wünsche vom 18.10.2026
 
-**Zu deiner Frage nach den Punkten von gestern:** Sie sind festgehalten, in `docs/stand.md` auf phase5/release (45a07a3)
+**Zu deiner Frage nach den Punkten von gestern:** Sie sind festgehalten, in `docs/stand.md` auf phase5/release (8fd62eb)
 im Abschnitt „Neue Wünsche des Nutzers (2026-10-18), noch nicht begonnen“. Es sind zwei Punkte:
 1. Deinstallierte Spiele
 2. Quiver Launcher
@@ -8,7 +8,7 @@ im Abschnitt „Neue Wünsche des Nutzers (2026-10-18), noch nicht begonnen“. 
 Vereinbart war, sie erst auf dein Zeichen anzugehen, und zwar nach der Werkzeugleiste. Inzwischen sind beide recherchiert, nur lesend. Umgesetzt ist noch nichts.
 
 **Reihenfolge:**
-1. Werkzeugleiste abschließen und mergen (ef23caf)
+1. Werkzeugleiste abschließen und mergen (b2ea035)
 2. Wunsch 1 (Phase 11, E90)
 3. Wunsch 2 (Phase 12, E91)
 
@@ -16,7 +16,7 @@ Beide setzen auf feature/library-toolbar auf, weil Kapsel und Zähler dort neu s
 
 ## Prüfvermerk
 
-Nachgeprüft habe ich in `.worktrees/s12-bar` (ef23caf), an den Kopien der echten Ablage und am Quiver-Ordner, alles nur lesend.
+Nachgeprüft habe ich in `.worktrees/s12-bar` (b2ea035), an den Kopien der echten Ablage und am Quiver-Ordner, alles nur lesend.
 
 **Bestätigt:**
 - `IsInstalled` ist das einzige Merkmal für „deinstalliert“ (`AppConfig.cs:173`). Gesetzt wird es nur in `LibraryMerger.cs:68-98`; ein abgestürzter Scanner markiert nichts.
@@ -250,7 +250,7 @@ Dein Benutzer-PATH enthält einen überflüssigen, harmlosen Eintrag auf einen a
 
 ## Zur zweiten Frage (Dauer)
 Dieser Plan beantwortet sie nicht. Aus git, falls die Werkzeugleiste gemeint ist:
-- **Zeitraum und Umfang:** Die Arbeit lief vom 16.10. bis 19.10. Seit 09824b7 sind es 13 Commits in 45 Dateien mit +9 390/−603 Zeilen, davon +2 936 in Tests.
+- **Zeitraum und Umfang:** Die Arbeit lief vom 16.10. bis 19.10. Seit 8fe23c6 sind es 13 Commits in 45 Dateien mit +9 390/−603 Zeilen, davon +2 936 in Tests.
 - **Zusammenführungen:** zwei Zweige.
-- **Prüfung:** aus drei Blickwinkeln, mit Korrektur (ef23caf: 21 Dateien, +1 226).
+- **Prüfung:** aus drei Blickwinkeln, mit Korrektur (b2ea035: 21 Dateien, +1 226).
 - **UI-Gates:** am echten Bildschirm.

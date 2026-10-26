@@ -712,7 +712,7 @@ Entscheidungen des Nutzers danach, so gebaut: Nur noch der globale Schalter, und
 Einstellung; die frühere Notlösung (`autoHdrGlobalFallback`) und „Auto-HDR-Einträge zurücknehmen“ entfallen, ein
 Eintrag `autoHdrGlobalFallback` aus einer Vorabversion wird beim Laden übergangen. Der Weg je EXE ist samt
 Zustandsdatei `autohdr-state.json` entfernt (G9.2 gestrichen; Entwurf und Code stehen in `feature/autohdr-core`,
-34c83cf); HDRpilot schreibt keine Werte je EXE. Gesetzt wird der Schalter nur bei Starts, die HDRpilot vorher kennt: Die
+e9193f7); HDRpilot schreibt keine Werte je EXE. Gesetzt wird der Schalter nur bei Starts, die HDRpilot vorher kennt: Die
 Sitzungslogik kündigt jeden solchen Start als Erstes an (`IAutoHdrSessionHooks.OnStartAnnounced`), vor dem Schalten von
 HDR und vor dem Start-Befehl, bei „Mit HDR starten“ und „(HDR)“-Verknüpfungen (`LaunchAsync`), bei der
 Steam-Startoption (`PrepareAsync`) und bei der Frühwarnung von Steam und Epic (für Spiele mit „HDR automatisch“ über

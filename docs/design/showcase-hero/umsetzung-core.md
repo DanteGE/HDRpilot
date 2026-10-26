@@ -1,6 +1,6 @@
 # Umsetzung Showcase Hero: Teil CORE (Bilder, SteamGridDB, Helligkeit)
 
-Stand 2026-10-16, Zweig `feature/showcase-core` (Basis e773a1e). Notizen für README und E89 im Schritt G10.10. Die Texte
+Stand 2026-10-16, Zweig `feature/showcase-core` (Basis 838066b). Notizen für README und E89 im Schritt G10.10. Die Texte
 der Oberfläche stehen in `src/HdrPilot.App/Resources/ArtworkStrings.resx` und sind hier wörtlich zitiert.
 
 ## Spielbilder (G10.3)

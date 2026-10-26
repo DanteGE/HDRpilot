@@ -4,7 +4,7 @@ Zuletzt aktualisiert: 2026-10-22. Dieses Dokument hält fest, wo die Arbeit steh
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
 ## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
-- **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (a902beb), darauf dieser Stand;
+- **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (f3da056), darauf dieser Stand;
   Version 1.5.0.
 - **Anonymisierung fertig** (Antworten 1 und 4 unten, E92):
   - Spielordner an Standardorten tragen in Tests, Beispieldateien und Doku erfundene Namen und Kennungen.
@@ -40,7 +40,7 @@ Auf Wunsch des Nutzers gesichert. Er bat darum, Fragen bis zu einem gemeinsamen
 Durchlauf zu sammeln.
 
 **Stand:**
-- `main` = `phase5/release` = 3614e02, Version 1.5.0.
+- `main` = `phase5/release` = fd79060, Version 1.5.0.
 - Enthalten: Showcase Hero, Werkzeugleiste, Auswahl beim Filtern, nicht installierte Spiele, Quiver, Lizenz, README und
   Bereinigung der aktuellen Dateien. Release-Builds ohne lokale Pfade (PathMap und ContinuousIntegrationBuild).
 - Alle Gates ohne echte HDR-Umschaltung grün, zuletzt `TESTS_OK 3409` und `PHASE7_SETUP_OK`.
@@ -174,15 +174,15 @@ Stresstests und keine künstliche Last.
   - Wird das gewählte Spiel herausgefiltert, springt die Auswahl auf den ersten Treffer und kehrt nach dem Filter
     zurück.
 - **Kriterien:** in `GATES.md` als G10.5 (Auswahl beim Filtern), Phase 11 und Phase 12.
-- **Lauf 1** auf `feature/library-toolbar` (`.worktrees/s12-bar`, ab 523340c):
+- **Lauf 1** auf `feature/library-toolbar` (`.worktrees/s12-bar`, ab 7825e20):
   - Auswahl beim Filtern;
   - Phase 11;
   - Prüfung aus Sicht von Funktion, Oberfläche und Datensicherheit;
   - Korrektur und Gegenprüfung.
 - **Lauf 1 fertig (2026-10-20):**
-  - 204fa09: Auswahl beim Filtern.
-  - 1065e88 bis 1d613a6: Phase 11.
-  - 50bf8b0: nach der Prüfung.
+  - 766c98d: Auswahl beim Filtern.
+  - a6abea4 bis 087982a: Phase 11.
+  - afd54eb: nach der Prüfung.
   - Gates: alle grün, TESTS_OK 3169, PHASE11_UI_OK, PHASE11_MIGRATION_OK (echte Ablage nur kopiert, Hash gleich).
   - Gegenprüfung: 1 mittlerer Fund (Warnung „Ordner noch da“ bei reinen Restdateien, betrifft VEIN Demo) und 5 kleine.
 - **Lauf 2 (gestartet 2026-10-20):**
@@ -190,11 +190,11 @@ Stresstests und keine künstliche Last.
     eine Speicherung verloren gehen. Danach Gegenprüfung.
   - Dann Phase 12 Quiver, Prüfung aus drei Blickwinkeln, Korrektur und Gegenprüfung.
 - **Pausiert am 2026-10-20 auf Wunsch des Nutzers, Lauf 2 fast fertig.** Stand
-  `feature/library-toolbar` b238cf1, Arbeitsordner `.worktrees/s12-bar` sauber.
+  `feature/library-toolbar` 9e16822, Arbeitsordner `.worktrees/s12-bar` sauber.
   - **Fertig:**
     - Restfunde Phase 11 einschließlich robusterem Speichern, mit Gegenprüfung.
-    - Phase 12 Quiver: 28728a7, c1adc4c, 1145b61, 381e7c5, e0d3925.
-    - Prüfung aus drei Blickwinkeln: 25 Funde, alle bestätigt und behoben in b238cf1. Alle Gates grün, TESTS_OK
+    - Phase 12 Quiver: e14fe75, 4a77680, bb668db, 28ed38a, 17c5814.
+    - Prüfung aus drei Blickwinkeln: 25 Funde, alle bestätigt und behoben in 9e16822. Alle Gates grün, TESTS_OK
       3380 nach einem bekannten Wackler.
   - **Abgebrochen:** die letzte Gegenprüfung von Lauf 2 (Quiver nach der Korrektur). Neu starten; der
     Prüf-Arbeitsordner `rv12-recheck` ist entfernt.
@@ -211,8 +211,8 @@ Stresstests und keine künstliche Last.
     4. Dem Nutzer die neuen Funktionen zeigen: Leiste, Auswahl beim Filtern, nicht installierte Spiele, Quiver.
     5. Danach Zusammenführung, 1.5.0, Setup bauen (nicht installieren), G12.7 als Livetest mit „Black“ nur mit
        dem Nutzer.
-  - **Stand 2026-10-21:** Phase-11-Fund behoben (0101229: nicht lesbare Ordner gelten als „nicht prüfbar“);
-    Abschlussprüfung von `feature/library-toolbar` mit Korrekturen und Gegenprüfung (864aa2d, c8e6f10, a98953a);
+  - **Stand 2026-10-21:** Phase-11-Fund behoben (3532608: nicht lesbare Ordner gelten als „nicht prüfbar“);
+    Abschlussprüfung von `feature/library-toolbar` mit Korrekturen und Gegenprüfung (c5d0a1f, 8f47e30, 948102a);
     Zusammenführung und 1.5.0 erledigt (siehe oben). Offen: Schritt 4 und G12.7 mit dem Nutzer; die Setup-Datei erst
     aus dem umgeschriebenen Repository bauen.
 - **Danach (Plan vom 2026-10-20):** Abschlussprüfung, Stand sichern. Zusammenführung, 1.5.0 und Setup erst, nachdem
@@ -246,18 +246,18 @@ Installiert ist weiter 1.4.0. **1.5.0 nur nach ausdrücklichem Ja des Nutzers in
 Einstellungen der Vorversion erhalten bleiben (vorher/nachher vergleichen).
 
 **Zweige und Arbeitsordner:**
-- **`feature/showcase`** (`.worktrees/s11-ui`, 09824b7): die Neugestaltung mit allen Prüf- und Korrekturrunden.
+- **`feature/showcase`** (`.worktrees/s11-ui`, 8fe23c6): die Neugestaltung mit allen Prüf- und Korrekturrunden.
   - **Zuletzt am 2026-10-16:**
-    - Speicher nach dem Schließen, helle HDR-Fassung nur im Ruhezustand, Messgrenze im GPU-Gate (37ef909).
-    - Helle Ebene nach verzögertem HDR-Moment; phase10-gpu meldet bei Fokusverlust UMGEBUNG statt FEHLER (52e7d1e).
-    - Weiches Überblenden der hellen Ebene (8f796fc, 09824b7).
+    - Speicher nach dem Schließen, helle HDR-Fassung nur im Ruhezustand, Messgrenze im GPU-Gate (ce84e4f).
+    - Helle Ebene nach verzögertem HDR-Moment; phase10-gpu meldet bei Fokusverlust UMGEBUNG statt FEHLER (1c84900).
+    - Weiches Überblenden der hellen Ebene (764e6fb, 8fe23c6).
   - **Gegenprüfung:** ohne offene Funde, nur ein kosmetischer Hinweis. Wechselt die Effektstufe mitten im Übergang,
     behält die Ebene die Dauer ihres ersten Übergangs.
   - **GPU-Gate:** lief am 2026-10-16 mit eingeschaltetem Monitor einmal komplett grün (PHASE10_GPU_OK). Gemessen:
     - Liste in Ruhe: 1,2 % GPU.
     - HDR-Moment: Spitze rund 24 % GPU.
     - Minimiert: 0,2 % CPU.
-- **`feature/hero-height`** (`.worktrees/s11-hero`, 9e51e95, auf 37ef909): Ziehgriff für die Höhe des Titelbereichs in
+- **`feature/hero-height`** (`.worktrees/s11-hero`, 59051c5, auf ce84e4f): Ziehgriff für die Höhe des Titelbereichs in
   der Liste (Wunsch 2026-10-16).
   - **Höhe und Speicherung:** Standard ein Drittel der Fensterhöhe, 186 px bis H − 416 (abzüglich sichtbarer Hinweise).
     Gemerkt als `settings.libraryHeroRatio`.
@@ -270,7 +270,7 @@ Einstellungen der Vorversion erhalten bleiben (vorher/nachher vergleichen).
     Liste 10 px, Raster 22 px. Der Titelbereich des Rasters gibt in niedrigen Fenstern nach.
   - **phase10-ui:** nimmt die Skalierung aus der DPI des Fensters.
   - **Prüfung:** von zwei Blickwinkeln geprüft, 9 Funde behoben.
-- **`feature/toolbar-wrap`** (`.worktrees/s11-bar`, eaff8e2, enthält feature/hero-height): Die Werkzeugleiste bricht in
+- **`feature/toolbar-wrap`** (`.worktrees/s11-bar`, 56df4f3, enthält feature/hero-height): Die Werkzeugleiste bricht in
   gefüllte, ausgeglichene Zeilen um (`ToolbarFlowPanel`), alle Elemente mit Text, ohne „Filter“-Menü.
   - **Status:** ungeprüft, der Lauf wurde vor der Prüfung angehalten. Inhaltlich überholt durch die neuen Anmerkungen
     des Nutzers (unten). Nicht ohne Entscheidung zusammenführen. Das Umbrechen kann als Rückfall für schmale Fenster
@@ -297,27 +297,27 @@ Vorschläge einer Entwurfsrunde liegen in `docs/design/showcase-hero/werkzeuglei
 - **Strg+F bei eingeklappter Leiste:** klappt sie dauerhaft aus.
 
 **Abgenommen am 2026-10-17:** „Ansonsten gefällt es mir gut und kann so umgesetzt werden“. Vorher kam eine Korrektur
-dazu: Die Lasche sitzt 8 px über der Leiste, so viel wie der Abstand der Knöpfe (8ddfdb2). Die Kriterien stehen in
+dazu: Die Lasche sitzt 8 px über der Leiste, so viel wie der Abstand der Knöpfe (ee348f3). Die Kriterien stehen in
 G10.5. Seit 2026-10-17 wird sie umgesetzt:
-- **Zweig und Ordner:** `feature/library-toolbar` in `.worktrees/s12-bar`, ausgehend von `feature/showcase` 09824b7.
+- **Zweig und Ordner:** `feature/library-toolbar` in `.worktrees/s12-bar`, ausgehend von `feature/showcase` 8fe23c6.
 - **Hineingeführt:** `feature/toolbar-wrap` mit `feature/hero-height` und der Wackeltest-Zweig.
 - **Danach:** Prüfung aus drei Blickwinkeln, Korrektur und Gegenprüfung.
 
 **Pausiert am 2026-10-17 auf Wunsch des Nutzers.** Stand auf `feature/library-toolbar`
-(d043930, Arbeitsordner sauber):
+(4262c57, Arbeitsordner sauber):
 - **Zusammenführung fertig:**
-  - 117e05b: toolbar-wrap mit hero-height.
-  - ae6a7ef: Wackeltest-Zweig.
-  - 04dd8fb: EffectReviewTests laufen allein.
+  - b6cf838: toolbar-wrap mit hero-height.
+  - 320b1ed: Wackeltest-Zweig.
+  - 3d4903b: EffectReviewTests laufen allein.
   - Ohne Textkonflikte; `_scrimEdge` und alle Überblend-Korrekturen sind erhalten.
-- **Umsetzung fertig:** ac5fe53, a6d35d4, 1cf6cec, d043930.
+- **Umsetzung fertig:** 48b6583, edae5e5, 5096369, 4262c57.
   - Neue Dateien: ToolbarLayout, MotionChannels, ToolbarChoreography, ToolbarPanel, ToolbarToggle, ToolbarTip,
     FilterToggle, FilterGlyph, `MainWindow.Toolbar.cs` und `LibraryViewModel.Toolbar.cs`, dazu Tests.
   - ToolbarFlowPanel ist entfernt.
   - Mutationsprüfung: 17 von 17 erkannt.
   - Alle erlaubten Gates gaben Exit 0, `phase10-ui` misst am echten Bildschirm.
   - **Ausnahme:** `test.ps1` scheitert gelegentlich an zeitabhängigen Tests, die mit der Leiste nichts zu tun haben.
-    Laut Zusammenführung tritt das auch auf 09824b7 auf. Klären, bevor 1.5.0 gebaut wird.
+    Laut Zusammenführung tritt das auch auf 8fe23c6 auf. Klären, bevor 1.5.0 gebaut wird.
 - **Abweichungen laut Bericht:**
   - Im Regal sinken Logo und Knöpfe eingeklappt um 32 statt 40 px.
   - Eine Zeile kommt beim Ziehen bei 838 zurück, wie in der Vorschau.
@@ -337,8 +337,8 @@ G10.5. Seit 2026-10-17 wird sie umgesetzt:
   - **Falls es später stört:** Die angehobene Kachel könnte die Ecke unter der Lasche frei lassen. Die Lasche könnte
     beim Überfahren der Kachel kurz ausblenden. Oder die Kachelreihe hebt sich nicht nach oben in die Fuge.
 
-Der Zweig `claude/modest-thompson-62a15c` (87699e4) stammt aus der Sitzung des Nutzers zum Wackeltest. Er lässt die
-Bindungsfehler-Prüfungen allein laufen (`ShellSerialCollection`, `BindingErrorRecorder`) und baut auf 5731db1 auf.
+Der Zweig `claude/modest-thompson-62a15c` (1dc2745) stammt aus der Sitzung des Nutzers zum Wackeltest. Er lässt die
+Bindungsfehler-Prüfungen allein laufen (`ShellSerialCollection`, `BindingErrorRecorder`) und baut auf 7bdf4e4 auf.
 Beim Zusammenführen mitnehmen.
 
 **Nächste Schritte, in dieser Reihenfolge:**

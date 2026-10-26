@@ -7,12 +7,12 @@ Done. I can't finish all of Phase 9 alone: decisions 4 and 6 (G9.7, G9.9) are fo
 Worktree: `.worktrees\s10-autohdr`, branch `feature/autohdr`. All allowed gates passed; the full test suite passed on its third run (see Open points). GATES.md and docs/stand.md are not edited.
 
 **Commits**
-- `edcf376` Core and UI rework: decisions 1, 2, 3.
-- `2298022` Gates for G9.1, G9.3 and G9.4.
-- `ff353e3` README and decision E88 (decision 5; E88 kept CRLF).
-- `4aa90c5` Extra test found by the mutation checks, plus a doc comment.
+- `c1dad78` Core and UI rework: decisions 1, 2, 3.
+- `459a2a0` Gates for G9.1, G9.3 and G9.4.
+- `43c1bfe` README and decision E88 (decision 5; E88 kept CRLF).
+- `b69a0f4` Extra test found by the mutation checks, plus a doc comment.
 
-**WIP 4e1c7b6**
+**WIP 282e92f**
 - It did not compile (a missing `using`).
 - Its content was status text per EXE and integration tests for the per-EXE path. Decision 2 made both obsolete, so it is deleted and replaced.
 
@@ -129,14 +129,14 @@ The gate outputs and mutation logs are in `<Notizordner>\autohdr`:
 
 I finished G9.7 and G9.9 on `feature/autohdr` and committed them, but I can't finish all of Phase 9 alone, so I did not shut down the PC. Two things need you: the final live test G9.8 at the real PC, and the tray gate `phase6-traymenu.ps1`, which moves the real mouse and needs your consent. One more thing needs your decision: HDRpilot has no way to write the Steam launch option, so the G9.7 offer copies it instead (details below).
 
-The full test suite is not fully green: `TrayServiceTests.Many_state_changes_do_not_leak_gdi_or_user_handles` ("GDI-Objekte wachsen") failed in all 4 full runs. The same test also fails on the commit before my changes (`4aa90c5`) when the Shell tests run together, so it is not caused by this work. It passes on its own (`TESTS_OK 10`). Without that one test, the full suite passes: `TESTS_OK 2379`.
+The full test suite is not fully green: `TrayServiceTests.Many_state_changes_do_not_leak_gdi_or_user_handles` ("GDI-Objekte wachsen") failed in all 4 full runs. The same test also fails on the commit before my changes (`b69a0f4`) when the Shell tests run together, so it is not caused by this work. It passes on its own (`TESTS_OK 10`). Without that one test, the full suite passes: `TESTS_OK 2379`.
 
 Worktree: `.worktrees\s10-autohdr`, clean. GATES.md and docs/stand.md are not edited.
 
 **Commits**
-- `5546502` Offer the Steam launch option when Auto HDR is switched on (G9.7).
-- `013717d` Tray entry "Auto HDR" (G9.9), its tests and the `phase6-traymenu.ps1` edit.
-- `0dbcb72` README and E88 for both (E88 kept CRLF).
+- `d00ac64` Offer the Steam launch option when Auto HDR is switched on (G9.7).
+- `28fbd4d` Tray entry "Auto HDR" (G9.9), its tests and the `phase6-traymenu.ps1` edit.
+- `3d703ee` README and E88 for both (E88 kept CRLF).
 
 **G9.7: how the Steam offer works**
 - **No setter exists:** HDRpilot has no function that writes the Steam launch option. The only existing feature is "Steam-Startoption kopieren" (copy to clipboard). The uninstall scanner only reads `localconfig.vdf`. So there is no "Steam must be closed" condition anywhere to reuse.
@@ -228,7 +228,7 @@ Logs are in `<Notizordner>\autohdr`:
 ## findings
 
 ### Lens registry
-Found 5 problems on `feature/autohdr` at 0dbcb72 under the registry and restore lens: 1 medium, 4 low. None writes outside `DirectXUserGlobalSettings` or reaches the real key from tests or gates. I did not shut down the PC: this was only a review, and G9.8 and `phase6-traymenu.ps1` still need the user at the real PC.
+Found 5 problems on `feature/autohdr` at 3d703ee under the registry and restore lens: 1 medium, 4 low. None writes outside `DirectXUserGlobalSettings` or reaches the real key from tests or gates. I did not shut down the PC: this was only a review, and G9.8 and `phase6-traymenu.ps1` still need the user at the real PC.
 
 **Checks run in my own detached worktree `rv-registry`** (now removed with `git worktree remove --force`; it was clean before removal)
 - `build.ps1`: exit 0, `BUILD_OK_0_WARNINGS`.
@@ -291,7 +291,7 @@ Found 5 problems on `feature/autohdr` at 0dbcb72 under the registry and restore 
 ### Lens session
 The review found 3 low-severity problems; the start paths, restore, tray entry and Steam offer are otherwise correct. I could not finish the rest of Phase 9 alone: G9.8 and running `phase6-traymenu.ps1` need the user at the real PC. I did not shut down the PC; that belongs at the end of the whole run.
 
-**Checks run in my own detached worktree `rv-session` at 0dbcb72 (now removed)**
+**Checks run in my own detached worktree `rv-session` at 3d703ee (now removed)**
 
 | Check | Result |
 |---|---|
@@ -345,7 +345,7 @@ I confirmed problems 1–3 with 5 temporary tests (`TESTS_OK 5`); they are delet
 Gate outputs and mutation logs are in `<Notizordner>\autohdr\rvs`.
 
 ### Lens ux
-Review of `feature/autohdr` (0dbcb72), focused on user decisions, UX and docs: I found no high-severity problems. One medium point needs your decision (G9.7), and there are seven low ones. I did not shut down the PC; that belongs at the very end of the whole run.
+Review of `feature/autohdr` (3d703ee), focused on user decisions, UX and docs: I found no high-severity problems. One medium point needs your decision (G9.7), and there are seven low ones. I did not shut down the PC; that belongs at the very end of the whole run.
 
 **Checks run in my own worktree `rv-ux`** (removed afterwards; no commits; temporary test files deleted before removal):
 
@@ -425,7 +425,7 @@ Logs and images are in `<Notizordner>\autohdr\`:
 
 ## fix
 
-**Auto HDR review fixes: committed as 726e846 on `feature/autohdr` (one commit)**
+**Auto HDR review fixes: committed as fd6440e on `feature/autohdr` (one commit)**
 
 All findings are fixed except two: G9.7 needs your decision, and the optional "less hint text" point I turned down. Build, the full test suite and every gate on the list pass. Each fix was checked by a mutation, and all 19 mutations turned the tests red. The worktree is clean and no `rv-*` worktrees are left.
 
@@ -498,7 +498,7 @@ Mutation script and log are in `<Notizordner>\autohdr\fix\`:
 
 **Can the rest be finished alone? No.** Three things still need you: G9.8 (the final test on the real PC), running `phase6-traymenu.ps1` (it moves the real mouse, so I must not run it), and a decision on G9.7. I did not shut down the PC: this re-check is one step inside the larger run, so saving the state, ending tasks and shutting down belong at the end of that run.
 
-I re-checked `feature/autohdr` at 726e846 without changing it. One medium point is still waiting for your decision (G9.7). Two new low findings came up; neither undoes a fix. The worktree `rv-recheck` was clean and is removed, and no `rv-*` worktrees are left.
+I re-checked `feature/autohdr` at fd6440e without changing it. One medium point is still waiting for your decision (G9.7). Two new low findings came up; neither undoes a fix. The worktree `rv-recheck` was clean and is removed, and no `rv-*` worktrees are left.
 
 **Checks run in `rv-recheck`**
 
@@ -573,7 +573,7 @@ Gate outputs, the probe and mutation logs are in `<Notizordner>\autohdr\rc\`:
 
 ## Letzte Korrekturen (Wiederholversuch, Kennzeichen erledigt)
 
-Both findings were real. Both are fixed, and every requested gate passed after the last code change. The work is committed as **0b597d5** on feature/autohdr, on top of 726e846, and the worktree is clean.
+Both findings were real. Both are fixed, and every requested gate passed after the last code change. The work is committed as **bd1a507** on feature/autohdr, on top of fd6440e, and the worktree is clean.
 
 **Finding 2 (retry turned the switch on for a game already running): confirmed and fixed.**
 - **Bug:** `Evaluate` called `Activate` for any active key once the 30 s retry wait had passed, including games that were only running.
@@ -640,7 +640,7 @@ The commit message file is `%TEMP%\hp-msg.txt` (UTF-8 without BOM, ends with the
 
 ## Gegenprüfung der letzten Korrekturen
 
-Both findings are fixed in the code paths they named. Two smaller problems remain, both in finding 3's area. HEAD of feature/autohdr is **0b597d5** (the fix commit on top of 726e846), and that is what I checked. All requested gates passed and both mutation checks I re-ran turned red as reported.
+Both findings are fixed in the code paths they named. Two smaller problems remain, both in finding 3's area. HEAD of feature/autohdr is **bd1a507** (the fix commit on top of fd6440e), and that is what I checked. All requested gates passed and both mutation checks I re-ran turned red as reported.
 
 **Finding 2 (retry turned the switch on for a running game): fixed.**
 - `AutoHdrGlobalSwitch.cs:440-449` now calls `Activate` only if an active key is still announced. A game that is only running can keep a switch HDRpilot already holds, but never causes a new set.
@@ -661,7 +661,7 @@ Both findings are fixed in the code paths they named. Two smaller problems remai
      4. `RemoveData` then deletes the folder. `Directory.Delete` keeps going after a failed file, so it removes `autohdr-global.done` and everything else and leaves `autohdr-global.json` alone. I confirmed this on .NET 10.
      5. After a reinstall, the app start (or a second cleanup) finds the marker with no done file and turns the user's "on" off.
    - **Probe:** a temporary test with a real `FileStream(FileShare.Read)` lock gave `marker=True done=False value=AutoHDREnable=0;…`.
-   - **Context:** this is not a regression against 726e846, which also left an "Applied" marker here. It is a gap in finding 3's fix.
+   - **Context:** this is not a regression against fd6440e, which also left an "Applied" marker here. It is a gap in finding 3's fix.
    - **Fix:** in `RemoveData`, if `autohdr-global.json` still exists after `RestoreAutoHdr`, delete the data folder's contents but keep `autohdr-global.done`. Alternatively, have `AutoHdrCleanup` report that its done file must stay.
    - **Test:** add a SetupUninstallAutoHdrTests case with a real lock and `removeData: true`. After unlocking, `RestoreAll` must leave GlobalOn. Mutation check: a plain `Directory.Delete` turns it red.
 
@@ -690,6 +690,6 @@ Both findings are fixed in the code paths they named. Two smaller problems remai
 | M1 | `?? active[0]` in `Evaluate` (old retry behaviour) | `Retry_after_a_failure_never_sets_the_switch_once_the_game_runs`: 3 of 3 (Lesen, Schreiben, Merker) | SHA-256 1E5081542EA88D72041218372BB433E9F25D21A23CB09DD758A63FFCC821D482 matches |
 | M3 | `Matches` ignores SetAt | `Old_done_mark_does_not_protect_a_new_marker_after_a_crash` and `Done_mark_of_an_earlier_marker_does_not_stop_the_restore`: 2 of 2 | SHA-256 0F7279F3CBAAF65B8D19CE5DC33011F814988B579186CEE146E438229CBBD3B5 matches |
 
-**Cleanup:** I deleted the probe tests, `git status` was clean, and I removed the review worktree with `worktree remove --force`. feature/autohdr is unchanged at 0b597d5dcf7e8d6f4fce6680570832e3219ecd1b. The NTFS lock experiment is in `<Notizordner>\autohdr\deltest`.
+**Cleanup:** I deleted the probe tests, `git status` was clean, and I removed the review worktree with `worktree remove --force`. feature/autohdr is unchanged at bd1a50763cb9dedf6de9ed55656c00a55c5b07e2. The NTFS lock experiment is in `<Notizordner>\autohdr\deltest`.
 
-Die beiden danach gemeldeten Randfaelle (defektes Kennzeichen in der App, gesperrter Merker beim Entfernen mit Daten loeschen) wurden mit Commit f8e1d7b behoben, Tests mit Gegenprobe.
+Die beiden danach gemeldeten Randfaelle (defektes Kennzeichen in der App, gesperrter Merker beim Entfernen mit Daten loeschen) wurden mit Commit f81b56d behoben, Tests mit Gegenprobe.

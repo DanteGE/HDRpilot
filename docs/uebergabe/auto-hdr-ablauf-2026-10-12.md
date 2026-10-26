@@ -1,12 +1,12 @@
 # Auto HDR (Phase 9): Berichte des Ablaufs vom 2026-10-12, unverändert übernommen
 
-Der Ablauf wurde auf Wunsch des Nutzers angehalten, während der Integrations-Agent nach dem Zusammenführen beider Teilzweige abstimmte. Sein unfertiger Stand ist als WIP-Commit 4e1c7b6 auf `feature/autohdr` gesichert. Prüfung (3 Blickwinkel), Korrektur und Gegenprüfung liefen noch nicht.
+Der Ablauf wurde auf Wunsch des Nutzers angehalten, während der Integrations-Agent nach dem Zusammenführen beider Teilzweige abstimmte. Sein unfertiger Stand ist als WIP-Commit 282e92f auf `feature/autohdr` gesichert. Prüfung (3 Blickwinkel), Korrektur und Gegenprüfung liefen noch nicht.
 
 ## Agent: design
 
-The skeleton is committed as `62dfed3` on `feature/autohdr`, and the design is written. The skeleton compiles and is wired into AutomationHost, SessionManagerOptions, the app and the setup, but its Auto HDR engine is a no-op: nothing writes to the registry yet.
+The skeleton is committed as `13ec86b` on `feature/autohdr`, and the design is written. The skeleton compiles and is wired into AutomationHost, SessionManagerOptions, the app and the setup, but its Auto HDR engine is a no-op: nothing writes to the registry yet.
 
-**Gates on 62dfed3:**
+**Gates on 13ec86b:**
 
 | Gate | Marker |
 |---|---|
@@ -18,7 +18,7 @@ The skeleton is committed as `62dfed3` on `feature/autohdr`, and the design is w
 
 No other gates were run.
 
-- **Flaky test on the base too:** `TrayServiceTests.Many_state_changes_do_not_leak_gdi_or_user_handles` fails in about one of three full test runs. It failed 1 of 3 on the stashed base `76ebc17` and 2 of 3 with the skeleton, and passes in isolation. `TESTS_OK 2210` came from a clean rerun.
+- **Flaky test on the base too:** `TrayServiceTests.Many_state_changes_do_not_leak_gdi_or_user_handles` fails in about one of three full test runs. It failed 1 of 3 on the stashed base `b2187c3` and 2 of 3 with the skeleton, and passes in isolation. `TESTS_OK 2210` came from a clean rerun.
 - **Work split change:** I moved the setup uninstall step from UI to CORE. G9.4 can only pass with the real restore logic, and this way CORE can verify it end to end alone. UI keeps the Settings rollback button.
 - **Restore rule you may want to override (R2):** if HDRpilot's own `AutoHDREnable` value is still intact, switching off takes back only that value and keeps everything else, instead of leaving the whole value untouched. Windows adds `AppStatus=…` to game EXEs by itself (seen in the 2026-10-10 local registry readout, `<Notizordner>\autohdr\gpuprefs.txt`). With a strict "leave changed values untouched" rule, switching off would silently fail for every game that ran once. E88 must state this.
 - **Test-instance safety:** any instance started with `--config-dir` writes under `HKCU\Software\HDRpilot.Tests\AutoHdr\<name>` and never under the real Windows key. The name comes from `--autohdr-test-root`, or is derived from the folder when that is missing.
@@ -31,11 +31,11 @@ The full design text, for the two leaf agents:
 # HDRpilot Phase 9: Windows Auto HDR per game (G9.1 to G9.6, E88): design, skeleton, work split
 
 Branch `feature/autohdr`. Skeleton worktree: `.worktrees\s10-autohdr`.
-Skeleton commit: `62dfed3` "Auto HDR: Entwurf und Gerüst (G9)", on top of `76ebc17`. Both leaves start from that commit,
+Skeleton commit: `13ec86b` "Auto HDR: Entwurf und Gerüst (G9)", on top of `b2187c3`. Both leaves start from that commit,
 work in parallel, and touch only the files they own (section 15). The gates are in `GATES.md` section "Phase 9" (G9.1
 to G9.6). G9.6 is the later experiment with the user and is out of scope.
 
-Skeleton verification on 62dfed3:
+Skeleton verification on 13ec86b:
 - build.ps1 gave BUILD_OK_0_WARNINGS.
 - test.ps1 gave TESTS_OK 2210 (base 2193, plus 17 new).
 - test.ps1 with filter `AutoHdr` gave TESTS_OK 17. The filters `AutoHdrRegistry` and `AutoHdrGlobal` still count 0.
@@ -689,7 +689,7 @@ The gate never starts a game, never switches HDR (no running game, so HdrAuto to
 
 - **Both leaves:** `build.ps1` (BUILD_OK_0_WARNINGS) and `test.ps1` (TESTS_OK). Known pre-existing flakiness:
   `TrayServiceTests.Many_state_changes_do_not_leak_gdi_or_user_handles` measures process-wide GDI objects and fails
-  about 1 run in 3 on the unchanged base (verified on 76ebc17). Rerun before blaming your change; never "fix" it by
+  about 1 run in 3 on the unchanged base (verified on b2187c3). Rerun before blaming your change; never "fix" it by
   weakening it inside this feature.
 - **CORE:**
   - `test.ps1 -Filter "FullyQualifiedName~AutoHdrRegistry" -MinTests 15` (G9.2)
@@ -906,9 +906,9 @@ together (G9.5) and get an independent review.
 
 ## Agent: leaf:ui
 
-The UI leaf is done and committed as `96c4962` on `feature/autohdr-ui`, and the worktree is clean. Every gate assigned to the UI leaf passes except one: `phase9-autohdr-ui.ps1` can only pass in its `-UiOnly` mode on this branch. The skeleton's Auto HDR engine is still a no-op, so the full mode, which checks the registry values, can only pass after the CORE leaf is merged.
+The UI leaf is done and committed as `13173e4` on `feature/autohdr-ui`, and the worktree is clean. Every gate assigned to the UI leaf passes except one: `phase9-autohdr-ui.ps1` can only pass in its `-UiOnly` mode on this branch. The skeleton's Auto HDR engine is still a no-op, so the full mode, which checks the registry values, can only pass after the CORE leaf is merged.
 
-**Commit:** `96c4962` "Auto HDR: Oberfläche, Einstellungen, README und E88 (G9.1, G9.5)" in `.worktrees\s10-ui`, on top of `62dfed3`.
+**Commit:** `13173e4` "Auto HDR: Oberfläche, Einstellungen, README und E88 (G9.1, G9.5)" in `.worktrees\s10-ui`, on top of `13ec86b`.
 
 **Files** (all inside the UI ownership from the design):
 - **Library view models:** `src/HdrPilot.App/ViewModels/Library/` GameDetailsViewModel.cs, GameItemViewModel.cs, ILibraryContext.cs, AppLibraryContext.cs, LibraryViewModel.cs, LibraryText.cs.
@@ -988,10 +988,10 @@ The review renders are in `<Notizordner>\autohdr\renders\`: bibliothek-autohdr-d
 
 ## Agent: leaf:core
 
-CORE is done: one commit, `34c83cf`, on `feature/autohdr-core`, with the worktree clean. Every check below exited 0 with its marker. All 19 mutations made their tests fail, and the run left nothing behind. The phase7-setup check of the real key ran inside the Claude container, so it only proves the container's view of `UserGpuPreferences` is unchanged.
+CORE is done: one commit, `e9193f7`, on `feature/autohdr-core`, with the worktree clean. Every check below exited 0 with its marker. All 19 mutations made their tests fail, and the run left nothing behind. The phase7-setup check of the real key ran inside the Claude container, so it only proves the container's view of `UserGpuPreferences` is unchanged.
 
 **Commit**
-`34c83cf` "Auto HDR: Werte je Spiel, globale Notlösung, Rücknahme (G9.2–G9.4)", on top of `62dfed3`.
+`e9193f7` "Auto HDR: Werte je Spiel, globale Notlösung, Rücknahme (G9.2–G9.4)", on top of `13ec86b`.
 
 **Files** (all under `.worktrees\s10-core\`)
 - New in `src\HdrPilot.Core\AutoHdr\`:

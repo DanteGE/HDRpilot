@@ -1,7 +1,7 @@
 # Ersatz-Symbole (G8.2) und eigenes Symbol (G8.3): Auftrag und Stand
 
 > **Status: angehalten am 2026-10-10 auf Wunsch des Nutzers, halbfertig.** Der Code liegt auf dem Zweig `feature/icons`
-> (Arbeitsordner `.worktrees/s9-icons`, WIP-Commit `b1eedc5` auf `91ebf48`). Er ist **weder gebaut noch getestet**.
+> (Arbeitsordner `.worktrees/s9-icons`, WIP-Commit `b1eedc5` auf `ad98e51`). Er ist **weder gebaut noch getestet**.
 
 ## Wünsche und Entscheidungen des Nutzers (2026-10-10)
 - Findet der Scan kein brauchbares Symbol, soll HDRpilot andere Quellen nutzen.

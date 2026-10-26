@@ -4,9 +4,9 @@ Der Ablauf wurde um ca. 20:05 auf Wunsch des Nutzers gestoppt (Wochenvolumen kna
 
 ## version:fix
 
-G8.1 is finished on `feature/version-display` as commit **651dd4d1257bd41784dc91a450565a31951eec2b**, and the worktree is clean. Every gate I ran passed, every mutation turned the tests red, and every mutated file was restored. One thing is still unproven: I changed `phase6-traymenu.ps1` but did not run it, because it moves the real mouse.
+G8.1 is finished on `feature/version-display` as commit **bc23f392edb808d12a8c9f4238be9cede2568106**, and the worktree is clean. Every gate I ran passed, every mutation turned the tests red, and every mutated file was restored. One thing is still unproven: I changed `phase6-traymenu.ps1` but did not run it, because it moves the real mouse.
 
-**History:** I ran `git reset --soft 67d9136` and committed everything as one commit, "G8.1: Korrekturen nach der Prüfung (Info-Symbol, Tastatur-Test, Sichtbarkeit, Gate-Robustheit, README)", with a German body listing the changes. The history is now c1198d4 → 67d9136 → 651dd4d. All edited files keep LF line endings, and both gate scripts keep their BOM.
+**History:** I ran `git reset --soft 27f86d9` and committed everything as one commit, "G8.1: Korrekturen nach der Prüfung (Info-Symbol, Tastatur-Test, Sichtbarkeit, Gate-Robustheit, README)", with a German body listing the changes. The history is now 88235f5 → 27f86d9 → bc23f39. All edited files keep LF line endings, and both gate scripts keep their BOM.
 
 **Changes (10 files):**
 1. **Info symbol (Finding 1):** the WIP from 85ba0db builds and passes as it was. I checked the renders in light and dark: the muted info symbol E946 sits centred in front of "HDRpilot 1.2.0" and no longer looks like a status dot.
@@ -21,7 +21,7 @@ G8.1 is finished on `feature/version-display` as commit **651dd4d1257bd41784dc91
 5. **Caption buttons (Finding 4):** `tools\gates\phase4-ui.ps1` now records the caption buttons it finds and reports FEHLER if `CaptionClose` is missing.
 6. **README wording (Finding 5):** the three README sentences now say the version line sits directly below the menu header. I also updated the comments in `AppVersion.cs` and `TrayMenuViewModel.cs`. The tray text "HDRpilot <version>" is unchanged.
 
-**Gate markers (final run on 651dd4d):**
+**Gate markers (final run on bc23f39):**
 
 | Command | Exit | Marker |
 |---|---|---|
@@ -99,7 +99,7 @@ Files:
 - Die UIA-Gates lesen `AutomationProperties.Name`. Dass der sichtbare Text gleich ist, prüfen nur die Unit-Tests.
 - `TrayMenuKeyboardTests` öffnet ein echtes Popup und braucht deshalb eine interaktive Desktop-Sitzung.
 
-## Selbst ausgeführt (auf 651dd4d)
+## Selbst ausgeführt (auf bc23f39)
 
 | Befehl | Exit | Marker |
 |---|---|---|
@@ -147,7 +147,7 @@ Alle liefen in einer Kopie von HEAD (per `git archive`) im ignorierten Ordner `t
   - Das Info-Symbol ist zurückgenommen und wirkt nicht wie ein Statuspunkt.
   - Nichts überdeckt etwas.
 
-Arbeitsordner sauber auf 651dd4d. Keine Testinstanz läuft noch; nur das installierte HDRpilot (PID 24844) läuft, unberührt. Den Rechner habe ich nicht heruntergefahren, das ist Sache des Orchestrators.
+Arbeitsordner sauber auf bc23f39. Keine Testinstanz läuft noch; nur das installierte HDRpilot (PID 24844) läuft, unberührt. Den Rechner habe ich nicht heruntergefahren, das ist Sache des Orchestrators.
 
 Dateien:
 - .worktrees\s9-version\tools\gates\phase6-traymenu.ps1
@@ -157,7 +157,7 @@ Dateien:
 
 ## version:fix2
 
-Commit `2952c72` is on `feature/version-display` as a new commit on top of 651dd4d, and the worktree is clean. I fixed finding 2. Finding 1 is confirmed but I could not fix it, so G8.1 stays unchecked. Finding 3 needs no code change.
+Commit `145b60a` is on `feature/version-display` as a new commit on top of bc23f39, and the worktree is clean. I fixed finding 2. Finding 1 is confirmed but I could not fix it, so G8.1 stays unchecked. Finding 3 needs no code change.
 
 **Finding 1 (HIGH, missing UI-Automation evidence for the tray line): confirmed, still open.**
 - The tray line is only covered by unit tests. Step 7 of `phase6-traymenu.ps1` has never run.
@@ -208,7 +208,7 @@ Files:
 
 ## icons:impl
 
-Commit **9294239** on `feature/icons`: "G8.2/G8.3: Ersatz-Symbole aus lokalen Quellen und eigenes Symbol per Rechtsklick (E86)". It is a single commit on top of 91ebf48, with the WIP folded in via `git reset --soft`. The worktree is clean afterwards. All required gates passed, plus a new UI gate for the custom icon. The full test suite failed once on one HDR-list test that this change does not touch, and passed on two later full runs.
+Commit **49ac571** on `feature/icons`: "G8.2/G8.3: Ersatz-Symbole aus lokalen Quellen und eigenes Symbol per Rechtsklick (E86)". It is a single commit on top of ad98e51, with the WIP folded in via `git reset --soft`. The worktree is clean afterwards. All required gates passed, plus a new UI gate for the custom icon. The full test suite failed once on one HDR-list test that this change does not touch, and passed on two later full runs.
 
 I did not shut the PC down. That is left to the orchestrator.
 
@@ -288,7 +288,7 @@ The UI gates worked with the monitor off; none failed for lack of a display.
 
 I re-ran both checks: the build is clean and all 220 icon tests pass. The review found one medium problem and four low ones; nothing blocks G8.2/G8.3.
 
-**Markers (re-run in `.worktrees\s9-icons`, HEAD 9294239, worktree still clean)**
+**Markers (re-run in `.worktrees\s9-icons`, HEAD 49ac571, worktree still clean)**
 - `build.ps1`: exit 0, `BUILD_OK_0_WARNINGS`.
 - `test.ps1 -Filter "FullyQualifiedName~Icon" -MinTests 30`: exit 0, `TESTS_OK 220`.
 - I ran no other gates.
@@ -350,7 +350,7 @@ I did not shut the PC down; that is left to the orchestrator.
 
 ## icons:review:decisions
 
-Review of feature/icons (91ebf48..9294239) for G8.2/G8.3, read-only. I made no edits or commits; the worktree is still clean at 9294239. I found one medium and four low problems.
+Review of feature/icons (ad98e51..49ac571) for G8.2/G8.3, read-only. I made no edits or commits; the worktree is still clean at 49ac571. I found one medium and four low problems.
 
 **Markers I re-ran myself**
 - `build.ps1`: exit 0, `BUILD_OK_0_WARNINGS`. My first attempt failed with 484 errors (missing `ref\*.dll`). That was a build running at the same time in the same worktree; the rerun was clean.

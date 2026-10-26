@@ -2,7 +2,7 @@
 
 > **Status: angehalten am 2026-10-10 auf Wunsch des Nutzers, fast fertig.**
 > - Zweig `feature/version-display`, Arbeitsordner `.worktrees/s9-version`.
-> - Zweigt von `c1198d4` ab. Den Eintrag G8.1 in `GATES.md` gibt es nur auf `phase5/release`.
+> - Zweigt von `88235f5` ab. Den Eintrag G8.1 in `GATES.md` gibt es nur auf `phase5/release`.
 
 ## Wunsch des Nutzers
 „Bitte für die App noch einplanen, irgendwo wo es sinnvoll ist, die Versionsnummer mit einzubauen.“
@@ -10,10 +10,10 @@
 ## Commits
 | Commit | Inhalt | Geprüft |
 |---|---|---|
-| `67d9136` | Umsetzung, Details unten | ja, vom Umsetzer und vom Prüfer selbst gelaufen. Marker: <ul><li>BUILD_OK_0_WARNINGS</li><li>TESTS_OK 1947</li><li>TESTS_OK 10 (Filter AppVersion)</li><li>PHASE4_RESOURCES_OK</li><li>PHASE6_NAME_OK</li><li>PHASE5_README_OK</li><li>PHASE4_UI_OK, PHASE4_PERSIST_OK</li></ul>9 Gegenproben, alle rot |
+| `27f86d9` | Umsetzung, Details unten | ja, vom Umsetzer und vom Prüfer selbst gelaufen. Marker: <ul><li>BUILD_OK_0_WARNINGS</li><li>TESTS_OK 1947</li><li>TESTS_OK 10 (Filter AppVersion)</li><li>PHASE4_RESOURCES_OK</li><li>PHASE6_NAME_OK</li><li>PHASE5_README_OK</li><li>PHASE4_UI_OK, PHASE4_PERSIST_OK</li></ul>9 Gegenproben, alle rot |
 | `85ba0db` | WIP der Korrekturrunde: Punkt in der Pille durch Info-Symbol ersetzt, Kommentar im Tray-Menü | **nein**, nicht gebaut |
 
-**Umsetzung in `67d9136`:**
+**Umsetzung in `27f86d9`:**
 - `src/HdrPilot.App/Infrastructure/AppVersion.cs`: einzige Quelle der Version, dreistellig, gleiche Regel wie das Setup
   (`SetupSupport.Normalize`).
 - Text `AppVersionFormat` = „HDRpilot {0}“ in `CommonStrings.resx`.

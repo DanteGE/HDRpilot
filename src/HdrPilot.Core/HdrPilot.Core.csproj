@@ -9,7 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
   </ItemGroup>
 
-  <!-- Texte, die der Nutzer sieht (Tray-Hinweise, Schaltergebnisse); neutral = Deutsch, Englisch später als .en.resx. -->
+  <!-- Texte, die der Nutzer sieht (Tray-Hinweise, Schaltergebnisse); neutral = Deutsch, Englisch in CoreStrings.en.resx (E95). -->
   <ItemGroup>
     <EmbeddedResource Update="Resources\CoreStrings.resx">
       <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>

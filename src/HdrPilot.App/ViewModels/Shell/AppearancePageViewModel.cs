@@ -53,6 +53,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
     private string? _steamGridDbKey;
     private string? _steamGridDbMessage;
     private bool _steamGridDbMessageIsError;
+    private StatusSnapshot? _steamGridDbMessageSnapshot;
     private ColorWellItem? _pickerWell;
     private Color _pickerColor;
     private string? _errorMessage;
@@ -462,49 +463,15 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Stand des Netzwerkzugriffs (klare Anzeige, G10.4).</summary>
-    public string SteamGridDbStatusText
-    {
-        get
-        {
-            if (_steamGridDbMessage is { } message)
-            {
-                return message;
-            }
+    /// <summary>
+    /// Stand des Netzwerkzugriffs (klare Anzeige, G10.4, E93): der letzte Zugriff, Lauf oder Suche in „Bild wählen…“, mit
+    /// der Zahl der Anfragen; ausgeschaltet mit Schlüssel „Suche … nur auf Klick“. Eine Meldung von „Prüfen“ gilt, bis ein
+    /// neuer Stand kommt.
+    /// </summary>
+    public string SteamGridDbStatusText => SteamGridDbLine().Text;
 
-            var s = SteamGridDbStatus;
-            if (!s.Enabled)
-            {
-                return ShellStrings.SteamGridDbStatusOff;
-            }
-
-            if (s.Key == SteamGridDbKeyState.Unreadable)
-            {
-                return ShellStrings.SteamGridDbStatusUnreadable;
-            }
-
-            if (s.Key == SteamGridDbKeyState.Missing)
-            {
-                return ShellStrings.SteamGridDbStatusNoKey;
-            }
-
-            if (s.IsRunning)
-            {
-                return ShellStrings.SteamGridDbStatusRunning;
-            }
-
-            if (s.LastError is { } error)
-            {
-                return string.Format(CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusError, error);
-            }
-
-            return s.LastRun is { } last
-                ? string.Format(CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastRun, last.ToLocalTime(), s.LastRequests, s.LastFilled)
-                : ShellStrings.SteamGridDbStatusReady;
-        }
-    }
-
-    public bool SteamGridDbStatusIsError => _steamGridDbMessageIsError || SteamGridDbStatus.Key == SteamGridDbKeyState.Unreadable;
+    /// <summary>Rot: Fehlermeldung von „Prüfen“, unlesbarer Schlüssel oder ein abgelehnter Schlüssel.</summary>
+    public bool SteamGridDbStatusIsError => SteamGridDbLine().IsError;
 
     /// <summary>„Fehlende Bilder jetzt laden“: nur eingeschaltet, mit Schlüssel und wenn gerade kein Lauf läuft.</summary>
     public RelayCommand RunSteamGridDbNowCommand { get; }
@@ -531,6 +498,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
             _context.SteamGridDb.RemoveKey();
             _steamGridDbMessage = null;
             _steamGridDbMessageIsError = false;
+            _steamGridDbMessageSnapshot = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -968,10 +936,81 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
     private void OnSteamGridDbChanged(object? sender, EventArgs e)
     {
-        if (!_disposed)
+        if (_disposed)
         {
-            RaiseSteamGridDb();
+            return;
         }
+
+        // Die Meldung von „Prüfen“ bleibt nur, solange der Stand derselbe ist (sonst verdeckte sie jeden späteren).
+        if (_steamGridDbMessage is not null && _steamGridDbMessageSnapshot != StatusSnapshot.Of(SteamGridDbStatus))
+        {
+            _steamGridDbMessage = null;
+            _steamGridDbMessageIsError = false;
+            _steamGridDbMessageSnapshot = null;
+        }
+
+        RaiseSteamGridDb();
+    }
+
+    /// <summary>Zeile unter dem Schlüssel samt Fehlerfarbe (Reihenfolge nach §10.2 der Spezifikation zu E93).</summary>
+    private (string Text, bool IsError) SteamGridDbLine()
+    {
+        if (_steamGridDbMessage is { } message)
+        {
+            return (message, _steamGridDbMessageIsError);
+        }
+
+        var s = SteamGridDbStatus;
+        if (s.Key == SteamGridDbKeyState.Unreadable)
+        {
+            return (ShellStrings.SteamGridDbStatusUnreadable, true);
+        }
+
+        if (!s.Enabled)
+        {
+            // Aus: alte Fehler eines Laufs (etwa „ein Spiel läuft“) zählen nicht mehr.
+            if (s.Key == SteamGridDbKeyState.Missing)
+            {
+                return (ShellStrings.SteamGridDbStatusOff, false);
+            }
+
+            if (s.LastSearchError is { } searchError)
+            {
+                return (Format(ShellStrings.SteamGridDbStatusError, searchError), true);
+            }
+
+            return s.LastSearch is { } search
+                ? (Format(ShellStrings.SteamGridDbStatusLastSearch, search.ToLocalTime(), s.LastSearchRequests), false)
+                : (ShellStrings.SteamGridDbStatusOffWithKey, false);
+        }
+
+        if (s.Key == SteamGridDbKeyState.Missing)
+        {
+            return (ShellStrings.SteamGridDbStatusNoKey, false);
+        }
+
+        if (s.IsRunning)
+        {
+            return (ShellStrings.SteamGridDbStatusRunning, false);
+        }
+
+        if (s.LastSearch is { } latest && (s.LastRun is not { } run || latest > run))
+        {
+            return s.LastSearchError is { } error
+                ? (Format(ShellStrings.SteamGridDbStatusError, error), true)
+                : (Format(ShellStrings.SteamGridDbStatusLastSearchOn, latest.ToLocalTime(), s.LastSearchRequests), false);
+        }
+
+        if (s.LastError is { } lastError)
+        {
+            return (Format(ShellStrings.SteamGridDbStatusError, lastError), lastError == ArtworkStrings.SteamGridDb_Error_Unauthorized);
+        }
+
+        return s.LastRun is { } last
+            ? (Format(ShellStrings.SteamGridDbStatusLastRun, last.ToLocalTime(), s.LastRequests, s.LastFilled), false)
+            : (ShellStrings.SteamGridDbStatusReady, false);
+
+        static string Format(string template, params object?[] args) => string.Format(CultureInfo.CurrentCulture, template, args);
     }
 
     private void OnLuminanceChanged(object? sender, EventArgs e)
@@ -1359,6 +1398,13 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
     {
         _steamGridDbMessage = message;
         _steamGridDbMessageIsError = isError;
+        _steamGridDbMessageSnapshot = message is null ? null : StatusSnapshot.Of(SteamGridDbStatus);
         RaiseSteamGridDb();
+    }
+
+    /// <summary>Was die Meldung von „Prüfen“ überdauert; ändert sich etwas davon, gilt der neue Stand.</summary>
+    private sealed record StatusSnapshot(bool Enabled, SteamGridDbKeyState Key, bool IsRunning, DateTimeOffset? LastRun, DateTimeOffset? LastSearch, string? LastError, string? LastSearchError)
+    {
+        public static StatusSnapshot Of(SteamGridDbStatus s) => new(s.Enabled, s.Key, s.IsRunning, s.LastRun, s.LastSearch, s.LastError, s.LastSearchError);
     }
 }

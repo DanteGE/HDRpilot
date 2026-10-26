@@ -105,8 +105,10 @@ try {
     $sgdb = Find-Id $set 'SteamGridDbToggle'
     $c = Read-Config $cfg
     Check ((Get-Toggle $sgdb) -eq 'Off' -and -not [bool]$c.settings.artwork.steamGridDb) "SteamGridDB standardmäßig aus (Schalter $(Get-Toggle $sgdb), Konfiguration '$($c.settings.artwork.steamGridDb)')"
+    # E93: Der Schlüssel erlaubt die Suche in „Bild wählen…“ auch bei ausgeschaltetem Schalter
     $check = Find-Id $set 'SteamGridDbCheckButton'
-    Check (-not $check.Current.IsEnabled) '„Prüfen“ ist ohne SteamGridDB gesperrt (und wird hier nie gedrückt)'
+    $keyField = Find-Id $set 'SteamGridDbKey'
+    Check ($check.Current.IsEnabled -and $keyField.Current.IsEnabled) 'Schlüsselfeld und „Prüfen“ sind auch bei ausgeschaltetem Schalter bedienbar (und werden hier nie gedrückt)'
 
     # Darstellung wirkt und speichert sofort
     Select-El ($items | Where-Object { $_.Current.Name -eq 'Cyber' } | Select-Object -First 1)

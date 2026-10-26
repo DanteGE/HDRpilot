@@ -960,7 +960,7 @@
     <value>Füllt nur fehlende Bilder: {0} Titelbilder, {1} Logos, {2} Cover. Lokale Bilder bleiben unangetastet.</value>
   </data>
   <data name="SteamGridDbToggleName" xml:space="preserve">
-    <value>SteamGridDB verwenden</value>
+    <value>Fehlende Bilder automatisch von SteamGridDB laden</value>
   </data>
   <data name="SteamGridDbKeyPlaceholder" xml:space="preserve">
     <value>API-Schlüssel von steamgriddb.com</value>
@@ -987,13 +987,13 @@
     <value>Gespeicherten SteamGridDB-Schlüssel entfernen</value>
   </data>
   <data name="SteamGridDbKeyNote" xml:space="preserve">
-    <value>Standard: aus. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben.</value>
+    <value>Standard: aus. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben. Mit Schlüssel kannst du in „Bild wählen…“ selbst bei SteamGridDB suchen, auch wenn das automatische Laden aus ist.</value>
   </data>
   <data name="SteamGridDbStatusName" xml:space="preserve">
     <value>Letzter Netzwerkzugriff von SteamGridDB</value>
   </data>
   <data name="SteamGridDbStatusOff" xml:space="preserve">
-    <value>Aus · kein Netzwerkzugriff</value>
+    <value>Ohne Schlüssel · kein Netzwerkzugriff</value>
   </data>
   <data name="SteamGridDbStatusNoKey" xml:space="preserve">
     <value>Ein · ohne Schlüssel kein Netzwerkzugriff</value>
@@ -1183,5 +1183,25 @@
   </data>
   <data name="RemoveUninstalledNone" xml:space="preserve">
     <value>Zurzeit gibt es keine nicht installierten Spiele aus Launchern.</value>
+  </data>
+  <data name="SteamGridDbSubtitle" xml:space="preserve">
+    <value>Weitere Bilder aus dem Netz, nur mit deinem eigenen API-Schlüssel.</value>
+    <comment>Zeile unter „SteamGridDB (online)“ (E93)</comment>
+  </data>
+  <data name="SteamGridDbAutoLabel" xml:space="preserve">
+    <value>Fehlende Bilder automatisch laden</value>
+    <comment>Sichtbare Beschriftung des Schalters in eigener Zeile (E93)</comment>
+  </data>
+  <data name="SteamGridDbStatusOffWithKey" xml:space="preserve">
+    <value>Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick</value>
+    <comment>Schalter aus, Schlüssel gespeichert (E93)</comment>
+  </data>
+  <data name="SteamGridDbStatusLastSearch" xml:space="preserve">
+    <value>Automatisches Laden aus · letzte Suche {0:g} · {1} Anfragen</value>
+    <comment>{0} = Zeit der letzten Anfrage einer Suche in „Bild wählen…“, {1} = Anfragen</comment>
+  </data>
+  <data name="SteamGridDbStatusLastSearchOn" xml:space="preserve">
+    <value>Letzte Suche in „Bild wählen…“ {0:g} · {1} Anfragen</value>
+    <comment>Schalter an, die letzte Suche ist neuer als der letzte Lauf</comment>
   </data>
 </root>

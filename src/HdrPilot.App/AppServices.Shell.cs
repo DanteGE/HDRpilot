@@ -62,7 +62,7 @@ public sealed partial class AppServices
 
     private partial Window CreateSettingsWindow()
     {
-        var window = new SettingsWindow();
+        var window = new SettingsWindow { TestLog = TestLog() };
         window.Attach(new SettingsViewModel(
             ShellAdapter,
             new DialogFolderPicker(window),

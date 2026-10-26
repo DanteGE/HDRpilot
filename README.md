@@ -80,8 +80,14 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 
 ### Spielebibliothek
 
-- Im Kopf stehen die Zahl der Spiele, die Bildschirm-Kapsel und die Knöpfe **HDR einschalten** bzw. **HDR ausschalten**
-  (schaltet sofort, unabhängig von einem Spiel), **Automatik pausieren** und das Zahnrad für die Einstellungen. Die
+- Links im Kopf steht groß die gewählte Quelle („Alle Spiele“, „Steam-Spiele“, „GOG-Spiele“ … „Eigene Spiele“) unter
+  der Kennzeile „SPIELEBIBLIOTHEK“, darunter ihre Zahlen: Spiele, davon mit **HDR automatisch**, davon neu (etwa „641
+  Spiele · 12 mit HDR automatisch · 3 neu“). Mit Filtern oder Suche zählen nur die gezeigten Spiele dieser Quelle („36
+  von 641 Spielen · 4 mit HDR automatisch · 1 neu“); ausgeblendete nicht installierte Spiele zählen nie. Ein Klick auf
+  den Titel (oder Eingabe-, Leertaste bzw. Alt+Pfeil nach unten) öffnet die Quellen mit ihrer Zahl; die Wahl gilt wie
+  im Feld „Quelle“ der Werkzeugleiste. Rechts stehen die Bildschirm-Kapsel und die Knöpfe **HDR einschalten** bzw. **HDR
+  ausschalten** (schaltet sofort, unabhängig von einem Spiel), **Automatik pausieren** und das Zahnrad für die
+  Einstellungen. Die
   Kapsel zeigt den Zielbildschirm mit Farbtiefe, ob HDR an ist, und seine Werte laut Windows: Spitze, Vollbild und
   Minimum in nits. Die Skala reicht von 0 bis zur Spitze bei eingeschaltetem HDR, auch wenn HDR gerade aus ist (die
   Fähigkeit des Bildschirms, keine Messung); solange HDRpilot die Werte nicht kennt, steht dort „—“.
@@ -145,7 +151,9 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   **Neu** und **HDR-fähig** als Symbol-Schalter mit ihrer Zahl (auch Alt+A, Alt+N, Alt+H), rechts Ansicht, **Neu
   einlesen**, **Alle als gesehen markieren** und **Spiel hinzufügen**. Zeigst du eine Sekunde auf ein Element, erklärt
   ein Tooltip es samt Kürzel. In schmaleren Fenstern werden Suche, Quelle und Sortierung schmaler, dann zeigt die
-  Sortierung nur ihr Symbol; erst wenn auch das nicht passt, verteilt sich die Leiste auf zwei Zeilen.
+  Sortierung nur ihr Symbol; erst wenn auch das nicht passt, verteilt sich die Leiste auf zwei Zeilen. Ein Filter-Schalter
+  ist nur hervorgehoben, solange sein Filter an ist; den Fokusrahmen zeigt er nur, wenn du mit der Tastatur bedienst,
+  nicht nach einem Mausklick.
 - Die Werkzeugleiste lässt sich ausblenden: über die kleine Lasche rechts über der Leiste, mit Strg+Umschalt+F oder
   Strg+F1 oder per Rechtsklick auf eine freie Stelle der Leiste (auch Umschalt+F10) › **Leiste ausblenden**. Dann
   steht an der Unterkante des Titelbilds nur eine Kapsel, die die Suche bzw. die aktiven Filter samt Anzahl zeigt;
@@ -189,11 +197,14 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     **Nach dem Spiel zurückstellen** (danach wieder den HDR-Zustand von vorher herstellen, Standard: an).
   - Abschnitt „BILD“ mit **Windows Auto HDR**: Windows rechnet das SDR-Bild eines Spiels ohne eigenes HDR in HDR um
     (DirectX 11/12). Das wirkt nur, wenn das Spiel über HDRpilot startet (**Starten**, „(HDR)“-Verknüpfung,
-    Steam-Startoption): HDRpilot schaltet Auto HDR in Windows direkt davor ein und nach dem Spiel wieder zurück; so steht
-    es auch unter dem Schalter. Das Schalten selbst ändert in Windows noch nichts. Unabhängig von **HDR automatisch**; ist
-    das aus, weist ein Hinweis darauf hin, dass Windows-HDR schon vor dem Spielstart an sein muss. Hat das Spiel laut
-    PCGamingWiki eigenes HDR, sind Titel und Schalter blasser und ein Hinweis rät, das HDR des Spiels zu nehmen;
-    schalten lässt es sich trotzdem (siehe „Windows Auto HDR“). Schaltest du es bei einem Steam-Spiel ein, dessen
+    Steam-Startoption): HDRpilot schaltet Auto HDR in Windows direkt davor ein und nach dem Spiel wieder zurück; kurz
+    steht das unter dem Titel („Wirkt beim Start über HDRpilot“), ausführlich hinter **Mehr erfahren** (wieder zu mit
+    **Weniger**; aufgeklappt bleibt es für alle Spiele, bis du das Fenster schließt). Das Schalten selbst ändert in
+    Windows noch nichts. Unabhängig von **HDR automatisch**; ist das aus, weist ein Hinweis darauf hin, dass Windows-HDR
+    schon vor dem Spielstart an sein muss. Ist Auto HDR an und **HDR automatisch** aus, steht dieser Hinweis auch
+    zugeklappt, sonst nur bei den Erklärungen. Hat das Spiel laut PCGamingWiki eigenes HDR, sind Titel und Schalter
+    blasser, und bei den Erklärungen rät ein Hinweis, das HDR des Spiels zu nehmen; schalten lässt es sich trotzdem
+    (siehe „Windows Auto HDR“). Schaltest du es bei einem Steam-Spiel ein, dessen
     Steam-Startoption noch fehlt, fragt HDRpilot, ob es sie kopieren soll (**Startoption kopieren**, wie
     **Steam-Startoption kopieren**); eintragen musst du sie in Steam selbst. Ablehnen ändert nichts, Auto HDR bleibt an.
   - **EXE-Dateien**: Grundsätzlich zählt jedes Programm im Installationsordner als dieses Spiel, außer Hilfsprozessen.
@@ -508,9 +519,10 @@ anderes als „HDR automatisch“:
 
 Beide Schalter sind unabhängig voneinander. „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten
 HDR ohnehin vor dem Spiel ein; ist „HDR automatisch“ für das Spiel aus, steht unter dem Schalter ein Hinweis, dass HDR
-sonst schon vor dem Spielstart an sein muss. Hat ein Spiel laut PCGamingWiki eigenes HDR (Kennzeichen „HDR“ oder
-„HDR*“), sind Titel und Schalter blasser und ein Hinweis rät, das HDR des Spiels zu nehmen, das meist besser aussieht;
-einschalten lässt sich Auto HDR trotzdem.
+sonst schon vor dem Spielstart an sein muss (bei eingeschaltetem Auto HDR immer, sonst hinter **Mehr erfahren**). Hat
+ein Spiel laut PCGamingWiki eigenes HDR (Kennzeichen „HDR“ oder „HDR*“), sind Titel und Schalter blasser, und hinter
+**Mehr erfahren** rät ein Hinweis, das HDR des Spiels zu nehmen, das meist besser aussieht; einschalten lässt sich Auto
+HDR trotzdem.
 
 **So funktioniert es:** Windows wendet Auto HDR nur an, wenn beim Start des Spielprozesses Windows-HDR und der Schalter
 „Auto HDR“ der Windows-Einstellungen (System → Anzeige → HDR) an sind. Dieser Schalter steht als Token

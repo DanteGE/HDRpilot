@@ -116,7 +116,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         _context = context;
         _dialogs = dialogs;
-        _allSources = new SourceFilterOption(null, 0);
+        _allSources = new SourceFilterOption(null, 0) { IsSelected = true };
         _selectedSource = _allSources;
         SourceOptions = [_allSources];
 
@@ -246,6 +246,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (!ReferenceEquals(next, _selectedSource))
             {
                 _selectedSource = next;
+                MarkSelectedSource();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsFiltered));
                 RefreshView();
@@ -651,6 +652,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         _searchText = string.Empty;
         _searchTokens = [];
         _selectedSource = _allSources;
+        MarkSelectedSource();
         _onlySelected = false;
         _onlyNew = false;
         _onlyHdrCapable = false;
@@ -1376,6 +1378,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ViewSummaryText));
         OnPropertyChanged(nameof(ListHeaderText));
         RaiseToolbarTexts();
+        UpdateHeader();
     }
 
     private int InsertIndex(GameItemViewModel item)
@@ -1459,6 +1462,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         RaiseToolbarTexts();
+        UpdateHeader();
     }
 
     private void ApplyRunningFlags()

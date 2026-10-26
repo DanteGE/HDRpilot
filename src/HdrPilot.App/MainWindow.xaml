@@ -219,6 +219,15 @@
                       AutomationProperties.AutomationId="ToolbarMenuReset" AutomationProperties.Name="{x:Static res:LibraryStrings.Toolbar_ResetAll}" />
         </ContextMenu>
 
+        <!--
+            Quellenmenü am Titel im Kopf (Wunsch des Nutzers 2026-10-22): alle Quellen mit Zahl, die gewählte mit Haken; wählt
+            wie das Feld „Quelle“ der Werkzeugleiste (dieselben Einträge, SourceOptions).
+        -->
+        <ContextMenu x:Key="SourceMenu" x:Shared="False" Style="{StaticResource Lib.ContextMenu}" MinWidth="240"
+                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                     ItemsSource="{Binding SourceOptions}" ItemContainerStyle="{StaticResource Lib.SourceMenuItem}"
+                     AutomationProperties.AutomationId="SourceMenu" AutomationProperties.Name="{x:Static res:LibraryStrings.SourceMenu_Name}" />
+
         <!-- Zeile der Spieleliste mit Kontextmenü auf der ganzen Fläche -->
         <Style x:Key="GameRowWithMenu" TargetType="ListBoxItem" BasedOn="{StaticResource Lib.GameRow}">
             <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}" />
@@ -937,14 +946,26 @@
                         </Canvas>
                     </Viewbox>
                 </Grid>
-                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Static res:LibraryStrings.Header_Title}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="21" FontWeight="Bold"
-                               Foreground="{DynamicResource Hp.Brush.TextOnArt}" />
-                    <StackPanel x:Name="HeaderStats" Orientation="Horizontal" Margin="0,5,0,0"
+                <!--
+                    Titel folgt der Quelle (Wunsch des Nutzers 2026-10-22): Kennzeile „SPIELEBIBLIOTHEK“, groß die gewählte Quelle
+                    (überblendet beim Wechsel, ein Klick öffnet das Quellenmenü), darunter die Kennzahlen nur dieser Auswahl.
+                -->
+                <StackPanel x:Name="HeaderTitleBlock" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="HeaderOverline" Text="{x:Static res:LibraryStrings.Header_Overline}" FontSize="10" FontWeight="Bold"
+                               LineHeight="12" LineStackingStrategy="BlockLineHeight" Foreground="{StaticResource Lib.Brush.ArtCaption}" />
+                    <lib:MenuButton x:Name="SourceTitleButton" Style="{StaticResource Lib.HeaderTitleButton}" ContextMenu="{StaticResource SourceMenu}"
+                                    ToolTipService.InitialShowDelay="1000" ToolTip="{x:Static res:LibraryStrings.Header_SourceTooltip}"
+                                    AutomationProperties.AutomationId="SourceTitleButton" AutomationProperties.Name="{Binding HeaderSourceName}"
+                                    AutomationProperties.HelpText="{x:Static res:LibraryStrings.Header_SourceHelp}">
+                        <lib:CrossfadeText x:Name="HeaderTitle" Text="{Binding HeaderTitle}" TextElement.FontFamily="{StaticResource Lib.Font.Display}"
+                                           TextElement.FontSize="21" TextElement.FontWeight="Bold" />
+                    </lib:MenuButton>
+                    <StackPanel x:Name="HeaderStats" Orientation="Horizontal" Margin="0,2,0,0"
                                 AutomationProperties.Name="{x:Static res:LibraryStrings.Stats_Name}">
                         <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
                             <Ellipse Width="6" Height="6" Fill="{StaticResource Lib.Brush.ArtMuted}" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding TotalText}" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArtSecondary}" />
+                            <TextBlock x:Name="HeaderCount" Text="{Binding HeaderCountText}" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArtSecondary}"
+                                       AutomationProperties.AutomationId="HeaderCount" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,14,0">
                             <Ellipse Width="6" Height="6" VerticalAlignment="Center">
@@ -952,15 +973,17 @@
                                     <SolidColorBrush Color="{DynamicResource Hp.Color.C1}" />
                                 </Ellipse.Fill>
                             </Ellipse>
-                            <TextBlock Text="{Binding HdrAutoText}" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArtSecondary}" />
+                            <TextBlock x:Name="HeaderHdrAuto" Text="{Binding HeaderHdrAutoText}" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArtSecondary}"
+                                       AutomationProperties.AutomationId="HeaderHdrAuto" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Visibility="{Binding NewCount, Converter={StaticResource Lib.BoolToVisibility}}">
+                        <StackPanel x:Name="HeaderNewStat" Orientation="Horizontal" Visibility="{Binding HeaderNewCount, Converter={StaticResource Lib.BoolToVisibility}}">
                             <Ellipse Width="6" Height="6" VerticalAlignment="Center">
                                 <Ellipse.Fill>
                                     <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" />
                                 </Ellipse.Fill>
                             </Ellipse>
-                            <TextBlock Text="{Binding NewText}" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArtSecondary}" />
+                            <TextBlock x:Name="HeaderNew" Text="{Binding HeaderNewText}" Margin="6,0,0,0" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnArtSecondary}"
+                                       AutomationProperties.AutomationId="HeaderNew" />
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -1770,7 +1793,12 @@
                                                         </Border>
                                                     </WrapPanel>
                                                     <TextBlock Text="{x:Static res:LibraryStrings.Details_AutoHdrWhere}" FontSize="12" Margin="0,2,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
-                                                    <TextBlock x:Name="AutoHdrExplanation" Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrHint}" Margin="0,4,0,0" />
+                                                    <!-- Erklärung und Hinweise zugeklappt (Rückmeldung des Nutzers 2026-10-22), gilt fürs Fenster -->
+                                                    <lib:DisclosureToggle x:Name="AutoHdrInfoToggle" Style="{StaticResource Lib.DisclosureToggle}" Margin="0,5,0,0"
+                                                                          IsChecked="{Binding IsAutoHdrInfoExpanded}" Reveals="{Binding ElementName=AutoHdrInfo}"
+                                                                          CollapsedText="{x:Static res:LibraryStrings.Details_AutoHdrMore}" ExpandedText="{x:Static res:LibraryStrings.Details_AutoHdrLess}"
+                                                                          AutomationProperties.AutomationId="AutoHdrInfoToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_AutoHdrInfoName}"
+                                                                          AutomationProperties.HelpText="{x:Static res:LibraryStrings.Details_AutoHdrInfoHelp}" />
                                                 </StackPanel>
                                                 <CheckBox Grid.Column="1" Margin="0,0,8,0" VerticalAlignment="Center" IsChecked="{Binding AutoHdr}"
                                                           AutomationProperties.AutomationId="DetailAutoHdr" AutomationProperties.Name="{x:Static res:LibraryStrings.Details_AutoHdr}"
@@ -1786,18 +1814,25 @@
                                                     </CheckBox.Style>
                                                 </CheckBox>
                                             </Grid>
-                                            <!-- Wirkt nur bei Starts, die HDRpilot vorher kennt (E88): immer sichtbar, auch vor dem Einschalten -->
-                                            <DockPanel Margin="0,8,0,0">
-                                                <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
-                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrStartHint}"
-                                                           AutomationProperties.AutomationId="DetailAutoHdrStartHint" />
-                                            </DockPanel>
-                                            <DockPanel Margin="0,8,0,0" Visibility="{Binding ShowAutoHdrNativeHint, Converter={StaticResource Lib.BoolToVisibility}}">
-                                                <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
-                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding AutoHdrNativeHint}"
-                                                           AutomationProperties.AutomationId="DetailAutoHdrNativeHint" />
-                                            </DockPanel>
-                                            <DockPanel Margin="0,8,0,0" Visibility="{Binding ShowAutoHdrNeedsHdrHint, Converter={StaticResource Lib.BoolToVisibility}}">
+                                            <!--
+                                                Aufgeklappt: Erklärung, „wirkt nur bei Starts über HDRpilot“ (E88) und bei eigenem HDR der Rat,
+                                                es im Spiel zu nehmen (das Kennzeichen neben dem Titel bleibt immer sichtbar).
+                                            -->
+                                            <StackPanel x:Name="AutoHdrInfo" Visibility="{Binding IsAutoHdrInfoExpanded, Converter={StaticResource Lib.BoolToVisibility}}">
+                                                <TextBlock x:Name="AutoHdrExplanation" Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrHint}" Margin="0,8,0,0" />
+                                                <DockPanel Margin="0,8,0,0">
+                                                    <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
+                                                    <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrStartHint}"
+                                                               AutomationProperties.AutomationId="DetailAutoHdrStartHint" />
+                                                </DockPanel>
+                                                <DockPanel Margin="0,8,0,0" Visibility="{Binding ShowAutoHdrNativeHint, Converter={StaticResource Lib.BoolToVisibility}}">
+                                                    <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
+                                                    <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{Binding AutoHdrNativeHint}"
+                                                               AutomationProperties.AutomationId="DetailAutoHdrNativeHint" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                            <!-- „HDR automatisch“ aus: aufgeklappt immer, zugeklappt nur bei eingeschaltetem Auto HDR (sonst liefe die Wahl ins Leere) -->
+                                            <DockPanel Margin="0,8,0,0" Visibility="{Binding ShowAutoHdrNeedsHdrLine, Converter={StaticResource Lib.BoolToVisibility}}">
                                                 <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Info}" FontSize="12" Margin="0,1,8,0" VerticalAlignment="Top" />
                                                 <TextBlock Style="{StaticResource Hp.Text.Caption}" Text="{x:Static res:LibraryStrings.Details_AutoHdrNeedsHdr}"
                                                            AutomationProperties.AutomationId="DetailAutoHdrNeedsHdrHint" />

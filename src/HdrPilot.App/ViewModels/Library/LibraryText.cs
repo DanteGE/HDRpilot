@@ -85,4 +85,23 @@ public static class LibraryText
         GameSource.Quiver => LibraryStrings.Source_Quiver,
         _ => source.ToString(),
     };
+
+    /// <summary>
+    /// Titel im Kopf und Eintrag im Quellenmenü (Wunsch des Nutzers 2026-10-22): „Alle Spiele“ (null), „Steam-Spiele“,
+    /// „GOG-Spiele“ …, selbst hinzugefügte „Eigene Spiele“.
+    /// </summary>
+    public static string SourceTitle(GameSource? source) => source switch
+    {
+        null => LibraryStrings.Header_TitleAll,
+        GameSource.Steam => LibraryStrings.Header_TitleSteam,
+        GameSource.Epic => LibraryStrings.Header_TitleEpic,
+        GameSource.Xbox => LibraryStrings.Header_TitleXbox,
+        GameSource.Gog => LibraryStrings.Header_TitleGog,
+        GameSource.Ubisoft => LibraryStrings.Header_TitleUbisoft,
+        GameSource.EA => LibraryStrings.Header_TitleEA,
+        GameSource.BattleNet => LibraryStrings.Header_TitleBattleNet,
+        GameSource.Quiver => LibraryStrings.Header_TitleQuiver,
+        GameSource.Manual => LibraryStrings.Header_TitleManual,
+        { } other => SourceName(other),
+    };
 }

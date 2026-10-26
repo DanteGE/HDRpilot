@@ -17,8 +17,65 @@
   <data name="Window_Title" xml:space="preserve">
     <value>HDRpilot – Spielebibliothek</value>
   </data>
-  <data name="Header_Title" xml:space="preserve">
-    <value>Spielebibliothek</value>
+  <data name="Header_Overline" xml:space="preserve">
+    <value>SPIELEBIBLIOTHEK</value>
+    <comment>Kennzeile über dem Titel; der Titel nennt die gewählte Quelle (Wunsch des Nutzers 2026-10-22)</comment>
+  </data>
+  <data name="Header_TitleAll" xml:space="preserve">
+    <value>Alle Spiele</value>
+  </data>
+  <data name="Header_TitleSteam" xml:space="preserve">
+    <value>Steam-Spiele</value>
+  </data>
+  <data name="Header_TitleEpic" xml:space="preserve">
+    <value>Epic-Spiele</value>
+  </data>
+  <data name="Header_TitleXbox" xml:space="preserve">
+    <value>Xbox-Spiele</value>
+  </data>
+  <data name="Header_TitleGog" xml:space="preserve">
+    <value>GOG-Spiele</value>
+  </data>
+  <data name="Header_TitleUbisoft" xml:space="preserve">
+    <value>Ubisoft-Spiele</value>
+  </data>
+  <data name="Header_TitleEA" xml:space="preserve">
+    <value>EA-Spiele</value>
+  </data>
+  <data name="Header_TitleBattleNet" xml:space="preserve">
+    <value>Battle.net-Spiele</value>
+  </data>
+  <data name="Header_TitleQuiver" xml:space="preserve">
+    <value>Quiver-Spiele</value>
+  </data>
+  <data name="Header_TitleManual" xml:space="preserve">
+    <value>Eigene Spiele</value>
+    <comment>Quelle „Manuell“: selbst hinzugefügte Spiele</comment>
+  </data>
+  <data name="Header_SourceName" xml:space="preserve">
+    <value>Quelle: {0}</value>
+    <comment>Name des Titels für Bildschirmleser; {0} = Titel, etwa „Steam-Spiele“</comment>
+  </data>
+  <data name="Header_SourceHelp" xml:space="preserve">
+    <value>Öffnet das Menü der Quellen mit der Zahl ihrer Spiele (Eingabe- oder Leertaste, Alt+Pfeil nach unten). Wählt wie das Feld „Quelle“ der Werkzeugleiste.</value>
+  </data>
+  <data name="Header_SourceTooltip" xml:space="preserve">
+    <value>Quelle wechseln</value>
+  </data>
+  <data name="SourceMenu_Name" xml:space="preserve">
+    <value>Quellen</value>
+  </data>
+  <data name="SourceMenu_Selected" xml:space="preserve">
+    <value>gewählt</value>
+    <comment>Zustand des gewählten Eintrags im Quellenmenü für Bildschirmleser</comment>
+  </data>
+  <data name="Stats_Filtered" xml:space="preserve">
+    <value>{0} von {1} Spielen</value>
+    <comment>Kopf mit Filtern oder Suche; {0} = sichtbare Spiele der Quelle, {1} = alle Spiele der Quelle</comment>
+  </data>
+  <data name="Stats_FilteredOfOne" xml:space="preserve">
+    <value>{0} von 1 Spiel</value>
+    <comment>wie Stats_Filtered, wenn die Quelle genau ein Spiel hat; {0} = sichtbare Spiele</comment>
   </data>
   <data name="Count_GamesOne" xml:space="preserve">
     <value>1 Spiel</value>
@@ -397,6 +454,20 @@
   </data>
   <data name="Details_AutoHdrNativeLimited" xml:space="preserve">
     <value>Dieses Spiel hat laut PCGamingWiki eingeschränktes eigenes HDR – meist besser im Spiel einschalten.</value>
+  </data>
+  <data name="Details_AutoHdrMore" xml:space="preserve">
+    <value>Mehr erfahren</value>
+    <comment>klappt Erklärung und Hinweise zu Windows Auto HDR auf (Rückmeldung des Nutzers 2026-10-22)</comment>
+  </data>
+  <data name="Details_AutoHdrLess" xml:space="preserve">
+    <value>Weniger</value>
+    <comment>klappt sie wieder zu</comment>
+  </data>
+  <data name="Details_AutoHdrInfoName" xml:space="preserve">
+    <value>Erklärungen zu Windows Auto HDR</value>
+  </data>
+  <data name="Details_AutoHdrInfoHelp" xml:space="preserve">
+    <value>Blendet die Erklärung und die Hinweise zu Windows Auto HDR ein oder aus.</value>
   </data>
   <data name="AutoHdrSteam_OfferTitle" xml:space="preserve">
     <value>Steam-Startoption kopieren?</value>

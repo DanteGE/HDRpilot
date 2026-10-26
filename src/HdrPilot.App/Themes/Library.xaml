@@ -2006,13 +2006,16 @@
     <!--
         Filter als Symbolknopf 40×40 (lib:FilterToggle, Vorschau .f-flt): Glas wie Lib.FieldFrame; an: Fläche C1 18 %, Rahmen
         AccentStrong, Hof AccentSoft und gefülltes Symbol (Übergänge im Code nach der Effektstufe). Symbol 2 px unter der Mitte,
-        Zähler-Plakette innen oben rechts (2 px Abstand, 12 hoch). Tastaturfokus: Ring 2 px mit −3 Abstand. Gedrückt: 0,96.
+        Zähler-Plakette innen oben rechts (2 px Abstand, 12 hoch). Tastaturfokus: Ring 2 px mit −3 Abstand, nur bei Bedienung
+        mit der Tastatur (lib:FocusCue; nach einem Mausklick sah ein ausgeschalteter Filter sonst weiter gewählt aus,
+        Rückmeldung des Nutzers 2026-10-22). Gedrückt: 0,96.
     -->
     <Style x:Key="Lib.FilterToggle" TargetType="lib:FilterToggle">
         <Setter Property="Width" Value="40" />
         <Setter Property="Height" Value="40" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
         <Setter Property="FontFamily" Value="{StaticResource Hp.Font.Text}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -2045,7 +2048,7 @@
                             <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
                             <Setter TargetName="PART_Glyph" Property="Stroke" Value="{DynamicResource Hp.Brush.Text}" />
                         </Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True">
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
                             <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -2323,6 +2326,168 @@
                         </Trigger>
                         <Trigger Property="InputGestureText" Value="">
                             <Setter TargetName="Key" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Titel im Kopf als Knopf (Wunsch des Nutzers 2026-10-22): die gewählte Quelle groß mit kleinem Pfeil, öffnet das
+        Quellenmenü (lib:MenuButton). Fläche nur beim Überfahren und bei offenem Menü (heller Schleier wie die Chips über dem
+        Titelbild); innen 8 px Rand, außen ausgeglichen, damit der Text bündig unter der Kennzeile bleibt. Offen dreht sich
+        der Pfeil. Fokusring nur bei Bedienung mit der Tastatur (lib:FocusCue).
+    -->
+    <Style x:Key="Lib.HeaderTitleButton" TargetType="lib:MenuButton">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="Margin" Value="-8,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:MenuButton">
+                    <Grid Background="Transparent">
+                        <Border x:Name="Body" CornerRadius="9" Background="{StaticResource Lib.Brush.ArtChip}" BorderBrush="{StaticResource Lib.Brush.ArtChipLine}" BorderThickness="1" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="11" Margin="-2" BorderThickness="2" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <StackPanel Orientation="Horizontal" Margin="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                            <TextBlock x:Name="Chevron" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="11" Margin="9,1,0,0"
+                                       Foreground="{StaticResource Lib.Brush.ArtCaption}" RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+                        </StackPanel>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="1" />
+                            <Setter TargetName="Chevron" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                        </Trigger>
+                        <Trigger Property="IsMenuOpen" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="1" />
+                            <Setter TargetName="Chevron" Property="Foreground" Value="{DynamicResource Hp.Brush.TextOnArt}" />
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Body" Property="Opacity" Value="0.7" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Eintrag im Quellenmenü am Titel (Vorschau .mi wie das Menü der Werkzeugleiste): Haken links bei der gewählten Quelle,
+        Farbpunkt und Titel der Quelle („Steam-Spiele“), rechts ihre Zahl in Festbreitenschrift. Wählen statt Umschalten: nicht
+        abhakbar, der Haken folgt der Wahl (IsChecked an SourceFilterOption.IsSelected).
+    -->
+    <Style x:Key="Lib.SourceMenuItem" TargetType="MenuItem" BasedOn="{StaticResource Lib.MenuItem}">
+        <Setter Property="Header" Value="{Binding Title}" />
+        <Setter Property="Tag" Value="{Binding Count}" />
+        <Setter Property="IsCheckable" Value="False" />
+        <Setter Property="IsChecked" Value="{Binding IsSelected, Mode=OneWay}" />
+        <Setter Property="Command" Value="{Binding DataContext.SelectSourceCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+        <Setter Property="CommandParameter" Value="{Binding}" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding MenuName}" />
+        <Setter Property="AutomationProperties.ItemStatus" Value="{Binding MenuStatus}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid Background="Transparent" Margin="0,1">
+                        <Border x:Name="Hover" CornerRadius="10" Background="{DynamicResource Hp.Brush.Surface1}" Opacity="0" />
+                        <Border x:Name="Focus" CornerRadius="10" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.FocusRing}" Visibility="Collapsed" />
+                        <Grid Margin="{TemplateBinding Padding}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="Check" Style="{StaticResource Lib.Glyph}" Text="&#xE73E;" FontSize="11" Width="14" Margin="0,0,8,0"
+                                       Foreground="{DynamicResource Hp.Brush.AccentText}" Opacity="0" />
+                            <Ellipse x:Name="Dot" Grid.Column="1" Style="{StaticResource Lib.SourceDot}" Width="8" Height="8" Margin="0,0,10,0" />
+                            <ContentPresenter Grid.Column="2" ContentSource="Header" RecognizesAccessKey="False" VerticalAlignment="Center" />
+                            <TextBlock x:Name="Count" Grid.Column="3" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Margin="20,0,0,0" VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                        </Grid>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Hover" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Check" Property="Opacity" Value="1" />
+                            <Setter TargetName="Count" Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
+                        </Trigger>
+                        <!-- „Alle Spiele“: neutraler Punkt wie im Feld „Quelle“ -->
+                        <DataTrigger Binding="{Binding Source}" Value="{x:Null}">
+                            <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Hp.Brush.TextMuted}" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        „Mehr erfahren“ / „Weniger“ (lib:DisclosureToggle, Rückmeldung des Nutzers 2026-10-22): Verweis in Akzentschrift mit
+        kleinem Pfeil, der sich aufgeklappt dreht; die ganze Zeile klickbar. Fokusring nur bei Bedienung mit der Tastatur.
+    -->
+    <Style x:Key="Lib.DisclosureToggle" TargetType="lib:DisclosureToggle">
+        <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.AccentText}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="lib:FocusCue.Enabled" Value="True" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="lib:DisclosureToggle">
+                    <Border x:Name="Body" Background="Transparent" Padding="4,2" Margin="-5,0,0,0" CornerRadius="6" BorderThickness="1" BorderBrush="Transparent">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="Label" Text="{Binding CollapsedText, RelativeSource={RelativeSource TemplatedParent}}" VerticalAlignment="Center" />
+                            <TextBlock x:Name="Chevron" Style="{StaticResource Lib.Glyph}" Text="&#xE70D;" FontSize="9" Margin="6,2,0,0"
+                                       Foreground="{TemplateBinding Foreground}" RenderTransformOrigin="0.5,0.5">
+                                <TextBlock.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </TextBlock.RenderTransform>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Label" Property="Text" Value="{Binding ExpandedText, RelativeSource={RelativeSource TemplatedParent}}" />
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" />
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="lib:FocusCue.IsVisible" Value="True">
+                            <Setter TargetName="Body" Property="BorderBrush" Value="{DynamicResource Hp.Brush.FocusRing}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />

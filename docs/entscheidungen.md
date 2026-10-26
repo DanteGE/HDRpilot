@@ -696,7 +696,9 @@ Schalter immer der Hinweis, dass Windows-HDR schon vor dem Spielstart an sein mu
 mit ein). Spiele mit eigenem HDR laut PCGamingWiki (`Native` oder `Limited`, dieselbe Regel wie das Kennzeichen
 „HDR“/„HDR*“) zeigen Titel und Schalter blasser (Deckkraft 0,7, deutlich heller als ein gesperrter Schalter mit 0,4),
 aber voll bedienbar, mit dem Hinweis, besser das HDR des Spiels zu nehmen; Erklärung und Hinweise bleiben voll lesbar.
-Das Schalten selbst ändert in Windows nichts.
+Das Schalten selbst ändert in Windows nichts. Seit 2026-10-22 stehen Erklärung und Hinweise zugeklappt hinter
+„Mehr erfahren“; nur „HDR automatisch ist aus …“ bleibt bei eingeschaltetem Auto HDR stehen (E89, Rückmeldungen vom
+2026-10-22).
 
 Livetest am 2026-10-12 mit dem Nutzer (G9.6, Windows 11 26H2, Build 26300; Werte per WMI außerhalb des Containers
 gesetzt, danach byte-gleich zurückgestellt): Auto HDR wirkt nur, wenn Windows-HDR und der globale Schalter (Token
@@ -1061,6 +1063,51 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   (es gibt nichts zu wählen), sondern neutral „Kein Spiel gewählt“; ist nur nichts gewählt, bleibt es bei „Wähle ein
   Spiel“ mit der Erklärung (Prüfung 2026-10-20). Ebenso bei leerer Liste („Noch keine Spiele“, auch wenn alle Spiele
   ausgeblendet sind): dort sagt der Detailbereich „Noch kein Spiel in der Liste“ (Gegenprüfung 2026-10-20).
+- Rückmeldungen des Nutzers nach dem Test von 1.5.0 (2026-10-22), Kopf, Filterknöpfe und Detailbereich:
+  - Titel folgt der Quelle (Entscheidung des Nutzers: nur die Quelle im Titel). Groß steht die gewählte Quelle („Alle
+    Spiele“, „Steam-Spiele“, „GOG-Spiele“, „Epic-Spiele“, „Xbox-Spiele“, „Ubisoft-Spiele“, „EA-Spiele“,
+    „Battle.net-Spiele“, „Quiver-Spiele“, selbst hinzugefügte „Eigene Spiele“), darüber die Kennzeile „SPIELEBIBLIOTHEK“
+    (10 px, Zeilenhöhe 12); die Titelleiste des Fensters bleibt „HDRpilot – Spielebibliothek“. Die Kennzahlen zählen nur
+    die Auswahl: ohne Filter und Suche alle Spiele der Quelle („641 Spiele · 12 mit HDR automatisch · 3 neu“), mit
+    Filtern oder Suche die gezeigten, bezogen auf alle der Quelle („36 von 641 Spielen · 4 mit HDR automatisch · 1 neu“,
+    bei genau einem Spiel „… von 1 Spiel“); ausgeblendete nicht installierte Spiele zählen nie (E90). „neu“ steht nur,
+    wenn es welche gibt, und im schmalen Fenster fallen die Kennzahlen wie bisher weg. Die Zahlen der Filterknöpfe und
+    „Alle als gesehen markieren“ zählen weiter alle Spiele. Kennzeile, Titel und Kennzahlen beginnen auf derselben Kante;
+    der Block ist 55 px hoch und steht mittig im 52 px hohen Kopf (je knapp 2 px darüber hinaus, gemessen 1000×620 bis
+    3440×1440 in allen drei Ansichten, auch mit dem längsten Titel).
+  - Beim Wechsel blendet der Titel über (`CrossfadeText`): Voll 280 ms mit 4 px Weg, Reduziert 150 ms nur Deckkraft, Aus
+    sofort. Die Breite gleitet mit (der Pfeil dahinter wandert, statt zu springen); danach hängt keine Uhr mehr am Element.
+  - Ein Klick auf den Titel (kleiner Pfeil, heller Schleier beim Überfahren und bei offenem Menü, der Pfeil dreht sich)
+    öffnet das Quellenmenü (`MenuButton`, `SourceMenu`): alle Quellen der Bibliothek mit ihrer Zahl in der Reihenfolge
+    des Felds „Quelle“, die gewählte mit Haken, linksbündig 4 px unter dem Titel. Es setzt dieselbe Wahl wie das Feld
+    „Quelle“ (dieselben Einträge, `SelectedSource`), so folgen Leiste, Kapsel, Menü und Titel immer einander. Tastatur:
+    Eingabe-, Leertaste, Alt+Pfeil nach unten oder F4 öffnen (auch Umschalt+F10 und Rechtsklick); mit der Tastatur
+    geöffnet steht der Fokus auf der gewählten Quelle, dann Pfeile, Eingabe und Esc wie in jedem Menü. Für
+    UI-Automation ist der Titel der Knopf `SourceTitleButton` mit Auslösen und Aus-/Einklappen, Name „Quelle:
+    Steam-Spiele“ und Hilfetext; das Menü heißt „Quellen“, seine Einträge „Steam-Spiele (631)“, der gewählte mit Status
+    „gewählt“.
+  - Filterknöpfe „HDR automatisch“, „Neu“ und „HDR-fähig“: Nach einem Mausklick blieb ihr Fokusring stehen, ein
+    ausgeschalteter Filter sah weiter gewählt aus. Der Ring erscheint jetzt nur bei Bedienung mit der Tastatur
+    (`FocusCue`, wie :focus-visible im Browser): wenn der Fokus über die Tastatur kommt (Tab, Pfeile, auch ein Fokus, den
+    das Programm nach einer Taste setzt) oder auf dem Knopf eine Taste gedrückt wird (nur Umschalt, Strg, Alt oder die
+    Windows-Taste zählen nicht); ein Klick nimmt ihn wieder weg. Ist in Windows „Zugriffstasten unterstreichen“ an, zeigt
+    WPF Fokus immer, dann auch hier. Hervorgehoben ist ein Filter nur, solange er an ist. Titelknopf und „Mehr erfahren“
+    folgen derselben Regel; die übrigen Knöpfe bleiben, wie sie sind („Neu einlesen“ und „gesehen“ verlieren den Fokus
+    beim Klick ohnehin, weil sie dabei gesperrt werden).
+  - „Windows Auto HDR“ (E88) im Abschnitt „BILD“: Unter dem Titel stehen nur noch „Wirkt beim Start über HDRpilot“ und
+    „Mehr erfahren“ (`AutoHdrInfoToggle`, `DisclosureToggle`; Klick, Leer- oder Eingabetaste, für UI-Automation
+    Aus-/Einklappen und Umschalten). Aufgeklappt („Weniger“) folgen die Erklärung, „wirkt nur beim Start über HDRpilot“
+    und bei eigenem HDR der Rat, es im Spiel zu nehmen; sie blenden nach der Effektstufe ein. Der Zustand gilt für alle
+    Spiele, solange das Fenster offen ist, wird aber nicht gespeichert: Ein einmal vergessenes Aufklappen brächte sonst
+    dauerhaft genau die Texte zurück, die der Nutzer weghaben wollte, und die Konfiguration bekommt kein neues Feld.
+    Zugeklappt stehen bleibt nur der Hinweis „HDR automatisch ist aus …“, und nur bei eingeschaltetem Auto HDR: Dann
+    liefe die Wahl des Nutzers ohne Windows-HDR still ins Leere (etwa beim Start aus dem Launcher mit Frühwarnung); ohne
+    Auto HDR ist er nur Erklärung. Der Rat bei eigenem HDR ist kein Muss; das Kennzeichen neben dem Titel und die
+    blassere Zeile zeigen es weiter. Die Erklärung bleibt Hilfetext des Schalters.
+  - Prüfung: `test.ps1 -Filter "FullyQualifiedName~HeaderSourceTests|FullyQualifiedName~HeaderDetailsWindowTests|FullyQualifiedName~AutoHdr"`;
+    `phase9-autohdr-ui.ps1` klappt die Erklärungen per UI-Automation auf und zu; Zustände `liste-quelle`,
+    `liste-quelle-gefiltert`, `raster-quelle`, `regal-quelle`, `liste-quellenmenue`, `liste-autohdr` und
+    `liste-autohdr-mehr` für Bildschirmfotos.
 
 **E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
 2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und

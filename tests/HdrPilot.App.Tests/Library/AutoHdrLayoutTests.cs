@@ -92,9 +92,20 @@ public sealed class AutoHdrLayoutTests
                 toggle.TranslatePoint(default, window).Y > hdrAuto.TranslatePoint(default, window).Y,
                 "Windows Auto HDR steht unter HDR automatisch");
 
-            // Sichtbar: „wirkt nur beim Start über HDRpilot“ und „HDR automatisch aus“; kein Hinweis auf eigenes HDR (laut
-            // Wiki unbekannt).
+            // Zugeklappt (Rückmeldung des Nutzers 2026-10-22): Erklärung und „wirkt nur beim Start über HDRpilot“ verborgen,
+            // „HDR automatisch aus“ bleibt, weil Auto HDR hier an ist (sonst liefe die Wahl ins Leere).
             var start = (TextBlock)pictureIds["DetailAutoHdrStartHint"];
+            Assert.False(model.IsAutoHdrInfoExpanded);
+            Assert.False(Shown(start));
+            Assert.False(Shown((FrameworkElement)window.FindName("AutoHdrExplanation")));
+            Assert.True(Shown(pictureIds["DetailAutoHdrNeedsHdrHint"]));
+
+            // Aufgeklappt: Sichtbar „wirkt nur beim Start über HDRpilot“ und „HDR automatisch aus“; kein Hinweis auf eigenes
+            // HDR (laut Wiki unbekannt).
+            var more = Assert.IsType<DisclosureToggle>(pictureIds["AutoHdrInfoToggle"]);
+            more.IsChecked = true; // wie ein Klick
+            Arrange(window, new Size(1460, 1400));
+            Assert.True(model.IsAutoHdrInfoExpanded);
             Assert.True(Shown(start));
             Assert.Equal(LibraryStrings.Details_AutoHdrStartHint, start.Text);
             Assert.True(start.TranslatePoint(default, window).Y > toggle.TranslatePoint(default, window).Y, "Hinweis unter dem Schalter");
@@ -102,11 +113,16 @@ public sealed class AutoHdrLayoutTests
             Assert.False(Shown(pictureIds["DetailAutoHdrNativeHint"]));
             Assert.True(model.Details!.AutoHdr);
 
-            toggle.IsChecked = false; // wie ein Klick: schreibt die Option, der Hinweis bleibt (auch vor dem Einschalten klar)
+            toggle.IsChecked = false; // wie ein Klick: schreibt die Option, aufgeklappt bleibt der Hinweis (auch vor dem Einschalten klar)
             Arrange(window, new Size(1460, 1400));
             Assert.False(context.Config.FindGame("Gog:1207658924")!.AutoHdr);
             Assert.True(Shown(start));
             Assert.True(Shown(pictureIds["DetailAutoHdrNeedsHdrHint"]));
+
+            more.IsChecked = false; // zugeklappt und Auto HDR aus: kein Hinweis mehr nötig
+            Arrange(window, new Size(1460, 1400));
+            Assert.False(Shown(start));
+            Assert.False(Shown(pictureIds["DetailAutoHdrNeedsHdrHint"]));
             window.Close();
         });
     }
@@ -116,7 +132,8 @@ public sealed class AutoHdrLayoutTests
     {
         WpfTestHost.Run(() =>
         {
-            var (native, nativeContext, _) = Open("Steam:3008130");
+            var (native, nativeContext, nativeModel) = Open("Steam:3008130");
+            nativeModel.IsAutoHdrInfoExpanded = true; // Rat zum eigenen HDR steht bei den aufgeklappten Erklärungen
             Arrange(native, new Size(1460, 1400));
             var ids = Ids((DependencyObject)native.FindName("PictureSection"));
             var toggle = (CheckBox)ids["DetailAutoHdr"];
@@ -255,6 +272,7 @@ public sealed class AutoHdrLayoutTests
         {
             var (window, _, model) = Open("Steam:3008130", LibraryLayout.MinDetailsRatio);
             model.Details!.AutoHdr = true;
+            model.IsAutoHdrInfoExpanded = true;
             Arrange(window, new Size(1000, 1600));
             window.FitDetailsColumn();
             Arrange(window, new Size(1000, 1600));

@@ -157,6 +157,71 @@ public sealed partial class AppServices
         // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
+
+        // Rückmeldungen des Nutzers 2026-10-22: Titel mit der Quelle (die größte einzelne Quelle der Ablage), dazu „HDR
+        // automatisch“ als Filter (Kennzahlen „x von y Spielen“), das Quellenmenü am Titel und der Abschnitt „BILD“ mit
+        // zugeklappten und aufgeklappten Erklärungen zu Windows Auto HDR (bevorzugt ein Spiel mit Auto HDR).
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-quelle", () => LibraryScene(LibraryViewMode.List), w => SelectLargestSourceAsync(w, filter: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-quelle-gefiltert", () => LibraryScene(LibraryViewMode.List), w => SelectLargestSourceAsync(w, filter: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-quelle", () => LibraryScene(LibraryViewMode.Grid), w => SelectLargestSourceAsync(w, filter: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-quelle", () => LibraryScene(LibraryViewMode.Shelf), w => SelectLargestSourceAsync(w, filter: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-quellenmenue", () => LibraryScene(LibraryViewMode.List))
+        {
+            Settle = LibrarySettle,
+            Overlays = window => window is MainWindow main && main.CreateSourceMenuPreview() is { } menu ? [menu] : [],
+        });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-autohdr", () => LibraryScene(LibraryViewMode.List), w => ShowAutoHdrSectionAsync(w, expanded: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-autohdr-mehr", () => LibraryScene(LibraryViewMode.List), w => ShowAutoHdrSectionAsync(w, expanded: true)) { Settle = LibrarySettle });
+    }
+
+    /// <summary>
+    /// Größte einzelne Quelle der Ablage wählen (Titel „Steam-Spiele“ …), auf Wunsch mit dem Filter „HDR automatisch“ (gibt es
+    /// keins, „Neu“). Nur im ViewModel, nichts wird gespeichert; danach laufen Überblendungen zu Ende.
+    /// </summary>
+    private static async Task SelectLargestSourceAsync(Window window, bool filter)
+    {
+        if (window is not MainWindow { ViewModel: { } vm } || vm.SourceOptions.Where(o => o.Source is not null).MaxBy(o => o.Count) is not { } option)
+        {
+            return;
+        }
+
+        vm.SelectedSource = option;
+        if (filter)
+        {
+            if (vm.Games.Any(g => g.Source == option.Source && g.HdrAuto))
+            {
+                vm.OnlySelected = true;
+            }
+            else
+            {
+                vm.OnlyNew = true;
+            }
+        }
+
+        await Task.Delay(1400);
+    }
+
+    /// <summary>
+    /// Abschnitt „BILD“ im Detailbereich zeigen: ein Spiel mit „Windows Auto HDR“ wählen (sonst bleibt die Auswahl), Bereich
+    /// dorthin scrollen, Erklärungen auf Wunsch aufklappen. Nur im ViewModel, nichts wird gespeichert.
+    /// </summary>
+    private static async Task ShowAutoHdrSectionAsync(Window window, bool expanded)
+    {
+        if (window is not MainWindow { ViewModel: { } vm } main)
+        {
+            return;
+        }
+
+        var candidates = vm.GamesView.Cast<GameItemViewModel>().ToList();
+        if ((candidates.FirstOrDefault(g => g.AutoHdr && !g.HdrAuto) ?? candidates.FirstOrDefault(g => g.AutoHdr)) is { } item)
+        {
+            vm.SelectQuietly(item);
+        }
+
+        vm.IsAutoHdrInfoExpanded = expanded;
+        await Task.Delay(1400);
+        main.ScrollDetailsToPicture();
+        await Task.Delay(300);
     }
 
     /// <summary>

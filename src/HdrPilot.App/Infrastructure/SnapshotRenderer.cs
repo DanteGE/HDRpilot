@@ -72,6 +72,12 @@ public sealed record SnapshotOverlay(FrameworkElement Element, Point Position);
 /// </summary>
 public sealed record SnapshotPlan(IReadOnlyList<SnapshotSize> Sizes, IReadOnlyList<string> Scenes, IReadOnlyList<bool> Themes, DisplayNits? Display = null)
 {
+    /// <summary>
+    /// Sprache der Bildschirmfotos (E95, gesetzt von <c>App</c>: <c>--snapshot-language</c> oder die der Ablage). Englische
+    /// Fotos tragen „-en“ im Dateinamen, deutsche heißen wie bisher.
+    /// </summary>
+    public string? Language { get; init; }
+
     /// <summary>Wie bisher: alle Zustände in Startgröße, dunkel und hell.</summary>
     public static SnapshotPlan Default { get; } = new([], [], [true, false]);
 
@@ -177,7 +183,7 @@ public static class SnapshotRenderer
                     IReadOnlyList<SnapshotSize?> sizes = plan.Sizes.Count == 0 || !scene.Resizable ? [null] : plan.Sizes.Select(s => (SnapshotSize?)s).ToList();
                     foreach (var size in sizes)
                     {
-                        var path = Path.Combine(directory, FileName(scene, size, dark));
+                        var path = Path.Combine(directory, FileName(scene, size, dark, plan.Language));
                         await RenderOneAsync(scene, size, path);
                         written.Add(path);
                     }
@@ -193,9 +199,13 @@ public static class SnapshotRenderer
         return written;
     }
 
-    /// <summary>Dateiname eines Zustands: „hauptfenster-raster-1920x1080-dunkel.png“ bzw. ohne Größe „hauptfenster-raster-hell.png“.</summary>
-    public static string FileName(SnapshotScene scene, SnapshotSize? size, bool dark) =>
-        scene.Id + (size is { } s ? "-" + s : string.Empty) + (dark ? "-dunkel" : "-hell") + ".png";
+    /// <summary>
+    /// Dateiname eines Zustands: „hauptfenster-raster-1920x1080-dunkel.png“ bzw. ohne Größe „hauptfenster-raster-hell.png“; auf
+    /// Englisch (E95) mit „-en“ vor der Endung, etwa „hauptfenster-liste-dunkel-en.png“.
+    /// </summary>
+    public static string FileName(SnapshotScene scene, SnapshotSize? size, bool dark, string? language = null) =>
+        scene.Id + (size is { } s ? "-" + s : string.Empty) + (dark ? "-dunkel" : "-hell")
+        + (Core.Config.UiLanguage.Parse(language) == Core.Config.UiLanguage.English ? "-en" : string.Empty) + ".png";
 
     private static async Task RenderOneAsync(SnapshotScene scene, SnapshotSize? size, string path)
     {

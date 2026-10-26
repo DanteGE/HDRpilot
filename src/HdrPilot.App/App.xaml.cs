@@ -43,9 +43,11 @@ public partial class App : Application
             return;
         }
 
-        // Setup-Datei oder Entfernen (E83): eigene Fenster, nie Einzelinstanz, Automatik, Tray oder Konfiguration.
+        // Setup-Datei oder Entfernen (E83): eigene Fenster, nie Einzelinstanz, Automatik, Tray oder Konfiguration. Sprache wie
+        // die Anzeigesprache von Windows (E95), nie aus den Einstellungen.
         if (SetupMode.TryDetect(Environment.ProcessPath, e.Args, out var setupMode))
         {
+            UiLanguage.Apply(setupMode.Arguments.EffectiveUiLanguage);
             var code = await SetupMode.RunAsync(this, setupMode);
             Environment.ExitCode = code;
             Shutdown(code);
@@ -60,9 +62,12 @@ public partial class App : Application
             return;
         }
 
+        // Sprache (E95) vor dem ersten Fenster und der ersten Ressource: aus der Ablage, neu nach der Anzeigesprache von Windows.
+        var language = ApplyLanguage(args);
+
         if (args.SnapshotDir is { } snapshotDir)
         {
-            await RunSnapshotModeAsync(args, snapshotDir);
+            await RunSnapshotModeAsync(args, snapshotDir, language);
             return;
         }
 
@@ -80,6 +85,12 @@ public partial class App : Application
 
         var instanceId = SingleInstance.IdFor(args.ConfigDir);
         var instance = SingleInstance.TryAcquire(instanceId);
+        if (instance is null && args.Restarted)
+        {
+            // Neustart über die Einstellungen (E95): Die alte Instanz gibt Einzelinstanz und Tray erst beim Beenden frei.
+            instance = await WaitForInstanceAsync(instanceId, RestartWait);
+        }
+
         if (instance is null)
         {
             // Zweiter Aufruf: an die laufende Instanz weiterreichen (ohne Befehl: Fenster öffnen, Autostart: nichts).
@@ -107,7 +118,7 @@ public partial class App : Application
 
         // Auto HDR (E88): mit eigener Ablage immer eine Testwurzel, nie der echte Schlüssel von Windows.
         _host = new AutomationHost(paths, autoHdrLocation: AutoHdrRegistryLocation.Resolve(paths, AppPaths.Default(SystemEnvironment.Instance), args.AutoHdrTestRoot));
-        _services = new AppServices(_host, Dispatcher, instance);
+        _services = new AppServices(_host, Dispatcher, instance) { RestartArguments = args.ToRestartArgs() };
         try
         {
             await _services.StartAsync();
@@ -140,7 +151,7 @@ public partial class App : Application
     /// Entwicklung: Bildschirmfotos der Fenster rendern (eigene Ablage nötig), dann beenden. Mit --snapshot-sizes,
     /// --snapshot-scenes und --snapshot-themes in festen Größen und Zuständen (E89); ungültige Angaben: Exit-Code 2.
     /// </summary>
-    private async Task RunSnapshotModeAsync(AppArguments args, string snapshotDir)
+    private async Task RunSnapshotModeAsync(AppArguments args, string snapshotDir, string language)
     {
         if (!args.HasOwnConfigDir(AppPaths.Default(SystemEnvironment.Instance)))
         {
@@ -151,7 +162,7 @@ public partial class App : Application
         SnapshotPlan plan;
         try
         {
-            plan = SnapshotPlan.Parse(args.SnapshotSizes, args.SnapshotScenes, args.SnapshotThemes, args.SnapshotDisplay);
+            plan = SnapshotPlan.Parse(args.SnapshotSizes, args.SnapshotScenes, args.SnapshotThemes, args.SnapshotDisplay) with { Language = language };
         }
         catch (FormatException)
         {
@@ -241,6 +252,54 @@ public partial class App : Application
 
         await _services.DisposeAsync();
         Shutdown(code);
+    }
+
+    /// <summary>So lange wartet ein Neustart über die Einstellungen höchstens auf das Ende der alten Instanz (E95).</summary>
+    internal static TimeSpan RestartWait { get; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Stellt Texte und Formate des Prozesses auf die Sprache der Ablage um (E95, <see cref="UiLanguage.ForStartup"/>); bei
+    /// Bildschirmfotos auf Wunsch auf <c>--snapshot-language</c>. Liefert die gewählte Sprache.
+    /// </summary>
+    private static string ApplyLanguage(AppArguments args)
+    {
+        string language;
+        try
+        {
+            var paths = args.ConfigDir is { } dir ? AppPaths.InDirectory(System.IO.Path.GetFullPath(dir)) : AppPaths.Default(SystemEnvironment.Instance);
+            language = UiLanguage.ForStartup(PhysicalFileSystem.Instance, paths.ConfigFile);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or System.IO.PathTooLongException or System.Security.SecurityException)
+        {
+            language = UiLanguage.ForNewConfig(); // ungültiger Ordner: Der Start scheitert ohnehin später, die Meldung dann wie Windows
+        }
+
+        if (args.SnapshotDir is not null && UiLanguage.Parse(args.SnapshotLanguage) is { } snapshotLanguage)
+        {
+            language = snapshotLanguage;
+        }
+
+        UiLanguage.Apply(language);
+        return language;
+    }
+
+    /// <summary>
+    /// Versucht alle 100 ms, die Einzelinstanz zu bekommen, höchstens <paramref name="timeout"/> lang (nur Sperre, kein Handle
+    /// auf die alte Instanz). Null: Sie ist weiter belegt; dann gilt der Aufruf wie ein zweiter Start.
+    /// </summary>
+    private static async Task<SingleInstance?> WaitForInstanceAsync(string instanceId, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(100);
+            if (SingleInstance.TryAcquire(instanceId) is { } instance)
+            {
+                return instance;
+            }
+        }
+
+        return null;
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

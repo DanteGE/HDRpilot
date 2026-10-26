@@ -34,6 +34,25 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>
+    /// Sprache der Ausgaben (E95): die der Ablage (<c>--config-dir</c> oder die normale), ohne config.json nach der
+    /// Anzeigesprache von Windows wie bei einer neuen Konfiguration (<see cref="UiLanguage.ForStartup"/>). Liest nur.
+    /// </summary>
+    internal static string LanguageFor(IReadOnlyList<string> args, IFileSystem fileSystem, IAppEnvironment environment, Func<string>? newConfigLanguage = null)
+    {
+        try
+        {
+            var paths = CliArguments.Parse(args, out _).Get("--config-dir") is { } dir
+                ? AppPaths.InDirectory(Path.GetFullPath(dir))
+                : AppPaths.Default(environment);
+            return UiLanguage.ForStartup(fileSystem, paths.ConfigFile, newConfigLanguage);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or System.Security.SecurityException)
+        {
+            return (newConfigLanguage ?? UiLanguage.ForNewConfig)();
+        }
+    }
+
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
         var parsed = CliArguments.Parse(args, out var parseError);

@@ -225,7 +225,7 @@
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
-                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}">
                                     <DockPanel>
                                         <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
                                                   Style="{StaticResource Hp.ToggleSwitch}"
@@ -238,6 +238,42 @@
                                             <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.NotificationsHint}" />
                                         </StackPanel>
                                     </DockPanel>
+                                </Border>
+                                <!-- Sprache (E95): gilt nach einem Neustart; weicht die Wahl ab, Hinweis und „Jetzt neu starten“ -->
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <ComboBox DockPanel.Dock="Right" Width="196" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                      Style="{StaticResource Hp.Shell.ComboBox}"
+                                                      AutomationProperties.AutomationId="LanguageChoice"
+                                                      AutomationProperties.Name="{x:Static res:ShellStrings.LanguageLabel}"
+                                                      AutomationProperties.HelpText="{x:Static res:ShellStrings.LanguageHint}"
+                                                      ItemsSource="{Binding Languages}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedValuePath="Value"
+                                                      SelectedValue="{Binding Language, Mode=TwoWay}" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.LanguageLabel}" />
+                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.LanguageHint}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,12,0,0" Visibility="{Binding LanguageNeedsRestart, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource Hp.GhostButton}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                    AutomationProperties.AutomationId="LanguageRestartButton"
+                                                    AutomationProperties.Name="{x:Static res:ShellStrings.LanguageRestartNow}"
+                                                    AutomationProperties.HelpText="{x:Static res:ShellStrings.LanguageRestartHint}"
+                                                    Command="{Binding RestartNowCommand}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <views:LineIcon Style="{StaticResource Hp.Shell.ButtonIcon}" Data="{StaticResource Hp.Icon.Reset}" />
+                                                    <TextBlock Text="{x:Static res:ShellStrings.LanguageRestartNow}" />
+                                                </StackPanel>
+                                            </Button>
+                                            <views:LineIcon Width="14" Height="14" Margin="0,1,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.TextMuted}" Data="{StaticResource Hp.Icon.Info}" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" TextWrapping="Wrap"
+                                                       AutomationProperties.AutomationId="LanguageRestartHint"
+                                                       Text="{x:Static res:ShellStrings.LanguageRestartHint}" />
+                                        </DockPanel>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </views:SettingsCard>

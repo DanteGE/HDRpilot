@@ -258,6 +258,30 @@
   <data name="NotificationsHint" xml:space="preserve">
     <value>Kurze Meldungen beim Schalten, nie während Vollbild-Spielen.</value>
   </data>
+  <data name="LanguageLabel" xml:space="preserve">
+    <value>Sprache · Language</value>
+    <comment>E95: Auswahl der Sprache; zweisprachig, damit sie auch findet, wer die angezeigte Sprache nicht liest</comment>
+  </data>
+  <data name="LanguageHint" xml:space="preserve">
+    <value>Sprache der Oberfläche. Gilt nach einem Neustart von HDRpilot.</value>
+  </data>
+  <data name="LanguageNameGerman" xml:space="preserve">
+    <value>Deutsch</value>
+    <comment>Eigenbezeichnung, in jeder Sprache gleich (nie übersetzen)</comment>
+  </data>
+  <data name="LanguageNameEnglish" xml:space="preserve">
+    <value>English</value>
+    <comment>Eigenbezeichnung, in jeder Sprache gleich (nie übersetzen)</comment>
+  </data>
+  <data name="LanguageRestartHint" xml:space="preserve">
+    <value>Die neue Sprache gilt nach einem Neustart von HDRpilot. „Jetzt neu starten“ speichert vorher alle Einstellungen.</value>
+  </data>
+  <data name="LanguageRestartNow" xml:space="preserve">
+    <value>Jetzt neu starten</value>
+  </data>
+  <data name="RestartFailed" xml:space="preserve">
+    <value>HDRpilot ließ sich nicht neu starten. Die Einstellungen sind gespeichert; die neue Sprache gilt nach dem nächsten Start.</value>
+  </data>
   <data name="HotkeyFallbackLabel" xml:space="preserve">
     <value>Tastenkürzel als Notlösung</value>
   </data>

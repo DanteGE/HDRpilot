@@ -82,5 +82,11 @@ public sealed class SnapshotPlanTests
 
         Assert.Equal("hauptfenster-raster-3440x1440-dunkel.png", SnapshotRenderer.FileName(scene, new SnapshotSize(3440, 1440), dark: true));
         Assert.Equal("hauptfenster-raster-hell.png", SnapshotRenderer.FileName(scene, null, dark: false));
+
+        // Englisch (E95): eigener Name, damit deutsche und englische Fotos im selben Ordner liegen können.
+        Assert.Equal("hauptfenster-raster-dunkel-en.png", SnapshotRenderer.FileName(scene, null, dark: true, language: "en"));
+        Assert.Equal("hauptfenster-raster-1280x800-hell-en.png", SnapshotRenderer.FileName(scene, new SnapshotSize(1280, 800), dark: false, language: "en"));
+        Assert.Equal("hauptfenster-raster-hell.png", SnapshotRenderer.FileName(scene, null, dark: false, language: "de"));
+        Assert.Equal("hauptfenster-raster-hell.png", SnapshotRenderer.FileName(scene, null, dark: false, language: "fr"));
     }
 }

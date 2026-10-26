@@ -143,7 +143,7 @@ Farben des gewählten Spiels. Was die App dafür baut:
   kommt über `ToolbarToggle.SetAccentColors` (vorher fest Abendrot). Ersetzt wird ein Pinsel nur bei anderem Aufbau
   (hell/dunkel, hoher Kontrast). Themenpinsel, die der Code bisher als Momentaufnahme setzte (Kapselpunkt, Markenzeichen,
   Nit-Skala, Statuspunkt, Effekte-Symbol, Linie der Fensterkante), sind jetzt Verweise (`SetResourceReference`).
-- **Entprellung** `GameAccentScheduler`: einzelner Wechsel sofort; Wechsel schneller als 300 ms oder eine gehaltene Taste
+- **Entprellung** `GameAccentScheduler` (in `HdrPilot.Core`, ohne WPF): einzelner Wechsel sofort; Wechsel schneller als 300 ms oder eine gehaltene Taste
   (Wiederholung der letzten 150 ms) halten die gezeigten Farben, das letzte Spiel folgt 300 ms nach dem letzten Wechsel.
   Die Farben kommen mit den Bildern des Spiels; graue Spiele zeigen genau das Schema, ladende Bilder und eine leere Auswahl
   behalten die gezeigten Farben.

@@ -1447,3 +1447,16 @@ Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
   Tests. Kontextmenüs und Tooltips des Bibliotheksfensters bekommen die Farbebene beim Öffnen vorsorglich in ihre Ressourcen.
   Ein Gelb, das mehr als 150° vom Akzent entfernt liegt (etwa im bunten Logo neben Blau), wird nie Glanz; dann gilt der Bogen
   hinter der Atmosphäre.
+- **Nachbesserung nach der Durchsicht (2026-10-26):** Ein Lesefehler ergibt „unbekannt“, nicht „grau“: Die gezeigten Farben
+  bleiben (wie beim Laden), nichts wird gemerkt, bei der nächsten Auswahl wird neu gelesen. Eine kaputte, fremde oder zu große
+  Bilddatei fehlt als Quelle, das Ergebnis gilt aber für diesen Bildstand und wird nicht bei jeder Auswahl neu dekodiert; nur
+  vorübergehende Fehler (gesperrt, kein Zugriff, halb geschrieben) werden nicht gemerkt. Eine Anfrage nach neuen Bildern hängt
+  sich nie an eine laufende Rechnung für die alten. Gelesen wird erst, wenn die Entprellung ein Spiel anwendet; bei gehaltener
+  Taste übersprungene Spiele werden nie gelesen. Bei ausgeschaltetem Schalter kostet eine Auswahl nichts: keine Rechnung und
+  kein Zeitgeber; die Pinsel im Code werden nur beruhigt, solange sie überblenden (neues Schema). Der Ring der gewählten
+  Kachel zeichnet mit dem lebenden Pinsel der Farbebene, ohne ihn einzufrieren. Die Farbprobe der Seite „Darstellung“ wird
+  je Eingabe gemerkt, die Grenzen des Grundtons entstehen auf einem Hintergrund-Thread. Die Entprellung
+  (`GameAccentScheduler`) liegt ohne WPF in `HdrPilot.Core`.
+- **Widerspruch im Entwurf:** Die Bildtabelle des Entwurfs erwartet für „bunt-tri“ (buntes Logo: blauer Akzent, dazu Gelb)
+  einen gelben Glanz. Das Gelb liegt aber 161° vom Akzent entfernt, und die Grenze von 150° zwischen Akzent und Glanz (Auswahl,
+  Bogen, Durchsicht D12) hat Vorrang vor der Tabelle; der Glanz kommt dort deshalb vom Bogen hinter der Atmosphäre.

@@ -75,8 +75,18 @@ public sealed class GameColorRenderTests
     {
         var artwork = r.Window.ViewModel!.Hero!.Artwork!;
         var hint = LibraryArt.Parse(artwork.Ambient.Glow);
-        var expected = GamePalette.Map(r.Colors, PaletteMode.Duotone, hint);
-        Assert.Equal(expected, r.Window.ShownAccents);
+        var shown = r.Window.ShownAccents;
+        Assert.Equal(GamePalette.Map(r.Colors, PaletteMode.Duotone, hint), shown); // das Fenster gibt den Hinweis weiter
+
+        // Gegen das Ergebnis ohne Hinweis: Die Atmosphäre wandert zum Leuchten des Titelbilds (höchstens 45° entfernt).
+        var without = GamePalette.Map(r.Colors, PaletteMode.Duotone)!.Value;
+        var glowHue = Hue(hint);
+        Assert.NotEqual(without.Atmosphere, shown.Atmosphere);
+        Assert.True(ColorScience.HueDistance(Hue(shown.Atmosphere), glowHue) <= 45, $"Atmosphäre {Hue(shown.Atmosphere):0}°, Leuchten {glowHue:0}°");
+        Assert.True(
+            ColorScience.HueDistance(Hue(shown.Atmosphere), glowHue) < ColorScience.HueDistance(Hue(without.Atmosphere), glowHue),
+            $"ohne Hinweis {Hue(without.Atmosphere):0}°, mit {Hue(shown.Atmosphere):0}°, Leuchten {glowHue:0}°");
+        Assert.Equal(without.Accent, shown.Accent); // der Akzent bleibt
     });
 
     [Fact]
@@ -358,7 +368,7 @@ public sealed class GameColorRenderTests
             return true;
         }
 
-        public Task<GameColors> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default) => Task.FromResult(Colors);
+        public Task<GameColors?> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default) => Task.FromResult<GameColors?>(Colors);
 
         public ImageSource? GetCachedImage(GameConfig game, ArtworkKind kind, int decodeWidth) => null;
 

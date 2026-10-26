@@ -18,8 +18,9 @@ public interface IGameColorsSource
 
     /// <summary>
     /// Farben des aktuellen Bildstands: aus dem Speicher, aus <c>art\index.json</c> oder einmal auf dem Bilder-Thread
-    /// berechnet. Wirft nur beim Abbrechen; bei einem unerwarteten Fehler <see cref="GameColors.None"/> (weder gemerkt noch
-    /// gespeichert).
+    /// berechnet. Wirft nur beim Abbrechen. null: nicht gelesen (unerwarteter Fehler, Bilderdienst geleert), weder gemerkt
+    /// noch gespeichert. Das ist etwas anderes als <see cref="GameColors.None"/> (graue Bilder, es gilt das Schema): Für
+    /// Aufrufer sind die Farben dann unbekannt, gezeigte Farben bleiben (E94).
     /// </summary>
-    Task<GameColors> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default);
+    Task<GameColors?> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default);
 }

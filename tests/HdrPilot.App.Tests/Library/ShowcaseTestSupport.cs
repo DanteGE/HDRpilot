@@ -11,11 +11,11 @@ namespace HdrPilot.App.Tests.Library;
 /// Bilddienst für Tests (E89): kleine, erzeugte Bilder (nie Spielbilder), Auswahl je Art aus festen Kandidaten, eigene
 /// Dateien nur als Einträge. Zählt Anfragen und gelöschte eigene Bilder. Spielfarben (E94) kommen aus
 /// <paramref name="colors"/> (ohne: keine, also das Farbschema); mit <paramref name="colorsAsync"/> erst nach
-/// <see cref="CompleteColors"/> (Tests: die Farben werden noch gelesen).
+/// <see cref="CompleteColors"/> (Tests: die Farben werden noch gelesen) oder als Lesefehler nach <see cref="FailColors"/>.
 /// </summary>
 public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null, bool colorsAsync = false) : IArtworkService, IGameColorsSource
 {
-    private readonly Dictionary<string, TaskCompletionSource<GameColors>> _pendingColors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TaskCompletionSource<GameColors?>> _pendingColors = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _completedColors = new(StringComparer.OrdinalIgnoreCase);
     private EventHandler<ArtworkChangedEventArgs>? _changed;
 
@@ -80,17 +80,17 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
         return !colorsAsync || _completedColors.Contains(game.Key);
     }
 
-    public Task<GameColors> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default)
+    public Task<GameColors?> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default)
     {
         ColorRequests.Add(game.Key);
         if (!colorsAsync || _completedColors.Contains(game.Key))
         {
-            return Task.FromResult(ColorsOf(game.Key));
+            return Task.FromResult<GameColors?>(ColorsOf(game.Key));
         }
 
         if (!_pendingColors.TryGetValue(game.Key, out var pending))
         {
-            _pendingColors[game.Key] = pending = new TaskCompletionSource<GameColors>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pendingColors[game.Key] = pending = new TaskCompletionSource<GameColors?>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
 
         var key = game.Key;
@@ -105,6 +105,15 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
         if (_pendingColors.Remove(key, out var pending))
         {
             pending.TrySetResult(ColorsOf(key));
+        }
+    }
+
+    /// <summary>Lesefehler: wartende Anfragen bekommen null (nicht gelesen), <see cref="TryPeek"/> kennt weiterhin nichts.</summary>
+    public void FailColors(string key)
+    {
+        if (_pendingColors.Remove(key, out var pending))
+        {
+            pending.TrySetResult(null);
         }
     }
 

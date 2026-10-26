@@ -10,11 +10,13 @@ namespace HdrPilot.App.Services.Artwork;
 /// Spielfarben (E94) auf Anfrage: einmal je Spiel und Bildstand aus kleinen Fassungen von Logo, Cover und Titelbild gelesen
 /// (<see cref="GameColorAnalysis"/>), im Speicher gemerkt und als <c>colors</c> in index.json gespeichert. Nur lesend: es
 /// entstehen keine Zuschnitte und keine erzeugten Bilder; erzeugte Bilder und Farben aus dem Namen sind nie eine Quelle.
-/// <see cref="LoadArtwork"/> bleibt unberührt, wer den Schalter nicht nutzt, zahlt nichts.
+/// <see cref="LoadArtwork"/> bleibt unberührt, wer den Schalter nicht nutzt, zahlt nichts. Ein Fehler ergibt null
+/// (unbekannt, gezeigte Farben bleiben), nie <see cref="GameColors.None"/> (grau, das Schema).
 /// </summary>
 public sealed partial class ArtworkService : IGameColorsSource
 {
     private readonly ConcurrentDictionary<string, (string Signature, GameColors Colors)> _gameColors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, int> _forgotten = new(StringComparer.OrdinalIgnoreCase);
     private int _gameColorsComputed;
 
     /// <summary>Wie oft Spielfarben berechnet (nicht aus Speicher oder Verzeichnis gelesen) wurden; für Tests.</summary>
@@ -37,22 +39,35 @@ public sealed partial class ArtworkService : IGameColorsSource
         return false;
     }
 
-    public Task<GameColors> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default)
+    public Task<GameColors?> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(game);
         if (TryPeek(game, out var known))
         {
-            return Task.FromResult(known);
+            return Task.FromResult<GameColors?>(known);
         }
 
         var snapshot = Snapshot(game);
         return Typed(
-            Enqueue(snapshot.Key + "|" + ConfigStamp(snapshot) + "|colors", () => ReadGameColors(snapshot), cancellationToken),
-            value => value as GameColors ?? GameColors.None);
+            Enqueue(snapshot.Key + "|" + ConfigStamp(snapshot) + "|" + ArtVersion(snapshot) + "|colors", () => ReadGameColors(snapshot), cancellationToken),
+            value => value as GameColors);
     }
 
-    /// <summary>Arbeit auf dem Bilder-Thread: Verzeichnis oder Berechnung; Fehler ergeben <see cref="GameColors.None"/>.</summary>
-    private GameColors ReadGameColors(GameConfig game)
+    /// <summary>
+    /// Bildstand im Schlüssel der laufenden Arbeit: die bekannte Kennung der Bilder und wie oft das Spiel vergessen wurde
+    /// (neue Datei, „Bild wählen…“). Eine Anfrage nach neuen Bildern hängt sich so nie an eine Rechnung für die alten.
+    /// </summary>
+    private string ArtVersion(GameConfig game)
+    {
+        var signature = _states.TryGetValue(game.Key, out var state) && state.ConfigStamp == ConfigStamp(game) ? state.Signature : "?";
+        return signature + "|" + _forgotten.GetValueOrDefault(game.Key);
+    }
+
+    /// <summary>
+    /// Arbeit auf dem Bilder-Thread: Verzeichnis oder Berechnung. Ein unerwarteter Fehler ergibt null (nicht gelesen, nichts
+    /// gemerkt), nie <see cref="GameColors.None"/>: Das hieße „graue Bilder“ und blendete ein buntes Spiel zum Schema.
+    /// </summary>
+    private GameColors? ReadGameColors(GameConfig game)
     {
         try
         {
@@ -70,7 +85,11 @@ public sealed partial class ArtworkService : IGameColorsSource
             GameColorsComputedHook?.Invoke(state.Key);
             if (!transient)
             {
-                _gameColors[state.Key] = (state.Signature, result);
+                // Im Speicher nur, solange dieser Bildstand gilt (sonst überschriebe eine späte Rechnung eine neuere).
+                if (_states.TryGetValue(state.Key, out var current) && current.Signature == state.Signature && current.ConfigStamp == state.ConfigStamp)
+                {
+                    _gameColors[state.Key] = (state.Signature, result);
+                }
 
                 // Nur in den Eintrag desselben Bildstands: Hat sich ein Bild während der Rechnung geändert, bleibt er leer.
                 var written = WithEntry(state.Key, e =>
@@ -95,13 +114,15 @@ public sealed partial class ArtworkService : IGameColorsSource
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogDebug("Spielfarben: nicht gelesen ({Error}).", ex.GetType().Name);
-            return GameColors.None;
+            return null;
         }
     }
 
     /// <summary>
     /// Die drei Quellen als kleine Fassungen (nur echte Dateien: Launcher, anderes lokales Bild, eigene Datei, SteamGridDB).
-    /// <c>transient</c>: eine Datei war nicht lesbar (etwa gerade gesperrt); das Ergebnis wird dann weder gemerkt noch gespeichert.
+    /// Eine kaputte, zu große oder fremde Datei fehlt als Quelle, das Ergebnis gilt aber für diesen Bildstand (eine ersetzte
+    /// Datei ändert die Kennung). <c>transient</c>: eine Datei war nur gerade nicht lesbar (gesperrt, kein Zugriff, halb
+    /// geschrieben, kein Speicher); das Ergebnis wird dann weder gemerkt noch gespeichert, die nächste Anfrage liest neu.
     /// </summary>
     private (SourceResult? Logo, SourceResult? Cover, SourceResult? Hero, bool Transient) GameColorInputs(GameState state)
     {
@@ -120,7 +141,7 @@ public sealed partial class ArtworkService : IGameColorsSource
             catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex))
             {
                 _logger.LogDebug("Spielfarben: {Kind} nicht lesbar: {Error}", spec.Kind, ex.GetType().Name);
-                transient = true;
+                transient |= IsPassingReadFailure(ex);
                 return null;
             }
         }
@@ -130,6 +151,14 @@ public sealed partial class ArtworkService : IGameColorsSource
         var hero = Read(state.Hero, AnalyzeHero);
         return (logo, cover, hero, transient);
     }
+
+    /// <summary>
+    /// Vorübergehender Lesefehler (Datei gesperrt, kein Zugriff, abgeschnitten, kein Speicher). Formatfehler des Decoders
+    /// (<see cref="NotSupportedException"/>, <see cref="FileFormatException"/>, COM), fehlende Pixel und zu große Bilder
+    /// bleiben, solange die Datei bleibt.
+    /// </summary>
+    public static bool IsPassingReadFailure(Exception ex) =>
+        ex is UnauthorizedAccessException or OutOfMemoryException || (ex is IOException && ex is not ImageTooLargeException);
 
     /// <summary>Eine Bildart zählt nur, wenn sie eine echte Datei zeigt (beim quadratischen Cover die Datei des Launchers).</summary>
     private static bool IsColorSource(ArtSpec spec) =>

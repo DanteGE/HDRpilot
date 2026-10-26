@@ -231,6 +231,35 @@ public sealed class LanguageSettingsTests
         });
     }
 
+    [Fact]
+    public void Tray_menu_in_english()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var ui = CultureInfo.CurrentUICulture;
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
+            try
+            {
+                var model = new TrayMenuViewModel(new FakeTrayHost(), new TrayState(HdrOn: true, HdrSupported: true, Paused: false, ActiveGames: ["A", "B"]), ex => throw ex);
+                var menu = new HdrPilot.App.Views.Shell.TrayMenu { DataContext = model };
+                WpfTestHost.DoEvents();
+                var items = menu.Items.OfType<MenuItem>().ToDictionary(AutomationProperties.GetAutomationId);
+
+                Assert.Equal("Turn HDR off now", items["TrayToggleHdr"].Header);
+                Assert.Equal("Pause automation", AutomationProperties.GetName(items["TrayPause"]));
+                Assert.Equal("Open game list", AutomationProperties.GetName(items["TrayOpen"]));
+                Assert.Equal("Settings", AutomationProperties.GetName(items["TraySettings"]));
+                Assert.Equal("Exit HDRpilot", AutomationProperties.GetName(items["TrayExit"]));
+                Assert.Equal("HDR on", model.StatusTitle);
+                Assert.Equal("2 games running", model.StatusDetail);
+            }
+            finally
+            {
+                CultureInfo.CurrentUICulture = ui;
+            }
+        });
+    }
+
     private (SettingsViewModel Vm, FakeShellContext Context) Create(Action<AppConfig>? setup = null)
     {
         var config = ShellTestFactory.NewConfig(_fs, setup);

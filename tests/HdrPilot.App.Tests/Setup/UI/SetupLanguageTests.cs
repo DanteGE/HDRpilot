@@ -61,7 +61,7 @@ public sealed class SetupLanguageTests
 
         Assert.Equal("Install HDRpilot 1.6.0", SetupText.Format(SetupStrings.SetupTitleInstall, "1.6.0"));
         Assert.Equal("Uninstall HDRpilot", SetupStrings.UninstallWindowTitle);
-        Assert.Equal("Register under “Installed apps”", SetupText.Step(SetupStep.Register));
+        Assert.Equal("Add to “Installed apps”", SetupText.Step(SetupStep.Register));
         Assert.Equal("done", SetupText.State(StepState.Done));
         Assert.StartsWith("Unexpected error: disk on fire. The previous version is unchanged.", SetupText.Error(SetupErrorKind.Unexpected, "disk on fire", @"D:\Pruefung\setup.log"), StringComparison.Ordinal);
     }

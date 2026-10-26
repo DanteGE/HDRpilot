@@ -36,7 +36,7 @@
     <value>Automation active</value>
   </data>
   <data name="TrayTooltipRestartBuffer" xml:space="preserve">
-    <value>HDR stays on for {0}:{1:00} (restart buffer)</value>
+    <value>HDR stays on for another {0}:{1:00} (restart buffer)</value>
   </data>
   <data name="TrayTooltipRestartBufferFullscreen" xml:space="preserve">
     <value>HDR stays on until the full-screen app exits (restart buffer)</value>
@@ -138,13 +138,13 @@
     <value>Displays</value>
   </data>
   <data name="DisplaysHint" xml:space="preserve">
-    <value>HDRpilot switches HDR on these displays. Games with their own display choice keep their setting.</value>
+    <value>HDRpilot toggles HDR on these displays. Games with their own display choice keep their setting.</value>
   </data>
   <data name="DisplaysPrimaryFallback" xml:space="preserve">
-    <value>None selected: HDRpilot switches the primary display ({0}).</value>
+    <value>None selected: HDRpilot uses the primary display ({0}).</value>
   </data>
   <data name="DisplaysPrimaryFallbackUnknown" xml:space="preserve">
-    <value>None selected: HDRpilot switches the primary display.</value>
+    <value>None selected: HDRpilot uses the primary display.</value>
   </data>
   <data name="DisplaysSelected" xml:space="preserve">
     <value>{0} of {1} selected</value>
@@ -261,7 +261,7 @@
     <value>Keyboard shortcut as fallback</value>
   </data>
   <data name="HotkeyFallbackHint" xml:space="preserve">
-    <value>Sends Win+Alt+B only if the Windows interface fails, and never while a game is running (anti-cheat systems may treat simulated key presses as a macro). Affects all HDR displays and requires the Xbox Game Bar.</value>
+    <value>Sends Win+Alt+B only if the Windows API fails, and never while a game is running (anti-cheat systems may treat simulated key presses as a macro). Affects all HDR displays and requires the Xbox Game Bar.</value>
   </data>
   <data name="SectionSearchFolders" xml:space="preserve">
     <value>Search folders</value>
@@ -345,10 +345,10 @@
     <value>HDR list (PCGamingWiki)</value>
   </data>
   <data name="HdrListHint" xml:space="preserve">
-    <value>Shows in the game list which games support HDR according to PCGamingWiki (“HDR”, limited “HDR*”). Without an account, HDRpilot looks up the names of your games on PCGamingWiki, at most 100 per start.</value>
+    <value>Shows in the game list which games support HDR according to PCGamingWiki (“HDR”, limited “HDR*”). Without an account, HDRpilot looks up the names of your games on PCGamingWiki, at most 100 per startup.</value>
   </data>
   <data name="HdrListSyncLabel" xml:space="preserve">
-    <value>Sync on every start</value>
+    <value>Sync at every startup</value>
   </data>
   <data name="HdrListSyncHint" xml:space="preserve">
     <value>In the background 30 seconds after startup, at most once per hour.</value>
@@ -369,7 +369,7 @@
     <value>{0} · Last attempt: {1}</value>
   </data>
   <data name="HdrListSyncing" xml:space="preserve">
-    <value>Syncing …</value>
+    <value>Syncing…</value>
   </data>
   <data name="HdrListModeAnonymous" xml:space="preserve">
     <value>Without an account: game names are looked up one by one.</value>
@@ -447,7 +447,7 @@
     <value>Leave empty to test the saved bot password again.</value>
   </data>
   <data name="PcgwTesting" xml:space="preserve">
-    <value>Checking login …</value>
+    <value>Checking login…</value>
   </data>
   <data name="PcgwSaved" xml:space="preserve">
     <value>Account saved. Login and Cargo query work; the complete HDR list is being downloaded now.</value>
@@ -564,7 +564,7 @@
     <value>Reset appearance to default</value>
   </data>
   <data name="SectionStartupHint" xml:space="preserve">
-    <value>Start with Windows, notifications in the notification area and language</value>
+    <value>Start with Windows, notifications and language</value>
   </data>
   <data name="SectionDisplaysHint" xml:space="preserve">
     <value>Where HDRpilot switches HDR</value>
@@ -597,7 +597,7 @@
     <value>Color scheme</value>
   </data>
   <data name="SectionPaletteHint" xml:space="preserve">
-    <value>Every color has its own job</value>
+    <value>Each color has its own role</value>
   </data>
   <data name="PaletteModeName" xml:space="preserve">
     <value>Number of colors</value>
@@ -645,7 +645,7 @@
     <value>Color presets</value>
   </data>
   <data name="PresetCaptionDuotone" xml:space="preserve">
-    <value>{0} · Duotone, shine automatic</value>
+    <value>{0} · Duotone, automatic shine</value>
   </data>
   <data name="PresetCaptionTritone" xml:space="preserve">
     <value>{0} · Tritone, 3 colors</value>
@@ -828,7 +828,7 @@
     <value>Pause in the background</value>
   </data>
   <data name="PauseInBackgroundHint" xml:space="preserve">
-    <value>Minimized, covered or inactive: 0 % GPU</value>
+    <value>Minimized, covered or inactive: 0% GPU</value>
   </data>
   <data name="RespectWindowsAnimationsLabel" xml:space="preserve">
     <value>Respect Windows animation effects</value>
@@ -843,7 +843,7 @@
     <value>Windows: animations off – currently not respected</value>
   </data>
   <data name="MinimizeToTrayLabel" xml:space="preserve">
-    <value>Close to the notification area after launch</value>
+    <value>Go to the notification area after launching a game</value>
   </data>
   <data name="MinimizeToTrayHint" xml:space="preserve">
     <value>The window closes, HDRpilot keeps running in the tray</value>
@@ -894,10 +894,10 @@
     <value>{0}, {1}: {2} used, {3} found, games: {4}</value>
   </data>
   <data name="CoverageLegend" xml:space="preserve">
-    <value>Number = used / games, +n = found but not used (such as smeared capsules or engine logos); selectable under “Choose image…”.</value>
+    <value>Number = used / games, +n = found but not used (such as blurred capsules or engine logos); selectable under “Choose image…”.</value>
   </data>
   <data name="CoverageLoading" xml:space="preserve">
-    <value>Counting images …</value>
+    <value>Counting images…</value>
   </data>
   <data name="CoverageEmpty" xml:space="preserve">
     <value>No games scanned yet.</value>
@@ -918,7 +918,7 @@
     <value>Cover generated</value>
   </data>
   <data name="FallbackKind_CoverFromSmearedCapsule" xml:space="preserve">
-    <value>Smeared capsule → crop</value>
+    <value>Blurred capsule → crop</value>
   </data>
   <data name="FallbackKind_Monogram" xml:space="preserve">
     <value>Monogram</value>
@@ -984,7 +984,7 @@
     <value>On · key saved · no network access yet</value>
   </data>
   <data name="SteamGridDbStatusRunning" xml:space="preserve">
-    <value>Downloading missing images from SteamGridDB …</value>
+    <value>Downloading missing images from SteamGridDB…</value>
   </data>
   <data name="SteamGridDbStatusLastRun" xml:space="preserve">
     <value>Last access {0:g} · requests: {1} · images added: {2}</value>
@@ -993,7 +993,7 @@
     <value>Last error: {0}</value>
   </data>
   <data name="SteamGridDbChecking" xml:space="preserve">
-    <value>Checking the key …</value>
+    <value>Checking the key…</value>
   </data>
   <data name="SteamGridDbCheckValid" xml:space="preserve">
     <value>Key valid and saved</value>
@@ -1146,7 +1146,7 @@
     <value>Uninstalled games currently: {0}</value>
   </data>
   <data name="RemoveUninstalledButton" xml:space="preserve">
-    <value>Remove settings of all uninstalled games…</value>
+    <value>Remove settings for all uninstalled games…</value>
   </data>
   <data name="RemoveUninstalledHint" xml:space="preserve">
     <value>After confirmation, removes what HDRpilot has stored about these games, immediately and regardless of “Save”. Nothing changes in the games or launchers; games you added yourself stay.</value>

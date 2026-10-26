@@ -31,6 +31,20 @@ public sealed class ResourceTranslationTests
 
     private static readonly Regex Umlauts = new("[äöüÄÖÜß„]", RegexOptions.CultureInvariant);
 
+    /// <summary>Glossar (E95): steht der deutsche Begriff im neutralen Text, muss der englische in der Übersetzung stehen.</summary>
+    private static readonly (string German, string English)[] GlossaryTerms =
+    [
+        ("kein eigenes HDR", "no native HDR"),
+        ("Eigene Datei", "Custom file"),
+        ("Eigenes Symbol", "Custom icon"),
+    ];
+
+    /// <summary>Frühere, missverständliche Wörter, die das Glossar ersetzt („custom“, „native HDR“, „blurred“).</summary>
+    private static readonly Regex Avoided = new(@"\b(own (file|icon|images?)|HDR of its own|smeared)\b", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    /// <summary>Typografie (en-US): Leerzeichen vor „…“ oder vor „%“ nach einer Zahl, britisches „Cancelled“.</summary>
+    private static readonly Regex Typography = new(@" …|\d %|\bCancell", RegexOptions.CultureInvariant);
+
     private static readonly Regex Placeholder = new(@"(?<!\{)\{(\d+)(?:[,:][^}]*)?\}", RegexOptions.CultureInvariant);
 
     public static TheoryData<string> NeutralFiles()
@@ -158,6 +172,79 @@ public sealed class ResourceTranslationTests
                 Assert.DoesNotContain("Auto HDR", library[key], StringComparison.Ordinal);
             }
         }
+    }
+
+    [Theory]
+    [MemberData(nameof(NeutralFiles))]
+    public void Glossary_is_followed_in_every_file(string relative)
+    {
+        // Glossar aus E95 für alle Dateien: „HDR automatisch“ ist „HDR on launch“, „Auto HDR“ nur dort, wo auch der deutsche
+        // Text den Schalter von Windows meint; „kein eigenes HDR“ ist „no native HDR“, eigene Dateien und Symbole sind „custom“.
+        var neutral = Read(relative);
+        var english = Read(EnglishOf(relative));
+        var problems = new List<string>();
+        foreach (var (key, german) in neutral)
+        {
+            if (!english.TryGetValue(key, out var translated))
+            {
+                continue; // meldet English_file_exists_with_the_same_keys
+            }
+
+            var windowsAutoHdr = german.Contains("Auto HDR", StringComparison.OrdinalIgnoreCase) || german.Contains("Auto-HDR", StringComparison.OrdinalIgnoreCase);
+            if (german.Contains("HDR automatisch", StringComparison.Ordinal) && !translated.Contains("HDR on launch", StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"{key}: „HDR automatisch“ ohne „HDR on launch“: {translated}");
+            }
+
+            if (!windowsAutoHdr && translated.Contains("Auto HDR", StringComparison.OrdinalIgnoreCase))
+            {
+                problems.Add($"{key}: „Auto HDR“ ist nur der Schalter von Windows: {translated}");
+            }
+
+            foreach (var (de, en) in GlossaryTerms)
+            {
+                if (german.Contains(de, StringComparison.OrdinalIgnoreCase) && !translated.Contains(en, StringComparison.OrdinalIgnoreCase))
+                {
+                    problems.Add($"{key}: „{de}“ ohne „{en}“: {translated}");
+                }
+            }
+
+            if (Avoided.Match(translated) is { Success: true } avoided)
+            {
+                problems.Add($"{key}: „{avoided.Value}“ vermeiden: {translated}");
+            }
+        }
+
+        Assert.True(problems.Count == 0, $"{EnglishOf(relative)}:\n" + string.Join("\n", problems));
+    }
+
+    [Theory]
+    [MemberData(nameof(NeutralFiles))]
+    public void English_typography_is_consistent(string relative)
+    {
+        // en-US: „…“ ohne Leerzeichen davor, „50%“ ohne Leerzeichen, „Canceled“ mit einem l.
+        var problems = Read(EnglishOf(relative))
+            .Where(e => Typography.IsMatch(e.Value))
+            .Select(e => $"{e.Key}: „{Typography.Match(e.Value).Value}“ in {e.Value}")
+            .ToList();
+        Assert.True(problems.Count == 0, $"{EnglishOf(relative)}:\n" + string.Join("\n", problems));
+    }
+
+    [Fact]
+    public void Glossary_and_typography_checks_find_what_they_should()
+    {
+        // Gegenprobe der beiden Prüfungen oben.
+        Assert.Matches(Avoided, "Own file…");
+        Assert.Matches(Avoided, "NO HDR OF ITS OWN");
+        Assert.Matches(Avoided, "smeared capsule → crop");
+        Assert.DoesNotMatch(Avoided, "Please put the EXE in a folder of its own.");
+        Assert.DoesNotMatch(Avoided, "Custom file: {0}");
+        Assert.Matches(Typography, "Scanning …");
+        Assert.Matches(Typography, "0 % GPU");
+        Assert.Matches(Typography, "Cancelled.");
+        Assert.DoesNotMatch(Typography, "Scanning…");
+        Assert.DoesNotMatch(Typography, "0% GPU · Canceled.");
+        Assert.DoesNotMatch(Typography, "{0} %APPDATA%");
     }
 
     private static IEnumerable<string> NeutralResx() =>

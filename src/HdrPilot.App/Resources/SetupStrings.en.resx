@@ -57,7 +57,7 @@
     <value>Install the older version anyway</value>
   </data>
   <data name="SetupRunningNote" xml:space="preserve">
-    <value>HDRpilot is running and will be closed briefly for this.</value>
+    <value>HDRpilot is running and will be closed briefly during installation.</value>
   </data>
   <data name="SetupInstallButton" xml:space="preserve">
     <value>Install</value>
@@ -93,7 +93,7 @@
     <value>Adjust autostart</value>
   </data>
   <data name="SetupStepRegister" xml:space="preserve">
-    <value>Register under “Installed apps”</value>
+    <value>Add to “Installed apps”</value>
   </data>
   <data name="SetupStepLaunchApp" xml:space="preserve">
     <value>Launch HDRpilot</value>
@@ -153,7 +153,7 @@
     <value>Unexpected error. The previous version is unchanged. Details are in {0}.</value>
   </data>
   <data name="SetupErrorRefusedArguments" xml:space="preserve">
-    <value>This command line doesn't fit ({0}); nothing was changed. Details are in {1}.</value>
+    <value>These command-line options aren't valid ({0}); nothing was changed. Details are in {1}.</value>
   </data>
   <data name="SetupErrorContainer" xml:space="preserve">
     <value>The setup is running in the container of another app ({0}). Windows would redirect registry entries and settings there, and HDRpilot would only be half installed. Nothing was changed. Please start the setup file by double-clicking it in File Explorer.</value>
@@ -207,7 +207,7 @@
     <value>Remove autostart</value>
   </data>
   <data name="UninstallStepUnregister" xml:space="preserve">
-    <value>Remove entry</value>
+    <value>Remove from “Installed apps”</value>
   </data>
   <data name="UninstallStepRemoveData" xml:space="preserve">
     <value>Delete settings and data</value>

@@ -28,7 +28,7 @@
     <value>Quiver cache</value>
   </data>
   <data name="Source_Custom" xml:space="preserve">
-    <value>Own file</value>
+    <value>Custom file</value>
   </data>
   <data name="Source_Generated" xml:space="preserve">
     <value>Generated</value>
@@ -37,13 +37,13 @@
     <value>SteamGridDB</value>
   </data>
   <data name="Source_Name" xml:space="preserve">
-    <value>Name as lettering</value>
+    <value>Name as text</value>
   </data>
   <data name="Source_Monogram" xml:space="preserve">
     <value>Monogram</value>
   </data>
   <data name="Source_CustomIcon" xml:space="preserve">
-    <value>Own icon</value>
+    <value>Custom icon</value>
   </data>
   <data name="Source_IconFile" xml:space="preserve">
     <value>.ico file · {0} px</value>
@@ -70,7 +70,7 @@
     <value>No local images found · substitute images</value>
   </data>
   <data name="Summary_Custom" xml:space="preserve">
-    <value>Own file · only on this PC</value>
+    <value>Custom file · only on this PC</value>
   </data>
   <data name="Summary_SteamGridDb" xml:space="preserve">
     <value>Hero image from SteamGridDB · downloaded with your own key</value>
@@ -94,10 +94,10 @@
     <value>{0}: no local hero image – generated from monogram and name</value>
   </data>
   <data name="Summary_CoverFromCache" xml:space="preserve">
-    <value>Cover local from the {0} · hero image generated from the icon</value>
+    <value>Cover from the local {0} · hero image generated from the icon</value>
   </data>
   <data name="Summary_CoverFromCacheNoIcon" xml:space="preserve">
-    <value>Cover local from the {0} · hero image generated from monogram and name</value>
+    <value>Cover from the local {0} · hero image generated from monogram and name</value>
   </data>
   <data name="Summary_SquareArt" xml:space="preserve">
     <value>Local from the {0}: square image · hero image and cover generated from it</value>
@@ -112,7 +112,7 @@
     <value>Name instead of logo</value>
   </data>
   <data name="Candidate_CustomFile" xml:space="preserve">
-    <value>Own file</value>
+    <value>Custom file</value>
   </data>
   <data name="Candidate_Alternative" xml:space="preserve">
     <value>{0} ({1})</value>
@@ -124,7 +124,7 @@
     <value>Title card with lettering in the center</value>
   </data>
   <data name="Note_SmearedCapsule" xml:space="preserve">
-    <value>Steam capsule smeared – crop from the hero image</value>
+    <value>Steam capsule blurred – crop from the hero image</value>
   </data>
   <data name="Error_NotAnImage" xml:space="preserve">
     <value>The file isn't a readable image.</value>
@@ -151,7 +151,7 @@
     <value>{0} · generated from the hero image</value>
   </data>
   <data name="Fallback_Smeared" xml:space="preserve">
-    <value>{0} · smeared capsule → crop</value>
+    <value>{0} · blurred capsule → crop</value>
   </data>
   <data name="Fallback_Monogram" xml:space="preserve">
     <value>{0} · no icon found</value>
@@ -166,7 +166,7 @@
     <value>Too many requests – the next run fetches the rest</value>
   </data>
   <data name="SteamGridDb_Error_Http" xml:space="preserve">
-    <value>Error at SteamGridDB</value>
+    <value>SteamGridDB returned an error</value>
   </data>
   <data name="SteamGridDb_Error_InvalidResponse" xml:space="preserve">
     <value>Response from SteamGridDB can't be read</value>

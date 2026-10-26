@@ -45,7 +45,7 @@ Exit codes: 0 ok, 1 error, 2 wrong usage, 3 display not found,
     <value>Unknown command "{0}".</value>
   </data>
   <data name="Cancelled" xml:space="preserve">
-    <value>Cancelled.</value>
+    <value>Canceled.</value>
   </data>
   <data name="UnexpectedError" xml:space="preserve">
     <value>Unexpected error: {0}</value>

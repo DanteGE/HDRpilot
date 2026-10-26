@@ -34,13 +34,13 @@
     <value>HDR turned on</value>
   </data>
   <data name="NotifyHdrEnabledMessage" xml:space="preserve">
-    <value>{0}: HDR turned on for "{1}".</value>
+    <value>{0}: HDR turned on on display "{1}".</value>
   </data>
   <data name="NotifyHdrRestoredTitle" xml:space="preserve">
     <value>HDR restored</value>
   </data>
   <data name="NotifyHdrRestoredMessage" xml:space="preserve">
-    <value>HDR turned off again for "{0}".</value>
+    <value>HDR turned off again on display "{0}".</value>
   </data>
   <data name="NotifySwitchFailedTitle" xml:space="preserve">
     <value>Switching HDR failed</value>

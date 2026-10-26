@@ -27,7 +27,7 @@
     <value>Steam games</value>
   </data>
   <data name="Header_TitleEpic" xml:space="preserve">
-    <value>Epic games</value>
+    <value>Epic Games</value>
   </data>
   <data name="Header_TitleXbox" xml:space="preserve">
     <value>Xbox games</value>
@@ -54,7 +54,7 @@
     <value>Source: {0}</value>
   </data>
   <data name="Header_SourceHelp" xml:space="preserve">
-    <value>Opens the source menu with the number of games per source (Enter or Space, Alt+Down Arrow). Selects like the “Source” field of the toolbar.</value>
+    <value>Opens the source menu with the number of games per source (Enter or Space, Alt+Down Arrow). Works like the “Source” field in the toolbar.</value>
   </data>
   <data name="Header_SourceTooltip" xml:space="preserve">
     <value>Change source</value>
@@ -108,7 +108,7 @@
     <value>Turn HDR off</value>
   </data>
   <data name="Hdr_ToggleTooltip" xml:space="preserve">
-    <value>Switches HDR on the target displays now, independent of any game.</value>
+    <value>Toggles HDR on the target displays now, regardless of any game.</value>
   </data>
   <data name="Pause_Name" xml:space="preserve">
     <value>Pause automation</value>
@@ -120,7 +120,7 @@
     <value>Automation paused</value>
   </data>
   <data name="Pause_Tooltip" xml:space="preserve">
-    <value>While paused, a detected game launch doesn't turn HDR on. “Launch”, “(HDR)” shortcuts and the Steam launch option still switch. Running games end normally and are restored.</value>
+    <value>While paused, a detected game launch doesn't turn HDR on. “Launch”, “(HDR)” shortcuts and the Steam launch option still turn HDR on. Running games end normally and are restored.</value>
   </data>
   <data name="Settings_Name" xml:space="preserve">
     <value>Settings</value>
@@ -201,10 +201,10 @@
     <value>Rescan</value>
   </data>
   <data name="Rescan_Running" xml:space="preserve">
-    <value>Scanning …</value>
+    <value>Scanning…</value>
   </data>
   <data name="Rescan_Tooltip" xml:space="preserve">
-    <value>Scan all launchers again. New games are marked and only switch HDR once you turn it on.</value>
+    <value>Scan all launchers again. New games are marked; HDRpilot switches HDR for them only once you turn on “HDR on launch”.</value>
   </data>
   <data name="Rescan_Done" xml:space="preserve">
     <value>Scan complete: {0}.</value>
@@ -225,7 +225,7 @@
     <value>Suggestions from your search folders</value>
   </data>
   <data name="Candidates_Hint" xml:space="preserve">
-    <value>Nothing is added without you. Added games have HDR on launch turned on.</value>
+    <value>Nothing is added without your confirmation. Added games have HDR on launch turned on.</value>
   </data>
   <data name="Candidates_Toggle" xml:space="preserve">
     <value>Expand or collapse suggestions</value>
@@ -381,7 +381,7 @@
     <value>Restore after game</value>
   </data>
   <data name="Details_RestoreHint" xml:space="preserve">
-    <value>Afterwards, return HDR to the state it was in before.</value>
+    <value>Afterwards, restore the previous HDR state.</value>
   </data>
   <data name="Details_Display" xml:space="preserve">
     <value>Display</value>
@@ -396,7 +396,7 @@
     <value>Windows Auto HDR</value>
   </data>
   <data name="Details_AutoHdrHint" xml:space="preserve">
-    <value>Windows converts the SDR picture to HDR. Only for games without their own HDR (DirectX 11/12).</value>
+    <value>Windows converts the SDR picture to HDR. Only for games without native HDR (DirectX 11/12).</value>
   </data>
   <data name="Details_AutoHdrStartHint" xml:space="preserve">
     <value>Only takes effect when the game is launched via HDRpilot (Launch, shortcut, Steam launch option): HDRpilot turns Auto HDR on in Windows right before and switches it back after the game.</value>
@@ -405,10 +405,10 @@
     <value>“HDR on launch” is off for this game: Auto HDR only works if Windows HDR is already on before the game starts. “Launch”, “(HDR)” shortcuts and the Steam launch option turn HDR on as well; otherwise turn HDR on yourself beforehand.</value>
   </data>
   <data name="Details_AutoHdrNative" xml:space="preserve">
-    <value>According to PCGamingWiki, this game has its own HDR – better turn it on in the game.</value>
+    <value>According to PCGamingWiki, this game has native HDR – it's better to enable it in the game.</value>
   </data>
   <data name="Details_AutoHdrNativeLimited" xml:space="preserve">
-    <value>According to PCGamingWiki, this game has limited HDR of its own – usually better turned on in the game.</value>
+    <value>According to PCGamingWiki, this game has limited native HDR – it's usually better to enable it in the game.</value>
   </data>
   <data name="Details_AutoHdrMore" xml:space="preserve">
     <value>Learn more</value>
@@ -417,7 +417,7 @@
     <value>Less</value>
   </data>
   <data name="Details_AutoHdrInfoName" xml:space="preserve">
-    <value>Explanations about Windows Auto HDR</value>
+    <value>About Windows Auto HDR</value>
   </data>
   <data name="Details_AutoHdrInfoHelp" xml:space="preserve">
     <value>Shows or hides the explanation and notes about Windows Auto HDR.</value>
@@ -507,7 +507,7 @@
     <value>Forget remembered EXEs and learn them again the next time you play</value>
   </data>
   <data name="Exe_Added" xml:space="preserve">
-    <value>“{0}” now belongs to the game.</value>
+    <value>“{0}” is now part of the game.</value>
   </data>
   <data name="Exe_Removed" xml:space="preserve">
     <value>“{0}” no longer counts as a game process.</value>
@@ -549,7 +549,7 @@
     <value>Installed via Windows Installer: the folder of the EXE linked in Quiver counts as the install folder. “Launch” starts this EXE directly.</value>
   </data>
   <data name="Launch_Running" xml:space="preserve">
-    <value>Turning HDR on, then the game starts …</value>
+    <value>Turning HDR on, then launching the game…</value>
   </data>
   <data name="Launch_Started" xml:space="preserve">
     <value>Launched. HDR was ready at {0}.</value>
@@ -633,10 +633,10 @@
     <value>e.g. D:\Games\My Game\Game.exe</value>
   </data>
   <data name="AddGame_BrowseExe" xml:space="preserve">
-    <value>Choose EXE …</value>
+    <value>Choose EXE…</value>
   </data>
   <data name="AddGame_BrowseFolder" xml:space="preserve">
-    <value>Choose folder …</value>
+    <value>Choose folder…</value>
   </data>
   <data name="AddGame_FolderPickerTitle" xml:space="preserve">
     <value>Choose the game's folder</value>
@@ -789,7 +789,7 @@
     <value>HDR via mod</value>
   </data>
   <data name="HdrKind_None" xml:space="preserve">
-    <value>No HDR of its own</value>
+    <value>No native HDR</value>
   </data>
   <data name="HdrKind_Unknown" xml:space="preserve">
     <value>HDR unknown</value>
@@ -846,7 +846,7 @@
     <value>Automation active · HDR on</value>
   </data>
   <data name="Status_Paused" xml:space="preserve">
-    <value>Automation paused · HDR isn't switched</value>
+    <value>Automation paused · HDR won't be switched</value>
   </data>
   <data name="Status_Running" xml:space="preserve">
     <value>Game running · {0}</value>
@@ -900,13 +900,13 @@
     <value>Effects: Full</value>
   </data>
   <data name="Effects_FullPauseBoth" xml:space="preserve">
-    <value>Effects: Full · pausing in the background and while playing</value>
+    <value>Effects: Full · paused in the background and while playing</value>
   </data>
   <data name="Effects_FullPauseBackground" xml:space="preserve">
-    <value>Effects: Full · pausing in the background</value>
+    <value>Effects: Full · paused in the background</value>
   </data>
   <data name="Effects_FullPausePlaying" xml:space="preserve">
-    <value>Effects: Full · pausing while playing</value>
+    <value>Effects: Full · paused while playing</value>
   </data>
   <data name="Effects_Reduced" xml:space="preserve">
     <value>Effects: Reduced</value>
@@ -990,7 +990,7 @@
     <value>Automation</value>
   </data>
   <data name="Search_Short" xml:space="preserve">
-    <value>Search …</value>
+    <value>Search…</value>
   </data>
   <data name="Context_MenuName" xml:space="preserve">
     <value>Game menu</value>
@@ -1086,7 +1086,7 @@
     <value>Cover generated</value>
   </data>
   <data name="Artwork_CoverFromSmear" xml:space="preserve">
-    <value>Cover from hero image (Steam capsule smeared)</value>
+    <value>Cover from hero image (Steam capsule blurred)</value>
   </data>
   <data name="Artwork_Monogram" xml:space="preserve">
     <value>Monogram instead of icon</value>
@@ -1170,13 +1170,13 @@
     <value>CURRENT</value>
   </data>
   <data name="Picker_PickFile" xml:space="preserve">
-    <value>Own file…</value>
+    <value>Custom file…</value>
   </data>
   <data name="Picker_PickFileHint" xml:space="preserve">
     <value>PNG, JPG, WebP or BMP from this PC</value>
   </data>
   <data name="Picker_OwnFile" xml:space="preserve">
-    <value>Own file: {0}</value>
+    <value>Custom file: {0}</value>
   </data>
   <data name="Picker_OwnFileNote" xml:space="preserve">
     <value>Stored downscaled in the data folder when applied; the file itself stays unchanged.</value>
@@ -1224,7 +1224,7 @@
     <value>HDR VIA MOD</value>
   </data>
   <data name="HdrTag_None" xml:space="preserve">
-    <value>NO HDR OF ITS OWN</value>
+    <value>NO NATIVE HDR</value>
   </data>
   <data name="HdrTag_Unknown" xml:space="preserve">
     <value>HDR UNKNOWN</value>
@@ -1233,7 +1233,7 @@
     <value>Takes effect when launched via HDRpilot</value>
   </data>
   <data name="Stats_Name" xml:space="preserve">
-    <value>Library figures</value>
+    <value>Library stats</value>
   </data>
   <data name="List_ThumbnailsName" xml:space="preserve">
     <value>Thumbnail or icon in the list</value>
@@ -1389,10 +1389,10 @@
     <value>Removes what HDRpilot has stored about this game. Nothing changes in the game or the launcher.</value>
   </data>
   <data name="RemoveSettings_ConfirmTitle" xml:space="preserve">
-    <value>Remove settings of “{0}”?</value>
+    <value>Remove settings for “{0}”?</value>
   </data>
   <data name="RemoveSettings_ConfirmText" xml:space="preserve">
-    <value>HDRpilot forgets what it has stored about this game, including your own icon and images. Nothing changes in the game or the launcher. If you install it again, it appears as new in the next scan, with “HDR on launch” off.</value>
+    <value>HDRpilot forgets what it has stored about this game, including its custom icon and images. Nothing changes in the game or the launcher. If you install it again, it appears as new in the next scan, with “HDR on launch” off.</value>
   </data>
   <data name="RemoveSettings_LossHeader" xml:space="preserve">
     <value>WILL BE LOST</value>
@@ -1404,7 +1404,7 @@
     <value>“Windows Auto HDR” is on</value>
   </data>
   <data name="RemoveSettings_LossDisplay" xml:space="preserve">
-    <value>Own display instead of the global setting</value>
+    <value>Game-specific display instead of the global setting</value>
   </data>
   <data name="RemoveSettings_LossNoRestore" xml:space="preserve">
     <value>“Restore after game” is off</value>
@@ -1428,13 +1428,13 @@
     <value>{0} excluded EXE files</value>
   </data>
   <data name="RemoveSettings_LossCustomIcon" xml:space="preserve">
-    <value>Own icon</value>
+    <value>Custom icon</value>
   </data>
   <data name="RemoveSettings_LossImagesOne" xml:space="preserve">
-    <value>1 own image</value>
+    <value>1 custom image</value>
   </data>
   <data name="RemoveSettings_LossImagesMany" xml:space="preserve">
-    <value>{0} own images</value>
+    <value>{0} custom images</value>
   </data>
   <data name="RemoveSettings_LossChosenOne" xml:space="preserve">
     <value>1 chosen image</value>
@@ -1461,7 +1461,7 @@
     <value>The game's drive or folder doesn't respond or can't be read. The game may still be installed.</value>
   </data>
   <data name="RemoveSettings_Checking" xml:space="preserve">
-    <value>Checking drive and shortcuts of “{0}” …</value>
+    <value>Checking drive and shortcuts of “{0}”…</value>
   </data>
   <data name="RemoveSettings_ShortcutOne" xml:space="preserve">
     <value>Also delete the HDRpilot shortcut</value>
@@ -1479,13 +1479,13 @@
     <value>Remove</value>
   </data>
   <data name="RemoveSettings_Done" xml:space="preserve">
-    <value>Settings of “{0}” removed.</value>
+    <value>Settings for “{0}” removed.</value>
   </data>
   <data name="RemoveSettings_DoneShortcutOne" xml:space="preserve">
-    <value>Settings of “{0}” and one shortcut removed.</value>
+    <value>Settings for “{0}” and one shortcut removed.</value>
   </data>
   <data name="RemoveSettings_DoneShortcutsMany" xml:space="preserve">
-    <value>Settings of “{0}” and {1} shortcuts removed.</value>
+    <value>Settings for “{0}” and {1} shortcuts removed.</value>
   </data>
   <data name="RemoveSettings_FilesFailedOne" xml:space="preserve">
     <value>One file couldn't be deleted (see log).</value>
@@ -1494,7 +1494,7 @@
     <value>{0} files couldn't be deleted (see log).</value>
   </data>
   <data name="RemoveSettings_Kept" xml:space="preserve">
-    <value>“{0}” has been installed again or is running. Nothing removed.</value>
+    <value>“{0}” has been installed again or is running. Nothing was removed.</value>
   </data>
   <data name="RemoveSettings_Running" xml:space="preserve">
     <value>“{0}” is running right now. You can remove it after the game.</value>
@@ -1506,13 +1506,13 @@
     <value>Del</value>
   </data>
   <data name="RemoveAll_ConfirmTitleOne" xml:space="preserve">
-    <value>Remove the settings of one uninstalled game?</value>
+    <value>Remove the settings for one uninstalled game?</value>
   </data>
   <data name="RemoveAll_ConfirmTitleMany" xml:space="preserve">
-    <value>Remove the settings of {0} uninstalled games?</value>
+    <value>Remove the settings for {0} uninstalled games?</value>
   </data>
   <data name="RemoveAll_ConfirmText" xml:space="preserve">
-    <value>HDRpilot forgets what it has stored about these games, including your own icons and images. Nothing changes in the games or launchers. If one is installed again, it appears as new in the next scan, with “HDR on launch” off.</value>
+    <value>HDRpilot forgets what it has stored about these games, including custom icons and images. Nothing changes in the games or launchers. If one is installed again, it appears as new in the next scan, with “HDR on launch” off.</value>
   </data>
   <data name="RemoveAll_DetailsHeader" xml:space="preserve">
     <value>AFFECTED</value>
@@ -1542,22 +1542,22 @@
     <value>For {0} games, the line under the name says why they may still be installed.</value>
   </data>
   <data name="RemoveAll_Checking" xml:space="preserve">
-    <value>Checking drives and shortcuts …</value>
+    <value>Checking drives and shortcuts…</value>
   </data>
   <data name="RemoveAll_RunningMany" xml:space="preserve">
     <value>{0} uninstalled games are running right now. You can remove them once they've exited.</value>
   </data>
   <data name="RemoveAll_DoneOne" xml:space="preserve">
-    <value>Settings of one game removed.</value>
+    <value>Settings for one game removed.</value>
   </data>
   <data name="RemoveAll_DoneMany" xml:space="preserve">
-    <value>Settings of {0} games removed.</value>
+    <value>Settings for {0} games removed.</value>
   </data>
   <data name="RemoveAll_KeptOne" xml:space="preserve">
-    <value>One game has been installed again or is running and stays.</value>
+    <value>One game has been installed again or is running and was kept.</value>
   </data>
   <data name="RemoveAll_KeptMany" xml:space="preserve">
-    <value>{0} games have been installed again or are running and stay.</value>
+    <value>{0} games have been installed again or are running and were kept.</value>
   </data>
   <data name="Count_HiddenOne" xml:space="preserve">
     <value>1 uninstalled game</value>

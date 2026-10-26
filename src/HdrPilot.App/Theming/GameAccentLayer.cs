@@ -14,6 +14,9 @@ namespace HdrPilot.App.Theming;
 /// </summary>
 public sealed class GameAccentLayer : IDisposable
 {
+    /// <summary>Kennzeichen im Wörterbuch der Ebene (zum Wiederfinden, etwa in den Ressourcen eines Popups).</summary>
+    public const string MarkerKey = "Hp.GameAccentLayer";
+
     /// <summary>Zuschlag nach dem Ende einer Überblendung, bevor die Grundwerte gesetzt und die Animationen entfernt werden.</summary>
     public static readonly TimeSpan SettleMargin = TimeSpan.FromMilliseconds(80);
 
@@ -30,6 +33,7 @@ public sealed class GameAccentLayer : IDisposable
         ArgumentNullException.ThrowIfNull(initial);
         _dispatcher = dispatcher;
         Target = initial;
+        Dictionary[MarkerKey] = true;
         var values = Entries(initial);
         Dictionary.MergedDictionaries.Add(ColorPart(values));
         foreach (var key in BrushKeys)

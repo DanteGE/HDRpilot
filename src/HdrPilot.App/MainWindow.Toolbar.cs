@@ -124,7 +124,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Hoher Kontrast an oder aus (Systemeinstellung; Tests und Bildschirmfotos ohne Umstellung des Systems): Lasche, Kapsel
-    /// und ✕ in Systemfarben, Lichtnaht und Streif in der Markierungsfarbe ohne Schein.
+    /// und ✕ in Systemfarben, Lichtnaht und Streif in der Markierungsfarbe ohne Schein, keine Spielfarben.
     /// </summary>
     public void SetToolbarHighContrast(bool on)
     {
@@ -133,6 +133,9 @@ public partial class MainWindow
         ToolbarToggle.UseSystemColors(ToolbarResetButton.Resources, on);
         ApplyToolbarBrushes();
         _toolbarMotion.Apply();
+
+        // Spielfarben (E94): bei hohem Kontrast sofort keine Farbebene, danach wieder (sofort).
+        RefreshShownAccents(instant: true);
     }
 
     /// <summary>
@@ -1201,8 +1204,12 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Pinsel von Naht und Streif aus den Akzentfarben (Thema, Farbschema); hoher Kontrast: Systemfarbe, kein Schein.</summary>
-    private void ApplyToolbarBrushes()
+    /// <summary>
+    /// Pinsel von Naht und Streif aus den gezeigten Akzenten (Farbschema oder Spielfarben, E94; C1 Akzent, C2 Atmosphäre, C3
+    /// Glanz) als bleibende Pinsel, die mit <paramref name="duration"/> überblenden; der Schein der Lasche folgt sofort. Hoher
+    /// Kontrast: Systemfarbe, kein Schein.
+    /// </summary>
+    private void ApplyToolbarBrushes(TimeSpan duration = default)
     {
         if (_highContrast)
         {
@@ -1212,25 +1219,26 @@ public partial class MainWindow
             return;
         }
 
-        var c1 = TryFindResource(ThemeKeys.ColorC1) is Color a ? a : Color.FromRgb(0xFF, 0x8A, 0x3D);
-        var c2 = TryFindResource(ThemeKeys.ColorC2) is Color b ? b : Color.FromRgb(0xFF, 0x3D, 0x7F);
+        var c1 = _accents.Accent;
+        var c2 = _accents.Atmosphere;
         var mid = ColorMath.Mix(c1, c2, 0.6);
-        SeamCore.Fill = Frozen(new LinearGradientBrush(
+        SeamCore.Fill = _liveBrushes.Track(SeamCore.Fill, new LinearGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(c1, 0), 0), new GradientStop(AmbientPalette.Alpha(c1, 0.6), _dark ? 0.3 : 0.35), new GradientStop(AmbientPalette.Alpha(mid, 0.85), _dark ? 0.65 : 0.7), new GradientStop(AmbientPalette.Alpha(c2, 0.95), 1)],
             new Point(0, 0.5),
-            new Point(1, 0.5)));
-        SeamGlow.Fill = Frozen(new LinearGradientBrush(
+            new Point(1, 0.5)), duration);
+        SeamGlow.Fill = _liveBrushes.Track(SeamGlow.Fill, new LinearGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(c2, 0), 0), new GradientStop(AmbientPalette.Alpha(c2, 0.16), 0.4), new GradientStop(AmbientPalette.Alpha(c2, 0.42), 1)],
             new Point(0, 0.5),
-            new Point(1, 0.5)));
-        SeamGlow.OpacityMask = Frozen(new LinearGradientBrush(
+            new Point(1, 0.5)), duration);
+        SeamGlow.OpacityMask ??= Frozen(new LinearGradientBrush(
             [new GradientStop(Colors.Transparent, 0), new GradientStop(Colors.Black, 0.45), new GradientStop(Colors.Black, 0.55), new GradientStop(Colors.Transparent, 1)],
             new Point(0.5, 0),
             new Point(0.5, 1)));
-        ApplyStreakBrushes();
+        ToolbarToggle.SetAccentColors(c1, c2);
+        ApplyStreakBrushes(duration);
     }
 
-    private void ApplyStreakBrushes()
+    private void ApplyStreakBrushes(TimeSpan duration = default)
     {
         if (_highContrast)
         {
@@ -1239,23 +1247,23 @@ public partial class MainWindow
             return;
         }
 
-        var c1 = TryFindResource(ThemeKeys.ColorC1) is Color a ? a : Color.FromRgb(0xFF, 0x8A, 0x3D);
-        var c2 = TryFindResource(ThemeKeys.ColorC2) is Color b ? b : Color.FromRgb(0xFF, 0x3D, 0x7F);
-        var c3 = TryFindResource(ThemeKeys.ColorC3) is Color c ? c : Color.FromRgb(0xFF, 0x94, 0xB9);
+        var c1 = _accents.Accent;
+        var c2 = _accents.Atmosphere;
+        var c3 = _accents.Shine;
         var start = _streakReversed ? new Point(1, 0.5) : new Point(0, 0.5);
         var end = _streakReversed ? new Point(0, 0.5) : new Point(1, 0.5);
-        StreakCore.Background = Frozen(_dark
+        StreakCore.Background = _liveBrushes.Track(StreakCore.Background, _dark
             ? new LinearGradientBrush([new GradientStop(AmbientPalette.Alpha(c3, 0), 0), new GradientStop(ColorMath.Mix(c3, Colors.White, 0.55), 0.55), new GradientStop(Colors.White, 0.78), new GradientStop(AmbientPalette.Alpha(c1, 0), 1)], start, end)
-            : new LinearGradientBrush([new GradientStop(AmbientPalette.Alpha(c2, 0), 0), new GradientStop(c1, 0.45), new GradientStop(c2, 0.8), new GradientStop(AmbientPalette.Alpha(c2, 0), 1)], start, end));
+            : new LinearGradientBrush([new GradientStop(AmbientPalette.Alpha(c2, 0), 0), new GradientStop(c1, 0.45), new GradientStop(c2, 0.8), new GradientStop(AmbientPalette.Alpha(c2, 0), 1)], start, end), duration);
         var center = new Point(_streakReversed ? 0.28 : 0.72, 0.5);
-        StreakGlow.Background = Frozen(new RadialGradientBrush(
+        StreakGlow.Background = _liveBrushes.Track(StreakGlow.Background, new RadialGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(c2, _dark ? 0.8 : 0.62), 0), new GradientStop(AmbientPalette.Alpha(c1, _dark ? 0.28 : 0.34), 0.6), new GradientStop(AmbientPalette.Alpha(c1, 0), 1)])
         {
             Center = center,
             GradientOrigin = center,
             RadiusX = 0.5,
             RadiusY = 0.5,
-        });
+        }, duration);
         StreakGlow.Margin = _streakReversed ? new Thickness(0, 0, 16, 0) : new Thickness(16, 0, 0, 0);
     }
 

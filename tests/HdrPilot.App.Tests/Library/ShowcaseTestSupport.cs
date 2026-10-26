@@ -65,6 +65,9 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
 
     public int Leases { get; private set; }
 
+    /// <summary>Umgebungsfarben je Spiel (ohne Eintrag: aus dem Namen), etwa ein graues Titelbild.</summary>
+    public Func<string, AmbientColors?>? AmbientFor { get; set; }
+
     /// <summary>Anfragen nach Spielfarben (Spielschlüssel), ohne die aus <see cref="TryPeek"/>.</summary>
     public List<string> ColorRequests { get; } = [];
 
@@ -143,7 +146,7 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
             ? new ArtworkImage(Solid(40, 12, Colors.Gold), ArtworkKind.Logo, ArtworkOrigin.Launcher, 40, 12, "Steam")
             : null;
         var summary = new ArtworkSummary(hero.Origin, logo?.Origin ?? ArtworkOrigin.None, ArtworkOrigin.Generated, ArtworkOrigin.None, LogoIsName: logo is null, CoverFromSmear: false, "Testbilder");
-        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientColors.FromName(game.Name), summary));
+        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientFor?.Invoke(game.Key) ?? AmbientColors.FromName(game.Name), summary));
     }
 
     /// <summary>Helle Fassung (nur für Spiele mit Titelbild aus einer Quelle), je Anfrage ein neues Bild.</summary>

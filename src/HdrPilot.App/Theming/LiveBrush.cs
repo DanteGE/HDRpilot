@@ -100,9 +100,16 @@ public sealed class LiveBrushSet
     /// <paramref name="live"/> auf das Ziel führen; Ergebnis ist der Pinsel, der gelten soll (<paramref name="live"/> selbst oder
     /// eine neue, nicht eingefrorene Kopie von <paramref name="target"/>, wenn er fehlt oder nicht passt).
     /// </summary>
-    public Brush Track(Brush? live, Brush target, TimeSpan duration)
+    public Brush Track(Brush? live, Brush target, TimeSpan duration) => Track(live, target, _ => duration);
+
+    /// <summary>
+    /// Wie <see cref="Track(Brush?, Brush, TimeSpan)"/>, mit eigener Dauer je Verlaufsstopp (etwa die Fensterkante: Stopps der
+    /// Umgebung sofort, der Akzent-Stopp mit der Überblendung).
+    /// </summary>
+    public Brush Track(Brush? live, Brush target, Func<int, TimeSpan> durationOfStop)
     {
         ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(durationOfStop);
         if (live is null || !LiveBrush.Compatible(live, target))
         {
             if (live is not null)
@@ -119,13 +126,13 @@ public sealed class LiveBrushSet
         switch (live, target)
         {
             case (SolidColorBrush solid, SolidColorBrush to):
-                Retarget(solid, SolidColorBrush.ColorProperty, to.Color, duration);
+                Retarget(solid, SolidColorBrush.ColorProperty, to.Color, durationOfStop(0));
                 break;
             case (GradientBrush gradient, GradientBrush to):
                 Geometry(gradient, to);
                 for (var i = 0; i < gradient.GradientStops.Count; i++)
                 {
-                    Retarget(gradient.GradientStops[i], GradientStop.ColorProperty, to.GradientStops[i].Color, duration);
+                    Retarget(gradient.GradientStops[i], GradientStop.ColorProperty, to.GradientStops[i].Color, durationOfStop(i));
                 }
 
                 break;

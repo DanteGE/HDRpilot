@@ -243,6 +243,7 @@ public partial class MainWindow : ChromeWindow
         _shownCollapsed = viewModel.IsToolbarCollapsed;
         ApplyView(viewModel.ViewMode, animate: false);
         AttachToolbar(viewModel);
+        InitializeGameColors(viewModel);
         UpdateHero(instant: true);
         ApplyHdrState(instant: true);
     }
@@ -298,7 +299,7 @@ public partial class MainWindow : ChromeWindow
 
         vm.SetPreviewHdr(true);
         ApplyHdrState(instant: true);
-        _moment.Freeze(Hero.MomentScene(_palette.ParticleColors(_scheme, vm.Context.Appearance.Current.BackgroundFollowsGame)), fraction, transientBoost: false);
+        _moment.Freeze(Hero.MomentScene(MomentParticleColors), fraction, transientBoost: false);
     }
 
     /// <summary>Wie <see cref="FreezeHdrMoment"/>, wartet aber zuerst auf die helle Fassung (Bildschirmfotos).</summary>
@@ -1478,6 +1479,7 @@ public partial class MainWindow : ChromeWindow
             hero.PropertyChanged += OnHeroPropertyChanged;
         }
 
+        OnGameAccentSelection(instant);
         ApplyAmbient(instant);
         Hero.Show(_hero, _hero?.Artwork, instant ? TimeSpan.Zero : HeroTransition());
         UpdateSheen();
@@ -1494,6 +1496,14 @@ public partial class MainWindow : ChromeWindow
         if (e.PropertyName == nameof(HeroViewModel.Artwork) && ReferenceEquals(sender, _hero))
         {
             ApplyAmbient(instant: false);
+            if (FollowColors)
+            {
+                // Das Bild kann sich geändert haben (Beobachtung, „Bild wählen…“): Farben neu nachsehen; sie kommen mit dem Bild.
+                _colorsKey = null;
+                RequestColors(_hero);
+                OnAccentInputsArrived();
+            }
+
             Hero.Show(_hero, _hero?.Artwork, HeroTransition());
             UpdateSheen();
 
@@ -1525,10 +1535,13 @@ public partial class MainWindow : ChromeWindow
         var follow = appearance.BackgroundFollowsGame;
         var artwork = _hero?.Artwork;
         var ambient = _hero is null ? null : artwork?.Ambient ?? _hero.Ambient;
-        _palette = AmbientPalette.Resolve(follow ? ambient : null, _scheme, follow, _dark);
+
+        // Spielfarben (E94): graue Bilder mischen sich mit den gezeigten Akzenten; ohne „Hintergrund folgt“ ein ruhiger Grund.
+        var schemeArg = !FollowColors ? _scheme : follow ? _accents : GamePalette.Calm(_scheme);
+        _palette = AmbientPalette.Resolve(follow ? ambient : null, schemeArg, follow, _dark);
         var transition = instant || _motion is null ? TimeSpan.Zero : _motion.Transition(AmbientBackdrop.ColorDuration);
         Ambient.Apply(_palette, follow ? artwork?.Field?.Image : null, _dark, transition);
-        Hero.SetPalette(_palette, _scheme, _dark);
+        Hero.SetPalette(_palette, _accents, _dark);
         ApplyWindowBrushes();
         UpdateLight();
     }
@@ -1538,12 +1551,7 @@ public partial class MainWindow : ChromeWindow
     {
         var p = _palette;
         var bg = p.Background;
-        Resources["Lib.Brush.RowSelection"] = _dark
-            ? Frozen(new LinearGradientBrush(
-                [new GradientStop(AmbientPalette.Alpha(p.A2, 0.30), 0), new GradientStop(AmbientPalette.Alpha(p.A2, 0.08), 0.6), new GradientStop(AmbientPalette.Alpha(p.A2, 0), 1)],
-                new Point(0, 0.5),
-                new Point(1, 0.5)))
-            : Frozen(new SolidColorBrush(ColorMath.WithAlpha(_scheme.Accent, 0.14)));
+        ApplyRowSelection(TimeSpan.Zero);
         Resources["Lib.Brush.ListCard"] = Frozen(new SolidColorBrush(_dark ? AmbientPalette.Alpha(bg, 0.55) : Color.FromArgb(0x9E, 255, 255, 255)));
 
         // Schublade im Regal: deckend (WPF hat keinen Weichzeichner für den Hintergrund wie der Prototyp; schon 3 % Durchsicht
@@ -1603,10 +1611,7 @@ public partial class MainWindow : ChromeWindow
         ApplyToolbarBrushes();
 
         // Fensterkante: Puls in den Spielfarben (HDR-Moment), feine Linie in der Leuchtfarbe bei HDR an.
-        EdgeGlow.BorderBrush = Frozen(new LinearGradientBrush(
-            [new GradientStop(p.A3, 0), new GradientStop(p.A2, 0.45), new GradientStop(_scheme.Accent, 0.75), new GradientStop(p.A3, 1)],
-            new Point(0, 0),
-            new Point(1, 1)));
+        ApplyEdgeGlow(accentDuration: TimeSpan.Zero);
         ApplyEdgeLine();
     }
 
@@ -1617,10 +1622,17 @@ public partial class MainWindow : ChromeWindow
     private void ApplySheenBrush() =>
         Resources["Lib.Brush.HeroSheen"] = Frozen(new SolidColorBrush(ColorMath.MixOklab(_palette.A3, Colors.White, 0.55)));
 
-    private void ApplyEdgeLine() =>
-        EdgeLine.BorderBrush = _viewModel?.ShowsHdrOn == true
-            ? Frozen(new SolidColorBrush(AmbientPalette.Alpha(_palette.A2, 0.55)))
-            : (Brush)FindResource(ThemeKeys.BrushLine);
+    private void ApplyEdgeLine()
+    {
+        if (_viewModel?.ShowsHdrOn == true)
+        {
+            EdgeLine.BorderBrush = Frozen(new SolidColorBrush(AmbientPalette.Alpha(_palette.A2, 0.55)));
+        }
+        else
+        {
+            EdgeLine.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.BrushLine);
+        }
+    }
 
     /// <summary>Spitzlicht des Titelbilds, links vom Detailbereich bzw. der Karte und unter der Kopfzeile geklemmt.</summary>
     private void UpdateLight()
@@ -1650,28 +1662,45 @@ public partial class MainWindow : ChromeWindow
         var transition = instant || _motion is null ? TimeSpan.Zero : _motion.Transition(TimeSpan.FromSeconds(1.2));
         Hero.SetHdr(on, transition);
         _pulse?.SetWanted(on);
-        CapsuleDot.Fill = on ? (Brush)FindResource(ThemeKeys.BrushShine) : Frozen(new SolidColorBrush(Color.FromRgb(0x7A, 0x7F, 0x94)));
+        // Themenfarben als Verweis (nicht als Momentaufnahme): folgen der Farbebene der Spielfarben und jedem Schema.
+        if (on)
+        {
+            CapsuleDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, ThemeKeys.BrushShine);
+        }
+        else
+        {
+            CapsuleDot.Fill = Frozen(new SolidColorBrush(Color.FromRgb(0x7A, 0x7F, 0x94)));
+        }
+
         CapsuleRing.Opacity = on ? 1 : 0;
         CapsuleHalo.Opacity = on ? 0.6 : 0;
         CapsulePulse.Opacity = 0;
         BrandTileOn.Opacity = on ? 1 : 0;
         BrandFill.Opacity = on ? 1 : 0;
-        BrandGlyph.Stroke = on ? (Brush)FindResource(ThemeKeys.BrushTextOnAccent) : (Brush)FindResource(ThemeKeys.BrushAccentText);
+        BrandGlyph.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, on ? ThemeKeys.BrushTextOnAccent : ThemeKeys.BrushAccentText);
         var valueBrush = on ? Brushes.White : Frozen(new SolidColorBrush(Color.FromRgb(0xAE, 0xB3, 0xC6)));
         PeakValue.Foreground = valueBrush;
         FullFrameValue.Foreground = valueBrush;
         MinimumValue.Foreground = valueBrush;
-        NitsScale.Fill = on ? (Brush)FindResource(ThemeKeys.BrushAccentShine) : Frozen(new SolidColorBrush(Color.FromRgb(0x6E, 0x73, 0x88)));
+        if (on)
+        {
+            NitsScale.SetResourceReference(NitsScaleBar.FillProperty, ThemeKeys.BrushAccentShine);
+        }
+        else
+        {
+            NitsScale.Fill = Frozen(new SolidColorBrush(Color.FromRgb(0x6E, 0x73, 0x88)));
+        }
+
         ApplyEdgeLine();
     }
 
     private void ApplyStatusDot(AutomationState state) =>
-        StatusDot.Fill = state switch
+        StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, state switch
         {
-            AutomationState.Paused => (Brush)FindResource("Lib.Brush.Amber"),
-            AutomationState.Running => (Brush)FindResource(ThemeKeys.BrushShine),
-            _ => (Brush)FindResource("Lib.Brush.Ok"),
-        };
+            AutomationState.Paused => "Lib.Brush.Amber",
+            AutomationState.Running => ThemeKeys.BrushShine,
+            _ => "Lib.Brush.Ok",
+        });
 
     /// <summary>Regal: Schublade ein- bzw. ausfahren (0,55 s nach Effektstufe), Karte aus, Abdunklung an.</summary>
     private void ApplyDrawer(bool instant)
@@ -1758,7 +1787,7 @@ public partial class MainWindow : ChromeWindow
             motion.Effects.Count(e => e.IsRunning && !e.IsPaused),
             motion.Effects.Count(e => e.IsPaused),
             motion.LiveClocks);
-        EffectsGlyph.Foreground = vm.EffectsPaused ? (Brush)FindResource("Lib.Brush.Amber") : (Brush)FindResource(ThemeKeys.BrushAccentText);
+        EffectsGlyph.SetResourceReference(TextBlock.ForegroundProperty, vm.EffectsPaused ? "Lib.Brush.Amber" : ThemeKeys.BrushAccentText);
         if (!motion.OneShotAllowed)
         {
             _moment?.Stop();
@@ -1815,7 +1844,7 @@ public partial class MainWindow : ChromeWindow
         }
 
         UpdateLight();
-        var scene = Hero.MomentScene(_palette.ParticleColors(_scheme, vm.Context.Appearance.Current.BackgroundFollowsGame));
+        var scene = Hero.MomentScene(MomentParticleColors);
         var kind = _moment.Play(motion.Level, motion.Context, scene, transientBoost);
         if (kind == HdrMomentKind.Full)
         {
@@ -1837,7 +1866,7 @@ public partial class MainWindow : ChromeWindow
             {
                 Width = 7,
                 Height = 7,
-                Fill = new SolidColorBrush(i % 2 == 1 ? _scheme.Accent : _scheme.Shine),
+                Fill = new SolidColorBrush(ButtonBurstColors[i % 2 == 1 ? 0 : 1]),
                 Opacity = 0,
                 RenderTransformOrigin = new Point(0.5, 0.5),
             };
@@ -1986,6 +2015,7 @@ public partial class MainWindow : ChromeWindow
     {
         ReadTheme();
         ApplyAmbient(instant: true);
+        RefreshShownAccents(instant: true);
         ApplyHdrState(instant: true);
     }
 
@@ -2000,6 +2030,7 @@ public partial class MainWindow : ChromeWindow
     private void OnClosed(object? sender, EventArgs e)
     {
         ThemeManager.ThemeChanged -= OnThemeChanged;
+        DetachGameColors();
         DetachToolbar();
         _moment?.Dispose();
         _motion?.Dispose();

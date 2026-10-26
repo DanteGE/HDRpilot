@@ -107,6 +107,7 @@ public sealed partial class AppServices
             Overlays = window => window is MainWindow main && main.CreateContextMenuPreview() is { } menu ? [menu] : [],
         });
         scenes.Add(new SnapshotScene("hauptfenster", "bildwahl", CreatePickerScene) { Settle = TimeSpan.FromSeconds(2), Resizable = false });
+        AddSteamGridDbPickerScenes(scenes);
 
         // Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17): Filter an, eingeklappt (Kapsel), eingeklappt
         // und gefiltert (Lichtnaht), in allen Ansichten; Tooltip eines Filters, Lasche beim Überfahren, Menü der Leiste. Zwei
@@ -547,7 +548,143 @@ public sealed partial class AppServices
         var picker = new ArtworkPickerViewModel(library, item, ArtworkKind.Hero);
         _ = picker.LoadAsync();
         var dialog = new ArtworkPickerDialog(picker);
-        dialog.Closed += (_, _) => library.Dispose();
+        dialog.Closed += (_, _) =>
+        {
+            picker.Dispose();
+            library.Dispose();
+        };
         return dialog;
+    }
+
+    /// <summary>
+    /// „Bild wählen…“ mit dem Abschnitt „STEAMGRIDDB“ (E93, §14): je Zustand ein Fenster über dem Testdaten-Lieferanten
+    /// (erzeugte Bilder, kein Netz, nie der echte Dienst), für das erste Spiel „HDRpilot-Prüfspiel …“ der Ablage.
+    /// </summary>
+    private void AddSteamGridDbPickerScenes(List<SnapshotScene> scenes)
+    {
+        scenes.Add(SgdbScene("ohne-schluessel", ArtworkKind.Hero, keyState: SteamGridDbKeyState.Missing));
+        scenes.Add(SgdbScene("bereit", ArtworkKind.Cover));
+        scenes.Add(SgdbScene("titelbild", ArtworkKind.Hero, prepare: async (_, picker, _) =>
+        {
+            await SgdbSearchAsync(picker);
+            if (picker.Online.Results.Count > 1)
+            {
+                picker.Selected = picker.Online.Results[1];
+            }
+        }));
+        scenes.Add(SgdbScene("cover", ArtworkKind.Cover, prepare: async (dialog, picker, _) =>
+        {
+            await SgdbSearchAsync(picker);
+            await picker.Online.MoreAsync(picker.Kind);
+            await PreviewsSettledAsync(picker);
+            dialog.UpdateLayout();
+            dialog.Scroll.ScrollToEnd();
+        }));
+        scenes.Add(SgdbScene("logo", ArtworkKind.Logo, prepare: (_, picker, _) => SgdbSearchAsync(picker)));
+        scenes.Add(SgdbScene("spielwahl", ArtworkKind.Cover, prepare: async (_, picker, _) =>
+        {
+            await SgdbSearchAsync(picker);
+            picker.Online.IsMatchOpen = true;
+            picker.Online.MatchSearchText = picker.Item.Name;
+            await picker.Online.SearchGamesAsync();
+        }));
+        scenes.Add(SgdbScene("fehler", ArtworkKind.Hero, key: SteamGridDbFixture.LaterRejectedKey, prepare: (_, picker, _) => SgdbSearchAsync(picker)));
+        scenes.Add(SgdbScene("uebernehmen", ArtworkKind.Cover, prepare: async (dialog, picker, fixture) =>
+        {
+            await SgdbSearchAsync(picker);
+            if (picker.Online.Results.Count > 2)
+            {
+                picker.Selected = picker.Online.Results[2];
+            }
+
+            // Der Lieferant hält das volle Bild in der Leitung: die Zeile „Lädt …“ bleibt stehen, bis das Fenster schließt.
+            fixture.HoldFullDownloads = true;
+            _ = dialog.ApplyCoreAsync();
+            await Task.Delay(400);
+        }));
+        scenes.Add(SgdbScene("klein", ArtworkKind.Cover, setup: dialog => dialog.FitToWorkArea(new Rect(0, 0, 1024, 616))));
+        scenes.Add(SgdbScene("kontrast", ArtworkKind.Logo, setup: dialog => dialog.SetHighContrast(HighContrastPalette.NightSky),
+            prepare: (_, picker, _) => SgdbSearchAsync(picker)));
+    }
+
+    private SnapshotScene SgdbScene(string name, ArtworkKind kind, SteamGridDbKeyState keyState = SteamGridDbKeyState.Stored,
+        string key = SteamGridDbFixture.SnapshotKey, Action<ArtworkPickerDialog>? setup = null,
+        Func<ArtworkPickerDialog, ArtworkPickerViewModel, SteamGridDbFixtureService, Task>? prepare = null)
+    {
+        // Ein Zustand rendert seine Fenster nacheinander (je Thema neu): der Lieferant des gerade offenen Fensters.
+        SteamGridDbFixtureService? current = null;
+        return new SnapshotScene("hauptfenster", "bildwahl-sgdb-" + name, () =>
+        {
+            var fixture = new SteamGridDbFixtureService(keyState, key);
+            var window = CreateSgdbPickerScene(fixture, kind, setup);
+            current = window is ArtworkPickerDialog ? fixture : null;
+            if (current is null)
+            {
+                fixture.Dispose();
+            }
+
+            return window;
+        }, async window =>
+        {
+            if (window is ArtworkPickerDialog { DataContext: ArtworkPickerViewModel picker } dialog && current is { } fixture)
+            {
+                if (prepare is not null)
+                {
+                    await prepare(dialog, picker, fixture);
+                }
+
+                await PreviewsSettledAsync(picker);
+                await Task.Delay(300);
+            }
+        })
+        {
+            Settle = TimeSpan.FromSeconds(2),
+            Resizable = false,
+        };
+    }
+
+    /// <summary>Das Fenster; ohne Spiel „HDRpilot-Prüfspiel …“ ein leeres (die Prüfung „nicht leer“ schlägt dann fehl, kein Ersatzspiel).</summary>
+    private Window CreateSgdbPickerScene(SteamGridDbFixtureService fixture, ArtworkKind kind, Action<ArtworkPickerDialog>? setup)
+    {
+        var library = new LibraryViewModel(new AppLibraryContext(this, fixture), new LibraryDialogs(new Window()));
+        var item = library.Games.FirstOrDefault(g => g.Name.StartsWith(SnapshotGamePrefix, StringComparison.Ordinal));
+        if (item is null)
+        {
+            library.Dispose();
+            return new Window();
+        }
+
+        var picker = new ArtworkPickerViewModel(library, item, kind);
+        _ = picker.LoadAsync();
+        var dialog = new ArtworkPickerDialog(picker);
+        setup?.Invoke(dialog);
+        dialog.Closed += (_, _) =>
+        {
+            picker.Dispose();
+            library.Dispose();
+            fixture.Dispose();
+        };
+        return dialog;
+    }
+
+    /// <summary>Spiele der Prüfläufe von E93 (erfunden, von phase14-sgdb-ui.ps1 angelegt).</summary>
+    private const string SnapshotGamePrefix = "HDRpilot-Prüfspiel";
+
+    private static async Task SgdbSearchAsync(ArtworkPickerViewModel picker)
+    {
+        await picker.Online.SearchAsync(picker.Kind);
+        await PreviewsSettledAsync(picker);
+    }
+
+    /// <summary>Wartet, bis keine Suche mehr läuft und jede Kachel ihre Vorschau hat (oder keine bekommt), höchstens 20 s.</summary>
+    private static async Task PreviewsSettledAsync(ArtworkPickerViewModel picker)
+    {
+        var end = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+        while (DateTime.UtcNow < end
+            && (picker.Online.IsSearchBusy || picker.Online.IsMoreBusy
+                || picker.Online.Results.Any(r => r.PreviewState is PreviewState.None or PreviewState.Loading)))
+        {
+            await Task.Delay(100);
+        }
     }
 }

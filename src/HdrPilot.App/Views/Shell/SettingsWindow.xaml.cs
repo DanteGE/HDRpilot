@@ -118,6 +118,14 @@ public partial class SettingsWindow : ChromeWindow
         TestLog?.Invoke("Prüfung: Einstellungen bei " + SectionArtwork.Name + ", Fokus " + SteamGridDbKey.Name);
     }
 
+    /// <summary>Bildschirmfoto „einstellungen-bilder-sgdb“ (E93): Darstellung › Bilder, bis zur Karte „SteamGridDB (online)“ gerollt.</summary>
+    internal void ScrollToSteamGridDbCard()
+    {
+        ScrollToSection(NavAppearanceArtwork.Name);
+        Page.ScrollToVerticalOffset(Math.Max(0, TopOf(SteamGridDbCard) - 8));
+        Page.UpdateLayout();
+    }
+
     /// <summary>PasswordBox ist nicht bindbar: das Bot-Passwort geht nur in diese Richtung ans ViewModel.</summary>
     private void OnPcgwPasswordChanged(object sender, RoutedEventArgs e) => _model?.HdrList.SetPassword(PcgwPassword.Password);
 

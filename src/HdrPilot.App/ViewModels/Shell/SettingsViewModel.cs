@@ -780,7 +780,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _uninstalledCount = LibraryCleanup.CountNotInstalled(config);
         _removableCount = LibraryCleanup.Removable(config).Count;
         var listed = config.Games.Where(g => !config.Settings.HideUninstalledGames || g.IsInstalled).ToList();
-        LibrarySummary = string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummary, listed.Count, listed.Count(g => g.HdrAuto));
+        LibrarySummary = string.Format(CultureInfo.CurrentCulture, listed.Count == 1 ? ShellStrings.LibraryCardSummaryOne : ShellStrings.LibraryCardSummary, listed.Count, listed.Count(g => g.HdrAuto));
         OnPropertyChanged(nameof(UninstalledCount));
         OnPropertyChanged(nameof(UninstalledCountText));
         OnPropertyChanged(nameof(UninstalledCountName));

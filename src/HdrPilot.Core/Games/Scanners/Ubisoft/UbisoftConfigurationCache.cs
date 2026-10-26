@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Ubisoft;
 
@@ -26,7 +27,7 @@ internal static class UbisoftConfigurationCache
             var at = pos;
             if (!TryReadVarint(data, ref pos, data.Length, out var tag) || (tag >> 3) == 0)
             {
-                error = Describe("Ungültiger Feldkopf", at);
+                error = Describe(ScanStrings.Ubisoft_InvalidFieldHeader, at);
                 break;
             }
 
@@ -36,7 +37,7 @@ internal static class UbisoftConfigurationCache
             {
                 if (!TrySkip(data, ref pos, data.Length, wireType))
                 {
-                    error = Describe("Ungültiges Feld", at);
+                    error = Describe(ScanStrings.Ubisoft_InvalidField, at);
                     break;
                 }
 
@@ -45,14 +46,14 @@ internal static class UbisoftConfigurationCache
 
             if (!TryReadLength(data, ref pos, data.Length, out var length))
             {
-                error = Describe("Feldlänge außerhalb der Datei (abgeschnitten?)", at);
+                error = Describe(ScanStrings.Ubisoft_FieldLength, at);
                 break;
             }
 
             var end = pos + length;
             if (field == 1 && !TryReadProduct(data, pos, end, wanted, result))
             {
-                error = Describe("Produkteintrag beschädigt", at);
+                error = Describe(ScanStrings.Ubisoft_ProductDamaged, at);
                 break;
             }
 
@@ -177,5 +178,5 @@ internal static class UbisoftConfigurationCache
     }
 
     private static string Describe(string what, int offset) =>
-        what + " bei Byte " + offset.ToString(CultureInfo.InvariantCulture) + ".";
+        ScanText.Format(ScanStrings.Ubisoft_AtByte, what, offset.ToString(CultureInfo.InvariantCulture));
 }

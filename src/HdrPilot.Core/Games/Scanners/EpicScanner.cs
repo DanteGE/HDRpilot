@@ -1,6 +1,7 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Common;
 using HdrPilot.Core.Games.Scanners.Epic;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -71,7 +72,7 @@ public sealed class EpicScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            errors.Add(new ScanError($"Epic-Manifestordner nicht lesbar: {ex.GetType().Name}: {ex.Message}", manifestDir));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Epic_FolderUnreadable, ex.GetType().Name, ex.Message), manifestDir));
             return Result(true, games, errors);
         }
 
@@ -151,18 +152,18 @@ public sealed class EpicScanner : IGameScanner
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError("Epic-Manifest defekt: " + ex.Message, file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Epic_ManifestDamaged, ex.Message), file));
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            errors.Add(new ScanError($"Epic-Manifest nicht lesbar: {ex.GetType().Name}: {ex.Message}", file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Epic_ManifestUnreadable, ex.GetType().Name, ex.Message), file));
             return null;
         }
 
         if (string.IsNullOrWhiteSpace(manifest.AppName))
         {
-            errors.Add(new ScanError("Epic-Manifest unvollständig: Pflichtfeld AppName fehlt.", file));
+            errors.Add(new ScanError(ScanStrings.Epic_AppNameMissing, file));
             return null;
         }
 
@@ -193,7 +194,7 @@ public sealed class EpicScanner : IGameScanner
         AddIfMissing(missing, "CatalogItemId", manifest.CatalogItemId);
         if (missing.Count > 0)
         {
-            errors.Add(new ScanError($"Epic-Manifest unvollständig: Pflichtfeld(er) {string.Join(", ", missing)} fehlen.", file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Epic_FieldsMissing, string.Join(", ", missing)), file));
             return null;
         }
 
@@ -201,7 +202,7 @@ public sealed class EpicScanner : IGameScanner
         var installDir = InstallPaths.NormalizeInstallDir(manifest.InstallLocation, out var problem);
         if (installDir is null)
         {
-            errors.Add(new ScanError($"Epic-Manifest für \"{name}\" unbrauchbar: {problem}", file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Epic_ManifestUnusable, name, problem), file));
             return null;
         }
 

@@ -144,4 +144,22 @@
   <data name="HdrSwitchException" xml:space="preserve">
     <value>Exception while switching: {0}</value>
   </data>
+  <data name="ManualNoPath" xml:space="preserve">
+    <value>No path was given.</value>
+  </data>
+  <data name="ManualRelative" xml:space="preserve">
+    <value>The path must be complete (with drive), not relative: "{0}".</value>
+  </data>
+  <data name="ManualNotExe" xml:space="preserve">
+    <value>Only EXE files or folders can be added: "{0}".</value>
+  </data>
+  <data name="ManualNotFound" xml:space="preserve">
+    <value>The path doesn't exist: "{0}".</value>
+  </data>
+  <data name="ManualDriveRoot" xml:space="preserve">
+    <value>A whole drive can't be a game folder, otherwise every process on it would count as the game: "{0}". Please put the EXE in a folder of its own or choose the game folder.</value>
+  </data>
+  <data name="ConfigSaveFailed" xml:space="preserve">
+    <value>Configuration {0} couldn't be saved: {1}</value>
+  </data>
 </root>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Steam;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -185,19 +186,19 @@ public sealed class SteamScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(new ScanError("Steam-Bibliotheksliste nicht lesbar, nur die Standardbibliothek wird gelesen: " + ex.Message, vdfPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_LibraryListUnreadable, ex.Message), vdfPath));
             return libraries;
         }
         catch (KeyValuesException ex)
         {
-            errors.Add(new ScanError("Steam-Bibliotheksliste defekt, nur die Standardbibliothek wird gelesen: " + ex.Message, vdfPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_LibraryListDamaged, ex.Message), vdfPath));
             return libraries;
         }
 
         var folders = root.Child("libraryfolders");
         if (folders is null || !folders.IsBlock)
         {
-            errors.Add(new ScanError("Steam-Bibliotheksliste hat einen unerwarteten Aufbau (Abschnitt \"libraryfolders\" fehlt), nur die Standardbibliothek wird gelesen.", vdfPath));
+            errors.Add(new ScanError(ScanStrings.Steam_LibraryListUnexpected, vdfPath));
             return libraries;
         }
 
@@ -213,14 +214,14 @@ public sealed class SteamScanner : IGameScanner
             var raw = entry.IsBlock ? entry.GetString("path") : entry.Value;
             if (string.IsNullOrWhiteSpace(raw))
             {
-                errors.Add(new ScanError($"Steam-Bibliothek \"{entry.Key}\" in der Bibliotheksliste hat keinen Pfad.", vdfPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_LibraryNoPath, entry.Key), vdfPath));
                 continue;
             }
 
             var path = PathUtil.Normalize(raw);
             if (!Path.IsPathFullyQualified(path))
             {
-                errors.Add(new ScanError($"Steam-Bibliothek \"{entry.Key}\" hat keinen absoluten Pfad: {raw}", vdfPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_LibraryNotAbsolute, entry.Key, raw), vdfPath));
                 continue;
             }
 
@@ -261,7 +262,7 @@ public sealed class SteamScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(new ScanError("Steam-Bibliothek nicht lesbar: " + ex.Message, steamApps));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_LibraryUnreadable, ex.Message), steamApps));
             return;
         }
 
@@ -285,39 +286,39 @@ public sealed class SteamScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(new ScanError("Steam-Manifest nicht lesbar: " + ex.Message, file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_ManifestUnreadable, ex.Message), file));
             return null;
         }
         catch (KeyValuesException ex)
         {
-            errors.Add(new ScanError("Steam-Manifest defekt: " + ex.Message, file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_ManifestDamaged, ex.Message), file));
             return null;
         }
 
         var state = root.Child("AppState");
         if (state is null || !state.IsBlock)
         {
-            errors.Add(new ScanError("Steam-Manifest defekt: Abschnitt \"AppState\" fehlt.", file));
+            errors.Add(new ScanError(ScanStrings.Steam_ManifestNoAppState, file));
             return null;
         }
 
         var appIdText = state.GetString("appid");
         if (!uint.TryParse(appIdText, NumberStyles.None, CultureInfo.InvariantCulture, out var appId) || appId == 0)
         {
-            errors.Add(new ScanError("Steam-Manifest unvollständig: \"appid\" fehlt oder ist keine Zahl.", file));
+            errors.Add(new ScanError(ScanStrings.Steam_ManifestNoAppId, file));
             return null;
         }
 
         var installDir = state.GetString("installdir")?.Trim();
         if (string.IsNullOrEmpty(installDir))
         {
-            errors.Add(new ScanError($"Steam-Manifest unvollständig: \"installdir\" fehlt (AppID {appId}).", file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_ManifestNoInstallDir, appId), file));
             return null;
         }
 
         if (!IsPlainRelativeFolder(installDir))
         {
-            errors.Add(new ScanError($"Steam-Manifest enthält einen ungültigen Ordnernamen in \"installdir\" (AppID {appId}): {installDir}", file));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_ManifestInvalidInstallDir, appId, installDir), file));
             return null;
         }
 
@@ -422,12 +423,12 @@ public sealed class SteamScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(new ScanError("Steam-App-Cache nicht lesbar; Werkzeuge werden nur über die feste Liste und Namensregeln erkannt: " + ex.Message, path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_AppCacheUnreadable, ex.Message), path));
             return null;
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError("Steam-App-Cache beschädigt; Werkzeuge werden nur über die feste Liste und Namensregeln erkannt: " + ex.Message, path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Steam_AppCacheDamaged, ex.Message), path));
             return null;
         }
     }

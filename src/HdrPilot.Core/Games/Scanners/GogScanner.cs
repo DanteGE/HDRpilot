@@ -1,6 +1,7 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Common;
 using HdrPilot.Core.Games.Scanners.Gog;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -112,7 +113,7 @@ public sealed class GogScanner : IGameScanner
         {
             if (key is null)
             {
-                errors.Add(new ScanError("GOG-Registry-Eintrag nicht lesbar.", keyPath));
+                errors.Add(new ScanError(ScanStrings.Gog_EntryUnreadable, keyPath));
                 return null;
             }
 
@@ -128,21 +129,21 @@ public sealed class GogScanner : IGameScanner
 
         if (string.IsNullOrWhiteSpace(reg.Path))
         {
-            errors.Add(new ScanError($"GOG-Registry-Eintrag unvollständig: Wert {GogRegistryEntry.PathValue} fehlt.", keyPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Gog_ValueMissing, GogRegistryEntry.PathValue), keyPath));
             return null;
         }
 
         var installDir = InstallPaths.NormalizeInstallDir(reg.Path, out var problem);
         if (installDir is null)
         {
-            errors.Add(new ScanError("GOG-Registry-Eintrag unbrauchbar: " + problem, keyPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Gog_EntryUnusable, problem), keyPath));
             return null;
         }
 
         if (galaxyClientDir is not null && PathUtil.IsUnder(galaxyClientDir, installDir))
         {
             // Sonst gälte GOG Galaxy selbst als Spiel und jeder Galaxy-Prozess schaltete HDR.
-            errors.Add(new ScanError($"GOG-Registry-Eintrag unbrauchbar: Installationsordner \"{installDir}\" enthält GOG Galaxy selbst.", keyPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Gog_ContainsGalaxy, installDir), keyPath));
             return null;
         }
 
@@ -162,7 +163,7 @@ public sealed class GogScanner : IGameScanner
         var name = !string.IsNullOrWhiteSpace(reg.GameName) ? reg.GameName.Trim() : info?.Name?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
-            errors.Add(new ScanError($"GOG-Registry-Eintrag unvollständig: Wert {GogRegistryEntry.GameNameValue} fehlt.", keyPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Gog_ValueMissing, GogRegistryEntry.GameNameValue), keyPath));
             return null;
         }
 
@@ -170,7 +171,7 @@ public sealed class GogScanner : IGameScanner
         if (launch is null)
         {
             errors.Add(new ScanError(
-                $"GOG-Spiel \"{name}\": keine vorhandene Start-EXE (Registry-Wert {GogRegistryEntry.ExeValue} und primäre playTask fehlen oder zeigen ins Leere).",
+                ScanText.Format(ScanStrings.Gog_NoLaunchExe, name, GogRegistryEntry.ExeValue),
                 keyPath));
             return null;
         }
@@ -266,11 +267,11 @@ public sealed class GogScanner : IGameScanner
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError("GOG-Spielinfo defekt: " + ex.Message, path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Gog_InfoDamaged, ex.Message), path));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            errors.Add(new ScanError($"GOG-Spielinfo nicht lesbar: {ex.GetType().Name}: {ex.Message}", path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Gog_InfoUnreadable, ex.GetType().Name, ex.Message), path));
         }
 
         return null;

@@ -1,6 +1,7 @@
 using System.Globalization;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Ubisoft;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -119,7 +120,7 @@ public sealed class UbisoftScanner : IGameScanner
             }
             else
             {
-                errors.Add(new ScanError($"Ubisoft-Installationseintrag \"{keyName}\" hat keine gültige Produkt-ID.", installsKey.Name + "\\" + keyName));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_NoProductId, keyName), installsKey.Name + "\\" + keyName));
             }
         }
 
@@ -130,7 +131,7 @@ public sealed class UbisoftScanner : IGameScanner
             using var key = installsKey.OpenSubKey(keyName);
             if (key is null)
             {
-                errors.Add(new ScanError($"Ubisoft-Installationseintrag {id} ist nicht lesbar.", keyPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_EntryUnreadable, id), keyPath));
                 continue;
             }
 
@@ -144,7 +145,7 @@ public sealed class UbisoftScanner : IGameScanner
 
             if (raw is not string text)
             {
-                errors.Add(new ScanError($"Ubisoft-Installationseintrag {id}: InstallDir hat den unerwarteten Typ {raw.GetType().Name}.", keyPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_InstallDirType, id, raw.GetType().Name), keyPath));
                 continue;
             }
 
@@ -157,7 +158,7 @@ public sealed class UbisoftScanner : IGameScanner
             var dir = PathUtil.Normalize(text);
             if (!Path.IsPathFullyQualified(dir))
             {
-                errors.Add(new ScanError($"Ubisoft-Installationseintrag {id}: InstallDir ist kein absoluter Pfad: {text}", keyPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_InstallDirNotAbsolute, id, text), keyPath));
                 continue;
             }
 
@@ -166,8 +167,7 @@ public sealed class UbisoftScanner : IGameScanner
                 // Später gilt jeder Prozess unter InstallDir als Spiel; bei einer Laufwerkswurzel wäre das jeder Prozess
                 // auf dem Laufwerk. Lieber melden und weglassen (manueller Eintrag möglich) als falsch zuordnen.
                 errors.Add(new ScanError(
-                    $"Ubisoft-Installationseintrag {id}: InstallDir ist die Wurzel eines Laufwerks bzw. einer Freigabe ({text}); " +
-                    "jeder Prozess auf dem Laufwerk gälte als Spiel. Eintrag wird übersprungen, bitte den Spielordner manuell eintragen.",
+                    ScanText.Format(ScanStrings.Ubisoft_InstallDirRoot, id, text),
                     keyPath));
                 continue;
             }
@@ -215,7 +215,7 @@ public sealed class UbisoftScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(new ScanError("Ubisoft-Produkt-Cache nicht lesbar, Namen und EXE-Dateien fehlen: " + ex.Message, path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_CacheUnreadable, ex.Message), path));
             return configs;
         }
 
@@ -223,7 +223,7 @@ public sealed class UbisoftScanner : IGameScanner
         var yamls = UbisoftConfigurationCache.Read(data, installs.Select(i => i.Id).ToHashSet(), out var cacheError);
         if (cacheError is not null)
         {
-            errors.Add(new ScanError("Ubisoft-Produkt-Cache beschädigt, Namen und EXE-Dateien fehlen teilweise: " + cacheError, path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_CacheDamaged, cacheError), path));
         }
 
         foreach (var (id, yaml) in yamls)
@@ -234,7 +234,7 @@ public sealed class UbisoftScanner : IGameScanner
             }
             catch (FormatException ex)
             {
-                errors.Add(new ScanError($"Ubisoft-Produkt-Cache: Eintrag {id} ist defekt: {ex.Message}", path));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Ubisoft_CacheEntryDamaged, id, ex.Message), path));
             }
         }
 

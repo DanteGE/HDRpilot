@@ -539,6 +539,9 @@
   <data name="LibraryCardSummary" xml:space="preserve">
     <value>{0} games · {1} with HDR on launch</value>
   </data>
+  <data name="LibraryCardSummaryOne" xml:space="preserve">
+    <value>1 game · {1} with HDR on launch</value>
+  </data>
   <data name="OpenLibrary" xml:space="preserve">
     <value>Open game library</value>
   </data>

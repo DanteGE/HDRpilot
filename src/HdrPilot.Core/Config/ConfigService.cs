@@ -408,7 +408,7 @@ public sealed class ConfigService : ISessionConfigSource
 
 /// <summary>Die Konfiguration ließ sich nicht speichern (Platte voll, Datei gesperrt). Die Änderung wurde nicht übernommen.</summary>
 public sealed class ConfigSaveException(string path, string reason)
-    : IOException($"Konfiguration {path} ließ sich nicht speichern: {reason}")
+    : IOException(string.Format(System.Globalization.CultureInfo.CurrentCulture, Resources.CoreStrings.ConfigSaveFailed, path, reason))
 {
     public string ConfigPath { get; } = path;
 

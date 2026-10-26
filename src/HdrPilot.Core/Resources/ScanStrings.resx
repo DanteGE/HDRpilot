@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+    <data name="ScannerCrashed" xml:space="preserve">
+    <value>Scanner abgestürzt: {0}: {1}</value>
+    <comment>{0} = Art der Ausnahme, {1} = ihre Meldung</comment>
+  </data>
+  <data name="Quiver_LibraryDamaged" xml:space="preserve">
+    <value>Quiver-Bibliothek defekt: {0}</value>
+  </data>
+  <data name="Quiver_LibraryUnreadable" xml:space="preserve">
+    <value>Quiver-Bibliothek nicht lesbar: {0}: {1}</value>
+  </data>
+  <data name="Quiver_EntryUnusable" xml:space="preserve">
+    <value>Quiver-Eintrag {0} unbrauchbar: {1}</value>
+  </data>
+  <data name="Quiver_SettingsDamaged" xml:space="preserve">
+    <value>Quiver-Einstellungen defekt, es gilt der Ordner Apps: {0}</value>
+  </data>
+  <data name="Quiver_SettingsUnreadable" xml:space="preserve">
+    <value>Quiver-Einstellungen nicht lesbar, es gilt der Ordner Apps: {0}: {1}</value>
+  </data>
+  <data name="Quiver_AppsPathUnusable" xml:space="preserve">
+    <value>Quiver-Einstellung AppsPath unbrauchbar, es gilt der Ordner Apps: "{0}" ist kein gültiger absoluter Pfad.</value>
+  </data>
+  <data name="Quiver_EntryRejected" xml:space="preserve">
+    <value>Quiver-Eintrag "{0}" abgelehnt: {1}</value>
+  </data>
+  <data name="Quiver_InstallPathUnusable" xml:space="preserve">
+    <value>Quiver-Eintrag "{0}": installPath unbrauchbar: {1}</value>
+  </data>
+  <data name="Quiver_ReceiptDamaged" xml:space="preserve">
+    <value>Quiver-Eintrag "{0}": Verknüpfung des Windows Installers defekt: {1}</value>
+  </data>
+  <data name="Quiver_ReceiptUnreadable" xml:space="preserve">
+    <value>Quiver-Eintrag "{0}": Verknüpfung des Windows Installers nicht lesbar: {1}: {2}</value>
+  </data>
+  <data name="Quiver_LinkedExeUnusable" xml:space="preserve">
+    <value>Quiver-Eintrag "{0}": verknüpfte EXE unbrauchbar: {1}</value>
+  </data>
+  <data name="Quiver_FolderNameMissing" xml:space="preserve">
+    <value>folderName fehlt.</value>
+  </data>
+  <data name="Quiver_FolderNameDot" xml:space="preserve">
+    <value>folderName ist „.“.</value>
+  </data>
+  <data name="Quiver_FolderNameDotDot" xml:space="preserve">
+    <value>folderName "{0}" enthält „..“.</value>
+  </data>
+  <data name="Quiver_FolderNameInvalidChars" xml:space="preserve">
+    <value>folderName "{0}" enthält einen Pfadtrenner oder ein ungültiges Zeichen.</value>
+  </data>
+  <data name="Quiver_FolderNameTrailing" xml:space="preserve">
+    <value>folderName "{0}" endet mit Punkt oder Leerzeichen.</value>
+  </data>
+  <data name="Scan_FileTooLarge" xml:space="preserve">
+    <value>Datei größer als {0} MB.</value>
+  </data>
+  <data name="Quiver_AppsMissing" xml:space="preserve">
+    <value>Feld "apps" fehlt oder ist keine Liste.</value>
+  </data>
+  <data name="Quiver_EntryNotObject" xml:space="preserve">
+    <value>Eintrag ist kein Objekt.</value>
+  </data>
+  <data name="Quiver_UnknownPhase" xml:space="preserve">
+    <value>Unbekannte Phase "{0}".</value>
+  </data>
+  <data name="Epic_FolderUnreadable" xml:space="preserve">
+    <value>Epic-Manifestordner nicht lesbar: {0}: {1}</value>
+  </data>
+  <data name="Epic_ManifestDamaged" xml:space="preserve">
+    <value>Epic-Manifest defekt: {0}</value>
+  </data>
+  <data name="Epic_ManifestUnreadable" xml:space="preserve">
+    <value>Epic-Manifest nicht lesbar: {0}: {1}</value>
+  </data>
+  <data name="Epic_AppNameMissing" xml:space="preserve">
+    <value>Epic-Manifest unvollständig: Pflichtfeld AppName fehlt.</value>
+  </data>
+  <data name="Epic_FieldsMissing" xml:space="preserve">
+    <value>Epic-Manifest unvollständig: Pflichtfeld(er) {0} fehlen.</value>
+  </data>
+  <data name="Epic_ManifestUnusable" xml:space="preserve">
+    <value>Epic-Manifest für "{0}" unbrauchbar: {1}</value>
+  </data>
+  <data name="Ea_DriveRoot" xml:space="preserve">
+    <value>Spiel liegt direkt im Stammordner eines Laufwerks und wird übersprungen, weil sonst jeder Prozess auf dem Laufwerk als Spiel gälte.</value>
+  </data>
+  <data name="Ea_InstallerDataDamaged" xml:space="preserve">
+    <value>installerdata.xml ist defekt ({0}).</value>
+  </data>
+  <data name="Ea_InstallerDataUnreadable" xml:space="preserve">
+    <value>installerdata.xml ist nicht lesbar ({0}).</value>
+  </data>
+  <data name="Ea_NoContentId" xml:space="preserve">
+    <value>installerdata.xml enthält keine contentID; das Spiel wird übersprungen.</value>
+  </data>
+  <data name="Ea_WrongRoot" xml:space="preserve">
+    <value>Wurzelelement ist nicht &lt;{0}&gt;, sondern &lt;{1}&gt;.</value>
+  </data>
+  <data name="Xml_Invalid" xml:space="preserve">
+    <value>kein gültiges XML: {0}</value>
+  </data>
+  <data name="Xml_WrongEncoding" xml:space="preserve">
+    <value>Zeichen passen nicht zur angegebenen Kodierung: {0}</value>
+  </data>
+  <data name="BattleNet_Unreadable" xml:space="preserve">
+    <value>product.db ist nicht lesbar ({0}).</value>
+  </data>
+  <data name="BattleNet_DriveRoot" xml:space="preserve">
+    <value>Eintrag {0} nennt den Stammordner eines Laufwerks ({1}) als Installationsordner und wird übersprungen, weil sonst jeder Prozess auf dem Laufwerk als Spiel gälte.</value>
+  </data>
+  <data name="BattleNet_WrongWireType" xml:space="preserve">
+    <value>Produkteintrag hat den falschen Wire-Typ {0}</value>
+  </data>
+  <data name="BattleNet_EntryDamaged" xml:space="preserve">
+    <value>Eintrag {0} in product.db ist defekt und wird übersprungen ({1}).</value>
+  </data>
+  <data name="BattleNet_Truncated" xml:space="preserve">
+    <value>product.db ist defekt oder abgeschnitten (ab Byte {0}: {1}); Einträge danach fehlen.</value>
+  </data>
+  <data name="BattleNet_NoUid" xml:space="preserve">
+    <value>ohne uid</value>
+  </data>
+  <data name="BattleNet_NoProductCode" xml:space="preserve">
+    <value>ohne Produktcode, uid {0}</value>
+  </data>
+  <data name="Proto_InvalidField" xml:space="preserve">
+    <value>ungültige Feldnummer {0}</value>
+  </data>
+  <data name="Proto_UnknownWireType" xml:space="preserve">
+    <value>unbekannter Wire-Typ {0} bei Feld {1}</value>
+  </data>
+  <data name="Proto_TruncatedNumber" xml:space="preserve">
+    <value>Daten enden mitten in einer Zahl</value>
+  </data>
+  <data name="Proto_NumberTooLong" xml:space="preserve">
+    <value>Zahl länger als 10 Byte</value>
+  </data>
+  <data name="Proto_LengthBeyondEnd" xml:space="preserve">
+    <value>Längenangabe {0} reicht über das Ende der Daten</value>
+  </data>
+  <data name="Proto_InvalidUtf8" xml:space="preserve">
+    <value>Text ist kein gültiges UTF-8</value>
+  </data>
+  <data name="Proto_GroupUnsupported" xml:space="preserve">
+    <value>Wire-Typ {0} (Gruppe) wird nicht unterstützt</value>
+  </data>
+  <data name="Proto_TruncatedValue" xml:space="preserve">
+    <value>Daten enden mitten in einem Wert</value>
+  </data>
+  <data name="Steam_LibraryListUnreadable" xml:space="preserve">
+    <value>Steam-Bibliotheksliste nicht lesbar, nur die Standardbibliothek wird gelesen: {0}</value>
+  </data>
+  <data name="Steam_LibraryListDamaged" xml:space="preserve">
+    <value>Steam-Bibliotheksliste defekt, nur die Standardbibliothek wird gelesen: {0}</value>
+  </data>
+  <data name="Steam_LibraryListUnexpected" xml:space="preserve">
+    <value>Steam-Bibliotheksliste hat einen unerwarteten Aufbau (Abschnitt "libraryfolders" fehlt), nur die Standardbibliothek wird gelesen.</value>
+  </data>
+  <data name="Steam_LibraryNoPath" xml:space="preserve">
+    <value>Steam-Bibliothek "{0}" in der Bibliotheksliste hat keinen Pfad.</value>
+  </data>
+  <data name="Steam_LibraryNotAbsolute" xml:space="preserve">
+    <value>Steam-Bibliothek "{0}" hat keinen absoluten Pfad: {1}</value>
+  </data>
+  <data name="Steam_LibraryUnreadable" xml:space="preserve">
+    <value>Steam-Bibliothek nicht lesbar: {0}</value>
+  </data>
+  <data name="Steam_ManifestUnreadable" xml:space="preserve">
+    <value>Steam-Manifest nicht lesbar: {0}</value>
+  </data>
+  <data name="Steam_ManifestDamaged" xml:space="preserve">
+    <value>Steam-Manifest defekt: {0}</value>
+  </data>
+  <data name="Steam_ManifestNoAppState" xml:space="preserve">
+    <value>Steam-Manifest defekt: Abschnitt "AppState" fehlt.</value>
+  </data>
+  <data name="Steam_ManifestNoAppId" xml:space="preserve">
+    <value>Steam-Manifest unvollständig: "appid" fehlt oder ist keine Zahl.</value>
+  </data>
+  <data name="Steam_ManifestNoInstallDir" xml:space="preserve">
+    <value>Steam-Manifest unvollständig: "installdir" fehlt (AppID {0}).</value>
+  </data>
+  <data name="Steam_ManifestInvalidInstallDir" xml:space="preserve">
+    <value>Steam-Manifest enthält einen ungültigen Ordnernamen in "installdir" (AppID {0}): {1}</value>
+  </data>
+  <data name="Steam_AppCacheUnreadable" xml:space="preserve">
+    <value>Steam-App-Cache nicht lesbar; Werkzeuge werden nur über die feste Liste und Namensregeln erkannt: {0}</value>
+  </data>
+  <data name="Steam_AppCacheDamaged" xml:space="preserve">
+    <value>Steam-App-Cache beschädigt; Werkzeuge werden nur über die feste Liste und Namensregeln erkannt: {0}</value>
+  </data>
+  <data name="AppInfo_KeyTableOffset" xml:space="preserve">
+    <value>Offset der Schlüsseltabelle liegt außerhalb der Datei.</value>
+  </data>
+  <data name="AppInfo_EntrySize" xml:space="preserve">
+    <value>Eintrag der AppID {0} hat eine ungültige Größe ({1} Byte).</value>
+  </data>
+  <data name="AppInfo_KeyTableLength" xml:space="preserve">
+    <value>Schlüsseltabelle hat eine ungültige Länge.</value>
+  </data>
+  <data name="AppInfo_TooDeep" xml:space="preserve">
+    <value>Binäre KeyValues zu tief verschachtelt.</value>
+  </data>
+  <data name="AppInfo_UnknownType" xml:space="preserve">
+    <value>Unbekannter Typ 0x{0} in binären KeyValues.</value>
+  </data>
+  <data name="AppInfo_KeyIndex" xml:space="preserve">
+    <value>Schlüsselindex {0} liegt außerhalb der Schlüsseltabelle.</value>
+  </data>
+  <data name="AppInfo_Truncated" xml:space="preserve">
+    <value>Datei ist abgeschnitten oder beschädigt.</value>
+  </data>
+  <data name="KeyValues_AtLine" xml:space="preserve">
+    <value>{0} (Zeile {1})</value>
+    <comment>{0} = Meldung, {1} = Zeilennummer</comment>
+  </data>
+  <data name="KeyValues_TooDeep" xml:space="preserve">
+    <value>Zu tief verschachtelt</value>
+  </data>
+  <data name="KeyValues_BlockNotClosed" xml:space="preserve">
+    <value>Block ab Zeile {0} wird nicht geschlossen (Datei abgeschnitten?)</value>
+  </data>
+  <data name="KeyValues_UnexpectedClose" xml:space="preserve">
+    <value>Unerwartete schließende Klammer</value>
+  </data>
+  <data name="KeyValues_BlockWithoutKey" xml:space="preserve">
+    <value>Block ohne Schlüssel</value>
+  </data>
+  <data name="KeyValues_ValueMissingTruncated" xml:space="preserve">
+    <value>Wert für "{0}" fehlt (Datei abgeschnitten?)</value>
+  </data>
+  <data name="KeyValues_ValueMissing" xml:space="preserve">
+    <value>Wert für "{0}" fehlt</value>
+  </data>
+  <data name="KeyValues_NullChar" xml:space="preserve">
+    <value>Nullzeichen in Zeichenkette (Binärdaten oder falsche Kodierung?)</value>
+  </data>
+  <data name="KeyValues_StringNotClosed" xml:space="preserve">
+    <value>Zeichenkette ab Zeile {0} wird nicht geschlossen (Datei abgeschnitten?)</value>
+  </data>
+  <data name="KeyValues_ConditionNotClosed" xml:space="preserve">
+    <value>Bedingung in eckigen Klammern wird nicht geschlossen</value>
+  </data>
+  <data name="KeyValues_ControlChar" xml:space="preserve">
+    <value>Ungültiges Steuerzeichen 0x{0} (Binärdaten oder falsche Kodierung?)</value>
+  </data>
+  <data name="Gog_EntryUnreadable" xml:space="preserve">
+    <value>GOG-Registry-Eintrag nicht lesbar.</value>
+  </data>
+  <data name="Gog_ValueMissing" xml:space="preserve">
+    <value>GOG-Registry-Eintrag unvollständig: Wert {0} fehlt.</value>
+  </data>
+  <data name="Gog_EntryUnusable" xml:space="preserve">
+    <value>GOG-Registry-Eintrag unbrauchbar: {0}</value>
+  </data>
+  <data name="Gog_ContainsGalaxy" xml:space="preserve">
+    <value>GOG-Registry-Eintrag unbrauchbar: Installationsordner "{0}" enthält GOG Galaxy selbst.</value>
+  </data>
+  <data name="Gog_NoLaunchExe" xml:space="preserve">
+    <value>GOG-Spiel "{0}": keine vorhandene Start-EXE (Registry-Wert {1} und primäre playTask fehlen oder zeigen ins Leere).</value>
+  </data>
+  <data name="Gog_InfoDamaged" xml:space="preserve">
+    <value>GOG-Spielinfo defekt: {0}</value>
+  </data>
+  <data name="Gog_InfoUnreadable" xml:space="preserve">
+    <value>GOG-Spielinfo nicht lesbar: {0}: {1}</value>
+  </data>
+  <data name="Xbox_FileUnreadable" xml:space="preserve">
+    <value>{0} konnte nicht gelesen werden: {1}</value>
+    <comment>{0} = Dateiname, {1} = Meldung</comment>
+  </data>
+  <data name="Xbox_FolderNotFullPath" xml:space="preserve">
+    <value>{0}: Ordnername "{1}" ergibt keinen vollständigen Pfad und wird übersprungen.</value>
+  </data>
+  <data name="Xbox_LibraryUnreadable" xml:space="preserve">
+    <value>Spieleordner konnte nicht gelesen werden: {0}</value>
+  </data>
+  <data name="Xbox_GameFolderFailed" xml:space="preserve">
+    <value>Spielordner konnte nicht ausgewertet werden: {0}: {1}</value>
+  </data>
+  <data name="Xbox_InvalidPackageName" xml:space="preserve">
+    <value>Ungültiger Paketname "{0}" in Identity/@Name, Start-Befehl nicht bildbar.</value>
+  </data>
+  <data name="Xbox_NoAppId" xml:space="preserve">
+    <value>Keine App-Id gefunden (weder appxmanifest.xml Applications/Application/@Id noch Executable/@Id), Start-Befehl nicht bildbar.</value>
+  </data>
+  <data name="Xbox_InvalidAppId" xml:space="preserve">
+    <value>Ungültige App-Id "{0}", Start-Befehl nicht bildbar.</value>
+  </data>
+  <data name="Xbox_ManifestFallback" xml:space="preserve">
+    <value>{0} Es gelten die Angaben aus {1}.</value>
+    <comment>{0} = Meldung, {1} = Dateiname</comment>
+  </data>
+  <data name="GamingRoot_TooShort" xml:space="preserve">
+    <value>Datei ist zu kurz ({0} Byte, erwartet mindestens {1}).</value>
+  </data>
+  <data name="GamingRoot_NoMagic" xml:space="preserve">
+    <value>Kennung "RGBX" fehlt, die Datei hat ein unbekanntes Format.</value>
+  </data>
+  <data name="GamingRoot_InvalidFolder" xml:space="preserve">
+    <value>Ungültiger Ordnername in der Datei (Steuerzeichen oder unzulässige Zeichen).</value>
+  </data>
+  <data name="GamingRoot_Truncated" xml:space="preserve">
+    <value>Datei ist abgeschnitten: der letzte Ordnername endet nicht mit einem Nullzeichen.</value>
+  </data>
+  <data name="GamingRoot_NoFolders" xml:space="preserve">
+    <value>Datei enthält keinen Ordnernamen.</value>
+  </data>
+  <data name="XmlDoc_Empty" xml:space="preserve">
+    <value>{0} ist leer.</value>
+    <comment>{0} = Dateiname</comment>
+  </data>
+  <data name="XmlDoc_Invalid" xml:space="preserve">
+    <value>{0} ist kein gültiges XML (abgeschnitten, falsche Kodierung oder kein Text): {1}</value>
+  </data>
+  <data name="XmlDoc_Encoding" xml:space="preserve">
+    <value>{0} hat eine falsche Zeichenkodierung: {1}</value>
+  </data>
+  <data name="XmlDoc_NoRoot" xml:space="preserve">
+    <value>{0}: Wurzelelement &lt;{1}&gt; fehlt.</value>
+  </data>
+  <data name="Ubisoft_NoProductId" xml:space="preserve">
+    <value>Ubisoft-Installationseintrag "{0}" hat keine gültige Produkt-ID.</value>
+  </data>
+  <data name="Ubisoft_EntryUnreadable" xml:space="preserve">
+    <value>Ubisoft-Installationseintrag {0} ist nicht lesbar.</value>
+  </data>
+  <data name="Ubisoft_InstallDirType" xml:space="preserve">
+    <value>Ubisoft-Installationseintrag {0}: InstallDir hat den unerwarteten Typ {1}.</value>
+  </data>
+  <data name="Ubisoft_InstallDirNotAbsolute" xml:space="preserve">
+    <value>Ubisoft-Installationseintrag {0}: InstallDir ist kein absoluter Pfad: {1}</value>
+  </data>
+  <data name="Ubisoft_InstallDirRoot" xml:space="preserve">
+    <value>Ubisoft-Installationseintrag {0}: InstallDir ist die Wurzel eines Laufwerks bzw. einer Freigabe ({1}); jeder Prozess auf dem Laufwerk gälte als Spiel. Eintrag wird übersprungen, bitte den Spielordner manuell eintragen.</value>
+  </data>
+  <data name="Ubisoft_CacheUnreadable" xml:space="preserve">
+    <value>Ubisoft-Produkt-Cache nicht lesbar, Namen und EXE-Dateien fehlen: {0}</value>
+  </data>
+  <data name="Ubisoft_CacheDamaged" xml:space="preserve">
+    <value>Ubisoft-Produkt-Cache beschädigt, Namen und EXE-Dateien fehlen teilweise: {0}</value>
+  </data>
+  <data name="Ubisoft_CacheEntryDamaged" xml:space="preserve">
+    <value>Ubisoft-Produkt-Cache: Eintrag {0} ist defekt: {1}</value>
+  </data>
+  <data name="Ubisoft_InvalidFieldHeader" xml:space="preserve">
+    <value>Ungültiger Feldkopf</value>
+  </data>
+  <data name="Ubisoft_InvalidField" xml:space="preserve">
+    <value>Ungültiges Feld</value>
+  </data>
+  <data name="Ubisoft_FieldLength" xml:space="preserve">
+    <value>Feldlänge außerhalb der Datei (abgeschnitten?)</value>
+  </data>
+  <data name="Ubisoft_ProductDamaged" xml:space="preserve">
+    <value>Produkteintrag beschädigt</value>
+  </data>
+  <data name="Ubisoft_AtByte" xml:space="preserve">
+    <value>{0} bei Byte {1}.</value>
+    <comment>{0} = Meldung, {1} = Position</comment>
+  </data>
+  <data name="InstallDir_Empty" xml:space="preserve">
+    <value>Installationsordner ist leer.</value>
+  </data>
+  <data name="InstallDir_NotAbsolute" xml:space="preserve">
+    <value>Installationsordner "{0}" ist kein absoluter Pfad.</value>
+  </data>
+  <data name="InstallDir_DriveRoot" xml:space="preserve">
+    <value>Installationsordner "{0}" ist eine Laufwerkswurzel.</value>
+  </data>
+  <data name="Json_InvalidEncoding" xml:space="preserve">
+    <value>Ungültige Zeichenkodierung (weder UTF-8 noch UTF-16 mit BOM).</value>
+  </data>
+  <data name="Json_Invalid" xml:space="preserve">
+    <value>Kein gültiges JSON.</value>
+  </data>
+  <data name="Json_InvalidAt" xml:space="preserve">
+    <value>Kein gültiges JSON (Zeile {0}, Spalte {1}).</value>
+  </data>
+  <data name="Json_RootNotObject" xml:space="preserve">
+    <value>JSON-Wurzel ist kein Objekt.</value>
+  </data>
+  <data name="Json_LoneSurrogate" xml:space="preserve">
+    <value>Feld "{0}" enthält eine ungültige Escape-Folge (einzelnes UTF-16-Surrogat).</value>
+  </data>
+</root>

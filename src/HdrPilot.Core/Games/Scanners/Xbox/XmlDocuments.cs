@@ -1,5 +1,6 @@
 using System.Xml;
 using System.Xml.Linq;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Xbox;
 
@@ -19,7 +20,7 @@ internal static class XmlDocuments
     {
         if (data.Length == 0)
         {
-            throw new InvalidDataException($"{label} ist leer.");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.XmlDoc_Empty, label));
         }
 
         XDocument document;
@@ -31,17 +32,17 @@ internal static class XmlDocuments
         }
         catch (XmlException ex)
         {
-            throw new InvalidDataException($"{label} ist kein gültiges XML (abgeschnitten, falsche Kodierung oder kein Text): {ex.Message}", ex);
+            throw new InvalidDataException(ScanText.Format(ScanStrings.XmlDoc_Invalid, label, ex.Message), ex);
         }
         catch (System.Text.DecoderFallbackException ex)
         {
-            throw new InvalidDataException($"{label} hat eine falsche Zeichenkodierung: {ex.Message}", ex);
+            throw new InvalidDataException(ScanText.Format(ScanStrings.XmlDoc_Encoding, label, ex.Message), ex);
         }
 
         var root = document.Root;
         if (root is null || root.Name.LocalName != expectedRoot)
         {
-            throw new InvalidDataException($"{label}: Wurzelelement <{expectedRoot}> fehlt.");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.XmlDoc_NoRoot, label, expectedRoot));
         }
 
         return root;

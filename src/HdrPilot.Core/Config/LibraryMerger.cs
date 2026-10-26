@@ -71,7 +71,7 @@ public static class LibraryMerger
 
         // Nur Quellen, deren Scanner ohne Absturz durchlief, dürfen Spiele als verschwunden markieren.
         var completedSources = report.Scanners
-            .Where(s => !s.Result.Errors.Any(e => e.Message.StartsWith("Scanner abgestürzt", StringComparison.Ordinal)))
+            .Where(s => !s.Result.Errors.Any(e => e.ScannerCrashed))
             .Select(s => s.Result.Source)
             .ToHashSet();
 

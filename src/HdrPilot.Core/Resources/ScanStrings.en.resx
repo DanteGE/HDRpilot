@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+    <data name="ScannerCrashed" xml:space="preserve">
+    <value>Scanner crashed: {0}: {1}</value>
+  </data>
+  <data name="Quiver_LibraryDamaged" xml:space="preserve">
+    <value>Quiver library damaged: {0}</value>
+  </data>
+  <data name="Quiver_LibraryUnreadable" xml:space="preserve">
+    <value>Quiver library can't be read: {0}: {1}</value>
+  </data>
+  <data name="Quiver_EntryUnusable" xml:space="preserve">
+    <value>Quiver entry {0} unusable: {1}</value>
+  </data>
+  <data name="Quiver_SettingsDamaged" xml:space="preserve">
+    <value>Quiver settings damaged, using the Apps folder: {0}</value>
+  </data>
+  <data name="Quiver_SettingsUnreadable" xml:space="preserve">
+    <value>Quiver settings can't be read, using the Apps folder: {0}: {1}</value>
+  </data>
+  <data name="Quiver_AppsPathUnusable" xml:space="preserve">
+    <value>Quiver setting AppsPath unusable, using the Apps folder: "{0}" isn't a valid absolute path.</value>
+  </data>
+  <data name="Quiver_EntryRejected" xml:space="preserve">
+    <value>Quiver entry "{0}" rejected: {1}</value>
+  </data>
+  <data name="Quiver_InstallPathUnusable" xml:space="preserve">
+    <value>Quiver entry "{0}": installPath unusable: {1}</value>
+  </data>
+  <data name="Quiver_ReceiptDamaged" xml:space="preserve">
+    <value>Quiver entry "{0}": Windows Installer link damaged: {1}</value>
+  </data>
+  <data name="Quiver_ReceiptUnreadable" xml:space="preserve">
+    <value>Quiver entry "{0}": Windows Installer link can't be read: {1}: {2}</value>
+  </data>
+  <data name="Quiver_LinkedExeUnusable" xml:space="preserve">
+    <value>Quiver entry "{0}": linked EXE unusable: {1}</value>
+  </data>
+  <data name="Quiver_FolderNameMissing" xml:space="preserve">
+    <value>folderName is missing.</value>
+  </data>
+  <data name="Quiver_FolderNameDot" xml:space="preserve">
+    <value>folderName is “.”.</value>
+  </data>
+  <data name="Quiver_FolderNameDotDot" xml:space="preserve">
+    <value>folderName "{0}" contains “..”.</value>
+  </data>
+  <data name="Quiver_FolderNameInvalidChars" xml:space="preserve">
+    <value>folderName "{0}" contains a path separator or an invalid character.</value>
+  </data>
+  <data name="Quiver_FolderNameTrailing" xml:space="preserve">
+    <value>folderName "{0}" ends with a period or space.</value>
+  </data>
+  <data name="Scan_FileTooLarge" xml:space="preserve">
+    <value>File larger than {0} MB.</value>
+  </data>
+  <data name="Quiver_AppsMissing" xml:space="preserve">
+    <value>Field "apps" is missing or isn't a list.</value>
+  </data>
+  <data name="Quiver_EntryNotObject" xml:space="preserve">
+    <value>Entry isn't an object.</value>
+  </data>
+  <data name="Quiver_UnknownPhase" xml:space="preserve">
+    <value>Unknown phase "{0}".</value>
+  </data>
+  <data name="Epic_FolderUnreadable" xml:space="preserve">
+    <value>Epic manifest folder can't be read: {0}: {1}</value>
+  </data>
+  <data name="Epic_ManifestDamaged" xml:space="preserve">
+    <value>Epic manifest damaged: {0}</value>
+  </data>
+  <data name="Epic_ManifestUnreadable" xml:space="preserve">
+    <value>Epic manifest can't be read: {0}: {1}</value>
+  </data>
+  <data name="Epic_AppNameMissing" xml:space="preserve">
+    <value>Epic manifest incomplete: required field AppName is missing.</value>
+  </data>
+  <data name="Epic_FieldsMissing" xml:space="preserve">
+    <value>Epic manifest incomplete: required field(s) {0} missing.</value>
+  </data>
+  <data name="Epic_ManifestUnusable" xml:space="preserve">
+    <value>Epic manifest for "{0}" unusable: {1}</value>
+  </data>
+  <data name="Ea_DriveRoot" xml:space="preserve">
+    <value>Game is located directly in the root folder of a drive and is skipped, because otherwise every process on the drive would count as the game.</value>
+  </data>
+  <data name="Ea_InstallerDataDamaged" xml:space="preserve">
+    <value>installerdata.xml is damaged ({0}).</value>
+  </data>
+  <data name="Ea_InstallerDataUnreadable" xml:space="preserve">
+    <value>installerdata.xml can't be read ({0}).</value>
+  </data>
+  <data name="Ea_NoContentId" xml:space="preserve">
+    <value>installerdata.xml contains no contentID; the game is skipped.</value>
+  </data>
+  <data name="Ea_WrongRoot" xml:space="preserve">
+    <value>Root element isn't &lt;{0}&gt; but &lt;{1}&gt;.</value>
+  </data>
+  <data name="Xml_Invalid" xml:space="preserve">
+    <value>not valid XML: {0}</value>
+  </data>
+  <data name="Xml_WrongEncoding" xml:space="preserve">
+    <value>characters don't match the declared encoding: {0}</value>
+  </data>
+  <data name="BattleNet_Unreadable" xml:space="preserve">
+    <value>product.db can't be read ({0}).</value>
+  </data>
+  <data name="BattleNet_DriveRoot" xml:space="preserve">
+    <value>Entry {0} names the root folder of a drive ({1}) as its install folder and is skipped, because otherwise every process on the drive would count as the game.</value>
+  </data>
+  <data name="BattleNet_WrongWireType" xml:space="preserve">
+    <value>Product entry has the wrong wire type {0}</value>
+  </data>
+  <data name="BattleNet_EntryDamaged" xml:space="preserve">
+    <value>Entry {0} in product.db is damaged and is skipped ({1}).</value>
+  </data>
+  <data name="BattleNet_Truncated" xml:space="preserve">
+    <value>product.db is damaged or truncated (from byte {0}: {1}); entries after that are missing.</value>
+  </data>
+  <data name="BattleNet_NoUid" xml:space="preserve">
+    <value>without uid</value>
+  </data>
+  <data name="BattleNet_NoProductCode" xml:space="preserve">
+    <value>without product code, uid {0}</value>
+  </data>
+  <data name="Proto_InvalidField" xml:space="preserve">
+    <value>invalid field number {0}</value>
+  </data>
+  <data name="Proto_UnknownWireType" xml:space="preserve">
+    <value>unknown wire type {0} at field {1}</value>
+  </data>
+  <data name="Proto_TruncatedNumber" xml:space="preserve">
+    <value>data ends in the middle of a number</value>
+  </data>
+  <data name="Proto_NumberTooLong" xml:space="preserve">
+    <value>number longer than 10 bytes</value>
+  </data>
+  <data name="Proto_LengthBeyondEnd" xml:space="preserve">
+    <value>length {0} extends beyond the end of the data</value>
+  </data>
+  <data name="Proto_InvalidUtf8" xml:space="preserve">
+    <value>text isn't valid UTF-8</value>
+  </data>
+  <data name="Proto_GroupUnsupported" xml:space="preserve">
+    <value>wire type {0} (group) isn't supported</value>
+  </data>
+  <data name="Proto_TruncatedValue" xml:space="preserve">
+    <value>data ends in the middle of a value</value>
+  </data>
+  <data name="Steam_LibraryListUnreadable" xml:space="preserve">
+    <value>Steam library list can't be read, only the default library is read: {0}</value>
+  </data>
+  <data name="Steam_LibraryListDamaged" xml:space="preserve">
+    <value>Steam library list damaged, only the default library is read: {0}</value>
+  </data>
+  <data name="Steam_LibraryListUnexpected" xml:space="preserve">
+    <value>Steam library list has an unexpected structure (section "libraryfolders" is missing), only the default library is read.</value>
+  </data>
+  <data name="Steam_LibraryNoPath" xml:space="preserve">
+    <value>Steam library "{0}" in the library list has no path.</value>
+  </data>
+  <data name="Steam_LibraryNotAbsolute" xml:space="preserve">
+    <value>Steam library "{0}" has no absolute path: {1}</value>
+  </data>
+  <data name="Steam_LibraryUnreadable" xml:space="preserve">
+    <value>Steam library can't be read: {0}</value>
+  </data>
+  <data name="Steam_ManifestUnreadable" xml:space="preserve">
+    <value>Steam manifest can't be read: {0}</value>
+  </data>
+  <data name="Steam_ManifestDamaged" xml:space="preserve">
+    <value>Steam manifest damaged: {0}</value>
+  </data>
+  <data name="Steam_ManifestNoAppState" xml:space="preserve">
+    <value>Steam manifest damaged: section "AppState" is missing.</value>
+  </data>
+  <data name="Steam_ManifestNoAppId" xml:space="preserve">
+    <value>Steam manifest incomplete: "appid" is missing or isn't a number.</value>
+  </data>
+  <data name="Steam_ManifestNoInstallDir" xml:space="preserve">
+    <value>Steam manifest incomplete: "installdir" is missing (AppID {0}).</value>
+  </data>
+  <data name="Steam_ManifestInvalidInstallDir" xml:space="preserve">
+    <value>Steam manifest contains an invalid folder name in "installdir" (AppID {0}): {1}</value>
+  </data>
+  <data name="Steam_AppCacheUnreadable" xml:space="preserve">
+    <value>Steam app cache can't be read; tools are only recognized by the fixed list and name rules: {0}</value>
+  </data>
+  <data name="Steam_AppCacheDamaged" xml:space="preserve">
+    <value>Steam app cache damaged; tools are only recognized by the fixed list and name rules: {0}</value>
+  </data>
+  <data name="AppInfo_KeyTableOffset" xml:space="preserve">
+    <value>Offset of the key table lies outside the file.</value>
+  </data>
+  <data name="AppInfo_EntrySize" xml:space="preserve">
+    <value>Entry of AppID {0} has an invalid size ({1} bytes).</value>
+  </data>
+  <data name="AppInfo_KeyTableLength" xml:space="preserve">
+    <value>Key table has an invalid length.</value>
+  </data>
+  <data name="AppInfo_TooDeep" xml:space="preserve">
+    <value>Binary KeyValues nested too deeply.</value>
+  </data>
+  <data name="AppInfo_UnknownType" xml:space="preserve">
+    <value>Unknown type 0x{0} in binary KeyValues.</value>
+  </data>
+  <data name="AppInfo_KeyIndex" xml:space="preserve">
+    <value>Key index {0} lies outside the key table.</value>
+  </data>
+  <data name="AppInfo_Truncated" xml:space="preserve">
+    <value>File is truncated or damaged.</value>
+  </data>
+  <data name="KeyValues_AtLine" xml:space="preserve">
+    <value>{0} (line {1})</value>
+  </data>
+  <data name="KeyValues_TooDeep" xml:space="preserve">
+    <value>Nested too deeply</value>
+  </data>
+  <data name="KeyValues_BlockNotClosed" xml:space="preserve">
+    <value>Block from line {0} isn't closed (file truncated?)</value>
+  </data>
+  <data name="KeyValues_UnexpectedClose" xml:space="preserve">
+    <value>Unexpected closing brace</value>
+  </data>
+  <data name="KeyValues_BlockWithoutKey" xml:space="preserve">
+    <value>Block without a key</value>
+  </data>
+  <data name="KeyValues_ValueMissingTruncated" xml:space="preserve">
+    <value>Value for "{0}" is missing (file truncated?)</value>
+  </data>
+  <data name="KeyValues_ValueMissing" xml:space="preserve">
+    <value>Value for "{0}" is missing</value>
+  </data>
+  <data name="KeyValues_NullChar" xml:space="preserve">
+    <value>Null character in string (binary data or wrong encoding?)</value>
+  </data>
+  <data name="KeyValues_StringNotClosed" xml:space="preserve">
+    <value>String from line {0} isn't closed (file truncated?)</value>
+  </data>
+  <data name="KeyValues_ConditionNotClosed" xml:space="preserve">
+    <value>Condition in square brackets isn't closed</value>
+  </data>
+  <data name="KeyValues_ControlChar" xml:space="preserve">
+    <value>Invalid control character 0x{0} (binary data or wrong encoding?)</value>
+  </data>
+  <data name="Gog_EntryUnreadable" xml:space="preserve">
+    <value>GOG registry entry can't be read.</value>
+  </data>
+  <data name="Gog_ValueMissing" xml:space="preserve">
+    <value>GOG registry entry incomplete: value {0} is missing.</value>
+  </data>
+  <data name="Gog_EntryUnusable" xml:space="preserve">
+    <value>GOG registry entry unusable: {0}</value>
+  </data>
+  <data name="Gog_ContainsGalaxy" xml:space="preserve">
+    <value>GOG registry entry unusable: install folder "{0}" contains GOG Galaxy itself.</value>
+  </data>
+  <data name="Gog_NoLaunchExe" xml:space="preserve">
+    <value>GOG game "{0}": no existing launch EXE (registry value {1} and primary playTask are missing or point nowhere).</value>
+  </data>
+  <data name="Gog_InfoDamaged" xml:space="preserve">
+    <value>GOG game info damaged: {0}</value>
+  </data>
+  <data name="Gog_InfoUnreadable" xml:space="preserve">
+    <value>GOG game info can't be read: {0}: {1}</value>
+  </data>
+  <data name="Xbox_FileUnreadable" xml:space="preserve">
+    <value>{0} couldn't be read: {1}</value>
+  </data>
+  <data name="Xbox_FolderNotFullPath" xml:space="preserve">
+    <value>{0}: folder name "{1}" doesn't result in a full path and is skipped.</value>
+  </data>
+  <data name="Xbox_LibraryUnreadable" xml:space="preserve">
+    <value>Games folder couldn't be read: {0}</value>
+  </data>
+  <data name="Xbox_GameFolderFailed" xml:space="preserve">
+    <value>Game folder couldn't be evaluated: {0}: {1}</value>
+  </data>
+  <data name="Xbox_InvalidPackageName" xml:space="preserve">
+    <value>Invalid package name "{0}" in Identity/@Name, launch command can't be built.</value>
+  </data>
+  <data name="Xbox_NoAppId" xml:space="preserve">
+    <value>No app ID found (neither appxmanifest.xml Applications/Application/@Id nor Executable/@Id), launch command can't be built.</value>
+  </data>
+  <data name="Xbox_InvalidAppId" xml:space="preserve">
+    <value>Invalid app ID "{0}", launch command can't be built.</value>
+  </data>
+  <data name="Xbox_ManifestFallback" xml:space="preserve">
+    <value>{0} The details from {1} apply.</value>
+  </data>
+  <data name="GamingRoot_TooShort" xml:space="preserve">
+    <value>File is too short ({0} bytes, at least {1} expected).</value>
+  </data>
+  <data name="GamingRoot_NoMagic" xml:space="preserve">
+    <value>Identifier "RGBX" is missing, the file has an unknown format.</value>
+  </data>
+  <data name="GamingRoot_InvalidFolder" xml:space="preserve">
+    <value>Invalid folder name in the file (control characters or invalid characters).</value>
+  </data>
+  <data name="GamingRoot_Truncated" xml:space="preserve">
+    <value>File is truncated: the last folder name doesn't end with a null character.</value>
+  </data>
+  <data name="GamingRoot_NoFolders" xml:space="preserve">
+    <value>File contains no folder name.</value>
+  </data>
+  <data name="XmlDoc_Empty" xml:space="preserve">
+    <value>{0} is empty.</value>
+  </data>
+  <data name="XmlDoc_Invalid" xml:space="preserve">
+    <value>{0} isn't valid XML (truncated, wrong encoding or not text): {1}</value>
+  </data>
+  <data name="XmlDoc_Encoding" xml:space="preserve">
+    <value>{0} has a wrong character encoding: {1}</value>
+  </data>
+  <data name="XmlDoc_NoRoot" xml:space="preserve">
+    <value>{0}: root element &lt;{1}&gt; is missing.</value>
+  </data>
+  <data name="Ubisoft_NoProductId" xml:space="preserve">
+    <value>Ubisoft install entry "{0}" has no valid product ID.</value>
+  </data>
+  <data name="Ubisoft_EntryUnreadable" xml:space="preserve">
+    <value>Ubisoft install entry {0} can't be read.</value>
+  </data>
+  <data name="Ubisoft_InstallDirType" xml:space="preserve">
+    <value>Ubisoft install entry {0}: InstallDir has the unexpected type {1}.</value>
+  </data>
+  <data name="Ubisoft_InstallDirNotAbsolute" xml:space="preserve">
+    <value>Ubisoft install entry {0}: InstallDir isn't an absolute path: {1}</value>
+  </data>
+  <data name="Ubisoft_InstallDirRoot" xml:space="preserve">
+    <value>Ubisoft install entry {0}: InstallDir is the root of a drive or share ({1}); every process on the drive would count as the game. The entry is skipped, please add the game folder manually.</value>
+  </data>
+  <data name="Ubisoft_CacheUnreadable" xml:space="preserve">
+    <value>Ubisoft product cache can't be read, names and EXE files are missing: {0}</value>
+  </data>
+  <data name="Ubisoft_CacheDamaged" xml:space="preserve">
+    <value>Ubisoft product cache damaged, some names and EXE files are missing: {0}</value>
+  </data>
+  <data name="Ubisoft_CacheEntryDamaged" xml:space="preserve">
+    <value>Ubisoft product cache: entry {0} is damaged: {1}</value>
+  </data>
+  <data name="Ubisoft_InvalidFieldHeader" xml:space="preserve">
+    <value>Invalid field header</value>
+  </data>
+  <data name="Ubisoft_InvalidField" xml:space="preserve">
+    <value>Invalid field</value>
+  </data>
+  <data name="Ubisoft_FieldLength" xml:space="preserve">
+    <value>Field length outside the file (truncated?)</value>
+  </data>
+  <data name="Ubisoft_ProductDamaged" xml:space="preserve">
+    <value>Product entry damaged</value>
+  </data>
+  <data name="Ubisoft_AtByte" xml:space="preserve">
+    <value>{0} at byte {1}.</value>
+  </data>
+  <data name="InstallDir_Empty" xml:space="preserve">
+    <value>Install folder is empty.</value>
+  </data>
+  <data name="InstallDir_NotAbsolute" xml:space="preserve">
+    <value>Install folder "{0}" isn't an absolute path.</value>
+  </data>
+  <data name="InstallDir_DriveRoot" xml:space="preserve">
+    <value>Install folder "{0}" is a drive root.</value>
+  </data>
+  <data name="Json_InvalidEncoding" xml:space="preserve">
+    <value>Invalid character encoding (neither UTF-8 nor UTF-16 with BOM).</value>
+  </data>
+  <data name="Json_Invalid" xml:space="preserve">
+    <value>Not valid JSON.</value>
+  </data>
+  <data name="Json_InvalidAt" xml:space="preserve">
+    <value>Not valid JSON (line {0}, column {1}).</value>
+  </data>
+  <data name="Json_RootNotObject" xml:space="preserve">
+    <value>JSON root isn't an object.</value>
+  </data>
+  <data name="Json_LoneSurrogate" xml:space="preserve">
+    <value>Field "{0}" contains an invalid escape sequence (lone UTF-16 surrogate).</value>
+  </data>
+</root>

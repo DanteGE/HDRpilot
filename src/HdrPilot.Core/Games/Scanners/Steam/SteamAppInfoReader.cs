@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Steam;
 
@@ -56,7 +57,7 @@ internal static class SteamAppInfoReader
             var offset = reader.ReadInt64();
             if (offset < reader.Position || offset > data.Length - 4)
             {
-                throw new InvalidDataException("Offset der Schlüsseltabelle liegt außerhalb der Datei.");
+                throw new InvalidDataException(ScanStrings.AppInfo_KeyTableOffset);
             }
 
             entriesEnd = (int)offset;
@@ -78,7 +79,7 @@ internal static class SteamAppInfoReader
             var size = entries.ReadUInt32();
             if (size < entryHeaderSize || size > (uint)(entriesEnd - entries.Position))
             {
-                throw new InvalidDataException($"Eintrag der AppID {appId} hat eine ungültige Größe ({size} Byte).");
+                throw new InvalidDataException(ScanText.Format(ScanStrings.AppInfo_EntrySize, appId, size));
             }
 
             var entryEnd = entries.Position + (int)size;
@@ -104,7 +105,7 @@ internal static class SteamAppInfoReader
         var count = reader.ReadUInt32();
         if (count > (uint)(data.Length - reader.Position))
         {
-            throw new InvalidDataException("Schlüsseltabelle hat eine ungültige Länge.");
+            throw new InvalidDataException(ScanStrings.AppInfo_KeyTableLength);
         }
 
         var keys = new string[count];
@@ -135,7 +136,7 @@ internal static class SteamAppInfoReader
     {
         if (depth > MaxDepth)
         {
-            throw new InvalidDataException("Binäre KeyValues zu tief verschachtelt.");
+            throw new InvalidDataException(ScanStrings.AppInfo_TooDeep);
         }
 
         while (true)
@@ -177,7 +178,7 @@ internal static class SteamAppInfoReader
                     break;
                 default:
                     throw new InvalidDataException(
-                        "Unbekannter Typ 0x" + kind.ToString("X2", CultureInfo.InvariantCulture) + " in binären KeyValues.");
+                        ScanText.Format(ScanStrings.AppInfo_UnknownType, kind.ToString("X2", CultureInfo.InvariantCulture)));
             }
         }
     }
@@ -192,7 +193,7 @@ internal static class SteamAppInfoReader
         var index = reader.ReadInt32();
         if (index < 0 || index >= keyTable.Length)
         {
-            throw new InvalidDataException($"Schlüsselindex {index} liegt außerhalb der Schlüsseltabelle.");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.AppInfo_KeyIndex, index));
         }
 
         return keyTable[index];
@@ -319,6 +320,6 @@ internal static class SteamAppInfoReader
             }
         }
 
-        private static InvalidDataException Truncated() => new("Datei ist abgeschnitten oder beschädigt.");
+        private static InvalidDataException Truncated() => new(ScanStrings.AppInfo_Truncated);
     }
 }

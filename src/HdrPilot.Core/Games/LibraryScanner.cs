@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using HdrPilot.Core.Resources;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -64,7 +65,7 @@ public sealed class LibraryScanner(IReadOnlyList<IGameScanner> scanners, ILogger
                     Source = scanner.Source,
                     ScannerName = scanner.Name,
                     LauncherDetected = false,
-                    Errors = [new ScanError($"Scanner abgestürzt: {ex.GetType().Name}: {ex.Message}")],
+                    Errors = [new ScanError(ScanText.Format(ScanStrings.ScannerCrashed, ex.GetType().Name, ex.Message), ScannerCrashed: true)],
                 },
                 sw.Elapsed);
         }

@@ -577,6 +577,10 @@
   <data name="LibraryCardSummary" xml:space="preserve">
     <value>{0} Spiele · {1} mit HDR automatisch</value>
   </data>
+  <data name="LibraryCardSummaryOne" xml:space="preserve">
+    <value>1 Spiel · {1} mit HDR automatisch</value>
+    <comment>Wie LibraryCardSummary bei genau einem Spiel (E95)</comment>
+  </data>
   <data name="OpenLibrary" xml:space="preserve">
     <value>Spielebibliothek öffnen</value>
   </data>

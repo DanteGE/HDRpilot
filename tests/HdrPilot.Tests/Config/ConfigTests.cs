@@ -131,7 +131,7 @@ public sealed class ConfigTests
                 new GameEntry { Source = GameSource.Steam, SourceId = "1", Name = "Neuer Name", InstallDir = @"D:\New", LaunchCommand = "steam://rungameid/1" },
                 new GameEntry { Source = GameSource.Steam, SourceId = "3", Name = "Brandneu", InstallDir = @"D:\Three", LaunchCommand = "steam://rungameid/3" },
             ] }, TimeSpan.Zero),
-            new ScannerReport(new ScanResult { Source = GameSource.Gog, ScannerName = "GOG", Errors = [new ScanError("Scanner abgestürzt: X")] }, TimeSpan.Zero),
+            new ScannerReport(new ScanResult { Source = GameSource.Gog, ScannerName = "GOG", Errors = [new ScanError("Scanner abgestürzt: X", ScannerCrashed: true)] }, TimeSpan.Zero),
         ]);
 
         var summary = service.ApplyScan(report, _fs);

@@ -482,7 +482,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public string NewText => LibraryText.Format(LibraryStrings.Stats_New, _newCount);
 
     public string ResultText => IsFiltered
-        ? LibraryText.Format(LibraryStrings.List_ResultFiltered, _visibleCount, _totalCount)
+        ? _totalCount == 1
+            ? LibraryText.Format(LibraryStrings.Stats_FilteredOfOne, _visibleCount)
+            : LibraryText.Format(LibraryStrings.List_ResultFiltered, _visibleCount, _totalCount)
         : LibraryText.Games(_totalCount);
 
     public bool IsLibraryEmpty => _totalCount == 0;

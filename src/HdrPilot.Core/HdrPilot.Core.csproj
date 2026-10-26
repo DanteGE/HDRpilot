@@ -18,6 +18,13 @@
       <StronglyTypedFileName>$(IntermediateOutputPath)CoreStrings.Designer.cs</StronglyTypedFileName>
       <PublicClass>true</PublicClass>
     </EmbeddedResource>
+    <!-- Meldungen der Scanner (E95): Bibliothek und hdrpilot scan, nur im Kern gebraucht. -->
+    <EmbeddedResource Update="Resources\ScanStrings.resx">
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>HdrPilot.Core.Resources</StronglyTypedNamespace>
+      <StronglyTypedClassName>ScanStrings</StronglyTypedClassName>
+      <StronglyTypedFileName>$(IntermediateOutputPath)ScanStrings.Designer.cs</StronglyTypedFileName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows;
 using System.Windows.Media;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
@@ -368,6 +369,66 @@ public sealed class SettingsAppearancePageTests
         Assert.Null(plain.PreviewAccents);
         Assert.Equal(GamePalette.Scheme(plain.State, true).AccentFill1, Assert.IsType<LinearGradientBrush>(plain.ColorsFollowSample).GradientStops[0].Color);
         plain.Dispose();
+    }
+
+    [Fact]
+    public void Preview_layer_is_attached_only_while_the_switch_is_on()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, appearance) = PreviewWindow(colorsFollowGame: true);
+            var model = (SettingsViewModel)window.DataContext;
+            WpfTestHost.DoEvents();
+
+            Assert.False(SystemParameters.HighContrast, "Testumgebung ohne hohen Kontrast");
+            Assert.NotNull(model.Appearance.PreviewAccents);
+            Assert.True(window.PreviewAccentLayerAttached);
+
+            appearance.Update(s => s.ColorsFollowGame = false);
+            Assert.Null(model.Appearance.PreviewAccents);
+            Assert.False(window.PreviewAccentLayerAttached);
+
+            appearance.Update(s => s.ColorsFollowGame = true);
+            Assert.True(window.PreviewAccentLayerAttached);
+            window.Close();
+            Assert.False(window.PreviewAccentLayerAttached);
+        });
+    }
+
+    [Fact]
+    public void Stage_dot_resolves_its_shine_from_inside_the_stage()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _) = PreviewWindow(colorsFollowGame: true);
+            var model = (SettingsViewModel)window.DataContext;
+            WpfTestHost.DoEvents();
+            var stage = (FrameworkElement)window.FindName("Stage");
+            var dot = (System.Windows.Shapes.Ellipse)window.FindName("StageDot");
+
+            model.Appearance.PreviewHdr = true;
+
+            Assert.Same(stage.FindResource(ThemeKeys.BrushShine), dot.Fill);
+            Assert.NotSame(Application.Current.FindResource(ThemeKeys.BrushShine), dot.Fill); // Spielfarbe, nicht das Schema
+            model.Appearance.PreviewHdr = false;
+            Assert.IsType<SolidColorBrush>(dot.Fill);
+            window.Close();
+        });
+    }
+
+    private static (HdrPilot.App.Views.Shell.SettingsWindow Window, StaticAppearanceService Appearance) PreviewWindow(bool colorsFollowGame)
+    {
+        var red = new GameConfig { Source = GameSource.Steam, SourceId = "41", Name = "Testspiel Rot", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        var config = ShellTestFactory.NewConfig(new InMemoryFileSystem(), c => c.Games.Add(red));
+        var appearance = new StaticAppearanceService(new AppearanceSettings { ColorsFollowGame = colorsFollowGame });
+        var context = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new ConfigOnlyAutostartService(config))
+        {
+            Appearance = appearance,
+            Artwork = new HdrPilot.App.Tests.Library.FakeArtworkService(key => key == red.Key ? new GameColors("#D62828", GameColorSource.Logo, 1, [], []) : null),
+        };
+        var window = new HdrPilot.App.Views.Shell.SettingsWindow();
+        window.Attach(new SettingsViewModel(context, new FakeFolderPicker()));
+        return (window, appearance);
     }
 
     private static (AppearancePageViewModel Page, ConfigService Config, FakeShellContext Context) Create()

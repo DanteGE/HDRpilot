@@ -28,20 +28,10 @@ public static class ThemeResources
         var p = palette;
         var dark = p.IsDark;
 
-        // ---- Farben ----
-        d[ThemeKeys.ColorC1] = p.C1;
-        d[ThemeKeys.ColorC2] = p.C2;
-        d[ThemeKeys.ColorC3] = p.C3;
-        d[ThemeKeys.ColorOnAccent] = p.OnAccent;
-        d[ThemeKeys.ColorAccentText] = p.AccentText;
+        // ---- Farben und Akzente (auch die Farbebene der Spielfarben, E94) ----
+        AddAccentEntries(d, p);
         d[ThemeKeys.ColorBackground] = p.Background;
         d[ThemeKeys.ColorAmbient1] = p.Ambient1;
-        d[ThemeKeys.ColorAmbient2] = p.Ambient2;
-        d[ThemeKeys.ColorAmbient3] = p.Ambient3;
-        d[ThemeKeys.ColorAccent1] = p.C1;
-        d[ThemeKeys.ColorAccent2] = p.C2;
-        d[ThemeKeys.ColorAccent3] = p.C3;
-        d[ThemeKeys.ColorGlow] = p.C2;
         d[ThemeKeys.ColorShadow] = dark ? Colors.Black : Rgb(0x6B, 0x71, 0x89);
 
         // ---- Hintergrund ----
@@ -75,25 +65,11 @@ public static class ThemeResources
         d[ThemeKeys.BrushText] = Solid(p.Text);
         d[ThemeKeys.BrushTextSecondary] = Solid(p.TextSecondary);
         d[ThemeKeys.BrushTextMuted] = Solid(p.TextMuted);
-        d[ThemeKeys.BrushTextOnAccent] = Solid(p.OnAccent);
         d[ThemeKeys.BrushTextOnArt] = Solid(Rgb(0xF5, 0xF6, 0xFA));
         d[ThemeKeys.BrushTextOnArtSecondary] = Solid(Rgb(0xC9, 0xCD, 0xDB));
 
-        // ---- Akzent (Flächen unter Text: Akzentflächen; Bedienelemente: 3:1-Fassung) ----
-        d[ThemeKeys.BrushAccent] = Linear(new Point(0, 0.32), new Point(1, 0.68), (p.AccentFill1, 0), (p.AccentFill2, 1));
-        d[ThemeKeys.BrushAccentShine] = Linear(new Point(0, 0.32), new Point(1, 0.68), (p.AccentFill1, 0), (p.AccentFill3, 1));
-        d[ThemeKeys.BrushAccentSolid] = Solid(p.AccentText);
-        d[ThemeKeys.BrushAccentText] = Solid(p.AccentText);
-        d[ThemeKeys.BrushAccentSoft] = Solid(ColorMath.WithAlpha(p.C1, 0.22));
-        d[ThemeKeys.BrushAccentStrong] = Solid(ColorMath.WithAlpha(p.C1, 0.62));
-        d[ThemeKeys.BrushAtmosphereSoft] = Solid(ColorMath.WithAlpha(p.C2, 0.55));
-        d[ThemeKeys.BrushShine] = Solid(p.Shine);
-        d[ThemeKeys.BrushSelectionFill] = Solid(p.SelectionFill);
-        d[ThemeKeys.BrushSelectionRing] = Solid(p.SelectionRing);
-        d[ThemeKeys.BrushFocusRing] = Solid(p.FocusRing);
-        d[ThemeKeys.BrushHdrOn] = Linear(new Point(0, 0), new Point(1, 1), (p.AccentFill1, 0), (p.AccentFill2, 0.55), (p.AccentFill3, 1));
+        // ---- Akzent (Flächen unter Text und Bedienelemente stehen in AddAccentEntries) ----
         d[ThemeKeys.BrushHdrOff] = Solid(dark ? Argb(0x24, 0xFF, 0xFF, 0xFF) : Argb(0x24, 0x11, 0x13, 0x20));
-        d[ThemeKeys.BrushToggleOn] = Linear(new Point(0, 0.32), new Point(1, 0.68), (p.Control1, 0), (p.Control2, 1));
         d[ThemeKeys.BrushToggleOff] = Solid(dark ? Rgb(0xC9, 0xCC, 0xD8) : Colors.White);
         d[ThemeKeys.BrushToggleThumb] = Solid(Colors.White);
 
@@ -121,6 +97,45 @@ public static class ThemeResources
         d[ThemeKeys.FontText] = TextFont;
         d[ThemeKeys.FontMono] = MonoFont;
         return d;
+    }
+
+    /// <summary>
+    /// Die 25 Schlüssel, die der Akzent bestimmt (11 Farben, 14 Pinsel): Teil von <see cref="Build(ThemePalette)"/> und Inhalt
+    /// der Farbebene der Spielfarben (<see cref="GameAccentLayer"/>, E94). Flächen, Text, Zustände, Hintergrund und Schriften
+    /// bleiben beim Schema. Pinsel eingefroren wie in <see cref="Build(ThemePalette)"/>.
+    /// </summary>
+    public static void AddAccentEntries(ResourceDictionary d, ThemePalette p)
+    {
+        // ---- Farben ----
+        d[ThemeKeys.ColorC1] = p.C1;
+        d[ThemeKeys.ColorC2] = p.C2;
+        d[ThemeKeys.ColorC3] = p.C3;
+        d[ThemeKeys.ColorOnAccent] = p.OnAccent;
+        d[ThemeKeys.ColorAccentText] = p.AccentText;
+        d[ThemeKeys.ColorAmbient2] = p.Ambient2;
+        d[ThemeKeys.ColorAmbient3] = p.Ambient3;
+        d[ThemeKeys.ColorAccent1] = p.C1;
+        d[ThemeKeys.ColorAccent2] = p.C2;
+        d[ThemeKeys.ColorAccent3] = p.C3;
+        d[ThemeKeys.ColorGlow] = p.C2;
+
+        // ---- Text auf Akzent ----
+        d[ThemeKeys.BrushTextOnAccent] = Solid(p.OnAccent);
+
+        // ---- Akzent (Flächen unter Text: Akzentflächen; Bedienelemente: 3:1-Fassung) ----
+        d[ThemeKeys.BrushAccent] = Linear(new Point(0, 0.32), new Point(1, 0.68), (p.AccentFill1, 0), (p.AccentFill2, 1));
+        d[ThemeKeys.BrushAccentShine] = Linear(new Point(0, 0.32), new Point(1, 0.68), (p.AccentFill1, 0), (p.AccentFill3, 1));
+        d[ThemeKeys.BrushAccentSolid] = Solid(p.AccentText);
+        d[ThemeKeys.BrushAccentText] = Solid(p.AccentText);
+        d[ThemeKeys.BrushAccentSoft] = Solid(ColorMath.WithAlpha(p.C1, 0.22));
+        d[ThemeKeys.BrushAccentStrong] = Solid(ColorMath.WithAlpha(p.C1, 0.62));
+        d[ThemeKeys.BrushAtmosphereSoft] = Solid(ColorMath.WithAlpha(p.C2, 0.55));
+        d[ThemeKeys.BrushShine] = Solid(p.Shine);
+        d[ThemeKeys.BrushSelectionFill] = Solid(p.SelectionFill);
+        d[ThemeKeys.BrushSelectionRing] = Solid(p.SelectionRing);
+        d[ThemeKeys.BrushFocusRing] = Solid(p.FocusRing);
+        d[ThemeKeys.BrushHdrOn] = Linear(new Point(0, 0), new Point(1, 1), (p.AccentFill1, 0), (p.AccentFill2, 0.55), (p.AccentFill3, 1));
+        d[ThemeKeys.BrushToggleOn] = Linear(new Point(0, 0.32), new Point(1, 0.68), (p.Control1, 0), (p.Control2, 1));
     }
 
     /// <summary>

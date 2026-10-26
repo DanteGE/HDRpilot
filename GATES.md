@@ -397,7 +397,7 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
   EXPECT: TESTS_OK
   EVIDENCE: 2026-10-21 (phase5/release, 8f3a6a7): exit 0, TESTS_OK 123. Messung an einer Kopie der Bibliothek (2026-10-16, `--artwork-report`, Ergebnis in `docs/design/showcase-hero/umsetzung-core.md`): Steam Titelbild 631 von 636 Spielen.
 
-- [x] G10.4: SteamGridDB optional: standardmäßig aus, nur mit eigenem API-Schlüssel (verschlüsselt gespeichert wie das PCGamingWiki-Bot-Passwort), füllt nur fehlende Bilder, klare Anzeige des Netzwerkzugriffs; ist es aus, gibt es nachweislich keinen Netzwerkzugriff dafür; per Unit-Tests mit Attrappe (nie das echte Netz in Tests) belegt
+- [x] G10.4: SteamGridDB optional: standardmäßig aus, nur mit eigenem API-Schlüssel (verschlüsselt gespeichert wie das PCGamingWiki-Bot-Passwort), füllt automatisch nur fehlende Bilder, klare Anzeige des Netzwerkzugriffs; ist das automatische Füllen aus, gibt es nachweislich keinen automatischen Netzwerkzugriff dafür (seit E93 sucht „Bild wählen…“ mit gespeichertem Schlüssel nur auf Klick, siehe G14.2), ohne Schlüssel gar keinen; per Unit-Tests mit Attrappe (nie das echte Netz in Tests) belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDb" -MinTests 8
   EXPECT: TESTS_OK
   EVIDENCE: 2026-10-21 (phase5/release, 8f3a6a7): exit 0, TESTS_OK 40.
@@ -565,3 +565,76 @@ Scope: HDRpilot 1.5.0 im öffentlichen Repository `DanteGE/HDRpilot`. Lizenz Pol
   CHECK: ps tools\gates\publish-check.ps1 -History * -PrivateList <private Liste> (im umgeschriebenen Repository: alle Refs, also die hochzuladenden Zweige und origin/main; die private Liste liegt nur beim unbereinigten Repository)
   EXPECT: PUBLISH_CHECK_OK
   EVIDENCE: pending. Vorlauf 2026-10-20 (Werkzeug der Prüfung getestet, Umschreiben steht aus): Positivkontrolle der Geschichte 6 von 6 (Autor, Committer, Profilpfad und Titel nur in alten Versionen, Ordnername im Pfadnamen, Claude-Ordner in einer Nachricht), 7 von 7 Mutanten der Prüfung von den Positivkontrollen erkannt; unbereinigtes Repository (main, phase5/release, feature/library-toolbar: 216 Commits, 2 204 Blob-Versionen, 740 Pfadnamen) 3 427 Treffer, davon 404 bei Autor oder Committer (202 Commits); Probelauf des Umschreibwerkzeugs (dry2, `-History *`: 204 Commits, 2 070 Blob-Versionen) 2 261 Treffer und keine bei Autor oder Committer: 2 120 echte Installationsordner, 68 Titel aus entfernten Listen, 40 Ordnernamen ohne Laufwerk, 17 Kennungen, 16 gekürzte Verweise auf den Notizordner. Im unbereinigten Repository trifft außerdem die Nachricht des Commits „Bereinigung: Profilpfade, Claude-Ordner, Name und Kennungen des Rechners“ (gekürzter Verweis auf den Notizordner); beim Umschreiben anpassen. Vorbereitet 2026-10-22: Zuordnung der echten Spielordner an Standardorten zu erfundenen für alle Versionen (nicht im Repository, siehe `docs/stand.md`), mit Reihenfolge der Regeln und Umbenennungen alter Beispieldateien; im Werkzeug noch nachzurüsten, Umschreiben steht aus.
+
+## Phase 14: SteamGridDB-Suche in „Bild wählen…“ (Wunsch des Nutzers 2026-10-22, E93)
+
+Scope: Im Dialog „Bild wählen…“ je Reiter (Titelbild, Logo, Cover) ein Abschnitt „STEAMGRIDDB“ unter den lokalen Bildern: Spielzuordnung „Spiel: <Name> ▾“ mit Spielwahl, **Bei SteamGridDB suchen** nur auf Klick, 24 Vorschauen je Seite mit Autor, **Mehr laden**, nur unbewegte Bilder ohne NSFW-/Humor-Markierung; das volle Bild lädt erst **Übernehmen** und speichert es wie eine eigene Datei. Ohne Schlüssel Hinweis und **Zu den Einstellungen**; mit Schlüssel auch bei ausgeschaltetem automatischem Füllen. Dazu: eine Kachelform je Bildart für lokale und Online-Bilder, Fenster nie höher als die Arbeitsfläche und ohne Schrumpfen, hoher Kontrast, Schalter der Einstellungen in eigener Zeile, ein gemeinsamer Abstand aller Anfragen und Zeitgrenzen für jede Übertragung. Kein Netz in Tests und Prüfläufen (Attrappen, erzeugte Testdaten), keine Spielbilder in Testdaten und Bildschirmfotos. Spezifikation: siehe E93. Als eigenes Test-Update nach den UI-Wünschen vom 2026-10-22.
+
+- [ ] G14.1: Schnittstelle im Kern: Seiten mit Vorschau, Autor, Größe und Filtern (static, nsfw/humor/epilepsy false, Cover 600×900/342×482/660×930, page ohne limit), Ende erst mit leerer Seite (404 ab Seite 1 = Ende), Trefferliste und games/id mit Jahr, bereinigte Suchbegriffe und Namen, erlaubte Rechner auch für Vorschauen und nach Weiterleitungen, Vorschau nur aus thumb, HTTP 401/403 eines Bildes kein abgelehnter Schlüssel, getrennte Budgets, Vorschauen ohne 1-s-Abstand, gemeinsamer exklusiver Abstand der Schnittstelle über Threads, Zeitgrenzen und sofortiger Abbruch hängender Übertragungen, Größengrenzen 4 MB/32 MB/15 MB, Fehlerarten, Schlüssel nie in Ausnahmen; mit Gegenproben
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDbSearchClient" -MinTests 30
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.2: Dienst, Sitzung und Bilddaten: ohne Schlüssel keine Sitzung und kein Handler, mit Schlüssel kein Handler vor dem ersten Klick; Suche auch bei ausgeschaltetem Schalter, automatischer Lauf weiter nur eingeschaltet; Zuordnung (App-ID, gemerkt mit Name und Jahr, gleicher Name, mehrdeutig, Trefferliste), geteilte Auflösung ohne gemerkte Fehlschläge, ein Abstand für Lauf, Prüfen und Sitzungen, höchstens 3 Vorschauen gleichzeitig, Warteschlange abbrechbar, Grenzen je Dialog, 60 s Pause nach 429, Schlüssel entfernen und Beenden brechen sofort ab, Zuordnung nur ohne Steam-App-ID gemerkt und danach neu gefüllt, kein Bild der alten Zuordnung gespeichert, keine Autoren/Begriffe/Namen/Adressen/Schlüssel im Protokoll; Bilder aus Daten speichern wie Dateien; Testdaten-Lieferant nur mit --config-dir, ohne echten Handler; mit Gegenproben
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDbSearchSession|FullyQualifiedName~SteamGridDbFixture|FullyQualifiedName~ArtworkCustomDataTests" -MinTests 37
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.3: ViewModel des Dialogs: Zustände und Texte aus resx (ohne Schlüssel, nicht lesbar, bereit, lädt, langsam, Ergebnisse, Ende, Grenze je Reiter, kein Treffer, keine Bilder, Schlüssel abgelehnt, zu viele Anfragen, offline, Zeitüberschreitung, Grenze erreicht), je Reiter eigener Klick, Mehr laden bis zur leeren Seite, Speicher verborgener Reiter freigegeben, Spielwahl, eine Wahl je Reiter über lokale und Online-Liste, Spielwechsel mit Hinweis, Herunterladen beim Übernehmen noch im Dialog mit Meldung im betroffenen Reiter, Abbrechen ohne Absturz, Speichern als eigenes Bild, Zurücksetzen, Abbrechen schreibt nichts, Schließen gibt frei und lässt die lokale Wahl bedienbar, Link zu den Einstellungen, Ansage nur bei Zustandswechseln; mit Gegenproben
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ArtworkPickerSearchTests" -MinTests 40
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.4: Fenster: nie höher als die Arbeitsfläche des Bildschirms der Bibliothek (1280×800 bei 100 und 125 %, 1920×1080, 3440×1440), wächst nur und zur Mitte hin, nur die Mitte scrollt (auch per Mausrad über Kacheln), die Bildlaufleiste kostet keine Breite, Kacheln füllen die 830 DIP genau (lokal und online), Logos ganz auf Schachbrett, Tab-Reihenfolge, Fokus nach Suche und Mehr laden nur aus dem Abschnitt heraus, Esc und Enter in der Spielwahl, Kennungen, Muster und Namen für Bildschirmleser, Live-Ansage, hoher Kontrast mit lesbarem Text, Effektstufen Aus/Reduziert/Voll, helles und dunkles Thema, Übernehmen nach Schließen ohne Fehler
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ArtworkPickerSearchWindowTests" -MinTests 17
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.5: Einstellungen: Schlüsselfeld und „Prüfen“ auch bei ausgeschaltetem Schalter, „Prüfen“ speichert dann ohne Lauf, Schalter in eigener Zeile mit sichtbarer Beschriftung, Statuszeile „Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick“ bzw. letzter Zugriff (Lauf oder Suche), Prüfmeldung bleibt nicht hängen, abgelehnter Schlüssel aus einer Suche rot, Sprung zum Schlüsselfeld
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SettingsAppearancePageTests|FullyQualifiedName~SettingsSteamGridDbWindowTests" -MinTests 20
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.6: Bisherige Zusagen von G10.4 bleiben (aus: kein automatischer Netzwerkzugriff, ohne Schlüssel gar keiner), zusammen mit den neuen SteamGridDB-Tests
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDb" -MinTests 90
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.7: Testinstanz mit erzeugten SteamGridDB-Antworten (kein Netz, nur UI-Automation): Schlüssel bei ausgeschaltetem Schalter prüfen und speichern ohne Lauf; keine Anfrage vor dem Klick; 24/48/70 Ergebnisse mit Autor, Ende mit leerer Seite; nur www./cdn2.steamgriddb.com, Schlüssel nur an die Schnittstelle; Übernehmen speichert ein 600×900-Cover als eigenes Bild, Zurücksetzen entfernt es, Abbrechen schreibt nichts; Spielwahl, gemerkte Zuordnung nur ohne Steam-App-ID; Fehlerzustände samt Zeitüberschreitung; Link zum Schlüsselfeld; keine Vorschau-Threads nach dem Schließen; Bildschirmfotos aller Zustände hell und dunkel, auch klein und in hohem Kontrast, dazu die Einstellungskarte
+  CHECK: ps tools\gates\phase14-sgdb-ui.ps1
+  EXPECT: PHASE14_SGDB_UI_OK
+  EVIDENCE: pending.
+
+- [ ] G14.8: Einstellungen per UI-Automation weiter grün, mit der angepassten Prüfung „Prüfen auch bei ausgeschaltetem Schalter bedienbar“
+  CHECK: ps tools\gates\phase10-settings-ui.ps1
+  EXPECT: PHASE10_SETTINGS_UI_OK
+  EVIDENCE: pending.
+
+- [ ] G14.9: Bibliothek und Dialog ohne Schlüssel weiter grün (Abbrechen schreibt nichts, kein Netz)
+  CHECK: ps tools\gates\phase10-ui.ps1
+  EXPECT: PHASE10_UI_OK
+  EVIDENCE: pending.
+
+- [ ] G14.10: Bilder geprüft: Bildschirmfotos aus G14.7 bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel, zugeschnitten und vermessen (Kachelgrößen, Abstände, rechte Kante bei 830 DIP, Luft um die Trennlinie); Vergleich an den Nutzer geschickt, bevor das Test-Update installiert wird
+  EVIDENCE: pending.
+
+- [ ] G14.11: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (nacheinander, gedrosselt)
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: pending.
+
+- [ ] G14.12: README, E93 und GATES passen zu den resx-Texten (fett gesetzte Bezeichnungen, Einstellungstabelle)
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: pending.
+
+- [ ] G14.13: Keine lokalen Pfade, Namen oder echten Spieldaten in neuen Dateien (Testdaten-Lieferant, Tests, Doku)
+  CHECK: ps tools\gates\publish-check.ps1
+  EXPECT: PUBLISH_CHECK_OK
+  EVIDENCE: pending.
+
+- [ ] G14.14: Livetest nur mit dem Nutzer und seinem eigenen Schlüssel (der Nutzer klickt; Protokollstufe vorher auf „Ausführlich (Debug)“, danach zurück): Rechner der Vorschauen (das Debug-Protokoll nennt nur Rechnernamen), Seite 1 unterscheidet sich von Seite 0, ob eine Seite mit weniger als 50 Einträgen immer die letzte ist, was eine Seite hinter dem Ende liefert, ob `limit` in der Antwort steht, was der CDN für eine fehlende Vorschau antwortet (403 oder 404), Logo-Vorschauen behalten ihre Durchsichtigkeit, Namen mit „+“, „/“, Apostroph und Umlauten finden das Spiel, 342×482-Cover sehen zugeschnitten gut aus, WebP wird gezeigt, nie HTTP 429 bei normaler Nutzung
+  EVIDENCE: pending. Nur zusammen mit dem Nutzer.
+
+- [ ] G14.15: Abnahme durch den Nutzer am echten System (Aussehen bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel, Bedienung mit Tastatur)
+  EVIDENCE: pending.

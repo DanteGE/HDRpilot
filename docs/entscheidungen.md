@@ -809,7 +809,8 @@ solange ein Fenster offen ist. Eigene Bilder („Bild wählen…“) stehen je B
 SteamGridDB (G10.4) ist die einzige Ausnahme von „nur lokal“: standardmäßig aus (`settings.artwork.steamGridDb`), nur mit
 eigenem API-Schlüssel (mit DPAPI verschlüsselt in `steamgriddb-key.dat`, wie das PCGamingWiki-Bot-Passwort), füllt nur
 lokal fehlende Bilder und zeigt den Netzwerkzugriff in den Einstellungen an. Ist es aus oder fehlt der Schlüssel, gibt es
-keinen Netzwerkzugriff dafür; mit `--config-dir` läuft es nie von selbst.
+keinen Netzwerkzugriff dafür (seit E93 regelt der Schalter nur das automatische Füllen; mit gespeichertem Schlüssel
+sucht „Bild wählen…“ auf Klick auch bei ausgeschaltetem Schalter); mit `--config-dir` läuft es nie von selbst.
 
 Bildschirmwerte (G10.7) kommen über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv),
 gelesen nur nach einem HDR- oder Bildschirmwechsel und nur, solange ein Fenster sie zeigt. Das Maximum jeder Nit-Skala ist
@@ -1394,3 +1395,69 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
   per Regel) und mit `publish-check.ps1 -History` geprüft (G13.5): jede Blob-Version, jeder Pfadname, jede Nachricht
   sowie Autor und Committer jedes Commits (nur Dante_GE mit der Noreply-Adresse, als Committer auch GitHub selbst),
   mit eigener Positivkontrolle an einem Wegwerf-Repository.
+
+**E93 SteamGridDB-Suche in „Bild wählen…“ (Wunsch des Nutzers 2026-10-22, G14):** Im Dialog „Bild wählen…“ steht je
+Reiter (Titelbild, Logo, Cover) unter den lokalen Bildern („AUF DIESEM PC“) der Abschnitt „STEAMGRIDDB“ mit dem
+zugeordneten Spiel („Spiel: <Name> ▾“) und **Bei SteamGridDB suchen**.
+- Nur auf Klick: Öffnen, Reiterwechsel, Aufklappen der Spielwahl und Tippen fragen nichts ab. Online gehen nur
+  **Bei SteamGridDB suchen** (bei einer gemerkten Zuordnung dazu einmal Name und Jahr des Spiels), **Mehr laden**,
+  **Erneut versuchen**, die Suche der Spielwahl (Enter oder **Suchen**), die Wahl eines Treffers und **Übernehmen**
+  mit einem Bild von SteamGridDB. Jeder Reiter sucht erst nach seinem eigenen Klick. Auch während ein Spiel läuft, ist
+  die Suche erlaubt (ausdrücklicher Klick, klein und begrenzt).
+- Schlüssel statt Schalter (ändert E89 und G10.4): Ohne Schlüssel gibt es weiterhin keinen Netzwerkzugriff; der
+  Abschnitt zeigt dann einen Hinweis und **Zu den Einstellungen** (schließt den Dialog ohne Änderungen, öffnet
+  Darstellung › Bilder mit dem Fokus im Schlüsselfeld). Mit gespeichertem Schlüssel sucht der Dialog auch bei
+  ausgeschaltetem Schalter. Der Schalter **Fehlende Bilder automatisch laden** regelt nur das automatische Füllen und
+  steht in einer eigenen Zeile unter Schlüsselfeld, **Prüfen** und Statuszeile. Schlüsselfeld und **Prüfen** sind
+  immer bedienbar; „Prüfen“ bei ausgeschaltetem Schalter speichert nur.
+- Zuordnung: Steam-Spiele über ihre App-ID (kennt SteamGridDB sie nicht, einmal über den Namen), andere über die
+  gemerkte SteamGridDB-ID oder die Namenssuche. Ein Treffer mit gleichem Namen zählt; heißen mehrere so, der erste mit
+  dem Hinweis „Mehrere Spiele heißen so“. Sonst wählt der Nutzer aus bis zu 20 Treffern mit Jahr. Eine geänderte
+  Zuordnung gilt für alle Reiter; eine Wahl von SteamGridDB in den anderen Reitern gilt dann nicht mehr. Bei Spielen
+  ohne Steam-App-ID merkt HDRpilot sie mit **Übernehmen**, auch ohne geändertes Bild, nie nach **Abbrechen** oder einem
+  Fehler. Bisher automatisch geladene Bilder und Fehlanzeigen dieses Spiels gelten dann nicht mehr; ist das
+  automatische Laden an, füllt ein Lauf sie neu. Bei Steam-Spielen merkt HDRpilot nichts (die App-ID bleibt
+  maßgeblich). Ein Verzeichnis anderer Version beginnt leer und vergisst damit auch die gemerkte Zuordnung.
+- Ergebnisse: nur unbewegte Bilder ohne NSFW-, Humor- oder Epilepsie-Markierung, Cover im Hochformat (600×900,
+  342×482, 660×930; gespeichert auf 600×900 zugeschnitten, die Vorschau zeigt diesen Zuschnitt). Je Seite 24
+  Vorschauen mit „von <Autor>“, **Mehr laden** zeigt die nächsten 24 (abgefragt wird die Standardseite von 50; die
+  Liste endet mit einer leeren Seite), höchstens 240 je Reiter. Ohne Vorschau-Adresse zeigt die Kachel „Keine
+  Vorschau“; das volle Bild lädt nie vorher. Avatar und Steam-Kennung der Autoren liest HDRpilot nicht.
+- Kacheln: Lokale und Online-Kacheln haben je Bildart dieselbe Form und füllen die Breite genau (Cover 6 je Reihe im
+  Hochformat 2:3, Titelbild 4 je Reihe, Logo 4 je Reihe ganz auf einem Schachbrett, nie beschnitten).
+- Grenzen: Anfragen an die Schnittstelle haben mindestens 1 s Abstand vom Ende der vorigen, gemeinsam mit dem
+  automatischen Füllen und „Prüfen“ (es läuft immer nur eine). Vorschauen kommen ohne Abstand, höchstens 3
+  gleichzeitig. Je geöffnetem Dialog gelten höchstens 40 Anfragen, 800 Bildabrufe mit zusammen 128 MB und 6 volle
+  Bilder; dekodierte Vorschauen belegen höchstens 96 MB (zuerst geben verborgene Reiter ihre frei). Nach HTTP 429 folgt
+  eine Minute Pause, ohne automatische Wiederholung. Zeitgrenzen: 15 s bis zur Antwort, 15 s ohne Daten, insgesamt
+  30 s (90 s für ein volles Bild). Vorschauen sind höchstens 4 MB groß und kommen nur von https-Adressen unter
+  steamgriddb.com, ohne Weiterleitungen und ohne Schlüssel. HTTP 401/403 eines Bildes gilt nicht als abgelehnter
+  Schlüssel (auch beim automatischen Füllen). Vorschauen liegen nur im Speicher und werden beim Schließen freigegeben.
+- Übernehmen: Das volle Bild (höchstens 32 MB und 100 Megapixel) lädt HDRpilot erst beim **Übernehmen**, noch im
+  Dialog. Scheitert es, bleibt der Dialog im betroffenen Reiter mit einer Meldung offen; **Abbrechen** bricht ab.
+  Gespeichert wird es wie eine eigene Datei (`custom:`, `art\custom\`); es gilt unabhängig vom Schalter, und
+  **Zurücksetzen** wirkt wie bei eigenen Dateien. Die Herkunft wird nicht gespeichert; eigene Bilder heißen deshalb
+  „Eigenes Bild“.
+- Fenster: nie höher als die Arbeitsfläche des Bildschirms, auf dem die Bibliothek steht. Solange es offen ist, wächst
+  es nur (zur Mitte hin) und schrumpft nicht; nur die Mitte scrollt. Hoher Kontrast nutzt die Systemfarben.
+- Der Schlüssel geht nur an `www.steamgriddb.com`, nie ins Protokoll, in Meldungen oder an Bildschirmleser. Autoren,
+  Suchbegriffe und Spielnamen von SteamGridDB landen nicht im Protokoll; die Kennung beim Abruf bleibt wie in E92. Die
+  Einstellungen zeigen den letzten Netzwerkzugriff, Lauf oder Suche, mit der Zahl der Anfragen; ausgeschaltet mit
+  Schlüssel steht dort „Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick“.
+- Prüfläufe: `HDRPILOT_TEST_STEAMGRIDDB=fixture` wirkt nur mit `--config-dir` und ersetzt nur die Übertragung durch
+  erzeugte Antworten (erzeugte Bilder, erfundene Autoren, kein Netz). Bildschirmfotos nutzen dieselben Daten. Neues
+  Gate `phase14-sgdb-ui.ps1`.
+- Nebenbei behoben: ein Steam-Spiel mit leerer App-ID sucht beim automatischen Füllen über den Namen statt abzubrechen;
+  der Abstand der Anfragen vergibt die Reihe exklusiv (vorher konnten ein Lauf und „Prüfen“ gleichzeitig senden);
+  Antworten werden begrenzt und abbrechbar gelesen; die Prüfmeldung der Einstellungen bleibt nicht mehr stehen;
+  Vorschauen im Dialog werden nicht mehr beschnitten; die Fläche hinter Logos ist ein Farbwert des Themas
+  (`Hp.Brush.Plate`) statt einer festen Farbe; das Bildschirmfoto „hauptfenster-bildwahl“ gibt seinen Dialog frei.
+- Abweichungen bei der Umsetzung (2026-10-26): Die Sitzung eines Dialogs entsteht mit dem Dialog, sobald ein Schlüssel
+  gespeichert ist, nicht erst beim ersten Klick; Verbindung und Handler entstehen trotzdem erst mit der ersten Anfrage
+  (getestet). Ohne oder mit unlesbarem Schlüssel bleibt die Überschrift „STEAMGRIDDB“ stehen, nur die Spielwahl fehlt.
+  Die Ansichtsschicht hat kein Protokoll; eine Wahl von SteamGridDB ohne geladene Daten wird deshalb nur gemeldet,
+  nicht protokolliert. „Warteschlange angehalten“ heißt: offene Vorschau-Abrufe werden abgebrochen und nach dem
+  Fehler wieder eingereiht. Die schmale Bildlaufleiste des Dialogs ist ein eigener Stil (`Lib.DialogScrollBar`), weil
+  es keinen wiederverwendbaren gab (`GapScrollBar` gehört zum Spalt der Bibliothek). Der Testdaten-Lieferant nennt für
+  `games/id` den zuletzt gesuchten Namen (sonst „Testspiel“). Die App-Tests sehen interne Prüfpunkte über
+  `InternalsVisibleTo` (Platzierung, Kontrast, Vorschau-Threads, Übernehmen mit Ergebnis).

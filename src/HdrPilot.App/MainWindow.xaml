@@ -1605,12 +1605,13 @@
                                             <TextBlock Text="{Binding ProfileSubtitle}" FontSize="12" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <Button x:Name="ProfileMenuButton" Style="{StaticResource Lib.PaneButton}" Width="32" Height="32" Padding="0" Click="OnProfileMenuClick"
+                                            <!-- „···“: Menü des Spiels darunter; ein zweiter Klick schließt es wieder (MenuButton) -->
+                                            <lib:MenuButton x:Name="ProfileMenuButton" Style="{StaticResource Lib.PaneButton}" Width="32" Height="32" Padding="0"
                                                     Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}" ContextMenu="{StaticResource GameContextMenu}"
                                                     AutomationProperties.AutomationId="ProfileMenuButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Profile_More}"
                                                     ToolTip="{x:Static res:LibraryStrings.Profile_More}">
                                                 <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE712;" FontSize="13" />
-                                            </Button>
+                                            </lib:MenuButton>
                                             <Button x:Name="DrawerCloseButton" Style="{StaticResource Lib.PaneButton}" Width="32" Height="32" Padding="0" Margin="6,0,0,0" Visibility="Collapsed"
                                                     Click="OnDrawerClose"
                                                     AutomationProperties.AutomationId="DrawerCloseButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Drawer_Close}"
@@ -1937,10 +1938,10 @@
                                                 <Button Style="{StaticResource Lib.IconButton}" Margin="0,0,6,0" Content="{Binding ArtworkTiles[2]}" ContentTemplate="{StaticResource ArtworkTileTemplate}"
                                                         Command="{Binding DataContext.ChooseArtworkCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{x:Static art:ArtworkKind.Cover}"
                                                         ToolTip="{Binding ArtworkTiles[2].Tooltip}" AutomationProperties.AutomationId="ArtworkTileCover" AutomationProperties.Name="{x:Static res:LibraryStrings.Artwork_TileCover}" />
-                                                <!-- Klick öffnet „Symbol ändern…“ / „Symbol zurücksetzen“ (dasselbe wie im Kontextmenü) -->
-                                                <Button x:Name="DetailIconButton" Style="{StaticResource Lib.IconButton}" Content="{Binding ArtworkTiles[3]}" ContentTemplate="{StaticResource ArtworkTileTemplate}"
+                                                <!-- Klick öffnet „Symbol ändern…“ / „Symbol zurücksetzen“ (dasselbe wie im Kontextmenü), ein zweiter schließt es -->
+                                                <lib:MenuButton x:Name="DetailIconButton" Style="{StaticResource Lib.IconButton}" Content="{Binding ArtworkTiles[3]}" ContentTemplate="{StaticResource ArtworkTileTemplate}"
                                                         Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        ContextMenu="{StaticResource GameIconMenu}" Click="OnDetailIconClick"
+                                                        ContextMenu="{StaticResource GameIconMenu}"
                                                         ToolTip="{x:Static res:LibraryStrings.Icon_ButtonName}" ToolTipService.InitialShowDelay="900"
                                                         AutomationProperties.AutomationId="DetailIconButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Icon_ButtonName}" />
                                             </UniformGrid>

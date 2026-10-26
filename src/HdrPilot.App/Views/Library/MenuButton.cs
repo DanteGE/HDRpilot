@@ -15,6 +15,11 @@ namespace HdrPilot.App.Views.Library;
 /// Umschalt+F10 wie jedes Kontextmenü), linksbündig mit dem Knopf. Mit der Tastatur geöffnet steht der Fokus auf dem
 /// gewählten Eintrag (angehakt, sonst dem ersten), mit der Maus auf keinem. <see cref="IsMenuOpen"/> folgt dem Menü (Pfeil
 /// der Vorlage dreht sich). Für UI-Automation ein Knopf mit Aus-/Einklappen (ExpandCollapse) und Auslösen.
+/// <para>
+/// Ein zweiter Klick, die Eingabe- oder Leertaste (und Auslösen per UI-Automation) bei offenem Menü schließt es, der Fokus
+/// bleibt auf dem Knopf (Wunsch des Nutzers 2026-10-22). Mit der Maus schließt das Menü schon beim Drücken (es gibt die
+/// Maus beim Klick daneben frei); der Klick, der danach auf dem Knopf ankommt, öffnet es deshalb nicht wieder.
+/// </para>
 /// </summary>
 public sealed class MenuButton : Button
 {
@@ -30,6 +35,13 @@ public sealed class MenuButton : Button
     public static readonly Thickness MenuShadowMargin = new(8, 4, 12, 18);
 
     private bool _focusOnOpen;
+
+    /// <summary>Das laufende Drücken der Maus hat das Menü geschlossen: Der Klick darauf öffnet es nicht wieder.</summary>
+    private bool _pressClosedMenu;
+    private long _closedTick;
+
+    /// <summary>So kurz nach dem Schließen gehört ein Drücken noch dazu (die Maus geht erst ans Menü, dann an den Knopf).</summary>
+    private const long PressWindowMs = 250;
 
     public bool IsMenuOpen => (bool)GetValue(IsMenuOpenProperty);
 
@@ -66,12 +78,56 @@ public sealed class MenuButton : Button
     protected override void OnClick()
     {
         base.OnClick();
+        if (_pressClosedMenu)
+        {
+            _pressClosedMenu = false;
+            return;
+        }
+
+        if (IsMenuOpen)
+        {
+            CloseMenu(); // Eingabe-, Leertaste oder UI-Automation bei offenem Menü
+            return;
+        }
+
         OpenMenu(InputManager.Current.MostRecentInputDevice is KeyboardDevice);
+    }
+
+    /// <summary>Drücken bei noch offenem Menü (erreicht den Knopf, bevor das Menü zugeht): schließen, nicht wieder öffnen.</summary>
+    protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        if (IsMenuOpen)
+        {
+            _pressClosedMenu = true;
+        }
+        else if (_pressClosedMenu && Environment.TickCount64 - _closedTick > PressWindowMs)
+        {
+            _pressClosedMenu = false; // übrig von einem Drücken, das nie losgelassen wurde: ein neuer Klick öffnet
+        }
+
+        base.OnPreviewMouseLeftButtonDown(e);
+    }
+
+    /// <summary>Nach dem Loslassen gilt die Sperre nicht mehr (auch wenn kein Klick entstand, etwa außerhalb losgelassen).</summary>
+    protected override void OnPreviewMouseLeftButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonUp(e);
+        if (_pressClosedMenu)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => _pressClosedMenu = false);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (!e.Handled && IsMenuOpen && Keyboard.Modifiers == ModifierKeys.None && key is Key.Enter or Key.Space)
+        {
+            CloseMenu(); // Fokus noch auf dem Knopf (mit der Maus geöffnet): wie ein zweiter Klick
+            e.Handled = true;
+            return;
+        }
+
         if (!e.Handled && ((key == Key.Down && Keyboard.Modifiers == ModifierKeys.Alt) || (key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None)))
         {
             OpenMenu(byKeyboard: true);
@@ -117,12 +173,14 @@ public sealed class MenuButton : Button
         {
             old.Opened -= OnMenuOpened;
             old.Closed -= OnMenuClosed;
+            old.PreviewKeyDown -= OnMenuPreviewKeyDown;
         }
 
         if (e.NewValue is ContextMenu menu)
         {
             menu.Opened += OnMenuOpened;
             menu.Closed += OnMenuClosed;
+            menu.PreviewKeyDown += OnMenuPreviewKeyDown;
         }
     }
 
@@ -144,8 +202,37 @@ public sealed class MenuButton : Button
         }
     }
 
+    /// <summary>
+    /// Mit der Maus geöffnet, ist noch kein Eintrag gewählt; die Tastatur geht trotzdem ans Menü. Eingabe- oder Leertaste
+    /// schließen es dann wie ein zweiter Klick auf den Knopf, der den Fokus behält. Mit gewähltem Eintrag lösen sie wie
+    /// immer den Eintrag aus.
+    /// </summary>
+    private void OnMenuPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Handled || sender is not ContextMenu menu || Keyboard.Modifiers != ModifierKeys.None || e.Key is not (Key.Enter or Key.Space))
+        {
+            return;
+        }
+
+        if (menu.Items.Cast<object>().Select(i => i as MenuItem ?? menu.ItemContainerGenerator.ContainerFromItem(i) as MenuItem).Any(i => i is { IsHighlighted: true }))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        CloseMenu();
+        Focus();
+    }
+
     private void OnMenuClosed(object sender, RoutedEventArgs e)
     {
+        // Geschlossen, weil die Maus auf diesem Knopf gedrückt wurde: Der folgende Klick soll es nicht wieder öffnen.
+        if (IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed)
+        {
+            _pressClosedMenu = true;
+            _closedTick = Environment.TickCount64;
+        }
+
         SetValue(IsMenuOpenPropertyKey, false);
         RaiseExpandCollapse(true, false);
     }

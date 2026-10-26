@@ -1089,22 +1089,6 @@ public partial class MainWindow : ChromeWindow
         ApplyLayout(animate: true);
     }
 
-    /// <summary>Klick auf die Kachel „Symbol“ im Detailbereich: öffnet das Menü „Symbol ändern…“ darunter (E86).</summary>
-    private void OnDetailIconClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
-
-    /// <summary>„···“ im Kopf des Detailbereichs: Kontextmenü des Spiels.</summary>
-    private void OnProfileMenuClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
-
-    private static void OpenMenuBelow(object sender)
-    {
-        if (sender is FrameworkElement { ContextMenu: { } menu } target)
-        {
-            menu.PlacementTarget = target;
-            menu.Placement = PlacementMode.Bottom;
-            menu.IsOpen = true;
-        }
-    }
-
     // ---------- Liste, Raster, Regal ----------
 
     /// <summary>

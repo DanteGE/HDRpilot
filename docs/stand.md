@@ -1,7 +1,15 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-22. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-26. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Stand 2026-10-26: Phase 15 „Farben folgen dem Spiel“ (E94) gebaut, Prüfung unter Windows offen
+- Zweig `feature/spielfarben` (auf `ui/feedback`): Schalter, Auslesen auf Anfrage, Einpassen und Kontrast, Farbebene,
+  OKLCH-Überblendung, Entprellung, Live-Vorschau, Bildtests und Gate `phase15-gamecolors.ps1`; README, E94, GATES.md
+  (G15.1–G15.10) und `docs/design/showcase-hero/umsetzung-theme.md` ergänzt.
+- In der Cloud-Sitzung gelaufen: Bau ohne Warnungen, die Tests aus `HdrPilot.Tests` (G15.1: 72 von 72). Offen unter
+  Windows: alle Tests von `HdrPilot.App.Tests` (G15.2–G15.4, G15.7), die Gates G15.5, G15.6, G15.8, G15.9 und die Abnahme
+  G15.10.
 
 ## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
 - **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (f3da056), darauf dieser Stand;

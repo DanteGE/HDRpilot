@@ -276,6 +276,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Farbschema | Duoton oder Tritonus, eine der acht Vorlagen oder eigene Farben; färbt Oberfläche, Tray- und Fenstersymbol | Abendrot, Duoton |
 | Textfarbe auf Akzentflächen automatisch | Dunkle Schrift oder Weiß auf Akzentflächen, je nachdem, was besser lesbar ist | an |
 | Hintergrund folgt dem Spiel | Umgebungslicht und Leuchten der Bibliothek nehmen die Farben des gewählten Titelbilds an | an |
+| Farben folgen dem Spiel | Akzente der Bibliothek (Starten- und HDR-Knopf, Auswahl, Schalter, Fokusrahmen, Kennzeichen, Werkzeugleiste, Partikel im HDR-Moment) nehmen die Farben von Logo und Cover des gewählten Spiels an, einmal pro Spiel ausgelesen und nur bei eingeschaltetem Schalter. Bei grauen Bildern und bei hohem Kontrast gilt das Farbschema; Einstellungen, Tray-Menü und Dialoge behalten es immer | aus |
 | Thema | Automatisch (wie der App-Modus von Windows), Hell oder Dunkel | Automatisch |
 | Effekte | Voll, Reduziert (nur kurze Übergänge bis 0,3 s) oder Aus | Voll |
 | Beim Spielen anhalten | Solange ein Spiel läuft, steht jede Animation still | an |

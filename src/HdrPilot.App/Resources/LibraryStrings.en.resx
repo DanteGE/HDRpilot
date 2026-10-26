@@ -1,0 +1,1583 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Fenster und Kopf -->
+  <data name="Window_Title" xml:space="preserve">
+    <value>HDRpilot – Game library</value>
+  </data>
+  <data name="Header_Overline" xml:space="preserve">
+    <value>GAME LIBRARY</value>
+  </data>
+  <data name="Header_TitleAll" xml:space="preserve">
+    <value>All games</value>
+  </data>
+  <data name="Header_TitleSteam" xml:space="preserve">
+    <value>Steam games</value>
+  </data>
+  <data name="Header_TitleEpic" xml:space="preserve">
+    <value>Epic games</value>
+  </data>
+  <data name="Header_TitleXbox" xml:space="preserve">
+    <value>Xbox games</value>
+  </data>
+  <data name="Header_TitleGog" xml:space="preserve">
+    <value>GOG games</value>
+  </data>
+  <data name="Header_TitleUbisoft" xml:space="preserve">
+    <value>Ubisoft games</value>
+  </data>
+  <data name="Header_TitleEA" xml:space="preserve">
+    <value>EA games</value>
+  </data>
+  <data name="Header_TitleBattleNet" xml:space="preserve">
+    <value>Battle.net games</value>
+  </data>
+  <data name="Header_TitleQuiver" xml:space="preserve">
+    <value>Quiver games</value>
+  </data>
+  <data name="Header_TitleManual" xml:space="preserve">
+    <value>My games</value>
+  </data>
+  <data name="Header_SourceName" xml:space="preserve">
+    <value>Source: {0}</value>
+  </data>
+  <data name="Header_SourceHelp" xml:space="preserve">
+    <value>Opens the source menu with the number of games per source (Enter or Space, Alt+Down Arrow). Selects like the “Source” field of the toolbar.</value>
+  </data>
+  <data name="Header_SourceTooltip" xml:space="preserve">
+    <value>Change source</value>
+  </data>
+  <data name="SourceMenu_Name" xml:space="preserve">
+    <value>Sources</value>
+  </data>
+  <data name="SourceMenu_Selected" xml:space="preserve">
+    <value>selected</value>
+  </data>
+  <data name="Stats_Filtered" xml:space="preserve">
+    <value>{0} of {1} games</value>
+  </data>
+  <data name="Stats_FilteredOfOne" xml:space="preserve">
+    <value>{0} of 1 game</value>
+  </data>
+  <data name="Count_GamesOne" xml:space="preserve">
+    <value>1 game</value>
+  </data>
+  <data name="Count_GamesMany" xml:space="preserve">
+    <value>{0} games</value>
+  </data>
+  <data name="Stats_HdrAuto" xml:space="preserve">
+    <value>{0} with HDR on launch</value>
+  </data>
+  <data name="Stats_New" xml:space="preserve">
+    <value>{0} new</value>
+  </data>
+  <data name="Hdr_Overline" xml:space="preserve">
+    <value>HDR STATUS</value>
+  </data>
+  <data name="Hdr_StatusOn" xml:space="preserve">
+    <value>HDR on · {0}</value>
+  </data>
+  <data name="Hdr_StatusOff" xml:space="preserve">
+    <value>HDR off · {0}</value>
+  </data>
+  <data name="Hdr_StatusUnavailable" xml:space="preserve">
+    <value>HDR not available · {0}</value>
+  </data>
+  <data name="Hdr_StatusNoDisplay" xml:space="preserve">
+    <value>No display found</value>
+  </data>
+  <data name="Hdr_ActiveSessions" xml:space="preserve">
+    <value>Active for {0}</value>
+  </data>
+  <data name="Hdr_TurnOn" xml:space="preserve">
+    <value>Turn HDR on</value>
+  </data>
+  <data name="Hdr_TurnOff" xml:space="preserve">
+    <value>Turn HDR off</value>
+  </data>
+  <data name="Hdr_ToggleTooltip" xml:space="preserve">
+    <value>Switches HDR on the target displays now, independent of any game.</value>
+  </data>
+  <data name="Pause_Name" xml:space="preserve">
+    <value>Pause automation</value>
+  </data>
+  <data name="Pause_Label" xml:space="preserve">
+    <value>Pause automation</value>
+  </data>
+  <data name="Pause_Active" xml:space="preserve">
+    <value>Automation paused</value>
+  </data>
+  <data name="Pause_Tooltip" xml:space="preserve">
+    <value>While paused, a detected game launch doesn't turn HDR on. “Launch”, “(HDR)” shortcuts and the Steam launch option still switch. Running games end normally and are restored.</value>
+  </data>
+  <data name="Settings_Name" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Search_Name" xml:space="preserve">
+    <value>Search games</value>
+  </data>
+  <data name="Search_Clear" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="Filter_SourceName" xml:space="preserve">
+    <value>Filter by source</value>
+  </data>
+  <data name="Filter_All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Filter_SourceWithCount" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Filter_OnlySelected" xml:space="preserve">
+    <value>HDR on launch</value>
+  </data>
+  <data name="Filter_OnlySelectedName" xml:space="preserve">
+    <value>Only games with HDR on launch</value>
+  </data>
+  <data name="Filter_OnlyNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="Filter_OnlyNewName" xml:space="preserve">
+    <value>Only new games</value>
+  </data>
+  <data name="Filter_OnlyHdrCapable" xml:space="preserve">
+    <value>HDR-capable</value>
+  </data>
+  <data name="Filter_OnlyHdrCapableName" xml:space="preserve">
+    <value>Only games with HDR according to PCGamingWiki (including limited)</value>
+  </data>
+  <data name="Sort_Name" xml:space="preserve">
+    <value>Sort games</value>
+  </data>
+  <data name="Sort_ByName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Sort_ByLastPlayed" xml:space="preserve">
+    <value>Last played</value>
+  </data>
+  <data name="Sort_ByHdrSupport" xml:space="preserve">
+    <value>HDR support</value>
+  </data>
+  <data name="Splitter_Name" xml:space="preserve">
+    <value>Width of game list and details</value>
+  </data>
+  <data name="Splitter_Tooltip" xml:space="preserve">
+    <value>Drag or arrow keys: change width · Double-click: default width</value>
+  </data>
+  <data name="ScrollGap_Name" xml:space="preserve">
+    <value>Game scroll bar</value>
+  </data>
+  <data name="ScrollGap_Tooltip" xml:space="preserve">
+    <value>Drag horizontally: change width · Click above or below the bar: scroll one page · Double-click: default width</value>
+  </data>
+  <data name="HeroSplitter_Name" xml:space="preserve">
+    <value>Height of the title area</value>
+  </data>
+  <data name="HeroSplitter_Tooltip" xml:space="preserve">
+    <value>Drag or arrow keys: change height · Double-click: default height</value>
+  </data>
+  <data name="HeroSplitter_Help" xml:space="preserve">
+    <value>Up and Down Arrow: change height, Page Up and Page Down: large steps, Home and End: smallest and largest height, Enter: default height</value>
+  </data>
+  <data name="MarkAllSeen_Name" xml:space="preserve">
+    <value>Mark all as seen</value>
+  </data>
+  <data name="MarkAllSeen_Done" xml:space="preserve">
+    <value>{0} marked as seen.</value>
+  </data>
+  <data name="Rescan_Button" xml:space="preserve">
+    <value>Rescan</value>
+  </data>
+  <data name="Rescan_Running" xml:space="preserve">
+    <value>Scanning …</value>
+  </data>
+  <data name="Rescan_Tooltip" xml:space="preserve">
+    <value>Scan all launchers again. New games are marked and only switch HDR once you turn it on.</value>
+  </data>
+  <data name="Rescan_Done" xml:space="preserve">
+    <value>Scan complete: {0}.</value>
+  </data>
+  <data name="AddGame_Button" xml:space="preserve">
+    <value>Add game</value>
+  </data>
+  <data name="ScanErrors_HeaderOne" xml:space="preserve">
+    <value>The last scan found 1 problem</value>
+  </data>
+  <data name="ScanErrors_HeaderMany" xml:space="preserve">
+    <value>The last scan found {0} problems</value>
+  </data>
+  <data name="ScanErrors_Item" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Candidates_Title" xml:space="preserve">
+    <value>Suggestions from your search folders</value>
+  </data>
+  <data name="Candidates_Hint" xml:space="preserve">
+    <value>Nothing is added without you. Added games switch HDR on launch.</value>
+  </data>
+  <data name="Candidates_Toggle" xml:space="preserve">
+    <value>Expand or collapse suggestions</value>
+  </data>
+  <data name="Candidate_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Candidate_ExeCount" xml:space="preserve">
+    <value>{0} EXE files</value>
+  </data>
+  <data name="Candidate_Detail" xml:space="preserve">
+    <value>{0}  ·  {1}</value>
+  </data>
+  <data name="List_Name" xml:space="preserve">
+    <value>Game list</value>
+  </data>
+  <data name="List_HdrAutoColumn" xml:space="preserve">
+    <value>HDR ON LAUNCH</value>
+  </data>
+  <data name="List_ResultFiltered" xml:space="preserve">
+    <value>{0} of {1} games</value>
+  </data>
+  <data name="List_EmptyTitle" xml:space="preserve">
+    <value>No games yet</value>
+  </data>
+  <data name="List_EmptyText" xml:space="preserve">
+    <value>Scan your launchers with “Rescan” or add a game manually.</value>
+  </data>
+  <data name="List_NoMatchTitle" xml:space="preserve">
+    <value>No games for this selection</value>
+  </data>
+  <data name="List_NoMatchHiddenOne" xml:space="preserve">
+    <value>Search, source and filters exclude all games. One hidden uninstalled game would match; you can show it under Settings › Library.</value>
+  </data>
+  <data name="List_NoMatchHiddenMany" xml:space="preserve">
+    <value>Search, source and filters exclude all games. {0} hidden uninstalled games would match; you can show them under Settings › Library.</value>
+  </data>
+  <data name="List_NoMatchText" xml:space="preserve">
+    <value>Search, source and filters exclude all games.</value>
+  </data>
+  <data name="List_ResetFilters" xml:space="preserve">
+    <value>Reset filters</value>
+  </data>
+  <data name="Row_HdrAutoName" xml:space="preserve">
+    <value>HDR on launch</value>
+  </data>
+  <data name="Badge_New" xml:space="preserve">
+    <value>NEW</value>
+  </data>
+  <data name="Badge_Running" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Badge_NotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="Badge_Hdr" xml:space="preserve">
+    <value>HDR</value>
+  </data>
+  <data name="Badge_HdrLimited" xml:space="preserve">
+    <value>HDR*</value>
+  </data>
+  <data name="Badge_HdrTooltip" xml:space="preserve">
+    <value>HDR according to PCGamingWiki</value>
+  </data>
+  <data name="Badge_HdrLimitedTooltip" xml:space="preserve">
+    <value>Limited HDR according to PCGamingWiki</value>
+  </data>
+  <data name="Badge_AutoHdr" xml:space="preserve">
+    <value>AUTO HDR</value>
+  </data>
+  <data name="Badge_AutoHdrTooltip" xml:space="preserve">
+    <value>Windows Auto HDR on for this game (when launched via HDRpilot)</value>
+  </data>
+  <data name="Status_Dismiss" xml:space="preserve">
+    <value>Dismiss message</value>
+  </data>
+  <data name="Game_Added" xml:space="preserve">
+    <value>“{0}” was added. HDR on launch is on.</value>
+  </data>
+  <data name="Game_Removed" xml:space="preserve">
+    <value>“{0}” was removed.</value>
+  </data>
+  <data name="Error_SaveFailed" xml:space="preserve">
+    <value>The change couldn't be saved: {0}</value>
+  </data>
+  <data name="Error_Generic" xml:space="preserve">
+    <value>That didn't work: {0}</value>
+  </data>
+  <data name="Source_Steam" xml:space="preserve">
+    <value>Steam</value>
+  </data>
+  <data name="Source_Epic" xml:space="preserve">
+    <value>Epic Games</value>
+  </data>
+  <data name="Source_Xbox" xml:space="preserve">
+    <value>Xbox</value>
+  </data>
+  <data name="Source_Gog" xml:space="preserve">
+    <value>GOG</value>
+  </data>
+  <data name="Source_Ubisoft" xml:space="preserve">
+    <value>Ubisoft Connect</value>
+  </data>
+  <data name="Source_EA" xml:space="preserve">
+    <value>EA app</value>
+  </data>
+  <data name="Source_BattleNet" xml:space="preserve">
+    <value>Battle.net</value>
+  </data>
+  <data name="Source_Manual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="Source_Quiver" xml:space="preserve">
+    <value>Quiver</value>
+  </data>
+  <data name="Details_Name" xml:space="preserve">
+    <value>Game details</value>
+  </data>
+  <data name="Details_EmptyTitle" xml:space="preserve">
+    <value>Choose a game</value>
+  </data>
+  <data name="Details_EmptyText" xml:space="preserve">
+    <value>Here you decide whether HDRpilot turns HDR on automatically for a game, on which display, and which EXE files belong to the game.</value>
+  </data>
+  <data name="Details_NoMatchTitle" xml:space="preserve">
+    <value>No game selected</value>
+  </data>
+  <data name="Details_NoMatchText" xml:space="preserve">
+    <value>As soon as the list shows games again, the settings of the selected game appear here.</value>
+  </data>
+  <data name="Details_EmptyLibraryTitle" xml:space="preserve">
+    <value>No game in the list yet</value>
+  </data>
+  <data name="Details_EmptyLibraryText" xml:space="preserve">
+    <value>As soon as the list shows games, the settings of the selected game appear here.</value>
+  </data>
+  <data name="Details_NotInstalled" xml:space="preserve">
+    <value>This game wasn't found in the last scan. Its settings are kept.</value>
+  </data>
+  <data name="Details_LastPlayed" xml:space="preserve">
+    <value>Last played: {0}</value>
+  </data>
+  <data name="Details_SectionAutomation" xml:space="preserve">
+    <value>AUTOMATION</value>
+  </data>
+  <data name="Details_HdrAuto" xml:space="preserve">
+    <value>HDR on launch</value>
+  </data>
+  <data name="Details_HdrAutoHint" xml:space="preserve">
+    <value>Turn HDR on as soon as the game starts.</value>
+  </data>
+  <data name="Details_Restore" xml:space="preserve">
+    <value>Restore after game</value>
+  </data>
+  <data name="Details_RestoreHint" xml:space="preserve">
+    <value>Afterwards, return HDR to the state it was in before.</value>
+  </data>
+  <data name="Details_Display" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="Details_DisplayHint" xml:space="preserve">
+    <value>The default is the global setting.</value>
+  </data>
+  <data name="Details_SectionPicture" xml:space="preserve">
+    <value>PICTURE</value>
+  </data>
+  <data name="Details_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Details_AutoHdrHint" xml:space="preserve">
+    <value>Windows converts the SDR picture to HDR. Only for games without their own HDR (DirectX 11/12).</value>
+  </data>
+  <data name="Details_AutoHdrStartHint" xml:space="preserve">
+    <value>Only takes effect when the game is launched via HDRpilot (Launch, shortcut, Steam launch option): HDRpilot turns Auto HDR on in Windows right before and switches it back after the game.</value>
+  </data>
+  <data name="Details_AutoHdrNeedsHdr" xml:space="preserve">
+    <value>“HDR on launch” is off for this game: Auto HDR only works if Windows HDR is already on before the game starts. “Launch”, “(HDR)” shortcuts and the Steam launch option turn HDR on as well; otherwise turn HDR on yourself beforehand.</value>
+  </data>
+  <data name="Details_AutoHdrNative" xml:space="preserve">
+    <value>According to PCGamingWiki, this game has its own HDR – better turn it on in the game.</value>
+  </data>
+  <data name="Details_AutoHdrNativeLimited" xml:space="preserve">
+    <value>According to PCGamingWiki, this game has limited HDR of its own – usually better turned on in the game.</value>
+  </data>
+  <data name="Details_AutoHdrMore" xml:space="preserve">
+    <value>Learn more</value>
+  </data>
+  <data name="Details_AutoHdrLess" xml:space="preserve">
+    <value>Less</value>
+  </data>
+  <data name="Details_AutoHdrInfoName" xml:space="preserve">
+    <value>Explanations about Windows Auto HDR</value>
+  </data>
+  <data name="Details_AutoHdrInfoHelp" xml:space="preserve">
+    <value>Shows or hides the explanation and notes about Windows Auto HDR.</value>
+  </data>
+  <data name="AutoHdrSteam_OfferTitle" xml:space="preserve">
+    <value>Copy Steam launch option?</value>
+  </data>
+  <data name="AutoHdrSteam_OfferText" xml:space="preserve">
+    <value>If you launch {0} directly in Steam, HDRpilot only reliably learns about the launch through the Steam launch option, and this game doesn't have it yet. Without it, Auto HDR is only certain to work when launched via HDRpilot or an “(HDR)” shortcut. Should HDRpilot copy it? You have to add it in Steam yourself: right-click the game &gt; Properties &gt; General &gt; Launch options. Auto HDR stays on either way.</value>
+  </data>
+  <data name="AutoHdrSteam_OfferConfirm" xml:space="preserve">
+    <value>Copy launch option</value>
+  </data>
+  <data name="AutoHdrSteam_Copied" xml:space="preserve">
+    <value>Copied. In Steam: right-click the game &gt; Properties &gt; General &gt; Launch options, paste it there. Then HDRpilot turns on HDR and Auto HDR before the game even when launched from Steam (HDRpilot must be running).</value>
+  </data>
+  <data name="Display_Global" xml:space="preserve">
+    <value>Global setting</value>
+  </data>
+  <data name="Display_GlobalWith" xml:space="preserve">
+    <value>Global setting ({0})</value>
+  </data>
+  <data name="Display_HdrCapable" xml:space="preserve">
+    <value>HDR-capable</value>
+  </data>
+  <data name="Display_NoHdr" xml:space="preserve">
+    <value>no HDR</value>
+  </data>
+  <data name="Display_Primary" xml:space="preserve">
+    <value>Primary display</value>
+  </data>
+  <data name="Display_NotConnected" xml:space="preserve">
+    <value>Display not connected</value>
+  </data>
+  <data name="Display_LabelWithDetail" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Display_NameWithDevice" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Details_SectionExecutables" xml:space="preserve">
+    <value>EXE FILES</value>
+  </data>
+  <data name="Details_ExecutablesHint" xml:space="preserve">
+    <value>Every program in the install folder counts as the game. Excluded EXEs don't switch anything, added ones count even outside the folder.</value>
+  </data>
+  <data name="Exe_Empty" xml:space="preserve">
+    <value>No EXE known yet. HDRpilot remembers the EXE files the first time you play.</value>
+  </data>
+  <data name="Exe_OriginDetected" xml:space="preserve">
+    <value>detected while playing</value>
+  </data>
+  <data name="Exe_OriginKnown" xml:space="preserve">
+    <value>from the launcher</value>
+  </data>
+  <data name="Exe_OriginExtra" xml:space="preserve">
+    <value>added by you</value>
+  </data>
+  <data name="Exe_OriginExcluded" xml:space="preserve">
+    <value>excluded</value>
+  </data>
+  <data name="Exe_OriginHelper" xml:space="preserve">
+    <value>helper program, never counts</value>
+  </data>
+  <data name="Exe_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Exe_AddName" xml:space="preserve">
+    <value>Add EXE file</value>
+  </data>
+  <data name="Exe_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Exe_RemoveName" xml:space="preserve">
+    <value>Remove selected EXE</value>
+  </data>
+  <data name="Exe_Include" xml:space="preserve">
+    <value>Include again</value>
+  </data>
+  <data name="Exe_IncludeName" xml:space="preserve">
+    <value>Include excluded EXE again</value>
+  </data>
+  <data name="Exe_Relearn" xml:space="preserve">
+    <value>Relearn</value>
+  </data>
+  <data name="Exe_RelearnName" xml:space="preserve">
+    <value>Forget remembered EXEs and learn them again the next time you play</value>
+  </data>
+  <data name="Exe_Added" xml:space="preserve">
+    <value>“{0}” now belongs to the game.</value>
+  </data>
+  <data name="Exe_Removed" xml:space="preserve">
+    <value>“{0}” no longer counts as a game process.</value>
+  </data>
+  <data name="Exe_Included" xml:space="preserve">
+    <value>“{0}” counts as a game process again.</value>
+  </data>
+  <data name="Exe_RelearnDone" xml:space="preserve">
+    <value>Remembered EXE files forgotten. HDRpilot learns them again the next time you play.</value>
+  </data>
+  <data name="Exe_PickerTitle" xml:space="preserve">
+    <value>Choose the game's EXE file</value>
+  </data>
+  <data name="Exe_PickerFilter" xml:space="preserve">
+    <value>Programs (*.exe)|*.exe</value>
+  </data>
+  <data name="Details_SectionLaunch" xml:space="preserve">
+    <value>LAUNCH</value>
+  </data>
+  <data name="Launch_Button" xml:space="preserve">
+    <value>Launch with HDR</value>
+  </data>
+  <data name="Launch_Hint" xml:space="preserve">
+    <value>Turns HDR on, waits for confirmation and then launches the game (via its launcher or directly via the EXE).</value>
+  </data>
+  <data name="Launch_NoCommand" xml:space="preserve">
+    <value>HDRpilot doesn't know a launch EXE for this entry: the folder contains none or more than one. Detection while playing still works. To launch via HDRpilot, add the game via its EXE.</value>
+  </data>
+  <data name="Launch_NoCommandQuiver" xml:space="preserve">
+    <value>HDRpilot doesn't know a unique launch EXE for this Quiver game: the game folder contains several candidates, the EXE is nested very deep, or Quiver runs a script (BAT or CMD), which HDRpilot doesn't execute. Launch the game once in Quiver and choose the EXE there when Quiver asks; after “Rescan”, HDRpilot launches it directly. Detection while playing still works.</value>
+  </data>
+  <data name="Details_DuplicateOfManual" xml:space="preserve">
+    <value>The same game is also in the library as your own entry “{0}”, for the same folder. HDRpilot doesn't remove anything by itself: if you no longer need your own entry, remove it in its details with “Remove from library”.</value>
+  </data>
+  <data name="Details_DuplicateOfQuiver" xml:space="preserve">
+    <value>HDRpilot also reads this game from Quiver (“{0}”), for the same folder. HDRpilot doesn't remove anything by itself: if you no longer need this entry of your own, remove it below with “Remove from library”.</value>
+  </data>
+  <data name="Details_QuiverWindowsInstaller" xml:space="preserve">
+    <value>Installed via Windows Installer: the folder of the EXE linked in Quiver counts as the install folder. “Launch” starts this EXE directly.</value>
+  </data>
+  <data name="Launch_Running" xml:space="preserve">
+    <value>Turning HDR on, then the game starts …</value>
+  </data>
+  <data name="Launch_Started" xml:space="preserve">
+    <value>Launched. HDR was ready at {0}.</value>
+  </data>
+  <data name="Launch_StartedPlain" xml:space="preserve">
+    <value>Launched.</value>
+  </data>
+  <data name="Launch_Failed" xml:space="preserve">
+    <value>Launch failed: {0}</value>
+  </data>
+  <data name="Shortcut_Desktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="Shortcut_DesktopName" xml:space="preserve">
+    <value>Create shortcut on the desktop</value>
+  </data>
+  <data name="Shortcut_StartMenu" xml:space="preserve">
+    <value>Start menu</value>
+  </data>
+  <data name="Shortcut_StartMenuName" xml:space="preserve">
+    <value>Create Start menu entry</value>
+  </data>
+  <data name="Shortcut_Created" xml:space="preserve">
+    <value>Shortcut created: {0}</value>
+  </data>
+  <data name="Shortcut_Failed" xml:space="preserve">
+    <value>Shortcut couldn't be created: {0}</value>
+  </data>
+  <data name="Shortcut_FileName" xml:space="preserve">
+    <value>{0} (HDR)</value>
+  </data>
+  <data name="Shortcut_Description" xml:space="preserve">
+    <value>Launches {0} via HDRpilot with HDR</value>
+  </data>
+  <data name="Shortcut_NoTarget" xml:space="preserve">
+    <value>HDRpilot's program path is unknown.</value>
+  </data>
+  <data name="Steam_CopyLaunchOption" xml:space="preserve">
+    <value>Copy Steam launch option</value>
+  </data>
+  <data name="Steam_CopyLaunchOptionName" xml:space="preserve">
+    <value>Copy Steam launch option for launching from Steam</value>
+  </data>
+  <data name="Steam_LaunchOptionHint" xml:space="preserve">
+    <value>Fallback for launching directly from Steam: HDR then turns on before the game.</value>
+  </data>
+  <data name="Steam_LaunchOptionCopied" xml:space="preserve">
+    <value>Copied. In Steam: right-click the game &gt; Properties &gt; General &gt; Launch options, paste it there. Then HDRpilot turns HDR on before the game even when launched from Steam (HDRpilot must be running).</value>
+  </data>
+  <data name="Steam_LaunchOptionFailed" xml:space="preserve">
+    <value>Launch option couldn't be copied: {0}</value>
+  </data>
+  <data name="Details_InstallDir" xml:space="preserve">
+    <value>INSTALL FOLDER</value>
+  </data>
+  <data name="RemoveGame_Button" xml:space="preserve">
+    <value>Remove from library</value>
+  </data>
+  <data name="RemoveGame_ConfirmTitle" xml:space="preserve">
+    <value>Remove game?</value>
+  </data>
+  <data name="RemoveGame_ConfirmText" xml:space="preserve">
+    <value>“{0}” will be removed from HDRpilot. The files on disk stay unchanged.</value>
+  </data>
+  <data name="RemoveGame_Confirm" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AddGame_Title" xml:space="preserve">
+    <value>Add game</value>
+  </data>
+  <data name="AddGame_Intro" xml:space="preserve">
+    <value>Choose a game's EXE file or its folder.</value>
+  </data>
+  <data name="AddGame_PathLabel" xml:space="preserve">
+    <value>EXE file or folder</value>
+  </data>
+  <data name="AddGame_PathPlaceholder" xml:space="preserve">
+    <value>e.g. D:\Games\My Game\Game.exe</value>
+  </data>
+  <data name="AddGame_BrowseExe" xml:space="preserve">
+    <value>Choose EXE …</value>
+  </data>
+  <data name="AddGame_BrowseFolder" xml:space="preserve">
+    <value>Choose folder …</value>
+  </data>
+  <data name="AddGame_FolderPickerTitle" xml:space="preserve">
+    <value>Choose the game's folder</value>
+  </data>
+  <data name="AddGame_NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AddGame_NamePlaceholder" xml:space="preserve">
+    <value>Name of the game</value>
+  </data>
+  <data name="AddGame_NameHint" xml:space="preserve">
+    <value>Leave empty to use the file or folder name.</value>
+  </data>
+  <data name="AddGame_AutoHint" xml:space="preserve">
+    <value>Manually added games switch HDR on launch: the switch is on right away.</value>
+  </data>
+  <data name="AddGame_Confirm" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="AddGame_ErrorNoPath" xml:space="preserve">
+    <value>Please enter an EXE file or a folder.</value>
+  </data>
+  <data name="AddGame_ErrorRelative" xml:space="preserve">
+    <value>Please enter the full path including the drive.</value>
+  </data>
+  <data name="AddGame_ErrorNotFound" xml:space="preserve">
+    <value>This file or folder doesn't exist.</value>
+  </data>
+  <data name="AddGame_ErrorNotExe" xml:space="preserve">
+    <value>Only EXE files or folders can be added.</value>
+  </data>
+  <data name="AddGame_ErrorDriveRoot" xml:space="preserve">
+    <value>A whole drive can't be a game folder, otherwise every program on it would count as a game. Please choose the game's folder.</value>
+  </data>
+  <data name="WideFolder_Title" xml:space="preserve">
+    <value>Very broad folder</value>
+  </data>
+  <data name="WideFolder_Text" xml:space="preserve">
+    <value>“{0}” is a system folder or contains system folders. Every program in it would count as this game and turn HDR on. Add anyway?</value>
+  </data>
+  <data name="WideFolder_Confirm" xml:space="preserve">
+    <value>Add anyway</value>
+  </data>
+  <data name="Icon_Change" xml:space="preserve">
+    <value>Change icon…</value>
+  </data>
+  <data name="Icon_Reset" xml:space="preserve">
+    <value>Reset icon</value>
+  </data>
+  <data name="Icon_MenuName" xml:space="preserve">
+    <value>Game icon</value>
+  </data>
+  <data name="Icon_ButtonName" xml:space="preserve">
+    <value>Change or reset icon</value>
+  </data>
+  <data name="Icon_PickerTitle" xml:space="preserve">
+    <value>Choose an image or program for the icon</value>
+  </data>
+  <data name="Icon_PickerFilter" xml:space="preserve">
+    <value>Images and programs|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif;*.ico;*.exe|All files|*.*</value>
+  </data>
+  <data name="Icon_Changed" xml:space="preserve">
+    <value>“{0}” now shows your icon.</value>
+  </data>
+  <data name="Icon_ResetDone" xml:space="preserve">
+    <value>“{0}” shows the automatic icon again.</value>
+  </data>
+  <data name="Icon_NotAnImage" xml:space="preserve">
+    <value>No icon can be read from this file. Choose an image (PNG, JPG, WebP, ICO) or an EXE with an icon.</value>
+  </data>
+  <data name="Icon_SaveFailed" xml:space="preserve">
+    <value>The icon couldn't be saved: {0}</value>
+  </data>
+  <data name="View_Name" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="View_List" xml:space="preserve">
+    <value>List</value>
+  </data>
+  <data name="View_Grid" xml:space="preserve">
+    <value>Grid</value>
+  </data>
+  <data name="View_Shelf" xml:space="preserve">
+    <value>Shelf</value>
+  </data>
+  <data name="View_ListTooltip" xml:space="preserve">
+    <value>List (Ctrl+1)</value>
+  </data>
+  <data name="View_GridTooltip" xml:space="preserve">
+    <value>Grid (Ctrl+2)</value>
+  </data>
+  <data name="View_ShelfTooltip" xml:space="preserve">
+    <value>Shelf (Ctrl+3)</value>
+  </data>
+  <data name="When_Never" xml:space="preserve">
+    <value>never played</value>
+  </data>
+  <data name="When_Today" xml:space="preserve">
+    <value>today, {0:t}</value>
+  </data>
+  <data name="When_Yesterday" xml:space="preserve">
+    <value>yesterday, {0:t}</value>
+  </data>
+  <data name="When_Days" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="When_OneWeek" xml:space="preserve">
+    <value>1 week ago</value>
+  </data>
+  <data name="When_Weeks" xml:space="preserve">
+    <value>{0} weeks ago</value>
+  </data>
+  <data name="When_Date" xml:space="preserve">
+    <value>{0:MMM d, yyyy}</value>
+  </data>
+  <data name="Hero_Name" xml:space="preserve">
+    <value>Selected game</value>
+  </data>
+  <data name="Hero_OverlineNew" xml:space="preserve">
+    <value>New in the library · {0}</value>
+  </data>
+  <data name="Hero_OverlineNeverPlayed" xml:space="preserve">
+    <value>Not played yet</value>
+  </data>
+  <data name="Hero_OverlineLastPlayed" xml:space="preserve">
+    <value>Last played · {0}</value>
+  </data>
+  <data name="Hero_ChipLabel" xml:space="preserve">
+    <value>ON LAUNCH</value>
+  </data>
+  <data name="Hero_ChipRestore" xml:space="preserve">
+    <value>HDR on · restored afterwards</value>
+  </data>
+  <data name="Hero_ChipStay" xml:space="preserve">
+    <value>HDR on · stays on afterwards</value>
+  </data>
+  <data name="Hero_ChipUnchanged" xml:space="preserve">
+    <value>HDR stays unchanged</value>
+  </data>
+  <data name="Hero_ChipPaused" xml:space="preserve">
+    <value>Automation paused</value>
+  </data>
+  <data name="HdrKind_Native" xml:space="preserve">
+    <value>Native HDR</value>
+  </data>
+  <data name="HdrKind_Limited" xml:space="preserve">
+    <value>Limited HDR</value>
+  </data>
+  <data name="HdrKind_ModOnly" xml:space="preserve">
+    <value>HDR via mod</value>
+  </data>
+  <data name="HdrKind_None" xml:space="preserve">
+    <value>No HDR of its own</value>
+  </data>
+  <data name="HdrKind_Unknown" xml:space="preserve">
+    <value>HDR unknown</value>
+  </data>
+  <data name="HdrPill_Native" xml:space="preserve">
+    <value>NATIVE</value>
+  </data>
+  <data name="HdrPill_Limited" xml:space="preserve">
+    <value>LIMITED</value>
+  </data>
+  <data name="HdrPill_ModOnly" xml:space="preserve">
+    <value>MOD</value>
+  </data>
+  <data name="List_SwitchOn" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="List_SwitchOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="List_ColumnGame" xml:space="preserve">
+    <value>Game · {0}</value>
+  </data>
+  <data name="List_ColumnSource" xml:space="preserve">
+    <value>SOURCE</value>
+  </data>
+  <data name="List_ColumnLastPlayed" xml:space="preserve">
+    <value>LAST PLAYED</value>
+  </data>
+  <data name="List_ColumnHdr" xml:space="preserve">
+    <value>HDR</value>
+  </data>
+  <data name="List_SortByColumn" xml:space="preserve">
+    <value>Sort by this column</value>
+  </data>
+  <data name="List_HdrUnknown" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Thumbnail_Name" xml:space="preserve">
+    <value>Preview in the list</value>
+  </data>
+  <data name="Thumbnail_Image" xml:space="preserve">
+    <value>16:9 thumbnail</value>
+  </data>
+  <data name="Thumbnail_Icon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="Status_ViewSummary" xml:space="preserve">
+    <value>{0} · {1} of {2} · sorted by {3}</value>
+  </data>
+  <data name="Status_ActiveWaiting" xml:space="preserve">
+    <value>Automation active · waiting for a game to launch</value>
+  </data>
+  <data name="Status_ActiveHdrOn" xml:space="preserve">
+    <value>Automation active · HDR on</value>
+  </data>
+  <data name="Status_Paused" xml:space="preserve">
+    <value>Automation paused · HDR isn't switched</value>
+  </data>
+  <data name="Status_Running" xml:space="preserve">
+    <value>Game running · {0}</value>
+  </data>
+  <data name="Status_RunningPaused" xml:space="preserve">
+    <value>Game running · {0} · effects paused</value>
+  </data>
+  <data name="Status_HdrOn" xml:space="preserve">
+    <value>HDR is on · {0}</value>
+  </data>
+  <data name="Status_HdrOnWithNits" xml:space="preserve">
+    <value>HDR is on · {0} · peak {1} nits · full frame {2} nits</value>
+  </data>
+  <data name="Status_Name" xml:space="preserve">
+    <value>Status bar</value>
+  </data>
+  <data name="Keys_Selection" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="Keys_Launch" xml:space="preserve">
+    <value>Launch</value>
+  </data>
+  <data name="Keys_HdrAuto" xml:space="preserve">
+    <value>HDR on launch</value>
+  </data>
+  <data name="Keys_Menu" xml:space="preserve">
+    <value>Menu</value>
+  </data>
+  <data name="Key_Up" xml:space="preserve">
+    <value>↑</value>
+  </data>
+  <data name="Key_Down" xml:space="preserve">
+    <value>↓</value>
+  </data>
+  <data name="Key_Enter" xml:space="preserve">
+    <value>Enter</value>
+  </data>
+  <data name="Key_Space" xml:space="preserve">
+    <value>Space</value>
+  </data>
+  <data name="Key_ShiftF10" xml:space="preserve">
+    <value>Shift+F10</value>
+  </data>
+  <data name="Key_CtrlF" xml:space="preserve">
+    <value>Ctrl+F</value>
+  </data>
+  <data name="Key_I" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="Effects_Full" xml:space="preserve">
+    <value>Effects full</value>
+  </data>
+  <data name="Effects_FullPauseBoth" xml:space="preserve">
+    <value>Effects full · pause in the background and while playing</value>
+  </data>
+  <data name="Effects_FullPauseBackground" xml:space="preserve">
+    <value>Effects full · pause in the background</value>
+  </data>
+  <data name="Effects_FullPausePlaying" xml:space="preserve">
+    <value>Effects full · pause while playing</value>
+  </data>
+  <data name="Effects_Reduced" xml:space="preserve">
+    <value>Effects reduced</value>
+  </data>
+  <data name="Effects_ReducedByWindows" xml:space="preserve">
+    <value>Effects reduced (Windows setting)</value>
+  </data>
+  <data name="Effects_Off" xml:space="preserve">
+    <value>Effects off</value>
+  </data>
+  <data name="Effects_PausedGame" xml:space="preserve">
+    <value>Effects paused while the game is running</value>
+  </data>
+  <data name="Effects_PausedBackground" xml:space="preserve">
+    <value>Effects paused · window in the background</value>
+  </data>
+  <data name="Effects_PausedMinimized" xml:space="preserve">
+    <value>Effects paused · window minimized</value>
+  </data>
+  <data name="Nits_CapsuleName" xml:space="preserve">
+    <value>Display and HDR status</value>
+  </data>
+  <data name="Nits_UnknownDisplay" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="Nits_DisplayWithBits" xml:space="preserve">
+    <value>{0} · {1}-bit</value>
+  </data>
+  <data name="Nits_HdrOn" xml:space="preserve">
+    <value>HDR ON</value>
+  </data>
+  <data name="Nits_HdrOff" xml:space="preserve">
+    <value>HDR OFF</value>
+  </data>
+  <data name="Nits_Peak" xml:space="preserve">
+    <value>PEAK</value>
+  </data>
+  <data name="Nits_FullFrame" xml:space="preserve">
+    <value>FULL FRAME</value>
+  </data>
+  <data name="Nits_Minimum" xml:space="preserve">
+    <value>MINIMUM</value>
+  </data>
+  <data name="Nits_Unit" xml:space="preserve">
+    <value>nits</value>
+  </data>
+  <data name="Nits_Unknown" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Nits_ScaleEnd" xml:space="preserve">
+    <value>{0} nits</value>
+  </data>
+  <data name="Nits_ScaleName" xml:space="preserve">
+    <value>Brightness scale up to the peak with HDR on</value>
+  </data>
+  <data name="Nits_PeakName" xml:space="preserve">
+    <value>Peak in nits</value>
+  </data>
+  <data name="Nits_FullFrameName" xml:space="preserve">
+    <value>Full frame in nits</value>
+  </data>
+  <data name="Nits_MinimumName" xml:space="preserve">
+    <value>Minimum in nits</value>
+  </data>
+  <data name="Nits_ValueName" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Nits_ValueUnknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="Nits_Tooltip" xml:space="preserve">
+    <value>Display values according to Windows (DXGI): peak {0} nits · full frame {1} nits · minimum {2} nits · {3} bits per color. The scale goes up to the peak with HDR on (capability of the display, not a measurement).</value>
+  </data>
+  <data name="Nits_TooltipUnknown" xml:space="preserve">
+    <value>The display's brightness values aren't known yet. HDRpilot reads them when HDR or the display changes.</value>
+  </data>
+  <data name="Toolbar_Name" xml:space="preserve">
+    <value>Library toolbar</value>
+  </data>
+  <data name="Chip_HdrAuto" xml:space="preserve">
+    <value>Automation</value>
+  </data>
+  <data name="Search_Short" xml:space="preserve">
+    <value>Search …</value>
+  </data>
+  <data name="Context_MenuName" xml:space="preserve">
+    <value>Game menu</value>
+  </data>
+  <data name="Context_Subtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Context_Launch" xml:space="preserve">
+    <value>Launch</value>
+  </data>
+  <data name="Context_HdrAuto" xml:space="preserve">
+    <value>HDR on launch</value>
+  </data>
+  <data name="Context_Restore" xml:space="preserve">
+    <value>Restore after game</value>
+  </data>
+  <data name="Context_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Context_ChooseArtwork" xml:space="preserve">
+    <value>Choose image…</value>
+  </data>
+  <data name="Context_Desktop" xml:space="preserve">
+    <value>Create desktop shortcut</value>
+  </data>
+  <data name="Context_StartMenu" xml:space="preserve">
+    <value>Add to Start menu</value>
+  </data>
+  <data name="Context_OpenFolder" xml:space="preserve">
+    <value>Open install folder</value>
+  </data>
+  <data name="Folder_NotFound" xml:space="preserve">
+    <value>The install folder of “{0}” wasn't found.</value>
+  </data>
+  <data name="Launch_ButtonShort" xml:space="preserve">
+    <value>Launch</value>
+  </data>
+  <data name="Launch_IsRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Profile_Overline" xml:space="preserve">
+    <value>GAME PROFILE</value>
+  </data>
+  <data name="Profile_Subtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Profile_SubtitleNoExe" xml:space="preserve">
+    <value>{0} · no EXE detected</value>
+  </data>
+  <data name="Profile_SubtitleSeveralExe" xml:space="preserve">
+    <value>{0} · several EXEs</value>
+  </data>
+  <data name="Profile_More" xml:space="preserve">
+    <value>More options</value>
+  </data>
+  <data name="Details_ExecutablesCount" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Artwork_Section" xml:space="preserve">
+    <value>IMAGES</value>
+  </data>
+  <data name="Artwork_Choose" xml:space="preserve">
+    <value>Choose image…</value>
+  </data>
+  <data name="Artwork_Change" xml:space="preserve">
+    <value>Change…</value>
+  </data>
+  <data name="Artwork_TileHero" xml:space="preserve">
+    <value>Hero image</value>
+  </data>
+  <data name="Artwork_TileLogo" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="Artwork_TileCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Artwork_TileIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="Artwork_TileTooltip" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Artwork_LogoPlaceholder" xml:space="preserve">
+    <value>Aa</value>
+  </data>
+  <data name="Artwork_HeroGenerated" xml:space="preserve">
+    <value>Hero image generated</value>
+  </data>
+  <data name="Artwork_NameInsteadOfLogo" xml:space="preserve">
+    <value>Name instead of logo</value>
+  </data>
+  <data name="Artwork_CoverGenerated" xml:space="preserve">
+    <value>Cover generated</value>
+  </data>
+  <data name="Artwork_CoverFromSmear" xml:space="preserve">
+    <value>Cover from hero image (Steam capsule smeared)</value>
+  </data>
+  <data name="Artwork_Monogram" xml:space="preserve">
+    <value>Monogram instead of icon</value>
+  </data>
+  <data name="Separator" xml:space="preserve">
+    <value> · </value>
+  </data>
+  <data name="Shelf_Name" xml:space="preserve">
+    <value>Shelf</value>
+  </data>
+  <data name="Shelf_Position" xml:space="preserve">
+    <value>{0}–{1} of {2}</value>
+  </data>
+  <data name="Shelf_Previous" xml:space="preserve">
+    <value>Previous games</value>
+  </data>
+  <data name="Shelf_Next" xml:space="preserve">
+    <value>Next games</value>
+  </data>
+  <data name="Grid_Name" xml:space="preserve">
+    <value>Grid</value>
+  </data>
+  <data name="Card_Name" xml:space="preserve">
+    <value>Automation of the selected game</value>
+  </data>
+  <data name="Card_Title" xml:space="preserve">
+    <value>AUTOMATION</value>
+  </data>
+  <data name="Card_HdrAuto" xml:space="preserve">
+    <value>HDR on launch</value>
+  </data>
+  <data name="Card_HdrAutoHint" xml:space="preserve">
+    <value>turn on at launch</value>
+  </data>
+  <data name="Card_Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Card_RestoreHint" xml:space="preserve">
+    <value>after the game</value>
+  </data>
+  <data name="Card_AutoHdr" xml:space="preserve">
+    <value>Windows Auto HDR</value>
+  </data>
+  <data name="Card_Details" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Card_DetailsName" xml:space="preserve">
+    <value>Show all details of the game (I key)</value>
+  </data>
+  <data name="Drawer_Close" xml:space="preserve">
+    <value>Close details (Esc)</value>
+  </data>
+  <data name="Picker_Title" xml:space="preserve">
+    <value>Choose image</value>
+  </data>
+  <data name="Picker_Subtitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Picker_Tabs" xml:space="preserve">
+    <value>Image type</value>
+  </data>
+  <data name="Picker_TabHero" xml:space="preserve">
+    <value>Hero image</value>
+  </data>
+  <data name="Picker_TabLogo" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="Picker_TabCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Picker_ListName" xml:space="preserve">
+    <value>Options</value>
+  </data>
+  <data name="Picker_Automatic" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
+  <data name="Picker_AutomaticNote" xml:space="preserve">
+    <value>Image from the launcher cache or generated</value>
+  </data>
+  <data name="Picker_Current" xml:space="preserve">
+    <value>CURRENT</value>
+  </data>
+  <data name="Picker_PickFile" xml:space="preserve">
+    <value>Own file…</value>
+  </data>
+  <data name="Picker_PickFileHint" xml:space="preserve">
+    <value>PNG, JPG, WebP or BMP from this PC</value>
+  </data>
+  <data name="Picker_OwnFile" xml:space="preserve">
+    <value>Own file: {0}</value>
+  </data>
+  <data name="Picker_OwnFileNote" xml:space="preserve">
+    <value>Stored downscaled in the data folder when applied; the file itself stays unchanged.</value>
+  </data>
+  <data name="Picker_SourceNote" xml:space="preserve">
+    <value>HDRpilot reads images only from the launchers' local caches (Steam, GOG Galaxy, Ubisoft, Xbox package, Quiver). If one is missing, it's generated from the icon and name. SteamGridDB (online) only fills missing images, and only if you turn it on in the settings.</value>
+  </data>
+  <data name="Picker_Size" xml:space="preserve">
+    <value>{0} × {1}</value>
+  </data>
+  <data name="Picker_Reset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Picker_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Picker_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Picker_Applied" xml:space="preserve">
+    <value>Images for “{0}” applied.</value>
+  </data>
+  <data name="Picker_NotAnImage" xml:space="preserve">
+    <value>No image can be read from this file. Choose a PNG, JPG, WebP or BMP.</value>
+  </data>
+  <data name="Picker_TooLarge" xml:space="preserve">
+    <value>The image is too large (at most 32 MB and 100 megapixels). Choose a smaller version.</value>
+  </data>
+  <data name="Picker_SaveFailed" xml:space="preserve">
+    <value>The image couldn't be saved: {0}</value>
+  </data>
+  <data name="Picker_FileTitle" xml:space="preserve">
+    <value>Choose image</value>
+  </data>
+  <data name="Picker_FileFilter" xml:space="preserve">
+    <value>Images (*.png;*.jpg;*.jpeg;*.webp;*.bmp)|*.png;*.jpg;*.jpeg;*.webp;*.bmp</value>
+  </data>
+  <data name="HdrTag_Native" xml:space="preserve">
+    <value>NATIVE HDR</value>
+  </data>
+  <data name="HdrTag_Limited" xml:space="preserve">
+    <value>LIMITED HDR</value>
+  </data>
+  <data name="HdrTag_ModOnly" xml:space="preserve">
+    <value>HDR VIA MOD</value>
+  </data>
+  <data name="HdrTag_None" xml:space="preserve">
+    <value>NO HDR OF ITS OWN</value>
+  </data>
+  <data name="HdrTag_Unknown" xml:space="preserve">
+    <value>HDR UNKNOWN</value>
+  </data>
+  <data name="Details_AutoHdrWhere" xml:space="preserve">
+    <value>Takes effect when launched via HDRpilot</value>
+  </data>
+  <data name="Stats_Name" xml:space="preserve">
+    <value>Library figures</value>
+  </data>
+  <data name="List_ThumbnailsName" xml:space="preserve">
+    <value>Thumbnail or icon in the list</value>
+  </data>
+  <data name="Toast_Name" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="Toolbar_ToggleName" xml:space="preserve">
+    <value>Toolbar</value>
+  </data>
+  <data name="Toolbar_ToggleHelp" xml:space="preserve">
+    <value>Ctrl+F shows and hides the toolbar; when shown, the cursor is in the search box. Ctrl+F1 works too, Shift+F10 opens its menu.</value>
+  </data>
+  <data name="Toolbar_Hide" xml:space="preserve">
+    <value>Hide toolbar</value>
+  </data>
+  <data name="Toolbar_Show" xml:space="preserve">
+    <value>Show toolbar</value>
+  </data>
+  <data name="Toolbar_Hidden" xml:space="preserve">
+    <value>Toolbar hidden</value>
+  </data>
+  <data name="Toolbar_Shown" xml:space="preserve">
+    <value>Toolbar shown</value>
+  </data>
+  <data name="Toolbar_NoFilters" xml:space="preserve">
+    <value>No filters</value>
+  </data>
+  <data name="Toolbar_NoFiltersTip" xml:space="preserve">
+    <value>No filters active.</value>
+  </data>
+  <data name="Toolbar_Filtered" xml:space="preserve">
+    <value>Filtered: {0} – {1} of {2}</value>
+  </data>
+  <data name="Toolbar_FilterSearch" xml:space="preserve">
+    <value>Search “{0}”</value>
+  </data>
+  <data name="Toolbar_CapsuleSearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Toolbar_CapsuleTerm" xml:space="preserve">
+    <value>“{0}”</value>
+  </data>
+  <data name="Toolbar_CapsuleCount" xml:space="preserve">
+    <value>{0} of {1} games</value>
+  </data>
+  <data name="Toolbar_CapsuleTipFooter" xml:space="preserve">
+    <value>Click to show · Right-click: menu</value>
+  </data>
+  <data name="Toolbar_ResetName" xml:space="preserve">
+    <value>Reset search and filters</value>
+  </data>
+  <data name="Toolbar_ResetTip" xml:space="preserve">
+    <value>Shows all {0} again.</value>
+  </data>
+  <data name="Toolbar_MenuName" xml:space="preserve">
+    <value>Toolbar menu</value>
+  </data>
+  <data name="Toolbar_ResetAll" xml:space="preserve">
+    <value>Reset all filters</value>
+  </data>
+  <data name="Key_AltA" xml:space="preserve">
+    <value>Alt+A</value>
+  </data>
+  <data name="Key_AltN" xml:space="preserve">
+    <value>Alt+N</value>
+  </data>
+  <data name="Key_AltH" xml:space="preserve">
+    <value>Alt+H</value>
+  </data>
+  <data name="Key_Ctrl1" xml:space="preserve">
+    <value>Ctrl+1</value>
+  </data>
+  <data name="Key_Ctrl2" xml:space="preserve">
+    <value>Ctrl+2</value>
+  </data>
+  <data name="Key_Ctrl3" xml:space="preserve">
+    <value>Ctrl+3</value>
+  </data>
+  <data name="Keys_Toolbar" xml:space="preserve">
+    <value>Toolbar</value>
+  </data>
+  <data name="Tip_SearchTitle" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Tip_SearchText" xml:space="preserve">
+    <value>Filter by name. Esc clears the search.</value>
+  </data>
+  <data name="Tip_SearchHits" xml:space="preserve">
+    <value>Matches for “{1}”: {0}</value>
+  </data>
+  <data name="Tip_SourceTitle" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Tip_SourceText" xml:space="preserve">
+    <value>Show only the games of one launcher.</value>
+  </data>
+  <data name="Tip_SourceAll" xml:space="preserve">
+    <value>All sources · {0}</value>
+  </data>
+  <data name="Tip_SourceOne" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Tip_SortTitle" xml:space="preserve">
+    <value>Sort order</value>
+  </data>
+  <data name="Tip_SortText" xml:space="preserve">
+    <value>Order of the list; clicking a column header works too.</value>
+  </data>
+  <data name="Tip_SortTextCompact" xml:space="preserve">
+    <value>{0}. Shown only as an icon in a narrow window.</value>
+  </data>
+  <data name="Tip_AutoText" xml:space="preserve">
+    <value>Only games for which HDRpilot turns HDR on at launch.</value>
+  </data>
+  <data name="Tip_NewText" xml:space="preserve">
+    <value>Only games added since you last looked.</value>
+  </data>
+  <data name="Tip_HdrText" xml:space="preserve">
+    <value>Only games with HDR according to PCGamingWiki (including limited).</value>
+  </data>
+  <data name="Tip_FilterOff" xml:space="preserve">
+    <value>{0} · filter off</value>
+  </data>
+  <data name="Tip_FilterOnLead" xml:space="preserve">
+    <value>Filter on</value>
+  </data>
+  <data name="Tip_FilterOn" xml:space="preserve">
+    <value> · {0} of {1} · click to turn it off</value>
+  </data>
+  <data name="Tip_ListText" xml:space="preserve">
+    <value>All games as a list with columns.</value>
+  </data>
+  <data name="Tip_GridText" xml:space="preserve">
+    <value>Covers as tiles.</value>
+  </data>
+  <data name="Tip_ShelfText" xml:space="preserve">
+    <value>One large row of tiles below the hero image.</value>
+  </data>
+  <data name="Tip_SeenText" xml:space="preserve">
+    <value>Removes the “New” mark from all games.</value>
+  </data>
+  <data name="Tip_SeenFooter" xml:space="preserve">
+    <value>{0} new</value>
+  </data>
+  <data name="Tip_AddText" xml:space="preserve">
+    <value>Add a game manually (EXE or shortcut).</value>
+  </data>
+  <data name="RemoveSettings_Button" xml:space="preserve">
+    <value>Remove settings…</value>
+  </data>
+  <data name="RemoveSettings_Tooltip" xml:space="preserve">
+    <value>Removes what HDRpilot has stored about this game. Nothing changes in the game or the launcher.</value>
+  </data>
+  <data name="RemoveSettings_ConfirmTitle" xml:space="preserve">
+    <value>Remove settings of “{0}”?</value>
+  </data>
+  <data name="RemoveSettings_ConfirmText" xml:space="preserve">
+    <value>HDRpilot forgets what it has stored about this game, including your own icon and images. Nothing changes in the game or the launcher. If you install it again, it appears as new in the next scan, with “HDR on launch” off.</value>
+  </data>
+  <data name="RemoveSettings_LossHeader" xml:space="preserve">
+    <value>WILL BE LOST</value>
+  </data>
+  <data name="RemoveSettings_LossHdrAuto" xml:space="preserve">
+    <value>“HDR on launch” is on</value>
+  </data>
+  <data name="RemoveSettings_LossAutoHdr" xml:space="preserve">
+    <value>“Windows Auto HDR” is on</value>
+  </data>
+  <data name="RemoveSettings_LossDisplay" xml:space="preserve">
+    <value>Own display instead of the global setting</value>
+  </data>
+  <data name="RemoveSettings_LossNoRestore" xml:space="preserve">
+    <value>“Restore after game” is off</value>
+  </data>
+  <data name="RemoveSettings_LossDetectedOne" xml:space="preserve">
+    <value>1 remembered EXE file</value>
+  </data>
+  <data name="RemoveSettings_LossDetectedMany" xml:space="preserve">
+    <value>{0} remembered EXE files</value>
+  </data>
+  <data name="RemoveSettings_LossExtraOne" xml:space="preserve">
+    <value>1 added EXE file</value>
+  </data>
+  <data name="RemoveSettings_LossExtraMany" xml:space="preserve">
+    <value>{0} added EXE files</value>
+  </data>
+  <data name="RemoveSettings_LossExcludedOne" xml:space="preserve">
+    <value>1 excluded EXE file</value>
+  </data>
+  <data name="RemoveSettings_LossExcludedMany" xml:space="preserve">
+    <value>{0} excluded EXE files</value>
+  </data>
+  <data name="RemoveSettings_LossCustomIcon" xml:space="preserve">
+    <value>Own icon</value>
+  </data>
+  <data name="RemoveSettings_LossImagesOne" xml:space="preserve">
+    <value>1 own image</value>
+  </data>
+  <data name="RemoveSettings_LossImagesMany" xml:space="preserve">
+    <value>{0} own images</value>
+  </data>
+  <data name="RemoveSettings_LossChosenOne" xml:space="preserve">
+    <value>1 chosen image</value>
+  </data>
+  <data name="RemoveSettings_LossChosenMany" xml:space="preserve">
+    <value>{0} chosen images</value>
+  </data>
+  <data name="RemoveSettings_LossLastPlayed" xml:space="preserve">
+    <value>Last played on {0}</value>
+  </data>
+  <data name="RemoveSettings_LossNothing" xml:space="preserve">
+    <value>Only the library entry, no settings of your own</value>
+  </data>
+  <data name="RemoveSettings_DriveMissing" xml:space="preserve">
+    <value>Drive {0} isn't connected. The game may still be installed.</value>
+  </data>
+  <data name="RemoveSettings_ProgramPresent" xml:space="preserve">
+    <value>An EXE file of the game is still there. It may still be installed and just wasn't detected in the scan, for example in the middle of an update.</value>
+  </data>
+  <data name="RemoveSettings_SteamListed" xml:space="preserve">
+    <value>Steam still lists the game as installed. Maybe it just wasn't detected in the scan, for example in the middle of an update.</value>
+  </data>
+  <data name="RemoveSettings_Unchecked" xml:space="preserve">
+    <value>The game's drive or folder doesn't respond or can't be read. The game may still be installed.</value>
+  </data>
+  <data name="RemoveSettings_Checking" xml:space="preserve">
+    <value>Checking drive and shortcuts of “{0}” …</value>
+  </data>
+  <data name="RemoveSettings_ShortcutOne" xml:space="preserve">
+    <value>Also delete the HDRpilot shortcut</value>
+  </data>
+  <data name="RemoveSettings_ShortcutMany" xml:space="preserve">
+    <value>Also delete the {0} HDRpilot shortcuts</value>
+  </data>
+  <data name="RemoveSettings_ShortcutHintOne" xml:space="preserve">
+    <value>If unchecked, the shortcut stays on the desktop or in the Start menu and only launches the game again once it's installed and rescanned.</value>
+  </data>
+  <data name="RemoveSettings_ShortcutHint" xml:space="preserve">
+    <value>If unchecked, the shortcuts stay on the desktop or in the Start menu and only launch their game again once it's installed and rescanned.</value>
+  </data>
+  <data name="RemoveSettings_Confirm" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RemoveSettings_Done" xml:space="preserve">
+    <value>Settings of “{0}” removed.</value>
+  </data>
+  <data name="RemoveSettings_DoneShortcutOne" xml:space="preserve">
+    <value>Settings of “{0}” and one shortcut removed.</value>
+  </data>
+  <data name="RemoveSettings_DoneShortcutsMany" xml:space="preserve">
+    <value>Settings of “{0}” and {1} shortcuts removed.</value>
+  </data>
+  <data name="RemoveSettings_FilesFailedOne" xml:space="preserve">
+    <value>One file couldn't be deleted (see log).</value>
+  </data>
+  <data name="RemoveSettings_FilesFailed" xml:space="preserve">
+    <value>{0} files couldn't be deleted (see log).</value>
+  </data>
+  <data name="RemoveSettings_Kept" xml:space="preserve">
+    <value>“{0}” has been installed again or is running. Nothing removed.</value>
+  </data>
+  <data name="RemoveSettings_Running" xml:space="preserve">
+    <value>“{0}” is running right now. You can remove it after the game.</value>
+  </data>
+  <data name="Details_NotInstalledRemovable" xml:space="preserve">
+    <value>This game wasn't found in the last scan. Its settings are kept; you can remove them at the very bottom.</value>
+  </data>
+  <data name="Key_Delete" xml:space="preserve">
+    <value>Del</value>
+  </data>
+  <data name="RemoveAll_ConfirmTitleOne" xml:space="preserve">
+    <value>Remove the settings of one uninstalled game?</value>
+  </data>
+  <data name="RemoveAll_ConfirmTitleMany" xml:space="preserve">
+    <value>Remove the settings of {0} uninstalled games?</value>
+  </data>
+  <data name="RemoveAll_ConfirmText" xml:space="preserve">
+    <value>HDRpilot forgets what it has stored about these games, including your own icons and images. Nothing changes in the games or launchers. If one is installed again, it appears as new in the next scan, with “HDR on launch” off.</value>
+  </data>
+  <data name="RemoveAll_DetailsHeader" xml:space="preserve">
+    <value>AFFECTED</value>
+  </data>
+  <data name="RemoveAll_MarkDriveMissing" xml:space="preserve">
+    <value>Drive {0} not connected</value>
+  </data>
+  <data name="RemoveAll_MarkProgramPresent" xml:space="preserve">
+    <value>EXE file still there</value>
+  </data>
+  <data name="RemoveAll_MarkSteamListed" xml:space="preserve">
+    <value>still listed in Steam</value>
+  </data>
+  <data name="RemoveAll_MarkUnchecked" xml:space="preserve">
+    <value>can't be checked</value>
+  </data>
+  <data name="RemoveAll_DrivesMissingOne" xml:space="preserve">
+    <value>Drive {0} isn't connected. Games on it may still be installed.</value>
+  </data>
+  <data name="RemoveAll_DrivesMissingMany" xml:space="preserve">
+    <value>Drives {0} aren't connected. Games on them may still be installed.</value>
+  </data>
+  <data name="RemoveAll_UnsureOne" xml:space="preserve">
+    <value>For one game, the line under its name says why it may still be installed.</value>
+  </data>
+  <data name="RemoveAll_UnsureMany" xml:space="preserve">
+    <value>For {0} games, the line under the name says why they may still be installed.</value>
+  </data>
+  <data name="RemoveAll_Checking" xml:space="preserve">
+    <value>Checking drives and shortcuts …</value>
+  </data>
+  <data name="RemoveAll_RunningMany" xml:space="preserve">
+    <value>{0} uninstalled games are running right now. You can remove them once they've exited.</value>
+  </data>
+  <data name="RemoveAll_DoneOne" xml:space="preserve">
+    <value>Settings of one game removed.</value>
+  </data>
+  <data name="RemoveAll_DoneMany" xml:space="preserve">
+    <value>Settings of {0} games removed.</value>
+  </data>
+  <data name="RemoveAll_KeptOne" xml:space="preserve">
+    <value>One game has been installed again or is running and stays.</value>
+  </data>
+  <data name="RemoveAll_KeptMany" xml:space="preserve">
+    <value>{0} games have been installed again or are running and stay.</value>
+  </data>
+  <data name="Count_HiddenOne" xml:space="preserve">
+    <value>1 uninstalled game</value>
+  </data>
+  <data name="Count_HiddenMany" xml:space="preserve">
+    <value>{0} uninstalled games</value>
+  </data>
+  <data name="Toolbar_ResetTipHiddenOne" xml:space="preserve">
+    <value>Shows all {0} again. {1} stays hidden (Settings › Library).</value>
+  </data>
+  <data name="Toolbar_ResetTipHidden" xml:space="preserve">
+    <value>Shows all {0} again. {1} stay hidden (Settings › Library).</value>
+  </data>
+  <data name="List_EmptyHiddenTitle" xml:space="preserve">
+    <value>Only uninstalled games</value>
+  </data>
+  <data name="List_EmptyHiddenTextOne" xml:space="preserve">
+    <value>One uninstalled game is hidden. You can show it under Settings › Library.</value>
+  </data>
+  <data name="List_EmptyHiddenTextMany" xml:space="preserve">
+    <value>{0} uninstalled games are hidden. You can show them under Settings › Library.</value>
+  </data>
+</root>

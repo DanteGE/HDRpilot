@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Setup: Fenster und Optionen (E83) -->
+  <data name="SetupWindowTitle" xml:space="preserve">
+    <value>HDRpilot Setup</value>
+  </data>
+  <data name="SetupTitleInstall" xml:space="preserve">
+    <value>Install HDRpilot {0}</value>
+  </data>
+  <data name="SetupTitleUpdate" xml:space="preserve">
+    <value>Update HDRpilot</value>
+  </data>
+  <data name="SetupTitleReinstall" xml:space="preserve">
+    <value>Reinstall HDRpilot {0}</value>
+  </data>
+  <data name="SetupTitleDowngrade" xml:space="preserve">
+    <value>Install an older version?</value>
+  </data>
+  <data name="SetupVersionUpdate" xml:space="preserve">
+    <value>Installed: {0} → new: {1}</value>
+  </data>
+  <data name="SetupVersionDowngrade" xml:space="preserve">
+    <value>{0} is already installed, this setup contains {1}.</value>
+  </data>
+  <data name="SetupInstallDirLabel" xml:space="preserve">
+    <value>Program folder</value>
+  </data>
+  <data name="SetupDataNote" xml:space="preserve">
+    <value>Your settings, game list and logs are kept (stored in {0} and {1}).</value>
+  </data>
+  <data name="SetupDataNoteSingle" xml:space="preserve">
+    <value>Your settings, game list and logs are kept (stored in {0}).</value>
+  </data>
+  <data name="SetupAutostart" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="SetupDesktopShortcut" xml:space="preserve">
+    <value>Desktop shortcut</value>
+  </data>
+  <data name="SetupLaunchAfter" xml:space="preserve">
+    <value>Launch HDRpilot afterwards</value>
+  </data>
+  <data name="SetupAllowDowngrade" xml:space="preserve">
+    <value>Install the older version anyway</value>
+  </data>
+  <data name="SetupRunningNote" xml:space="preserve">
+    <value>HDRpilot is running and will be closed briefly for this.</value>
+  </data>
+  <data name="SetupInstallButton" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="SetupUpdateButton" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="SetupCancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SetupCloseButton" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="SetupCloseErrorButton" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="SetupRetryButton" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="SetupStepCheckSetupFile" xml:space="preserve">
+    <value>Check setup file</value>
+  </data>
+  <data name="SetupStepStopRunningApp" xml:space="preserve">
+    <value>Close HDRpilot</value>
+  </data>
+  <data name="SetupStepCopyFiles" xml:space="preserve">
+    <value>Copy files</value>
+  </data>
+  <data name="SetupStepShortcuts" xml:space="preserve">
+    <value>Create shortcuts</value>
+  </data>
+  <data name="SetupStepAutostart" xml:space="preserve">
+    <value>Adjust autostart</value>
+  </data>
+  <data name="SetupStepRegister" xml:space="preserve">
+    <value>Register under “Installed apps”</value>
+  </data>
+  <data name="SetupStepLaunchApp" xml:space="preserve">
+    <value>Launch HDRpilot</value>
+  </data>
+  <data name="SetupStepStatePending" xml:space="preserve">
+    <value>pending</value>
+  </data>
+  <data name="SetupStepStateRunning" xml:space="preserve">
+    <value>running</value>
+  </data>
+  <data name="SetupStepStateDone" xml:space="preserve">
+    <value>done</value>
+  </data>
+  <data name="SetupStepStateFailed" xml:space="preserve">
+    <value>failed</value>
+  </data>
+  <data name="SetupDoneInstall" xml:space="preserve">
+    <value>HDRpilot {0} is installed.</value>
+  </data>
+  <data name="SetupDoneUpdate" xml:space="preserve">
+    <value>HDRpilot was updated to {0}. Your settings are unchanged.</value>
+  </data>
+  <data name="SetupNotLaunched" xml:space="preserve">
+    <value>HDRpilot couldn't be launched; start it from the Start menu.</value>
+  </data>
+  <data name="SetupNotLaunchedElevated" xml:space="preserve">
+    <value>HDRpilot wasn't launched because the setup ran with administrator rights. Start HDRpilot from the Start menu.</value>
+  </data>
+  <data name="SetupErrorSetupFileDamaged" xml:space="preserve">
+    <value>The setup file is damaged or incomplete. Please copy or download it again.</value>
+  </data>
+  <data name="SetupErrorAppStillRunning" xml:space="preserve">
+    <value>HDRpilot couldn't be closed. Close it from the menu in the notification area (“Exit HDRpilot”) and try again.</value>
+  </data>
+  <data name="SetupErrorFilesInUse" xml:space="preserve">
+    <value>A file in the program folder is currently in use. Close HDRpilot and try again.</value>
+  </data>
+  <data name="SetupErrorAccessDenied" xml:space="preserve">
+    <value>No write access to the program folder.</value>
+  </data>
+  <data name="SetupErrorDiskFull" xml:space="preserve">
+    <value>Not enough free disk space.</value>
+  </data>
+  <data name="SetupErrorDowngradeNotAllowed" xml:space="preserve">
+    <value>A newer version is already installed.</value>
+  </data>
+  <data name="SetupErrorAnotherSetupRunning" xml:space="preserve">
+    <value>Another setup or uninstall of HDRpilot is already running.</value>
+  </data>
+  <data name="SetupErrorNotInstalled" xml:space="preserve">
+    <value>HDRpilot isn't installed.</value>
+  </data>
+  <data name="SetupErrorUnexpected" xml:space="preserve">
+    <value>Unexpected error: {0}. The previous version is unchanged. Details are in {1}.</value>
+  </data>
+  <data name="SetupErrorUnexpectedNoDetail" xml:space="preserve">
+    <value>Unexpected error. The previous version is unchanged. Details are in {0}.</value>
+  </data>
+  <data name="SetupErrorRefusedArguments" xml:space="preserve">
+    <value>This command line doesn't fit ({0}); nothing was changed. Details are in {1}.</value>
+  </data>
+  <data name="SetupErrorContainer" xml:space="preserve">
+    <value>The setup is running in the container of another app ({0}). Windows would redirect registry entries and settings there, and HDRpilot would only be half installed. Nothing was changed. Please start the setup file by double-clicking it in File Explorer.</value>
+  </data>
+  <data name="UninstallErrorContainer" xml:space="preserve">
+    <value>The uninstall is running in the container of another app ({0}). Windows would redirect changes to the registry and settings there, and HDRpilot would only be partly removed. Nothing was changed. Please uninstall HDRpilot via Settings → Apps → Installed apps.</value>
+  </data>
+  <data name="SetupSteamAppFallback" xml:space="preserve">
+    <value>Steam app {0}</value>
+  </data>
+  <data name="UninstallWindowTitle" xml:space="preserve">
+    <value>Uninstall HDRpilot</value>
+  </data>
+  <data name="UninstallTitle" xml:space="preserve">
+    <value>Uninstall HDRpilot {0}?</value>
+  </data>
+  <data name="UninstallInfo" xml:space="preserve">
+    <value>Removes the program, its shortcuts (including the “(HDR)” shortcuts of your games) and autostart.</value>
+  </data>
+  <data name="UninstallRemoveData" xml:space="preserve">
+    <value>Also delete settings, game list and logs</value>
+  </data>
+  <data name="UninstallKeepDataNote" xml:space="preserve">
+    <value>If unchecked, they're kept and used again by a new installation. If checked, the HDR list and a saved PCGamingWiki account are deleted as well.</value>
+  </data>
+  <data name="UninstallSteamWarning" xml:space="preserve">
+    <value>These Steam games still have the HDRpilot launch option. Remove it in Steam (Properties → Launch options), otherwise the games won't start anymore:</value>
+  </data>
+  <data name="UninstallConfirmButton" xml:space="preserve">
+    <value>Uninstall</value>
+  </data>
+  <data name="UninstallCancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="UninstallStepStopRunningApp" xml:space="preserve">
+    <value>Close HDRpilot</value>
+  </data>
+  <data name="UninstallStepRestoreHdr" xml:space="preserve">
+    <value>Restore HDR state</value>
+  </data>
+  <data name="UninstallStepRestoreAutoHdr" xml:space="preserve">
+    <value>Restore Auto HDR</value>
+  </data>
+  <data name="UninstallStepRemoveFiles" xml:space="preserve">
+    <value>Remove files</value>
+  </data>
+  <data name="UninstallStepRemoveShortcuts" xml:space="preserve">
+    <value>Remove shortcuts</value>
+  </data>
+  <data name="UninstallStepRemoveAutostart" xml:space="preserve">
+    <value>Remove autostart</value>
+  </data>
+  <data name="UninstallStepUnregister" xml:space="preserve">
+    <value>Remove entry</value>
+  </data>
+  <data name="UninstallStepRemoveData" xml:space="preserve">
+    <value>Delete settings and data</value>
+  </data>
+  <data name="UninstallDone" xml:space="preserve">
+    <value>HDRpilot was uninstalled.</value>
+  </data>
+  <data name="UninstallDoneDataKept" xml:space="preserve">
+    <value>Your settings remain in {0}.</value>
+  </data>
+  <data name="UninstallDoneDataRemoved" xml:space="preserve">
+    <value>Settings and data were deleted.</value>
+  </data>
+  <data name="UninstallHdrNotRestored" xml:space="preserve">
+    <value>The HDR state couldn't be restored; switch HDR in the Windows display settings if needed.</value>
+  </data>
+  <data name="UninstallAutoHdrNotRestored" xml:space="preserve">
+    <value>The global Auto HDR switch couldn't be restored; check “Auto HDR” in the Windows settings under Display → HDR.</value>
+  </data>
+  <data name="UninstallErrorUnexpected" xml:space="preserve">
+    <value>Uninstall incomplete: {0}. Details are in {1}.</value>
+  </data>
+  <data name="UninstallErrorUnexpectedNoDetail" xml:space="preserve">
+    <value>Uninstall incomplete. Details are in {0}.</value>
+  </data>
+  <data name="UninstallErrorFilesInUse" xml:space="preserve">
+    <value>A file couldn't be removed because it's currently in use: {0}. Delete it manually later.</value>
+  </data>
+  <data name="UninstallCloseButton" xml:space="preserve">
+    <value>Done</value>
+  </data>
+</root>

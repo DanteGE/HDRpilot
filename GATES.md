@@ -568,7 +568,7 @@ Scope: HDRpilot 1.5.0 im öffentlichen Repository `DanteGE/HDRpilot`. Lizenz Pol
 
 ## Phase 16: Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, E95)
 
-Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.en.resx` neben jeder neutralen (deutschen) resx; Sprachwahl „Sprache · Language“ in den Einstellungen mit Hinweis und „Jetzt neu starten“; neue Konfigurationen nach der Anzeigesprache von Windows (Deutsch bei Deutsch, sonst Englisch), vorhandene ohne Sprache bleiben Deutsch; Setup und Entfernen wie Windows, ohne die Einstellungen zu lesen. Texte, die Code zusammensetzt, kommen aus resx; das Protokoll bleibt deutsch. Glossar in E95.
+Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.en.resx` neben jeder neutralen (deutschen) resx; Sprachwahl „Sprache · Language“ in den Einstellungen mit Hinweis und „Jetzt neu starten“; neue Konfigurationen nach der Anzeigesprache von Windows (Deutsch bei Deutsch, sonst Englisch), vorhandene ohne Sprache bleiben Deutsch; Setup und Entfernen wie Windows, ohne die Einstellungen zu lesen. Texte, die Code zusammensetzt, kommen aus resx; das Protokoll bleibt deutsch, außer Meldungen, die auch in der Oberfläche stehen (Scanner, Sitzungen). Glossar in E95.
 
 - [ ] G16.1: Übersetzung vollständig: zu jeder neutralen resx unter `src` eine `.en.resx` mit denselben Schlüsseln (in beide Richtungen), ohne leere Werte, mit denselben Platzhaltern und gültigen Formatvorlagen, ohne deutsche Reste; Glossar „HDR on launch“ ≠ „Windows Auto HDR“ eingehalten.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ResourceTranslationTests" -MinTests 30

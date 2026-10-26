@@ -1404,9 +1404,13 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
   `ScanStrings` für die Meldungen der Scanner) und Kommandozeile (neu `CliStrings` samt Hilfe). Die Texte stehen in den
   Satellitenassemblies `en` (`SatelliteResourceLanguages` de;en, auch im Single-File-Paket); die englischen resx erzeugen
   keine eigene Klasse. Platzhalter sind gleich ({0}, {1} …), Formatangaben dürfen abweichen: Uhrzeit `{0:t}` statt
-  `{0:HH:mm}`, Datum `{0:MMM d, yyyy}` statt `{0:d. MMM yyyy}`. Wo im Englischen eine Mehrzahl mit „1“ falsch wäre und es
-  keine Einzahl-Variante gibt, ist der Satz umgestellt („Patterns: 12“, „requests: 3 · images added: 2“); neu sind
-  `LibraryCardSummaryOne` („1 Spiel · …“, behebt auch das deutsche „1 Spiele“) und „0 von 1 Spiel“ in der Liste.
+  `{0:HH:mm}`, Datum `{0:MMM d, yyyy}` statt `{0:d. MMM yyyy}`. Englische Daten stehen damit immer als Monat, Tag, Jahr
+  (wie en-US), auch mit britischem Regionsformat (en-GB, dort sonst Tag vor Monat): .NET kennt kein kulturabhängiges
+  Kurzformat mit abgekürztem Monat, `{0:D}` trüge in en-US den Wochentag, und eine eigene Vorlage je Region lohnt für
+  diese eine Datumsangabe nicht (Abwägung; die Uhrzeit `{0:t}` folgt weiter der Region). Wo im Englischen eine
+  Mehrzahl mit „1“ falsch wäre und es keine Einzahl-Variante gibt, ist der Satz umgestellt („Patterns: 12“, „requests:
+  3 · images added: 2“); neu sind `LibraryCardSummaryOne` („1 Spiel · …“, behebt auch das deutsche „1 Spiele“) und „0
+  von 1 Spiel“ in der Liste.
 - Einstellung `AppSettings.Language` (Feld `language`, Text "de" oder "en", wie `librarySortOrder` kein Enum):
   - Gibt es noch keine `config.json` (Erstinstallation, erster Start einer Kopie ohne Installation, erste Benutzung der
     Kommandozeile), bekommt die neue Konfiguration die Anzeigesprache von Windows: Deutsch, wenn ihre Sprache Deutsch ist
@@ -1444,7 +1448,11 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
   Einzelinstanz zu bekommen; die alte gibt sie (wie Tray-Symbol und Nachrichtenfenster) erst beim Beenden frei. So
   wartet sie ohne ein Handle auf die alte Instanz (die Anti-Cheat-Regeln verbieten `Process.GetProcessById` und
   `WaitForExit`, E65–E67). Bekommt sie die Einzelinstanz nicht, verhält sie sich wie ein zweiter Start. Scheitert der
-  Start der neuen Instanz, läuft die alte weiter und meldet das im Fuß der Einstellungen.
+  Start der neuen Instanz, läuft die alte weiter und meldet das im Fuß der Einstellungen. Solange eine Sitzung besteht
+  (ein Spiel läuft oder wird vorbereitet), ist „Jetzt neu starten“ gesperrt, und ein Hinweis darunter sagt, dass der
+  Neustart nach dem Spiel geht und „Speichern“ die Sprache schon übernimmt: Ein Neustart mitten in der Sitzung überließe
+  das Zurückstellen von HDR den gemerkten Zuständen der neuen Instanz. Die Sperre folgt den Sitzungen
+  (`HdrStateChanged`, das auch bei Beginn und Ende einer Sitzung kommt).
 - Texte aus dem Code: Was Code zusammensetzt und in Oberfläche, Hinweisen, Setup oder Kommandozeile erscheint, kommt
   jetzt aus den resx: die Meldungen aller Scanner und ihrer Leser (Bibliothek „Beim letzten Einlesen …“, `hdrpilot
   scan`), die Gründe von „Spiel hinzufügen“ (`ManualGames`), „Konfiguration ließ sich nicht speichern“, alle Ausgaben
@@ -1453,11 +1461,24 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
   installiert markiert) und ein mehrdeutiger Bildschirm in `hdrpilot hdr --display` (sonst Exit-Code 3 statt 2).
   Einzahl und Mehrzahl, „vor N Tagen“ und die Zahlen im Kopf (`LibraryText`, `RelativeTime`) waren schon Vorlagen mit
   Einzahl-Varianten und funktionieren auf Englisch unverändert.
-- Bleibt deutsch: das Protokoll (alle ILogger-Meldungen, das Setup-Protokoll, technische Angaben, die nur dort stehen,
-  etwa die Gründe der Quiver-Startwahl, Meldungen von PCGamingWiki und SteamGridDB, deren Oberfläche über Fehlerarten
-  übersetzt ist). Fehlertexte, die Windows oder .NET selbst liefern (etwa „Zugriff verweigert“ hinter einer Meldung),
-  kommen in der Sprache von Windows. Setup-Fehler zeigen wie bisher die übersetzte Art; die technische Angabe eines
-  unerwarteten Fehlers ist die Meldung der Ausnahme.
+- Ausnahmetexte von HDRpilot, die über ein „{0}“ in die Oberfläche gelangen („Das Symbol konnte nicht gespeichert
+  werden: {0}“, „Unerwarteter Fehler: {0}“ der Kommandozeile, die technische Angabe eines unerwarteten Setup-Fehlers),
+  kommen ebenfalls aus den resx: kein Ordner für eigene Symbole (`LibraryStrings.Icon_NoFolder`), Datei ohne lesbares
+  Bild (`Icon_Unreadable`), Spiel nicht in der Konfiguration (`CoreStrings.GameNotInConfig`, `UpdateGame`), der Schritt
+  „Dateien kopieren (…)“ des Setups (`SetupStrings.SetupDetailCopyFiles`) und die nicht gestartete Kopie zum Entfernen
+  (`UninstallCopyNotStarted`). Ausnahmen, deren Text hinter einer übersetzten Fehlerart verschwindet und nur im
+  Protokoll steht (etwa die abweichende Prüfsumme der abgelegten EXE: „Setup-Datei beschädigt“, oder „HDRpilot lief nach
+  N s noch“), bleiben deutsch. Andere Einzelheiten einer Ausnahme, die Windows oder .NET selbst liefern (etwa „Zugriff
+  verweigert“ oder „Der Datenträger ist voll“ hinter einer übersetzten Meldung), erscheinen in der Sprache von Windows,
+  nicht in der von HDRpilot; dafür gibt es keine Übersetzung.
+- Protokoll: Was HDRpilot selbst ins Protokoll schreibt (ILogger-Meldungen, das Setup-Protokoll, technische Angaben, die
+  nur dort stehen, etwa die Gründe der Quiver-Startwahl, Meldungen von PCGamingWiki und SteamGridDB, deren Oberfläche über
+  Fehlerarten übersetzt ist), bleibt deutsch. Texte aus den resx, die zugleich in der Oberfläche erscheinen und ins
+  Protokoll übernommen werden, stehen dort aber in der Sprache der Oberfläche: die Fehler der Scanner („Scanner {0}:
+  …“), die Ergebnisse und Gründe der Sitzungen (Schalten gescheitert, Start nicht möglich, Hinweise) und die technische
+  Angabe eines Setup-Fehlers. Ein englisches Protokoll ist deshalb gemischt; die festen Sätze drumherum bleiben deutsch.
+  Setup-Fehler zeigen wie bisher die übersetzte Art; die technische Angabe eines unerwarteten Fehlers ist die Meldung
+  der Ausnahme.
 - Glossar (verbindlich für weitere Texte):
 
   | Deutsch | Englisch |
@@ -1483,10 +1504,12 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
   | Darstellung, Thema, Effekte (Voll, Reduziert, Aus) | Appearance, Theme, Effects (Full, Reduced, Off) |
   | Farbschema, Akzent, Atmosphäre, Glanz, Duoton, Tritonus | color scheme, accent, atmosphere, shine, Duotone, Tritone |
   | Vorlagen Abendrot, Neongrün, Gletscher, Glut, Polarlicht | Sunset, Neon green, Glacier, Ember, Aurora (Cyber, Royal, Synthwave bleiben) |
-  | Bild wählen…, Eigene Datei…, erzeugt, Monogramm | Choose image…, Own file…, generated, monogram |
-  | Kapsel (Steam-Bild „capsule“) | capsule (nur in Bildquellen; die Kapsel der Werkzeugleiste hat keinen sichtbaren Namen) |
+  | Bild wählen…, Eigene Datei…, eigenes Symbol, eigene Bilder, erzeugt, Monogramm | Choose image…, Custom file…, custom icon, custom images, generated, monogram |
+  | Eigener Bildschirm (je Spiel) | game-specific display |
+  | Kapsel (Steam-Bild „capsule“), verschmierte Kapsel | capsule (nur in Bildquellen; die Kapsel der Werkzeugleiste hat keinen sichtbaren Namen), blurred capsule |
   | Einstellungen entfernen…, nicht installiert, NEU | Remove settings…, not installed, NEW |
-  | HDR-fähig, HDR-Liste, natives HDR, HDR teilweise, HDR per Mod | HDR-capable, HDR list, native HDR, limited HDR, HDR via mod |
+  | HDR-fähig, HDR-Liste, natives HDR, kein eigenes HDR, HDR teilweise, HDR per Mod | HDR-capable, HDR list, native HDR, no native HDR, limited HDR, HDR via mod |
+  | HDR einschalten, umschalten, (HDR) schalten | turn HDR on, toggle HDR, switch HDR (nie „switches HDR on“: liest sich als „einschalten“) |
   | Protokoll, Protokollordner | log, log folder |
   | Installierte Apps, Einstellungen → Apps | Installed apps, Settings → Apps (wie Windows) |
   | Tasten Strg, Umschalt, Entf, Pos1, Ende, Bild auf/ab, Eingabetaste, Leertaste | Ctrl, Shift, Del, Home, End, Page Up/Down, Enter, Space |
@@ -1496,8 +1519,10 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
 - Prüfung: `ResourceTranslationTests` (laufen auch unter Linux, lesen die resx aus dem Repository): zu jeder neutralen
   resx unter `src` eine `.en.resx`, dieselben Schlüssel in beide Richtungen, keine leeren Werte, gleiche Platzhalter,
   gültige Formatvorlagen, keine deutschen Reste (Heuristik: Umlaute, ß, „ und eine Wortliste samt Endungen wie -ieren
-  und -ungen, mit Gegenprobe; erlaubt nur „Deutsch“ und die zweisprachige Beschriftung), Glossar „HDR on launch“ ≠
-  „Windows Auto HDR“. Neue Schlüssel anderer Zweige ohne Übersetzung (E93, E94) fallen nach dem Zusammenführen hier
+  und -ungen, mit Gegenprobe; erlaubt nur „Deutsch“ und die zweisprachige Beschriftung), Glossar in allen Dateien
+  („HDR automatisch“ immer „HDR on launch“, „Auto HDR“ nur, wo auch der deutsche Text den Schalter von Windows meint,
+  „custom“ und „no native HDR“, keine früheren Wörter wie „Own file“ oder „smeared“) und en-US-Typografie („…“ ohne
+  Leerzeichen davor, „0%“, „Canceled“), beide mit Gegenprobe. Neue Schlüssel anderer Zweige ohne Übersetzung (E93, E94) fallen nach dem Zusammenführen hier
   auf; das ist gewollt. `UiLanguageTests` (Erkennung, Laderegeln, Kulturen), `EnglishOutputTests` (Satelliten, Scanner,
   „Spiel hinzufügen“, Kommandozeile, Absturz und Mehrdeutigkeit unabhängig vom Wortlaut), in den App-Tests Sprachwahl,
   Neustart, englisches Fenster und Tray-Menü, englische Zähl- und Zeitformen, `--restarted`, `--snapshot-language` und

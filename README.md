@@ -301,7 +301,8 @@ alle Einstellungen, beendet HDRpilot und startet es gleich wieder mit geöffnete
 Englisch. Wer HDRpilot schon nutzt, bleibt nach einer Aktualisierung bei Deutsch. Datum, Uhrzeit und Zahlen folgen den
 Regionseinstellungen von Windows, solange deren Sprache zur gewählten passt (etwa Englisch mit britischem Format);
 sonst gelten die Formate von Deutschland bzw. den USA. Die Kommandozeile `cli\hdrpilot.exe` antwortet in der Sprache
-der Ablage; das Protokoll bleibt immer deutsch.
+der Ablage. Das Protokoll ist deutsch; nur Meldungen, die auch in der Oberfläche stehen (etwa Fehler der Scanner),
+übernimmt es in der Sprache der Oberfläche. Englische Daten stehen immer als Monat, Tag, Jahr („Sep 11, 2026“).
 
 Im Bereich „HDR-Liste (PCGamingWiki)“ gibt es außerdem **Jetzt abgleichen**, den Stand der Liste und das optionale
 PCGamingWiki-Konto (siehe unten). Für „Windows Auto HDR“ gibt es keine Einstellung: Es wird je Spiel in der Bibliothek
@@ -827,8 +828,9 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   NVIDIA gehört nicht zu HDRpilot.
 - **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.
 - **Deutsch und Englisch:** Oberfläche, Hinweise, Setup, Meldungen der Launcher-Scanner und Kommandozeile gibt es auf
-  Deutsch und Englisch, das Protokoll nur auf Deutsch. Fehlertexte, die Windows selbst liefert (etwa „Zugriff
-  verweigert“ hinter einer Meldung), kommen in der Sprache von Windows.
+  Deutsch und Englisch, das Protokoll auf Deutsch (Meldungen, die auch in der Oberfläche stehen, in deren Sprache).
+  Fehlertexte, die Windows oder .NET selbst liefern (etwa „Zugriff verweigert“ hinter einer Meldung), kommen in der
+  Sprache von Windows.
 
 ## Fehlersuche
 

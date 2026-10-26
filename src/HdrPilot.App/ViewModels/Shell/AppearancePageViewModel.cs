@@ -46,6 +46,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
     private bool _examplesLoaded;
     private PreviewGameItem? _previewGame;
     private GameArtwork? _previewArt;
+    private GameColors? _previewColors;
     private bool _previewHdr;
     private int _previewVersion;
     private bool _taskbarLight;
@@ -241,6 +242,40 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
             {
                 Write(s => s.BackgroundFollowsGame = value);
             }
+        }
+    }
+
+    /// <summary>„Farben folgen dem Spiel“ (E94): Akzente der Bibliothek in den Farben des gewählten Spiels.</summary>
+    public bool ColorsFollowGame
+    {
+        get => State.ColorsFollowGame;
+        set
+        {
+            if (value != State.ColorsFollowGame)
+            {
+                Write(s => s.ColorsFollowGame = value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Spielfarben des Vorschauspiels für die Live-Vorschau, solange der Schalter an ist; null: das Schema (Schalter aus,
+    /// graues oder noch nicht gelesenes Spiel).
+    /// </summary>
+    public PaletteColors? PreviewAccents => ColorsFollowGame ? GamePalette.Map(_previewColors, State.Mode) : null;
+
+    /// <summary>
+    /// Farbprobe des Schalters: Akzentverlauf, den der Schalter für das Vorschauspiel ergäbe (auch wenn er aus ist); bei einem
+    /// grauen Spiel das Schema, denn das zeigt die Bibliothek dann.
+    /// </summary>
+    public Brush ColorsFollowSample
+    {
+        get
+        {
+            var palette = GamePalette.Map(_previewColors, State.Mode) is { } game
+                ? GamePalette.Compute(game, State, dark: true)
+                : GamePalette.Scheme(State, dark: true);
+            return Freeze(new LinearGradientBrush(palette.AccentFill1, palette.AccentFill2, new Point(0, 0), new Point(1, 1)));
         }
     }
 
@@ -948,6 +983,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
         _previewGame = item;
         _previewArt = null;
+        _previewColors = null;
         RaisePreview();
         _ = LoadPreviewAsync(item, ++_previewVersion);
     }
@@ -1027,6 +1063,8 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(PreviewAmbientColors));
         OnPropertyChanged(nameof(PreviewGlow));
         OnPropertyChanged(nameof(FollowSample));
+        OnPropertyChanged(nameof(PreviewAccents));
+        OnPropertyChanged(nameof(ColorsFollowSample));
     }
 
     private void UpdatePalette()
@@ -1237,6 +1275,21 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
             _previewArt = art;
             RaisePreview();
+
+            // Spielfarben (E94) für Farbprobe und Vorschau, auch bei ausgeschaltetem Schalter: einmal je Vorschauspiel.
+            if (_context.Artwork is IGameColorsSource colors)
+            {
+                var read = await colors.GetGameColorsAsync(item.Game, _cancel.Token);
+                if (_disposed || version != _previewVersion)
+                {
+                    return;
+                }
+
+                _previewColors = read;
+                OnPropertyChanged(nameof(PreviewAccents));
+                OnPropertyChanged(nameof(ColorsFollowSample));
+            }
+
             if (_previewHdr)
             {
                 await LoadPreviewBoostAsync(version);

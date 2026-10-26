@@ -4,6 +4,7 @@
 #   - alle bisherigen Kennungen der Einstellungen da, dazu Navigation und Seite „Darstellung“ mit allen neuen Kennungen
 #   - Vorlagen: 8 in der Reihenfolge des Prototyps; Cyber, Duoton/Tritonus, Hell, Reduziert landen sofort in der Konfiguration
 #   - SteamGridDB ist aus (Schalter und Konfiguration); „Standard“ setzt die Darstellung zurück
+#   - „Farben folgen dem Spiel“ (E94): Standard aus, an und aus sofort gespeichert, „Standard“ schaltet aus
 #   - Raster: jeder Bereich im Fenster und höchstens 760 px (DIP) breit; ab 1920 px Fensterbreite mindestens zwei nebeneinander
 #   - Bilder: jede Datei da, genau in Pixelgröße
 #   PHASE10_SETTINGS_UI_OK
@@ -25,7 +26,7 @@ $oldIds = 'TargetDisplays', 'PollInterval', 'GracePeriod', 'RestartBufferMinutes
 $newIds = 'SettingsNav', 'NavGeneral', 'NavDisplays', 'NavAutomation', 'NavSearchFolders', 'NavHelpers', 'NavAppearance', 'NavAppearanceColors',
     'NavAppearanceArtwork', 'NavAppearanceTray', 'NavAdvanced', 'NavLogs', 'SectionPalette', 'SectionPreview', 'SectionTheme', 'SectionEffects',
     'SectionArtwork', 'SectionTray', 'PaletteModeDuotone', 'PaletteModeTritone', 'PaletteSwapButton', 'PalettePresets', 'AutoTextOnAccentToggle',
-    'BackgroundFollowsGameToggle', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'EffectFull', 'EffectReduced', 'EffectOff', 'PauseWhilePlayingToggle',
+    'BackgroundFollowsGameToggle', 'ColorsFollowGameToggle', 'ThemeSystem', 'ThemeLight', 'ThemeDark', 'EffectFull', 'EffectReduced', 'EffectOff', 'PauseWhilePlayingToggle',
     'PauseInBackgroundToggle', 'RespectWindowsAnimationsToggle', 'MinimizeToTrayAfterLaunchToggle', 'ArtworkCoverageTable', 'FallbackExamples',
     'SteamGridDbToggle', 'SteamGridDbKey', 'SteamGridDbCheckButton', 'SteamGridDbStatus', 'TrayPreview', 'TrayMenuPreview', 'TaskbarPreviewLight',
     'TaskbarPreviewDark', 'PreviewHdrToggle', 'AppearanceResetButton', 'AppearanceAppliedHint'
@@ -119,11 +120,22 @@ try {
     Check (Wait-Appearance $cfg { param($s) $s.appearance.theme -eq 'Light' }) 'Thema Hell gespeichert (theme = Light)'
     Select-El (Find-Id $set 'EffectReduced')
     Check (Wait-Appearance $cfg { param($s) $s.appearance.effectLevel -eq 'Reduced' }) 'Effekte Reduziert gespeichert (effectLevel = Reduced)'
+    # Farben folgen dem Spiel (E94): Standard aus, an und aus landet sofort in der Konfiguration
+    $colors = Find-Id $set 'ColorsFollowGameToggle'
+    Check ((Get-Toggle $colors) -eq 'Off') "Farben folgen dem Spiel standardmäßig aus (Schalter $(Get-Toggle $colors))"
+    Check ($colors.Current.HelpText -match 'Logo') ('Hilfetext des Schalters: ' + $colors.Current.HelpText)
+    $null = Toggle-El $colors
+    Check (Wait-Appearance $cfg { param($s) $s.appearance.colorsFollowGame -eq $true }) 'Farben folgen dem Spiel an gespeichert (colorsFollowGame = true)'
+    $null = Toggle-El $colors
+    Check (Wait-Appearance $cfg { param($s) $s.appearance.colorsFollowGame -eq $false }) 'Farben folgen dem Spiel aus gespeichert (colorsFollowGame = false)'
+    $null = Toggle-El $colors
+    Check (Wait-Appearance $cfg { param($s) $s.appearance.colorsFollowGame -eq $true }) 'Farben folgen dem Spiel wieder an (für „Standard“)'
     $hint = Find-Id $set 'AppearanceAppliedHint'
     Check ($null -ne $hint -and $hint.Current.Name -match 'sofort') ('Hinweis neben „Standard“: ' + $hint.Current.Name)
 
     Invoke-El (Find-Id $set 'AppearanceResetButton')
     Check (Wait-Appearance $cfg { param($s) $null -eq $s.appearance.preset -and $null -eq $s.appearance.theme -and $null -eq $s.appearance.effectLevel -and $null -eq $s.appearance.paletteMode }) '„Standard“ setzt Vorlage, Thema, Anzahl und Effekte zurück'
+    Check (Wait-Appearance $cfg { param($s) -not [bool]$s.appearance.colorsFollowGame }) '„Standard“ schaltet „Farben folgen dem Spiel“ aus'
     $c = Read-Config $cfg
     Check (-not [bool]$c.settings.artwork.steamGridDb) 'SteamGridDB nach allen Schritten weiter aus'
 

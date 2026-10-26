@@ -286,6 +286,90 @@ public sealed class SettingsAppearancePageTests
         Assert.Equal(["Spiel 6"], AppearancePageViewModel.PickPreviewGames([games[5]]).Select(g => g.Name));
     }
 
+    [Fact]
+    public void Colors_follow_game_writes_immediately_independent_of_the_background_switch()
+    {
+        var (page, config, _) = Create();
+        Assert.False(page.ColorsFollowGame); // Standard aus
+
+        page.ColorsFollowGame = true;
+
+        Assert.True(config.Current.Settings.Appearance.ColorsFollowGame);
+        Assert.True(config.Current.Settings.Appearance.BackgroundFollowsGame);
+        Assert.True(page.State.ColorsFollowGame);
+        page.BackgroundFollowsGame = false;
+        Assert.True(config.Current.Settings.Appearance.ColorsFollowGame);
+        page.Dispose();
+    }
+
+    [Fact]
+    public void Standard_turns_colors_follow_game_off()
+    {
+        var (page, config, _) = Create();
+        page.ColorsFollowGame = true;
+
+        page.ResetCommand.Execute(null);
+
+        Assert.False(config.Current.Settings.Appearance.ColorsFollowGame);
+        Assert.False(page.ColorsFollowGame);
+        page.Dispose();
+    }
+
+    [Fact]
+    public async Task Colors_sample_shows_the_game_gradient_for_a_red_game_and_the_scheme_for_a_gray_one()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var red = new GameConfig { Source = GameSource.Steam, SourceId = "31", Name = "Testspiel Rot", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        var gray = new GameConfig { Source = GameSource.Steam, SourceId = "32", Name = "Testspiel Grau", LastPlayed = DateTimeOffset.Now.AddDays(-2) };
+        config.Update(c => c.Games.AddRange([red, gray]));
+        var redColors = new GameColors("#D62828", GameColorSource.Logo, 1, [], []);
+        context.Artwork = new HdrPilot.App.Tests.Library.FakeArtworkService(key => key == red.Key ? redColors : GameColors.None);
+
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await vm.Loaded;
+        var game = GamePalette.Compute(GamePalette.Map(redColors, vm.State.Mode)!.Value, vm.State, dark: true);
+        var redSample = Assert.IsType<LinearGradientBrush>(vm.ColorsFollowSample);
+        Assert.Equal([game.AccentFill1, game.AccentFill2], redSample.GradientStops.Select(s => s.Color));
+        Assert.Null(vm.PreviewAccents); // Schalter aus: die Vorschau zeigt das Schema, die Probe zeigt, was er ergäbe
+        vm.ColorsFollowGame = true;
+        Assert.Equal(GamePalette.Map(redColors, vm.State.Mode), vm.PreviewAccents);
+
+        vm.PreviewGames.Single(g => g.Game.Key == gray.Key).IsSelected = true;
+        await Task.Yield();
+        var scheme = GamePalette.Scheme(vm.State, dark: true);
+        var graySample = Assert.IsType<LinearGradientBrush>(vm.ColorsFollowSample);
+        Assert.Equal([scheme.AccentFill1, scheme.AccentFill2], graySample.GradientStops.Select(s => s.Color));
+        Assert.Null(vm.PreviewAccents);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public async Task Preview_colors_are_requested_only_through_the_colors_source_and_canceled_on_close()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var game = new GameConfig { Source = GameSource.Steam, SourceId = "33", Name = "Testspiel Blau", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        config.Update(c => c.Games.Add(game));
+        var art = new HdrPilot.App.Tests.Library.FakeArtworkService(_ => new GameColors("#1E64DC", GameColorSource.Cover, 1, [], []), colorsAsync: true);
+        context.Artwork = art;
+
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await Task.Yield();
+        Assert.Equal([game.Key], art.ColorRequests); // einmal je Vorschauspiel, auch bei ausgeschaltetem Schalter
+        vm.Dispose();
+        Assert.Equal([game.Key], art.CanceledColorRequests);
+
+        // Ein Bilderdienst ohne Spielfarben: kein Fehler, die Probe zeigt das Schema.
+        context.Artwork = new LeaseCountingArtwork();
+        var plain = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await plain.Loaded;
+        plain.ColorsFollowGame = true;
+        Assert.Null(plain.PreviewAccents);
+        Assert.Equal(GamePalette.Scheme(plain.State, true).AccentFill1, Assert.IsType<LinearGradientBrush>(plain.ColorsFollowSample).GradientStops[0].Color);
+        plain.Dispose();
+    }
+
     private static (AppearancePageViewModel Page, ConfigService Config, FakeShellContext Context) Create()
     {
         var config = ShellTestFactory.NewConfig(new InMemoryFileSystem());

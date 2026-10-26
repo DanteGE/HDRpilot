@@ -4,7 +4,7 @@ namespace HdrPilot.Core.Artwork;
 /// Schalter der Regeln von <see cref="GameColorAnalysis"/>. Alle an im Betrieb; Tests schalten einzelne Regeln ab
 /// (Gegenproben), ohne gemeinsamen Zustand zu ändern.
 /// </summary>
-internal sealed record GameColorOptions(
+public sealed record GameColorOptions(
     bool SkinRule = true,
     bool FrameExclusion = true,
     bool FillOverOutline = true,
@@ -162,7 +162,7 @@ public static class GameColorAnalysis
     public static SourceResult? Analyze(ReadOnlySpan<byte> bgra, int width, int height, GameColorKind kind) =>
         Analyze(bgra, width, height, kind, GameColorOptions.Default);
 
-    internal static SourceResult? Analyze(ReadOnlySpan<byte> bgra, int width, int height, GameColorKind kind, GameColorOptions options)
+    public static SourceResult? Analyze(ReadOnlySpan<byte> bgra, int width, int height, GameColorKind kind, GameColorOptions options)
     {
         if (width <= 0 || height <= 0 || bgra.Length < width * height * 4)
         {
@@ -230,7 +230,7 @@ public static class GameColorAnalysis
     public static GameColors Derive(SourceResult? logo, SourceResult? cover, SourceResult? hero) =>
         Derive(logo, cover, hero, GameColorOptions.Default);
 
-    internal static GameColors Derive(SourceResult? logo, SourceResult? cover, SourceResult? hero, GameColorOptions options)
+    public static GameColors Derive(SourceResult? logo, SourceResult? cover, SourceResult? hero, GameColorOptions options)
     {
         var reference = new[] { cover, hero }.FirstOrDefault(r => r is { Accent: not null } && r.Confidence >= GameColors.Accept);
         var logoWins = logo is { Accent: not null } && logo.Confidence >= GameColors.Accept

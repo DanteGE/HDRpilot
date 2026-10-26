@@ -9,10 +9,14 @@ namespace HdrPilot.App.Tests.Library;
 
 /// <summary>
 /// Bilddienst für Tests (E89): kleine, erzeugte Bilder (nie Spielbilder), Auswahl je Art aus festen Kandidaten, eigene
-/// Dateien nur als Einträge. Zählt Anfragen und gelöschte eigene Bilder.
+/// Dateien nur als Einträge. Zählt Anfragen und gelöschte eigene Bilder. Spielfarben (E94) kommen aus
+/// <paramref name="colors"/> (ohne: keine, also das Farbschema); mit <paramref name="colorsAsync"/> erst nach
+/// <see cref="CompleteColors"/> (Tests: die Farben werden noch gelesen).
 /// </summary>
-public sealed class FakeArtworkService : IArtworkService
+public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null, bool colorsAsync = false) : IArtworkService, IGameColorsSource
 {
+    private readonly Dictionary<string, TaskCompletionSource<GameColors>> _pendingColors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _completedColors = new(StringComparer.OrdinalIgnoreCase);
     private EventHandler<ArtworkChangedEventArgs>? _changed;
 
     public event EventHandler<ArtworkChangedEventArgs>? Changed
@@ -60,6 +64,48 @@ public sealed class FakeArtworkService : IArtworkService
     public List<(string Key, ArtworkKind Kind, string Path)> Saved { get; } = [];
 
     public int Leases { get; private set; }
+
+    /// <summary>Anfragen nach Spielfarben (Spielschlüssel), ohne die aus <see cref="TryPeek"/>.</summary>
+    public List<string> ColorRequests { get; } = [];
+
+    /// <summary>Abgebrochene Anfragen nach Spielfarben (Spielschlüssel).</summary>
+    public List<string> CanceledColorRequests { get; } = [];
+
+    public bool TryPeek(GameConfig game, out GameColors result)
+    {
+        result = ColorsOf(game.Key);
+        return !colorsAsync || _completedColors.Contains(game.Key);
+    }
+
+    public Task<GameColors> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default)
+    {
+        ColorRequests.Add(game.Key);
+        if (!colorsAsync || _completedColors.Contains(game.Key))
+        {
+            return Task.FromResult(ColorsOf(game.Key));
+        }
+
+        if (!_pendingColors.TryGetValue(game.Key, out var pending))
+        {
+            _pendingColors[game.Key] = pending = new TaskCompletionSource<GameColors>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        var key = game.Key;
+        cancellationToken.Register(() => CanceledColorRequests.Add(key));
+        return pending.Task.WaitAsync(cancellationToken);
+    }
+
+    /// <summary>Die Farben eines Spiels sind gelesen: wartende Anfragen bekommen sie, <see cref="TryPeek"/> kennt sie.</summary>
+    public void CompleteColors(string key)
+    {
+        _completedColors.Add(key);
+        if (_pendingColors.Remove(key, out var pending))
+        {
+            pending.TrySetResult(ColorsOf(key));
+        }
+    }
+
+    private GameColors ColorsOf(string key) => colors?.Invoke(key) ?? GameColors.None;
 
     /// <summary>Kleines einfarbiges Bild (eingefroren).</summary>
     public static ImageSource Solid(int width, int height, Color color)

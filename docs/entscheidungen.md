@@ -1039,6 +1039,35 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Spiel“ mit der Erklärung (Prüfung 2026-10-20). Ebenso bei leerer Liste („Noch keine Spiele“, auch wenn alle Spiele
   ausgeblendet sind): dort sagt der Detailbereich „Noch kein Spiel in der Liste“ (Gegenprüfung 2026-10-20).
 
+- Rückmeldungen des Nutzers nach dem Test von 1.5.0 (2026-10-22), Titelbereich, Griff, Kacheln und Lasche:
+  - Tiefenwirkung (Punkt 1): Verlässt der Zeiger Titelbild oder Fenster, gleiten Bildebenen und Inhalt (Titel,
+    Kennzeichen, Knöpfe) gemeinsam zurück, 0,8 s mit QuinticEase EaseOut (vorher sprang der Inhalt). Kommt der Zeiger
+    zurück, geht es vom aktuellen Wert weiter; ohne Dauer-Effekte (Stufe, minimiert, im Hintergrund, Spiel läuft) steht
+    alles sofort in der Mitte, auch mitten im Zurückgleiten.
+  - Griff in allen Ansichten (Punkt 5): Der Ziehgriff (`HeroSplitter`, Bedienung wie in der Liste) liegt auch in Raster
+    und Regal mittig auf der Bildkante. Jede Ansicht merkt ihre Höhe getrennt (`settings.libraryHeroRatio`,
+    `libraryGridHeroRatio`, `libraryShelfHeroRatio`; ohne Eintrag der Standard der Ansicht, ältere Konfigurationen gelten
+    unverändert); Zurücksetzen gilt nur für die gezeigte Ansicht. Raster: höchstens so hoch, dass eine ganze Kachelreihe
+    über der Statuszeile bleibt (H − 74 − Leiste − Kachel − Hinweise), mindestens 186 px. Regal: mindestens 447 px (die
+    Leiste bleibt unter der Automatik-Karte, der große Titel behält 108 px), höchstens H − 274 − Hinweise, dann ist die
+    Kachel 200 px; dazwischen tauscht der Titelbereich gegen die Kachelgröße. Solange die Kacheln des Rasters nicht
+    gemessen sind, reicht der Bereich bis zur aktuellen Höhe (ein Durchgang später gilt die Grenze).
+  - Kacheln (Punkt 6): Das Leuchten unter der gewählten Kachel ist eine Ellipse, die ganz in ihrer Fläche ausläuft (14 px
+    neben, 32 px unter der Kachel); Raster und Regal haben unten 32 px Innenabstand dafür (das Regal reicht 10 px unter die
+    Spalten). Kacheln ohne Platz nach oben (erste Reihe des Rasters, nach dem Scrollen die oberste) wachsen beim Überfahren
+    nach unten statt unter die Werkzeugleiste (`VirtualizingTilePanel.RisesOnHover`); im Regal ist oben Platz (die Reihe
+    beginnt an der Unterkante der Leiste mit 29 px Innenabstand, die Kachel 12 px unter der Bildkante).
+  - Lasche mittig auf der Bildkante (Punkt 8, ändert die 10-px-Luft von 2026-10-16): Die Lasche (18 hoch) liegt in Liste,
+    Raster und Regal mit ihrer Mitte auf der Bildkante, auf der auch Griff und (Liste, Raster) die Lichtnaht liegen, in
+    Gerätepixeln höchstens 0,5 px daneben; eingeklappt ebenso die Kapsel in Liste und Raster, das Verwandeln ist dort nur
+    eine Änderung der Größe. Daraus folgt die Luft je Ansicht: Liste 17 px von der Bildkante bis zur Leiste und 17 px bis
+    zum Rahmen der Liste; Raster 17 px über der Leiste und 17 px bis zur ersten Kachelreihe (10 bis zum Raster, 7
+    Innenabstand); Regal: Leiste endet 17 px über der Bildkante, die Lasche 8 px darunter, die Kachel beginnt 12 px unter
+    der Kante. Eingeklappt beginnt der Inhalt weiter 22 px unter der Kante (10 unter der Kapsel). Die Leuchtlinie des
+    Griffs endet 12 px vor der Lasche. Ausnahme Regal: Die Lichtnaht läuft dort weiter durch die Kapsel in der früheren
+    Leistenzeile (abgenommen 2026-10-17), nicht über die Bildkante.
+  - Prüfung: `test.ps1 -Filter "FullyQualifiedName~HeroPerView|FullyQualifiedName~HeroPointer|FullyQualifiedName~TileRoom|FullyQualifiedName~Showcase|FullyQualifiedName~Toolbar"`;
+    Zustände `raster-lasche`, `regal-lasche`, `raster-ueberfahren` und `regal-ueberfahren` für Bildschirmfotos.
 **E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
 2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und
 allen Einstellungen in der Bibliothek, und „HDR automatisch“ und Windows Auto HDR wirken für sie weiter (E38). Neu lässt

@@ -174,7 +174,7 @@ public static class ShowcaseLayout
         var h = Height(windowHeight);
         return view switch
         {
-            LibraryViewMode.Shelf => ShelfHeroHeight(h, ratio, toolbarHeight),
+            LibraryViewMode.Shelf => ShelfHeroHeight(h, ratio, toolbarHeight, notices),
             LibraryViewMode.Grid => GridHeroHeight(h, gridRow, notices, ratio),
             _ => ListHeroHeight(h, ratio, notices, toolbarHeight),
         };
@@ -191,7 +191,7 @@ public static class ShowcaseLayout
         double gridRow = 0,
         double toolbarHeight = ToolbarHeight) => view switch
         {
-            LibraryViewMode.Shelf => ShelfHeroRange(windowHeight, toolbarHeight),
+            LibraryViewMode.Shelf => ShelfHeroRange(windowHeight, toolbarHeight, notices),
             LibraryViewMode.Grid => GridHeroRange(windowHeight, gridRow, notices),
             _ => ListHeroRange(windowHeight, notices, toolbarHeight),
         };
@@ -241,10 +241,11 @@ public static class ShowcaseLayout
     /// </summary>
     /// <param name="ratio">Gemerkte Höhe als Anteil der Fensterhöhe (null oder unsinnig: Standard).</param>
     /// <param name="toolbarHeight">Höhe der ausgeklappten Werkzeugleiste (im Regal immer eine Zeile).</param>
-    public static double ShelfHeroHeight(double windowHeight, double? ratio, double toolbarHeight = ToolbarHeight)
+    /// <param name="notices">Hinweise zwischen Werkzeugleiste und Kachelreihe (0: keine).</param>
+    public static double ShelfHeroHeight(double windowHeight, double? ratio, double toolbarHeight = ToolbarHeight, double notices = 0)
     {
         var h = Height(windowHeight);
-        var (min, max) = ShelfHeroRange(h, toolbarHeight);
+        var (min, max) = ShelfHeroRange(h, toolbarHeight, notices);
         var value = NormalizeHeroRatio(ratio) is { } r ? r * h : Math.Max(Math.Clamp(h * 0.62, 500, 660), h - 462);
         return Math.Clamp(Math.Round(value), min, max);
     }
@@ -253,16 +254,18 @@ public static class ShowcaseLayout
     /// Kleinste und größte Höhe des Titelbereichs im Regal (Wunsch des Nutzers 2026-10-22: Titelbereich gegen Kachelgröße):
     /// mindestens <see cref="MinShelfHero"/> (die Werkzeugleiste bleibt unter der Automatik-Karte, der große Titel behält
     /// Platz); höchstens so hoch, dass die kleinste Kachel (<see cref="MinShelfTile"/>) ganz über der Statuszeile steht
-    /// (H − 274: die Kachelreihe hat 12 px über und 22 px unter der Kachel, darunter 40 px bis zum Fensterrand). In niedrigen
+    /// (H − 274: die Kachelreihe hat 12 px über und 22 px unter der Kachel, darunter 40 px bis zum Fensterrand; Hinweise über
+    /// der Kachelreihe, etwa Fehler beim Einlesen, gehen davon ab). In niedrigen
     /// Fenstern (Inhalt unter 721 px hoch) bleibt nur das Minimum, die Kacheln werden dann kleiner (höchstens bis
     /// <see cref="TinyShelfTile"/>).
     /// </summary>
     /// <param name="toolbarHeight">Höhe der ausgeklappten Werkzeugleiste (im Regal immer eine Zeile).</param>
-    public static (double Min, double Max) ShelfHeroRange(double windowHeight, double toolbarHeight = ToolbarHeight)
+    /// <param name="notices">Hinweise zwischen Werkzeugleiste und Kachelreihe (0: keine).</param>
+    public static (double Min, double Max) ShelfHeroRange(double windowHeight, double toolbarHeight = ToolbarHeight, double notices = 0)
     {
         var h = Height(windowHeight);
         var min = MinShelfHero + ToolbarExtra(toolbarHeight);
-        return (min, Math.Max(min, Math.Floor(h - ShelfRowChrome - MinShelfTile)));
+        return (min, Math.Max(min, Math.Floor(h - ShelfRowChrome - MinShelfTile - Notices(notices))));
     }
 
     /// <summary>

@@ -325,6 +325,20 @@ public sealed class ShowcaseLayoutTests
         Assert.Equal(mid, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, Math.Round(ShowcaseLayout.HeroRatio(mid, height)!.Value, 4)));
     }
 
+    [Theory]
+    [InlineData(980, 60)]
+    [InlineData(1438, 120)]
+    public void Shelf_hero_range_leaves_the_smallest_tile_below_notices(double height, double notices)
+    {
+        // Hinweise (Fehler beim Einlesen, Vorschläge) stehen im Regal zwischen Werkzeugleiste und Kachelreihe: Der größte
+        // Titelbereich gibt um sie nach, die Kachel bleibt mindestens 200 px (Prüfung 2026-10-26).
+        var (min, max) = ShowcaseLayout.ShelfHeroRange(height, notices: notices);
+        Assert.Equal(ShowcaseLayout.ShelfHeroRange(height).Max - notices, max);
+        Assert.Equal((min, max), ShowcaseLayout.HeroRange(LibraryViewMode.Shelf, height, notices));
+        Assert.Equal(ShowcaseLayout.MinShelfTile, ShowcaseLayout.Shelf(1600, height - max - ShowcaseLayout.PaneBottom - notices).TileHeight);
+        Assert.Equal(max, ShowcaseLayout.HeroHeight(LibraryViewMode.Shelf, height, 0.99, notices));
+    }
+
     [Fact]
     public void Showcase_toolbar_has_the_same_gap_above_as_below_in_list_and_grid_and_the_tab_sits_centred_on_the_edge()
     {

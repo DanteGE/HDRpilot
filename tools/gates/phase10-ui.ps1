@@ -6,7 +6,9 @@
 #   - Liste: virtualisiert, nach Spalten sortierbar (gespeichert), Schalter „HDR automatisch“ je Zeile, Vorschau Bild/Symbol
 #   - Liste: Höhe des Titelbereichs per Ziehgriff HeroSplitter (Wunsch des Nutzers 2026-10-16): Standard ein Drittel der
 #     Fensterhöhe, per UI-Automation gesetzt (RangeValue, keine echte Eingabe), gemerkt (auch nach Neustart), Auslösen
-#     (Invoke, wie Doppelklick) setzt zurück; Raster und Regal ohne Griff und mit ihrer bisherigen Höhe
+#     (Invoke, wie Doppelklick) setzt zurück; Raster und Regal mit eigenem Griff und eigener Höhe (Wunsch des Nutzers
+#     2026-10-22: Standard wie bisher, gesetzt und gemerkt in libraryGridHeroRatio bzw. libraryShelfHeroRatio, zurückgesetzt);
+#     die Lasche mittig auf der Bildkante, 17 px Luft über und unter der Leiste
 #   - Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17): Suche, Quelle, Sortierung, drei Filter
 #     als Symbole mit Zahl (Toggle, Zahl im ItemStatus), Ansicht und Aktionen als Symbole, kein „Filter“-Menü; sie gibt
 #     stufenlos nach und bricht erst in der schmalen Liste an der Gruppengrenze in zwei Zeilen um, bündig mit der Liste,
@@ -318,7 +320,7 @@ try {
     # --- Liste: Höhe des Titelbereichs per Ziehgriff, nur über UI-Automation (RangeValue, keine Maus- oder Tastatureingabe) ---
     # Werte des Griffs in geräteunabhängigen Pixeln. Die Skalierung kommt aus der DPI des Fensters (aus den 20 px des Griffs
     # wäre sie wegen der Rundung der Bildschirmkoordinaten bis 5 % ungenau, nur ersatzweise); die Höhe des Fensterinhalts
-    # ist sein größter Wert + 328 + Höhe der Werkzeugleiste (Luft, Kopf, fünf Zeilen, Statuszeile darunter; die Leiste in
+    # ist sein größter Wert + 342 + Höhe der Werkzeugleiste (Luft, Kopf, fünf Zeilen, Statuszeile darunter; die Leiste in
     # ihrer tatsächlichen Höhe, eine bis drei Zeilen) und muss zur gemessenen Fensterhöhe passen (Rahmen und Ränder höchstens
     # 12 px). Lagen werden nur relativ verglichen, so zählen Rahmen und Rundung der Bildschirmkoordinaten nicht.
     $grip = Find-Id $win 'HeroSplitter' 3000
@@ -330,11 +332,11 @@ try {
         $scale = if ($dpi -gt 0) { $dpi / 96.0 } else { (Rect $grip).Height / 20 }
         $value = $gripRange.Current.Value
         $barDip = [math]::Round((Rect (Find-Id $win 'LibraryToolbar' 3000)).Height / $scale)
-        $rootDip = $gripRange.Current.Maximum + 328 + $barDip
+        $rootDip = $gripRange.Current.Maximum + 342 + $barDip
         $chrome = (Rect $win).Height / $scale - $rootDip
         Note ("Ziehgriff: Wert {0}, Bereich {1}–{2}, Werkzeugleiste {3} px hoch, Fensterinhalt {4} px hoch (Fenster {5:N1}), Skalierung {6:N2}" -f $value, $gripRange.Current.Minimum, $gripRange.Current.Maximum, $barDip, $rootDip, ((Rect $win).Height / $scale), $scale)
         Check ($grip.Current.Name -eq 'Höhe des Titelbereichs' -and $grip.Current.IsKeyboardFocusable) ('Ziehgriff benannt und mit Tastatur erreichbar („{0}“)' -f $grip.Current.Name)
-        Check ($gripRange.Current.Minimum -eq 186 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 186 px (Symbol-Kachel ganz), höchstens Fensterinhalt − 328 − Werkzeugleiste ({0} px; Rahmen {1:N1} px)" -f $barDip, $chrome)
+        Check ($gripRange.Current.Minimum -eq 186 -and $chrome -ge 0 -and $chrome -le 12) ("Bereich: mindestens 186 px (Symbol-Kachel ganz), höchstens Fensterinhalt − 342 − Werkzeugleiste ({0} px; Rahmen {1:N1} px)" -f $barDip, $chrome)
         Check ([math]::Abs($value - [math]::Round($rootDip / 3)) -le 1) ('Standard: ein Drittel der Fensterhöhe ({0} von {1} px)' -f $value, $rootDip)
         Check ($null -eq (Read-Config $cfg).settings.libraryHeroRatio) 'Standardhöhe wird nicht gespeichert (libraryHeroRatio fehlt)'
         $gripTop = (Rect $grip).Top
@@ -347,8 +349,8 @@ try {
         Check (Wait-Until { [math]::Abs($gripRange.Current.Value - $heroSet) -lt 0.5 -and [math]::Abs((& $moved)) -le 1.5 -and [math]::Abs((& $listMoved)) -le 1.5 } 4000) ("Per UI-Automation von {0} auf {1} px gesetzt, Griff und Liste folgen (Abweichung {2:N1} / {3:N1} px)" -f $value, $heroSet, (& $moved), (& $listMoved))
         Check (Wait-Until { $r = (Read-Config $cfg).settings.libraryHeroRatio; $null -ne $r -and [math]::Abs([double]$r - $heroSet / $rootDip) -lt 0.0005 }) ("In der Konfiguration gemerkt (libraryHeroRatio {0}, erwartet {1:N4})" -f (Read-Config $cfg).settings.libraryHeroRatio, ($heroSet / $rootDip))
         Check ((Shown-Items (Find-Id $win 'GameList')).Count -ge 5) ("Darunter weiter Zeilen der Liste ({0})" -f (Shown-Items (Find-Id $win 'GameList')).Count)
-        # Lage der Werkzeugleiste zum Fenster (in der Liste 10 px unter dem Titelbild): misst unten Raster und Regal
-        $barOffset = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - ($heroSet + 10)
+        # Lage der Werkzeugleiste zum Fenster (in der Liste 17 px unter dem Titelbild, die Lasche mittig auf der Kante): misst unten Raster und Regal
+        $barOffset = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - ($heroSet + 17)
     } else { Check $false 'Ziehgriff mit Wertebereich (RangeValue)' }
 
     # --- Werkzeugleiste: eine Zeile im Startfenster, im schmalen Fenster zwei (Wunsch des Nutzers 2026-10-17) ---
@@ -362,9 +364,9 @@ try {
         $grip1 = Find-Id $win 'HeroSplitter' 2000
         $range1 = $null
         if ($grip1 -and $grip1.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$range1)) {
-            # Größter Titelbereich im schmalen Fenster nach der tatsächlichen Höhe der Leiste: Fensterinhalt − 328 − Leiste
+            # Größter Titelbereich im schmalen Fenster nach der tatsächlichen Höhe der Leiste: Fensterinhalt − 342 − Leiste
             $bar1 = [math]::Round((Rect (Find-Id $win 'LibraryToolbar')).Height / $scale)
-            $content1 = (Rect $win).Height / $scale - $range1.Current.Maximum - 328 - $bar1
+            $content1 = (Rect $win).Height / $scale - $range1.Current.Maximum - 342 - $bar1
             Check ($range1.Current.Maximum -eq 186 -or ($content1 -ge 0 -and $content1 -le 12)) ("Schmales Fenster: Bereich des Griffs bis {0} px bei {1} px hoher Werkzeugleiste (Rahmen {2:N1} px)" -f $range1.Current.Maximum, $bar1, $content1)
         }
     } else { Check $false 'Fenster lässt sich per UI-Automation in der Größe ändern' }
@@ -420,18 +422,23 @@ try {
         $barBefore = Rect (Find-Id $win 'LibraryToolbar' 2000)
         $listBefore = (Rect (Find-Id $win 'GameList' 2000)).Top
         $gripBefore = (Rect (Find-Id $win 'HeroSplitter' 2000)).Top
+        # Lasche mittig auf der Bildkante (Wunsch des Nutzers 2026-10-22), die Bildkante 17 px über der Leiste; Bildschirm-
+        # koordinaten sind ganzzahlig, daher 1,5 px Spielraum (genau prüfen es die Tests bei 100 bis 175 %).
+        $tabRect = Rect (Find-Id $win 'ToolbarToggle' 2000)
+        $tabOff = (($tabRect.Top + $tabRect.Bottom) / 2) - ($barBefore.Top - 17 * $scale)
+        Check ([math]::Abs($tabOff) -le 1.5) ("Lasche mittig auf der Bildkante ({0:N1} px daneben)" -f $tabOff)
         $expand.Collapse()
         Check (Wait-Until { $expand.Current.ExpandCollapseState -eq 'Collapsed' }) ('Eingeklappt (Lasche meldet {0})' -f $expand.Current.ExpandCollapseState)
         Check (Wait-Until { (Read-Config $cfg).settings.libraryToolbarCollapsed -eq $true }) ('Gemerkt (libraryToolbarCollapsed {0})' -f (Read-Config $cfg).settings.libraryToolbarCollapsed)
         Start-Sleep -Milliseconds 1200
         Check ($null -eq (Find-Id $win 'LibraryToolbar' 600) -and $null -eq (Find-Id $win 'SearchBox' 300) -and $null -eq (Find-Id $win 'OnlyNewToggle' 300)) 'Eingeklappt: Leiste und ihre Elemente nicht mehr im Automationsbaum'
         $cap = Rect (Find-Id $win 'ToolbarToggle' 2000)
-        $edge = $barBefore.Top - 10 * $scale
+        $edge = $barBefore.Top - 17 * $scale
         $rise = ($listBefore - (Rect (Find-Id $win 'GameList' 2000)).Top) / $scale
         $grip = (Rect (Find-Id $win 'HeroSplitter' 2000)).Top
         Note ("Eingeklappt: Kapsel {0:N0} x {1:N0} px, Mitte {2:N1} px zur Bildkante, Liste {3:N1} px höher, Griff {4:N1} px verschoben" -f $cap.Width, $cap.Height, ((($cap.Top + $cap.Bottom) / 2 - $edge) / $scale), $rise, (($grip - $gripBefore) / $scale))
         Check ([math]::Abs($cap.Height / $scale - 24) -le 1 -and [math]::Abs(($cap.Top + $cap.Bottom) / 2 - $edge) -le 2 -and [math]::Abs($cap.Right - $barBefore.Right) -le 2) 'Kapsel 24 px hoch, mittig auf der Bildkante, rechtsbündig mit der Liste'
-        Check ([math]::Abs($rise - ($barBefore.Height / $scale - 2)) -le 1.5) ("Liste rückt um die Leiste nach oben ({0:N1} px, erwartet {1:N0}), 10 px unter der Kapsel" -f $rise, ($barBefore.Height / $scale - 2))
+        Check ([math]::Abs($rise - ($barBefore.Height / $scale + 12)) -le 1.5) ("Liste rückt um die Leiste und die Luft nach oben ({0:N1} px, erwartet {1:N0}), 10 px unter der Kapsel" -f $rise, ($barBefore.Height / $scale + 12))
         Check ([math]::Abs($grip - $gripBefore) -le 1.5) 'Titelbereich und Griff springen nicht'
         Check ((Find-Id $win 'ToolbarToggle' 500).Current.ItemStatus -match '^Gefiltert: ') 'Kapsel nennt die Filter'
         $reset = Find-Id $win 'ToolbarResetButton' 2000
@@ -539,14 +546,29 @@ try {
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Grid' }) 'Raster gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
     Check ((Find-Id $win 'GameList' 500) -eq $null -or (Find-Id $win 'GameList' 500).Current.IsOffscreen) 'Liste ausgeblendet'
-    # Raster: ohne Ziehgriff, Titelbereich clamp(H·0,24; 196; 260) unabhängig von der Höhe in der Liste (weniger nur in
-    # niedrigen Fenstern, bis die erste Kachelreihe ganz zu sehen ist), Werkzeugleiste 22 px unter dem Titelbild (so viel
-    # Luft wie darunter bis zur ersten Kachelreihe)
-    Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Raster ohne Ziehgriff'
+    # Raster: mit eigenem Ziehgriff und eigener Höhe (Wunsch des Nutzers 2026-10-22), Standard clamp(H·0,24; 196; 260)
+    # unabhängig von der Höhe in der Liste (weniger nur in niedrigen Fenstern, bis die erste Kachelreihe ganz zu sehen ist),
+    # Werkzeugleiste 17 px unter dem Titelbild (so viel Luft wie darunter bis zur ersten Kachelreihe). Per UI-Automation
+    # gesetzt, gemerkt in libraryGridHeroRatio (die Liste behält ihre), Auslösen setzt nur das Raster zurück.
+    $gridGrip = Find-Id $win 'HeroSplitter' 2000
+    $gridRange = $null
+    Check ($gridGrip -and $gridGrip.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$gridRange)) 'Raster mit Ziehgriff (RangeValue)'
     if ($rootDip -gt 0) {
-        $rasterHero = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - $barOffset - 22
+        $rasterHero = (((Rect (Find-Id $win 'LibraryToolbar')).Top - (Rect $win).Top) / $scale) - $barOffset - 17
         $rasterExpected = [math]::Round([math]::Min(260, [math]::Max(196, $rootDip * 0.24)))
         Check ([math]::Abs($rasterHero - $rasterExpected) -le 1.5) ("Raster: Titelbereich wie bisher ({0:N1} px, erwartet {1})" -f $rasterHero, $rasterExpected)
+        if ($gridRange) {
+            Check ([math]::Abs($gridRange.Current.Value - $rasterExpected) -le 1) ("Raster: Griff steht auf dem Titelbereich ({0})" -f $gridRange.Current.Value)
+            $gridSet = [math]::Round(($gridRange.Current.Minimum + $gridRange.Current.Maximum) / 2)
+            $gridRange.SetValue($gridSet)
+            Check (Wait-Until { $r = (Read-Config $cfg).settings.libraryGridHeroRatio; $null -ne $r -and [math]::Abs([double]$r - $gridSet / $rootDip) -lt 0.0005 }) ("Raster: {0} px gesetzt und gemerkt (libraryGridHeroRatio {1})" -f $gridSet, (Read-Config $cfg).settings.libraryGridHeroRatio)
+            Check ([math]::Abs([double](Read-Config $cfg).settings.libraryHeroRatio - $heroSet / $rootDip) -lt 0.0005) 'Raster: die Höhe der Liste bleibt gemerkt'
+            $gridInvoke = $null
+            if ($gridGrip.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$gridInvoke)) {
+                $gridInvoke.Invoke()
+                Check (Wait-Until { [math]::Abs($gridRange.Current.Value - $rasterExpected) -le 1 -and $null -eq (Read-Config $cfg).settings.libraryGridHeroRatio } 4000) 'Raster: Auslösen setzt nur das Raster auf seinen Standard zurück'
+            } else { Check $false 'Raster: Ziehgriff lässt sich auslösen (Invoke)' }
+        }
     }
     $gridTiles = @(Get-ListItems (Find-Id $win 'GameGrid') | Where-Object { -not (Rect $_).IsEmpty }).Count
     Check ($total -lt 120 -or $gridTiles -lt $total / 2) "Raster virtualisiert ($gridTiles von $total Kacheln erzeugt)"
@@ -565,18 +587,34 @@ try {
     Select-El $views[2]
     Check (Wait-Until { (Read-Config $cfg).settings.libraryView -eq 'Shelf' }) 'Regal gewählt und gespeichert'
     Start-Sleep -Milliseconds 1200
-    # Regal wie bisher: ohne Ziehgriff, Werkzeugleiste 50 px über dem unteren Rand des großen Titelbereichs; umgebrochen
-    # wächst sie nach oben (je weitere Zeile 48 px) und bleibt unter der Automatik-Karte, nie darauf
-    Check ($null -eq (Find-Id $win 'HeroSplitter' 500)) 'Regal ohne Ziehgriff'
+    # Regal: mit eigenem Ziehgriff (Wunsch des Nutzers 2026-10-22), Standard wie bisher; Werkzeugleiste 57 px über dem unteren
+    # Rand des großen Titelbereichs (die Lasche liegt mittig auf der Bildkante, 8 px unter der Leiste); umgebrochen wächst sie
+    # nach oben (je weitere Zeile 48 px) und bleibt unter der Automatik-Karte, nie darauf. Per UI-Automation auf den größten
+    # Titelbereich gesetzt (kleinste Kachel), gemerkt in libraryShelfHeroRatio, dann zurückgesetzt.
+    $shelfGrip = Find-Id $win 'HeroSplitter' 2000
+    $shelfRange = $null
+    Check ($shelfGrip -and $shelfGrip.TryGetCurrentPattern([Windows.Automation.RangeValuePattern]::Pattern, [ref]$shelfRange)) 'Regal mit Ziehgriff (RangeValue)'
     Check-Toolbar $win 'Regal 1600x1000' $scale
     $shelfBar = Rect (Find-Id $win 'LibraryToolbar')
     $card = Find-Id $win 'AutomationCard' 2000
     if ($card) { $c = Rect $card; Check ($shelfBar.Top -ge $c.Bottom - 1 -or $shelfBar.Right -le $c.Left + 1) 'Regal: Werkzeugleiste unter oder neben der Automatik-Karte, nicht darauf' }
     if ($rootDip -gt 0) {
         $extra = [math]::Max(0, [math]::Round($shelfBar.Height / $scale) - 40)
-        $shelfHero = ((($shelfBar.Top - (Rect $win).Top) / $scale) - $barOffset) + 50 + $extra
-        $shelfExpected = [math]::Round([math]::Min([math]::Max([math]::Min([math]::Max($rootDip * 0.62, 500), 660), $rootDip - 462), [math]::Max(440 + $extra, $rootDip - 38 - 34 - 200)))
+        $shelfHero = ((($shelfBar.Top - (Rect $win).Top) / $scale) - $barOffset) + 57 + $extra
+        $shelfMax = [math]::Max(447 + $extra, [math]::Floor($rootDip - 274))
+        $shelfExpected = [math]::Round([math]::Min([math]::Max([math]::Min([math]::Max($rootDip * 0.62, 500), 660), $rootDip - 462), $shelfMax))
         Check ([math]::Abs($shelfHero - $shelfExpected) -le 1.5) ("Regal: Titelbereich wie bisher ({0:N1} px, erwartet {1}; Werkzeugleiste {2} px höher)" -f $shelfHero, $shelfExpected, $extra)
+        if ($shelfRange) {
+            Check ($shelfRange.Current.Minimum -eq 447 + $extra -and [math]::Abs($shelfRange.Current.Maximum - $shelfMax) -le 1) ("Regal: Bereich des Griffs {0}–{1} (kleinste Kachel beim größten)" -f $shelfRange.Current.Minimum, $shelfRange.Current.Maximum)
+            $shelfRange.SetValue($shelfRange.Current.Maximum)
+            Check (Wait-Until { $r = (Read-Config $cfg).settings.libraryShelfHeroRatio; $null -ne $r -and [math]::Abs([double]$r - $shelfRange.Current.Maximum / $rootDip) -lt 0.0005 }) ("Regal: größter Titelbereich gesetzt und gemerkt (libraryShelfHeroRatio {0})" -f (Read-Config $cfg).settings.libraryShelfHeroRatio)
+            $shelfInvoke = $null
+            if ($shelfGrip.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$shelfInvoke)) {
+                $shelfInvoke.Invoke()
+                Check (Wait-Until { [math]::Abs($shelfRange.Current.Value - $shelfExpected) -le 1 -and $null -eq (Read-Config $cfg).settings.libraryShelfHeroRatio } 4000) 'Regal: Auslösen setzt auf den Standard zurück'
+                Start-Sleep -Milliseconds 1000
+            } else { Check $false 'Regal: Ziehgriff lässt sich auslösen (Invoke)' }
+        }
     }
     $shelf = Find-Id $win 'GameShelf' 3000
     Check ($null -ne $shelf -and (Shown-Items $shelf).Count -ge 3) "Regal zeigt eine Kachelreihe ($(if ($shelf) { (Shown-Items $shelf).Count }) Kacheln)"
@@ -646,7 +684,7 @@ try {
             $invoke2 = $null
             if ($grip2.TryGetCurrentPattern([Windows.Automation.InvokePattern]::Pattern, [ref]$invoke2)) {
                 $invoke2.Invoke()
-                $root2 = $range2.Current.Maximum + 328 + [math]::Round((Rect (Find-Id $win2 'LibraryToolbar' 3000)).Height / $scale)
+                $root2 = $range2.Current.Maximum + 342 + [math]::Round((Rect (Find-Id $win2 'LibraryToolbar' 3000)).Height / $scale)
                 Check (Wait-Until { [math]::Abs($range2.Current.Value - $root2 / 3) -le 1.5 } 4000) ("Auslösen (wie Doppelklick) setzt auf ein Drittel zurück ({0} von {1:N0} px)" -f $range2.Current.Value, $root2)
                 Check (Wait-Until { $null -eq (Read-Config $cfg).settings.libraryHeroRatio }) 'Zurückgesetzt: libraryHeroRatio entfällt in der Konfiguration'
             } else { Check $false 'Ziehgriff lässt sich auslösen (Invoke)' }

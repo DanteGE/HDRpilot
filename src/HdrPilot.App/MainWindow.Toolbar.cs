@@ -23,10 +23,11 @@ namespace HdrPilot.App;
 /// <param name="Width">Breite der Leiste (= Liste).</param>
 /// <param name="CapsuleTop">Oberkante der Kapsel (24 hoch); die Lasche liegt <paramref name="TabTy"/> darunter (negativ: darüber).</param>
 /// <param name="SeamY">Linie von Lichtnaht und Lichtstreif (Bildkante, im Regal Mitte der Kapsel).</param>
-/// <param name="GripCenter">Mitte des Ziehgriffs (NaN ohne Griff: Raster, Regal).</param>
+/// <param name="GripCenter">Mitte des Ziehgriffs auf der Linie der Lichtnaht (NaN im Regal: Naht und Griff liegen dort auf verschiedenen Linien).</param>
 /// <param name="CapsuleMax">Breiteste Kapsel (höchstens bis 32 px vor die Mitte des Griffs, im Regal neben dem Titelinhalt).</param>
 /// <param name="ToolbarTop">Oberkante der ausgeklappten Leiste.</param>
-internal readonly record struct ToolbarOverlayGeometry(double Left, double Width, double CapsuleTop, double TabTy, double SeamY, double GripCenter, double CapsuleMax, double ToolbarTop)
+/// <param name="EdgeY">Bildkante (Unterkante des Titelbilds), auf der Lasche und Griff mittig liegen.</param>
+internal readonly record struct ToolbarOverlayGeometry(double Left, double Width, double CapsuleTop, double TabTy, double SeamY, double GripCenter, double CapsuleMax, double ToolbarTop, double EdgeY)
 {
     public double Right => Left + Width;
 
@@ -387,13 +388,16 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Leuchtlinie des Ziehgriffs (Liste): endet <see cref="GripLineGap"/> vor Lasche bzw. Kapsel (Vorschau gripLine), nach
-    /// deren Zielbreite; Lasche und Kapsel liegen rechtsbündig mit dem Griff.
+    /// Leuchtlinie des Ziehgriffs: endet <see cref="GripLineGap"/> vor Lasche bzw. Kapsel (Vorschau gripLine), nach deren
+    /// Zielbreite; Lasche und Kapsel liegen rechtsbündig mit dem Griff. Im Regal steht die Kapsel nicht auf der Bildkante
+    /// (sondern in der früheren Leistenzeile): Eingeklappt reicht die Linie dort bis <see cref="HeroSplitter.LineInset"/> vor
+    /// den rechten Rand.
     /// </summary>
     private void UpdateGripLine()
     {
         var pill = _shownCollapsed ? _capsuleWidth : ToolbarChoreography.TabWidth;
-        var margin = new Thickness(HeroSplitter.LineInset, 0, pill + GripLineGap, 0);
+        var right = _shownCollapsed && _appliedView == LibraryViewMode.Shelf ? HeroSplitter.LineInset : pill + GripLineGap;
+        var margin = new Thickness(HeroSplitter.LineInset, 0, right, 0);
         if (HeroSplitter.LineMargin != margin)
         {
             HeroSplitter.LineMargin = margin;
@@ -810,13 +814,14 @@ public partial class MainWindow
         var shelf = view == LibraryViewMode.Shelf;
         var left = shelf ? ShowcaseLayout.Pad : 0;
         var width = ToolbarWidth();
+        var edge = hero - columnsTop;
         var capsuleTop = ShowcaseLayout.CapsuleTop(view, hero, toolbar) - columnsTop;
-        var tabTop = ShowcaseLayout.TabTop(view, hero, toolbar) - columnsTop;
-        var grip = view == LibraryViewMode.List ? left + Math.Round(width / 2) : double.NaN;
+        var tabTop = ShowcaseLayout.TabTop(hero) - columnsTop;
         var center = left + Math.Round(width / 2);
+        var grip = shelf ? double.NaN : center; // Griff auf der Linie der Naht (im Regal liegt die Naht in der Leistenzeile)
         var max = shelf ? 380 - 16 : left + width - (center + 32);
         var next = new ToolbarOverlayGeometry(
-            left, width, capsuleTop, tabTop - capsuleTop, shelf ? capsuleTop + (ShowcaseLayout.CapsuleHeight / 2) : hero - columnsTop, grip, max, ShowcaseLayout.ToolbarTop(view, hero, toolbar) - columnsTop);
+            left, width, capsuleTop, tabTop - capsuleTop, shelf ? capsuleTop + (ShowcaseLayout.CapsuleHeight / 2) : edge, grip, max, ShowcaseLayout.ToolbarTop(view, hero, toolbar) - columnsTop, edge);
         var changed = next != _overlay;
         var maxChanged = Math.Abs(next.CapsuleMax - _overlay.CapsuleMax) > 0.5;
         _overlay = next;
@@ -933,18 +938,22 @@ public partial class MainWindow
     /// <summary>Rechte Kante von Leiste, Lasche und Kapsel in Gerätepixeln des Fensters: der Pixel nächst der Kante der Liste.</summary>
     private double OverlayRightPx(ToolbarOverlayGeometry g) => Math.Round(_toolbarOriginPx.X + (g.Width * PixelScale()), MidpointRounding.AwayFromZero);
 
+    /// <summary>Bildkante in Gerätepixeln des Fensters (nicht gerundet: sie liegt bei 110 oder 125 % meist zwischen zwei Pixeln).</summary>
+    private double EdgePx(ToolbarOverlayGeometry g) => _overlayOriginPx.Y + (g.EdgeY * PixelScale());
+
     /// <summary>
-    /// Oberkante der Lasche in Gerätepixeln: über der Leiste mit genau round(8 · Skalierung) Luft (Liste, Raster), im Regal
-    /// in der Fuge darunter, je an den Pixeln der Leiste ausgerichtet.
+    /// Oberkante eines Teils der Höhe <paramref name="heightPx"/> (ganze Gerätepixel), das mittig auf der Bildkante liegt: auf
+    /// ganzen Pixeln, seine Mitte höchstens einen halben Pixel neben der Kante (bei jeder Skalierung, Wunsch des Nutzers
+    /// 2026-10-22). Den Abstand zur Leiste (round(8 · Skalierung)) trifft das auf einen Pixel genau.
     /// </summary>
-    private double TabTopPx(ToolbarOverlayGeometry g)
-    {
-        var s = PixelScale();
-        var toolbarTop = Math.Round(_toolbarOriginPx.Y + (_toolbarShiftY * s), MidpointRounding.AwayFromZero);
-        return _appliedView == LibraryViewMode.Shelf
-            ? toolbarTop + Math.Round(ToolbarLayout.ItemHeight * s, MidpointRounding.AwayFromZero) + Math.Round((g.TabTop - g.ToolbarTop - ToolbarLayout.ItemHeight) * s)
-            : toolbarTop - Math.Round(ShowcaseLayout.TabGap * s, MidpointRounding.AwayFromZero) - Math.Round(ShowcaseLayout.TabHeight * s);
-    }
+    private double CenteredOnEdgePx(ToolbarOverlayGeometry g, double heightPx) =>
+        Math.Round(EdgePx(g) - (heightPx / 2), MidpointRounding.AwayFromZero);
+
+    /// <summary>Oberkante der Lasche in Gerätepixeln: in allen Ansichten mittig auf der Bildkante.</summary>
+    private double TabTopPx(ToolbarOverlayGeometry g) => CenteredOnEdgePx(g, TabHeightPx());
+
+    /// <summary>Höhe der Lasche in Gerätepixeln (wie ApplyMotion sie zeichnet).</summary>
+    private double TabHeightPx() => Math.Max(1, Math.Round(ShowcaseLayout.TabHeight * PixelScale()));
 
     /// <summary>Bild eines Teils festhalten (Reduziert: alt blendet aus, neu blendet ein).</summary>
     private void CaptureGhost(FrameworkElement source, Image ghost)
@@ -1065,7 +1074,7 @@ public partial class MainWindow
         }
         else
         {
-            var below = panelTop + (ToolbarArea.ReservesHeight ? ToolbarArea.ActualHeight : 0) + dy + ShowcaseLayout.ToolbarGap;
+            var below = panelTop + (ToolbarArea.ReservesHeight ? ToolbarArea.ActualHeight : 0) + dy + BodyArea.Margin.Top;
             var bottom = below - (panelTop + offset);
             ToolbarArea.Clip = new RectangleGeometry(new Rect(-24, -120, ToolbarArea.ActualWidth + 48, Math.Max(0, bottom + 120)));
         }
@@ -1095,17 +1104,31 @@ public partial class MainWindow
         var ty = ch.Get(ToolbarChoreography.PillTy, g.TabTy);
         var tabOpacity = ch.Get(ToolbarChoreography.TabOpacity, 1);
 
-        // Lasche bzw. Kapsel auf ganzen Gerätepixeln des Fensters, die rechte Kante auf der der Leiste; senkrecht zwischen
-        // Kapsel (mittig auf der Bildkante) und Lasche (an den Pixeln der Leiste), wie weit die Bewegung ist.
+        // Lasche bzw. Kapsel auf ganzen Gerätepixeln des Fensters, die rechte Kante auf der der Leiste. Senkrecht in Liste und
+        // Raster immer mittig auf der Bildkante (Lasche wie Kapsel, Wunsch des Nutzers 2026-10-22): Das Verwandeln ändert nur
+        // die Größe. Im Regal zwischen Kapsel (in der früheren Leistenzeile) und Lasche (mittig auf der Bildkante), wie weit
+        // die Bewegung ist.
         var s = PixelScale();
         var right = OverlayRightPx(g);
         var width = Math.Max(1, Math.Round(pw * s));
-        var capsuleTop = Math.Round(_overlayOriginPx.Y + (g.CapsuleTop * s));
-        var way = Math.Abs(g.TabTy) > 0.001 ? ty / g.TabTy : 0;
-        var top = Math.Round(capsuleTop + ((TabTopPx(g) - capsuleTop) * way));
+        var height = Math.Max(1, Math.Round(ph * s));
+        double capsuleTop;
+        double top;
+        if (_appliedView == LibraryViewMode.Shelf)
+        {
+            capsuleTop = Math.Round(_overlayOriginPx.Y + (g.CapsuleTop * s));
+            var way = Math.Abs(g.TabTy) > 0.001 ? ty / g.TabTy : 0;
+            top = Math.Round(capsuleTop + ((TabTopPx(g) - capsuleTop) * way));
+        }
+        else
+        {
+            capsuleTop = CenteredOnEdgePx(g, Math.Round(ToolbarChoreography.CapsuleHeight * s));
+            top = CenteredOnEdgePx(g, height);
+        }
+
         ToolbarToggle.ApplyMotion(
             width / s,
-            Math.Max(1, Math.Round(ph * s)) / s,
+            height / s,
             ch.Get(ToolbarChoreography.PillTurn),
             ch.Get(ToolbarChoreography.Divider),
             ch.Get(ToolbarChoreography.Hint),

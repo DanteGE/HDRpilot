@@ -94,6 +94,57 @@ public sealed class LibraryViewSettingsTests
     }
 
     [Fact]
+    public void Config_without_the_hero_heights_of_grid_and_shelf_loads_unchanged_and_they_survive_a_restart()
+    {
+        // Konfiguration von 1.5.0 (Griff nur in der Liste): Höhe der Liste, Aufteilung, Ansicht und alles andere bleiben.
+        _fs.AddFile(Path, """
+            {
+              "version": 1,
+              "settings": { "pollIntervalMs": 800, "libraryHeroRatio": 0.4584, "libraryPaneRatio": 0.31, "libraryView": "Shelf", "libraryToolbarCollapsed": true },
+              "games": [ { "source": "Steam", "sourceId": "570", "name": "Dota 2", "hdrAuto": true } ]
+            }
+            """);
+        var service = Service();
+
+        Assert.Null(service.LoadWarning);
+        var settings = service.Current.Settings;
+        Assert.Null(settings.LibraryGridHeroRatio);
+        Assert.Null(settings.LibraryShelfHeroRatio);
+        Assert.Equal((800, 0.4584, 0.31, "Shelf", true), (settings.PollIntervalMs, settings.LibraryHeroRatio, settings.LibraryPaneRatio, settings.LibraryView, settings.LibraryToolbarCollapsed));
+        Assert.True(Assert.Single(service.Current.Games).HdrAuto);
+
+        // Ohne gemerkte Höhe tauchen die Felder beim Speichern nicht auf.
+        service.Update(c => c.Settings.GracePeriodSeconds = 12);
+        var text = _fs.ReadAllText(Path);
+        Assert.DoesNotContain("libraryGridHeroRatio", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("libraryShelfHeroRatio", text, StringComparison.Ordinal);
+        Assert.Contains("\"libraryHeroRatio\": 0.4584", text, StringComparison.Ordinal);
+
+        // Gemerkt: stehen in der Datei und kommen nach einem Neustart unverändert zurück, die übrigen Werte auch.
+        service.Update(c =>
+        {
+            c.Settings.LibraryGridHeroRatio = 0.2712;
+            c.Settings.LibraryShelfHeroRatio = 0.55;
+        });
+        text = _fs.ReadAllText(Path);
+        Assert.Contains("\"libraryGridHeroRatio\": 0.2712", text, StringComparison.Ordinal);
+        Assert.Contains("\"libraryShelfHeroRatio\": 0.55", text, StringComparison.Ordinal);
+        var reloaded = Service().Current.Settings;
+        Assert.Equal((0.4584, 0.2712, 0.55), (reloaded.LibraryHeroRatio, reloaded.LibraryGridHeroRatio, reloaded.LibraryShelfHeroRatio));
+        Assert.Equal((800, 0.31, "Shelf", true, 12), (reloaded.PollIntervalMs, reloaded.LibraryPaneRatio, reloaded.LibraryView, reloaded.LibraryToolbarCollapsed, reloaded.GracePeriodSeconds));
+
+        // Zurück zum Standard: Felder entfallen wieder.
+        service.Update(c =>
+        {
+            c.Settings.LibraryGridHeroRatio = null;
+            c.Settings.LibraryShelfHeroRatio = null;
+        });
+        text = _fs.ReadAllText(Path);
+        Assert.DoesNotContain("libraryGridHeroRatio", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("libraryShelfHeroRatio", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Unknown_sort_order_from_a_newer_version_does_not_break_the_file()
     {
         _fs.AddFile(Path, """

@@ -287,7 +287,16 @@ public sealed class HeroStage : Grid
         SetBoost(_slots[_current], on, Scale(transition, 1.2));
     }
 
-    /// <summary>Tiefenwirkung: Zeiger relativ zur Mitte (−1…1); Bild −14/−9 px, Strahlen −24/−12, Lichtpunkte −40/−22 (0,6 s).</summary>
+    /// <summary>Verschiebung der Bildebene durch die Tiefenwirkung (Tests: gleitet sie, wo steht sie).</summary>
+    public TranslateTransform PointerShift => _stageShift;
+
+    /// <summary>Verschiebung der Lichtpunkte durch die Tiefenwirkung (die weiteste Ebene; Tests).</summary>
+    public TranslateTransform BokehShift => _bokehShift;
+
+    /// <summary>
+    /// Tiefenwirkung: Zeiger relativ zur Mitte (−1…1); Bild −14/−9 px, Strahlen −24/−12, Lichtpunkte −40/−22, in
+    /// <paramref name="duration"/> mit QuinticEase EaseOut vom aktuellen Wert aus (0: sofort).
+    /// </summary>
     public void SetPointer(double px, double py, TimeSpan duration)
     {
         px = Math.Clamp(px, -1, 1);

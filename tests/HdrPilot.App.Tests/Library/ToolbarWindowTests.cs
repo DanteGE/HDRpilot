@@ -20,8 +20,8 @@ namespace HdrPilot.App.Tests.Library;
 /// <summary>
 /// Werkzeugleiste im Hauptfenster (abgenommene Vorschau „Fließleiste mit Lichtnaht“, Wunsch des Nutzers 2026-10-17), auf
 /// dem WPF-Testhost erzeugt und angeordnet, nie angezeigt: Geometrie bei den Fenstergrößen der Abnahme (Zeilen, bündige
-/// Kanten, 8 px zwischen den Knöpfen, Luft 10/10 bzw. 22/22, Lasche 8 px über der Leiste, Kapsel 10 px über der Liste,
-/// Griff auf der Kante), Ein- und Ausklappen (Lasche, Tasten, Menü, gemerkt, ohne Bewegung beim Öffnen), Bewegung je
+/// Kanten, 8 px zwischen den Knöpfen, Luft 17/17, Lasche mittig auf der Bildkante und 8 px über der Leiste, Kapsel 10 px
+/// über der Liste, Griff auf der Kante), Ein- und Ausklappen (Lasche, Tasten, Menü, gemerkt, ohne Bewegung beim Öffnen), Bewegung je
 /// Effektstufe mit gestellter Uhr, Filter als Symbolknöpfe mit Zahl für Bildschirmleser, Automation-Peer mit ExpandCollapse.
 /// Läuft allein: Die Prüfungen stellen die Uhr der Leiste und die Effektstufe.
 /// </summary>
@@ -177,23 +177,25 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
                 }
             }
 
-            // Luft über der Leiste (zur Bildkante) gleich der darunter (zur Liste): 10/10; der Griff mittig auf der Kante.
+            // Luft über der Leiste (zur Bildkante) gleich der darunter (zur Liste): 17/17; der Griff mittig auf der Kante.
             var above = bar.Top - edge;
             var below = card.Top - bar.Bottom;
-            Assert.Equal(10, above, 0.5);
-            Assert.Equal(10, below, 0.5);
+            Assert.Equal(17, above, 0.5);
+            Assert.Equal(17, below, 0.5);
             var grip = Box(window, Named<FrameworkElement>(window, "HeroSplitter"));
             Assert.Equal(edge, grip.Top + (grip.Height / 2), 0.5);
 
-            // Lasche rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen, Wunsch des Nutzers): genau
-            // round(8 · Skalierung) Gerätepixel über den Knöpfen, rechts bündig mit ihnen.
+            // Lasche rechts, mittig auf der Bildkante (Wunsch des Nutzers 2026-10-22: höchstens einen halben Gerätepixel
+            // daneben), ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen): round(8 · Skalierung)
+            // Gerätepixel über den Knöpfen, auf einen Pixel genau, rechts bündig mit ihnen.
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             var knobs = ItemsBox(window);
             Assert.Equal(36, tab.Width, 0.5);
-            Assert.Equal(18, tab.Height, 0.5);
+            Assert.Equal(Math.Round(18 * scale) / scale, tab.Height, 3);
             Assert.Equal(card.Right, tab.Right, 0.6);
             Assert.Equal(knobs.Right, tab.Right, 3);
-            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, knobs.Top - tab.Bottom, 3);
+            Assert.True(Math.Abs((tab.Top + (tab.Height / 2) - edge) * scale) <= 0.5 + 1e-6, FormattableString.Invariant($"{width}×{height}: Mitte der Lasche {(tab.Top + (tab.Height / 2) - edge) * scale:0.###} px neben der Kante"));
+            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, knobs.Top - tab.Bottom, OnePixel(window));
 
             // Kanten auf ganzen Gerätepixeln des Fensters (nicht nur der Leiste): Knöpfe, Felder und Lasche.
             Assert.All(Slots, s => AssertWholePixels(window, Item(window, s), scale, s.ToString()));
@@ -238,13 +240,14 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var capsule = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             var card = Box(window, Named<FrameworkElement>(window, "ListCard"));
             Assert.Equal(24, capsule.Height, 0.5);
-            Assert.Equal(edge - 12, capsule.Top, 0.5); // mittig auf der Kante
+            Assert.Equal(edge - 12, capsule.Top, OnePixel(window)); // mittig auf der Kante, auf ganzen Gerätepixeln
+            Assert.True(Math.Abs((capsule.Top + (capsule.Height / 2) - edge) * Scale(window)) <= 0.5 + 1e-6, "Kapsel mittig auf der Kante (höchstens ein halber Gerätepixel)");
             Assert.Equal(card.Right, capsule.Right, 0.6); // rechtsbündig
             AssertWholePixels(window, Named<FrameworkElement>(window, "ToolbarToggle"), Scale(window), "Kapsel");
 
             // 10 px darunter die Liste; die Kapsel liegt auf ganzen Gerätepixeln, Bildkante und Liste nicht: ein Pixel Spielraum.
             Assert.Equal(10, card.Top - capsule.Bottom, OnePixel(window));
-            Assert.Equal(cardTop - card.Top, ToolbarLayout.HeightFor(rows) - 2, 0.5); // Gewinn: 38 bzw. 86
+            Assert.Equal(cardTop - card.Top, ToolbarLayout.HeightFor(rows) + 12, 0.5); // Gewinn: 52 bzw. 100
             var grip = Box(window, Named<FrameworkElement>(window, "HeroSplitter"));
             Assert.Equal(edge, grip.Top + (grip.Height / 2), 0.5);
             Assert.True(capsule.Left >= grip.Left + (grip.Width / 2) + 32 - 0.5, "Kapsel höchstens bis 32 px vor die Mitte des Griffs");
@@ -260,7 +263,7 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
     [InlineData(1280, 800)]
     [InlineData(1745, 982)]
     [InlineData(3440, 1440)]
-    public void Grid_keeps_22_px_air_above_and_below_expanded_and_under_the_capsule(double width, double height)
+    public void Grid_keeps_17_px_air_above_and_below_expanded_and_under_the_capsule(double width, double height)
     {
         WpfTestHost.Run(() =>
         {
@@ -271,11 +274,13 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var edge = Box(window, Named<FrameworkElement>(window, "Hero")).Bottom;
             var bar = Box(window, Named<FrameworkElement>(window, "ToolbarArea"));
             var tile = Box(window, (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(0));
-            Assert.Equal(22, bar.Top - edge, 0.5);
-            Assert.Equal(22, tile.Top - bar.Bottom, 0.5);
+            Assert.Equal(17, bar.Top - edge, 0.5);
+            Assert.Equal(17, tile.Top - bar.Bottom, 0.5);
+            Assert.Equal(10, Box(window, grid).Top - bar.Bottom, 0.5); // gescrollte Kacheln enden 10 px unter der Leiste
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             var scale = Scale(window);
-            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, ItemsBox(window).Top - tab.Bottom, 3); // −4 … +14 um die Kante
+            Assert.True(Math.Abs((tab.Top + (tab.Height / 2) - edge) * scale) <= 0.5 + 1e-6, "Lasche mittig auf der Kante (vorher −4 … +14)");
+            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, ItemsBox(window).Top - tab.Bottom, OnePixel(window));
             Assert.Equal(8, bar.Top - tab.Bottom, OnePixel(window));
 
             model.IsToolbarCollapsed = true;
@@ -283,9 +288,9 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.Equal(hero, window.HeroHeight);
             var capsule = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             tile = Box(window, (FrameworkElement)grid.ItemContainerGenerator.ContainerFromIndex(0));
-            Assert.Equal(edge - 12, capsule.Top, 0.5);
-            Assert.Equal(22, tile.Top - capsule.Bottom, OnePixel(window));
-            output.WriteLine(FormattableString.Invariant($"Raster {width}x{height}: Luft {bar.Top - edge:0.##}/22, Lasche {tab.Top - edge:0.##} … {tab.Bottom - edge:0.##}, eingeklappt Kachel {tile.Top - capsule.Bottom:0.##} unter der Kapsel"));
+            Assert.True(Math.Abs((capsule.Top + (capsule.Height / 2) - edge) * scale) <= 0.5 + 1e-6, "Kapsel mittig auf der Kante: das Verwandeln ändert nur die Größe");
+            Assert.Equal(17, tile.Top - capsule.Bottom, OnePixel(window));
+            output.WriteLine(FormattableString.Invariant($"Raster {width}x{height}: Luft {bar.Top - edge:0.##}/{tile.Top - bar.Bottom:0.##}, Lasche {tab.Top - edge:0.##} … {tab.Bottom - edge:0.##}, eingeklappt Kachel {tile.Top - capsule.Bottom:0.##} unter der Kapsel"));
             window.Close();
         });
     }
@@ -307,12 +312,17 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var edge = Box(window, Named<FrameworkElement>(window, "Hero")).Bottom;
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             var shelfTop = Box(window, Named<FrameworkElement>(window, "GameShelf")).Top;
+            var shelf = Named<ListBox>(window, "GameShelf");
+            var firstTile = Box(window, (FrameworkElement)shelf.ItemContainerGenerator.ContainerFromIndex(0));
             var scale = Scale(window);
 
-            // Lasche in der Fuge zwischen Leiste und Kachelreihe: round(2 · Skalierung) Gerätepixel unter den Knöpfen.
-            Assert.Equal(Math.Round(2 * scale) / scale, tab.Top - ItemsBox(window).Bottom, 3);
-            Assert.Equal(2, tab.Top - bar.Bottom, OnePixel(window));
-            Assert.Equal(2, shelfTop + ShowcaseLayout.GridPaddingTop - tab.Bottom, OnePixel(window));
+            // Lasche in der Fuge zwischen Leiste und Kachelreihe, mittig auf der Bildkante (Wunsch des Nutzers 2026-10-22):
+            // round(8 · Skalierung) Gerätepixel unter den Knöpfen (auf einen Pixel genau), 3 px über den Kacheln.
+            Assert.True(Math.Abs((tab.Top + (tab.Height / 2) - edge) * scale) <= 0.5 + 1e-6, "Lasche mittig auf der Kante");
+            Assert.Equal(Math.Round(8 * scale, MidpointRounding.AwayFromZero) / scale, tab.Top - ItemsBox(window).Bottom, OnePixel(window));
+            Assert.Equal(8, tab.Top - bar.Bottom, OnePixel(window));
+            Assert.Equal(3, firstTile.Top - tab.Bottom, OnePixel(window));
+            Assert.Equal(bar.Bottom, shelfTop, 0.5); // die Reihe beginnt an der Leiste: Platz zum Anheben der Kacheln
             Assert.Equal(bar.Right, tab.Right, 0.6);
             Assert.Equal(ItemsBox(window).Right, tab.Right, 3);
 
@@ -327,6 +337,122 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.Equal(edge, Box(window, Named<FrameworkElement>(window, "Hero")).Bottom, 0.5);
             Assert.Equal(ShowcaseLayout.LargeHeroSink, ((TranslateTransform)Named<FrameworkElement>(window, "HeroLargeSink").RenderTransform).Y);
             output.WriteLine(FormattableString.Invariant($"Regal {width}x{height}: Lasche {tab.Top - bar.Bottom:0.##} unter der Leiste, Kapsel {capsule.Top - card.Bottom:0.##} unter der Karte"));
+            window.Close();
+        });
+    }
+
+    /// <summary>Bildkante (Unterkante des Titelbilds) in geräteunabhängigen Pixeln des Fensters.</summary>
+    private static double Edge(MainWindow window) => WindowBox(window, Named<FrameworkElement>(window, "Hero")).Bottom;
+
+    /// <summary>
+    /// Lasche bzw. Kapsel liegt mittig auf der Bildkante: ihre Mitte höchstens einen halben Gerätepixel neben der Kante, ihre
+    /// Kanten auf ganzen Gerätepixeln.
+    /// </summary>
+    private static double AssertCentredOnEdge(MainWindow window, double scale, string what)
+    {
+        var toggle = Named<FrameworkElement>(window, "ToolbarToggle");
+        var box = WindowBox(window, toggle);
+        var offset = ((box.Top + (box.Height / 2)) - Edge(window)) * scale;
+        Assert.True(Math.Abs(offset) <= 0.5 + 1e-6, FormattableString.Invariant($"{what}: Mitte {offset:0.###} Gerätepixel neben der Bildkante (Lasche {box.Top * scale:0.##}–{box.Bottom * scale:0.##}, Kante {Edge(window) * scale:0.##})"));
+        AssertWholePixels(window, toggle, scale, what);
+        return offset;
+    }
+
+    [Theory]
+    [InlineData(1.0)]
+    [InlineData(1.25)]
+    [InlineData(1.5)]
+    [InlineData(1.75)]
+    public void Tab_and_capsule_sit_centred_on_the_edge_within_half_a_device_pixel_at_every_scale_height_and_view(double scale)
+    {
+        // Wunsch des Nutzers 2026-10-22: Die Lasche „Leiste ausblenden“ saß in der Liste −16 … +2 um die Bildkante, im Raster
+        // −4 … +14; Lichtnaht und Griff trafen sie unten. Jetzt liegt ihre Mitte auf der Kante: ausgeklappt, beim Überfahren,
+        // nach Ziehen am Griff, nach dem Wechsel der Ansicht und anderen Fenstergrößen; eingeklappt ebenso die Kapsel (Liste,
+        // Raster; im Regal steht sie in der früheren Leistenzeile).
+        WpfTestHost.Run(() =>
+        {
+            var (window, model, _) = Open(new Size(1600, 1000));
+            VisualTreeHelper.SetRootDpi(window, new DpiScale(scale, scale));
+            var splitter = Named<HeroSplitter>(window, "HeroSplitter");
+            var worst = 0.0;
+            var checks = 0;
+            foreach (var size in new[] { new Size(1280, 800), new Size(1745, 982), new Size(3127, 1309) })
+            {
+                foreach (var view in LibraryViewModes.Ordered)
+                {
+                    model.ViewMode = view;
+                    Arrange(window, size);
+                    Assert.Equal(scale, Scale(window));
+                    var what = FormattableString.Invariant($"{scale:0.##} · {size.Width}×{size.Height}, {view}");
+                    worst = Math.Max(worst, Math.Abs(AssertCentredOnEdge(window, scale, what + " ausgeklappt")));
+                    window.PreviewTabHover();
+                    worst = Math.Max(worst, Math.Abs(AssertCentredOnEdge(window, scale, what + " Lasche überfahren")));
+
+                    // Am Griff gezogen (ganze geräteunabhängige Pixel, bei 125 und 175 % keine ganzen Gerätepixel).
+                    foreach (var delta in new[] { 37.4, -61.2 })
+                    {
+                        splitter.RaiseEvent(new DragStartedEventArgs(0, 5));
+                        splitter.RaiseEvent(new DragDeltaEventArgs(0, delta));
+                        splitter.RaiseEvent(new DragCompletedEventArgs(0, delta, false));
+                        Arrange(window, size);
+                        worst = Math.Max(worst, Math.Abs(AssertCentredOnEdge(window, scale, FormattableString.Invariant($"{what} nach Ziehen um {delta}, Titelbereich {window.HeroHeight}"))));
+                        checks++;
+                    }
+
+                    model.IsToolbarCollapsed = true;
+                    Arrange(window, size);
+                    if (view != LibraryViewMode.Shelf)
+                    {
+                        worst = Math.Max(worst, Math.Abs(AssertCentredOnEdge(window, scale, what + " eingeklappt (Kapsel)")));
+                    }
+
+                    model.IsToolbarCollapsed = false;
+                    Arrange(window, size);
+                    AssertCentredOnEdge(window, scale, what + " wieder ausgeklappt");
+                    var tab = WindowBox(window, Named<FrameworkElement>(window, "ToolbarToggle"));
+                    var knobs = Slots.Select(s => WindowBox(window, Item(window, s))).Aggregate(Rect.Union);
+                    var gap = view == LibraryViewMode.Shelf ? tab.Top - knobs.Bottom : knobs.Top - tab.Bottom;
+                    Assert.True(Math.Abs((gap * scale) - Math.Round(8 * scale, MidpointRounding.AwayFromZero)) <= 1 + 1e-6, FormattableString.Invariant($"{what}: Lasche {gap * scale:0.##} Gerätepixel vor der Leiste"));
+                }
+            }
+
+            output.WriteLine(FormattableString.Invariant($"{scale * 100:0} %: {checks} Höhen nach Ziehen, größte Abweichung der Mitte {worst:0.###} Gerätepixel"));
+            model.ViewMode = LibraryViewMode.List;
+            window.Close();
+        });
+    }
+
+    [Theory]
+    [InlineData(LibraryViewMode.List)]
+    [InlineData(LibraryViewMode.Grid)]
+    public void Tab_turns_into_the_capsule_and_back_by_size_only_centred_on_the_edge(LibraryViewMode view)
+    {
+        // Wunsch des Nutzers 2026-10-22: Lasche und Kapsel liegen beide mittig auf der Bildkante, das Verwandeln (Voll, 740 bzw.
+        // 620 ms) ändert nur die Größe; die Mitte bleibt in jedem Bild auf der Kante.
+        WpfTestHost.Run(() =>
+        {
+            var size = new Size(1745, 982);
+            var (window, model, _) = Open(size, view);
+            var (_, time) = HandClock(window);
+            var scale = Scale(window);
+            var toggle = Named<FrameworkElement>(window, "ToolbarToggle");
+            var heights = new HashSet<double>();
+            foreach (var collapse in new[] { true, false })
+            {
+                model.IsToolbarCollapsed = collapse;
+                Arrange(window, size);
+                var start = time.Now.TotalMilliseconds;
+                for (var t = 0; t <= 800; t += 20)
+                {
+                    At(window, time, start + t);
+                    AssertCentredOnEdge(window, scale, FormattableString.Invariant($"{view}, {(collapse ? "einklappen" : "ausklappen")} bei {t} ms"));
+                    heights.Add(Math.Round(toggle.Height * scale));
+                }
+            }
+
+            Assert.Contains(Math.Round(18 * scale), heights);
+            Assert.Contains(Math.Round(24 * scale), heights);
+            Assert.True(heights.Count > 3, "Höhe gleitet: " + string.Join(", ", heights));
             window.Close();
         });
     }
@@ -760,13 +886,13 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             var cardTop = Box(window, list).Top;
 
             // Eingeklappt rechnet alles weiter mit den zwei Zeilen: Bereich des Griffs und Titelbereich bleiben, die Liste
-            // steigt um 86.
+            // steigt um 100 (88 + 12: ausgeklappt 17 über und unter der Leiste, eingeklappt 10 unter der Kapsel).
             model.IsToolbarCollapsed = true;
             Arrange(window, band);
             At(window, time, 2000);
             Assert.Equal(range, splitter.Maximum);
             Assert.Equal(hero, window.HeroHeight);
-            Assert.Equal(ToolbarLayout.HeightFor(2) - 2, cardTop - Box(window, list).Top, 0.5);
+            Assert.Equal(ToolbarLayout.HeightFor(2) + 12, cardTop - Box(window, list).Top, 0.5);
             var collapsedTop = Box(window, list).Top;
 
             // Ausklappen: Im ersten Bild steht die Liste, wo sie eingeklappt stand (kein Sprung um 48), dann wieder zwei Zeilen.
@@ -1075,24 +1201,34 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
-    public void Grip_line_ends_12_px_before_the_tab_or_the_capsule()
+    [Theory]
+    [InlineData(LibraryViewMode.List)]
+    [InlineData(LibraryViewMode.Grid)]
+    [InlineData(LibraryViewMode.Shelf)]
+    public void Grip_line_ends_12_px_before_the_tab_or_the_capsule(LibraryViewMode view)
     {
         WpfTestHost.Run(() =>
         {
             var size = new Size(1745, 982);
-            var (window, model, _) = Open(size);
+            var (window, model, _) = Open(size, view);
             var splitter = Named<HeroSplitter>(window, "HeroSplitter");
             var line = Assert.IsAssignableFrom<FrameworkElement>(splitter.Template.FindName("Line", splitter));
             var tab = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
             Assert.Equal(tab.Left - MainWindow.GripLineGap, Box(window, line).Right, OnePixel(window));
             Assert.Equal(Box(window, splitter).Left + HeroSplitter.LineInset, Box(window, line).Left, 0.5);
+            var listArea = Box(window, Named<FrameworkElement>(window, "ListArea"));
+            var side = view == LibraryViewMode.Shelf ? ShowcaseLayout.Pad : 0;
+            Assert.Equal(listArea.Left + side, Box(window, splitter).Left, 0.5); // Griff so breit wie die Leiste (im Regal ohne Rand)
+            Assert.Equal(listArea.Right - side, Box(window, splitter).Right, 0.5);
 
             model.ToggleFilter(ToolbarFilter.New);
             model.IsToolbarCollapsed = true;
             Arrange(window, size);
             var capsule = Box(window, Named<FrameworkElement>(window, "ToolbarToggle"));
-            Assert.Equal(capsule.Left - MainWindow.GripLineGap, Box(window, line).Right, OnePixel(window));
+            var right = view == LibraryViewMode.Shelf
+                ? Box(window, splitter).Right - HeroSplitter.LineInset // die Kapsel steht im Regal in der Leistenzeile, nicht auf der Linie
+                : capsule.Left - MainWindow.GripLineGap;
+            Assert.Equal(right, Box(window, line).Right, OnePixel(window));
             window.Close();
         });
     }

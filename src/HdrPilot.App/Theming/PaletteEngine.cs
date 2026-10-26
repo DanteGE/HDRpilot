@@ -73,7 +73,17 @@ public static class PaletteEngine
     }
 
     /// <summary>Alle Farben aus Palette, Thema und der Wahl „Textfarbe auf Akzentflächen automatisch“.</summary>
-    public static ThemePalette Compute(PaletteColors palette, bool dark, bool autoTextOnAccent)
+    public static ThemePalette Compute(PaletteColors palette, bool dark, bool autoTextOnAccent) =>
+        Compute(palette, dark, autoTextOnAccent, palette.Atmosphere);
+
+    /// <summary>
+    /// Wie <see cref="Compute(PaletteColors, bool, bool)"/>, aber die Flächen (Karte, Grund oben und unten) kommen aus
+    /// <paramref name="surfaceAtmosphere"/> statt aus der Atmosphäre der Palette, und Text- und Bedienfarben halten ihren
+    /// Kontrast zusätzlich gegen <paramref name="extraSurfaces"/> (Spielfarben, E94: Flächen des Schemas und der hellste bzw.
+    /// dunkelste mögliche Grundton der Bibliothek). Mit der eigenen Atmosphäre und ohne weitere Flächen gleich der
+    /// einfachen Fassung.
+    /// </summary>
+    public static ThemePalette Compute(PaletteColors palette, bool dark, bool autoTextOnAccent, Color surfaceAtmosphere, IReadOnlyList<Color>? extraSurfaces = null)
     {
         var c1 = Opaque(palette.Accent);
         var c2 = Opaque(palette.Atmosphere);
@@ -81,11 +91,13 @@ public static class PaletteEngine
 
         // Umgebung aus dem Schema (applyAmbient() ohne Spielfarben): a1 tief, a2 Atmosphäre, a3 Glanz.
         var a1 = SchemeAmbient(c2);
-        var background = dark ? ColorMath.MixOklab(Night, a1, 0.34) : ColorMath.MixOklab(Paper, c2, 0.09);
-        var top = dark ? ColorMath.MixOklab(Night, a1, 0.48) : ColorMath.MixOklab(Paper, c2, 0.13);
-        var bottom = dark ? ColorMath.MixOklab(Night, a1, 0.22) : ColorMath.MixOklab(Paper, c2, 0.05);
+        var surfaceA1 = SchemeAmbient(surfaceAtmosphere);
+        var surface2 = Opaque(surfaceAtmosphere);
+        var background = dark ? ColorMath.MixOklab(Night, surfaceA1, 0.34) : ColorMath.MixOklab(Paper, surface2, 0.09);
+        var top = dark ? ColorMath.MixOklab(Night, surfaceA1, 0.48) : ColorMath.MixOklab(Paper, surface2, 0.13);
+        var bottom = dark ? ColorMath.MixOklab(Night, surfaceA1, 0.22) : ColorMath.MixOklab(Paper, surface2, 0.05);
         var panel = dark ? DarkPanel : Colors.White;
-        Color[] surfaces = [panel, background, top, bottom];
+        Color[] surfaces = extraSurfaces is { Count: > 0 } ? [panel, background, top, bottom, .. extraSurfaces] : [panel, background, top, bottom];
 
         var on = OnAccentFor(c1, c2, autoTextOnAccent);
         var lighten = on == Ink;

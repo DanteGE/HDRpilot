@@ -52,19 +52,18 @@ public readonly record struct ToolbarSlotRect(double X, double Y, double Width, 
 /// Gedächtnis der Hysterese beim Ziehen (Fensterrand oder Trenner zum Detailbereich): welcher Zustand zuletzt galt. Nur
 /// solange gezogen wird, kehrt ein Schritt erst mit Abstand zur Schwelle zurück.
 /// </summary>
-public readonly record struct ToolbarMemory(bool MultipleRows, bool SortIcon, bool SearchKey);
+public readonly record struct ToolbarMemory(bool MultipleRows, bool SortIcon);
 
 /// <summary>Ergebnis von <see cref="ToolbarLayout.Arrange"/>: Zeilen, Stufe und die Lage jedes Elements.</summary>
 public sealed class ToolbarArrangement
 {
-    internal ToolbarArrangement(double requestedWidth, double width, double scale, int rows, ToolbarStage stage, bool searchKey, ToolbarSlotRect[] slots, double height)
+    internal ToolbarArrangement(double requestedWidth, double width, double scale, int rows, ToolbarStage stage, ToolbarSlotRect[] slots, double height)
     {
         RequestedWidth = requestedWidth;
         Width = width;
         Scale = scale;
         Rows = rows;
         Stage = stage;
-        SearchKey = searchKey;
         Slots = slots;
         Height = height;
     }
@@ -87,9 +86,6 @@ public sealed class ToolbarArrangement
     /// </summary>
     public bool SortIconOnly => this[ToolbarSlot.Sort].Width <= ToolbarLayout.SortIconWidth + 4; // Rundung auf Gerätepixel
 
-    /// <summary>Die Tastenkappe „Strg+F“ in der Suche ist zu sehen.</summary>
-    public bool SearchKey { get; }
-
     /// <summary>Höhe der Leiste im Layout: Zeilen à 40 und 8 dazwischen (40, 88, 136), unabhängig von der Skalierung.</summary>
     public double Height { get; }
 
@@ -101,7 +97,7 @@ public sealed class ToolbarArrangement
     /// <summary>Freiraum zwischen Filtern und Ansicht in einer Zeile (sonst zwischen Filtern und Ansicht der zweiten Zeile).</summary>
     public double GroupGap => this[ToolbarSlot.View].X - this[ToolbarSlot.FilterHdr].Right;
 
-    public ToolbarMemory Memory => new(Rows > 1, Stage == ToolbarStage.SortIcon, SearchKey);
+    public ToolbarMemory Memory => new(Rows > 1, Stage == ToolbarStage.SortIcon);
 }
 
 /// <summary>
@@ -111,7 +107,8 @@ public sealed class ToolbarArrangement
 /// von 806 kommen zwei Zeilen, getrennt an der Gruppengrenze (oben die drei Felder, die Zeile füllend; unten die Filter links,
 /// Ansicht · Neu einlesen · gesehen · hinzufügen rechts). Zwischen Filtern und Ansicht bleiben mindestens 24 (nur auf der
 /// Symbol-Stufe 16). Beim Ziehen gilt Hysterese: Die Beschriftung kommt erst 24 über der Schwelle zurück, die eine Zeile
-/// erst 32 darüber, die Tastenkappe „Strg+F“ weicht unter 204 Suchbreite und kommt ab 216 zurück.
+/// erst 32 darüber. Eine Tastenkappe „Strg+F“ hat die Suche nicht mehr (Strg+F blendet die sichtbare Leiste aus, Wunsch des
+/// Nutzers 2026-10-22).
 /// <para>
 /// Stufe und Zeilen folgen den Schwellen der Vorschau in geräteunabhängigen Pixeln, bei jeder Skalierung bei denselben
 /// Breiten (1366×768 bei 110 %, Liste 807, ist einzeilig wie bei 100 %). Verteilt wird danach in Gerätepixeln der
@@ -162,12 +159,6 @@ public static class ToolbarLayout
 
     /// <summary>Hysterese beim Ziehen: Die eine Zeile kommt erst so weit über ihrer Schwelle zurück.</summary>
     public const double OneRowBack = 32;
-
-    /// <summary>Unter dieser Suchbreite weicht die Tastenkappe „Strg+F“.</summary>
-    public const double SearchKeyHide = 204;
-
-    /// <summary>Beim Ziehen kommt die Tastenkappe erst ab dieser Suchbreite zurück.</summary>
-    public const double SearchKeyShow = 216;
 
     /// <summary>Linke Gruppe ohne die Felder: drei Filter und fünf Abstände.</summary>
     private const double LeftFixed = (3 * FilterWidth) + (5 * Gap);
@@ -223,7 +214,6 @@ public static class ToolbarLayout
         var slots = new ToolbarSlotRect[10];
         ToolbarStage stage;
         int rows;
-        double searchWidth;
         if (oneRow)
         {
             rows = 1;
@@ -266,7 +256,6 @@ public static class ToolbarLayout
             }
 
             RightGroupAt(slots, px, right, 0, b, g, view);
-            searchWidth = slots[(int)ToolbarSlot.Search].Width;
         }
         else
         {
@@ -313,12 +302,10 @@ public static class ToolbarLayout
             rows = three ? 3 : 2;
             stage = three ? ToolbarStage.ThreeRows : ToolbarStage.TwoRows;
             RightGroupAt(slots, px, right, three ? 2 * pitch : pitch, b, g, view);
-            searchWidth = slots[(int)ToolbarSlot.Search].Width;
         }
 
-        var key = memory is { SearchKey: false } ? searchWidth >= SearchKeyShow - 0.01 : searchWidth >= SearchKeyHide - 0.01;
         var height = HeightFor(rows);
-        return new ToolbarArrangement(w, right / s, s, rows, stage, key, slots, height);
+        return new ToolbarArrangement(w, right / s, s, rows, stage, slots, height);
     }
 
     /// <summary>Suche, Quelle und Sortierung geben anteilig nach (68 : 52 : 36), um <paramref name="d"/> zusammen.</summary>

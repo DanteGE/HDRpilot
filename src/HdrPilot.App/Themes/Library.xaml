@@ -259,7 +259,10 @@
         <Setter Property="BorderThickness" Value="1" />
     </Style>
 
-    <!-- Suchfeld: Lupe, Platzhalter (Tag), „Strg+F“, Rahmen in Akzentfarbe bei Fokus -->
+    <!--
+        Suchfeld: Lupe, Platzhalter (Tag), Rahmen in Akzentfarbe bei Fokus; rechts 36 Platz für „Suche leeren“. Eine
+        Tastenkappe „Strg+F“ hat es nicht mehr: Strg+F blendet die sichtbare Leiste aus (Wunsch des Nutzers 2026-10-22).
+    -->
     <Style x:Key="Lib.SearchBox" TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
         <Setter Property="CaretBrush" Value="{DynamicResource Hp.Brush.Text}" />
@@ -268,7 +271,7 @@
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Height" Value="40" />
-        <Setter Property="Padding" Value="38,0,70,0" />
+        <Setter Property="Padding" Value="38,0,36,0" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">

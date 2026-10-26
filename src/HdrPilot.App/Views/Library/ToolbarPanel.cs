@@ -18,9 +18,6 @@ public sealed class ToolbarArrangedEventArgs(ToolbarArrangement? previous, Toolb
 
     /// <summary>Die Sortierung zeigt jetzt nur ihr Symbol bzw. wieder ihre Beschriftung.</summary>
     public bool SortStepChanged => Previous is { } p && p.SortIconOnly != Current.SortIconOnly;
-
-    /// <summary>Die Tastenkappe „Strg+F“ kommt oder geht.</summary>
-    public bool SearchKeyChanged => Previous is { } p && p.SearchKey != Current.SearchKey;
 }
 
 /// <summary>
@@ -220,7 +217,7 @@ public sealed class ToolbarPanel : Panel
         Math.Abs(last.RequestedWidth - width) * last.Scale < 0.5;
 
     private static bool Same(ToolbarArrangement a, ToolbarArrangement b) =>
-        a.Rows == b.Rows && a.Stage == b.Stage && a.SearchKey == b.SearchKey && a.Scale == b.Scale && a.Slots.SequenceEqual(b.Slots);
+        a.Rows == b.Rows && a.Stage == b.Stage && a.Scale == b.Scale && a.Slots.SequenceEqual(b.Slots);
 
     private double Scale()
     {

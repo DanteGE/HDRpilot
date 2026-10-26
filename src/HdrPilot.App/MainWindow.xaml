@@ -201,7 +201,7 @@
         <ContextMenu x:Key="ToolbarMenu" x:Shared="False" Style="{StaticResource Lib.ContextMenu}" MinWidth="280"
                      DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
                      AutomationProperties.AutomationId="ToolbarMenu" AutomationProperties.Name="{x:Static res:LibraryStrings.Toolbar_MenuName}">
-            <MenuItem Style="{StaticResource Lib.ToolbarMenuItem}" Header="{Binding ToolbarToggleText}" InputGestureText="{x:Static res:LibraryStrings.Key_CtrlShiftF}"
+            <MenuItem Style="{StaticResource Lib.ToolbarMenuItem}" Header="{Binding ToolbarToggleText}" InputGestureText="{x:Static res:LibraryStrings.Key_CtrlF}"
                       Command="{Binding ToggleToolbarCommand}"
                       AutomationProperties.AutomationId="ToolbarMenuToggle" AutomationProperties.Name="{Binding ToolbarToggleText}" />
             <Separator Style="{StaticResource Lib.MenuSeparator}" />
@@ -1138,11 +1138,11 @@
                                    ToolTipService.InitialShowDelay="1000" ToolTipService.BetweenShowDelay="400" ToolTipService.ShowDuration="600000"
                                    AutomationProperties.AutomationId="ToolbarToggle" AutomationProperties.Name="{x:Static res:LibraryStrings.Toolbar_ToggleName}"
                                    AutomationProperties.HelpText="{x:Static res:LibraryStrings.Toolbar_ToggleHelp}"
-                                   AutomationProperties.AcceleratorKey="{x:Static res:LibraryStrings.Key_CtrlShiftF}"
+                                   AutomationProperties.AcceleratorKey="{x:Static res:LibraryStrings.Key_CtrlF}"
                                    AutomationProperties.ItemStatus="{Binding ToolbarSummary}">
                     <lib:ToolbarToggle.ToolTip>
                         <ToolTip Style="{StaticResource Lib.ToolTip}">
-                            <lib:ToolbarTip Style="{StaticResource Lib.ToolbarTip}" Title="{x:Static res:LibraryStrings.Toolbar_Show}" Shortcut="{x:Static res:LibraryStrings.Key_CtrlShiftF}"
+                            <lib:ToolbarTip Style="{StaticResource Lib.ToolbarTip}" Title="{x:Static res:LibraryStrings.Toolbar_Show}" Shortcut="{x:Static res:LibraryStrings.Key_CtrlF}"
                                             Text="{Binding ToolbarTipText}" Footer="{x:Static res:LibraryStrings.Toolbar_CapsuleTipFooter}" />
                         </ToolTip>
                     </lib:ToolbarToggle.ToolTip>
@@ -1176,21 +1176,17 @@
                 -->
                 <lib:ToolbarPanel x:Name="ToolbarArea" ContextMenu="{StaticResource ToolbarMenu}"
                                   AutomationProperties.AutomationId="LibraryToolbar" AutomationProperties.Name="{x:Static res:LibraryStrings.Toolbar_Name}">
+                    <!-- Suche ohne Kürzel: Strg+F blendet die sichtbare Leiste aus (Wunsch des Nutzers 2026-10-22), die Kapsel nennt es -->
                     <Grid x:Name="SearchHost" lib:ToolbarPanel.Slot="Search">
                         <Grid.ToolTip>
                             <ToolTip Style="{StaticResource Lib.ToolTip}">
-                                <lib:ToolbarTip Style="{StaticResource Lib.ToolbarTip}" Title="{x:Static res:LibraryStrings.Tip_SearchTitle}" Shortcut="{x:Static res:LibraryStrings.Key_CtrlF}"
+                                <lib:ToolbarTip Style="{StaticResource Lib.ToolbarTip}" Title="{x:Static res:LibraryStrings.Tip_SearchTitle}"
                                                 Text="{x:Static res:LibraryStrings.Tip_SearchText}" Footer="{Binding SearchTipFooter}" />
                             </ToolTip>
                         </Grid.ToolTip>
                         <TextBox x:Name="SearchBox" Style="{StaticResource Lib.SearchBox}" Tag="{x:Static res:LibraryStrings.Search_Short}"
                                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                 AutomationProperties.AutomationId="SearchBox" AutomationProperties.Name="{x:Static res:LibraryStrings.Search_Name}"
-                                 AutomationProperties.AcceleratorKey="{x:Static res:LibraryStrings.Key_CtrlF}" />
-                        <Border x:Name="SearchKey" Style="{StaticResource Lib.Kbd}" HorizontalAlignment="Right" Margin="0,0,10,0" IsHitTestVisible="False"
-                                Visibility="{Binding HasSearchText, Converter={StaticResource Lib.BoolToVisibility}, ConverterParameter=invert}">
-                            <TextBlock Text="{x:Static res:LibraryStrings.Key_CtrlF}" />
-                        </Border>
+                                 AutomationProperties.AutomationId="SearchBox" AutomationProperties.Name="{x:Static res:LibraryStrings.Search_Name}" />
                         <Button Style="{StaticResource Lib.LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"
                                 Foreground="{DynamicResource Hp.Brush.TextMuted}" Command="{Binding ClearSearchCommand}"
                                 Visibility="{Binding HasSearchText, Converter={StaticResource Lib.BoolToVisibility}}"
@@ -2082,7 +2078,7 @@
                 <TextBlock Text="{x:Static res:LibraryStrings.Keys_Launch}" VerticalAlignment="Center" Margin="0,0,18,0" />
                 <Border Style="{StaticResource Lib.Kbd}" Margin="0,0,6,0"><TextBlock Text="{x:Static res:LibraryStrings.Key_Space}" /></Border>
                 <TextBlock Text="{x:Static res:LibraryStrings.Keys_HdrAuto}" VerticalAlignment="Center" Margin="0,0,18,0" />
-                <Border Style="{StaticResource Lib.Kbd}" Margin="0,0,6,0"><TextBlock Text="{x:Static res:LibraryStrings.Key_CtrlShiftF}" /></Border>
+                <Border Style="{StaticResource Lib.Kbd}" Margin="0,0,6,0"><TextBlock Text="{x:Static res:LibraryStrings.Key_CtrlF}" /></Border>
                 <TextBlock Text="{x:Static res:LibraryStrings.Keys_Toolbar}" VerticalAlignment="Center" Margin="0,0,18,0" />
                 <Border Style="{StaticResource Lib.Kbd}" Margin="0,0,6,0"><TextBlock Text="{x:Static res:LibraryStrings.Key_ShiftF10}" /></Border>
                 <TextBlock Text="{x:Static res:LibraryStrings.Keys_Menu}" VerticalAlignment="Center" />

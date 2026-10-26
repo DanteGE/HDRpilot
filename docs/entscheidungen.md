@@ -1108,6 +1108,25 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
     `phase9-autohdr-ui.ps1` klappt die Erklärungen per UI-Automation auf und zu; Zustände `liste-quelle`,
     `liste-quelle-gefiltert`, `raster-quelle`, `regal-quelle`, `liste-quellenmenue`, `liste-autohdr` und
     `liste-autohdr-mehr` für Bildschirmfotos.
+- Strg+F schaltet die Werkzeugleiste um (Wunsch des Nutzers 2026-10-22: „Nutze bitte STRG+F zum Toggeln der Leiste, die
+  3-Tasten-Kombination wird nicht benötigt.“; ändert die Auslöser der Werkzeugleiste oben): Eingeklappt klappt Strg+F sie
+  wie bisher dauerhaft aus und setzt den Cursor in die Suche; ausgeklappt klappt es sie ein wie Lasche und Menü, auch mit
+  dem Fokus in der Suche (der Fokus geht dann auf die Kapsel, Suche und Filter bleiben aktiv und stehen in der Kapsel).
+  Strg+Umschalt+F gibt es nicht mehr; Strg+F1 schaltet weiter still um. Lasche („Leiste ausblenden · Strg+F“, ihre
+  Breite folgt dem gemessenen Inhalt), Tooltip und AcceleratorKey von Lasche bzw. Kapsel, das Menü der Leiste, die
+  Tastenhinweise der Statuszeile und der Hilfetext nennen Strg+F. Das Suchfeld wirbt nicht mehr damit (kein Kürzel im
+  Tooltip, kein AcceleratorKey, keine Tastenkappe im Feld; damit entfällt deren Schwelle bei 204/216 px Suchbreite, rechts
+  bleiben 36 px für „Suche leeren“), denn bei sichtbarer Leiste blendet Strg+F sie aus; „Suchen Strg+F“ in der Kapsel
+  stimmt weiter. Prüfung: `ToolbarWindowTests` (beide Richtungen, Fokus, Strg+Umschalt+F ohne Wirkung, Texte) und
+  `phase10-ui.ps1` (zweimal `--test-toolbar-search`).
+- Menüknöpfe schließen ihr Menü (Wunsch des Nutzers 2026-10-22): „···“ und das große Symbol im Detailbereich sind wie der
+  Titel `MenuButton`. Ein zweiter Klick bei offenem Menü schließt es, statt es (wie vorher durch das Schließen beim
+  Drücken und das Öffnen beim Klick) gleich wieder zu öffnen; ebenso Eingabe- und Leertaste auf dem Knopf oder im Menü,
+  solange darin kein Eintrag gewählt ist (mit gewähltem Eintrag lösen sie den Eintrag aus), und Auslösen per
+  UI-Automation. Esc und ein Klick daneben schließen wie bisher, Aus-/Einklappen meldet den Zustand. Die Menüs von „···“
+  und Symbol stehen jetzt wie das Quellenmenü bündig 4 px unter dem Knopf. Die Felder „Quelle“ und „Sortierung“ der
+  Werkzeugleiste sind Auswahlfelder, die das schon können; Lasche, Kapsel und Leiste öffnen ihr Menü nur per Rechtsklick
+  (wie jedes Kontextmenü). Prüfung: `MenuToggleTests`.
 
 **E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
 2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und

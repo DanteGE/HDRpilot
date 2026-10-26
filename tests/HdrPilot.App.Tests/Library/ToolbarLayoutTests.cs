@@ -185,19 +185,6 @@ public sealed class ToolbarLayoutTests
         Assert.Equal(2, ToolbarLayout.Arrange(805, memory: ToolbarLayout.Arrange(810).Memory).Rows);
     }
 
-    [Fact]
-    public void Search_key_hides_below_204_and_while_dragging_returns_only_at_216()
-    {
-        // Suchbreite 236 - d·68/156: 204 bei L ≈ 996,6; 216 bei L ≈ 1024,1.
-        Assert.True(ToolbarLayout.Arrange(1000).SearchKey);
-        Assert.False(ToolbarLayout.Arrange(990).SearchKey);
-        var hidden = ToolbarLayout.Arrange(990).Memory;
-        Assert.False(ToolbarLayout.Arrange(1010, memory: hidden).SearchKey);
-        Assert.True(ToolbarLayout.Arrange(1030, memory: hidden).SearchKey);
-        Assert.False(ToolbarLayout.Arrange(850).SearchKey); // Symbol-Stufe: Suche 168
-        Assert.True(ToolbarLayout.Arrange(1434).SearchKey);
-    }
-
     [Theory]
     [InlineData(96)]
     [InlineData(106)] // 110 %

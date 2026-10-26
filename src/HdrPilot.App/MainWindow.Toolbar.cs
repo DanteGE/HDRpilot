@@ -196,7 +196,7 @@ public partial class MainWindow
         _toolbarMotion.Tick();
     }
 
-    /// <summary>Bildschirmfoto: Lasche beim Überfahren (Hinweis „Leiste ausblenden · Strg+Umschalt+F“), ohne Bewegung.</summary>
+    /// <summary>Bildschirmfoto: Lasche beim Überfahren (Hinweis „Leiste ausblenden · Strg+F“), ohne Bewegung.</summary>
     public void PreviewTabHover()
     {
         if (!_shownCollapsed)
@@ -312,7 +312,7 @@ public partial class MainWindow
     // ---------- Ein- und Ausklappen ----------
 
     /// <summary>
-    /// Zustand des ViewModels zeigen (Lasche, Kapsel, Strg+Umschalt+F, Menü, Strg+F): Endlayout sofort, die Liste wird nur
+    /// Zustand des ViewModels zeigen (Lasche, Kapsel, Strg+F, Strg+F1, Menü): Endlayout sofort, die Liste wird nur
     /// verschoben (FLIP), Bewegung nach Effektstufe; liegt der Fokus beim Einklappen in der Leiste, geht er auf die Kapsel.
     /// Eine Ansage meldet den neuen Zustand.
     /// </summary>
@@ -465,7 +465,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Neue Anordnung der Leiste (im selben Layout-Durchgang wie die neue Breite): Nur beim Ziehen werden die Schritte
-    /// bewegt (Zeilenwechsel als Morph bzw. Überblenden, Sortier-Schritt, Tastenkappe), sonst gilt sofort der Endzustand,
+    /// bewegt (Zeilenwechsel als Morph bzw. Überblenden, Sortier-Schritt), sonst gilt sofort der Endzustand,
     /// ebenso bei einer anderen Skalierung (DPI-Wechsel). Die Elemente stehen schon an ihrem neuen Platz; die Kanäle führen
     /// sie vom alten dorthin (FLIP).
     /// </summary>
@@ -529,21 +529,7 @@ public partial class MainWindow
             _toolbarMotion.Set(ToolbarChoreography.SortWidth, current[ToolbarSlot.Sort].Width);
         }
 
-        _choreography.SearchKeyTo(current.SearchKey, animate && e.SearchKeyChanged);
-        UpdateSearchPadding();
         _toolbarMotion.Apply();
-    }
-
-    /// <summary>Platz rechts im Suchfeld: so viel, wie die Tastenkappe „Strg+F“ gerade braucht.</summary>
-    private void UpdateSearchPadding()
-    {
-        var key = ToolbarArea.Arrangement?.SearchKey != false && _viewModel?.HasSearchText != true;
-        var padding = SearchBox.Padding;
-        var right = key ? 70 : 36;
-        if (Math.Abs(padding.Right - right) > 0.1)
-        {
-            SearchBox.Padding = new Thickness(padding.Left, padding.Top, right, padding.Bottom);
-        }
     }
 
     // ---------- Lasche, Kapsel, Lichtnaht ----------
@@ -1024,7 +1010,6 @@ public partial class MainWindow
             ((TranslateTransform)label.RenderTransform).X = ch.Get(ToolbarChoreography.SortLabelX);
         }
 
-        SearchKey.Opacity = ch.Get(ToolbarChoreography.SearchKey, 1);
         ApplyListShift(ch.Get(ToolbarChoreography.ListDy));
         ApplyTabMotion();
         if (HeroLargeSink.RenderTransform is TranslateTransform sink)

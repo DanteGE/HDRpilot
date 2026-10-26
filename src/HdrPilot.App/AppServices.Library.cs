@@ -345,7 +345,7 @@ public sealed partial class AppServices
         await Task.Delay(400);
     }
 
-    /// <summary>Lasche, wie sie beim Überfahren nach links zu „Leiste ausblenden · Strg+Umschalt+F“ gewachsen ist.</summary>
+    /// <summary>Lasche, wie sie beim Überfahren nach links zu „Leiste ausblenden · Strg+F“ gewachsen ist.</summary>
     private static async Task HoverTabAsync(Window window)
     {
         if (window is MainWindow main)
@@ -376,7 +376,8 @@ public sealed partial class AppServices
     }
 
     /// <summary>
-    /// Prüfung (G10.5): Strg+F im offenen Hauptfenster wie gedrückt (MainWindow.HandleKey, ohne Tastatureingabe). Im
+    /// Prüfung (G10.5): Strg+F im offenen Hauptfenster wie gedrückt (MainWindow.HandleKey, ohne Tastatureingabe; schaltet die
+    /// Werkzeugleiste um, eingeklappt mit dem Cursor in der Suche). Im
     /// Protokoll stehen danach der Zustand der Werkzeugleiste und wohin der Fokus ging (in einem nicht aktiven Fenster der
     /// Fokus, den es beim Aktivieren wiederherstellt; er wird niemandem genommen).
     /// </summary>

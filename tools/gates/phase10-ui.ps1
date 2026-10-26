@@ -16,8 +16,9 @@
 #     Neustart); eingeklappt ist die Leiste nicht mehr im Automationsbaum, die Kapsel sitzt mittig auf der Bildkante 10 px
 #     über der Liste (der Titelbereich springt nicht) bzw. im Regal in der früheren Leistenzeile unter der Automatik-Karte,
 #     nennt die Filter („Gefiltert: …“) und setzt sie zurück; ausgeklappt gibt es kein unsichtbares „zurücksetzen“
-#   - Strg+F bei eingeklappter Leiste über die Testinstanz (--test-toolbar-search, keine Tastatureingabe): dauerhaft
-#     ausgeklappt, gemerkt, Fokus auf der Suche (Prüfung 2026-10-19)
+#   - Strg+F über die Testinstanz (--test-toolbar-search, keine Tastatureingabe): bei eingeklappter Leiste dauerhaft
+#     ausgeklappt, gemerkt, Fokus auf der Suche (Prüfung 2026-10-19); ein zweites Mal klappt es wieder ein, gemerkt, Fokus
+#     auf der Kapsel (Strg+F schaltet um, Wunsch des Nutzers 2026-10-22)
 #   - Auswahl beim Filtern (Entscheidung des Nutzers 2026-10-19): Fällt das gewählte Spiel mit „Neu“ heraus, zeigen Liste
 #     und Details leise den ersten Treffer (bleibt neu, nichts gespeichert); eine Suche ohne Treffer lässt kein Spiel
 #     gewählt und zeigt „Keine Spiele für diese Auswahl“, der Detailbereich dazu „Kein Spiel gewählt“ statt „Wähle ein
@@ -469,6 +470,19 @@ try {
         $searchStored = (Read-Config $cfg).settings.libraryToolbarCollapsed
         Check ($searchExpanded -and -not $searchStored) ('Strg+F: dauerhaft ausgeklappt und gemerkt (libraryToolbarCollapsed {0})' -f $searchStored)
         Check ($null -ne (Find-Id $win 'SearchBox' 3000)) 'Strg+F: Suche wieder im Automationsbaum'
+
+        # Strg+F bei ausgeklappter Leiste schaltet um (Wunsch des Nutzers 2026-10-22): eingeklappt und gemerkt, der Fokus geht
+        # wie bei der Lasche auf die Kapsel. Danach wieder ausklappen für die folgenden Prüfungen.
+        Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--test-toolbar-search') | Out-Null
+        $toggleLog = Wait-Until { $l = Wait-Log $cfg $searchPattern 500; $l -and ([regex]::Matches($l, $searchPattern)).Count -ge 2 } 8000
+        $toggleHit = if ($toggleLog) { [regex]::Matches((Wait-Log $cfg $searchPattern 500), $searchPattern) | Select-Object -Last 1 } else { $null }
+        Check ($toggleHit -and $toggleHit.Groups[1].Value -eq 'erledigt' -and $toggleHit.Groups[2].Value -eq 'eingeklappt' -and $toggleHit.Groups[3].Value -eq 'ToolbarToggle') ('Strg+F bei sichtbarer Leiste: eingeklappt, Fokus auf der Kapsel („{0}“)' -f $(if ($toggleHit) { $toggleHit.Value } else { 'nicht im Protokoll' }))
+        $toggleCollapsed = Wait-Until { $expand.Current.ExpandCollapseState -eq 'Collapsed' } 4000
+        Start-Sleep -Milliseconds 1500
+        Check ($toggleCollapsed -and (Read-Config $cfg).settings.libraryToolbarCollapsed -eq $true) 'Strg+F bei sichtbarer Leiste: eingeklappt gemerkt'
+        $expand.Expand()
+        Check (Wait-Until { $expand.Current.ExpandCollapseState -eq 'Expanded' } 4000) 'Nach Strg+F wieder ausgeklappt'
+        Start-Sleep -Milliseconds 1500
     }
 
     # --- Detailbereich: alle bisherigen Funktionen und „BILDER“ ---

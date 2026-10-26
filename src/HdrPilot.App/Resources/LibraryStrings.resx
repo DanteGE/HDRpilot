@@ -140,9 +140,6 @@
   </data>
 
   <!-- Werkzeugleiste -->
-  <data name="Search_Placeholder" xml:space="preserve">
-    <value>Spiele durchsuchen …   Strg+F</value>
-  </data>
   <data name="Search_Name" xml:space="preserve">
     <value>Spiele durchsuchen</value>
   </data>
@@ -1349,7 +1346,7 @@
     <value>Werkzeugleiste</value>
   </data>
   <data name="Toolbar_ToggleHelp" xml:space="preserve">
-    <value>Strg+Umschalt+F oder Strg+F1 blendet die Werkzeugleiste aus und ein, Strg+F sucht, Umschalt+F10 öffnet ihr Menü.</value>
+    <value>Strg+F blendet die Werkzeugleiste ein und aus; beim Einblenden steht der Cursor in der Suche. Strg+F1 geht auch, Umschalt+F10 öffnet ihr Menü.</value>
   </data>
   <data name="Toolbar_Hide" xml:space="preserve">
     <value>Leiste ausblenden</value>
@@ -1403,9 +1400,6 @@
   </data>
   <data name="Toolbar_ResetAll" xml:space="preserve">
     <value>Alle Filter zurücksetzen</value>
-  </data>
-  <data name="Key_CtrlShiftF" xml:space="preserve">
-    <value>Strg+Umschalt+F</value>
   </data>
   <data name="Key_AltA" xml:space="preserve">
     <value>Alt+A</value>

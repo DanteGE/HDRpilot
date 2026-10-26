@@ -348,17 +348,24 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.False(toggle.IsExpanded);
             Assert.True(context.Config.Settings.LibraryToolbarCollapsed);
 
-            // Strg+Umschalt+F und Strg+F1 schalten um.
-            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control | ModifierKeys.Shift, null));
+            // Strg+F1 schaltet still um (in beide Richtungen); Strg+Umschalt+F gibt es nicht mehr (Wunsch des Nutzers 2026-10-22).
+            Assert.True(window.HandleKey(Key.F1, ModifierKeys.Control, null));
             Assert.False(model.IsToolbarCollapsed);
             Assert.True(window.HandleKey(Key.F1, ModifierKeys.Control, null));
             Assert.True(model.IsToolbarCollapsed);
+            Assert.False(window.HandleKey(Key.F, ModifierKeys.Control | ModifierKeys.Shift, null));
+            Assert.True(model.IsToolbarCollapsed);
 
-            // Strg+F klappt dauerhaft aus (gemerkt) und geht in die Suche.
+            // Strg+F schaltet um: eingeklappt dauerhaft ausklappen (gemerkt) und in die Suche, ausgeklappt einklappen (gemerkt).
             Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, null));
             Assert.False(model.IsToolbarCollapsed);
             Assert.False(context.Config.Settings.LibraryToolbarCollapsed);
-            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, null)); // ausgeklappt bleibt es so
+            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, null));
+            Assert.True(model.IsToolbarCollapsed);
+            Assert.True(context.Config.Settings.LibraryToolbarCollapsed);
+            Assert.False(window.HandleKey(Key.F, ModifierKeys.Control | ModifierKeys.Shift, null));
+            Assert.True(model.IsToolbarCollapsed);
+            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, null));
             Assert.False(model.IsToolbarCollapsed);
 
             // Menü der Leiste: erster Eintrag blendet aus bzw. ein, Filter mit Haken, Zahl und Kürzel, alles zurücksetzen.
@@ -434,7 +441,7 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.Equal("ToolbarToggle", peer.GetAutomationId());
             Assert.Equal(LibraryStrings.Toolbar_NoFilters, peer.GetItemStatus());
             Assert.Equal(LibraryStrings.Toolbar_ToggleHelp, peer.GetHelpText());
-            Assert.Equal(LibraryStrings.Key_CtrlShiftF, peer.GetAcceleratorKey());
+            Assert.Equal(LibraryStrings.Key_CtrlF, peer.GetAcceleratorKey());
             Assert.True(toggle.Focusable && KeyboardNavigation.GetIsTabStop(toggle));
             var expand = Assert.IsAssignableFrom<IExpandCollapseProvider>(peer.GetPattern(PatternInterface.ExpandCollapse));
             Assert.Equal(ExpandCollapseState.Expanded, expand.ExpandCollapseState);
@@ -804,10 +811,10 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.Equal(Visibility.Collapsed, reset.Visibility);
             Assert.Same(toggle, FocusManager.GetFocusedElement(window));
 
-            // ✕ mit Fokus, dann Strg+Umschalt+F (ausklappen, das ✕ nimmt keinen Fokus mehr): ebenso.
+            // ✕ mit Fokus, dann Strg+F1 (ausklappen, das ✕ nimmt keinen Fokus mehr): ebenso.
             Assert.True(window.HandleKey(Key.N, ModifierKeys.Alt, null));
             FocusManager.SetFocusedElement(window, reset);
-            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control | ModifierKeys.Shift, null));
+            Assert.True(window.HandleKey(Key.F1, ModifierKeys.Control, null));
             Assert.False(model.IsToolbarCollapsed);
             Assert.False(reset.Focusable);
             Assert.Same(toggle, FocusManager.GetFocusedElement(window));
@@ -817,6 +824,46 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
             Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, null));
             Assert.False(model.IsToolbarCollapsed);
             Assert.Same(search, FocusManager.GetFocusedElement(window));
+
+            // Noch einmal Strg+F mit dem Fokus in der Suche: einklappen wie mit der Lasche, der Fokus geht auf die Kapsel; der
+            // Filter bleibt aktiv und steht in der Kapsel.
+            Assert.True(window.HandleKey(Key.F, ModifierKeys.Control, search));
+            Assert.True(model.IsToolbarCollapsed);
+            Assert.Same(toggle, FocusManager.GetFocusedElement(window));
+            Assert.NotEqual(LibraryStrings.Toolbar_NoFilters, model.ToolbarSummary);
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void Ctrl_f_is_advertised_for_the_toolbar_and_no_longer_by_the_search_box()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Strg+F blendet die sichtbare Leiste aus (Wunsch des Nutzers 2026-10-22): Lasche, Menü, Kapsel und Tastenhinweise
+            // nennen es, das Suchfeld nicht mehr (kein Kürzel im Tooltip, keine Tastenkappe, kein AcceleratorKey).
+            var (window, _, _) = Open(new Size(1745, 982));
+            var search = Named<TextBox>(window, "SearchBox");
+            Assert.Equal(string.Empty, AutomationProperties.GetAcceleratorKey(search));
+            Assert.Null(window.FindName("SearchKey"));
+            Assert.Equal(36, search.Padding.Right);
+            var tip = Assert.IsType<ToolbarTip>(Assert.IsType<ToolTip>(Named<Grid>(window, "SearchHost").ToolTip).Content);
+            Assert.True(string.IsNullOrEmpty(tip.Shortcut));
+
+            var toggle = Named<ToolbarToggle>(window, "ToolbarToggle");
+            Assert.Equal(LibraryStrings.Key_CtrlF, AutomationProperties.GetAcceleratorKey(toggle));
+            var toggleTip = Assert.IsType<ToolbarTip>(Assert.IsType<ToolTip>(toggle.ToolTip).Content);
+            Assert.Equal(LibraryStrings.Key_CtrlF, toggleTip.Shortcut);
+            var menu = Assert.IsType<ContextMenu>(toggle.ContextMenu);
+            menu.PlacementTarget = toggle;
+            WpfTestHost.DoEvents();
+            Assert.Equal(LibraryStrings.Key_CtrlF, menu.Items.OfType<MenuItem>().First().InputGestureText);
+            var hints = Named<StackPanel>(window, "KeyHints");
+            var keys = hints.Children.OfType<Border>().Select(b => ((TextBlock)b.Child).Text).ToList();
+            Assert.Contains(LibraryStrings.Key_CtrlF, keys);
+            Assert.DoesNotContain("Strg+Umschalt+F", keys);
+            Assert.DoesNotContain("Strg+Umschalt+F", LibraryStrings.Toolbar_ToggleHelp, StringComparison.Ordinal);
+            Assert.Contains("Strg+F blendet die Werkzeugleiste ein und aus", LibraryStrings.Toolbar_ToggleHelp, StringComparison.Ordinal);
             window.Close();
         });
     }

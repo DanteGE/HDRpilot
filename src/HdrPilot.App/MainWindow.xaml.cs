@@ -359,8 +359,8 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Tastenkürzel der Bibliothek: Strg+F Suche (klappt eine eingeklappte Werkzeugleiste dauerhaft aus), Strg+Umschalt+F und
-    /// Strg+F1 Werkzeugleiste aus- bzw. einblenden, Alt+A/N/H die Filter (auch bei eingeklappter Leiste), Strg+1/2/3
+    /// Tastenkürzel der Bibliothek: Strg+F blendet die Werkzeugleiste ein und aus (eingeklappt: dauerhaft ausklappen, Cursor in
+    /// die Suche; Wunsch des Nutzers 2026-10-22), Strg+F1 ebenso ohne die Suche, Alt+A/N/H die Filter (auch bei eingeklappter Leiste), Strg+1/2/3
     /// Liste/Raster/Regal, Esc leert die Suche bzw. schließt die Schublade, auf einer Zeile oder Kachel Enter starten,
     /// Leertaste „HDR automatisch“, Entf entfernen (mit Rückfrage), I Details (Regal), Pfeile im Raster und Regal.
     /// Modifikatoren und Fokus kommen als Werte (Tests: ohne angezeigtes Fenster gibt es keinen Tastaturfokus).
@@ -375,7 +375,7 @@ public partial class MainWindow : ChromeWindow
 
         var ctrl = modifiers == ModifierKeys.Control;
         var inSearch = ReferenceEquals(focused, SearchBox);
-        if ((key == Key.F && modifiers == (ModifierKeys.Control | ModifierKeys.Shift)) || (key == Key.F1 && ctrl))
+        if (key == Key.F1 && ctrl)
         {
             vm.IsToolbarCollapsed = !vm.IsToolbarCollapsed;
             return true;
@@ -383,13 +383,17 @@ public partial class MainWindow : ChromeWindow
 
         if (key == Key.F && ctrl)
         {
-            // Eingeklappt: dauerhaft ausklappen (gemerkt), die Elemente entfalten sich von der Suche aus.
-            if (vm.IsToolbarCollapsed)
+            // Ausgeklappt: einklappen wie Lasche und Menü (der Fokus geht, auch aus der Suche, auf die Kapsel; Suche und
+            // Filter bleiben und stehen in der Kapsel).
+            if (!vm.IsToolbarCollapsed)
             {
-                _expandFromSearch = true;
-                vm.IsToolbarCollapsed = false;
+                vm.IsToolbarCollapsed = true;
+                return true;
             }
 
+            // Eingeklappt: dauerhaft ausklappen (gemerkt), die Elemente entfalten sich von der Suche aus.
+            _expandFromSearch = true;
+            vm.IsToolbarCollapsed = false;
             FocusInWindow(SearchBox);
             SearchBox.SelectAll();
             return true;
@@ -1383,9 +1387,6 @@ public partial class MainWindow : ChromeWindow
                 break;
             case nameof(LibraryViewModel.ToolbarSummary):
                 UpdateCapsule(ToolbarLevel());
-                break;
-            case nameof(LibraryViewModel.HasSearchText):
-                UpdateSearchPadding();
                 break;
             case nameof(LibraryViewModel.SortTipCompactText) when ToolbarArea.Arrangement is { SortIconOnly: true }:
                 SortTip.Text = vm.SortTipCompactText;

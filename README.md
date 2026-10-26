@@ -115,13 +115,15 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   Breite der Details änderst du an der feinen Linie, die beim Überfahren des Spalts erscheint: waagerecht ziehen (Esc
   bricht ab), mit Fokus auf dem Trenner die Pfeiltasten, Doppelklick setzt zurück; die Breite merkt sich HDRpilot,
   höchstens 560 px.
-- Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR
-  automatisch“, Esc leert die Suche, Entf fragt bei einem nicht installierten Spiel aus einem Launcher, ob seine
-  Einstellungen weg sollen, bei einem selbst hinzugefügten, ob es aus der Bibliothek soll (siehe unten). Rechtsklick,
-  Umschalt+F10 oder die Menütaste öffnen das Spielmenü mit **Starten**, **HDR automatisch**, **Nach dem Spiel
-  zurückstellen**, **Windows Auto HDR**, **Bild wählen…**, **Symbol ändern…** bzw. **Symbol zurücksetzen**,
-  **Desktop-Verknüpfung erstellen**, **Zum Startmenü hinzufügen**, **Installationsordner öffnen** und, nur bei nicht
-  installierten Spielen aus Launchern, **Einstellungen entfernen…**.
+- Tastatur: Strg+F blendet die Werkzeugleiste ein (der Cursor steht dann in der Suche) und wieder aus, die Pfeiltasten
+  wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR automatisch“, Esc leert die Suche, Entf fragt
+  bei einem nicht installierten Spiel aus einem Launcher, ob seine Einstellungen weg sollen, bei einem selbst
+  hinzugefügten, ob es aus der Bibliothek soll (siehe unten). Rechtsklick, Umschalt+F10 oder die Menütaste öffnen das
+  Spielmenü mit **Starten**, **HDR automatisch**, **Nach dem Spiel zurückstellen**, **Windows Auto HDR**, **Bild
+  wählen…**, **Symbol ändern…** bzw. **Symbol zurücksetzen**, **Desktop-Verknüpfung erstellen**, **Zum Startmenü
+  hinzufügen**, **Installationsordner öffnen** und, nur bei nicht installierten Spielen aus Launchern, **Einstellungen
+  entfernen…**. Knöpfe, die ein Menü öffnen (der Titel mit den Quellen, „···“ und das große Symbol in den Details),
+  schließen es beim zweiten Klick wieder, ebenso Eingabe- oder Leertaste, solange darin nichts gewählt ist.
 - Titelbild, Logo und Cover kommen aus den Bild-Zwischenspeichern der Launcher auf dem PC (Steam, GOG Galaxy, Ubisoft
   Connect, Xbox-Paket, bei Quiver nur das Cover), nur lesend, nie aus dem Netz. Fehlt eines, erzeugt HDRpilot ein
   Ersatzbild aus Symbol und Name; neue Bilder eines Launchers erscheinen von selbst, bei Quiver nach dem nächsten
@@ -147,19 +149,19 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
   das große Symbol in den Details: **Symbol ändern…** nimmt ein Bild (PNG, JPG, WebP, BMP, GIF, ICO) oder eine EXE,
   **Symbol zurücksetzen** zeigt wieder das automatische Symbol. Das eigene Symbol hat Vorrang vor allen anderen
   Quellen; die gewählte Datei bleibt unverändert, HDRpilot legt eine verkleinerte Kopie (96 px) in seinem Datenordner ab.
-- Die Werkzeugleiste über der Liste: Suche (Strg+F), Filter nach Quelle, Sortierung, die Filter **HDR automatisch**,
+- Die Werkzeugleiste über der Liste: Suche, Filter nach Quelle, Sortierung, die Filter **HDR automatisch**,
   **Neu** und **HDR-fähig** als Symbol-Schalter mit ihrer Zahl (auch Alt+A, Alt+N, Alt+H), rechts Ansicht, **Neu
   einlesen**, **Alle als gesehen markieren** und **Spiel hinzufügen**. Zeigst du eine Sekunde auf ein Element, erklärt
   ein Tooltip es samt Kürzel. In schmaleren Fenstern werden Suche, Quelle und Sortierung schmaler, dann zeigt die
   Sortierung nur ihr Symbol; erst wenn auch das nicht passt, verteilt sich die Leiste auf zwei Zeilen. Ein Filter-Schalter
   ist nur hervorgehoben, solange sein Filter an ist; den Fokusrahmen zeigt er nur, wenn du mit der Tastatur bedienst,
   nicht nach einem Mausklick.
-- Die Werkzeugleiste lässt sich ausblenden: über die kleine Lasche rechts über der Leiste, mit Strg+Umschalt+F oder
-  Strg+F1 oder per Rechtsklick auf eine freie Stelle der Leiste (auch Umschalt+F10) › **Leiste ausblenden**. Dann
-  steht an der Unterkante des Titelbilds nur eine Kapsel, die die Suche bzw. die aktiven Filter samt Anzahl zeigt;
-  gefiltert leuchtet die Kante, und das Kreuz in der Kapsel setzt alle Filter zurück. Ein Klick auf die Kapsel,
-  dasselbe Kürzel oder Strg+F (sucht dann gleich) blendet die Leiste wieder ein. HDRpilot merkt sich, ob sie aus- oder
-  eingeblendet ist.
+- Die Werkzeugleiste lässt sich ausblenden: über die kleine Lasche rechts über der Leiste, mit Strg+F (auch aus der
+  Suche heraus; Strg+F1 geht auch) oder per Rechtsklick auf eine freie Stelle der Leiste (auch Umschalt+F10) › **Leiste
+  ausblenden**. Dann steht an der Unterkante des Titelbilds nur eine Kapsel, die die Suche bzw. die aktiven Filter samt
+  Anzahl zeigt; Suche und Filter bleiben dabei aktiv, gefiltert leuchtet die Kante, und das Kreuz in der Kapsel setzt
+  alle Filter zurück. Ein Klick auf die Kapsel oder Strg+F blendet die Leiste wieder ein, mit Strg+F steht der Cursor
+  gleich in der Suche. HDRpilot merkt sich, ob sie aus- oder eingeblendet ist.
 - Fällt das gewählte Spiel durch Suche oder Filter aus der Liste, zeigen Titelbild und Details den ersten Treffer (er
   bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“
   und in den Details „Kein Spiel gewählt“. Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen

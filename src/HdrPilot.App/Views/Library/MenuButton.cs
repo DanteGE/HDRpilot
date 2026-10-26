@@ -43,6 +43,9 @@ public sealed class MenuButton : Button
     /// <summary>So kurz nach dem Schließen gehört ein Drücken noch dazu (die Maus geht erst ans Menü, dann an den Knopf).</summary>
     private const long PressWindowMs = 250;
 
+    /// <summary>Länger gehalten zählt das Drücken nicht mehr als „Menü zu“: Ein Klick danach öffnet wieder.</summary>
+    private const long PressHoldMs = 3000;
+
     public bool IsMenuOpen => (bool)GetValue(IsMenuOpenProperty);
 
     /// <summary>Menü öffnen; <paramref name="byKeyboard"/>: Fokus auf den gewählten Eintrag.</summary>
@@ -81,7 +84,10 @@ public sealed class MenuButton : Button
         if (_pressClosedMenu)
         {
             _pressClosedMenu = false;
-            return;
+            if (Environment.TickCount64 - _closedTick <= PressHoldMs)
+            {
+                return;
+            }
         }
 
         if (IsMenuOpen)
@@ -99,6 +105,7 @@ public sealed class MenuButton : Button
         if (IsMenuOpen)
         {
             _pressClosedMenu = true;
+            _closedTick = Environment.TickCount64;
         }
         else if (_pressClosedMenu && Environment.TickCount64 - _closedTick > PressWindowMs)
         {
@@ -116,6 +123,13 @@ public sealed class MenuButton : Button
         {
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => _pressClosedMenu = false);
         }
+    }
+
+    /// <summary>Eine Taste beginnt eine neue Bedienung: Ein übrig gebliebenes Drücken (außerhalb losgelassen) zählt nicht mehr.</summary>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        _pressClosedMenu = false;
+        base.OnPreviewKeyDown(e);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -226,8 +240,9 @@ public sealed class MenuButton : Button
 
     private void OnMenuClosed(object sender, RoutedEventArgs e)
     {
-        // Geschlossen, weil die Maus auf diesem Knopf gedrückt wurde: Der folgende Klick soll es nicht wieder öffnen.
-        if (IsMouseOver && Mouse.LeftButton == MouseButtonState.Pressed)
+        // Geschlossen, weil die Maus auf diesem Knopf gedrückt wurde: Der folgende Klick soll es nicht wieder öffnen. Nach der
+        // Lage gefragt, nicht nach IsMouseOver: Solange das Menü die Maus hält, meldet IsMouseOver dessen Elemente.
+        if (Mouse.LeftButton == MouseButtonState.Pressed && new Rect(RenderSize).Contains(Mouse.GetPosition(this)))
         {
             _pressClosedMenu = true;
             _closedTick = Environment.TickCount64;

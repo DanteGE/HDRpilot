@@ -152,6 +152,31 @@ public sealed class MenuToggleTests
         });
     }
 
+    [Fact]
+    public void A_key_after_a_press_released_elsewhere_opens_the_menu_again()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (button, menu) = Standalone();
+            try
+            {
+                // Drücken bei offenem Menü schließt es; losgelassen wird außerhalb (kein Klick, kein Loslassen am Knopf).
+                Invoke(button);
+                Raise(button, UIElement.PreviewMouseLeftButtonDownEvent);
+                Close(menu);
+
+                // Eine Taste beginnt eine neue Bedienung: Eingabetaste bzw. Auslösen danach öffnet das Menü.
+                Press(button, Key.LeftCtrl);
+                Invoke(button);
+                Assert.True(menu.IsOpen);
+            }
+            finally
+            {
+                Close(menu);
+            }
+        });
+    }
+
     [Theory]
     [InlineData(Key.Enter)]
     [InlineData(Key.Space)]

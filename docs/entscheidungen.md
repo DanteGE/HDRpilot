@@ -1001,12 +1001,13 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   geht kein Fokus verloren. Was von der Höhe der Leiste abhängt (größter Titelbereich der Liste, Titelbereich des
   Rasters, Lage des Trenners), nimmt ihre ausgeklappte Höhe.
   Ein- und ausblenden: Lasche 36×18 rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen);
-  beim Überfahren wächst sie zu „Leiste ausblenden · Strg+Umschalt+F“. Eingeklappt sitzt eine Kapsel (24 px hoch) mittig
+  beim Überfahren wächst sie zu „Leiste ausblenden · Strg+Umschalt+F“ (seit 2026-10-22 „· Strg+F“, siehe unten). Eingeklappt sitzt eine Kapsel (24 px hoch) mittig
   auf der Bildkante, rechtsbündig mit der Liste (Liste 10 px, Raster 22 px darunter); sie zeigt „Suchen Strg+F“ (11 px
   zwischen Wort und Tastenkappe) oder die aktiven Filter (Suchbegriff, Quelle, Mini-Symbole, „x/652“, was nicht passt als
   „+2“) mit „Suche und Filter zurücksetzen“ (✕, nur eingeklappt und gefiltert da, sonst auch nicht im Automationsbaum),
   gefiltert dazu die Lichtnaht entlang der Bildkante. Die Leuchtlinie des Ziehgriffs endet 12 px vor Lasche bzw. Kapsel.
-  Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel, Strg+Umschalt+F, Strg+F1, Strg+F (blendet dauerhaft
+  Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel, Strg+Umschalt+F (seit 2026-10-22 entfallen, Strg+F
+  schaltet um, siehe unten), Strg+F1, Strg+F (blendet dauerhaft
   ein und sucht) und das Menü der Leiste (Rechtsklick auf freie Fläche, Umschalt+F10 bzw. Menütaste: ein-/ausblenden,
   die drei Filter mit Zahl und Kürzel, alle zurücksetzen). Gemerkt in `settings.libraryToolbarCollapsed` (ohne Eintrag
   ausgeklappt); beim Start ohne Bewegung. Der Titelbereich springt nie: Höhe und Bereich des Griffs rechnen immer mit der

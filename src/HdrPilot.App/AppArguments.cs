@@ -92,8 +92,8 @@ public sealed record AppArguments
     public bool TestHdrMoment { get; init; }
 
     /// <summary>
-    /// Prüfung (G10.5): in der Bibliothek Strg+F ausführen wie gedrückt (eine eingeklappte Werkzeugleiste klappt dauerhaft aus,
-    /// die Suche bekommt den Fokus), ohne Tastatureingabe. Wirkt nur in einer Instanz mit eigener Ablage (--config-dir) und
+    /// Prüfung (G10.5): in der Bibliothek Strg+F ausführen wie gedrückt (schaltet die Werkzeugleiste um: eingeklappt klappt sie
+    /// dauerhaft aus und die Suche bekommt den Fokus, ausgeklappt klappt sie ein), ohne Tastatureingabe. Wirkt nur in einer Instanz mit eigener Ablage (--config-dir) und
     /// wird an sie weitergereicht.
     /// </summary>
     public bool TestToolbarSearch { get; init; }

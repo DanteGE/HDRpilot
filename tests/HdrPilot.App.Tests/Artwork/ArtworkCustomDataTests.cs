@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HdrPilot.App.Services.Artwork;
@@ -36,7 +35,7 @@ public sealed class ArtworkCustomDataTests : IDisposable
 
         // Über 32 MB, über 100 Megapixel laut Kopf, oder kein Bild: wie bei Dateien.
         Assert.Throws<ImageTooLargeException>(() => ArtworkImaging.Decode(new byte[ArtworkImaging.MaxFileBytes + 1], 100));
-        Assert.Throws<ImageTooLargeException>(() => ArtworkImaging.Decode(GrayPng(20000, 20000, headerOnly: true), 100));
+        Assert.Throws<ImageTooLargeException>(() => ArtworkImaging.Decode(TestPng.Gray(20000, 20000, headerOnly: true), 100));
         var garbage = Record.Exception(() => ArtworkImaging.Decode("kein Bild"u8.ToArray(), 100));
         Assert.NotNull(garbage);
         Assert.True(ArtworkImaging.IsDecodeFailure(garbage));
@@ -46,7 +45,7 @@ public sealed class ArtworkCustomDataTests : IDisposable
     public void Validate_with_the_save_width_rejects_what_the_save_would_refuse()
     {
         // 600 × 61000 hat weniger als 100 MP, wäre aber in der Speicherbreite (Cover 1800, also ganz) über 36 MP.
-        var tall = GrayPng(600, 61000);
+        var tall = TestPng.Gray(600, 61000);
 
         Assert.Equal((600, 61000), ArtworkImaging.Validate(tall, ArtworkImaging.MaxSourcePixels));
         Assert.Throws<ImageTooLargeException>(() => ArtworkImaging.Validate(tall, ArtworkImaging.MaxSourcePixels, ArtworkService.CustomSaveWidth(ArtworkKind.Cover)));
@@ -144,64 +143,5 @@ public sealed class ArtworkCustomDataTests : IDisposable
         using var stream = new MemoryStream();
         encoder.Save(stream);
         return stream.ToArray();
-    }
-
-    /// <summary>Graues PNG (8 Bit) beliebiger Größe, klein durch Kompression; nur der Kopf, wenn gewünscht.</summary>
-    private static byte[] GrayPng(int width, int height, bool headerOnly = false)
-    {
-        using var output = new MemoryStream();
-        output.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
-        var header = new byte[13];
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header, width);
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4), height);
-        header[8] = 8; // Bittiefe
-        header[9] = 0; // Graustufen
-        Chunk(output, "IHDR", header);
-        if (!headerOnly)
-        {
-            using var raw = new MemoryStream();
-            using (var zlib = new ZLibStream(raw, CompressionLevel.Fastest, leaveOpen: true))
-            {
-                var row = new byte[width + 1];
-                Array.Fill(row, (byte)128, 1, width);
-                for (var y = 0; y < height; y++)
-                {
-                    zlib.Write(row);
-                }
-            }
-
-            Chunk(output, "IDAT", raw.ToArray());
-        }
-
-        Chunk(output, "IEND", []);
-        return output.ToArray();
-    }
-
-    private static void Chunk(Stream output, string type, byte[] data)
-    {
-        var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
-        var length = new byte[4];
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(length, data.Length);
-        output.Write(length);
-        output.Write(typeBytes);
-        output.Write(data);
-        var crc = new byte[4];
-        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(crc, Crc32([.. typeBytes, .. data]));
-        output.Write(crc);
-    }
-
-    private static uint Crc32(byte[] data)
-    {
-        var crc = 0xFFFFFFFFu;
-        foreach (var b in data)
-        {
-            crc ^= b;
-            for (var k = 0; k < 8; k++)
-            {
-                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
-            }
-        }
-
-        return ~crc;
     }
 }

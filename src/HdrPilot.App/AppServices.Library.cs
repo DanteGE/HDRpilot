@@ -25,6 +25,12 @@ public sealed partial class AppServices
     /// <summary>Wie <see cref="TestIconFileVariable"/>, für „Bild wählen…“ → „Eigene Datei…“ (E89).</summary>
     public const string TestArtFileVariable = "HDRPILOT_TEST_ART_FILE";
 
+    /// <summary>
+    /// Wie <see cref="TestIconFileVariable"/>: „fixture“ ersetzt die Übertragung zu SteamGridDB durch den
+    /// Testdaten-Lieferanten (erzeugte Antworten, kein Netz, E93); Anfrageprotokoll in sgdb-fixture.log der Ablage.
+    /// </summary>
+    public const string TestSteamGridDbVariable = "HDRPILOT_TEST_STEAMGRIDDB";
+
     /// <summary>Wartezeit vor dem Bildschirmfoto: Bilder laden im Hintergrund, Überblendungen (bis 1,4 s) sollen fertig sein.</summary>
     private static readonly TimeSpan LibrarySettle = TimeSpan.FromSeconds(3);
 

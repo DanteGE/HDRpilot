@@ -70,7 +70,11 @@ public sealed class SteamGridDbServiceOptions
     /// <summary>True, solange ein Spiel läuft (dann startet kein Lauf von selbst).</summary>
     public Func<bool> GameRunning { get; init; } = () => false;
 
-    /// <summary>Erzeugt den HTTP-Handler eines Laufs (in Tests eine Attrappe). Wird nur mit Schalter an und Schlüssel aufgerufen.</summary>
+    /// <summary>
+    /// Erzeugt den HTTP-Handler eines Laufs, einer Prüfung oder einer Suche (in Tests eine Attrappe, in Prüfläufen der
+    /// Testdaten-Lieferant). Wird nur mit Schlüssel aufgerufen: für einen Lauf mit Schalter an, für eine Suche in „Bild
+    /// wählen…“ erst bei ihrer ersten Anfrage (E93).
+    /// </summary>
     public Func<HttpMessageHandler>? HandlerFactory { get; init; }
 
     public Action<Action> PostToUi { get; init; } = action => action();
@@ -87,18 +91,25 @@ public sealed class SteamGridDbServiceOptions
     public TimeSpan? Pause { get; init; }
 
     public ILogger? Logger { get; init; }
+
+    /// <summary>Grenzen und Zeitgrenzen der Suche in „Bild wählen…“ (E93).</summary>
+    public SteamGridDbSearchLimits Search { get; init; } = SteamGridDbSearchLimits.Default;
+
+    /// <summary>Zeilen „Prüfung: …“ (nur in Prüfläufen mit --config-dir, nie im normalen Betrieb).</summary>
+    public Action<string>? TestLog { get; init; }
 }
 
 /// <summary>
-/// SteamGridDB (E89, G10.4): einzige Ausnahme von „nur lokal“. Standardmäßig aus; nur mit eigenem API-Schlüssel
-/// (DPAPI-verschlüsselt in steamgriddb-key.dat, nie im Protokoll) und nur für Bilder, die lokal fehlen und keine eigene Wahl
-/// haben. Ein Lauf (nach dem Einschalten oder Speichern des Schlüssels, „Fehlende Bilder jetzt laden“, höchstens einmal am
-/// Tag 60 s nach dem Start einer App mit normaler Ablage und ohne laufendes Spiel) läuft auf einem eigenen Thread mit
-/// niedriger Priorität, stellt höchstens 200 Anfragen mit mindestens 1 s Abstand und merkt sich Fehlanzeigen 30 Tage.
-/// Ist es aus oder fehlt der Schlüssel, entsteht kein HttpClient und keine Anfrage; nur „Prüfen“ (Klick des Nutzers)
-/// fragt mit dem eingegebenen Schlüssel einmal nach.
+/// SteamGridDB (E89, G10.4, E93): einzige Ausnahme von „nur lokal“. Nur mit eigenem API-Schlüssel (DPAPI-verschlüsselt in
+/// steamgriddb-key.dat, nie im Protokoll). Der Schalter (Standard: aus) regelt das automatische Füllen der Bilder, die
+/// lokal fehlen und keine eigene Wahl haben: Ein Lauf (nach dem Einschalten oder Speichern des Schlüssels, „Fehlende Bilder
+/// jetzt laden“, höchstens einmal am Tag 60 s nach dem Start einer App mit normaler Ablage und ohne laufendes Spiel) läuft
+/// auf einem eigenen Thread mit niedriger Priorität, stellt höchstens 200 Anfragen und merkt sich Fehlanzeigen 30 Tage.
+/// Unabhängig vom Schalter sucht „Bild wählen…“ mit Schlüssel auf Klick (<see cref="OpenSearch"/>, E93). Alle Anfragen an
+/// die Schnittstelle (Lauf, „Prüfen“, jede Suche) teilen einen Abstand von mindestens 1 s. Ohne Schlüssel entsteht kein
+/// HttpClient und keine Anfrage; nur „Prüfen“ (Klick des Nutzers) fragt mit dem eingegebenen Schlüssel einmal nach.
 /// </summary>
-public sealed class SteamGridDbService : ISteamGridDbService
+public sealed partial class SteamGridDbService : ISteamGridDbService
 {
     private readonly SteamGridDbServiceOptions _options;
     private readonly SteamGridDbKeyStore _keys;
@@ -117,6 +128,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
     private (int Hero, int Logo, int Cover)? _missing;
     private bool _missingRequested;
     private bool _disposed;
+    private int _handlersCreated;
 
     public SteamGridDbService(SteamGridDbServiceOptions options)
     {
@@ -133,15 +145,18 @@ public sealed class SteamGridDbService : ISteamGridDbService
     public static string UserAgent { get; } =
         "HDRpilot/" + (typeof(SteamGridDbService).Assembly.GetName().Version?.ToString(3) ?? "1.0.0") + " (Windows desktop app; artwork)";
 
-    /// <summary>Anzahl der erzeugten HTTP-Handler (Nachweis: aus oder ohne Schlüssel 0).</summary>
-    public int HandlersCreated { get; private set; }
+    /// <summary>Anzahl der erzeugten HTTP-Handler (Nachweis: ohne Schlüssel 0, mit Schlüssel erst bei der ersten Anfrage).</summary>
+    public int HandlersCreated => Volatile.Read(ref _handlersCreated);
+
+    /// <summary>Zustand des Schlüssels ohne Nebenwirkungen (liest nicht <see cref="Status"/>, zählt nichts).</summary>
+    public SteamGridDbKeyState KeyState => LoadKeyState();
 
     public SteamGridDbStatus Status
     {
         get
         {
             var enabled = _options.Current().Settings.Artwork?.SteamGridDb ?? false;
-            var key = KeyState();
+            var key = LoadKeyState();
             (int Hero, int Logo, int Cover)? missing;
             bool start;
             lock (_gate)
@@ -169,7 +184,12 @@ public sealed class SteamGridDbService : ISteamGridDbService
                     _lastError,
                     missing?.Hero ?? 0,
                     missing?.Logo ?? 0,
-                    missing?.Cover ?? 0);
+                    missing?.Cover ?? 0)
+                {
+                    LastSearch = _lastSearch,
+                    LastSearchRequests = _lastSearchRequests,
+                    LastSearchError = _lastSearchError,
+                };
             }
         }
     }
@@ -185,7 +205,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
 
         _options.Artwork.SteamGridDbSwitched(enabled);
         RaiseChanged();
-        if (enabled && KeyState() == SteamGridDbKeyState.Stored)
+        if (enabled && LoadKeyState() == SteamGridDbKeyState.Stored)
         {
             _ = RunNowAsync();
         }
@@ -200,7 +220,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
 
         return RunOnWorker(() =>
         {
-            using var client = CreateClient(key.Trim());
+            using var client = CreateClient(key.Trim(), budget: null, SteamGridDbTimeouts.Default);
             try
             {
                 return client.CheckKey(cancellationToken) ? SteamGridDbCheckResult.Valid : SteamGridDbCheckResult.Invalid;
@@ -222,6 +242,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
             {
                 _keyState = SteamGridDbKeyState.Stored;
                 _lastError = null;
+                _lastSearchError = null;
             }
 
             _logger.LogInformation("SteamGridDB: Schlüssel gespeichert.");
@@ -248,11 +269,13 @@ public sealed class SteamGridDbService : ISteamGridDbService
     public void RemoveKey()
     {
         CancelRun();
+        CloseSessions(); // auch eine offene Suche in „Bild wählen…“ endet sofort
         _keys.Delete();
         lock (_gate)
         {
             _keyState = SteamGridDbKeyState.Missing;
             _lastError = null;
+            _lastSearchError = null;
         }
 
         _logger.LogInformation("SteamGridDB: Schlüssel entfernt.");
@@ -337,6 +360,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
         }
 
         CancelRun();
+        CloseSessions();
         _lifetime.Cancel();
     }
 
@@ -365,7 +389,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
         && _options.Current().Settings.Artwork?.SteamGridDb == true
         && !_options.GameRunning();
 
-    private SteamGridDbKeyState KeyState()
+    private SteamGridDbKeyState LoadKeyState()
     {
         lock (_gate)
         {
@@ -407,7 +431,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
         try
         {
             var enabled = _options.Current().Settings.Artwork?.SteamGridDb == true;
-            if (!enabled || KeyState() != SteamGridDbKeyState.Stored)
+            if (!enabled || LoadKeyState() != SteamGridDbKeyState.Stored)
             {
                 return;
             }
@@ -493,7 +517,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
         var stopped = false;
         if (work.Count > 0)
         {
-            using var client = CreateClient(key);
+            using var client = CreateClient(key, budget: null, SteamGridDbTimeouts.Default);
             try
             {
                 foreach (var (game, kinds) in work)
@@ -568,7 +592,8 @@ public sealed class SteamGridDbService : ISteamGridDbService
     /// <summary>Füllt die fehlenden Bildarten eines Spiels; Fehlanzeigen werden gemerkt. Abbruch des Laufs über Ausnahmen.</summary>
     private int Fill(SteamGridDbClient client, GameConfig game, List<ArtworkKind> kinds, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var appId = game.Source == GameSource.Steam && game.SourceId.All(char.IsAsciiDigit) ? game.SourceId : null;
+        // Leere AppID wie ein Spiel ohne Steam-AppID (sonst übersprang der Lauf die Namenssuche und scheiterte, §19.1).
+        var appId = SteamAppId(game);
         long? gameId = null;
         if (appId is null)
         {
@@ -610,6 +635,15 @@ public sealed class SteamGridDbService : ISteamGridDbService
                 }
 
                 var (data, extension) = client.Download(asset, cancellationToken);
+
+                // Hat der Nutzer die Zuordnung inzwischen geändert (E93), gehört das Bild zum alten Spiel: nicht speichern.
+                cancellationToken.ThrowIfCancellationRequested();
+                if (appId is null && _options.Artwork.SteamGridDbGameId(game) != gameId)
+                {
+                    _logger.LogDebug("SteamGridDB: {Kind} für {Game} verworfen, die Zuordnung hat sich geändert.", kind, game.Key);
+                    continue;
+                }
+
                 _options.Artwork.StoreSteamGridDbImage(game, kind, data, extension, now);
                 filled++;
             }
@@ -672,9 +706,14 @@ public sealed class SteamGridDbService : ISteamGridDbService
         RaiseChanged();
     }
 
-    private SteamGridDbClient CreateClient(string key)
+    /// <summary>Steam-AppID eines Steam-Spiels (nur ASCII-Ziffern, nicht leer); sonst null.</summary>
+    private static string? SteamAppId(GameConfig game) =>
+        game.Source == GameSource.Steam && SteamGridDbTarget.IsSteamAppId(game.SourceId) ? game.SourceId : null;
+
+    /// <summary>Client mit dem gemeinsamen Abstand; <paramref name="budget"/> nur für eine Suche (sonst 200 je Lauf).</summary>
+    private SteamGridDbClient CreateClient(string key, SteamGridDbBudget? budget, SteamGridDbTimeouts timeouts)
     {
-        HandlersCreated++;
+        Interlocked.Increment(ref _handlersCreated);
 
         // Keine Weiterleitungen: Bilder nur von der geprüften Adresse unter steamgriddb.com (eine Weiterleitung auf einen
         // anderen Rechner umginge die Prüfung); der Client prüft zusätzlich die Adresse der Antwort.
@@ -684,7 +723,7 @@ public sealed class SteamGridDbService : ISteamGridDbService
             UseCookies = false,
             AllowAutoRedirect = false,
         };
-        return new SteamGridDbClient(handler, _options.Clock, key, UserAgent, _options.MaxRequests, _pacer);
+        return new SteamGridDbClient(handler, _options.Clock, key, UserAgent, _options.MaxRequests, _pacer, budget, timeouts);
     }
 
     private static string Message(SteamGridDbErrorKind kind) => kind switch

@@ -21,7 +21,8 @@ $appArgs = Read-Utf8 'src\HdrPilot.App\AppArguments.cs'
 $devOnlySwitches = @('--snapshot', '--prepare', '--ready-event', # Entwicklerwerkzeug (E54) und interne Absprache Wrapper/Instanz (E75)
     '--snapshot-sizes', '--snapshot-scenes', '--snapshot-themes', '--snapshot-display', '--artwork-report', '--test-hdr-moment', # Bildschirmfotos, Messung und Prüfung der Neugestaltung (E89)
     '--test-toolbar-search', # Prüfung der Werkzeugleiste (G10.5): Strg+F ohne Tastatureingabe
-    '--settings-probe') # Prüfung der Verträglichkeit (G11.3): Kopie der Ablage wie die Einstellungen speichern
+    '--settings-probe', # Prüfung der Verträglichkeit (G11.3): Kopie der Ablage wie die Einstellungen speichern
+    '--snapshot-language', '--restarted') # Sprache der Bildschirmfotos und interner Neustart nach dem Wechsel der Sprache (E95)
 $appSwitches = @([regex]::Matches($appArgs, '"(--[a-z-]+)"') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique | Where-Object { $_ -notin $devOnlySwitches })
 
 $config = Read-Utf8 'src\HdrPilot.Core\Config\AppConfig.cs'
@@ -70,8 +71,13 @@ foreach ($resx in 'src\HdrPilot.App\Resources\ShellStrings.resx', 'src\HdrPilot.
 }
 
 $ErrorActionPreference = 'Continue'
-$helpText = (& $cliExe --help 2>&1 | Out-String)
+# Hilfe auf Deutsch wie die README (E95): eigene Ablage mit "language": "de", nie die echte (deren Sprache kann Englisch sein).
+$helpDir = Join-Path ([IO.Path]::GetTempPath()) ('HDRpilot-Gate5-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+New-Item -ItemType Directory -Force $helpDir | Out-Null
+[IO.File]::WriteAllText((Join-Path $helpDir 'config.json'), '{ "version": 1, "settings": { "language": "de" }, "games": [] }', (New-Object Text.UTF8Encoding $false))
+$helpText = (& $cliExe --help --config-dir $helpDir 2>&1 | Out-String)
 $helpExit = $LASTEXITCODE
+Remove-Item $helpDir -Recurse -Force -ErrorAction SilentlyContinue
 $ErrorActionPreference = 'Stop'
 Check ($helpExit -eq 0 -and $helpText -match 'hdrpilot hdr status') "Hilfe der Kommandozeile gelesen (exit=$helpExit)"
 $helpUsage = @($helpText -split "`r?`n" | Where-Object { $_ -cmatch '^hdrpilot ' } | ForEach-Object { Normalize $_ })

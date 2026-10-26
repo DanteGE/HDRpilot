@@ -1,6 +1,10 @@
 # HDRpilot
 A sleek, 100% vibe-coded Windows app that automatically enables HDR for selected games. Features optional Auto HDR for SDR games, shortcut and Steam launch option integration, an intuitive GUI, and support for Steam, Epic Games, Ubisoft, Battle.net, GOG, and Quiver Launcher.
 
+English: HDRpilot is available in English and German. A new installation uses the language of Windows (German for
+German, English for every other language); an update keeps German. You can switch any time under *Settings › General ›
+Language* (takes effect after a restart, **Restart now** does it for you). The rest of this README is in German.
+
 HDRpilot schaltet Windows-HDR automatisch ein, wenn du ein ausgewähltes Spiel startest, und stellt danach den
 vorherigen Zustand wieder her. Es findet deine installierten Spiele selbst (Steam, Epic, Xbox/Game Pass, GOG,
 Ubisoft Connect, EA app, Battle.net, Quiver Launcher). Spiele ohne Launcher trägst du selbst ein, oder HDRpilot schlägt
@@ -25,7 +29,8 @@ Empfohlen ist der Setup `HDRpilot-Setup-1.5.0.exe`. Er installiert nur für dein
 Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HDRpilot` (siehe „Ohne Installation“).
 Fertige Versionen gibt es unter [GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
 
-1. `HDRpilot-Setup-1.5.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
+1. `HDRpilot-Setup-1.5.0.exe` starten (Setup und Entfernen sprechen die Sprache von Windows: Deutsch bei deutschem
+   Windows, sonst Englisch). Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
    Start nach („Weitere Informationen“ → „Trotzdem ausführen“).
 2. Der Setup zeigt den Programmordner `%LOCALAPPDATA%\Programs\HDRpilot` und drei Optionen: **Mit Windows starten**
    (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
@@ -269,6 +274,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Neustart-Puffer | Endet ein Spiel weniger als 5 Minuten nach dem Start, bleibt HDR so lange an (Minuten und Sekunden, höchstens 30:00, 0:00 = aus; siehe „So funktioniert es“) | 1:00 |
 | Startfrist | Bei „Starten“: so lange wird auf den Spielprozess gewartet | 120 s |
 | Mit Windows starten | Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | aus |
+| Sprache · Language | Sprache der Oberfläche: Deutsch oder English (jeweils in der eigenen Sprache benannt); gilt nach einem Neustart von HDRpilot | neu installiert: wie Windows (Deutsch bei deutscher Anzeigesprache, sonst Englisch); nach einer Aktualisierung: Deutsch |
 | Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
 | Suchordner | Ordner mit Spielen ohne Launcher; Unterordner mit EXE werden vorgeschlagen | keine |
 | Nicht installierte Spiele ausblenden | Nicht installierte Spiele stehen nicht in der Bibliothek und zählen dort nirgends mit (Zahl der Spiele, Quellen, Filter); wie viele es sind, steht daneben und im Tooltip zum Zurücksetzen der Filter. „HDR automatisch“ wirkt für sie weiter | aus |
@@ -287,11 +293,22 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Protokollstufe (Erweitert) | Wie ausführlich protokolliert wird | Normal |
 | Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert und gerade kein Spiel läuft; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
 
+**Sprache:** Die Auswahl steht in „Allgemein“ › „Start und Hinweise“ und gilt wie die übrigen allgemeinen Einstellungen
+mit **Speichern**. Weil die Texte beim Öffnen der Fenster feststehen, wechselt die Sprache erst nach einem Neustart von
+HDRpilot. Weicht die Wahl von der angezeigten Sprache ab, erscheinen ein Hinweis und **Jetzt neu starten**: Das speichert
+alle Einstellungen, beendet HDRpilot und startet es gleich wieder mit geöffneten Einstellungen. Eine neue Installation
+(oder der erste Start ohne Installation) nimmt die Anzeigesprache von Windows: Deutsch, wenn sie Deutsch ist, sonst
+Englisch. Wer HDRpilot schon nutzt, bleibt nach einer Aktualisierung bei Deutsch. Datum, Uhrzeit und Zahlen folgen den
+Regionseinstellungen von Windows, solange deren Sprache zur gewählten passt (etwa Englisch mit britischem Format);
+sonst gelten die Formate von Deutschland bzw. den USA. Die Kommandozeile `cli\hdrpilot.exe` antwortet in der Sprache
+der Ablage; das Protokoll bleibt immer deutsch.
+
 Im Bereich „HDR-Liste (PCGamingWiki)“ gibt es außerdem **Jetzt abgleichen**, den Stand der Liste und das optionale
 PCGamingWiki-Konto (siehe unten). Für „Windows Auto HDR“ gibt es keine Einstellung: Es wird je Spiel in der Bibliothek
 geschaltet und wirkt immer beim Start über HDRpilot (siehe „Windows Auto HDR“).
 
-Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard
+Die Sprache steht in `config.json` als `language` (`"de"` oder `"en"`); fehlt das Feld (Konfiguration aus 1.5.x oder
+älter) oder steht dort etwas anderes, gilt Deutsch. Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard
 `true`; sie setzt für Spiele mit „Windows Auto HDR“ auch den Auto-HDR-Schalter vor dem Spiel). Den Neustart-Puffer
 speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der Standard von 1 Minute.
 Ordner des Quiver Launchers, die HDRpilot sich gemerkt hat, stehen in `quiverFolders` (fehlt, solange es keinen gibt);
@@ -697,6 +714,7 @@ Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Ins
 | `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück. 0 heißt, die Kopie im Temp-Ordner entfernt jetzt; ihr Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll. 1 (Kopie nicht gestartet), 2 (Aufruf falsch) und 7 (Container) kommen direkt vom ersten Aufruf, ohne `ERGEBNIS`-Zeile; dann wurde nichts entfernt |
 | `--remove-data` | Beim Entfernen auch Einstellungen, Spieleliste, Protokolle und HDR-Liste löschen |
 | `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen und Ablage unter diesem Ordner, dazu ein eigener Registry-Zweig unter `HKCU\Software\HDRpilot.Tests` |
+| `--ui-language de\|en` | Nur mit `--test-root`: Sprache der Fenster fest statt wie Windows |
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 ältere Version abgelehnt, 4 HDRpilot ließ sich nicht beenden,
 5 abgebrochen, 6 nicht installiert, 7 aus dem Container einer anderen App gestartet, nichts geändert (siehe
@@ -721,7 +739,8 @@ hdrpilot run <schlüssel>
 `<auswahl>`: `primary` (Standard), `all`, Nummer aus `hdr status`, Teil des Namens oder `monitorDevicePath`.
 `<quelle>`: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver. `scan`, `games`, `watch` und `run` verstehen
 außerdem `--config-dir <ordner>`; `scan` nimmt dann die Suchordner und gemerkten Quiver-Ordner dieser Ablage hinzu
-(gelesen, nicht geschrieben) und sucht sonst wie immer. `hdrpilot --help` zeigt die vollständige Hilfe.
+(gelesen, nicht geschrieben) und sucht sonst wie immer. `hdrpilot --help` zeigt die vollständige Hilfe. Ausgaben und
+Meldungen der Scanner kommen in der Sprache der Ablage (`language` in `config.json`; ohne Datei wie Windows).
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden, 4 Bildschirm ohne HDR,
 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden.
@@ -807,7 +826,9 @@ gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.
   keine Herstelleraussage. Intensität und Erzwingen für nicht zugelassene Spiele stellt HDRpilot nicht ein; RTX HDR von
   NVIDIA gehört nicht zu HDRpilot.
 - **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.
-- **Nur auf Deutsch:** Oberfläche, Hinweise, Fehlermeldungen der Launcher-Scanner, Kommandozeile und Protokoll.
+- **Deutsch und Englisch:** Oberfläche, Hinweise, Setup, Meldungen der Launcher-Scanner und Kommandozeile gibt es auf
+  Deutsch und Englisch, das Protokoll nur auf Deutsch. Fehlertexte, die Windows selbst liefert (etwa „Zugriff
+  verweigert“ hinter einer Meldung), kommen in der Sprache von Windows.
 
 ## Fehlersuche
 

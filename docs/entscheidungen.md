@@ -1394,3 +1394,116 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
   per Regel) und mit `publish-check.ps1 -History` geprüft (G13.5): jede Blob-Version, jeder Pfadname, jede Nachricht
   sowie Autor und Committer jedes Commits (nur Dante_GE mit der Noreply-Adresse, als Committer auch GitHub selbst),
   mit eigener Positivkontrolle an einem Wegwerf-Repository.
+
+**E95 Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, G16):** „Bitte eine komplette englische
+Übersetzung der App, mit Sprachwahl in den Einstellungen und automatischer Erkennung der Systemsprache bei der
+Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = Englisch).“ Umgesetzt auf
+`feature/english`; die Vorgaben der Sitzungsleitung (Punkte 1 bis 9) stehen unten mit ihrer Umsetzung.
+- Ressourcen: Neutral bleibt Deutsch (`NeutralLanguage` de). Zu jeder resx gibt es eine `.en.resx`: App
+  (`ArtworkStrings`, `CommonStrings`, `LibraryStrings`, `SetupStrings`, `ShellStrings`), Kern (`CoreStrings`, neu
+  `ScanStrings` für die Meldungen der Scanner) und Kommandozeile (neu `CliStrings` samt Hilfe). Die Texte stehen in den
+  Satellitenassemblies `en` (`SatelliteResourceLanguages` de;en, auch im Single-File-Paket); die englischen resx erzeugen
+  keine eigene Klasse. Platzhalter sind gleich ({0}, {1} …), Formatangaben dürfen abweichen: Uhrzeit `{0:t}` statt
+  `{0:HH:mm}`, Datum `{0:MMM d, yyyy}` statt `{0:d. MMM yyyy}`. Wo im Englischen eine Mehrzahl mit „1“ falsch wäre und es
+  keine Einzahl-Variante gibt, ist der Satz umgestellt („Patterns: 12“, „requests: 3 · images added: 2“); neu sind
+  `LibraryCardSummaryOne` („1 Spiel · …“, behebt auch das deutsche „1 Spiele“) und „0 von 1 Spiel“ in der Liste.
+- Einstellung `AppSettings.Language` (Feld `language`, Text "de" oder "en", wie `librarySortOrder` kein Enum):
+  - Gibt es noch keine `config.json` (Erstinstallation, erster Start einer Kopie ohne Installation, erste Benutzung der
+    Kommandozeile), bekommt die neue Konfiguration die Anzeigesprache von Windows: Deutsch, wenn ihre Sprache Deutsch ist
+    (de, de-DE, de-AT, de-CH …), sonst Englisch; der Wert wird gleich gespeichert. Gemeint ist die Anzeigesprache des
+    Benutzers (`CultureInfo.CurrentUICulture` beim Start, `GetUserDefaultUILanguage`), nicht die bei der Installation von
+    Windows (`InstalledUICulture`): Wer ein deutsches Windows auf Englisch umgestellt hat, will Englisch.
+  - Eine vorhandene Konfiguration ohne `language` (Aktualisierung von 1.5.x und älter) gilt als Deutsch: Bisherige Nutzer
+    werden nicht umgestellt. Ein unbekannter Wert (etwa aus einer neueren Version) gilt ebenso als Deutsch. In beiden
+    Fällen bleibt die Datei unverändert: Laden schreibt nichts, Speichern anderer Einstellungen fügt kein Feld hinzu und
+    lässt einen unbekannten Wert stehen. Eine unlesbare oder defekte Datei gilt als vorhanden (Deutsch).
+  - Der Setup legt nie eine Konfiguration an (unverändert: „Einstellungen fasst der Setup nie an“, E83); die Erkennung
+    geschieht beim ersten Start von HDRpilot. Der Setup selbst und das Entfernen sprechen die Anzeigesprache von Windows
+    nach derselben Regel, lesen dafür aber nie die Einstellungen; nur ein Prüflauf (`--test-root`) kann sie mit
+    `--ui-language de|en` festlegen (auch für die Kopie zum Entfernen).
+- Anwenden beim Start (`UiLanguage.Apply`): vor dem ersten Fenster und der ersten Ressource, in der App gleich nach der
+  Steam-Startoption und vor Einzelinstanz, Bildschirmfotos und Prüfmodi (auch die Meldung „läuft bereits, reagiert aber
+  nicht“ eines zweiten Starts ist so schon in der richtigen Sprache), im Setup vor dem Fenster, in der Kommandozeile in
+  `Program.cs`. Die Sprache liest `UiLanguage.ForStartup` nur aus `settings.language` der `config.json`, ohne die Datei
+  zu laden. Gesetzt werden `CultureInfo.DefaultThreadCurrentUICulture`/`DefaultThreadCurrentCulture` und die Kulturen
+  des aktuellen Threads: Texte de-DE bzw. en-US. Formate (Datum, Uhrzeit, Zahlen): die Regionseinstellungen von
+  Windows samt eigener Anpassungen, wenn deren Sprache zur Oberfläche passt (de-AT bzw. de-CH zu Deutsch, en-GB zu
+  Englisch); sonst de-DE bzw. en-US, damit ein englischer Satz kein deutsches Datum trägt und umgekehrt (Abwägung:
+  Wer Englisch mit deutschem Regionsformat nutzt, sieht en-US-Formate; dafür bleiben Satz und Format immer stimmig).
+  XAML formatiert nichts selbst (keine `StringFormat` mit Zahlen oder Datum), alle Formate entstehen im Code mit
+  `CurrentCulture`; die Sprache der WPF-Elemente (`FrameworkElement.Language`) bleibt deshalb unverändert.
+- Einstellungen: Auswahl „Sprache · Language“ in „Allgemein“ › „Start und Hinweise“ (Kennung `LanguageChoice`, ComboBox
+  wie die Protokollstufe, Tastatur und Bedienungshilfen wie dort, keine eigenen Farben). Die Einträge heißen in jeder
+  Sprache „Deutsch“ und „English“; die Beschriftung ist zweisprachig, damit sie auch findet, wer die angezeigte Sprache
+  nicht liest. Die Wahl gilt wie die übrigen allgemeinen Einstellungen mit „Speichern“ (Abbrechen verwirft sie) und wird
+  nur geschrieben, wenn sie geändert wurde. Weil die Texte beim Erzeugen der Fenster per `x:Static` feststehen, wirkt sie
+  erst nach einem Neustart: Weicht die Wahl von der angezeigten Sprache ab, erscheinen darunter ein Hinweis und „Jetzt
+  neu starten“ (`LanguageRestartButton`). Der Knopf speichert alle Einstellungen wie „Speichern“ (scheitert das, bleibt
+  alles, wie es ist), startet `HDRpilot.exe --restarted --settings` (mit derselben Ablage und Auto-HDR-Testwurzel) und
+  beendet die laufende Instanz wie „HDRpilot beenden“. Die neue Instanz versucht bis zu 30 s lang alle 100 ms, die
+  Einzelinstanz zu bekommen; die alte gibt sie (wie Tray-Symbol und Nachrichtenfenster) erst beim Beenden frei. So
+  wartet sie ohne ein Handle auf die alte Instanz (die Anti-Cheat-Regeln verbieten `Process.GetProcessById` und
+  `WaitForExit`, E65–E67). Bekommt sie die Einzelinstanz nicht, verhält sie sich wie ein zweiter Start. Scheitert der
+  Start der neuen Instanz, läuft die alte weiter und meldet das im Fuß der Einstellungen.
+- Texte aus dem Code: Was Code zusammensetzt und in Oberfläche, Hinweisen, Setup oder Kommandozeile erscheint, kommt
+  jetzt aus den resx: die Meldungen aller Scanner und ihrer Leser (Bibliothek „Beim letzten Einlesen …“, `hdrpilot
+  scan`), die Gründe von „Spiel hinzufügen“ (`ManualGames`), „Konfiguration ließ sich nicht speichern“, alle Ausgaben
+  und die Hilfe der Kommandozeile. Zwei Stellen hingen am deutschen Wortlaut und sind jetzt Kennzeichen: Der Absturz
+  eines Scanners (`ScanError.ScannerCrashed`, sonst hätte das Einlesen auf Englisch die Spiele dieser Quelle als nicht
+  installiert markiert) und ein mehrdeutiger Bildschirm in `hdrpilot hdr --display` (sonst Exit-Code 3 statt 2).
+  Einzahl und Mehrzahl, „vor N Tagen“ und die Zahlen im Kopf (`LibraryText`, `RelativeTime`) waren schon Vorlagen mit
+  Einzahl-Varianten und funktionieren auf Englisch unverändert.
+- Bleibt deutsch: das Protokoll (alle ILogger-Meldungen, das Setup-Protokoll, technische Angaben, die nur dort stehen,
+  etwa die Gründe der Quiver-Startwahl, Meldungen von PCGamingWiki und SteamGridDB, deren Oberfläche über Fehlerarten
+  übersetzt ist). Fehlertexte, die Windows oder .NET selbst liefern (etwa „Zugriff verweigert“ hinter einer Meldung),
+  kommen in der Sprache von Windows. Setup-Fehler zeigen wie bisher die übersetzte Art; die technische Angabe eines
+  unerwarteten Fehlers ist die Meldung der Ausnahme.
+- Glossar (verbindlich für weitere Texte):
+
+  | Deutsch | Englisch |
+  |---|---|
+  | HDR automatisch (Schalter je Spiel von HDRpilot) | HDR on launch (nie „Auto HDR“) |
+  | Windows Auto HDR / Auto HDR (Schalter von Windows) | Windows Auto HDR / Auto HDR |
+  | Automatik | automation |
+  | Nach dem Spiel zurückstellen / zurückstellen | Restore after game / restore |
+  | Spielebibliothek, Bibliothek, Spieleliste | game library, library, game list |
+  | Titelbild, Logo, Cover, Symbol | hero image, logo, cover, icon |
+  | Liste, Raster, Regal | List, Grid, Shelf |
+  | Werkzeugleiste, Leiste | toolbar |
+  | Quelle, Eigene Spiele, Manuell | source, My games, Manual |
+  | Neu einlesen, Einlesen | Rescan, scan |
+  | Infobereich, Tray | notification area, tray (nur in „Icons and tray“, „tray icon“) |
+  | Hinweise | notifications |
+  | Bildschirm, Hauptbildschirm | display, primary display |
+  | Spitze, Vollbild, Minimum | peak, full frame, minimum |
+  | Abfrageintervall, Nachlaufzeit, Neustart-Puffer, Startfrist | polling interval, grace period, restart buffer, launch timeout |
+  | Suchordner, Hilfsprozesse | search folders, helper processes |
+  | Steam-Startoption, Verknüpfung | Steam launch option, shortcut |
+  | Starten, Mit HDR starten | Launch, Launch with HDR |
+  | Darstellung, Thema, Effekte (Voll, Reduziert, Aus) | Appearance, Theme, Effects (Full, Reduced, Off) |
+  | Farbschema, Akzent, Atmosphäre, Glanz, Duoton, Tritonus | color scheme, accent, atmosphere, shine, Duotone, Tritone |
+  | Vorlagen Abendrot, Neongrün, Gletscher, Glut, Polarlicht | Sunset, Neon green, Glacier, Ember, Aurora (Cyber, Royal, Synthwave bleiben) |
+  | Bild wählen…, Eigene Datei…, erzeugt, Monogramm | Choose image…, Own file…, generated, monogram |
+  | Kapsel (Steam-Bild „capsule“) | capsule (nur in Bildquellen; die Kapsel der Werkzeugleiste hat keinen sichtbaren Namen) |
+  | Einstellungen entfernen…, nicht installiert, NEU | Remove settings…, not installed, NEW |
+  | HDR-fähig, HDR-Liste, natives HDR, HDR teilweise, HDR per Mod | HDR-capable, HDR list, native HDR, limited HDR, HDR via mod |
+  | Protokoll, Protokollordner | log, log folder |
+  | Installierte Apps, Einstellungen → Apps | Installed apps, Settings → Apps (wie Windows) |
+  | Tasten Strg, Umschalt, Entf, Pos1, Ende, Bild auf/ab, Eingabetaste, Leertaste | Ctrl, Shift, Del, Home, End, Page Up/Down, Enter, Space |
+
+  Produkt- und Funktionsnamen bleiben: HDRpilot, Windows Auto HDR, SteamGridDB, PCGamingWiki, Steam, GOG (Galaxy), Epic
+  Games, Xbox, Ubisoft Connect, EA app, Battle.net, Quiver; ebenso die Anzeige „AUTO HDR“ und „HDR*“.
+- Prüfung: `ResourceTranslationTests` (laufen auch unter Linux, lesen die resx aus dem Repository): zu jeder neutralen
+  resx unter `src` eine `.en.resx`, dieselben Schlüssel in beide Richtungen, keine leeren Werte, gleiche Platzhalter,
+  gültige Formatvorlagen, keine deutschen Reste (Heuristik: Umlaute, ß, „ und eine Wortliste samt Endungen wie -ieren
+  und -ungen, mit Gegenprobe; erlaubt nur „Deutsch“ und die zweisprachige Beschriftung), Glossar „HDR on launch“ ≠
+  „Windows Auto HDR“. Neue Schlüssel anderer Zweige ohne Übersetzung (E93, E94) fallen nach dem Zusammenführen hier
+  auf; das ist gewollt. `UiLanguageTests` (Erkennung, Laderegeln, Kulturen), `EnglishOutputTests` (Satelliten, Scanner,
+  „Spiel hinzufügen“, Kommandozeile, Absturz und Mehrdeutigkeit unabhängig vom Wortlaut), in den App-Tests Sprachwahl,
+  Neustart, englisches Fenster und Tray-Menü, englische Zähl- und Zeitformen, `--restarted`, `--snapshot-language` und
+  `--ui-language`. Alle Tests laufen mit fester Kultur de-DE (`TestCulture`, Modul-Initialisierer, auch für die
+  STA-Threads); bisherige Tests prüfen weiter die deutschen Texte. Die Testablagen der Gates bekommen `"language":
+  "de"` (`TestConfigSeed.ps1`), `phase7-setup-ui.ps1` startet Setup und Entfernen mit `--ui-language de`, und
+  `phase5-readme.ps1` liest die Hilfe der Kommandozeile aus einer deutschen Testablage, damit die Gates auch auf einem
+  englischen Windows gelten. Neues Gate `phase16-english-ui.ps1` (G16.4). Bildschirmfotos mit `--snapshot-language en`
+  oder einer englischen Ablage heißen `…-en.png`.

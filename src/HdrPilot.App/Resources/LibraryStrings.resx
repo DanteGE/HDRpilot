@@ -138,6 +138,12 @@
   <data name="Splitter_Tooltip" xml:space="preserve">
     <value>Ziehen oder Pfeiltasten: Breite ändern · Doppelklick: Standardbreite</value>
   </data>
+  <data name="ScrollGap_Name" xml:space="preserve">
+    <value>Bildlaufleiste der Spiele</value>
+  </data>
+  <data name="ScrollGap_Tooltip" xml:space="preserve">
+    <value>Waagerecht ziehen: Breite ändern · Klick über oder unter die Leiste: eine Seite blättern · Doppelklick: Standardbreite</value>
+  </data>
   <data name="HeroSplitter_Name" xml:space="preserve">
     <value>Höhe des Titelbereichs</value>
   </data>

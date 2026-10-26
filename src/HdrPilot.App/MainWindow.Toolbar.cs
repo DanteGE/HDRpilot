@@ -1065,6 +1065,8 @@ public partial class MainWindow
             notices.Y = dy;
         }
 
+        LibraryScroll.ShiftTrack(dy); // Pille gleitet mit dem Inhalt
+
         var moving = Math.Abs(dy) > 0.01;
         BodyArea.Clip = moving ? BodyClip(BodyArea.ActualWidth, BodyArea.ActualHeight) : null;
 

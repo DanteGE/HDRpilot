@@ -83,6 +83,11 @@ public sealed partial class AppServices
     {
         scenes.Add(new SnapshotScene("hauptfenster", "liste", () => LibraryScene(LibraryViewMode.List)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-gescrollt", () => LibraryScene(LibraryViewMode.List), ScrollListAsync) { Settle = LibrarySettle });
+
+        // Bildlaufleiste im Spalt (Wunsch des Nutzers 2026-10-22): Liste gescrollt mit der feinen Linie des Trenners wie beim
+        // Überfahren des Spalts, Raster eine Seite weitergeblättert wie per Klick unter die Pille.
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-spalt", () => LibraryScene(LibraryViewMode.List), GapHoverAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-gescrollt", () => LibraryScene(LibraryViewMode.Grid), PageGridAsync) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "raster", () => LibraryScene(LibraryViewMode.Grid)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal", () => LibraryScene(LibraryViewMode.Shelf)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal-details", () => LibraryScene(LibraryViewMode.Shelf), OpenDrawerAsync) { Settle = LibrarySettle });
@@ -352,6 +357,26 @@ public sealed partial class AppServices
         if (window is MainWindow main)
         {
             main.ScrollListBy(14);
+            await Task.Delay(1500);
+        }
+    }
+
+    private static async Task GapHoverAsync(Window window)
+    {
+        if (window is MainWindow main)
+        {
+            main.ScrollListBy(140);
+            main.PreviewGapHover();
+            await Task.Delay(1500);
+        }
+    }
+
+    private static async Task PageGridAsync(Window window)
+    {
+        if (window is MainWindow main)
+        {
+            await Task.Delay(300); // Raster angeordnet
+            main.PageLibraryBy(1);
             await Task.Delay(1500);
         }
     }

@@ -48,11 +48,13 @@
   <!--
     WPF übersetzt vor dem eigentlichen Build eine temporäre Assembly (Projekt *_wpftmp), die alle C#-Dateien braucht.
     Deshalb werden die Ressourcen-Klassen vorher erzeugt und dem temporären Projekt ausdrücklich mitgegeben.
-    Im Hauptprojekt fügt GenerateResource sie selbst hinzu (sonst doppelt).
+    Im Hauptprojekt fügt GenerateResource sie selbst hinzu (sonst doppelt). Der Pfad ist ausgeschrieben statt
+    $(IntermediateOutputPath): Unter Linux (dotnet build -p:EnableWindowsTargeting=true) hängt das SDK im temporären
+    Projekt das Zielframework ein zweites Mal an (obj/Debug/net10.0-windows/net10.0-windows/), unter Windows nicht.
   -->
   <Target Name="HpGenerateResourceClassesEarly" BeforeTargets="MarkupCompilePass1" DependsOnTargets="PrepareResourceNames;ResolveReferences;CoreResGen" />
   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('_wpftmp'))">
-    <Compile Include="$(IntermediateOutputPath)*Strings.Designer.cs" />
+    <Compile Include="$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\*Strings.Designer.cs" />
   </ItemGroup>
 
   <ItemGroup>

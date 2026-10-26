@@ -99,10 +99,14 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     Zeilen der Liste zu sehen. Beim Scrollen bleibt die Höhe, wie sie ist.
   - **Raster**: Cover im Format 2:3. Spaltenzahl und Kachelgröße richten sich nach der Fensterbreite, im Vollbild
     genauso wie im kleinen Fenster; nichts wird gestreckt oder abgeschnitten. Der Schalter „HDR automatisch“ erscheint
-    an der gewählten Kachel und beim Zeigen mit der Maus.
+    an der gewählten Kachel und beim Zeigen mit der Maus. Den Titelbereich stellst du mit demselben Griff ein wie in der
+    Liste; eine ganze Kachelreihe bleibt immer zu sehen.
   - **Regal**: großes Titelbild mit **Starten**, **Desktop** und **Startmenü**, darunter eine Reihe Cover zum Blättern
     und rechts die Karte „AUTOMATIK“ mit den wichtigsten Schaltern (nur, wenn ein Spiel gewählt ist). **Details** (oder
-    die Taste I) öffnet alle Details als Schublade, Esc schließt sie.
+    die Taste I) öffnet alle Details als Schublade, Esc schließt sie. Mit dem Griff unter dem Titelbild tauschst du
+    Titelbild gegen Covergröße: Ein höheres Titelbild macht die Cover kleiner, bis zur kleinsten Größe.
+  - Jede Ansicht merkt sich ihre eigene Höhe des Titelbereichs; Doppelklick oder Eingabetaste am Griff setzen nur die
+    Höhe der gerade gezeigten Ansicht zurück.
 - In Liste und Raster stehen rechts die Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit
   den Pfeiltasten verschieben, per Doppelklick zurücksetzen); die Breite merkt sich HDRpilot, höchstens 560 px.
 - Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR

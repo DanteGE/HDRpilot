@@ -66,7 +66,10 @@ public static class GamePalette
     /// </summary>
     public static IReadOnlyList<Color> LibraryBackgroundBounds(bool dark) => dark ? DarkBounds.Value : LightBounds.Value;
 
-    /// <summary>Berechnet die Grenzen vorab auf einem Hintergrund-Thread (nur wenn der Schalter an ist).</summary>
+    /// <summary>Grenzen für das Thema schon berechnet (dann kostet <see cref="Compute"/> nur noch die Kontrastrechnung).</summary>
+    public static bool BoundsReady(bool dark) => (dark ? DarkBounds : LightBounds).IsValueCreated;
+
+    /// <summary>Berechnet die Grenzen vorab auf einem Hintergrund-Thread (Schalter an, Farbprobe der Einstellungen).</summary>
     public static Task PrepareAsync() => Task.Run(() =>
     {
         _ = DarkBounds.Value;

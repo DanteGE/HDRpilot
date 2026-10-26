@@ -115,7 +115,8 @@ internal sealed record GameAccentSetup(MainWindow Window, LibraryViewModel Model
 /// bei eingeschaltetem Schalter, bleibende Pinsel, Stilsetzer und Popups lösen die Ebene auf, Überblendung und Entprellung mit
 /// gestellter Uhr, hoher Kontrast, Verweise statt Momentaufnahmen, gleicher Baum, graue Spiele genau das Schema, Partikel,
 /// Änderung der Darstellung, Aus und wieder An vor dem Beruhigen, Farben und Bilder in beliebiger Reihenfolge, ruhiger
-/// Grund, Werkzeugleiste und helles Thema.
+/// Grund, Werkzeugleiste, helles Thema, Ring der Rasterkachel mitten in der Überblendung, Lesefehler (gezeigte Farben
+/// bleiben) und gehaltene Tasten ohne Anfrage für übersprungene Spiele.
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
 public sealed class GameAccentWindowTests
@@ -603,6 +604,114 @@ public sealed class GameAccentWindowTests
             {
                 WpfTestHost.UseTheme(true);
             }
+        });
+    }
+
+    [Fact]
+    public void W18_selection_ring_draws_the_live_accent_brush_mid_fade_without_freezing_it()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var s = GameAccentSetup.Open(effects: "Full");
+            s.Window.Motion!.SetWindowState(visible: true, minimized: false, active: true);
+            s.Model.ViewMode = LibraryViewMode.Grid;
+            WpfTestHost.Layout(s.Window, new Size(1600, 900));
+            s.Context.Dispatcher.RunDelayed();
+            WpfTestHost.DoEvents();
+            var layer = s.Window.AccentLayer!;
+            layer.TimerHookForTest = (_, _) => { };
+            var hdrOn = (Brush)layer.Dictionary[ThemeKeys.BrushHdrOn];
+
+            s.Select("blau");
+            WpfTestHost.DoEvents();
+            Assert.True(layer.Animating > 0, "Überblendung läuft");
+            var ring = WpfTestHost.Visuals(s.Window).OfType<DashRing>().Single(r => r.Visibility == Visibility.Visible && r.ActualWidth > 4);
+            Assert.Same(hdrOn, ring.Stroke); // Kachel des Rasters zeichnet mit dem bleibenden Pinsel der Ebene
+
+            // Zeichnen mitten in der Überblendung: früher fror der Stift den Pinsel ein (oder warf, solange er animiert war).
+            Assert.Null(Record.Exception(() => RenderRing(ring)));
+            Assert.False(hdrOn.IsFrozen);
+
+            s.Select("rot"); // nächster Wechsel überblendet denselben Pinsel weiter
+            Assert.Null(Record.Exception(() => RenderRing(ring)));
+            Assert.Same(hdrOn, layer.Dictionary[ThemeKeys.BrushHdrOn]);
+            Assert.False(hdrOn.IsFrozen);
+            Assert.Equal(0, layer.Stats.Replacements);
+            s.Settle();
+            s.Close();
+        });
+
+        static void RenderRing(FrameworkElement ring)
+        {
+            var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap((int)ring.ActualWidth, (int)ring.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(ring);
+        }
+    }
+
+    [Fact]
+    public void W19_a_read_error_keeps_the_shown_colors_and_asks_again_on_the_next_selection()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var s = GameAccentSetup.Open(colorsAsync: true);
+            s.Art.CompleteColors("Steam:rot");
+            WpfTestHost.DoEvents();
+            var red = s.Accents(GameAccentSetup.Red);
+            Assert.Equal(red, s.Window.ShownAccents);
+
+            s.Select("blau");
+            s.Art.FailColors("Steam:blau");
+            WpfTestHost.DoEvents();
+
+            // Fehler heißt „unbekannt“, nicht „grau“: kein Wechsel zum Schema, die roten Farben bleiben.
+            Assert.Equal(red, s.Window.ShownAccents);
+            Assert.NotEqual(s.State.Palette, s.Window.ShownAccents);
+            Assert.Equal(s.Expected(GameAccentSetup.Red), s.Window.AccentLayer!.Target);
+
+            s.Select("rot");
+            s.Select("blau");
+            Assert.Equal(2, s.Art.ColorRequests.Count(k => k == "Steam:blau")); // nichts gemerkt: erneut gefragt
+            s.Art.CompleteColors("Steam:blau");
+            WpfTestHost.DoEvents();
+            Assert.Equal(s.Accents(GameAccentSetup.Blue), s.Window.ShownAccents);
+            s.Close();
+        });
+    }
+
+    [Fact]
+    public void W20_held_keys_ask_for_the_colors_of_skipped_games_never()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var s = GameAccentSetup.Open(colorsAsync: true);
+            s.Art.CompleteColors("Steam:rot");
+            WpfTestHost.DoEvents();
+            Action? timer = null;
+            s.Window.AccentTimerHookForTest = (_, a) => timer = a;
+            var requests = s.Window.AccentStats.Requests;
+            s.Art.ColorRequests.Clear();
+
+            // Gehaltene Pfeiltaste über drei Spiele: jede Auswahl wird gehalten, keine fragt nach Farben.
+            foreach (var id in new[] { "blau", "grau", "bunt" })
+            {
+                s.Window.NoteAccentKey(repeat: true);
+                s.Select(id, afterMs: 33);
+            }
+
+            Assert.Empty(s.Art.ColorRequests);
+            Assert.Equal(requests, s.Window.AccentStats.Requests);
+
+            // Taste los: Die Entprellung wendet das letzte Spiel an und fragt erst jetzt, nur nach ihm.
+            s.Now += TimeSpan.FromMilliseconds(300);
+            timer!();
+            Assert.Equal(["Steam:bunt"], s.Art.ColorRequests);
+            Assert.Equal(requests + 1, s.Window.AccentStats.Requests);
+
+            // Ein einzelner Wechsel danach fragt sofort.
+            s.Select("blau");
+            Assert.Equal(["Steam:bunt", "Steam:blau"], s.Art.ColorRequests);
+            Assert.Contains("Steam:bunt", s.Art.CanceledColorRequests);
+            s.Close();
         });
     }
 

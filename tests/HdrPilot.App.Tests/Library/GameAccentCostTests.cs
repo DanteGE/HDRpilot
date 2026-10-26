@@ -9,8 +9,9 @@ namespace HdrPilot.App.Tests.Library;
 /// <summary>
 /// Kosten der Spielfarben im Fenster (E94, G15.7), nur über Zähler und Speicher, nie über Zeit: je angewendetem Wechsel
 /// höchstens ein Austausch der Farbwerte, kein neuer Pinsel, höchstens 19 Überblendungen in der Ebene und 22 bei den Pinseln
-/// im Code; Speicher je Wechsel des Akzentpfads unter der Grenze; gehaltene Auswahl ohne Arbeit; Schalter aus ohne Ebene und
-/// ohne Anfrage; nach dem Beruhigen keine Zeitgeber und keine laufenden Animationen.
+/// im Code; Speicher je Wechsel des Akzentpfads unter der Grenze; gehaltene Auswahl ohne Arbeit; Schalter aus (Effekte aus und
+/// voll) ohne Ebene, Anfrage, Rechnung und Zeitgeber, ein neues Schema beruhigt die Pinsel nur, solange sie überblenden; nach
+/// dem Beruhigen keine Zeitgeber und keine laufenden Animationen.
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
 public sealed class GameAccentCostTests(ITestOutputHelper output)
@@ -108,23 +109,59 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
         });
     }
 
-    [Fact]
-    public void Switch_off_does_no_layer_work_and_asks_for_no_colors()
+    [Theory]
+    [InlineData("Off")]
+    [InlineData("Full")]
+    public void Switch_off_does_no_layer_work_and_asks_for_no_colors(string effects)
     {
         WpfTestHost.Run(() =>
         {
-            var s = GameAccentSetup.Open(colors: false, effects: "Full");
+            var s = GameAccentSetup.Open(colors: false, effects: effects);
             s.Window.Motion!.SetWindowState(visible: true, minimized: false, active: true);
+            var settles = 0;
+            s.Window.BrushSettleHookForTest = (_, _) => settles++;
+            var computed = s.Window.AccentStats.Computed;
             for (var i = 0; i < 10; i++)
             {
-                s.Select(i % 2 == 0 ? "blau" : "rot");
+                s.Select(i % 2 == 0 ? "blau" : "rot", afterMs: i < 5 ? 1000 : 33); // einzeln und schnell hintereinander
             }
 
             Assert.Null(s.Window.AccentLayer);
             Assert.Empty(s.Art.ColorRequests);
             Assert.Equal(0, s.Window.AccentStats.Requests);
             Assert.Equal(0, s.Window.AccentStats.Applied);
+            Assert.Equal(0, s.Window.AccentStats.Held);
+            Assert.Equal(computed, s.Window.AccentStats.Computed); // keine Zielpalette (GamePalette/PaletteEngine)
+            Assert.Equal(0, settles); // kein Zeitgeber zum Beruhigen der Pinsel
+            Assert.False(((DispatcherTimer?)Field(s.Window, "_brushSettleTimer"))?.IsEnabled == true);
+            Assert.False(((DispatcherTimer?)Field(s.Window, "_accentTimer"))?.IsEnabled == true);
             Assert.Equal(0, s.Window.AccentBrushes.Stats.Animations);
+            Assert.Equal(0, s.Window.AccentBrushes.Animating);
+            s.Close();
+        });
+    }
+
+    [Fact]
+    public void Switch_off_with_a_new_scheme_settles_the_brushes_only_while_they_fade()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var s = GameAccentSetup.Open(colors: false, effects: "Full");
+            s.Window.Motion!.SetWindowState(visible: true, minimized: false, active: true);
+            Action? settle = null;
+            s.Window.BrushSettleHookForTest = (_, a) => settle = a;
+            var update = AccentPath(s.Window);
+
+            update(null, true); // sofort und gleiches Schema: nichts
+            Assert.Null(settle);
+
+            s.Appearance.Update(a => a.Preset = "royal");
+            WpfTestHost.DoEvents();
+            Assert.Null(s.Window.AccentLayer);
+            Assert.True(s.Window.AccentBrushes.Animating > 0, "neues Schema überblendet die Pinsel im Code");
+            Assert.NotNull(settle);
+            settle!();
+            Assert.Equal(0, s.Window.AccentBrushes.Animating);
             s.Close();
         });
     }

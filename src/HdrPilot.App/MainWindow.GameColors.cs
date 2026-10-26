@@ -18,7 +18,9 @@ namespace HdrPilot.App;
 /// Kontrast gilt; Pinsel im Code (Auswahl der Liste, Fensterkante, Naht und Streif der Werkzeugleiste) folgen über
 /// <see cref="LiveBrushSet"/>. Überblendet wird im OKLCH-Farbraum zusammen mit den Bildern des Spiels; schnelle Auswahl und
 /// gehaltene Tasten hält <see cref="GameAccentScheduler"/> zurück. Graue Spiele bekommen genau das Farbschema, ladende Bilder
-/// und eine leere Auswahl behalten die gezeigten Farben. Gelesen werden die Farben nur bei eingeschaltetem Schalter.
+/// und eine leere Auswahl behalten die gezeigten Farben, ebenso ein Lesefehler (unbekannt, nicht grau). Gelesen werden die
+/// Farben nur bei eingeschaltetem Schalter und erst, wenn die Entprellung ein Spiel anwendet. Bei ausgeschaltetem Schalter
+/// (ohne Ebene) kostet eine Auswahl nichts: keine Rechnung, kein Zeitgeber.
 /// </summary>
 public partial class MainWindow
 {
@@ -136,17 +138,33 @@ public partial class MainWindow
             return; // leere Auswahl: gezeigte Farben bleiben
         }
 
-        RequestColors(hero);
         var decision = instant ? GameAccentDecision.ApplyNow : _accentScheduler.Selected(AccentClock(), KeyRepeating());
         if (decision.Action == GameAccentAction.Hold)
         {
+            // Erst die Entprellung entscheidet: Übersprungene Spiele werden nie gelesen, eine laufende Anfrage für ein
+            // anderes Spiel entfällt (die gezeigten Farben bleiben ohnehin stehen).
+            if (_colorsKey != hero.Key)
+            {
+                CancelColorsRequest();
+            }
+
             StartAccentTimer(decision.DueAt);
             AccentStats.Held++;
             return;
         }
 
         _accentTimer?.Stop();
+        RequestColors(hero);
         ApplySelectedAccents(instant);
+    }
+
+    private void CancelColorsRequest()
+    {
+        _colorsRequest?.Cancel();
+        _colorsRequest?.Dispose();
+        _colorsRequest = null;
+        _colorsKey = null;
+        _colors = null;
     }
 
     /// <summary>Farben des Spiels: aus dem Speicher des Bilderdienstes sofort, sonst einmal angefragt.</summary>
@@ -157,16 +175,13 @@ public partial class MainWindow
             return;
         }
 
-        if (_colorsKey == hero.Key && _colors is not null)
+        if (_colorsKey == hero.Key && (_colors is not null || _colorsRequest is not null))
         {
-            return;
+            return; // bekannt oder schon angefragt
         }
 
-        _colorsRequest?.Cancel();
-        _colorsRequest?.Dispose();
-        _colorsRequest = null;
+        CancelColorsRequest();
         _colorsKey = hero.Key;
-        _colors = null;
         if (source.TryPeek(hero.Item.Config, out var known))
         {
             _colors = known;
@@ -186,6 +201,13 @@ public partial class MainWindow
             var colors = await source.GetGameColorsAsync(hero.Item.Config, token);
             if (token.IsCancellationRequested || _colorsKey != key)
             {
+                return;
+            }
+
+            if (colors is null)
+            {
+                // Nicht gelesen (Fehler): unbekannt, nicht grau. Die gezeigten Farben bleiben; erneut gewählt wird neu gefragt.
+                CancelColorsRequest();
                 return;
             }
 
@@ -272,6 +294,7 @@ public partial class MainWindow
         switch (decision.Action)
         {
             case GameAccentAction.ApplyNow:
+                RequestColors(_hero);
                 ApplySelectedAccents(instant: false);
                 break;
             case GameAccentAction.Hold:
@@ -330,10 +353,23 @@ public partial class MainWindow
 
         var state = vm.Context.Appearance.Current;
         var follow = FollowColors;
-        var duration = instant ? TimeSpan.Zero : _motion?.Transition(AppearanceService.RecolorDuration) ?? TimeSpan.Zero;
         var useGame = follow && game is not null;
         var accents = useGame ? game!.Value : state.Palette;
-        var target = useGame ? GamePalette.Compute(accents, state, _dark) : GamePalette.Scheme(state, _dark);
+        if (!follow && _accentLayer is null && accents == _accents)
+        {
+            // Schalter aus (Normalfall), keine Ebene, Schema unverändert: keine Rechnung, kein Zeitgeber.
+            _showingGame = false;
+            return;
+        }
+
+        var duration = instant ? TimeSpan.Zero : _motion?.Transition(AppearanceService.RecolorDuration) ?? TimeSpan.Zero;
+        ThemePalette? target = null;
+        if (follow || _accentLayer is not null)
+        {
+            target = useGame ? GamePalette.Compute(accents, state, _dark) : GamePalette.Scheme(state, _dark);
+            AccentStats.Computed++;
+        }
+
         if (follow)
         {
             if (_accentLayer is null)
@@ -344,12 +380,12 @@ public partial class MainWindow
                 _accentLayerGeneration++;
             }
 
-            _accentLayer.TransitionTo(target, duration, _liveBrushes.Settle);
+            _accentLayer.TransitionTo(target!, duration, _liveBrushes.Settle);
         }
         else if (_accentLayer is { } layer)
         {
             var generation = ++_accentLayerGeneration;
-            layer.TransitionTo(target, duration, () =>
+            layer.TransitionTo(target!, duration, () =>
             {
                 _liveBrushes.Settle();
                 if (generation == _accentLayerGeneration && !FollowColors && ReferenceEquals(_accentLayer, layer))
@@ -359,10 +395,6 @@ public partial class MainWindow
                     _accentLayer = null;
                 }
             });
-        }
-        else if (duration > TimeSpan.Zero)
-        {
-            StartBrushSettle(duration + GameAccentLayer.SettleMargin); // ohne Ebene (Schema): eigener Zeitgeber
         }
 
         _showingGame = useGame;
@@ -374,6 +406,10 @@ public partial class MainWindow
         _accents = accents;
         Hero.SetPalette(_palette, _accents, _dark);
         ApplyAccentBrushes(duration);
+        if (_accentLayer is null && _liveBrushes.Animating > 0)
+        {
+            StartBrushSettle(duration + GameAccentLayer.SettleMargin); // ohne Ebene (Schema gewechselt): eigener Zeitgeber
+        }
         if (follow && state.BackgroundFollowsGame && GrayArt())
         {
             ApplyAmbient(instant: duration == TimeSpan.Zero); // graue Bilder mischen sich mit den gezeigten Akzenten

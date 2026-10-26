@@ -1,4 +1,4 @@
-namespace HdrPilot.App.Theming;
+namespace HdrPilot.Core.Artwork;
 
 /// <summary>Was das Fenster mit einem Ereignis der Spielfarben tun soll.</summary>
 public enum GameAccentAction

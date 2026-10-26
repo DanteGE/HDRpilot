@@ -1,6 +1,6 @@
-using HdrPilot.App.Theming;
+using HdrPilot.Core.Artwork;
 
-namespace HdrPilot.App.Tests.Theming;
+namespace HdrPilot.Tests.Artwork;
 
 /// <summary>
 /// Entprellung der Spielfarben (E94, G15.3): einzelner Wechsel sofort, schnelle Folgen und gehaltene Tasten halten die

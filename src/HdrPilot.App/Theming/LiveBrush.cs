@@ -32,8 +32,11 @@ public sealed class GameAccentStats
     /// <summary>Anfragen nach Spielfarben (vom Fenster gezählt).</summary>
     public int Requests { get; internal set; }
 
+    /// <summary>Berechnete Zielpaletten der Farbebene (Schema oder Spiel, vom Fenster gezählt).</summary>
+    public int Computed { get; internal set; }
+
     public override string ToString() =>
-        $"angewendet {Applied}, gleich {SkippedEqual}, Farbwerte {ColorPartSwaps}, Ziele {Retargets}, Überblendungen {Animations}, ersetzt {Replacements}, gehalten {Held}, Anfragen {Requests}";
+        $"angewendet {Applied}, gleich {SkippedEqual}, Farbwerte {ColorPartSwaps}, Ziele {Retargets}, Überblendungen {Animations}, ersetzt {Replacements}, gehalten {Held}, Anfragen {Requests}, berechnet {Computed}";
 }
 
 /// <summary>Bleibende (nicht eingefrorene) Pinsel für die Spielfarben (E94).</summary>

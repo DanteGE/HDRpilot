@@ -329,6 +329,7 @@ public sealed class SettingsAppearancePageTests
 
         var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
         await vm.Loaded;
+        await GamePalette.PrepareAsync(); // Grenzen des Grundtons (sonst bis dahin die vorige Probe)
         var game = GamePalette.Compute(GamePalette.Map(redColors, vm.State.Mode)!.Value, vm.State, dark: true);
         var redSample = Assert.IsType<LinearGradientBrush>(vm.ColorsFollowSample);
         Assert.Equal([game.AccentFill1, game.AccentFill2], redSample.GradientStops.Select(s => s.Color));
@@ -342,6 +343,51 @@ public sealed class SettingsAppearancePageTests
         var graySample = Assert.IsType<LinearGradientBrush>(vm.ColorsFollowSample);
         Assert.Equal([scheme.AccentFill1, scheme.AccentFill2], graySample.GradientStops.Select(s => s.Color));
         Assert.Null(vm.PreviewAccents);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public async Task Colors_sample_is_computed_once_per_input_not_on_every_page_refresh()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var red = new GameConfig { Source = GameSource.Steam, SourceId = "34", Name = "Testspiel Rot", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        config.Update(c => c.Games.Add(red));
+        context.Artwork = new HdrPilot.App.Tests.Library.FakeArtworkService(_ => new GameColors("#D62828", GameColorSource.Logo, 1, [], []));
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await vm.Loaded;
+        await GamePalette.PrepareAsync();
+
+        var sample = vm.ColorsFollowSample;
+        var computed = vm.ColorsSampleComputations;
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Same(sample, vm.ColorsFollowSample);
+        }
+
+        // Jede Änderung der Darstellung liest alle Werte der Seite neu (PropertyChanged „“): ohne andere Eingaben keine Rechnung.
+        var refreshed = 0;
+        vm.PropertyChanged += (_, e) => refreshed += string.IsNullOrEmpty(e.PropertyName) ? 1 : 0;
+        vm.BackgroundFollowsGame = !vm.BackgroundFollowsGame;
+        vm.ColorsFollowGame = !vm.ColorsFollowGame;
+        Assert.True(refreshed >= 2);
+        Assert.Same(sample, vm.ColorsFollowSample);
+        Assert.Equal(computed, vm.ColorsSampleComputations);
+
+        // Andere Eingabe (Modus): genau eine neue Rechnung.
+        if (vm.IsTritone)
+        {
+            vm.IsDuotone = true;
+        }
+        else
+        {
+            vm.IsTritone = true;
+        }
+
+        var changed = vm.ColorsFollowSample;
+        Assert.NotSame(sample, changed);
+        Assert.Same(changed, vm.ColorsFollowSample);
+        Assert.Equal(computed + 1, vm.ColorsSampleComputations);
         vm.Dispose();
     }
 

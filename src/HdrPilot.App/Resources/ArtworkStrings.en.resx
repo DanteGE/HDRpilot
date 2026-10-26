@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Source_SteamCache" xml:space="preserve">
+    <value>Steam cache</value>
+  </data>
+  <data name="Source_GogCache" xml:space="preserve">
+    <value>GOG Galaxy cache</value>
+  </data>
+  <data name="Source_UbisoftCache" xml:space="preserve">
+    <value>Ubisoft cache</value>
+  </data>
+  <data name="Source_XboxPackage" xml:space="preserve">
+    <value>Xbox package</value>
+  </data>
+  <data name="Source_QuiverCache" xml:space="preserve">
+    <value>Quiver cache</value>
+  </data>
+  <data name="Source_Custom" xml:space="preserve">
+    <value>Own file</value>
+  </data>
+  <data name="Source_Generated" xml:space="preserve">
+    <value>Generated</value>
+  </data>
+  <data name="Source_SteamGridDb" xml:space="preserve">
+    <value>SteamGridDB</value>
+  </data>
+  <data name="Source_Name" xml:space="preserve">
+    <value>Name as lettering</value>
+  </data>
+  <data name="Source_Monogram" xml:space="preserve">
+    <value>Monogram</value>
+  </data>
+  <data name="Source_CustomIcon" xml:space="preserve">
+    <value>Own icon</value>
+  </data>
+  <data name="Source_IconFile" xml:space="preserve">
+    <value>.ico file · {0} px</value>
+  </data>
+  <data name="Source_Executable" xml:space="preserve">
+    <value>from {0} · {1} px</value>
+  </data>
+  <data name="Source_XboxTile" xml:space="preserve">
+    <value>Xbox tile image · {0} px</value>
+  </data>
+  <data name="Source_CacheIcon" xml:space="preserve">
+    <value>Launcher cache · {0} px</value>
+  </data>
+  <data name="Source_ImageFile" xml:space="preserve">
+    <value>Image file · {0} px</value>
+  </data>
+  <data name="Summary_LocalSteam" xml:space="preserve">
+    <value>Local from the Steam cache · nothing downloaded</value>
+  </data>
+  <data name="Summary_LocalCache" xml:space="preserve">
+    <value>Local from the {0} · nothing downloaded</value>
+  </data>
+  <data name="Summary_NoLocalImages" xml:space="preserve">
+    <value>No local images found · substitute images</value>
+  </data>
+  <data name="Summary_Custom" xml:space="preserve">
+    <value>Own file · only on this PC</value>
+  </data>
+  <data name="Summary_SteamGridDb" xml:space="preserve">
+    <value>Hero image from SteamGridDB · downloaded with your own key</value>
+  </data>
+  <data name="Summary_GeneratedChoice" xml:space="preserve">
+    <value>Hero image generated · your choice</value>
+  </data>
+  <data name="Summary_XboxTile" xml:space="preserve">
+    <value>Xbox package: tile image {0} px · hero image and cover generated from it</value>
+  </data>
+  <data name="Summary_ExeIcon" xml:space="preserve">
+    <value>{0}: no image cache · icon from {1} ({2} px), hero image and cover generated</value>
+  </data>
+  <data name="Summary_SteamNoHero" xml:space="preserve">
+    <value>Steam has no hero image for this game – generated from the icon</value>
+  </data>
+  <data name="Summary_NoHeroFromIcon" xml:space="preserve">
+    <value>{0}: no local hero image – generated from the icon</value>
+  </data>
+  <data name="Summary_NoHeroFromName" xml:space="preserve">
+    <value>{0}: no local hero image – generated from monogram and name</value>
+  </data>
+  <data name="Summary_CoverFromCache" xml:space="preserve">
+    <value>Cover local from the {0} · hero image generated from the icon</value>
+  </data>
+  <data name="Summary_CoverFromCacheNoIcon" xml:space="preserve">
+    <value>Cover local from the {0} · hero image generated from monogram and name</value>
+  </data>
+  <data name="Summary_SquareArt" xml:space="preserve">
+    <value>Local from the {0}: square image · hero image and cover generated from it</value>
+  </data>
+  <data name="Candidate_Automatic" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
+  <data name="Candidate_Generated" xml:space="preserve">
+    <value>Generated image</value>
+  </data>
+  <data name="Candidate_NameInsteadOfLogo" xml:space="preserve">
+    <value>Name instead of logo</value>
+  </data>
+  <data name="Candidate_CustomFile" xml:space="preserve">
+    <value>Own file</value>
+  </data>
+  <data name="Candidate_Alternative" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Note_Grayscale" xml:space="preserve">
+    <value>Black and white – probably an engine logo</value>
+  </data>
+  <data name="Note_TitleCard" xml:space="preserve">
+    <value>Title card with lettering in the center</value>
+  </data>
+  <data name="Note_SmearedCapsule" xml:space="preserve">
+    <value>Steam capsule smeared – crop from the hero image</value>
+  </data>
+  <data name="Error_NotAnImage" xml:space="preserve">
+    <value>The file isn't a readable image.</value>
+  </data>
+  <data name="Fallback_FromFile" xml:space="preserve">
+    <value>{0} · from {1} · {2} px</value>
+  </data>
+  <data name="Fallback_FromIconFile" xml:space="preserve">
+    <value>{0} · .ico file · {1} px</value>
+  </data>
+  <data name="Fallback_FromTile" xml:space="preserve">
+    <value>{0} · tile image {1} px</value>
+  </data>
+  <data name="Fallback_NoLogo" xml:space="preserve">
+    <value>{0} · no logo in the cache</value>
+  </data>
+  <data name="Fallback_CoverFromTile" xml:space="preserve">
+    <value>{0} · generated from the tile image</value>
+  </data>
+  <data name="Fallback_CoverFromIcon" xml:space="preserve">
+    <value>{0} · generated from the icon</value>
+  </data>
+  <data name="Fallback_CoverFromHero" xml:space="preserve">
+    <value>{0} · generated from the hero image</value>
+  </data>
+  <data name="Fallback_Smeared" xml:space="preserve">
+    <value>{0} · smeared capsule → crop</value>
+  </data>
+  <data name="Fallback_Monogram" xml:space="preserve">
+    <value>{0} · no icon found</value>
+  </data>
+  <data name="SteamGridDb_Error_Network" xml:space="preserve">
+    <value>SteamGridDB not reachable</value>
+  </data>
+  <data name="SteamGridDb_Error_Unauthorized" xml:space="preserve">
+    <value>Key rejected – please check it</value>
+  </data>
+  <data name="SteamGridDb_Error_RateLimited" xml:space="preserve">
+    <value>Too many requests – the next run fetches the rest</value>
+  </data>
+  <data name="SteamGridDb_Error_Http" xml:space="preserve">
+    <value>Error at SteamGridDB</value>
+  </data>
+  <data name="SteamGridDb_Error_InvalidResponse" xml:space="preserve">
+    <value>Response from SteamGridDB can't be read</value>
+  </data>
+  <data name="SteamGridDb_Error_Blocked" xml:space="preserve">
+    <value>Image not downloaded: address or size not allowed</value>
+  </data>
+  <data name="SteamGridDb_Error_RequestLimit" xml:space="preserve">
+    <value>Maximum number of requests reached – the next run fetches the rest</value>
+  </data>
+  <data name="SteamGridDb_Error_KeyUnreadable" xml:space="preserve">
+    <value>Saved key can't be read – please enter it again</value>
+  </data>
+  <data name="SteamGridDb_Error_KeyNotSaved" xml:space="preserve">
+    <value>Key not saved</value>
+  </data>
+  <data name="SteamGridDb_Error_GameRunning" xml:space="preserve">
+    <value>Skipped: a game is running</value>
+  </data>
+</root>

@@ -22,12 +22,14 @@ zusammengeführt.
 > „Bitte nur lokal umsetzen, was lokal gemacht werden muss, ansonsten jetzt den Fokus darauf, Änderungen in der
 > Cloudsitzung vorzunehmen.“
 
-- **Cloud-Sitzung (Linux):** Code, Unit-Tests, die ohne Windows-Desktop laufen, Doku, Zusammenführen der Zweige.
-  Bauen geht mit `dotnet build -p:EnableWindowsTargeting=true`. Was sich nicht bauen oder testen lässt, steht im
-  Bericht ausdrücklich als „lokal offen“.
+- **Cloud-Sitzung (Linux):** Code, Unit-Tests aus `HdrPilot.Tests`, soweit sie ohne Windows-APIs laufen, Doku,
+  Zusammenführen der Zweige. Bauen geht mit `dotnet build -p:EnableWindowsTargeting=true`. Was sich nicht bauen oder
+  testen lässt, steht im Bericht ausdrücklich als „lokal offen“.
 - **Lokal (Windows, die ursprüngliche Sitzung):**
-  - WPF-Fenstertests (`HdrPilot.App.Tests`) und alle Oberflächen-Gates (`phase4-ui`, `phase6-ui`, `phase8-icons`,
-    `phase9-autohdr-ui`, `phase10-ui`, `phase10-settings-ui`, `phase11-uninstalled-ui`, `phase12-quiver-ui`)
+  - das ganze Testprojekt `HdrPilot.App.Tests` (WPF; braucht die Windows-Desktop-Laufzeit, auch für die
+    ViewModel-Tests) und alle Oberflächen-Gates (`phase4-ui`, `phase6-ui`, `phase6-traymenu`, `phase7-setup-ui`,
+    `phase8-icons`, `phase9-autohdr-ui`, `phase10-ui`, `phase10-settings-ui`, `phase11-uninstalled-ui`,
+    `phase12-quiver-ui`)
   - Bildschirmfotos im Snapshot-Modus
   - Setup bauen, Test-Update installieren (Sicherung und Abgleich der Einstellungen)
   - echte HDR-Gates und Abnahmetests mit dem Nutzer
@@ -83,8 +85,8 @@ Die Punkte stehen mit allen Annahmekriterien in `items-en.txt`. Stand der Zweige
 
 - **SteamGridDB-Suche im „Bild wählen…“-Dialog**, Bauplan `sgdb-spec-final.md`. Zweig `feature/sgdb-search` (Name
   aus Abschnitt 17 des Bauplans), Entscheidung E93, Gates Phase 14.
-- **„Farben folgen dem Spiel“**, Bauplan `spielfarben-spec-final.md`. Zweig `feature/spielfarben`,
-  Entscheidung E94, Gates Phase 15.
+- **„Farben folgen dem Spiel“**, Bauplan `spielfarben-spec-final.md`. Zweig `feature/spielfarben` (neu; der Bauplan
+  nennt keinen Namen), Entscheidung E94, Gates Phase 15.
 - Beide Baupläne wurden nur lesend erstellt, auf Stand 1.5.0, und kritisch geprüft. Zeilennummern können sich
   durch das Test-Update verschoben haben.
 - Der Bauplan „Farben folgen dem Spiel“ nennt in Abschnitt 14 die Dateien des SteamGridDB-Strangs, die er nicht
@@ -92,7 +94,10 @@ Die Punkte stehen mit allen Annahmekriterien in `items-en.txt`. Stand der Zweige
   nur die gemeinsamen Theme-Tokens: Wer als Zweiter zusammenführt, trägt die Tokens des anderen nach. Laut Abschnitt
   13 des Farben-Bauplans ändert der Farben-Strang `Tokens.*.xaml` und `ThemeKeys.cs` nicht, `Themes/Library.xaml`
   nur im Notfall aus Abschnitt 5.7.
-- Am Ende alles auf `ui/feedback` aufbauen bzw. danach zusammenführen.
+- Beide Zweige nach den drei UI-Zweigen anlegen: entweder von `ui/feedback` abzweigen oder von `main` und danach mit
+  `ui/feedback` zusammenführen. „Nach dem Zusammenführen des UI-Pakets“ (Abschnitt 17 des SteamGridDB-Bauplans,
+  Schritt 6 in Abschnitt 15 des Farben-Bauplans) heißt hier: nach dem Zusammenführen in `ui/feedback`, denn nach
+  `main` kommt erst etwas nach der lokalen Prüfung.
 
 ## Danach (lokal, mit dem Nutzer)
 

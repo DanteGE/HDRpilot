@@ -34,7 +34,7 @@ Fertige Versionen gibt es unter [GitHub Releases](https://github.com/DanteGE/HDR
    (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
    **Installieren** kopiert HDRpilot dorthin, legt eine Verknüpfung im Startmenü an und trägt HDRpilot unter
    *Einstellungen → Apps → Installierte Apps* ein. Die Kommandozeile liegt danach in `<Programmordner>\cli`, daneben
-   README, Lizenztext (`LICENSE`) und Lizenzhinweise.
+   die README (englisch `README.md`, deutsch `README.de.md`), Lizenztext (`LICENSE`) und Lizenzhinweise.
 3. Mit der dritten Option öffnet sich nach der Installation die Spielebibliothek (nicht, wenn der Setup mit
    Administratorrechten läuft; dann startest du HDRpilot über das Startmenü). Im Alltag läuft HDRpilot als Symbol
    im Infobereich (unten rechts neben der Uhr) und liest bei jedem Start deine Spiele ein. Siehst du das Symbol nicht,
@@ -68,7 +68,8 @@ Menükopf) und der Kopf der Einstellungen.
 
 ### Ohne Installation
 
-1. Den Ordner `HDRpilot` (mit `HDRpilot.exe`, `cli\hdrpilot.exe`, README, Lizenztext `LICENSE` und Lizenzhinweisen)
+1. Den Ordner `HDRpilot` (mit `HDRpilot.exe`, `cli\hdrpilot.exe`, README englisch und deutsch, Lizenztext `LICENSE` und
+   Lizenzhinweisen)
    an einen dauerhaften Ort legen, etwa nach `%LOCALAPPDATA%\Programs\HDRpilot\`. Autostart, Verknüpfungen und
    Steam-Startoptionen zeigen auf diesen Ort. Verschiebst du die EXE später, korrigiert HDRpilot den
    Autostart-Eintrag beim nächsten Start selbst; Verknüpfungen und Steam-Startoptionen musst du neu anlegen.
@@ -637,7 +638,7 @@ Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über d
 
 | Was | Wo |
 |---|---|
-| Programm (Setup): HDRpilot.exe, `cli\hdrpilot.exe`, README, `LICENSE`, Lizenzhinweise | `%LOCALAPPDATA%\Programs\HDRpilot\` |
+| Programm (Setup): HDRpilot.exe, `cli\hdrpilot.exe`, README (`README.md`, `README.de.md`), `LICENSE`, Lizenzhinweise | `%LOCALAPPDATA%\Programs\HDRpilot\` |
 | Eintrag unter „Installierte Apps“ (Setup) | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\HDRpilot` |
 | Verknüpfung im Startmenü (Setup) | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot.lnk` |
 | Protokoll von Setup und Entfernen | `%TEMP%\HDRpilot-Setup.log` |
@@ -930,7 +931,7 @@ Ohne Installation:
 1. In den Einstellungen **Mit Windows starten** ausschalten und gegebenenfalls **Konto entfernen**.
 2. In Steam die Startoption `--wrap -- %command%` bei den Spielen wieder löschen, bei denen du sie eingetragen hast.
 3. Warten, bis kein Spiel mehr läuft und HDR zurückgestellt ist, dann im Infobereich **HDRpilot beenden**.
-4. Den Ordner `HDRpilot` löschen (`HDRpilot.exe`, `cli`, README, `LICENSE` und Lizenzhinweise), dazu die Ordner
+4. Den Ordner `HDRpilot` löschen (`HDRpilot.exe`, `cli`, `README.md`, `README.de.md`, `LICENSE` und Lizenzhinweise), dazu die Ordner
    `%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`, `%TEMP%\.net\HDRpilot`, den Startmenü-Ordner
    `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot` und die „(HDR)“-Verknüpfungen auf dem Desktop.
 
@@ -949,7 +950,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
 `tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab und daneben den Setup
-`artifacts\publish\HDRpilot-Setup-1.5.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenztext,
+`artifacts\publish\HDRpilot-Setup-1.5.0.exe` (dieselbe EXE mit angehängtem Paket aus beiden READMEs, Lizenztext,
 Lizenzhinweisen und Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
 `HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
 `GATES.md`.

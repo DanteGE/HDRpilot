@@ -513,9 +513,10 @@ public sealed class ArtworkPickerViewModel : ObservableObject, IDisposable
                 {
                     return false;
                 }
-                catch (Exception ex) when (ex is SteamGridDbException or IOException or InvalidDataException or NotSupportedException or ArgumentException
-                    or InvalidOperationException or System.Runtime.InteropServices.ExternalException or OutOfMemoryException)
+                catch (Exception ex)
                 {
+                    // Jeder andere Fehler (auch ein kaputter Bildkopf als FileFormatException, fehlende Rechte) wird zur
+                    // Meldung im Dialog; aus dem async-void-Handler von „Übernehmen“ entkäme er sonst als „Unerwarteter Fehler“.
                     if (_onlineClosed)
                     {
                         return false;
@@ -645,16 +646,19 @@ public sealed class ArtworkPickerViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Nach dem Übernehmen: eine vom Nutzer geänderte Zuordnung eines Spiels ohne Steam-App-ID merken (nie bei Steam-Spielen,
-    /// nach Abbrechen oder einem Fehler). Auch ohne geändertes Bild; dann meldet die Statuszeile das Merken.
+    /// nach Abbrechen oder einem Fehler). Auch ohne geändertes Bild; dann meldet die Statuszeile das Merken. Das Merken
+    /// (Bilder der alten Zuordnung löschen, Verzeichnis schreiben) läuft im Hintergrund; die Meldung folgt danach.
     /// </summary>
-    public void CommitMatch(ApplyOutcome outcome)
+    public async Task CommitMatchAsync(ApplyOutcome outcome)
     {
         if (outcome == ApplyOutcome.Failed || !Online.MatchChangedByUser || Online.IsSteamGame || Online.Match?.Target.GameId is not { } id)
         {
             return;
         }
 
-        _owner.Context.SteamGridDb.RememberMatch(Item.Config, id);
+        var service = _owner.Context.SteamGridDb;
+        var game = Item.Config;
+        await Task.Run(() => service.RememberMatch(game, id));
         if (outcome == ApplyOutcome.Unchanged)
         {
             _owner.ShowStatus(LibraryText.Format(LibraryStrings.Picker_MatchRemembered, Item.Name), StatusKind.Success);

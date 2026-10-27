@@ -75,13 +75,14 @@ public sealed class ArtworkPickerSearchTests
         picker.Kind = ArtworkKind.Logo;
         picker.Kind = ArtworkKind.Cover;
         picker.Online.IsMatchOpen = true;
+        Assert.True(picker.Online.IsMatchOpen); // aufklappbar ohne Sitzung
         picker.Online.MatchSearchText = "Nebelfahrt";
         picker.Online.IsMatchOpen = false;
         await Settle();
 
-        var session = Assert.Single(_sgdb.Sessions);
-        Assert.Empty(session.ApiCalls);
-        Assert.Empty(session.PreviewCalls);
+        // Nicht einmal eine Sitzung (also kein entschlüsselter Schlüssel) vor dem ersten Klick.
+        Assert.Empty(_sgdb.Sessions);
+        Assert.Null(picker.Online.Session);
         Assert.Equal(SteamGridDbSearchState.Ready, picker.Online.State);
         Assert.Equal(LibraryText.Format(LibraryStrings.Picker_SgdbMatch, "Kupferwald"), picker.Online.MatchText);
         Assert.Equal(LibraryStrings.Picker_SgdbMatchHowSteam, picker.Online.MatchToolTip);
@@ -417,7 +418,7 @@ public sealed class ArtworkPickerSearchTests
     [Fact]
     public void A_remembered_match_shows_its_name_after_the_first_click_and_is_offered_first() => Sta.Run(async () =>
     {
-        _sgdb.Setup = s => s.InitialMatch = new SteamGridDbMatch(SteamGridDbMatchKind.Remembered, SteamGridDbTarget.Game(9105), "Kupferwald", null, false);
+        _sgdb.RememberedId = 9105;
         var (_, vm, picker) = Open(Manual, ArtworkKind.Hero);
         using var _vm = vm;
         var online = picker.Online;
@@ -444,18 +445,19 @@ public sealed class ArtworkPickerSearchTests
         var online = picker.Online;
         online.IsMatchOpen = true;
         online.MatchSearchText = "Nebel";
-        Assert.Empty(_sgdb.Session!.ApiCalls);
+        Assert.Empty(_sgdb.Sessions);
 
-        _sgdb.Session.HoldApi = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sgdb.Setup = s => s.HoldApi = hold;
         var first = online.SearchGamesAsync();
         Assert.True(online.IsMatchSearching);
         Assert.Equal(LibraryStrings.Picker_SgdbMatchSearching, online.MatchHint);
         online.MatchSearchText = "Nebelfahrt";
         var second = online.SearchGamesAsync();
-        _sgdb.Session.HoldApi.SetResult();
+        hold.SetResult();
         await Task.WhenAll(first, second);
 
-        Assert.Equal(["games:Nebel", "games:Nebelfahrt"], _sgdb.Session.ApiCalls);
+        Assert.Equal(["games:Nebel", "games:Nebelfahrt"], Assert.Single(_sgdb.Sessions).ApiCalls);
         Assert.Equal(3, online.MatchEntries.Count);
         Assert.Equal("Nebelfahrt (2019)", online.MatchEntries[0].Text); // nur die zweite Suche zählt
         Assert.False(online.IsMatchSearching);
@@ -492,8 +494,8 @@ public sealed class ArtworkPickerSearchTests
         Assert.True(picker.Online.MatchChangedByUser);
         Assert.False(picker.Online.ShowCommitHint);
 
-        picker.CommitMatch(await picker.ApplyWithOutcomeAsync());
-        picker.CommitMatch(ApplyOutcome.Applied);
+        await picker.CommitMatchAsync(await picker.ApplyWithOutcomeAsync());
+        await picker.CommitMatchAsync(ApplyOutcome.Applied);
 
         Assert.Empty(_sgdb.Remembered);
         Assert.Null(context.Config.FindGame(SteamKey)!.Artwork);
@@ -507,12 +509,17 @@ public sealed class ArtworkPickerSearchTests
         await picker.Online.SearchGamesAsync();
         await picker.Online.ChooseMatchAsync(picker.Online.MatchEntries.Single(e => e.Hit?.Id == 9102));
 
-        picker.CommitMatch(ApplyOutcome.Failed);
+        await picker.CommitMatchAsync(ApplyOutcome.Failed);
         Assert.Empty(_sgdb.Remembered);
         var outcome = await picker.ApplyWithOutcomeAsync();
         Assert.Equal(ApplyOutcome.Unchanged, outcome);
-        picker.CommitMatch(outcome);
+        var ui = Environment.CurrentManagedThreadId;
+        var commit = picker.CommitMatchAsync(outcome);
+        Assert.NotEqual(LibraryText.Format(LibraryStrings.Picker_MatchRemembered, "Kupferwald"), vm.StatusMessage); // erst nach dem Merken
+        await commit;
         Assert.Equal([(Manual, 9102L)], _sgdb.Remembered);
+        Assert.NotEqual(ui, Assert.Single(_sgdb.RememberedOnThreads)); // Löschen und Schreiben nicht auf dem UI-Thread
+        Assert.Equal(ui, Environment.CurrentManagedThreadId); // danach zurück auf ihm
         Assert.Equal(LibraryText.Format(LibraryStrings.Picker_MatchRemembered, "Kupferwald"), vm.StatusMessage);
 
         // Über den Dialog: Abbrechen merkt nichts, Übernehmen schon.
@@ -631,11 +638,15 @@ public sealed class ArtworkPickerSearchTests
     [Fact]
     public void Rate_limit_disables_search_more_and_retry_until_the_pause_ends() => Sta.Run(async () =>
     {
+        FakeSearchSession? session = null;
+        _sgdb.Setup = s =>
+        {
+            session = s;
+            s.Fail = _ => new SteamGridDbException(SteamGridDbErrorKind.RateLimited, "Test");
+        };
         var (context, vm, picker) = Open(SteamKey, ArtworkKind.Cover);
         using var _vm = vm;
-        var session = _sgdb.Session!;
-        session.Fail = _ => new SteamGridDbException(SteamGridDbErrorKind.RateLimited, "Test");
-        session.BlockedUntil = context.FakeClock.UtcNow + TimeSpan.FromSeconds(60);
+        _sgdb.Setup += s => s.BlockedUntil = context.FakeClock.UtcNow + TimeSpan.FromSeconds(60);
 
         await picker.Online.SearchAsync(ArtworkKind.Cover);
 
@@ -645,7 +656,7 @@ public sealed class ArtworkPickerSearchTests
         Assert.Equal(LibraryStrings.Picker_SgdbRateLimited, picker.Online.RetryToolTip);
         Assert.Equal(1, context.Dispatcher.PendingDelays); // ein einmaliger Zeitgeber, kein Ticken
 
-        session.BlockedUntil = null;
+        session!.BlockedUntil = null;
         session.Fail = _ => null;
         context.Dispatcher.RunDelayed();
         Assert.True(picker.Online.CanRetry);
@@ -656,9 +667,10 @@ public sealed class ArtworkPickerSearchTests
     [Fact]
     public void A_slow_answer_shows_the_slow_text_once() => Sta.Run(async () =>
     {
+        var hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sgdb.Setup = s => s.HoldApi = hold;
         var (context, vm, picker) = Open(SteamKey, ArtworkKind.Cover);
         using var _vm = vm;
-        _sgdb.Session!.HoldApi = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var changes = Track(picker.Online, nameof(SteamGridDbSearchViewModel.StatusText));
 
         var search = picker.Online.SearchAsync(ArtworkKind.Cover);
@@ -667,7 +679,7 @@ public sealed class ArtworkPickerSearchTests
         Assert.Equal(LibraryStrings.Picker_SgdbSlow, picker.Online.StatusText);
         context.Dispatcher.RunDelayed(); // nichts mehr fällig
         Assert.Equal(1, changes.Count(t => t == LibraryStrings.Picker_SgdbSlow));
-        _sgdb.Session.HoldApi.SetResult();
+        hold.SetResult();
         await search;
         Assert.Equal(SteamGridDbSearchState.Results, picker.Online.State);
     });
@@ -753,6 +765,11 @@ public sealed class ArtworkPickerSearchTests
     [InlineData("notAnImage")]
     [InlineData("tooLarge")]
     [InlineData("rateLimited")]
+    [InlineData("corruptHeader")]
+    [InlineData("denied")]
+    [InlineData("overflow")]
+    [InlineData("security")]
+    [InlineData("unexpected")]
     public void Prepare_apply_failure_switches_to_the_failing_tab_and_keeps_message_selection_and_data(string failure) => Sta.Run(async () =>
     {
         var (_, vm, picker) = Open(SteamKey, ArtworkKind.Cover);
@@ -770,6 +787,11 @@ public sealed class ArtworkPickerSearchTests
             "blocked" => new SteamGridDbException(SteamGridDbErrorKind.Blocked, "Test"),
             "notAnImage" => new InvalidDataException("Test"),
             "tooLarge" => new ImageTooLargeException("Test"),
+            "corruptHeader" => new FileFormatException("Test"), // kaputter Bildkopf (WIC)
+            "denied" => new UnauthorizedAccessException("Test"),
+            "overflow" => new OverflowException("Test"),
+            "security" => new System.Security.SecurityException("Test"),
+            "unexpected" => new InvalidCastException("Test"),
             _ => new SteamGridDbException(SteamGridDbErrorKind.RateLimited, "Test"),
         } : null;
         var focus = new List<SteamGridDbFocusRequestEventArgs>();
@@ -787,8 +809,9 @@ public sealed class ArtworkPickerSearchTests
         {
             "network" => LibraryStrings.Picker_SgdbDownloadFailed,
             "blocked" => LibraryStrings.Picker_SgdbDownloadBlocked,
-            "notAnImage" => LibraryStrings.Picker_SgdbDownloadNotAnImage,
+            "notAnImage" or "corruptHeader" or "denied" or "overflow" or "security" => LibraryStrings.Picker_SgdbDownloadNotAnImage, // wie ArtworkImaging.IsDecodeFailure
             "tooLarge" => LibraryStrings.Picker_TooLarge,
+            "unexpected" => LibraryStrings.Picker_SgdbDownloadFailed,
             _ => LibraryStrings.Picker_SgdbRateLimited,
         }, picker.Message);
         Assert.Contains(focus, f => f.Target == SteamGridDbFocusTarget.Tile && ReferenceEquals(f.Item, cover));
@@ -942,10 +965,12 @@ public sealed class ArtworkPickerSearchTests
             Assert.Equal(SteamGridDbSearchState.NoKey, picker.Online.State);
         }
 
-        // Schlüssel wieder da: die Reiter sind wieder bereit.
+        // Schlüssel wieder da: die Reiter sind wieder bereit; eine neue Sitzung erst mit dem nächsten Klick.
         _sgdb.Key = SteamGridDbKeyState.Stored;
         _sgdb.RaiseChanged();
         Assert.Equal(SteamGridDbSearchState.Ready, picker.Online.State);
+        Assert.Single(_sgdb.Sessions);
+        await picker.Online.SearchAsync(ArtworkKind.Hero);
         Assert.Equal(2, _sgdb.Sessions.Count);
     });
 
@@ -963,6 +988,13 @@ public sealed class ArtworkPickerSearchTests
         var picker = new ArtworkPickerViewModel(vm, vm.Games.Single(g => g.Key == SteamKey), ArtworkKind.Cover);
         Assert.Equal(0, service.HandlersCreated);
 
+        // Öffnen und Schließen ohne Klick: keine Sitzung, nichts im Protokoll.
+        var idle = new ArtworkPickerViewModel(vm, vm.Games.Single(g => g.Key == SteamKey), ArtworkKind.Hero);
+        idle.Online.IsMatchOpen = true;
+        idle.Dispose();
+        Assert.DoesNotContain(rig.Log.Entries, e => e.Message.StartsWith("SteamGridDB-Suche", StringComparison.Ordinal));
+        Assert.Null(picker.Online.Session);
+
         await picker.Online.SearchAsync(ArtworkKind.Cover);
         await WaitFor(() => picker.Online.Results.All(r => r.PreviewState == PreviewState.Loaded));
 
@@ -975,13 +1007,14 @@ public sealed class ArtworkPickerSearchTests
     [Fact]
     public void Late_results_after_close_are_ignored() => Sta.Run(async () =>
     {
+        var hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sgdb.Setup = s => s.HoldApi = hold;
         var (_, vm, picker) = Open(SteamKey, ArtworkKind.Hero);
         using var _vm = vm;
-        _sgdb.Session!.HoldApi = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var search = picker.Online.SearchAsync(ArtworkKind.Hero);
 
         picker.CloseSession();
-        _sgdb.Session.HoldApi.SetResult();
+        hold.SetResult();
         await search;
 
         Assert.Empty(picker.Online.Results);
@@ -1016,7 +1049,8 @@ public sealed class ArtworkPickerSearchTests
         var online = picker.Online;
         Assert.Equal(LibraryStrings.Picker_SgdbSearch, online.SearchButtonText);
         Assert.Equal(LibraryText.Format(LibraryStrings.Picker_SgdbSearchName, LibraryStrings.Picker_KindPluralCover), online.SearchAutomationName);
-        _sgdb.Session!.HoldApi = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sgdb.Setup = s => s.HoldApi = hold;
 
         online.SearchCommand.Execute(null);
         Assert.True(online.ShowSearchButton);
@@ -1026,12 +1060,213 @@ public sealed class ArtworkPickerSearchTests
         Assert.Equal(LibraryStrings.Picker_SgdbSearching, online.SearchButtonText);
         Assert.Equal(LibraryStrings.Picker_SgdbSearching, online.SearchItemStatus);
         online.SearchCommand.Execute(null); // wird übergangen
-        _sgdb.Session.HoldApi.SetResult();
+        hold.SetResult();
         await WaitFor(() => online.State == SteamGridDbSearchState.Results);
 
-        Assert.Single(_sgdb.Session.ApiCalls);
+        Assert.Single(_sgdb.Session!.ApiCalls);
         Assert.False(online.ShowSearchButton);
         Assert.Null(online.SearchItemStatus);
+    });
+
+    [Fact]
+    public void The_session_opens_with_the_first_click_and_shows_the_match_without_it() => Sta.Run(async () =>
+    {
+        // Gemerkte Zuordnung: Spielwahl und Hinweis stehen ohne Sitzung; erst die Suche der Spielwahl öffnet sie.
+        _sgdb.RememberedId = 9105;
+        var (_, vm, picker) = Open(Manual, ArtworkKind.Hero);
+        using var _vm = vm;
+        var online = picker.Online;
+        Assert.Equal(LibraryStrings.Picker_SgdbMatchHowRemembered, online.MatchToolTip);
+        Assert.True(online.ShowCommitHint);
+        Assert.True(online.ToggleMatchCommand.CanExecute(null));
+        Assert.True(online.SearchGamesCommand.CanExecute(null));
+        Assert.Empty(_sgdb.Sessions);
+
+        await online.SearchGamesAsync();
+
+        var session = Assert.Single(_sgdb.Sessions);
+        Assert.Same(session, online.Session);
+        Assert.Equal(["games:Kupferwald"], session.ApiCalls);
+        Assert.Equal(SteamGridDbMatchKind.Remembered, session.InitialMatch!.Kind);
+        Assert.False(online.MatchChangedByUser);
+
+        // Weitere Klicks nutzen dieselbe Sitzung; Schließen gibt sie frei.
+        await online.SearchAsync(ArtworkKind.Hero);
+        Assert.Single(_sgdb.Sessions);
+        picker.Dispose();
+        Assert.True(session.Disposed);
+
+        // Ohne Klick entsteht nie eine Sitzung, auch nicht beim Schließen.
+        var (_, vm2, idle) = Open(Manual, ArtworkKind.Cover);
+        using var _vm2 = vm2;
+        idle.Kind = ArtworkKind.Logo;
+        idle.Online.IsMatchOpen = true;
+        idle.Dispose();
+        Assert.Single(_sgdb.Sessions);
+    });
+
+    [Fact]
+    public void A_refused_expand_tells_the_view_to_close_again() => Sta.Run(() =>
+    {
+        _sgdb.Key = SteamGridDbKeyState.Missing;
+        var (_, vm, picker) = Open(Manual, ArtworkKind.Hero);
+        using var _vm = vm;
+        var count = 0;
+        picker.Online.PropertyChanged += (_, e) => count += e.PropertyName == nameof(SteamGridDbSearchViewModel.IsMatchOpen) ? 1 : 0;
+
+        // Die Ansicht (TwoWay) setzt true; abgelehnt, aber gemeldet, damit der Umschalter wieder zu ist.
+        picker.Online.IsMatchOpen = true;
+
+        Assert.False(picker.Online.IsMatchOpen);
+        Assert.Equal(1, count);
+        Assert.Empty(_sgdb.Sessions);
+        return Task.CompletedTask;
+    });
+
+    [Fact]
+    public void Removing_the_key_resets_online_picks_with_a_note_so_apply_never_silently_does_nothing() => Sta.Run(async () =>
+    {
+        var (context, vm, picker) = Open(SteamKey, ArtworkKind.Cover);
+        using var _vm = vm;
+        await picker.LoadAsync();
+        await picker.Online.SearchAsync(ArtworkKind.Cover);
+        picker.Selected = picker.Online.Results[2];
+        picker.Kind = ArtworkKind.Hero;
+        await picker.LoadAsync();
+        await picker.Online.SearchAsync(ArtworkKind.Hero);
+        picker.Selected = picker.Online.Results[0];
+        Assert.True(picker.HasChanges);
+
+        _sgdb.Key = SteamGridDbKeyState.Missing;
+        _sgdb.RaiseChanged();
+
+        Assert.False(picker.Selected!.IsOnline);
+        Assert.False(picker.ChosenFor(ArtworkKind.Cover)!.IsOnline);
+        Assert.DoesNotContain(picker.ChosenItems, c => c.IsOnline);
+        Assert.False(picker.HasChanges);
+        Assert.Equal(LibraryStrings.Picker_SgdbPicksResetNoKey, picker.Message);
+        Assert.Equal(StatusKind.Info, picker.MessageKind);
+
+        // „Übernehmen“ hat nichts mehr zu laden und schließt; geschrieben wird nichts.
+        Assert.True(await picker.PrepareApplyAsync());
+        Assert.Equal(ApplyOutcome.Unchanged, await picker.ApplyWithOutcomeAsync());
+        Assert.Null(context.Config.FindGame(SteamKey)!.Artwork);
+        Assert.Empty(_sgdb.Session!.Downloads);
+    });
+
+    [Fact]
+    public void Previews_finishing_after_a_match_change_touch_neither_the_new_list_nor_its_state() => Sta.Run(async () =>
+    {
+        var running = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _sgdb.Setup = s =>
+        {
+            s.HoldRunningPreviews = running;
+            s.PreviewFail = a => a.Id < 1000 ? new SteamGridDbException(SteamGridDbErrorKind.RateLimited, "Test") : null; // nur die alte Liste
+        };
+        var (_, vm, picker) = Open(SteamKey, ArtworkKind.Hero);
+        using var _vm = vm;
+        var online = picker.Online;
+        await online.SearchAsync(ArtworkKind.Hero);
+        var old = online.Results.ToList();
+        await online.SearchGamesAsync();
+        await online.ChooseMatchAsync(online.MatchEntries.Single(e => e.Hit?.Id == 9102));
+        Assert.Equal(SteamGridDbSearchState.Results, online.State);
+        var fresh = online.Results.ToList();
+        Assert.All(fresh, t => Assert.True(t.Asset!.Id > 1000));
+        var focus = new List<SteamGridDbFocusTarget>();
+        online.FocusRequest += (_, e) => focus.Add(e.Target);
+
+        // Die laufenden Vorschauen der alten Liste enden jetzt, mit „zu viele Anfragen“.
+        running.SetResult();
+        await WaitFor(() => fresh.All(t => t.PreviewState is PreviewState.Loaded or PreviewState.Missing));
+        await Settle();
+
+        Assert.Equal(SteamGridDbSearchState.Results, online.State); // kein Fehler aus der alten Liste
+        Assert.DoesNotContain(SteamGridDbFocusTarget.Retry, focus);
+        Assert.Null(online.ProgressText); // die Zähler der neuen Seite stimmen
+        Assert.All(old, t => Assert.NotEqual(PreviewState.Loading, t.PreviewState));
+        Assert.All(old, t => Assert.Null(t.Preview));
+    });
+
+    [Fact]
+    public void A_first_page_of_only_filtered_entries_fetches_the_next_page() => Sta.Run(async () =>
+    {
+        _sgdb.Setup = s => s.FilteredPages.Add(0);
+        var (_, vm, picker) = Open(SteamKey, ArtworkKind.Hero);
+        using var _vm = vm;
+
+        await picker.Online.SearchAsync(ArtworkKind.Hero);
+
+        Assert.Equal(SteamGridDbSearchState.Results, picker.Online.State);
+        Assert.Equal(22, picker.Online.Results.Count); // Seite 1
+        Assert.Equal(["assets:Hero:steam/9990150:0", "assets:Hero:steam/9990150:1"], _sgdb.Session!.ApiCalls);
+    });
+
+    [Fact]
+    public void Filtered_pages_are_skipped_only_up_to_a_bound() => Sta.Run(async () =>
+    {
+        _sgdb.Setup = s =>
+        {
+            for (var p = 0; p <= SteamGridDbSearchViewModel.MaxFilteredPages; p++)
+            {
+                s.FilteredPages.Add(p);
+            }
+
+            s.PageSizes[SteamGridDbSearchViewModel.MaxFilteredPages + 1] = 5;
+        };
+        var (_, vm, picker) = Open(SteamKey, ArtworkKind.Logo);
+        using var _vm = vm;
+
+        await picker.Online.SearchAsync(ArtworkKind.Logo);
+
+        Assert.Equal(SteamGridDbSearchState.NoImages, picker.Online.State);
+        Assert.Equal(1 + SteamGridDbSearchViewModel.MaxFilteredPages, _sgdb.Session!.ApiCalls.Count); // Budget geschont
+    });
+
+    [Fact]
+    public void More_skips_filtered_pages_and_keeps_offering_more_while_the_list_goes_on() => Sta.Run(async () =>
+    {
+        _sgdb.Setup = s =>
+        {
+            s.PageSizes.Clear();
+            s.PageSizes[0] = 24;
+            s.FilteredPages.Add(1);
+            s.PageSizes[2] = 10;
+        };
+        var (_, vm, picker) = Open(SteamKey, ArtworkKind.Hero);
+        using var _vm = vm;
+        var online = picker.Online;
+        await online.SearchAsync(ArtworkKind.Hero);
+        Assert.True(online.ShowMore);
+
+        await online.MoreAsync(ArtworkKind.Hero);
+
+        Assert.Equal(34, online.Results.Count); // Seite 1 verworfen, Seite 2 gezeigt
+        Assert.EndsWith(":2", _sgdb.Session!.ApiCalls[^1], StringComparison.Ordinal);
+
+        // Lauter verworfene Seiten bis zur Grenze: „Mehr laden“ bleibt, kein „alle gezeigt“.
+        _sgdb.Setup = s =>
+        {
+            s.PageSizes.Clear();
+            s.PageSizes[0] = 24;
+            for (var p = 1; p <= 1 + SteamGridDbSearchViewModel.MaxFilteredPages; p++)
+            {
+                s.FilteredPages.Add(p);
+            }
+        };
+        var (_, vm2, other) = Open(SteamKey, ArtworkKind.Hero);
+        using var _vm2 = vm2;
+        await other.Online.SearchAsync(ArtworkKind.Hero);
+        await other.Online.MoreAsync(ArtworkKind.Hero);
+        Assert.Equal(24, other.Online.Results.Count);
+        Assert.Equal(SteamGridDbSearchState.Results, other.Online.State);
+        Assert.True(other.Online.ShowMore);
+        Assert.NotEqual(LibraryText.Format(LibraryStrings.Picker_SgdbEnd, LibraryStrings.Picker_KindPluralHero), other.Online.StatusText);
+
+        // Der nächste Klick findet das Ende (leere Seite): jetzt „alle gezeigt“.
+        await other.Online.MoreAsync(ArtworkKind.Hero);
+        Assert.False(other.Online.ShowMore);
+        Assert.Equal(LibraryText.Format(LibraryStrings.Picker_SgdbEnd, LibraryStrings.Picker_KindPluralHero), other.Online.StatusText);
     });
 
     private static Exception Error(string kind) => kind switch

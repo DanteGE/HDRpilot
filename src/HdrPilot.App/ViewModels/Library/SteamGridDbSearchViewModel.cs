@@ -108,7 +108,9 @@ public sealed class SteamGridDbMatchEntry : ObservableObject
 /// <summary>
 /// Abschnitt „STEAMGRIDDB“ von „Bild wählen…“ (E93): Zustand, Ergebnisse und Spielwahl je Reiter, gezeigt wird immer der
 /// aktuelle Reiter. Ins Netz geht nur ein Klick (Suchen, Mehr laden, Erneut versuchen, Suche der Spielwahl, Wahl eines
-/// Treffers, Übernehmen). Je Seite 24 Kacheln aus dem Speicher (die Schnittstelle liefert 50), höchstens 240 je Reiter;
+/// Treffers, Übernehmen); die Sitzung (und mit ihr der entschlüsselte Schlüssel) entsteht erst mit dem ersten solchen Klick,
+/// bis dahin zeigt die Spielwahl die Zuordnung ohne Netz (<see cref="ISteamGridDbService.PeekMatch"/>). Je Seite 24 Kacheln
+/// aus dem Speicher (die Schnittstelle liefert 50), höchstens 240 je Reiter;
 /// Vorschauen nur des aktuellen Reiters, in der Reihenfolge der Kacheln, gehalten höchstens 96 MB (verborgene Reiter geben
 /// ihre zuerst frei). Gehört dem <see cref="ArtworkPickerViewModel"/>; nach <see cref="Close"/> bleiben späte Ergebnisse
 /// ohne Wirkung.
@@ -126,6 +128,12 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
     /// <summary>Höchste Breite einer dekodierten Vorschau.</summary>
     public const int MaxDecodeWidth = 512;
+
+    /// <summary>
+    /// Höchstens so viele Seiten holt ein Klick zusätzlich, solange eine Seite nur verworfene Einträge brachte (bewegte Bilder,
+    /// Markierungen) und die Liste weitergeht.
+    /// </summary>
+    public const int MaxFilteredPages = 3;
 
     /// <summary>Nach so langer Zeit ohne Antwort einmal „antwortet langsam“.</summary>
     public static readonly TimeSpan SlowAfter = TimeSpan.FromSeconds(4);
@@ -147,6 +155,7 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
     private bool _isMatchOpen;
     private bool _isMatchSearching;
     private bool _closed;
+    private bool _keyReady;
     private long _shownCounter;
     private double _previewScale = 1;
 
@@ -164,16 +173,18 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
         if (start == SteamGridDbSearchState.Ready)
         {
-            OpenSession();
+            // Nur die Zuordnung ohne Netz; die Sitzung entsteht erst mit dem ersten Klick (EnsureSession).
+            _keyReady = true;
+            _initialMatch = _match = _context.SteamGridDb.PeekMatch(game);
         }
 
         SearchCommand = new RelayCommand(() => _ = SearchAsync(Kind), () => !_picker.IsApplying);
         MoreCommand = new RelayCommand(() => _ = MoreAsync(Kind), () => !_picker.IsApplying && !Current.IsBusy);
         RetryCommand = new RelayCommand(() => _ = RetryAsync(Kind), () => CanRetry);
         OpenSettingsCommand = new RelayCommand(() => _picker.RequestSettings(), () => !_picker.IsApplying);
-        SearchGamesCommand = new RelayCommand(() => _ = SearchGamesAsync(), () => !_picker.IsApplying && _session is not null);
+        SearchGamesCommand = new RelayCommand(() => _ = SearchGamesAsync(), () => !_picker.IsApplying && CanUseSearch);
         ChooseMatchCommand = new RelayCommand(p => _ = ChooseMatchAsync(p as SteamGridDbMatchEntry), p => p is SteamGridDbMatchEntry && !_picker.IsApplying);
-        ToggleMatchCommand = new RelayCommand(() => IsMatchOpen = !IsMatchOpen, () => !_picker.IsApplying && _session is not null);
+        ToggleMatchCommand = new RelayCommand(() => IsMatchOpen = !IsMatchOpen, () => !_picker.IsApplying && CanUseSearch);
         context.SteamGridDb.Changed += OnServiceChanged;
         RebuildEntries();
     }
@@ -275,8 +286,10 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
         get => _isMatchOpen;
         set
         {
-            if (value && (_session is null || _picker.IsApplying))
+            if (value && (!CanUseSearch || _picker.IsApplying))
             {
+                // Abgelehnt: Die Ansicht (TwoWay) hat schon umgeschaltet und muss zurück auf zu.
+                OnPropertyChanged();
                 return;
             }
 
@@ -311,12 +324,13 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
     public string MatchHint => _isMatchSearching ? LibraryStrings.Picker_SgdbMatchSearching : LibraryStrings.Picker_SgdbMatchHint;
 
     /// <summary>Hinweis, dass HDRpilot die Wahl beim Übernehmen merkt (nur ohne Steam-App-ID).</summary>
-    public bool ShowCommitHint => _session is { IsSteamGame: false };
+    public bool ShowCommitHint => CanUseSearch && !IsSteamGame;
 
     /// <summary>Vom Nutzer auf ein anderes Spiel als das anfangs zugeordnete geändert.</summary>
     public bool MatchChangedByUser { get; private set; }
 
-    public bool IsSteamGame => _session?.IsSteamGame ?? (_game.Source == Core.Games.GameSource.Steam && SteamGridDbTarget.IsSteamAppId(_game.SourceId));
+    public bool IsSteamGame => _session?.IsSteamGame ?? (_initialMatch?.Kind == SteamGridDbMatchKind.SteamAppId
+        || (_game.Source == Core.Games.GameSource.Steam && SteamGridDbTarget.IsSteamAppId(_game.SourceId)));
 
     internal SteamGridDbMatch? Match => _match;
 
@@ -346,9 +360,15 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
     internal bool IsClosed => _closed;
 
+    /// <summary>Die Sitzung, sobald ein Klick sie geöffnet hat (Tests).</summary>
+    internal ISteamGridDbSearchSession? Session => _session;
+
     private ArtworkKind Kind => _picker.Kind;
 
     private KindState Current => _states[Kind];
+
+    /// <summary>Ein lesbarer Schlüssel ist gespeichert und der Dialog offen: Suche und Spielwahl sind bedienbar.</summary>
+    private bool CanUseSearch => _keyReady && !_closed;
 
     private string MatchLabel => _match is { } match && (match.Kind is not (SteamGridDbMatchKind.SteamAppId or SteamGridDbMatchKind.Remembered) || _described is not null)
         ? Label(match.DisplayName, match.Year)
@@ -512,7 +532,7 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
     internal async Task SearchAsync(ArtworkKind kind)
     {
         var st = _states[kind];
-        if (_closed || _picker.IsApplying || st.IsBusy || _session is not { } session || st.Shown.Count > 0)
+        if (_closed || _picker.IsApplying || st.IsBusy || st.Shown.Count > 0 || EnsureSession() is not { } session)
         {
             return;
         }
@@ -586,6 +606,16 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
             st.NextServerPage = 1;
             st.ServerHasMore = page.HasMore && !page.GameUnknown;
             AddToBuffer(st, page);
+            if (st.Pinned is null)
+            {
+                // Seite 0 nur mit verworfenen Einträgen: Die nächste kann Bilder haben (begrenzt).
+                await FetchPastFilteredAsync(st, session, _match!, kind, token);
+                if (Stale(token))
+                {
+                    return;
+                }
+            }
+
             if (st.Buffer.Count == 0 && st.Pinned is null)
             {
                 st.Ended = !st.ServerHasMore;
@@ -638,11 +668,17 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
                 st.NextServerPage++;
                 st.ServerHasMore = page.HasMore;
                 AddToBuffer(st, page);
+                await FetchPastFilteredAsync(st, session, match, kind, token);
+                if (Stale(token))
+                {
+                    return;
+                }
             }
 
             if (st.Buffer.Count == 0)
             {
-                st.Ended = true;
+                // Zu Ende nur, wenn die Liste endet; nach lauter verworfenen Seiten bleibt „Mehr laden“ stehen.
+                st.Ended = !st.ServerHasMore;
                 SetState(st, SteamGridDbSearchState.Results, force: true);
                 return;
             }
@@ -671,7 +707,7 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
     /// <summary>Suche der Spielwahl (Enter oder „Suchen“); eine neue bricht die vorige ab.</summary>
     internal async Task SearchGamesAsync()
     {
-        if (_closed || _picker.IsApplying || _session is not { } session)
+        if (_closed || _picker.IsApplying || EnsureSession() is not { } session)
         {
             return;
         }
@@ -819,28 +855,44 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
         }
     }
 
-    /// <summary>Öffnet die Sitzung (kein Netz, kein Handler); ohne lesbaren Schlüssel bleiben die Reiter beim Hinweis.</summary>
-    private void OpenSession()
+    /// <summary>
+    /// Öffnet die Sitzung beim ersten Klick, der ins Netz geht (kein Handler, keine Anfrage; erst jetzt wird der Schlüssel
+    /// entschlüsselt). Ohne lesbaren Schlüssel bleiben die Reiter beim Hinweis; null.
+    /// </summary>
+    private ISteamGridDbSearchSession? EnsureSession()
     {
-        if (_session is not null || _closed)
+        if (_session is not null || !CanUseSearch)
         {
-            return;
+            return _session;
         }
 
         _session = _context.SteamGridDb.OpenSearch(_game);
         if (_session is null)
         {
             var state = StateFor(SafeKeyState());
+            _keyReady = false;
             foreach (var st in _states.Values)
             {
                 st.State = state == SteamGridDbSearchState.Ready ? SteamGridDbSearchState.NoKey : state;
             }
 
-            return;
+            IsMatchOpen = false;
+            Announcement = Status(Current);
+            RaiseAll();
+            return null;
         }
 
-        _initialMatch = _session.InitialMatch;
-        _match ??= _initialMatch;
+        // Die Sitzung kennt die Zuordnung ohne Netz ebenso; eine vom Nutzer gewählte bleibt.
+        var initial = _session.InitialMatch;
+        if (_match == _initialMatch)
+        {
+            _match = initial;
+        }
+
+        _initialMatch = initial;
+        RebuildEntries();
+        RaiseMatch();
+        return _session;
     }
 
     private string? Status(KindState st) => st.State switch
@@ -980,6 +1032,26 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Holt weitere Seiten, solange der Speicher leer ist und die Liste weitergeht: Eine Seite aus lauter verworfenen Einträgen
+    /// heißt nicht, dass keine Bilder mehr kommen. Höchstens <see cref="MaxFilteredPages"/> je Klick (Budget der Suche).
+    /// </summary>
+    private async Task FetchPastFilteredAsync(KindState st, ISteamGridDbSearchSession session, SteamGridDbMatch match, ArtworkKind kind, CancellationToken token)
+    {
+        for (var i = 0; i < MaxFilteredPages && st.Buffer.Count == 0 && st.ServerHasMore && !Stale(token); i++)
+        {
+            var page = await session.GetAssetsAsync(match, kind, st.NextServerPage, token);
+            if (Stale(token))
+            {
+                return;
+            }
+
+            st.NextServerPage++;
+            st.ServerHasMore = page.HasMore;
+            AddToBuffer(st, page);
+        }
+    }
+
     /// <summary>Zeigt die nächsten bis zu 24 Kacheln (Grenzen beachtet) und fragt ihre Vorschauen an.</summary>
     private void ShowNext(KindState st, SteamGridDbFocusTarget focus)
     {
@@ -1084,6 +1156,22 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
             return; // späte Ergebnisse nach dem Schließen gelten nicht
         }
 
+        if (!st.Shown.Contains(tile))
+        {
+            // Veraltet: Der Reiter wurde inzwischen zurückgesetzt (neue Zuordnung, Schlüssel entfernt); Zähler, Zustand und
+            // Fehler gehören der neuen Liste. Eine mitgenommene Wahl behält ihre Vorschau, sonst fragt sie sie neu an.
+            if (ReferenceEquals(tile, st.Pinned) && task.IsCompletedSuccessfully)
+            {
+                tile.SetPreview(task.Result.Image, task.Result.DecodedBytes);
+            }
+            else if (tile.PreviewState == PreviewState.Loading)
+            {
+                tile.SetPreviewState(PreviewState.None);
+            }
+
+            return;
+        }
+
         if (task.IsCanceled)
         {
             // Reiter gewechselt: beim nächsten Zeigen neu anfragen.
@@ -1095,13 +1183,21 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
             st.BatchDone++;
             if (task.IsFaulted)
             {
-                tile.SetPreviewState(PreviewState.Failed);
-                if (task.Exception?.InnerException is SteamGridDbException { Kind: SteamGridDbErrorKind.RateLimited or SteamGridDbErrorKind.RequestLimit } limit
-                    && st.State == SteamGridDbSearchState.Results)
+                var limit = task.Exception?.InnerException is SteamGridDbException { Kind: SteamGridDbErrorKind.RateLimited or SteamGridDbErrorKind.RequestLimit } error ? error : null;
+                if (limit is not null && !ReferenceEquals(st, Current))
                 {
-                    // Die Kacheln bleiben; Pause oder Grenze steht darunter, die übrigen Vorschauen scheitern sofort.
-                    st.Retry = RetryAction.Previews;
-                    SetError(st, limit);
+                    // Verborgener Reiter: kein Fehler dort (die Bitte um Fokus gälte dem sichtbaren); beim Zeigen neu angefragt.
+                    tile.SetPreviewState(PreviewState.None);
+                }
+                else
+                {
+                    tile.SetPreviewState(PreviewState.Failed);
+                    if (limit is not null && st.State == SteamGridDbSearchState.Results)
+                    {
+                        // Die Kacheln bleiben; Pause oder Grenze steht darunter, die übrigen Vorschauen scheitern sofort.
+                        st.Retry = RetryAction.Previews;
+                        SetError(st, limit);
+                    }
                 }
             }
             else if (st.Shown.Contains(tile))
@@ -1247,11 +1343,25 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
                 _session = null;
             }
 
+            // Eine Wahl von SteamGridDB ließe sich ohne Schlüssel nicht mehr laden („Übernehmen“ täte still nichts): Die
+            // Reiter fallen mit einem Hinweis auf ihre Standardwahl zurück.
+            var reset = false;
+            foreach (var kind in Kinds)
+            {
+                if (_picker.ChosenFor(kind) is { IsOnline: true })
+                {
+                    _picker.ResetToDefault(kind);
+                    reset = true;
+                }
+            }
+
+            _keyReady = false;
             var state = StateFor(key);
             foreach (var st in _states.Values)
             {
                 st.CancelOp();
                 st.CancelQueue();
+                st.Pinned = null;
                 if (st.State != state)
                 {
                     st.State = state;
@@ -1263,6 +1373,11 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
             Results.Clear();
             IsMatchOpen = false;
+            if (reset)
+            {
+                _picker.ShowInfo(LibraryStrings.Picker_SgdbPicksResetNoKey);
+            }
+
             Announcement = Status(Current);
             RaiseAll();
             return;
@@ -1270,10 +1385,12 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
         if (_states.Values.Any(s => s.State is SteamGridDbSearchState.NoKey or SteamGridDbSearchState.KeyUnreadable))
         {
-            OpenSession();
+            // Schlüssel gespeichert: bereit; die Sitzung entsteht erst mit dem nächsten Klick.
+            _keyReady = true;
             if (_session is null)
             {
-                return;
+                _initialMatch = _context.SteamGridDb.PeekMatch(_game);
+                _match ??= _initialMatch;
             }
 
             foreach (var st in _states.Values.Where(s => s.State is SteamGridDbSearchState.NoKey or SteamGridDbSearchState.KeyUnreadable))

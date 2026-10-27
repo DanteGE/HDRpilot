@@ -1452,11 +1452,15 @@ zugeordneten Spiel („Spiel: <Name> ▾“) und **Bei SteamGridDB suchen**.
   Antworten werden begrenzt und abbrechbar gelesen; die Prüfmeldung der Einstellungen bleibt nicht mehr stehen;
   Vorschauen im Dialog werden nicht mehr beschnitten; die Fläche hinter Logos ist ein Farbwert des Themas
   (`Hp.Brush.Plate`) statt einer festen Farbe; das Bildschirmfoto „hauptfenster-bildwahl“ gibt seinen Dialog frei.
-- Abweichungen bei der Umsetzung (2026-10-26): Die Sitzung eines Dialogs entsteht mit dem Dialog, sobald ein Schlüssel
-  gespeichert ist, nicht erst beim ersten Klick; Verbindung und Handler entstehen trotzdem erst mit der ersten Anfrage
-  (getestet). Ohne oder mit unlesbarem Schlüssel bleibt die Überschrift „STEAMGRIDDB“ stehen, nur die Spielwahl fehlt.
-  Die Ansichtsschicht hat kein Protokoll; eine Wahl von SteamGridDB ohne geladene Daten wird deshalb nur gemeldet,
-  nicht protokolliert. „Warteschlange angehalten“ heißt: offene Vorschau-Abrufe werden abgebrochen und nach dem
+- Abweichungen bei der Umsetzung (2026-10-26, nachgeprüft 2026-10-27): Die Sitzung eines Dialogs entsteht wie geplant
+  erst mit dem ersten Klick, der ins Netz geht (Suchen, Suche der Spielwahl, Wahl eines Treffers); erst dann wird der
+  Schlüssel entschlüsselt, Öffnen und Schließen ohne Klick protokollieren nichts, und Verbindung und Handler entstehen
+  erst mit der ersten Anfrage (getestet). Davor zeigt die Spielwahl die Zuordnung ohne Netz (Steam-App-ID oder gemerkte
+  ID) und lässt sich aufklappen. Ohne oder mit unlesbarem Schlüssel bleibt die Überschrift „STEAMGRIDDB“ stehen, nur
+  die Spielwahl fehlt. Eine Wahl von SteamGridDB ohne geladene Daten wird nie geschrieben (auch nicht als
+  „Automatisch“); wird der Schlüssel entfernt, während der Dialog offen ist, fallen solche Wahlen mit einem Hinweis auf
+  die Standardwahl ihres Reiters zurück, sodass „Übernehmen“ nie still nichts tut. Eine Seite, deren Einträge alle
+  verworfen wurden, beendet die Liste nicht: Ein Klick holt dann bis zu drei weitere Seiten. „Warteschlange angehalten“ heißt: offene Vorschau-Abrufe werden abgebrochen und nach dem
   Fehler wieder eingereiht. Die schmale Bildlaufleiste des Dialogs ist ein eigener Stil (`Lib.DialogScrollBar`), weil
   es keinen wiederverwendbaren gab (`GapScrollBar` gehört zum Spalt der Bibliothek). Der Testdaten-Lieferant nennt für
   `games/id` den zuletzt gesuchten Namen (sonst „Testspiel“). Die App-Tests sehen interne Prüfpunkte über

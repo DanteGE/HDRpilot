@@ -930,7 +930,7 @@ public sealed partial class LibraryViewModel
             {
                 // Bilder von SteamGridDB hat „Übernehmen“ schon im offenen Dialog geladen (E93); hier wird nur gespeichert.
                 await load;
-                picker.CommitMatch(await picker.ApplyWithOutcomeAsync());
+                await picker.CommitMatchAsync(await picker.ApplyWithOutcomeAsync());
             }
             else if (picker.SettingsRequested)
             {

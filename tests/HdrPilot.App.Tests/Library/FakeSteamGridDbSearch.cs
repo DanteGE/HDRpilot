@@ -8,7 +8,7 @@ namespace HdrPilot.App.Tests.Library;
 
 /// <summary>
 /// SteamGridDB für Tests des Dialogs „Bild wählen…“ (E93): Zustand des Schlüssels einstellbar, jede Suche eine steuerbare
-/// Sitzung, nie das Netz. Gemerkte Zuordnungen werden aufgezeichnet.
+/// Sitzung, nie das Netz. Gemerkte Zuordnungen werden aufgezeichnet (mit dem Thread, auf dem gemerkt wurde).
 /// </summary>
 public sealed class FakeSteamGridDbSearch : ISteamGridDbService
 {
@@ -37,6 +37,12 @@ public sealed class FakeSteamGridDbSearch : ISteamGridDbService
 
     public List<(string Key, long Id)> Remembered { get; } = [];
 
+    /// <summary>Thread-Kennung je Aufruf von <see cref="RememberMatch"/>.</summary>
+    public List<int> RememberedOnThreads { get; } = [];
+
+    /// <summary>Gemerkte SteamGridDB-ID für Spiele ohne Steam-AppID (null: keine).</summary>
+    public long? RememberedId { get; set; }
+
     public ISteamGridDbSearchSession? OpenSearch(GameConfig game)
     {
         if (Key != SteamGridDbKeyState.Stored)
@@ -44,14 +50,27 @@ public sealed class FakeSteamGridDbSearch : ISteamGridDbService
             return null;
         }
 
-        var steam = game.Source == HdrPilot.Core.Games.GameSource.Steam && SteamGridDbTarget.IsSteamAppId(game.SourceId);
-        var session = new FakeSearchSession(game.Name, steam ? new SteamGridDbMatch(SteamGridDbMatchKind.SteamAppId, SteamGridDbTarget.Steam(game.SourceId), game.Name, null, false) : null);
+        var session = new FakeSearchSession(game.Name, PeekMatch(game));
         Setup?.Invoke(session);
         Sessions.Add(session);
         return session;
     }
 
-    public void RememberMatch(GameConfig game, long steamGridDbGameId) => Remembered.Add((game.Key, steamGridDbGameId));
+    public SteamGridDbMatch? PeekMatch(GameConfig game) =>
+        game.Source == HdrPilot.Core.Games.GameSource.Steam && SteamGridDbTarget.IsSteamAppId(game.SourceId)
+            ? new SteamGridDbMatch(SteamGridDbMatchKind.SteamAppId, SteamGridDbTarget.Steam(game.SourceId), game.Name, null, false)
+            : RememberedId is { } id
+                ? new SteamGridDbMatch(SteamGridDbMatchKind.Remembered, SteamGridDbTarget.Game(id), game.Name, null, false)
+                : null;
+
+    public void RememberMatch(GameConfig game, long steamGridDbGameId)
+    {
+        lock (Remembered)
+        {
+            Remembered.Add((game.Key, steamGridDbGameId));
+            RememberedOnThreads.Add(Environment.CurrentManagedThreadId);
+        }
+    }
 
     public void RaiseChanged() => _changed?.Invoke(this, EventArgs.Empty);
 
@@ -113,6 +132,9 @@ public sealed class FakeSearchSession(string gameName, SteamGridDbMatch? initial
     /// <summary>Einträge je Seite (Seite → Anzahl gültiger Einträge); fehlende Seiten sind leer.</summary>
     public Dictionary<int, int> PageSizes { get; } = new() { [0] = 50, [1] = 22 };
 
+    /// <summary>Seiten, deren 50 Einträge alle verworfen wurden (keine Kachel, aber die Liste geht weiter).</summary>
+    public HashSet<int> FilteredPages { get; } = [];
+
     /// <summary>Ergebnis der Namenssuche (Standard: ein Treffer mit gleichem Namen, 9101, 2019).</summary>
     public Func<SteamGridDbResolveResult>? Resolve { get; set; }
 
@@ -127,6 +149,12 @@ public sealed class FakeSearchSession(string gameName, SteamGridDbMatch? initial
 
     /// <summary>Gesetzt: Vorschauen warten auf diese Quelle.</summary>
     public TaskCompletionSource? HoldPreviews { get; set; }
+
+    /// <summary>
+    /// Gesetzt: Vorschauen warten auf diese Quelle, ohne das Token der Warteschlange zu beachten (wie eine schon laufende
+    /// Übertragung, die nur das Token der Sitzung beendet).
+    /// </summary>
+    public TaskCompletionSource? HoldRunningPreviews { get; set; }
 
     /// <summary>Gesetzt: volle Bilder warten auf diese Quelle.</summary>
     public TaskCompletionSource? HoldDownloads { get; set; }
@@ -183,6 +211,11 @@ public sealed class FakeSearchSession(string gameName, SteamGridDbMatch? initial
                 return page == 0 ? SteamGridDbAssetPage.Unknown() : SteamGridDbAssetPage.End(page);
             }
 
+            if (FilteredPages.Contains(page))
+            {
+                return new SteamGridDbAssetPage([], page, 50, 50, false);
+            }
+
             var count = PageSizes.TryGetValue(page, out var size) ? size : 0;
             var offset = PageSizes.Where(p => p.Key < page).Sum(p => p.Value);
             var items = Enumerable.Range(offset + 1, count).Select(n => Asset(n + (int)(match.Target.GameId ?? 0) * 1000, kind, thumb: n % 10 != 0)).ToList();
@@ -197,7 +230,15 @@ public sealed class FakeSearchSession(string gameName, SteamGridDbMatch? initial
             await hold.Task.WaitAsync(queueToken);
         }
 
-        queueToken.ThrowIfCancellationRequested();
+        if (HoldRunningPreviews is { } running)
+        {
+            await running.Task;
+        }
+        else
+        {
+            queueToken.ThrowIfCancellationRequested();
+        }
+
         PreviewCalls.Add(asset);
         if (PreviewFail(asset) is { } error)
         {

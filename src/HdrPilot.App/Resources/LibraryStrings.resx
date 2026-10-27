@@ -2012,6 +2012,10 @@
     <value>Deine Wahl von SteamGridDB in den anderen Reitern gilt nicht mehr, weil du ein anderes Spiel gewählt hast.</value>
     <comment>Nach einer geänderten Zuordnung</comment>
   </data>
+  <data name="Picker_SgdbPicksResetNoKey" xml:space="preserve">
+    <value>Deine Wahl von SteamGridDB gilt nicht mehr, weil der Schlüssel entfernt wurde.</value>
+    <comment>Schlüssel in den Einstellungen entfernt, während „Bild wählen…“ offen war</comment>
+  </data>
   <data name="Picker_MatchRemembered" xml:space="preserve">
     <value>Spiel bei SteamGridDB für „{0}“ gemerkt.</value>
     <comment>Statuszeile der Bibliothek; {0} = Name des Spiels</comment>

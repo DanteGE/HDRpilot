@@ -438,11 +438,14 @@ public sealed class SteamGridDbSearchClientTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task A_stalled_body_times_out_as_network_with_the_timeout_flag(bool idle)
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    public async Task A_stalled_body_times_out_as_network_with_the_timeout_flag(bool idle, bool honorToken)
     {
-        Stream body = idle ? new StalledStream() : new TrickleStream(long.MaxValue, TimeSpan.FromMilliseconds(20));
+        // Ein Inhalt, der das Token nicht beachtet (hängender Socket), endet nur, weil die Zeitgrenze die Antwort freigibt.
+        Stream body = idle || !honorToken ? new StalledStream(honorToken) : new TrickleStream(long.MaxValue, TimeSpan.FromMilliseconds(20));
         var timeouts = idle
             ? new SteamGridDbTimeouts(TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30))
             : new SteamGridDbTimeouts(TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(300), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
@@ -457,6 +460,35 @@ public sealed class SteamGridDbSearchClientTests
         Assert.True(error.IsTimeout);
         Assert.Equal(true, error.Data["timeout"]);
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task A_request_cancelled_while_waiting_for_its_turn_gives_its_budget_back(bool budgeted)
+    {
+        var clock = new FakeClock();
+        var pacer = new RequestPacer(clock, TimeSpan.FromSeconds(1));
+        var handler = Api("{\"success\":true,\"data\":[{\"id\":9101,\"name\":\"Nebelfahrt\"}]}");
+        var budget = budgeted ? new SteamGridDbBudget(maxApiRequests: 1, maxImageRequests: 1, maxPreviewBytes: 1000) : null;
+        using var client = new SteamGridDbClient(handler, clock, Key, "Test", maxRequests: 1, pacer: pacer, budget: budget);
+
+        // Ein anderer hält den Zug; die Anfrage wird beim Warten abgebrochen und ging nie hinaus.
+        var holder = pacer.Enter(Ct);
+        using var cancel = new CancellationTokenSource();
+        var waiting = Task.Run(() => client.SearchGames("Nebelfahrt", cancel.Token), Ct);
+        Assert.False(await Finishes(waiting, 100));
+        cancel.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting);
+        holder.Dispose();
+        Assert.Empty(handler.Requests);
+        Assert.Equal(0, budget?.ApiRequests ?? 0);
+
+        // Der Platz ist wieder frei: Die einzige erlaubte Anfrage geht noch.
+        Assert.Single(await Task.Run(() => client.SearchGames("Nebelfahrt", Ct), Ct));
+        Assert.Single(handler.Requests);
+        Assert.Equal(budgeted ? 1 : 0, budget?.ApiRequests ?? 0);
+        Assert.Equal(SteamGridDbErrorKind.RequestLimit, Assert.Throws<SteamGridDbException>(() => client.SearchGames("Nebelfahrt", Ct)).Kind);
     }
 
     [Fact]

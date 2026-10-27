@@ -670,13 +670,50 @@ public sealed class SteamGridDbClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Zug des Abstands für eine reservierte Anfrage. Endet das Warten mit einem Abbruch, ging nichts hinaus: Der Platz im
+    /// Budget (oder in der Gesamtgrenze) kommt zurück.
+    /// </summary>
+    private RequestTurn EnterTurn(RequestClass kind, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return _pacer.Enter(cancellationToken);
+        }
+        catch
+        {
+            Unreserve(kind);
+            throw;
+        }
+    }
+
+    /// <summary>Gibt einen Platz von <see cref="Reserve"/> zurück (die Anfrage ging nie hinaus).</summary>
+    private void Unreserve(RequestClass kind)
+    {
+        if (_budget is not null)
+        {
+            if (kind == RequestClass.Api)
+            {
+                _budget.ReturnApi();
+            }
+            else
+            {
+                _budget.ReturnImage();
+            }
+
+            return;
+        }
+
+        Interlocked.Decrement(ref _reserved);
+    }
+
     private HttpResponseMessage Send(HttpRequestMessage request, RequestClass kind, bool paced, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Reserve(kind);
 
         // Der Zug gilt bis zu den Kopfzeilen der Antwort oder bis zum Fehler (wie früher MarkDone).
-        using var turn = paced ? _pacer.Enter(cancellationToken) : default;
+        using var turn = paced ? EnterTurn(kind, cancellationToken) : default;
         if (kind == RequestClass.Api)
         {
             Interlocked.Increment(ref _apiRequests);
@@ -739,15 +776,18 @@ public sealed class SteamGridDbClient : IDisposable
 
     /// <summary>
     /// Liest den Inhalt bis <paramref name="limit"/> Bytes. Ein Abbruch des Aufrufers gibt die Antwort sofort frei (auch
-    /// eine im Socket hängende Übertragung endet); eine Gesamt- und eine Ruhezeitgrenze beenden langsame Antworten als
-    /// <see cref="SteamGridDbErrorKind.Network"/> mit <c>Data["timeout"]</c>.
+    /// eine im Socket hängende Übertragung endet); eine Gesamt- und eine Ruhezeitgrenze beenden langsame Antworten ebenso,
+    /// als <see cref="SteamGridDbErrorKind.Network"/> mit <c>Data["timeout"]</c>.
     /// </summary>
     private byte[] ReadLimited(HttpResponseMessage response, long limit, TimeSpan total, CancellationToken cancellationToken)
     {
-        using var abort = cancellationToken.Register(static state => ((HttpResponseMessage)state!).Dispose(), response);
         using var totalTimer = new CancellationTokenSource(total);
         using var idleTimer = new CancellationTokenSource(_timeouts.Idle);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, totalTimer.Token, idleTimer.Token);
+
+        // Abbruch und beide Zeitgrenzen geben die Antwort frei: Auch ein Inhalt, der das Token nicht beachtet (ein hängender
+        // Socket), endet dann.
+        using var abort = linked.Token.Register(static state => ((HttpResponseMessage)state!).Dispose(), response);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();

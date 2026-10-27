@@ -92,6 +92,11 @@ public sealed class SteamGridDbBudget(int maxApiRequests, int maxImageRequests, 
 
     internal bool TryTakeImage() => TryTake(ref _images, maxImageRequests);
 
+    /// <summary>Platz einer Anfrage zurückgeben, die nie gesendet wurde (Abbruch beim Warten auf den Abstand).</summary>
+    internal void ReturnApi() => Interlocked.Decrement(ref _api);
+
+    internal void ReturnImage() => Interlocked.Decrement(ref _images);
+
     /// <summary>False, sobald die Summe <c>maxPreviewBytes</c> überschritte (dann wird nichts gezählt).</summary>
     internal bool TryAddPreviewBytes(long count)
     {

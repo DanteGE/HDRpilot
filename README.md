@@ -1,891 +1,927 @@
 # HDRpilot
 A sleek, 100% vibe-coded Windows app that automatically enables HDR for selected games. Features optional Auto HDR for SDR games, shortcut and Steam launch option integration, an intuitive GUI, and support for Steam, Epic Games, Ubisoft, Battle.net, GOG, and Quiver Launcher.
 
-HDRpilot schaltet Windows-HDR automatisch ein, wenn du ein ausgewähltes Spiel startest, und stellt danach den
-vorherigen Zustand wieder her. Es findet deine installierten Spiele selbst (Steam, Epic, Xbox/Game Pass, GOG,
-Ubisoft Connect, EA app, Battle.net, Quiver Launcher). Spiele ohne Launcher trägst du selbst ein, oder HDRpilot schlägt
-sie aus deinen Suchordnern vor. Welche Spiele HDR unterstützen, zeigt es dir laut PCGamingWiki an. Im Alltag läuft es
-unauffällig im Infobereich.
+Deutsch: [README.de.md](README.de.md)
 
-- Ein Setup ohne Administratorrechte, alternativ eine einzelne EXE ganz ohne Installation; kein Windows-Dienst.
-- Keine Telemetrie und keine Eingriffe in Spielprozesse. Ins Netz geht HDRpilot nur für den Abgleich der HDR-Liste mit
-  PCGamingWiki; das lässt sich abschalten.
-- Im Hintergrund sparsam: eine Prozessabfrage pro Sekunde, gemessen rund 0,1–0,4 % eines CPU-Kerns und etwa 40–50 MB
-  Arbeitsspeicher.
+HDRpilot turns Windows HDR on automatically when you launch a selected game and restores the previous state afterwards.
+It finds your installed games by itself (Steam, Epic, Xbox/Game Pass, GOG, Ubisoft Connect, EA app, Battle.net, Quiver
+Launcher). You add games without a launcher yourself, or HDRpilot suggests them from your search folders. It shows you
+which games support HDR according to PCGamingWiki. In everyday use it runs unobtrusively in the notification area.
 
-## Voraussetzungen
+- A setup without administrator rights, or alternatively a single EXE with no installation at all; no Windows service.
+- No telemetry and no interference with game processes. HDRpilot only goes online to sync the HDR list with
+  PCGamingWiki; you can turn that off.
+- Light in the background: one process query per second, measured at about 0.1–0.4% of one CPU core and about 40–50 MB
+  of memory.
 
-- Windows 11 oder Windows 10 ab 21H2, 64 Bit.
-- Ein HDR-fähiger Bildschirm, bei dem sich unter *Einstellungen → System → Anzeige* „HDR verwenden“ einschalten lässt.
-- Keine .NET-Installation nötig, die Laufzeit steckt in der EXE.
+## Requirements
 
-## Einrichtung
+- Windows 11 or Windows 10 version 21H2 or later, 64-bit.
+- An HDR-capable display for which “Use HDR” can be turned on under *Settings → System → Display*.
+- No .NET installation needed; the runtime is built into the EXE.
 
-Empfohlen ist der Setup `HDRpilot-Setup-1.5.0.exe`. Er installiert nur für deinen Windows-Benutzer und braucht keine
-Administratorrechte. Wer lieber ohne Installation arbeitet, nimmt den Ordner `HDRpilot` (siehe „Ohne Installation“).
-Fertige Versionen gibt es unter [GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
+## Installation
 
-1. `HDRpilot-Setup-1.5.0.exe` starten. Die Datei ist nicht signiert, deshalb fragt Windows SmartScreen beim ersten
-   Start nach („Weitere Informationen“ → „Trotzdem ausführen“).
-2. Der Setup zeigt den Programmordner `%LOCALAPPDATA%\Programs\HDRpilot` und drei Optionen: **Mit Windows starten**
-   (vorbelegt), **Verknüpfung auf dem Desktop** (nicht vorbelegt) und **HDRpilot danach starten** (vorbelegt).
-   **Installieren** kopiert HDRpilot dorthin, legt eine Verknüpfung im Startmenü an und trägt HDRpilot unter
-   *Einstellungen → Apps → Installierte Apps* ein. Die Kommandozeile liegt danach in `<Programmordner>\cli`, daneben
-   README, Lizenztext (`LICENSE`) und Lizenzhinweise.
-3. Mit der dritten Option öffnet sich nach der Installation die Spielebibliothek (nicht, wenn der Setup mit
-   Administratorrechten läuft; dann startest du HDRpilot über das Startmenü). Im Alltag läuft HDRpilot als Symbol
-   im Infobereich (unten rechts neben der Uhr) und liest bei jedem Start deine Spiele ein. Siehst du das Symbol nicht,
-   hat Windows es hinter dem Pfeil (˄) ausgeblendet; von dort kannst du es in die Taskleiste ziehen. Ein Doppelklick
-   auf das Symbol (oder ein Start über das Startmenü) öffnet die Spielebibliothek.
-4. Bei den Spielen, die HDR bekommen sollen, den Schalter **HDR automatisch** einschalten. Eingelesene Spiele sind
-   anfangs immer aus; Spiele, die du selbst hinzufügst, haben den Schalter gleich an. Der Filter **HDR-fähig** zeigt
-   dir, welche deiner Spiele laut PCGamingWiki HDR unterstützen.
+The recommended way is the setup `HDRpilot-Setup-1.6.0.exe`. It installs for your Windows user only and needs no
+administrator rights. If you prefer to work without an installation, use the `HDRpilot` folder (see “Without
+installation”). Ready-made releases are available on [GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
 
-Das Fenster zu schließen beendet HDRpilot nicht. Beenden über das Infobereich-Menü → **HDRpilot beenden**.
+1. Run `HDRpilot-Setup-1.6.0.exe` (setup and uninstall use the language of Windows: German on a German Windows, English
+   otherwise). The file isn't signed, so Windows SmartScreen asks the first time you run it (“More info” → “Run
+   anyway”).
+2. The setup shows the program folder `%LOCALAPPDATA%\Programs\HDRpilot` and three options: **Start with Windows**
+   (preselected), **Desktop shortcut** (not preselected) and **Launch HDRpilot afterwards** (preselected).
+   **Install** copies HDRpilot there, creates a Start menu shortcut and adds HDRpilot to *Settings → Apps → Installed
+   apps*. The command line is then in `<program folder>\cli`, next to it the README (English `README.md` and German
+   `README.de.md`), the license text (`LICENSE`) and the third-party notices.
+3. With the third option, the game library opens after installation (not if the setup runs with administrator rights;
+   in that case, start HDRpilot from the Start menu). In everyday use, HDRpilot runs as an icon in the notification area
+   (bottom right, next to the clock) and scans your games every time it starts. If you don't see the icon, Windows has
+   hidden it behind the arrow (˄); from there you can drag it onto the taskbar. Double-clicking the icon (or starting
+   HDRpilot from the Start menu) opens the game library.
+4. For the games that should get HDR, turn on the **HDR on launch** switch. Scanned games always start with it off;
+   games you add yourself have it on right away. The **HDR-capable** filter shows which of your games support HDR
+   according to PCGamingWiki.
 
-Einstellungen, Spieleliste, Protokolle und HDR-Liste liegen nicht im Programmordner, sondern in `%APPDATA%\HDRpilot`
-und `%LOCALAPPDATA%\HDRpilot`. Der Setup fasst sie nie an: Hattest du HDRpilot schon, gelten sie nach der Installation
-unverändert weiter. Lag deine bisherige `HDRpilot.exe` schon in `%LOCALAPPDATA%\Programs\HDRpilot`, ersetzt der Setup
-sie dort, und Autostart, Verknüpfungen und Steam-Startoptionen zeigen weiter auf dieselbe EXE. Lag sie woanders,
-beendet der Setup eine laufende alte Version und startet danach die neue; die alte EXE kannst du dann löschen, ihre
-Verknüpfungen und Steam-Startoptionen legst du neu an.
+Closing the window doesn't exit HDRpilot. To exit, use the notification area menu → **Exit HDRpilot**.
 
-### Aktualisieren
+Settings, game list, logs and HDR list aren't stored in the program folder but in `%APPDATA%\HDRpilot` and
+`%LOCALAPPDATA%\HDRpilot`. The setup never touches them: if you already had HDRpilot, they stay in effect unchanged after
+the installation. If your previous `HDRpilot.exe` was already in `%LOCALAPPDATA%\Programs\HDRpilot`, the setup replaces
+it there, and autostart, shortcuts and Steam launch options keep pointing to the same EXE. If it was somewhere else, the
+setup closes a running old version and then starts the new one; you can then delete the old EXE and create its shortcuts
+and Steam launch options again.
 
-Den Setup der neuen Version starten. Er zeigt die installierte und die neue Version; Autostart und Desktop-Verknüpfung
-sind wie bisher vorbelegt. **Aktualisieren** beendet ein laufendes HDRpilot kurz, ersetzt die Programmdateien und
-startet HDRpilot wieder, wenn es vorher lief (wieder nur im Infobereich); lief es nicht, entscheidest du mit
-**HDRpilot danach starten**. Schlägt dabei etwas fehl, bleibt die bisherige Version unverändert und lauffähig.
-Einstellungen, Spieleliste, Protokolle und HDR-Liste bleiben erhalten, weil sie in `%APPDATA%\HDRpilot` und
-`%LOCALAPPDATA%\HDRpilot` liegen. Denselben Setup noch einmal auszuführen repariert die Installation. Eine ältere
-Version installiert er nur, wenn du **Trotzdem die ältere Version installieren** ankreuzt. Vorsicht nach Spielen aus dem
-Quiver Launcher: HDRpilot 1.4.0 und älter kennen diese Quelle nicht, halten deine Spieleliste dann für defekt und
-beginnen leer (siehe „Bekannte Grenzen“). Welche Version läuft, zeigen das Infobereich-Menü (graue Zeile unter dem
-Menükopf) und der Kopf der Einstellungen.
+### Updating
 
-### Ohne Installation
+Run the setup of the new version. It shows the installed and the new version; autostart and desktop shortcut are
+preselected as before. **Update** briefly closes a running HDRpilot, replaces the program files and starts HDRpilot
+again if it was running before (again only in the notification area); if it wasn't running, **Launch HDRpilot
+afterwards** decides. If something fails along the way, the previous version stays unchanged and working. Settings, game
+list, logs and HDR list are kept because they're stored in `%APPDATA%\HDRpilot` and `%LOCALAPPDATA%\HDRpilot`. Running
+the same setup again repairs the installation. It only installs an older version if you check **Install the older
+version anyway**. Be careful after playing games from the Quiver Launcher: HDRpilot 1.4.0 and older don't know this
+source, consider your game list broken and start empty (see “Known limitations”). The notification area menu (gray line
+below the menu header) and the header of the settings show which version is running.
 
-1. Den Ordner `HDRpilot` (mit `HDRpilot.exe`, `cli\hdrpilot.exe`, README, Lizenztext `LICENSE` und Lizenzhinweisen)
-   an einen dauerhaften Ort legen, etwa nach `%LOCALAPPDATA%\Programs\HDRpilot\`. Autostart, Verknüpfungen und
-   Steam-Startoptionen zeigen auf diesen Ort. Verschiebst du die EXE später, korrigiert HDRpilot den
-   Autostart-Eintrag beim nächsten Start selbst; Verknüpfungen und Steam-Startoptionen musst du neu anlegen.
-2. `HDRpilot.exe` starten (SmartScreen wie oben). Es öffnet sich kein Fenster: HDRpilot meldet sich kurz im
-   Infobereich und liest deine Spiele ein. Ein Doppelklick auf das Symbol oder ein zweiter Start der EXE öffnet die
-   Spielebibliothek; weiter wie oben in Schritt 4.
-3. Optional in den Einstellungen **Mit Windows starten** einschalten.
+### Without installation
 
-Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und Spieleliste bleiben dabei erhalten.
+1. Put the `HDRpilot` folder (with `HDRpilot.exe`, `cli\hdrpilot.exe`, the README in English and German, the license
+   text `LICENSE` and the third-party notices) in a permanent location, for example `%LOCALAPPDATA%\Programs\HDRpilot\`.
+   Autostart, shortcuts and Steam launch options point to this location. If you move the EXE later, HDRpilot fixes the
+   autostart entry by itself the next time it starts; you have to create shortcuts and Steam launch options again.
+2. Start `HDRpilot.exe` (SmartScreen as above). No window opens: HDRpilot briefly shows up in the notification area and
+   scans your games. Double-clicking the icon or starting the EXE a second time opens the game library; continue as in
+   step 4 above.
+3. Optionally turn on **Start with Windows** in the settings.
 
-## Bedienung
+You can switch to an installation with the setup at any time; settings and game list are kept.
 
-### Spielebibliothek
+## Usage
 
-- Im Kopf stehen die Zahl der Spiele, die Bildschirm-Kapsel und die Knöpfe **HDR einschalten** bzw. **HDR ausschalten**
-  (schaltet sofort, unabhängig von einem Spiel), **Automatik pausieren** und das Zahnrad für die Einstellungen. Die
-  Kapsel zeigt den Zielbildschirm mit Farbtiefe, ob HDR an ist, und seine Werte laut Windows: Spitze, Vollbild und
-  Minimum in nits. Die Skala reicht von 0 bis zur Spitze bei eingeschaltetem HDR, auch wenn HDR gerade aus ist (die
-  Fähigkeit des Bildschirms, keine Messung); solange HDRpilot die Werte nicht kennt, steht dort „—“.
-- Darunter der Titelbereich des gewählten Spiels: Titelbild, Logo oder Name, wann es zuletzt gespielt wurde, die Quelle
-  und ein Kennzeichen zur HDR-Unterstützung. Beim Wechsel des Spiels blendet das Bild über; Umgebungslicht und Leuchten
-  des Fensters nehmen die Farben des Titelbilds an (abschaltbar unter „Darstellung“, siehe „Einstellungen“).
-- Drei Ansichten, umschaltbar in der Werkzeugleiste oder mit Strg+1, Strg+2 und Strg+3; die Wahl bleibt gespeichert:
-  - **Liste** (Standard): je Spiel eine Zeile mit Vorschau, Name, Quelle, „Zuletzt gespielt“, HDR-Kennzeichen und dem
-    Schalter **HDR automatisch**. Ein Klick auf eine Spaltenüberschrift sortiert. Links über der Liste wählst du die
-    Vorschau: **16:9-Vorschaubild** oder **Symbol**. In schmalen Fenstern fallen erst die Quelle, dann die HDR-Spalte
-    und „Zuletzt gespielt“ weg. Wie hoch der Titelbereich über der Liste ist, stellst du mit dem Griff an seiner
-    Unterkante ein: ziehen oder, wenn der Griff den Fokus hat, Pfeil hoch/runter (Bild auf/ab in größeren Schritten,
-    Pos1/Ende kleinste bzw. größte Höhe); Esc bricht das Ziehen ab, Doppelklick oder Eingabetaste stellen den Standard
-    wieder her (ein Drittel der Fensterhöhe). HDRpilot merkt sich die Höhe; darunter bleiben immer mindestens fünf ganze
-    Zeilen der Liste zu sehen. Beim Scrollen bleibt die Höhe, wie sie ist.
-  - **Raster**: Cover im Format 2:3. Spaltenzahl und Kachelgröße richten sich nach der Fensterbreite, im Vollbild
-    genauso wie im kleinen Fenster; nichts wird gestreckt oder abgeschnitten. Der Schalter „HDR automatisch“ erscheint
-    an der gewählten Kachel und beim Zeigen mit der Maus.
-  - **Regal**: großes Titelbild mit **Starten**, **Desktop** und **Startmenü**, darunter eine Reihe Cover zum Blättern
-    und rechts die Karte „AUTOMATIK“ mit den wichtigsten Schaltern (nur, wenn ein Spiel gewählt ist). **Details** (oder
-    die Taste I) öffnet alle Details als Schublade, Esc schließt sie.
-- In Liste und Raster stehen rechts die Details zum gewählten Spiel. Den Trenner dazwischen kannst du ziehen (oder mit
-  den Pfeiltasten verschieben, per Doppelklick zurücksetzen); die Breite merkt sich HDRpilot, höchstens 560 px.
-- Tastatur: Strg+F sucht, die Pfeiltasten wählen, Enter startet das gewählte Spiel, die Leertaste schaltet „HDR
-  automatisch“, Esc leert die Suche, Entf fragt bei einem nicht installierten Spiel aus einem Launcher, ob seine
-  Einstellungen weg sollen, bei einem selbst hinzugefügten, ob es aus der Bibliothek soll (siehe unten). Rechtsklick,
-  Umschalt+F10 oder die Menütaste öffnen das Spielmenü mit **Starten**, **HDR automatisch**, **Nach dem Spiel
-  zurückstellen**, **Windows Auto HDR**, **Bild wählen…**, **Symbol ändern…** bzw. **Symbol zurücksetzen**,
-  **Desktop-Verknüpfung erstellen**, **Zum Startmenü hinzufügen**, **Installationsordner öffnen** und, nur bei nicht
-  installierten Spielen aus Launchern, **Einstellungen entfernen…**.
-- Titelbild, Logo und Cover kommen aus den Bild-Zwischenspeichern der Launcher auf dem PC (Steam, GOG Galaxy, Ubisoft
-  Connect, Xbox-Paket, bei Quiver nur das Cover), nur lesend, nie aus dem Netz. Fehlt eines, erzeugt HDRpilot ein
-  Ersatzbild aus Symbol und Name; neue Bilder eines Launchers erscheinen von selbst, bei Quiver nach dem nächsten
-  Einlesen (siehe „So funktioniert es“). Ein anderes Bild wählst du per Rechtsklick › **Bild wählen…** oder im
-  Abschnitt „BILDER“ der Details: Je Reiter **Titelbild**, **Logo** und **Cover** stehen **Automatisch**, weitere lokale
-  Bilder (etwa der Startbildschirm eines Xbox-Pakets), das erzeugte Bild und **Eigene Datei…** (PNG, JPG, WebP, BMP) zur
-  Wahl; **Übernehmen** speichert, **Zurücksetzen** wählt im aktuellen Reiter wieder **Automatisch**. Eigene Bilder legt
-  HDRpilot verkleinert in seinem Datenordner ab, die gewählte Datei bleibt unverändert. Optional füllt SteamGridDB
-  fehlende Bilder aus dem Netz (siehe „Einstellungen“).
-- Bewegung: Das Titelbild zoomt langsam und folgt leicht der Maus, Lichtstrahlen und Lichtpunkte ziehen darüber. Geht
-  HDR an, während die Bibliothek offen ist, läuft ein kurzer HDR-Moment (Lichtstreifen, hellere Fassung des Titelbilds,
-  Partikel für höchstens 2,5 s, leuchtender Rand). Wie viel sich bewegt, stellst du unter „Darstellung“ › „Effekte“
-  ein; minimiert, im Hintergrund und während ein Spiel läuft steht alles still. Rechts in der Statuszeile steht, was
-  gerade gilt.
-- Was PCGamingWiki über die HDR-Unterstützung weiß, zeigt die Liste in der Spalte „HDR“: „NATIV“, „TEILWEISE“
-  (eingeschränkt) oder „MOD“ (nur per Mod). Kacheln von Spielen mit HDR tragen ein Kennzeichen „HDR“, der Titelbereich
-  nennt „NATIVES HDR“, „HDR TEILWEISE“, „HDR PER MOD“ oder „HDR UNBEKANNT“.
-- Das violette Kennzeichen „AUTO HDR“ direkt hinter dem Namen zeigt Spiele, bei denen **Windows Auto HDR** an ist. Es ist
-  nur eine Anzeige; geschaltet wird in den Details, wirken tut es beim Start über HDRpilot (siehe „Windows Auto HDR“).
-  Sein Funkel-Symbol hat sonst nur der Eintrag **Auto HDR** im Infobereich.
-- Die Symbole stammen aus Dateien, die schon auf dem PC liegen, nie aus dem Netz (bei Steam das offizielle
-  Steam-Symbol, siehe „So funktioniert es“). Ein eigenes Bild setzt du per Rechtsklick auf das Spiel oder per Klick auf
-  das große Symbol in den Details: **Symbol ändern…** nimmt ein Bild (PNG, JPG, WebP, BMP, GIF, ICO) oder eine EXE,
-  **Symbol zurücksetzen** zeigt wieder das automatische Symbol. Das eigene Symbol hat Vorrang vor allen anderen
-  Quellen; die gewählte Datei bleibt unverändert, HDRpilot legt eine verkleinerte Kopie (96 px) in seinem Datenordner ab.
-- Die Werkzeugleiste über der Liste: Suche (Strg+F), Filter nach Quelle, Sortierung, die Filter **HDR automatisch**,
-  **Neu** und **HDR-fähig** als Symbol-Schalter mit ihrer Zahl (auch Alt+A, Alt+N, Alt+H), rechts Ansicht, **Neu
-  einlesen**, **Alle als gesehen markieren** und **Spiel hinzufügen**. Zeigst du eine Sekunde auf ein Element, erklärt
-  ein Tooltip es samt Kürzel. In schmaleren Fenstern werden Suche, Quelle und Sortierung schmaler, dann zeigt die
-  Sortierung nur ihr Symbol; erst wenn auch das nicht passt, verteilt sich die Leiste auf zwei Zeilen.
-- Die Werkzeugleiste lässt sich ausblenden: über die kleine Lasche rechts über der Leiste, mit Strg+Umschalt+F oder
-  Strg+F1 oder per Rechtsklick auf eine freie Stelle der Leiste (auch Umschalt+F10) › **Leiste ausblenden**. Dann
-  steht an der Unterkante des Titelbilds nur eine Kapsel, die die Suche bzw. die aktiven Filter samt Anzahl zeigt;
-  gefiltert leuchtet die Kante, und das Kreuz in der Kapsel setzt alle Filter zurück. Ein Klick auf die Kapsel,
-  dasselbe Kürzel oder Strg+F (sucht dann gleich) blendet die Leiste wieder ein. HDRpilot merkt sich, ob sie aus- oder
-  eingeblendet ist.
-- Fällt das gewählte Spiel durch Suche oder Filter aus der Liste, zeigen Titelbild und Details den ersten Treffer (er
-  bleibt „NEU“, bis du ihn selbst anklickst); passt gar nichts, steht in der Liste „Keine Spiele für diese Auswahl“
-  und in den Details „Kein Spiel gewählt“. Sobald dein Spiel wieder in der Liste steht, etwa nach dem Zurücksetzen
-  der Filter, ist es wieder gewählt.
-  Verschwindet das gewählte Spiel ganz aus der Liste (entfernt oder ausgeblendet), ist das nächste gewählt, am Ende der
-  Liste das vorige; fällt damit auch die gewählte Quelle weg, zeigt die Liste wieder alle Spiele, und gewählt ist das,
-  das dort auf das verschwundene folgt.
-- Sortierung nach **Name**, **Zuletzt gespielt** oder **HDR-Unterstützung**; die Wahl bleibt gespeichert. „Zuletzt
-  gespielt“ kennt Steam-Spiele aus Steams eigenen Daten und alle Spiele, die HDRpilot laufen sieht.
-- Neu gefundene Spiele tragen die Markierung „NEU“. Sie verschwindet, sobald du das Spiel anklickst oder seinen
-  Schalter änderst; das Augen-Symbol neben „Neu einlesen“ (**Alle als gesehen markieren**) entfernt sie bei allen.
-- **Neu einlesen** liest alle Launcher erneut ein. Das passiert auch bei jedem Start von HDRpilot im Hintergrund.
-  Deinstallierte Spiele bleiben mit dem Hinweis „Nicht installiert“ samt Einstellungen in der Liste; nach einer
-  Neuinstallation gelten die Einstellungen wieder. Brauchst du sie nicht mehr, entfernst du sie mit **Einstellungen
-  entfernen…** (siehe unten); ausblenden lassen sich nicht installierte Spiele unter „Einstellungen“ › **Bibliothek**.
-- **Spiel hinzufügen**: Spiele ohne Launcher selbst eintragen. Wähle am besten die Start-EXE des Spiels. Wählst du einen
-  Ordner, kann HDRpilot das Spiel nur dann selbst starten, wenn direkt darin genau eine EXE liegt; die Erkennung beim
-  Spielen funktioniert in beiden Fällen.
-- **Vorschläge aus deinen Suchordnern**: Unterordner deiner Suchordner mit EXE-Dateien erscheinen oben in der
-  Bibliothek. Übernommen wird nur, was du dort hinzufügst.
-- Details zum gewählten Spiel, von oben nach unten:
-  - **Starten** (für Bildschirmleser **Mit HDR starten**): schaltet HDR ein, wartet die Bestätigung ab und startet dann
-    das Spiel. Ist **Nach dem Start in den Infobereich** an (siehe „Einstellungen“), schließt sich die Bibliothek danach.
-    Bei einem Spiel aus dem Quiver Launcher ist es gesperrt, solange HDRpilot keine eindeutige Start-EXE kennt; der
-    Hinweis darunter sagt, was zu tun ist (siehe „Quiver Launcher“).
-  - **Desktop** / **Startmenü**: legt eine Verknüpfung „<Spiel> (HDR)“ an, die das Spiel genauso über HDRpilot startet.
-    Im Startmenü liegt sie im Ordner „HDRpilot“. Sie zeigt das Symbol der Liste, auch dein eigenes (dafür legt HDRpilot
-    neben dessen PNG eine ICO-Datei ab, die beim Zurücksetzen bleibt, damit die Verknüpfung ihr Symbol behält). Ist das
-    Symbol der Liste ein Bild wie ein Xbox-Logo, zeigt sie das der Spiel-EXE.
-  - **Steam-Startoption kopieren** (nur bei Steam-Spielen): Notlösung für Spiele, die du lieber direkt aus Steam
-    startest. Kopiert `"…\HDRpilot.exe" --wrap -- %command%`; in Steam per Rechtsklick auf das Spiel → Eigenschaften →
-    Allgemein → Startoptionen einfügen. Dann ist HDR auch beim Start aus Steam an, bevor das Spiel startet
-    (HDRpilot muss dafür laufen).
-  - **HDR automatisch**, **Bildschirm** (welcher Bildschirm geschaltet wird, Standard: die globale Einstellung) und
-    **Nach dem Spiel zurückstellen** (danach wieder den HDR-Zustand von vorher herstellen, Standard: an).
-  - Abschnitt „BILD“ mit **Windows Auto HDR**: Windows rechnet das SDR-Bild eines Spiels ohne eigenes HDR in HDR um
-    (DirectX 11/12). Das wirkt nur, wenn das Spiel über HDRpilot startet (**Starten**, „(HDR)“-Verknüpfung,
-    Steam-Startoption): HDRpilot schaltet Auto HDR in Windows direkt davor ein und nach dem Spiel wieder zurück; so steht
-    es auch unter dem Schalter. Das Schalten selbst ändert in Windows noch nichts. Unabhängig von **HDR automatisch**; ist
-    das aus, weist ein Hinweis darauf hin, dass Windows-HDR schon vor dem Spielstart an sein muss. Hat das Spiel laut
-    PCGamingWiki eigenes HDR, sind Titel und Schalter blasser und ein Hinweis rät, das HDR des Spiels zu nehmen;
-    schalten lässt es sich trotzdem (siehe „Windows Auto HDR“). Schaltest du es bei einem Steam-Spiel ein, dessen
-    Steam-Startoption noch fehlt, fragt HDRpilot, ob es sie kopieren soll (**Startoption kopieren**, wie
-    **Steam-Startoption kopieren**); eintragen musst du sie in Steam selbst. Ablehnen ändert nichts, Auto HDR bleibt an.
-  - **EXE-Dateien**: Grundsätzlich zählt jedes Programm im Installationsordner als dieses Spiel, außer Hilfsprozessen.
-    Die Liste zeigt die bekannten EXEs mit Herkunft („vom Launcher“, „beim Spielen erkannt“, „von dir hinzugefügt“).
-    Du kannst EXEs hinzufügen (auch außerhalb des Spielordners), entfernen (dann zählen sie für dieses Spiel nie) und
-    mit **Wieder aufnehmen** zurückholen. **Neu lernen** vergisst die beim Spielen erkannten EXEs.
-  - Abschnitt „BILDER“: Titelbild, Logo, Cover und Symbol des Spiels; ein Klick öffnet **Bild wählen…**, beim Symbol
-    das Menü mit **Symbol ändern…**. Darunter steht, woher die Bilder kommen, etwa „Lokal aus dem Steam-Cache · nichts
-    heruntergeladen“ oder „Eigene Datei · nur auf diesem PC“.
-  - **Aus der Bibliothek entfernen**: nur für selbst hinzugefügte Spiele.
-  - **Einstellungen entfernen…** (ganz unten, rot): nur für nicht installierte Spiele aus Launchern, auch per
-    Rechtsklick oder Entf. Nach einer Rückfrage vergisst HDRpilot, was es zu dem Spiel gespeichert hat: den Eintrag
-    samt Schaltern, gemerkten EXE-Dateien und Bildwahl, das eigene Symbol und die eigenen Bilder. Die Rückfrage nennt,
-    was verloren geht (etwa dass „HDR automatisch“ an ist oder „2 gemerkte EXE-Dateien“), warnt, wenn das Spiel
-    vielleicht noch installiert ist (sein Laufwerk ist nicht verbunden, eine EXE des Spiels ist noch da, Steam führt es
-    noch als installiert, etwa mitten in einem Update, oder Laufwerk bzw. Ordner antworten nicht oder sind nicht lesbar;
-    ein Restordner nur mit Spielständen, Einstellungen und Protokollen zählt nicht), und hat den Fokus auf **Abbrechen**. Gibt es
-    „(HDR)“-Verknüpfungen des Spiels auf dem Desktop oder im Startmenü, löscht ein Häkchen sie mit, ihre ICO-Datei nur,
-    wenn sicher keine andere Verknüpfung sie mehr zeigt; ohne Häkchen bleiben sie liegen und starten das Spiel erst
-    wieder, wenn es installiert und neu eingelesen ist. Am Spiel, am Launcher und an anderen Verknüpfungen ändert sich
-    nichts. Danach ist das nächste Spiel der Liste gewählt. Installierst du das Spiel wieder, erscheint es beim nächsten
-    Einlesen als neu, mit „HDR automatisch“ aus. Solange das Spiel läuft, geht es nicht.
+### Game library
 
-### Infobereich
+- On the left of the header, the selected source is shown in large type (“All games”, “Steam games”, “GOG games”, and so on
+  up to “My games”) under the overline “GAME LIBRARY”, with its numbers below: games, of those with **HDR on launch**, of
+  those new (for example “641 games · 12 with HDR on launch · 3 new”). With filters or search, only the games shown
+  from this source count (“36 of 641 games · 4 with HDR on launch · 1 new”); hidden uninstalled games never count.
+  Clicking the title (or Enter, Space or Alt+Down Arrow) opens the sources with their numbers; the choice works like
+  the “Source” field in the toolbar. On the right are the display capsule and the buttons **Turn HDR on** or **Turn
+  HDR off** (switches immediately, regardless of any game), **Pause automation** and the gear for the settings. The
+  capsule shows the target display with its color depth, whether HDR is on, and its values according to Windows: peak,
+  full frame and minimum in nits. The scale goes from 0 up to the peak with HDR on, even if HDR is currently off (the
+  capability of the display, not a measurement); as long as HDRpilot doesn't know the values, it shows “—”.
+- Below it is the title area of the selected game: hero image, logo or name, when it was last played, the source and a
+  badge for HDR support. When you switch games, the image cross-fades; the ambient light and glow of the window take
+  on the colors of the hero image (can be turned off under “Appearance”, see “Settings”).
+- Three views, switchable in the toolbar or with Ctrl+1, Ctrl+2 and Ctrl+3; the choice is remembered:
+  - **List** (default): one row per game with a preview, name, source, “Last played”, HDR badge and the **HDR on
+    launch** switch. Clicking a column header sorts. At the top left of the list you choose the preview: **16:9
+    thumbnail** or **Icon**. In narrow windows, first the source, then the HDR column and “Last played” are dropped. You
+    set the height of the title area above the list with the handle at its bottom edge: drag it or, when the handle has
+    focus, use Up/Down Arrow (Page Up/Down for larger steps, Home/End for the smallest or largest height); Esc cancels
+    dragging, double-click or Enter restores the default (one third of the window height). HDRpilot remembers the
+    height; below it, at least five full rows of the list always remain visible. Scrolling leaves the height as it is.
+  - **Grid**: covers in 2:3 format. The number of columns and the tile size follow the window width, in full screen
+    just as in a small window; nothing is stretched or cropped. The “HDR on launch” switch appears on the selected tile
+    and on mouse hover. You set the title area with the same handle as in the list; one full row of tiles always
+    remains visible.
+  - **Shelf**: a large hero image with **Launch**, **Desktop** and **Start menu**, below it a row of covers to browse
+    and on the right the “AUTOMATION” card with the most important switches (only when a game is selected). **Details**
+    (or the I key) opens all details as a drawer, Esc closes it. With the handle below the hero image you trade hero
+    image size for cover size: a taller hero image makes the covers smaller, down to the smallest size.
+  - Each view remembers its own height of the title area; double-click or Enter on the handle only resets the height
+    of the view currently shown.
+- In List and Grid, the details of the selected game are on the right. In the gap between them sits the scroll bar of
+  the list or grid: the pill shows where you are and how much of it is visible. Dragging scrolls, clicking above or
+  below the pill scrolls one page, and the mouse wheel also scrolls in the gap; if everything fits in the window, it's
+  hidden. You change the width of the details at the thin line that appears when you hover over the gap: drag
+  horizontally (Esc cancels), use the arrow keys when the splitter has focus, double-click to reset; HDRpilot remembers
+  the width, at most 560 px.
+- Keyboard: Ctrl+F shows the toolbar (the cursor is then in the search) and hides it again, the arrow keys select,
+  Enter launches the selected game, Space toggles “HDR on launch”, Esc clears the search, and Del asks, for an
+  uninstalled game from a launcher, whether its settings should go, and for a game you added yourself, whether it should
+  be removed from the library (see below). Right-click, Shift+F10 or the Menu key opens the game menu with **Launch**,
+  **HDR on launch**, **Restore after game**, **Windows Auto HDR**, **Choose image…**, **Change icon…** or **Reset
+  icon**, **Create desktop shortcut**, **Add to Start menu**, **Open install folder** and, only for uninstalled games
+  from launchers, **Remove settings…**. Buttons that open a menu (the title with the sources, “···” and the large icon
+  in the details) close it again on a second click, as do Enter or Space as long as nothing in it is selected.
+- Hero image, logo and cover come from the launchers' image caches on the PC (Steam, GOG Galaxy, Ubisoft Connect, Xbox
+  package, for Quiver only the cover), read-only, never from the internet. If one is missing, HDRpilot generates a
+  substitute image from the icon and name; new images from a launcher appear by themselves, for Quiver after the next
+  scan (see “How it works”). You choose a different image via right-click › **Choose image…** or in the “IMAGES”
+  section of the details: on each of the tabs **Hero image**, **Logo** and **Cover**, “ON THIS PC” offers **Automatic**,
+  other local images (such as the splash screen of an Xbox package), the generated image and **Custom file…** (PNG, JPG,
+  WebP, BMP); **Apply** saves, **Reset** selects **Automatic** again on the current tab. HDRpilot stores custom images
+  downscaled in its data folder; the chosen file stays unchanged. With your own SteamGridDB API key, **Search
+  SteamGridDB** in the “STEAMGRIDDB” section searches for more images of the game, always only on click: 24 previews per
+  page with the author, **Load more** shows more; if the game is wrong, you choose a different one under “Game”.
+  HDRpilot only downloads the chosen image when you click **Apply** and saves it as a custom image. Without a key,
+  **Open settings** takes you to the key field (see “Settings”).
+- Motion: the hero image slowly zooms and follows the mouse slightly, light rays and specks of light drift across it. If
+  HDR turns on while the library is open, a short HDR moment plays (light streak, brighter version of the hero image,
+  particles for at most 2.5 s, glowing edge). You set how much moves under “Appearance” › “Effects”; when minimized, in
+  the background and while a game is running, everything stands still. The right side of the status bar shows what
+  currently applies.
+- What PCGamingWiki knows about HDR support is shown in the list's “HDR” column: “NATIVE”, “LIMITED” (restricted) or
+  “MOD” (only via a mod). Tiles of games with HDR carry an “HDR” badge, and the title area says “NATIVE HDR”, “LIMITED
+  HDR”, “HDR VIA MOD” or “HDR UNKNOWN”.
+- The purple “AUTO HDR” badge right after the name marks games for which **Windows Auto HDR** is on. It's only an
+  indicator; you switch it in the details, and it takes effect when the game is launched via HDRpilot (see “Windows
+  Auto HDR”). Apart from it, only the **Auto HDR** entry in the notification area has its sparkle icon.
+- Icons come from files that are already on the PC, never from the internet (for Steam, the official Steam icon, see
+  “How it works”). You set a custom image via right-click on the game or by clicking the large icon in the details:
+  **Change icon…** takes an image (PNG, JPG, WebP, BMP, GIF, ICO) or an EXE, **Reset icon** shows the automatic icon
+  again. The custom icon takes precedence over all other sources; the chosen file stays unchanged, and HDRpilot stores a
+  downscaled copy (96 px) in its data folder.
+- The toolbar above the list: search, filter by source, sorting, the filters **HDR on launch**, **New** and
+  **HDR-capable** as icon toggles with their count (also Alt+A, Alt+N, Alt+H), and on the right the view, **Rescan**,
+  **Mark all as seen** and **Add game**. If you point at an element for a second, a tooltip explains it, including its
+  shortcut. In narrower windows, search, source and sorting get narrower, then sorting shows only its icon; only when
+  even that doesn't fit does the toolbar wrap onto two rows. A filter toggle is only highlighted while its filter is on;
+  it only shows the focus frame when you use the keyboard, not after a mouse click.
+- The toolbar can be hidden: with the small tab above the right end of the toolbar, with Ctrl+F (also from within the
+  search; Ctrl+F1 works too) or via right-click on an empty spot of the toolbar (also Shift+F10) › **Hide toolbar**.
+  Then only a capsule sits at the bottom edge of the hero image, showing the search or the active filters with their
+  count; search and filters stay active, the edge glows while filtered, and the cross in the capsule resets all
+  filters. Clicking the capsule or Ctrl+F shows the toolbar again; with Ctrl+F the cursor goes straight into the
+  search. HDRpilot remembers whether it's hidden or shown.
+- If search or filters remove the selected game from the list, the hero image and details show the first match (it
+  stays “NEW” until you click it yourself); if nothing matches, the list says “No games for this selection” and the
+  details say “No game selected”. As soon as your game is back in the list, for example after resetting the filters,
+  it's selected again.
+  If the selected game disappears from the list entirely (removed or hidden), the next one is selected, or the previous
+  one at the end of the list; if that also removes the selected source, the list shows all games again, and the game
+  selected is the one that follows the vanished game there.
+- Sorting by **Name**, **Last played** or **HDR support**; the choice is remembered. “Last played” knows Steam games
+  from Steam's own data and all games HDRpilot sees running.
+- Newly found games carry the “NEW” marker. It disappears as soon as you click the game or change its switch; the eye
+  icon next to “Rescan” (**Mark all as seen**) removes it from all games.
+- **Rescan** scans all launchers again. This also happens in the background every time HDRpilot starts. Uninstalled
+  games stay in the list with the note “Not installed”, together with their settings; after a reinstall, the settings
+  apply again. If you no longer need them, remove them with **Remove settings…** (see below); uninstalled games can be
+  hidden under “Settings” › **Library**.
+- **Add game**: add games without a launcher yourself. Preferably choose the game's launch EXE. If you choose a folder,
+  HDRpilot can only launch the game itself if exactly one EXE is directly inside it; detection while playing works in
+  both cases.
+- **Suggestions from your search folders**: subfolders of your search folders that contain EXE files appear at the top
+  of the library. Only what you add there is taken over.
+- Details of the selected game, from top to bottom:
+  - **Launch** (for screen readers **Launch with HDR**): turns HDR on, waits for confirmation and then launches the
+    game. If **Go to the notification area after launching a game** is on (see “Settings”), the library closes
+    afterwards. For a game from the Quiver Launcher, it's disabled as long as HDRpilot doesn't know a unique launch EXE;
+    the note below it says what to do (see “Quiver Launcher”).
+  - **Desktop** / **Start menu**: creates a shortcut “<Game> (HDR)” that launches the game via HDRpilot in the same
+    way. In the Start menu it's in the “HDRpilot” folder. It shows the icon from the list, including your custom one
+    (for that, HDRpilot stores an ICO file next to its PNG, which stays when you reset the icon so the shortcut keeps
+    its icon). If the list icon is an image such as an Xbox logo, the shortcut shows the icon of the game EXE.
+  - **Copy Steam launch option** (Steam games only): a workaround for games you'd rather launch directly from Steam.
+    Copies `"…\HDRpilot.exe" --wrap -- %command%`; in Steam, paste it via right-click on the game → Properties →
+    General → Launch Options. Then HDR is on before the game starts even when launched from Steam (HDRpilot has to be
+    running for this).
+  - **HDR on launch**, **Display** (which display is switched; default: the global setting) and **Restore after game**
+    (afterwards, restore the HDR state from before; default: on).
+  - The “PICTURE” section with **Windows Auto HDR**: Windows converts the SDR picture of a game without native HDR to
+    HDR (DirectX 11/12). This only works if the game is launched via HDRpilot (**Launch**, “(HDR)” shortcut, Steam
+    launch option): HDRpilot turns Auto HDR on in Windows right before and restores it after the game; a short note
+    under the title says so (“Takes effect when launched via HDRpilot”), the full explanation is behind **Learn more**
+    (closed again with **Less**; it stays expanded for all games until you close the window). Switching it alone doesn't
+    change anything in Windows yet. Independent of **HDR on launch**; if that's off, a note points out that Windows HDR
+    must already be on before the game starts. If Auto HDR is on and **HDR on launch** is off, this note also shows
+    when collapsed, otherwise only with the explanations. If the game has native HDR according to PCGamingWiki, the
+    title and switch are dimmed, and a note in the explanations advises using the game's own HDR; you can still switch
+    it (see “Windows Auto HDR”). If you turn it on for a Steam game whose Steam launch option is still missing, HDRpilot
+    asks whether it should copy it (**Copy launch option**, like **Copy Steam launch option**); you have to add it in
+    Steam yourself. Declining changes nothing; Auto HDR stays on.
+  - **EXE files**: in principle, every program in the install folder counts as this game, except helper processes. The
+    list shows the known EXEs with their origin (“from the launcher”, “detected while playing”, “added by you”). You
+    can add EXEs (also outside the game folder), remove them (then they never count for this game) and bring them back
+    with **Include again**. **Relearn** forgets the EXEs detected while playing.
+  - The “IMAGES” section: hero image, logo, cover and icon of the game; a click opens **Choose image…**, for the icon
+    the menu with **Change icon…**. Below it, it says where the images come from, for example “Local from the Steam
+    cache · nothing downloaded” or “Custom image · only on this PC”.
+  - **Remove from library**: only for games you added yourself.
+  - **Remove settings…** (at the very bottom, red): only for uninstalled games from launchers, also via right-click or
+    Del. After a confirmation, HDRpilot forgets what it has stored about the game: the entry with its switches,
+    remembered EXE files and image choice, the custom icon and the custom images. The confirmation lists what will be
+    lost (for example that “HDR on launch” is on, or “2 remembered EXE files”), warns if the game may still be
+    installed (its drive isn't connected, an EXE of the game is still there, Steam still lists it as installed, for
+    example in the middle of an update, or the drive or folder doesn't respond or isn't readable; a leftover folder with
+    only saves, settings and logs doesn't count), and has the focus on **Cancel**. If there are “(HDR)” shortcuts of
+    the game on the desktop or in the Start menu, a checkbox deletes them too, and their ICO file only if no other
+    shortcut can still be using it; without the checkbox they stay and only launch the game again once it's installed
+    and scanned again. Nothing changes in the game, the launcher or other shortcuts. Afterwards, the next game in the
+    list is selected. If you reinstall the game, it appears as new at the next scan, with “HDR on launch” off. It isn't
+    possible while the game is running.
 
-Das Symbol, eine Sonne über dem Horizont in den Farben deines Farbschemas, zeigt den Zustand: bei ausgeschaltetem HDR
-als Linie, bei eingeschaltetem als gefüllte Kachel, bei pausierter Automatik mit gelbem Pause-Abzeichen und, solange ein
-Spiel mit HDR läuft, mit grünem Abzeichen. Das Fenstersymbol in Titelleiste und Taskleiste zeigt dasselbe. Der Tooltip
-nennt die Spiele, für die HDRpilot gerade HDR geschaltet hat, ob die Automatik aktiv ist und gegebenenfalls, wie lange
-der Neustart-Puffer HDR noch anlässt. Das Menü (Rechtsklick) bietet:
+### Notification area
 
-- **HDR jetzt einschalten** / **HDR jetzt ausschalten**
-- **Auto HDR**: zeigt, ob der Schalter „Auto HDR“ von Windows gerade an ist (gelesen beim Öffnen des Menüs), und
-  schaltet ihn um. Das gilt ab dem nächsten Spielstart, für jedes Spiel und auch ohne HDRpilot. Eine Änderung hier ist
-  deine Wahl: HDRpilot stellt sie nach einem Spiel nicht zurück (siehe „Windows Auto HDR“). Hat HDRpilot den Schalter
-  gerade nur für ein Spiel eingeschaltet, sagt das der Tooltip: Nach dem Spiel ist er wieder aus. Ist der Wert nicht
-  lesbar oder in einem fremden Format, ist der Eintrag gesperrt.
-- **Automatik pausieren**: keine neuen automatischen Schaltungen; laufende Spiele werden noch normal zurückgestellt.
-  „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten weiterhin. Die Pause gilt, bis du sie
-  aufhebst oder HDRpilot neu startet; sie wird nicht gespeichert.
-- **Spieleliste öffnen**, **Einstellungen**, **Protokollordner öffnen**
-- **HDRpilot beenden**
+The icon, a sun above the horizon in the colors of your color scheme, shows the state: as an outline with HDR off, as a
+filled tile with HDR on, with a yellow pause badge when automation is paused and, while a game with HDR is running,
+with a green badge. The window icon in the title bar and taskbar shows the same. The tooltip names the games for which
+HDRpilot has currently switched HDR, whether automation is active and, if applicable, how much longer the restart
+buffer keeps HDR on. The menu (right-click) offers:
 
-Direkt unter dem Kopf des Menüs (Symbol, „HDRpilot“ und Status) steht grau und nicht anklickbar die Version („Version“
-mit Versionsnummer), dieselbe Nummer wie im Setup und unter „Installierte Apps“.
+- **Turn HDR on now** / **Turn HDR off now**
+- **Auto HDR**: shows whether the Windows “Auto HDR” switch is currently on (read when the menu opens) and toggles it.
+  This applies from the next game launch, for every game and also without HDRpilot. A change here is your choice:
+  HDRpilot doesn't restore it after a game (see “Windows Auto HDR”). If HDRpilot has just turned the switch on for a
+  game only, the tooltip says so: it will be off again after the game. If the value can't be read or has an unknown
+  format, the entry is disabled.
+- **Pause automation**: no new automatic switching; running games are still restored as usual. “Launch”, “(HDR)”
+  shortcuts and the Steam launch option still switch. The pause lasts until you lift it or HDRpilot restarts; it isn't
+  saved.
+- **Open game list**, **Settings**, **Open log folder**
+- **Exit HDRpilot**
 
-Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
+Directly below the menu header (icon, “HDRpilot” and status), the version is shown in gray and not clickable (“Version”
+with the version number), the same number as in the setup and under “Installed apps”.
 
-### Einstellungen
+Clicking a notification from HDRpilot also opens the game library.
 
-| Einstellung | Bedeutung | Standard |
+### Settings
+
+| Setting | Meaning | Default |
 |---|---|---|
-| Bildschirme | Auf welchen Bildschirmen HDR geschaltet wird | Hauptbildschirm |
-| Abfrageintervall | Wie oft nach Spielstarts gesehen wird | 1000 ms |
-| Nachlaufzeit | Wartezeit nach dem Spielende, bevor zurückgestellt wird | 10 s |
-| Neustart-Puffer | Endet ein Spiel weniger als 5 Minuten nach dem Start, bleibt HDR so lange an (Minuten und Sekunden, höchstens 30:00, 0:00 = aus; siehe „So funktioniert es“) | 1:00 |
-| Startfrist | Bei „Starten“: so lange wird auf den Spielprozess gewartet | 120 s |
-| Mit Windows starten | Autostart über `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | aus |
-| Hinweise anzeigen | Kurze Meldungen im Infobereich beim Schalten und bei Problemen; nie während Vollbild-Spielen, Präsentationen oder bei gesperrtem Bildschirm (dann nur im Protokoll). Aus: alle Meldungen nur im Protokoll | an |
-| Suchordner | Ordner mit Spielen ohne Launcher; Unterordner mit EXE werden vorgeschlagen | keine |
-| Nicht installierte Spiele ausblenden | Nicht installierte Spiele stehen nicht in der Bibliothek und zählen dort nirgends mit (Zahl der Spiele, Quellen, Filter); wie viele es sind, steht daneben und im Tooltip zum Zurücksetzen der Filter. „HDR automatisch“ wirkt für sie weiter | aus |
-| Hilfsprozesse ausschließen | Programme, die nie als Spiel zählen (Absturzmelder, Installer und Laufzeitpakete, Anti-Cheat-Installer und -Dienste, reine Launcher-Fenster …) | Standardliste |
-| Farbschema | Duoton oder Tritonus, eine der acht Vorlagen oder eigene Farben; färbt Oberfläche, Tray- und Fenstersymbol | Abendrot, Duoton |
-| Textfarbe auf Akzentflächen automatisch | Dunkle Schrift oder Weiß auf Akzentflächen, je nachdem, was besser lesbar ist | an |
-| Hintergrund folgt dem Spiel | Umgebungslicht und Leuchten der Bibliothek nehmen die Farben des gewählten Titelbilds an | an |
-| Thema | Automatisch (wie der App-Modus von Windows), Hell oder Dunkel | Automatisch |
-| Effekte | Voll, Reduziert (nur kurze Übergänge bis 0,3 s) oder Aus | Voll |
-| Beim Spielen anhalten | Solange ein Spiel läuft, steht jede Animation still | an |
-| Im Hintergrund anhalten | Minimiert, verdeckt oder nicht aktiv steht jede Animation still | an |
-| Windows-Animationseffekte beachten | Ist „Animationseffekte“ in Windows aus, gilt mindestens „Reduziert“ | an |
-| Nach dem Start in den Infobereich | Nach einem Start aus der Bibliothek schließt sich das Fenster, HDRpilot läuft im Infobereich weiter | aus |
-| SteamGridDB (online) | Fehlende Titelbilder, Logos und Cover von steamgriddb.com laden, nur mit eigenem API-Schlüssel | aus |
-| Bei jedem Start abgleichen | HDR-Liste von PCGamingWiki 30 s nach dem Start abgleichen, höchstens einmal pro Stunde (siehe „HDR-Liste“) | an |
-| Protokollstufe (Erweitert) | Wie ausführlich protokolliert wird | Normal |
-| Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert und gerade kein Spiel läuft; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
+| Displays | Which displays HDR is switched on | Primary display |
+| Polling interval | How often HDRpilot checks for game launches | 1000 ms |
+| Grace period | Waiting time after the game ends before restoring | 10 s |
+| Restart buffer | If a game ends less than 5 minutes after launch, HDR stays on this long (minutes and seconds, at most 30:00, 0:00 = off; see “How it works”) | 1:00 |
+| Launch timeout | With “Launch”: how long to wait for the game process | 120 s |
+| Start with Windows | Autostart via `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | off |
+| Language · Sprache | Interface language: Deutsch or English (each named in its own language); takes effect after HDRpilot restarts | new installation: like Windows (German for a German display language, English otherwise); after an update: German |
+| Show notifications | Short messages in the notification area when switching and when there are problems; never during full-screen games, presentations or on a locked screen (then only in the log). Off: all messages only in the log | on |
+| Search folders | Folders with games that have no launcher; subfolders with an EXE are suggested | none |
+| Hide uninstalled games | Uninstalled games aren't shown in the library and aren't counted anywhere there (number of games, sources, filters); how many there are is shown next to the option and in the tooltip for resetting the filters. “HDR on launch” still applies to them | off |
+| Exclude helper processes | Programs that never count as a game (crash reporters, installers and runtime packages, anti-cheat installers and services, plain launcher windows, etc.) | default list |
+| Color scheme | Duotone or Tritone, one of the eight presets or custom colors; colors the interface, tray icon and window icon | Sunset, Duotone |
+| Automatic text color on accent surfaces | Dark text or white on accent surfaces, whichever is more readable | on |
+| Background follows the game | Ambient light and glow of the library take on the colors of the selected hero image | on |
+| Colors follow the game | Library accents (Launch and HDR buttons, selection, switches, focus frames, badges, toolbar, particles in the HDR moment) take on the colors of the selected game's logo and cover, read once per game and only while the switch is on. Gray images and high contrast use the color scheme; settings, tray menu and dialogs always keep it | off |
+| Theme | Automatic (like the Windows app mode), Light or Dark | Automatic |
+| Effects | Full, Reduced (only short transitions up to 0.3 s) or Off | Full |
+| Pause while playing | While a game is running, all animation stops | on |
+| Pause in the background | When minimized, covered or inactive, all animation stops | on |
+| Respect Windows animation effects | If “Animation effects” is off in Windows, at least “Reduced” applies | on |
+| Go to the notification area after launching a game | After a launch from the library, the window closes and HDRpilot keeps running in the notification area | off |
+| SteamGridDB (online) | With your own API key: search in **Choose image…** on click; **Load missing images automatically** also fills in missing hero images, logos and covers | off |
+| Sync at every startup | Sync the HDR list with PCGamingWiki 30 s after startup, at most once per hour (see “HDR list”) | on |
+| Log level (Advanced) | How detailed the log is | Normal |
+| Keyboard shortcut as fallback (Advanced) | Sends Win+Alt+B, only if the Windows API fails and no game is running; requires the Xbox Game Bar and toggles all HDR-capable displays | off |
 
-Im Bereich „HDR-Liste (PCGamingWiki)“ gibt es außerdem **Jetzt abgleichen**, den Stand der Liste und das optionale
-PCGamingWiki-Konto (siehe unten). Für „Windows Auto HDR“ gibt es keine Einstellung: Es wird je Spiel in der Bibliothek
-geschaltet und wirkt immer beim Start über HDRpilot (siehe „Windows Auto HDR“).
+**Language:** The choice is under “General” › “Startup and notifications” and, like the other general settings,
+applies with **Save**. Because texts are fixed when the windows open, the language only changes after HDRpilot
+restarts. If the choice differs from the language shown, a note and **Restart now** appear: this saves all settings,
+exits HDRpilot and starts it again right away with the settings open. A new installation (or the first start without
+installation) uses the Windows display language: German if it's German, English otherwise. If you already use
+HDRpilot, it stays German after an update. Date, time and numbers follow the Windows regional settings as long as their
+language matches the chosen one (for example English with British format); otherwise the formats of Germany or the US
+apply. The command line `cli\hdrpilot.exe` responds in the language of its storage. The log is in German; only messages
+that also appear in the interface (such as scanner errors) are written in the interface language. English dates always
+appear as month, day, year (“Sep 11, 2026”).
 
-Nur in `config.json` einstellbar: `launcherSignals` (Frühwarnung aus den Protokollen von Epic und Steam, Standard
-`true`; sie setzt für Spiele mit „Windows Auto HDR“ auch den Auto-HDR-Schalter vor dem Spiel). Den Neustart-Puffer
-speichert HDRpilot dort als `restartBufferSeconds` (in Sekunden); fehlt der Wert, gilt der Standard von 1 Minute.
-Ordner des Quiver Launchers, die HDRpilot sich gemerkt hat, stehen in `quiverFolders` (fehlt, solange es keinen gibt);
-einen Ordner trägst du dort ein oder, einfacher, startest Quiver einmal, während HDRpilot läuft.
+The “HDR list (PCGamingWiki)” section also has **Sync now**, the status of the list and the optional PCGamingWiki
+account (see below). There's no setting for “Windows Auto HDR”: it's switched per game in the library and always takes
+effect when the game is launched via HDRpilot (see “Windows Auto HDR”).
 
-Im Bereich **Bibliothek** entfernt **Einstellungen aller nicht installierten Spiele entfernen…** auf einmal, was
-**Einstellungen entfernen…** bei jedem einzelnen nicht installierten Spiel aus einem Launcher entfernen würde. Die
-Rückfrage nennt alle betroffenen Spiele, unter jedem, was verloren geht, und warnt, wenn Spiele vielleicht noch
-installiert sind; warum, steht unter dem Namen des Spiels: Laufwerk nicht verbunden, EXE-Datei noch da, bei Steam noch
-eingetragen oder nicht prüfbar (Laufwerk bzw. Ordner antworten nicht oder sind nicht lesbar). Ein Restordner nur mit
-Spielständen, Einstellungen und Protokollen zählt nicht. Das gilt sofort und unabhängig von **Speichern**; selbst
-hinzugefügte und gerade laufende Spiele bleiben (laufen alle, sagt die Karte das).
+The language is stored in `config.json` as `language` (`"de"` or `"en"`); if the field is missing (configuration from
+1.5.x or older) or contains anything else, German applies. Only adjustable in `config.json`: `launcherSignals` (early
+warning from the Epic and Steam logs, default `true`; for games with “Windows Auto HDR” it also sets the Auto HDR switch
+before the game). HDRpilot stores the restart buffer there as `restartBufferSeconds` (in seconds); if the value is
+missing, the default of 1 minute applies. Quiver Launcher folders that HDRpilot has remembered are in `quiverFolders`
+(absent as long as there are none); you can add a folder there or, more simply, start Quiver once while HDRpilot is
+running.
 
-Links führt eine Navigation durch die Bereiche (**Allgemein**, **Bildschirme**, **Automatik**, **Suchordner**,
-**Bibliothek**, **Hilfsprozesse**, **Darstellung** mit **Farben**, **Bilder** und **Symbole und Tray**, **Erweitert**,
-**Protokolle**); alle stehen untereinander auf einer Seite, ein Klick springt hin. Oben in der Navigation steht die
-Version von HDRpilot, dieselbe Nummer wie im Infobereich-Menü, unten die Zahl der Spiele (ohne ausgeblendete) und
-**Spielebibliothek öffnen**. In
-breiten Fenstern stehen die Bereiche in bis zu drei Spalten nebeneinander, jeder höchstens 760 px breit; im Vollbild
-bleibt der Rest frei, statt die Bereiche in die Länge zu ziehen.
+In the **Library** section, **Remove settings for all uninstalled games…** removes in one go what **Remove settings…**
+would remove for each individual uninstalled game from a launcher. The confirmation lists all affected games, under each
+one what will be lost, and warns if games may still be installed; the reason is shown under the game's name: drive not
+connected, EXE file still there, still listed in Steam, or can't be checked (drive or folder doesn't respond or isn't
+readable). A leftover folder with only saves, settings and logs doesn't count. This takes effect immediately and
+independently of **Save**; games you added yourself and games currently running are kept (if all are running, the card
+says so).
 
-**Speichern** (Strg+S) und **Abbrechen** (Esc) gelten für alle Bereiche außer der Darstellung. Was du unter
-„Darstellung“ änderst, gilt und speichert sofort (**Wird sofort angewendet**); **Abbrechen** nimmt es nicht zurück,
-**Standard** setzt die ganze Darstellung zurück. Dort gibt es:
+On the left, a navigation leads through the sections (**General**, **Displays**, **Automation**, **Search folders**,
+**Library**, **Helper processes**, **Appearance** with **Colors**, **Images** and **Icons and tray**, **Advanced**,
+**Logs**); all of them are on one page, one below the other, and a click jumps there. At the top of the navigation is
+the HDRpilot version, the same number as in the notification area menu; at the bottom, the number of games (without
+hidden ones) and **Open game library**. In wide windows, the sections sit side by side in up to three columns, each at
+most 760 px wide; in full screen the rest stays empty instead of stretching the sections.
 
-- **Farbschema**: **Duoton** (Akzent und Atmosphäre, der Glanz entsteht aus der Atmosphäre) oder **Tritonus** (Akzent,
-  Atmosphäre und Glanz), acht Vorlagen (Abendrot, Cyber, Neongrün, Royal, Gletscher, Synthwave, Glut, Polarlicht) und
-  eigene Farben: Ein Klick auf ein Farbfeld öffnet den Farbwähler (Feld, Farbton-Leiste, Hex-Wert). Der Akzent färbt
-  Schaltflächen und Auswahl, die Atmosphäre Hintergrund und Leuchten, der Glanz HDR-Moment und Lichtstreifen. Alle
-  Farben der Oberfläche, das Tray-Symbol und das Fenstersymbol folgen dem Schema; Text auf Akzentflächen bleibt
-  mindestens 4,5:1 lesbar, Schalter und Fokusrahmen heben sich mindestens 3:1 ab.
-- **Live-Vorschau**: deine zuletzt gespielten Spiele im gewählten Schema. Der Schalter **HDR** zeigt den HDR-Moment nur
-  in der Vorschau und schaltet kein HDR.
-- **Thema**: **Automatisch** (wie der App-Modus von Windows), **Hell** oder **Dunkel**.
-- **Effekte**: **Voll**, **Reduziert** (nur kurze Übergänge bis 0,3 s, keine Daueranimation) oder **Aus**, dazu
-  **Beim Spielen anhalten**, **Im Hintergrund anhalten**, **Windows-Animationseffekte beachten** und **Nach dem Start in
-  den Infobereich**. Die Stufe gilt überall: Bibliothek, Einstellungen, Dialoge und Tray-Menü. Daueranimationen laufen
-  mit höchstens 30 Bildern pro Sekunde und nur, solange etwas davon zu sehen ist; bei geschlossenem Fenster läuft gar
-  nichts.
-- **Bilder**: wie viele Bilder je Launcher lokal gefunden und genutzt werden, je Ersatzfall ein Beispiel aus deiner
-  Bibliothek und **SteamGridDB (online)**.
-- **Symbole und Tray**: Tray- und Fenstersymbol in allen Zuständen und in echter Größe, das Tray-Menü und eine
-  Taskleiste zur Vorschau (**Hell** oder **Dunkel**, nur für die Vorschau).
+**Save** (Ctrl+S) and **Cancel** (Esc) apply to all sections except Appearance. What you change under “Appearance”
+applies and is saved immediately (**Applied immediately**); **Cancel** doesn't undo it, **Default** resets the whole
+appearance. It contains:
 
-**SteamGridDB (online)** ist die einzige Bildquelle aus dem Netz und standardmäßig aus. Eingeschaltet und mit eigenem
-API-Schlüssel von steamgriddb.com (eintragen, dann **Prüfen**) lädt HDRpilot nur Titelbilder, Logos und Cover, die lokal
-fehlen und die du nicht selbst gewählt hast: nach dem Einschalten, nach dem Prüfen eines Schlüssels, mit
-**Fehlende Bilder jetzt laden** und höchstens einmal am Tag eine Minute nach dem Start, nie während eines Spiels. Der
-Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben; die Zeile
-darunter zeigt den letzten Netzwerkzugriff, **Schlüssel entfernen** löscht ihn. Aus oder ohne Schlüssel gibt es keinen
-Netzwerkzugriff dafür: Ausschalten, Schlüssel entfernen oder ein Spielstart halten auch einen laufenden Abruf sofort an.
-Ausgeschaltet zeigt HDRpilot wieder die lokalen bzw. erzeugten Bilder; die geladenen bleiben für ein erneutes
-Einschalten liegen.
+- **Color scheme**: **Duotone** (accent and atmosphere; the shine is derived from the atmosphere) or **Tritone**
+  (accent, atmosphere and shine), eight presets (Sunset, Cyber, Neon green, Royal, Glacier, Synthwave, Ember, Aurora)
+  and custom colors: clicking a color swatch opens the color picker (field, hue bar, hex value). The accent colors
+  buttons and selection, the atmosphere the background and glow, the shine the HDR moment and light streaks. All
+  interface colors, the tray icon and the window icon follow the scheme; text on accent surfaces stays readable at a
+  contrast of at least 4.5:1, switches and focus frames stand out by at least 3:1.
+- **Live preview**: your most recently played games in the chosen scheme. The **HDR** switch shows the HDR moment only
+  in the preview and doesn't switch HDR.
+- **Theme**: **Automatic** (like the Windows app mode), **Light** or **Dark**.
+- **Effects**: **Full**, **Reduced** (only short transitions up to 0.3 s, no continuous animation) or **Off**, plus
+  **Pause while playing**, **Pause in the background**, **Respect Windows animation effects** and **Go to the
+  notification area after launching a game**. The level applies everywhere: library, settings, dialogs and tray menu.
+  Continuous animations run at no more than 30 frames per second and only while some of them are visible; with the
+  window closed, nothing runs at all.
+- **Images**: how many images per launcher are found locally and used, one example from your library for each
+  substitute case, and **SteamGridDB (online)**.
+- **Icons and tray**: tray and window icon in all states and at actual size, the tray menu and a taskbar for preview
+  (**Light** or **Dark**, only for the preview).
 
-## So funktioniert es
+**SteamGridDB (online)** is the only image source from the internet. Without your own API key from steamgriddb.com,
+there's no network access for it. You enter the key and confirm it with **Check**; the field and button are always
+usable, and **Remove key** deletes it again and also stops a running search. With a key, you can search yourself in
+**Choose image…**, always only on click. Below that, **Load missing images automatically** (default: off) additionally
+downloads hero images, logos and covers that are missing locally and that you haven't chosen yourself: after turning it
+on, after checking a key, with **Download missing images now**, and at most once a day one minute after startup, never
+during a game. The key is stored encrypted (DPAPI) for your Windows account and never written to the log; the line
+below the key shows the last network access, run or search, with the number of requests. Turning it off or launching a
+game stops a running automatic download immediately; when it's off, HDRpilot shows the local or generated images again,
+and the automatically downloaded ones are kept in case you turn it on again. Images you applied in **Choose image…**
+count as custom images and don't depend on the switch.
 
-**Erkennen (Weg A):** HDRpilot fragt einmal pro Sekunde die Prozessliste ab. Startet ein Programm aus dem
-Installationsordner eines Spiels mit „HDR automatisch“, schaltet HDRpilot HDR ein. Reine Launcher-Fenster,
-Absturzmelder, Installer und Laufzeitpakete zählen nicht. Start-Helfer, die das Spiel selbst starten (etwa
-`gamelaunchhelper.exe` oder `PlayRDR2.exe`), zählen bewusst schon als Spiel, damit HDR früh an ist. Die beim ersten
-Lauf erkannten EXEs merkt sich HDRpilot und zeigt sie in den Details.
+## How it works
 
-**Frühwarnung bei Epic und Steam:** Startest du ein Spiel mit „HDR automatisch“ aus dem Epic Games Launcher oder aus
-Steam, liest HDRpilot das in deren eigenen Protokolldateien mit (nur lesend) und schaltet HDR schon 1–2 s vor dem
-Spielprozess ein. Kommt das Spiel doch nicht, stellt die Startfrist HDR wieder zurück. Abschaltbar über
-`launcherSignals` in `config.json`.
+**Detection (path A):** HDRpilot queries the process list once per second. If a program from the install folder of a
+game with “HDR on launch” starts, HDRpilot turns HDR on. Plain launcher windows, crash reporters, installers and runtime
+packages don't count. Launch helpers that start the game themselves (such as `gamelaunchhelper.exe` or `PlayRDR2.exe`)
+deliberately count as the game already, so HDR is on early. HDRpilot remembers the EXEs detected on the first run and
+shows them in the details.
 
-**Starten über HDRpilot (Weg B):** „Starten“ oder eine „(HDR)“-Verknüpfung (`HDRpilot.exe --run <Quelle:ID>`)
-schaltet HDR zuerst ein, wartet die Bestätigung ab und startet erst dann das Spiel: über den Launcher-Link der Quelle
-(etwa `steam://`), Spiele aus GOG und dem Quiver Launcher sowie selbst eingetragene direkt über ihre EXE. Das ist der
-sichere Weg für Spiele, die HDR nur beim Start prüfen. Erscheint innerhalb der Startfrist (Standard 120 s) kein
-erkannter Spielprozess, etwa weil der Launcher noch aktualisiert, stellt HDRpilot HDR wieder zurück. Solange ein
-Programm aus dem Spielordner läuft (etwa ein Launcher-Fenster, das auf die Anmeldung wartet), wartet HDRpilot weiter,
-höchstens 30 Minuten. Scheitert das Einschalten, startet das Spiel trotzdem. Doppelte Startanforderungen (doppelter
-Doppelklick) übergeht HDRpilot.
+**Early warning for Epic and Steam:** If you launch a game with “HDR on launch” from the Epic Games Launcher or from
+Steam, HDRpilot picks this up from their own log files (read-only) and turns HDR on 1–2 s before the game process. If
+the game doesn't come after all, the launch timeout restores HDR again. Can be turned off with `launcherSignals` in
+`config.json`.
 
-**Steam-Startoption:** Mit `"…\HDRpilot.exe" --wrap -- %command%` in den Startoptionen eines Steam-Spiels startet Steam
-zuerst HDRpilot. Läuft HDRpilot, schaltet es HDR ein, wartet die Bestätigung und noch 1,5 s ab, startet dann das Spiel
-und beendet sich sofort (es hält nichts am Spiel fest). Wie bei „Starten“ gilt das auch bei pausierter
-Automatik und für Spiele ohne „HDR automatisch“. Läuft HDRpilot nicht oder ist das Spiel unbekannt, startet das Spiel
-sofort ohne HDR.
+**Launch via HDRpilot (path B):** “Launch” or an “(HDR)” shortcut (`HDRpilot.exe --run <Source:ID>`) turns HDR on
+first, waits for confirmation and only then launches the game: via the source's launcher link (such as `steam://`), and
+games from GOG and the Quiver Launcher as well as games you added yourself directly via their EXE. This is the safe way
+for games that only check HDR at startup. If no recognized game process appears within the launch timeout (default
+120 s), for example because the launcher is still updating, HDRpilot restores HDR. As long as a program from the game
+folder is running (such as a launcher window waiting for sign-in), HDRpilot keeps waiting, for at most 30 minutes. If
+turning HDR on fails, the game launches anyway. HDRpilot ignores duplicate launch requests (an accidental double
+double-click).
 
-**Quiver Launcher:** Quiver ist portabel und liegt dort, wo du es entpackt hast. HDRpilot erkennt seinen Ordner an
-`current\sq.version` mit der Kennung QuiverLauncher (bis Version 2.4.x an `Quiver.exe`) und sucht ihn nur lesend in
-dieser Reihenfolge: Ordner, die es sich gemerkt hat; das Protokoll des Updaters von Quiver
-(`%LOCALAPPDATA%\velopack\velopack_QuiverLauncher.log`); deine Suchordner und ihre Unterordner;
-`%LOCALAPPDATA%\QuiverLauncher` und ein Eintrag unter
-`HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuiverLauncher` (falls Quiver je mit einem Setup kommt).
-Findet das nichts, sucht es in Downloads, Desktop, Dokumenten, im Benutzerordner und auf den festen Laufwerken bis
-zwei Ebenen tief (höchstens 1500 Ordner, ohne Windows- und Programmordner, nur auf festen Laufwerken und ohne
-verknüpften Ordnern zu folgen, also nie auf eine Netzfreigabe). Liegt Quiver woanders, merkt sich HDRpilot den Ordner,
-sobald Quiver startet, während HDRpilot läuft, und liest wenige Sekunden später neu ein. Gelesen werden `apps.json`
-und aus `settings.json` nur ein eigener Apps-Ordner (auch eine Laufwerkswurzel wie `G:\`); Quivers Dateien ändert
-HDRpilot nie. „Starten“ startet die Spiel-EXE direkt mit ihrem Ordner als Arbeitsordner, wie Quiver selbst: die in
-Quiver gewählte EXE, sonst die einzige oben im Spielordner, sonst die einzige bis drei Ebenen tief. Ein Startskript
-(BAT oder CMD) zählt dabei wie in Quiver mit, gestartet wird es aber nie: Startet Quiver ein Skript, liegen mehrere
-Kandidaten im Spielordner oder liegt die EXE noch tiefer, kennt HDRpilot keine Start-EXE. Dann startest du das Spiel
-einmal in Quiver und wählst dort die EXE, wenn Quiver danach fragt; nach „Neu einlesen“ geht es auch über HDRpilot.
-Als installiert gilt ein Spiel wie in Quiver, sobald irgendwo im Spielordner eine EXE, BAT oder CMD liegt (gesucht bis
-16 Ebenen tief, höchstens 3000 Ordner; endet die Suche an dieser Grenze, gilt es als installiert). Spiele, die Quiver
-über den Windows Installer installiert hat, starten über die EXE, die Quiver dafür verknüpft hat; ihr Ordner gilt als
-Installationsordner. Erkannt wird ein laufendes Spiel immer über seinen Ordner. Steht dasselbe Spiel in zwei
-Quiver-Ordnern (etwa während des Umzugs von Quiver 2.4 auf 3.x), gilt der Ordner von 3.x, sonst der zuletzt gespielte.
-Hast du ein Quiver-Spiel früher selbst eingetragen, steht es zweimal in der Bibliothek; die Details beider Einträge
-weisen darauf hin, entfernt wird nichts von selbst. Das Cover liest HDRpilot aus dem Ordner `Cache` von Quiver,
-„Zuletzt gespielt“ aus Quivers `LastPlayed.txt` (ein Datum in einem anderen Kalender, etwa dem thailändischen mit dem
-Jahr 2569, zählt nicht).
+**Steam launch option:** With `"…\HDRpilot.exe" --wrap -- %command%` in the launch options of a Steam game, Steam starts
+HDRpilot first. If HDRpilot is running, it turns HDR on, waits for confirmation and another 1.5 s, then starts the game
+and exits immediately (it doesn't hold on to anything in the game). As with “Launch”, this also applies when automation
+is paused and for games without “HDR on launch”. If HDRpilot isn't running or the game is unknown, the game starts
+immediately without HDR.
 
-**Zurückstellen:** Vor dem Schalten merkt sich HDRpilot den HDR-Zustand jedes betroffenen Bildschirms und speichert
-ihn sofort. Wenn das letzte HDR-Spiel beendet ist und die Nachlaufzeit (10 s) verstrichen ist, stellt HDRpilot diesen
-Zustand wieder her. Laufen mehrere Spiele, wird erst nach dem letzten zurückgestellt, und nur, wenn alle beteiligten
-Spiele „Nach dem Spiel zurückstellen“ an haben. Diese Einstellung gilt ab dem nächsten Spielstart. War HDR schon vor
-dem Spiel an, schaltet HDRpilot am Ende nichts. Schaltest du HDR während des Spiels von Hand um, überschreibt
-HDRpilot das nicht; am Ende schaltet es HDR nur aus, wenn es vor dem Spiel aus war, und nie wieder ein.
+**Quiver Launcher:** Quiver is portable and lives wherever you unpacked it. HDRpilot recognizes its folder by
+`current\sq.version` with the identifier QuiverLauncher (up to version 2.4.x by `Quiver.exe`) and looks for it
+read-only in this order: folders it has remembered; the log of Quiver's updater
+(`%LOCALAPPDATA%\velopack\velopack_QuiverLauncher.log`); your search folders and their subfolders;
+`%LOCALAPPDATA%\QuiverLauncher` and an entry under
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\QuiverLauncher` (in case Quiver ever ships with a setup). If
+that finds nothing, it searches Downloads, Desktop, Documents, the user folder and the fixed drives up to two levels deep
+(at most 1500 folders, excluding Windows and program folders, only on fixed drives and without following linked
+folders, so never on a network share). If Quiver is somewhere else, HDRpilot remembers the folder as soon as Quiver
+starts while HDRpilot is running, and rescans a few seconds later. It reads `apps.json` and, from `settings.json`, only a
+custom apps folder (also a drive root such as `G:\`); HDRpilot never changes Quiver's files. “Launch” starts the game EXE
+directly with its folder as the working folder, just like Quiver itself: the EXE chosen in Quiver, otherwise the only
+one at the top of the game folder, otherwise the only one up to three levels deep. A launch script (BAT or CMD) counts
+here as it does in Quiver, but it's never started: if Quiver starts a script, if there are several candidates in the
+game folder, or if the EXE is even deeper, HDRpilot doesn't know a launch EXE. Then launch the game once in Quiver and
+choose the EXE there when Quiver asks; after “Rescan” it works via HDRpilot as well. As in Quiver, a game counts as
+installed as soon as there's an EXE, BAT or CMD anywhere in the game folder (searched up to 16 levels deep, at most 3000
+folders; if the search stops at this limit, the game counts as installed). Games that Quiver installed via Windows
+Installer launch via the EXE that Quiver linked for them; their folder counts as the install folder. A running game is
+always detected by its folder. If the same game is in two Quiver folders (for example while moving from Quiver 2.4 to
+3.x), the 3.x folder wins, otherwise the most recently played one. If you added a Quiver game yourself earlier, it's in
+the library twice; the details of both entries point this out, and nothing is removed automatically. HDRpilot reads the
+cover from Quiver's `Cache` folder and “Last played” from Quiver's `LastPlayed.txt` (a date in another calendar, such as
+the Thai one with the year 2569, doesn't count).
 
-**Neustart-Puffer:** Endet ein Spiel weniger als 5 Minuten nach dem Start (typisch für Hänger oder Abstürze) und hat
-HDRpilot HDR dafür eingeschaltet, bleibt HDR noch eine Weile an statt nur die Nachlaufzeit: Standard 1 Minute,
-einstellbar unter „Einstellungen“ in Minuten und Sekunden (0:00 bis 30:00, 0:00 schaltet den Puffer ab; ist er nicht
-länger als die Nachlaufzeit, wirkt er wie 0:00). Eine Änderung gilt ab dem nächsten Spielende, ohne Neustart von
-HDRpilot. Startest du das Spiel in dieser Zeit neu, ist HDR schon an (hast du es zwischendurch von Hand ausgeschaltet,
-schaltet HDRpilot es bei Spielen mit „HDR automatisch“ wieder ein). Läuft beim Ablauf des Puffers eine
-Vollbild-Anwendung, wartet HDRpilot mit dem Zurückstellen, bis sie endet (höchstens 30 Minuten; nur nach dem Puffer,
-nie nach der Nachlaufzeit). Spiele, die HDRpilot nach einem eigenen Neustart übernimmt, gelten nie als kurz.
+**Restore:** Before switching, HDRpilot remembers the HDR state of each affected display and saves it immediately.
+When the last HDR game has ended and the grace period (10 s) has passed, HDRpilot restores this state. If several games
+are running, it restores only after the last one, and only if all games involved have “Restore after game” on. This
+setting applies from the next game launch. If HDR was already on before the game, HDRpilot doesn't switch anything at
+the end. If you switch HDR manually during the game, HDRpilot doesn't override that; at the end it only turns HDR off
+if it was off before the game, and never turns it back on.
 
-**Hängender Spielprozess:** Läuft ein Spiel nach dem Spielen unsichtbar weiter (kein Fenster, keine Rechenzeit), lässt
-HDRpilot HDR an, weil das Spiel ja noch läuft. Nach 2 Minuten ohne jede Aktivität erscheint einmal ein Hinweis, dass das
-Spiel im Hintergrund zu hängen scheint; läuft gerade ein Vollbild-Programm oder ist der Bildschirm gesperrt, wartet
-der Hinweis, bis er wieder angezeigt werden kann. HDRpilot beendet nichts selbst.
+**Restart buffer:** If a game ends less than 5 minutes after launch (typical for hangs or crashes) and HDRpilot turned
+HDR on for it, HDR stays on for a while instead of just the grace period: default 1 minute, adjustable under “Settings”
+in minutes and seconds (0:00 to 30:00; 0:00 turns the buffer off; if it isn't longer than the grace period, it acts like
+0:00). A change applies from the next time a game ends, without restarting HDRpilot. If you restart the game during
+this time, HDR is already on (if you turned it off manually in between, HDRpilot turns it on again for games with “HDR
+on launch”). If a full-screen app is running when the buffer expires, HDRpilot waits with restoring until it ends (at
+most 30 minutes; only after the buffer, never after the grace period). Games that HDRpilot takes over after its own
+restart never count as short.
 
-**Beenden, Absturz oder Neustart:** Wird HDRpilot während eines Spiels oder in der Nachlaufzeit beendet (auch über
-„HDRpilot beenden“, durch einen Absturz oder beim Abmelden), bleibt HDR zunächst an. Beim nächsten Start stellt
-HDRpilot den gemerkten Zustand wieder her, sobald kein Spiel aus diesem Zustand mehr läuft.
+**Hanging game process:** If a game keeps running invisibly after you've finished playing (no window, no CPU time),
+HDRpilot leaves HDR on, because the game is still running. After 2 minutes without any activity, a notification appears
+once saying that the game seems to be hanging in the background; if a full-screen program is running or the screen is
+locked, the notification waits until it can be shown. HDRpilot never ends anything itself.
 
-**Bildschirm ohne HDR oder nicht angeschlossen:** HDRpilot meldet das (während eines Vollbild-Spiels nur im
-Protokoll) und lässt das Spiel normal laufen; es blockiert nie einen Spielstart. Bei Änderungen an den Bildschirmen
-(anschließen, Auflösung, Aufwachen aus dem Ruhezustand) holt HDRpilot Ausstehendes nach: Ein Bildschirm, der beim
-Spielstart fehlte oder kein HDR konnte, wird dann eingeschaltet, und ein gescheitertes Zurückstellen wird wiederholt.
+**Exit, crash or restart:** If HDRpilot is closed during a game or during the grace period (also via “Exit HDRpilot”,
+by a crash or when signing out), HDR stays on for now. At the next start, HDRpilot restores the remembered state as soon
+as no game from that state is running anymore.
 
-**Spielsymbole:** Je Spiel gilt die erste brauchbare Quelle, nur aus Dateien auf dem PC (nur lesend): ein eigenes
-Symbol; bei Steam das offizielle Steam-Symbol (`steam\games\<Name>.ico` laut Steams App-Daten, sonst das Symbol des
-Eintrags „Steam App <ID>“ unter „Installierte Apps“, einer Steam-Verknüpfung oder das 32-px-Bild aus Steams
-Bibliothekszwischenspeicher); bei GOG `goggame-<ID>.ico` im Spielordner oder das Symbol aus dem Zwischenspeicher von
-GOG Galaxy; bei Xbox-Spielen ihre Logos; bei Ubisoft das Symbol des Deinstallationseintrags; bei Epic, EA, Battle.net
-und dem Quiver Launcher die Spiel-EXE. Brauchbar heißt: kein bekanntes Standardsymbol (EasyAntiCheat, Unreal, Epic
-Online Services, Godot, Unity, Windows-Programmsymbol) und in der Datei mindestens 48 px groß. Die Spiel-EXE kommt bei
-Steam deshalb nur zum Zug, wenn das Steam-Symbol fehlt, ein Standardsymbol ist oder kleiner als 48 px ist, während die
-EXE mindestens 48 px hat. Anti-Cheat-Starter (EasyAntiCheat, BattlEye, EA Anti-Cheat, GameGuard, PunkBuster, Epic
-Online Services), Absturzmelder, Installer und Werkzeuge liefern nie das Symbol, auch wenn du die Liste der
-Hilfsprozesse änderst; bei Unreal-Spielen zählt zuerst `<Projekt>\Binaries\Win64\*-Shipping.exe`.
-Findet sich gar kein echtes Symbol, sucht HDRpilot bis drei Ordnerebenen tief (höchstens 300 Ordner und 1 s). Die
-gewählte Quelle merkt es sich in `icon-cache.json`, damit die Liste nach einem Neustart keine Spielordner durchsucht.
-Symbole lädt HDRpilot nur für sichtbare Zeilen und nur, solange die Bibliothek offen ist.
+**Display without HDR or not connected:** HDRpilot reports this (during a full-screen game only in the log) and lets the
+game run normally; it never blocks a game launch. When the displays change (connecting, resolution, waking from sleep),
+HDRpilot catches up on anything pending: a display that was missing or couldn't do HDR at game launch is then turned
+on, and a failed restore is retried.
 
-**Spielbilder:** Titelbild, Logo und Cover liest HDRpilot nur aus den Bild-Zwischenspeichern der Launcher: Steam
-`appcache\librarycache` (deutsche Fassungen zuerst), GOG Galaxy `webcache`, Ubisoft Connect `cache\assets`, bei
-Xbox-Spielen das Kachelbild im Paket und beim Quiver Launcher das Cover aus seinem Ordner `Cache` (dein eigenes Cover in
-Quiver, sonst die Kopie, die Quiver geladen hat; neue Bilder von Quiver erscheinen nach dem nächsten Einlesen). Epic, EA
-und Battle.net haben keinen solchen Speicher; dort, bei Quiver und bei selbst eingetragenen Spielen kommt das Symbol aus
-der Spiel-EXE. Fehlt ein Bild, erzeugt HDRpilot ein Ersatzbild: ein Titelbild aus den Farben des Symbols mit dem Namen
-als Muster, ein Cover aus Titelbild oder Symbol mit dem Namen, statt eines Logos den Namen in der Titelschrift und ohne
-Symbol ein Monogramm. Verschmierte Steam-Kapseln (gestreckte Kapselbilder als einziges Cover) erkennt HDRpilot und
-ersetzt sie durch einen Ausschnitt aus dem Titelbild. Quadratische Cover von Quiver (wie meist, 480 × 480) beschneidet
-es nicht, sondern setzt sie ganz oben in ein Cover im Hochformat und rechts in das erzeugte Titelbild, wie das
-Kachelbild eines Xbox-Spiels; wie dieses füllt ihre Mitte auch das Vorschaubild in der Liste, und die Farben kommen
-aus diesem Bild. Logos schneidet es auf ihren sichtbaren Teil zu.
-Umgebungsfarben berechnet es je Bild einmal, die hellere Fassung des Titelbilds nur bei aktivem Bibliotheksfenster und
-nie, solange ein Spiel läuft oder startet: kurz nachdem die Auswahl zur Ruhe gekommen ist, mit niedriger Priorität,
-damit sie bereitliegt, wenn HDR angeht. Beides legt es mit den Ersatzbildern unter `%LOCALAPPDATA%\HDRpilot\art\` ab.
-Bilddateien der Launcher öffnet es nur so lange, bis ihr Inhalt im Speicher liegt. Solange ein Fenster offen ist,
-beobachtet es die Ordner der Launcher (bei Ubisoft Connect auch den Produkt-Cache, den Ordner von Quiver nicht), sodass
-neue Bilder von selbst erscheinen; im Speicher hält es höchstens 192 MB Bilder. Bei geschlossenem Fenster gibt es weder
-Beobachtung noch Bilder im Speicher (auch den Grafikspeicher des Fensters gibt HDRpilot wenige Sekunden nach dem
-Schließen zurück), und Bilder von Spielen, die nicht mehr in der Bibliothek stehen, räumt es dann auf; Spiele einer
-Quelle, die diese Version nicht kennt, zählen dabei als vorhanden. Eigene Bilder („Bild wählen…“, höchstens 32 MB und
-100 Megapixel, größere Fotos werden verkleinert) stehen je Bildart in `config.json` (`artwork`) und liegen in
-`art\custom\`.
+**Game icons:** For each game, the first usable source applies, only from files on the PC (read-only): a custom icon;
+for Steam, the official Steam icon (`steam\games\<Name>.ico` according to Steam's app data, otherwise the icon of the
+“Steam App <ID>” entry under “Installed apps”, a Steam shortcut or the 32 px image from Steam's library cache); for GOG,
+`goggame-<ID>.ico` in the game folder or the icon from the GOG Galaxy cache; for Xbox games, their logos; for Ubisoft,
+the icon of the uninstall entry; for Epic, EA, Battle.net and the Quiver Launcher, the game EXE. Usable means: not a
+known generic icon (EasyAntiCheat, Unreal, Epic Online Services, Godot, Unity, Windows program icon) and at least 48 px
+in the file. For Steam, the game EXE therefore only gets its turn if the Steam icon is missing, is a generic icon or is
+smaller than 48 px, while the EXE has at least 48 px. Anti-cheat launchers (EasyAntiCheat, BattlEye, EA Anti-Cheat,
+GameGuard, PunkBuster, Epic Online Services), crash reporters, installers and tools never provide the icon, even if you
+change the list of helper processes; for Unreal games, `<Project>\Binaries\Win64\*-Shipping.exe` comes first.
+If no real icon is found at all, HDRpilot searches up to three folder levels deep (at most 300 folders and 1 s). It
+remembers the chosen source in `icon-cache.json`, so the list doesn't search any game folders after a restart.
+HDRpilot only loads icons for visible rows and only while the library is open.
 
-**SteamGridDB:** nur eingeschaltet und mit eigenem Schlüssel (siehe „Einstellungen“). Gefragt wird
-`www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen (nur ein Treffer mit gleichem Namen zählt),
-und nur nach unbewegten Bildern ohne NSFW- oder Spaß-Markierung. Bilder lädt HDRpilot nur von https-Adressen unter
-steamgriddb.com, ohne Weiterleitungen, höchstens 15 MB je Bild, mit mindestens 1 s Abstand und höchstens 200 Anfragen
-je Lauf; was SteamGridDB nicht hat, fragt es 30 Tage lang nicht erneut. Geladene Bilder liegen in `art\sgdb\`.
+**Game images:** HDRpilot reads hero image, logo and cover only from the launchers' image caches: Steam
+`appcache\librarycache` (German versions first), GOG Galaxy `webcache`, Ubisoft Connect `cache\assets`, for Xbox games
+the tile image in the package and for the Quiver Launcher the cover from its `Cache` folder (your own cover in Quiver,
+otherwise the copy Quiver downloaded; new images from Quiver appear after the next scan). Epic, EA and Battle.net have no
+such cache; there, for Quiver and for games you added yourself, the icon comes from the game EXE. If an image is
+missing, HDRpilot generates a substitute: a hero image from the icon's colors with the name as a pattern, a cover from
+the hero image or icon with the name, the name in the title font instead of a logo, and a monogram if there's no icon.
+HDRpilot recognizes blurred Steam capsules (stretched capsule images as the only cover) and replaces them with a crop of
+the hero image. It doesn't crop square covers from Quiver (480 × 480, as is usual), but places them at the very top of a
+portrait cover and on the right of the generated hero image, like the tile image of an Xbox game; as with that one,
+their center also fills the thumbnail in the list, and the colors come from this image. It trims logos to their visible
+part.
+It computes ambient colors once per image, and the brighter version of the hero image only while the library window is
+active and never while a game is running or launching: shortly after the selection has settled, at low priority, so
+it's ready when HDR turns on. It stores both with the substitute images under `%LOCALAPPDATA%\HDRpilot\art\`. It only
+keeps launcher image files open until their content is in memory. While a window is open, it watches the launchers'
+folders (for Ubisoft Connect also the product cache, but not Quiver's folder), so new images appear by themselves; it
+keeps at most 192 MB of images in memory. With the window closed there's neither watching nor images in memory
+(HDRpilot also releases the window's graphics memory a few seconds after closing), and it then cleans up images of games
+that are no longer in the library; games from a source this version doesn't know count as present. Custom images
+(“Choose image…”, at most 32 MB and 100 megapixels; larger photos are downscaled) are recorded per image type in
+`config.json` (`artwork`) and stored in `art\custom\`.
 
-**Bildschirmwerte:** Spitze, Vollbild, Minimum, Farbtiefe und ob HDR an ist, liest HDRpilot über die
-Grafikschnittstelle von Windows (DXGI), nur solange ein Fenster sie zeigt und nur nach einem HDR- oder
-Bildschirmwechsel. Die Spitze bei eingeschaltetem HDR merkt es sich in `display-luminance.json`; sie ist das Maximum
-jeder Nit-Skala, auch wenn HDR gerade aus ist. Gibt es noch keine Messung mit HDR, gilt der aktuelle Wert. Meldet
-Windows keine Werte (etwa bei ausgeschaltetem Bildschirm), steht dort „—“.
+**SteamGridDB:** only with your own key (see “Settings”); automatically only when turned on, in **Choose image…** only
+on click. HDRpilot asks `www.steamgriddb.com`, for Steam games by their app ID, for others by name (automatically, only
+a match with the same name counts; in **Choose image…** you otherwise choose from the list of matches, and for games
+without a Steam app ID HDRpilot remembers the choice when you click **Apply**), and only for still images without an
+NSFW, humor or epilepsy flag. HDRpilot downloads images only from https addresses under steamgriddb.com, without
+redirects and without the key. API requests are at least 1 s apart from the end of the previous one, and every transfer
+has time limits. Automatically, at most 15 MB per image and 200 requests per run apply, and anything SteamGridDB
+doesn't have isn't requested again for 30 days; downloaded images are stored in `art\sgdb\`. In **Choose image…**, at
+most 40 requests per window apply; previews are at most 4 MB, kept only in memory and at most three load at the same
+time. An applied image is at most 32 MB and is then stored in `art\custom\`.
 
-**Schalten:** über die Windows-Anzeige-Schnittstelle (DisplayConfig), danach wird der Zustand jedes Mal erneut gelesen
-und so bestätigt. Ab Windows 11 24H2 (Build 26100) nutzt HDRpilot die neue HDR-Schnittstelle, sonst die ältere
-„Advanced Color“-Schnittstelle. Meldet die neue Schnittstelle einen Fehler, weicht HDRpilot automatisch auf die ältere
-aus.
+**Display values:** HDRpilot reads peak, full frame, minimum, color depth and whether HDR is on via the Windows
+graphics API (DXGI), only while a window shows them and only after an HDR or display change. It remembers the peak with
+HDR on in `display-luminance.json`; it's the maximum of every nit scale, even if HDR is currently off. If there's no
+measurement with HDR yet, the current value applies. If Windows reports no values (for example with the display turned
+off), it shows “—”.
 
-## HDR-Liste (PCGamingWiki)
+**Switching:** via the Windows display API (DisplayConfig); afterwards the state is read again every time and thus
+confirmed. From Windows 11 24H2 (build 26100), HDRpilot uses the new HDR API, otherwise the older “Advanced Color” API.
+If the new API reports an error, HDRpilot automatically falls back to the older one.
 
-HDRpilot zeigt, welche deiner Spiele laut [PCGamingWiki](https://www.pcgamingwiki.com) HDR unterstützen. Abgeglichen
-wird 30 s nach jedem Start im Hintergrund, höchstens einmal pro Stunde, und jederzeit über **Jetzt abgleichen**.
+## HDR list (PCGamingWiki)
 
-- **Ohne Konto (Standard):** HDRpilot fragt bei PCGamingWiki nach den Seiten deiner Spiele; dabei gehen die
-  Spielnamen an PCGamingWiki, sonst nichts. Je Start höchstens 100 Spiele (2 Anfragen plus 2 Suchen, 2 s Abstand),
-  neue und kürzlich gespielte zuerst, bekannte alle 14 Tage neu. Bei einer großen Bibliothek ist nach einigen Starts
-  alles geprüft. Steam- und GOG-Spiele werden über ihre Laden-ID zugeordnet, andere über den Namen.
-- **Mit eigenem PCGamingWiki-Konto:** Unter Einstellungen → „HDR-Liste (PCGamingWiki)“ führen **Konto anlegen** und
-  **Bot-Passwörter** zu PCGamingWiki. Dort ein Bot-Passwort mit dem Namen HDRpilot anlegen und nur das Recht „Create,
-  query and delete data through the Cargo extension“ wählen. Benutzername (`Name@HDRpilot`) und Bot-Passwort in
-  HDRpilot eintragen und **Speichern und testen**. Dann lädt HDRpilot die vollständige Liste und gleicht sie nur auf
-  deinem PC ab; Spielnamen werden nicht gesendet. Das Passwort liegt mit Windows (DPAPI) verschlüsselt in
-  `pcgw-account.dat` und ist nur für deinen Windows-Benutzer lesbar; **Konto entfernen** löscht es.
+HDRpilot shows which of your games support HDR according to [PCGamingWiki](https://www.pcgamingwiki.com). It syncs in
+the background 30 s after every startup, at most once per hour, and at any time via **Sync now**.
 
-Spiele aus dem Quiver Launcher gleicht HDRpilot in beiden Fällen nicht ab: Meist sind es Umsetzungen älterer Spiele,
-deren Name die Seite des Originals träfe. Ihre Namen gehen deshalb nicht an PCGamingWiki, und sie stehen als „HDR
-UNBEKANNT“.
+- **Without an account (default):** HDRpilot asks PCGamingWiki for the pages of your games; this sends the game names
+  to PCGamingWiki, nothing else. At most 100 games per startup (2 requests plus 2 searches, 2 s apart), new and
+  recently played ones first, known ones again every 14 days. With a large library, everything has been checked after
+  a few startups. Steam and GOG games are matched by their store ID, others by name.
+- **With your own PCGamingWiki account:** Under Settings → “HDR list (PCGamingWiki)”, **Create account** and **Bot
+  passwords** lead to PCGamingWiki. Create a bot password named HDRpilot there and select only the grant “Create, query
+  and delete data through the Cargo extension”. Enter the user name (`Name@HDRpilot`) and bot password in HDRpilot and
+  click **Save and test**. HDRpilot then downloads the complete list and matches it on your PC only; no game names are
+  sent. The password is stored encrypted with Windows (DPAPI) in `pcgw-account.dat` and is readable only by your Windows
+  user; **Remove account** deletes it.
 
-Ohne Netz bleibt der zuletzt geladene Stand erhalten. PCGamingWiki ist ein kleines Gemeinschaftsprojekt; HDRpilot hält
-sich an dessen Anfragegrenzen und speichert die Ergebnisse zwischen. Die HDR-Angaben stehen unter der Lizenz
-CC BY-NC-SA 3.0.
+In both cases, HDRpilot doesn't sync games from the Quiver Launcher: they're mostly ports of older games whose name
+would hit the page of the original. So their names aren't sent to PCGamingWiki, and they show as “HDR UNKNOWN”.
+
+Without a network connection, the last downloaded status is kept. PCGamingWiki is a small community project; HDRpilot
+respects its request limits and caches the results. The HDR data is licensed under CC BY-NC-SA 3.0.
 
 ## Windows Auto HDR
 
-„Windows Auto HDR“ ist eine Funktion von Windows: Sie rechnet das SDR-Bild eines Spiels, das selbst kein HDR kann, in
-HDR um. HDRpilot schaltet sie auf Wunsch je Spiel für dich ein, wenn du das Spiel über HDRpilot startest. Das ist etwas
-anderes als „HDR automatisch“:
+“Windows Auto HDR” is a Windows feature: it converts the SDR picture of a game that can't do HDR itself to HDR. On
+request, HDRpilot turns it on for you per game when you launch the game via HDRpilot. This is something different from
+“HDR on launch”:
 
-| | „HDR automatisch“ | „Windows Auto HDR“ |
+| | “HDR on launch” | “Windows Auto HDR” |
 |---|---|---|
-| Was passiert | HDRpilot schaltet Windows-HDR beim Spielstart ein und danach zurück | Windows rechnet das SDR-Bild in HDR um; HDRpilot schaltet dafür den Auto-HDR-Schalter von Windows direkt vor dem Start ein und danach zurück |
-| Wann | bei jedem erkannten Spielstart, auch ohne HDRpilot | nur bei einem Start über HDRpilot: „Starten“, „(HDR)“-Verknüpfung, Steam-Startoption (dazu die Frühwarnung von Steam und Epic) |
-| Wo | Abschnitt „AUTOMATIK“ in den Details und Schalter in der Liste | Abschnitt „BILD“ in den Details, in der Liste nur das Kennzeichen „AUTO HDR“ |
-| Braucht | einen HDR-fähigen Bildschirm | Windows-HDR schon vor dem Spielstart an und ein Spiel mit DirectX 11 oder 12, das Windows für Auto HDR zulässt |
+| What happens | HDRpilot turns Windows HDR on at game launch and restores it afterwards | Windows converts the SDR picture to HDR; for this, HDRpilot turns the Windows Auto HDR switch on right before the launch and restores it afterwards |
+| When | at every detected game launch, also without HDRpilot | only when launched via HDRpilot: “Launch”, “(HDR)” shortcut, Steam launch option (plus the early warning from Steam and Epic) |
+| Where | “AUTOMATION” section in the details and switch in the list | “PICTURE” section in the details; in the list only the “AUTO HDR” badge |
+| Requires | an HDR-capable display | Windows HDR already on before the game starts, and a DirectX 11 or 12 game that Windows allows for Auto HDR |
 
-Beide Schalter sind unabhängig voneinander. „Starten“, „(HDR)“-Verknüpfungen und die Steam-Startoption schalten
-HDR ohnehin vor dem Spiel ein; ist „HDR automatisch“ für das Spiel aus, steht unter dem Schalter ein Hinweis, dass HDR
-sonst schon vor dem Spielstart an sein muss. Hat ein Spiel laut PCGamingWiki eigenes HDR (Kennzeichen „HDR“ oder
-„HDR*“), sind Titel und Schalter blasser und ein Hinweis rät, das HDR des Spiels zu nehmen, das meist besser aussieht;
-einschalten lässt sich Auto HDR trotzdem.
+The two switches are independent of each other. “Launch”, “(HDR)” shortcuts and the Steam launch option turn HDR on
+before the game anyway; if “HDR on launch” is off for the game, a note below the switch says that HDR otherwise has to
+be on before the game starts (always when Auto HDR is on, otherwise behind **Learn more**). If a game has native HDR
+according to PCGamingWiki (“HDR” or “HDR*” badge), the title and switch are dimmed, and behind **Learn more** a note
+advises using the game's own HDR, which usually looks better; you can still turn Auto HDR on.
 
-**So funktioniert es:** Windows wendet Auto HDR nur an, wenn beim Start des Spielprozesses Windows-HDR und der Schalter
-„Auto HDR“ der Windows-Einstellungen (System → Anzeige → HDR) an sind. Dieser Schalter steht als Token
-`AutoHDREnable=1` im Wert `DirectXUserGlobalSettings` unter `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`.
-Startest du ein Spiel mit „Windows Auto HDR“ über HDRpilot oder greift die Frühwarnung, setzt HDRpilot direkt davor nur
-dieses Token (alle anderen Einträge im Wert, ihre Reihenfolge und der Abschluss bleiben), schaltet HDR ein und startet
-dann das Spiel. Den Wert von vorher merkt es sich in `autohdr-global.json`. Zurückgestellt wird nach dem Spiel wie der
-HDR-Zustand: nach der Nachlaufzeit, bei einem Spiel, das kürzer als 5 Minuten lief, nach dem Neustart-Puffer (Standard
-1 Minute); startet das Spiel in dieser Zeit neu, bleibt der Schalter an. Laufen mehrere solche Spiele, bleibt er an, bis
-das letzte endet. Erscheint kein Spielprozess, stellt HDRpilot ihn mit dem Ende der Startfrist zurück, scheitert schon
-der Start-Befehl, sofort. Beim Beenden stellt HDRpilot den Schalter sofort zurück, nach einem Absturz beim nächsten
-Start, und das Entfernen über den Setup erledigt einen Rest. Während der Schalter an ist, gilt Auto HDR für jedes Spiel,
-das in dieser Zeit startet.
+**How it works:** Windows only applies Auto HDR if Windows HDR and the “Auto HDR” switch of the Windows settings
+(System → Display → HDR) are on when the game process starts. This switch is stored as the token `AutoHDREnable=1` in the
+value `DirectXUserGlobalSettings` under `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`. If you launch a game with
+“Windows Auto HDR” via HDRpilot or the early warning kicks in, HDRpilot sets only this token right before (all other
+entries in the value, their order and the terminator stay), turns HDR on and then launches the game. It remembers the
+previous value in `autohdr-global.json`. It's restored after the game like the HDR state: after the grace period, or,
+for a game that ran for less than 5 minutes, after the restart buffer (default 1 minute); if the game restarts during
+that time, the switch stays on. If several such games are running, it stays on until the last one ends. If no game
+process appears, HDRpilot restores it when the launch timeout ends, or immediately if the launch command itself fails.
+When exiting, HDRpilot restores the switch immediately, after a crash at the next start, and uninstalling via the
+setup takes care of any remainder. While the switch is on, Auto HDR applies to every game that starts during that time.
 
-Ohne Start über HDRpilot schaltet HDRpilot Auto HDR nie, auch nicht, wenn es ein Spiel mit der Option laufen sieht:
-Windows hat den Schalter dann schon beim Spielstart gelesen. Aus demselben Grund setzt ein Start über HDRpilot nichts,
-solange das Spiel schon läuft (etwa ein zweiter Klick auf **Starten** oder die „(HDR)“-Verknüpfung). HDRpilot
-fasst nur Werte aus reinem Text mit `Schlüssel=Wert;`-Paaren an und schreibt keine Werte je Spiel-EXE, nur unter HKCU,
-nie unter HKLM, und braucht keine Administratorrechte.
+Without a launch via HDRpilot, HDRpilot never switches Auto HDR, not even when it sees a game with the option running:
+Windows has already read the switch at game launch by then. For the same reason, a launch via HDRpilot sets nothing
+while the game is already running (such as a second click on **Launch** or the “(HDR)” shortcut). HDRpilot only
+touches values made of plain text with `key=value;` pairs and doesn't write any per-game-EXE values, only under HKCU,
+never under HKLM, and needs no administrator rights.
 
-**Deine Wahl bleibt:** War Auto HDR in Windows schon an, ändert HDRpilot nichts und schaltet es auch nicht aus. Stellst
-du den Schalter in Windows um, während HDRpilot ihn hält, bleibt deine Einstellung, und das Protokoll vermerkt „extern
-geändert“ (schaltest du ihn dort aus und gleich wieder ein, sieht HDRpilot keinen Unterschied und stellt danach
-zurück). Den Windows-Schalter selbst schaltest du auch im Menü des Infobereichs (**Auto HDR**): Das gilt ab dem nächsten
-Spielstart, auch ohne HDRpilot, und ist immer deine Wahl. Hält HDRpilot den Schalter gerade für ein Spiel, gibt es ihn
-ab, stellt danach nichts zurück und setzt ihn für die laufenden Spiele nicht neu. Jeder neue Start über HDRpilot liest
-den Schalter aber neu: Ist er aus, setzt dieser Start ihn für sein Spiel und stellt danach deinen Stand wieder her.
+**Your choice stays:** If Auto HDR was already on in Windows, HDRpilot changes nothing and doesn't turn it off either.
+If you change the switch in Windows while HDRpilot is holding it, your setting stays, and the log notes “extern
+geändert” (changed externally) (if you turn it off there and right back on, HDRpilot sees no difference and restores it
+afterwards). You can also toggle the Windows switch itself in the notification area menu (**Auto HDR**): this applies
+from the next game launch, also without HDRpilot, and is always your choice. If HDRpilot is currently holding the switch
+for a game, it lets go of it, restores nothing afterwards and doesn't set it again for the running games. Every new
+launch via HDRpilot reads the switch again, though: if it's off, that launch sets it for its game and restores your
+state afterwards.
 
-**Steam-Spiele:** Startest du ein Steam-Spiel direkt in Steam, erfährt HDRpilot vom Start zuverlässig nur über die
-Steam-Startoption; die Frühwarnung aus Steams Protokoll kommt nicht immer vor dem Spielprozess. Schaltest du „Windows
-Auto HDR“ für ein Steam-Spiel ein, prüft HDRpilot deshalb (nur lesend in Steams `localconfig.vdf`), ob die Startoption
-schon eingetragen ist. Fehlt sie, fragt es, ob es sie in die Zwischenablage kopieren soll, wie
-**Steam-Startoption kopieren**. Eintragen musst du sie in Steam selbst (Rechtsklick auf das Spiel → Eigenschaften →
-Allgemein → Startoptionen); Steams Dateien ändert HDRpilot nie. Ablehnen ändert nichts, Auto HDR bleibt an und wirkt
-dann beim Start über HDRpilot oder die „(HDR)“-Verknüpfung, beim Start direkt aus Steam nur, wenn die Frühwarnung vor
-dem Spielprozess kommt.
+**Steam games:** If you launch a Steam game directly in Steam, HDRpilot only learns about the launch reliably via the
+Steam launch option; the early warning from Steam's log doesn't always come before the game process. So when you turn
+on “Windows Auto HDR” for a Steam game, HDRpilot checks (read-only in Steam's `localconfig.vdf`) whether the launch
+option is already set. If it's missing, HDRpilot asks whether to copy it to the clipboard, like **Copy Steam launch
+option**. You have to add it in Steam yourself (right-click on the game → Properties → General → Launch Options);
+HDRpilot never changes Steam's files. Declining changes nothing; Auto HDR stays on and then takes effect when launched
+via HDRpilot or the “(HDR)” shortcut, and when launched directly from Steam only if the early warning comes before the
+game process.
 
-**Livetest (Windows 11 26H2, Build 26300, 2026-10-12):**
+**Live test (Windows 11 26H2, build 26300, 2026-10-12):**
 
-- TUNIC (Unity, DirectX 11): Auto HDR in Windows an und HDR vor dem Start an, dann ist der Regler „HDR-Intensität
-  anpassen“ in der Game Bar bedienbar. Der Registry-Wert ist derselbe Schalter wie in den Windows-Einstellungen.
-- Nur der Wert je Spiel-EXE (`AutoHDREnable=2097`) bei ausgeschaltetem Auto HDR wirkt nicht. Deshalb nimmt HDRpilot den
-  globalen Schalter.
-- Auto HDR erst einschalten, während das Spiel läuft, oder HDR erst nach dem Spielstart einschalten wirkt erst beim
-  nächsten Start. Deshalb setzt HDRpilot beides vor dem Spielprozess.
+- TUNIC (Unity, DirectX 11): with Auto HDR on in Windows and HDR on before the launch, the “Adjust HDR intensity”
+  slider in the Game Bar is usable. The registry value is the same switch as in the Windows settings.
+- The per-game-EXE value alone (`AutoHDREnable=2097`) with Auto HDR turned off has no effect. That's why HDRpilot uses
+  the global switch.
+- Turning Auto HDR on only while the game is running, or turning HDR on only after the game has started, only takes
+  effect at the next launch. That's why HDRpilot sets both before the game process.
 
-**Prüfen:** Wirkt Auto HDR, ist in der Xbox Game Bar (Win+G) der Regler für die Auto-HDR-Intensität bedienbar. Das
-Einstellungsfenster der Game Bar zeigt einen alten Stand, bis du es ganz schließt und neu öffnest.
+**Check:** If Auto HDR is working, the Auto HDR intensity slider in the Xbox Game Bar (Win+G) is usable. The Game Bar
+settings window shows an outdated state until you close it completely and open it again.
 
-RTX HDR von NVIDIA gehört nicht zu HDRpilot; das geht in der NVIDIA App.
+NVIDIA's RTX HDR isn't part of HDRpilot; that's done in the NVIDIA app.
 
-## Anti-Cheat
+## Anti-cheat
 
-HDRpilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme keinen Anlass zum Eingreifen haben:
+HDRpilot doesn't interfere with games and is built so that anti-cheat systems have no reason to step in:
 
-- Es liest nur die Prozessliste von Windows. Den EXE-Pfad eines Programms erfragt es bei Windows, ohne das Programm
-  selbst zu öffnen; ein Spiel bekommt von HDRpilot also gar nichts mit. Für den Hänger-Hinweis fragt es Rechenzeit und
-  sichtbare Fenster ebenfalls nur bei Windows ab.
-- Es liest und schreibt keinen Spielspeicher, schleust keinen Code ein, setzt keine Hooks, legt kein Overlay über das
-  Spiel und ändert weder Priorität noch Prozessorzuteilung von Spielen. Die Protokolle von Epic und Steam liest es nur.
-- Es lädt keinen Treiber und braucht keine Administratorrechte. Netzwerk nutzt es nur für die HDR-Liste und, wenn du
-  es einschaltest, für SteamGridDB.
-- HDR schaltet es über die Anzeige-Einstellungen von Windows, wie der HDR-Schalter in den Windows-Einstellungen.
-- „Windows Auto HDR“ schaltet es nur über den Auto-HDR-Schalter in den Grafikeinstellungen von Windows unter HKCU, wie
-  der Schalter in den Windows-Einstellungen selbst, und zwar vor dem Spielstart; das Spiel und seine Dateien fasst es
-  dafür nicht an. Eine Aussage der Anti-Cheat-Hersteller dazu gibt es nicht.
-- Künstliche Tastendrücke gibt es nur in der Tastenkürzel-Notlösung. Sie ist ab Werk aus und sendet nie etwas,
-  solange ein Spiel läuft oder eine Vollbild-Anwendung im Vordergrund ist, auch nicht beim Umschalten von Hand.
-- Launcher-Spiele startet es über den Launcher-Link, sodass deren Anti-Cheat-Starter wie gewohnt läuft. Die
-  Steam-Startoption startet genau den Befehl, den Steam vorgibt, und beendet sich sofort.
+- It only reads the Windows process list. It asks Windows for a program's EXE path without opening the program itself;
+  a game doesn't notice HDRpilot at all. For the hang notification, it also asks only Windows for CPU time and visible
+  windows.
+- It doesn't read or write game memory, inject code, set hooks, draw an overlay over the game, or change the priority
+  or processor affinity of games. It only reads the Epic and Steam logs.
+- It loads no driver and needs no administrator rights. It only uses the network for the HDR list and, with your own
+  key, for SteamGridDB (automatically only if you turn it on; in **Choose image…** only on click).
+- It switches HDR via the Windows display settings, like the HDR switch in the Windows settings.
+- It switches “Windows Auto HDR” only via the Auto HDR switch in the Windows graphics settings under HKCU, like the
+  switch in the Windows settings itself, and does so before the game launches; it doesn't touch the game or its files
+  for this. There's no statement from anti-cheat vendors about it.
+- Simulated key presses only exist in the keyboard shortcut fallback. It's off by default and never sends anything
+  while a game is running or a full-screen app is in the foreground, not even when switching manually.
+- It launches launcher games via the launcher link, so their anti-cheat launcher runs as usual. The Steam launch
+  option starts exactly the command Steam specifies and exits immediately.
 
-Ein automatischer Test stellt sicher, dass solche Techniken nicht in den Quelltext gelangen. Eine Garantie gibt es
-trotzdem nicht, denn die Regeln der Anti-Cheat-Hersteller sind nicht öffentlich. Meldet ein Anti-Cheat HDRpilot (etwa
-„Hack attempt detected“ bei nProtect GameGuard), HDRpilot vor diesem Spiel beenden und den Fall dem Spielhersteller
-melden. Selbst eingetragene Spiele mit Anti-Cheat (etwa mit einem Ordner EasyAntiCheat oder BattlEye) über ihr
-Start-Programm eintragen, zum Beispiel `start_protected_game.exe`, nicht über die eigentliche Spiel-EXE.
+An automated test makes sure such techniques don't get into the source code. There's still no guarantee, because the
+anti-cheat vendors' rules aren't public. If an anti-cheat flags HDRpilot (for example “Hack attempt detected” with
+nProtect GameGuard), exit HDRpilot before playing that game and report the case to the game publisher. Add games with
+anti-cheat that you add yourself (for example with an EasyAntiCheat or BattlEye folder) via their launch program, for
+example `start_protected_game.exe`, not via the actual game EXE.
 
-## Speicherorte
+## File locations
 
-| Was | Wo |
+| What | Where |
 |---|---|
-| Programm (Setup): HDRpilot.exe, `cli\hdrpilot.exe`, README, `LICENSE`, Lizenzhinweise | `%LOCALAPPDATA%\Programs\HDRpilot\` |
-| Eintrag unter „Installierte Apps“ (Setup) | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\HDRpilot` |
-| Verknüpfung im Startmenü (Setup) | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot.lnk` |
-| Protokoll von Setup und Entfernen | `%TEMP%\HDRpilot-Setup.log` |
-| Einstellungen und Spieleliste | `%APPDATA%\HDRpilot\config.json` |
-| Gemerkter HDR-Zustand während eines Spiels | `%LOCALAPPDATA%\HDRpilot\session-state.json` |
-| Protokoll (täglich neue Datei, höchstens 5 MB je Datei, 14 Tage) | `%LOCALAPPDATA%\HDRpilot\logs\` |
-| Protokoll der Steam-Startoption (eine Zeile je Start, 256 KB) | `%LOCALAPPDATA%\HDRpilot\logs\wrap.log` |
-| HDR-Angaben je Spiel | `%LOCALAPPDATA%\HDRpilot\hdr-support.json` |
-| Vollständige HDR-Liste (nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\hdr-catalog.json` |
-| PCGamingWiki-Konto (verschlüsselt, nur mit Konto) | `%LOCALAPPDATA%\HDRpilot\pcgw-account.dat` |
-| Eigene Spielsymbole (je Spiel eine PNG mit 96 px, für Verknüpfungen dazu eine ICO) | `%LOCALAPPDATA%\HDRpilot\icons\` |
-| Gemerkte Quelle der Spielsymbole | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
-| Spielbilder: Verzeichnis `index.json` (Herkunft und Farben je Spiel), erzeugte Ersatzbilder, zugeschnittene Logos, helle HDR-Fassungen, eigene Bilder und Bilder von SteamGridDB | `%LOCALAPPDATA%\HDRpilot\art\` |
-| SteamGridDB-Schlüssel (verschlüsselt, nur wenn eingetragen) | `%LOCALAPPDATA%\HDRpilot\steamgriddb-key.dat` |
-| Zuletzt bei eingeschaltetem HDR gemessene Helligkeit je Bildschirm (Maximum der Nit-Anzeigen) | `%LOCALAPPDATA%\HDRpilot\display-luminance.json` |
-| Auto-HDR-Schalter von Windows samt altem Wert, solange HDRpilot ihn für einen Spielstart hält | `%LOCALAPPDATA%\HDRpilot\autohdr-global.json` |
-| Vermerk „erledigt“, falls sich `autohdr-global.json` nicht löschen ließ (etwa vom Virenscanner gesperrt); beide werden gelöscht, sobald es geht | `%LOCALAPPDATA%\HDRpilot\autohdr-global.done` |
-| Auto HDR von Windows (globaler Schalter, Einstellung von Windows) | `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, Wert `DirectXUserGlobalSettings` |
-| Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, Wert `HDRpilot` |
-| Verknüpfungen | Desktop bzw. `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, „<Spiel> (HDR).lnk“ |
-| Entpackte Grafik-Bibliotheken (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot\` |
-| Dasselbe für den Setup (rund 8 MB je Version) | `%TEMP%\.net\HDRpilot-Setup-<Version>\` |
-| Dasselbe für das Entfernen (rund 8 MB, löscht sich danach selbst) | `%TEMP%\.net\HDRpilot-Uninstall\` |
+| Program (setup): HDRpilot.exe, `cli\hdrpilot.exe`, README (`README.md`, `README.de.md`), `LICENSE`, third-party notices | `%LOCALAPPDATA%\Programs\HDRpilot\` |
+| Entry under “Installed apps” (setup) | `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\HDRpilot` |
+| Start menu shortcut (setup) | `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot.lnk` |
+| Log of setup and uninstall | `%TEMP%\HDRpilot-Setup.log` |
+| Settings and game list | `%APPDATA%\HDRpilot\config.json` |
+| Remembered HDR state during a game | `%LOCALAPPDATA%\HDRpilot\session-state.json` |
+| Log (new file daily, at most 5 MB per file, 14 days) | `%LOCALAPPDATA%\HDRpilot\logs\` |
+| Log of the Steam launch option (one line per launch, 256 KB) | `%LOCALAPPDATA%\HDRpilot\logs\wrap.log` |
+| HDR data per game | `%LOCALAPPDATA%\HDRpilot\hdr-support.json` |
+| Complete HDR list (only with an account) | `%LOCALAPPDATA%\HDRpilot\hdr-catalog.json` |
+| PCGamingWiki account (encrypted, only with an account) | `%LOCALAPPDATA%\HDRpilot\pcgw-account.dat` |
+| Custom game icons (one 96 px PNG per game, plus an ICO for shortcuts) | `%LOCALAPPDATA%\HDRpilot\icons\` |
+| Remembered source of the game icons | `%LOCALAPPDATA%\HDRpilot\icon-cache.json` |
+| Game images: `index.json` index (origin and colors per game), generated substitute images, trimmed logos, bright HDR versions, custom images and images from SteamGridDB | `%LOCALAPPDATA%\HDRpilot\art\` |
+| SteamGridDB key (encrypted, only if entered) | `%LOCALAPPDATA%\HDRpilot\steamgriddb-key.dat` |
+| Brightness per display last measured with HDR on (maximum of the nit displays) | `%LOCALAPPDATA%\HDRpilot\display-luminance.json` |
+| Windows Auto HDR switch including its old value, while HDRpilot holds it for a game launch | `%LOCALAPPDATA%\HDRpilot\autohdr-global.json` |
+| “done” marker in case `autohdr-global.json` couldn't be deleted (for example locked by an antivirus); both are deleted as soon as possible | `%LOCALAPPDATA%\HDRpilot\autohdr-global.done` |
+| Windows Auto HDR (global switch, a Windows setting) | `HKCU\Software\Microsoft\DirectX\UserGpuPreferences`, value `DirectXUserGlobalSettings` |
+| Autostart | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value `HDRpilot` |
+| Shortcuts | Desktop or `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot\`, “<Game> (HDR).lnk” |
+| Unpacked graphics libraries (about 8 MB per version) | `%TEMP%\.net\HDRpilot\` |
+| The same for the setup (about 8 MB per version) | `%TEMP%\.net\HDRpilot-Setup-<Version>\` |
+| The same for uninstalling (about 8 MB, deletes itself afterwards) | `%TEMP%\.net\HDRpilot-Uninstall\` |
 
-Wer schon eine frühere Version hatte: Windows unterscheidet bei Ordnernamen nicht nach Groß- und Kleinschreibung, die
-bisherigen Ordner `HdrPilot` werden also weiter benutzt, auch als Programmordner des Setups. Setup und Entfernen
-ändern nichts an Einstellungen und Daten; nur beim Entfernen mit Haken (siehe „Entfernen“) werden sie gelöscht. Einzige
-Ausnahmen: Das Entfernen stellt einen gemerkten HDR-Zustand wieder her und verwirft danach `session-state.json`, und es
-stellt einen von HDRpilot gehaltenen Auto-HDR-Schalter zurück und löscht danach `autohdr-global.json` samt einem
-Vermerk `autohdr-global.done` (ließ er sich nicht zurückstellen, bleibt die Datei stehen).
+If you already had an earlier version: Windows doesn't distinguish upper and lower case in folder names, so the
+previous `HdrPilot` folders keep being used, also as the setup's program folder. Setup and uninstall don't change any
+settings or data; they're only deleted when uninstalling with the checkbox checked (see “Uninstalling”). The only
+exceptions: uninstalling restores a remembered HDR state and then discards `session-state.json`, and it restores an
+Auto HDR switch held by HDRpilot and then deletes `autohdr-global.json` together with an `autohdr-global.done` marker
+(if the switch couldn't be restored, the file stays).
 
-Zu jedem Spiel stehen in `config.json` auch die Symbol-Hinweise der Launcher (`iconCandidates`, meist eine Datei),
-bei Quiver-Spielen die Cover-Dateien aus Quivers Zwischenspeicher (`coverCandidates`), und gegebenenfalls das eigene
-Symbol (`customIcon`, nur der Dateiname im Ordner `icons`).
+For each game, `config.json` also contains the launchers' icon hints (`iconCandidates`, usually one file), for Quiver
+games the cover files from Quiver's cache (`coverCandidates`), and, if applicable, the custom icon (`customIcon`, only
+the file name in the `icons` folder).
 
-Einstellungen gelten je Spiel über Quelle und ID (etwa `Steam:1091500`), nicht über den Namen. `config.json` wird
-atomar geschrieben. Von Hand bearbeitest du sie am besten bei beendetem HDRpilot. Ist sie danach kein gültiges JSON,
-sichert HDRpilot sie beim nächsten Start als `config.json.defekt-<Zeit>.bak` und beginnt mit Standardwerten; deine
-Auswahl steckt dann nur noch in dieser Sicherung. Spiele einer Quelle, die diese Version nicht kennt (etwa aus einer
-neueren Version), lässt HDRpilot dagegen unverändert in der Datei stehen und liest den Rest wie gewohnt.
+Settings apply per game by source and ID (such as `Steam:1091500`), not by name. `config.json` is written atomically.
+It's best to edit it by hand while HDRpilot isn't running. If it's no longer valid JSON afterwards, HDRpilot backs it
+up at the next start as `config.json.defekt-<time>.bak` and starts with default values; your choices are then only in
+this backup. Games from a source this version doesn't know (for example from a newer version), on the other hand, stay
+in the file unchanged, and HDRpilot reads the rest as usual.
 
-Die Grafik-Bibliotheken entpackt HDRpilot beim ersten Start und nach jedem Update auf eine neue Version. Ordner
-älterer Versionen bleiben liegen und können bei beendetem HDRpilot gelöscht werden. Setup-Datei und die Kopie zum
-Entfernen entpacken ihre eigenen (Ordner nach dem Namen der EXE). Den der Setup-Datei
-(`%TEMP%\.net\HDRpilot-Setup-<Version>`) darfst du löschen, wenn gerade kein Setup läuft; den der Kopie zum Entfernen
-(`%TEMP%\.net\HDRpilot-Uninstall`) löscht sie am Ende zusammen mit ihrem Temp-Ordner selbst.
+HDRpilot unpacks the graphics libraries at the first start and after every update to a new version. Folders of older
+versions stay and can be deleted while HDRpilot isn't running. The setup file and the copy for uninstalling unpack
+their own (folders named after the EXE). You may delete the setup file's folder
+(`%TEMP%\.net\HDRpilot-Setup-<Version>`) when no setup is running; the uninstall copy deletes its own folder
+(`%TEMP%\.net\HDRpilot-Uninstall`) at the end, together with its temp folder.
 
-## Befehlszeile
+## Command line
 
 ### HDRpilot.exe
 
-Läuft HDRpilot schon, reicht ein zweiter Aufruf seine Befehle an die laufende Instanz weiter.
+If HDRpilot is already running, a second call passes its commands on to the running instance.
 
-| Aufruf | Wirkung |
+| Call | Effect |
 |---|---|
-| `HDRpilot.exe` | Starten (nur im Infobereich); läuft es schon, öffnet sich die Spielebibliothek |
-| `--minimized` | Starten (nur im Infobereich); läuft es schon, passiert nichts. So startet der Autostart |
-| `--show` / `--settings` | Spielebibliothek bzw. Einstellungen öffnen |
-| `--run <Quelle:ID>` | Spiel über HDRpilot starten (HDR vorher an) |
-| `--toggle-hdr` | HDR jetzt umschalten |
-| `--pause` / `--resume` | Automatik pausieren bzw. fortsetzen |
-| `--rescan` | Spiele neu einlesen |
-| `--exit` | Laufende Instanz beenden |
-| `--wrap -- <befehl>` | Steam-Startoption (`--wrap -- %command%`): HDR einschalten lassen, dann den Befehl starten |
-| `--config-dir <ordner>` | Eigene Ablage statt `%APPDATA%`/`%LOCALAPPDATA%` (Tests); eigene Instanz je Ordner |
-| `--autohdr-test-root <name>` | Nur mit `--config-dir` (Tests): Auto-HDR-Schalter unter `HKCU\Software\HDRpilot.Tests\AutoHdr\<name>`. Mit eigener Ablage schreibt HDRpilot nie in die echte Windows-Einstellung, ohne diesen Schalter unter einem aus dem Ordner abgeleiteten Namen |
+| `HDRpilot.exe` | Start (only in the notification area); if it's already running, the game library opens |
+| `--minimized` | Start (only in the notification area); if it's already running, nothing happens. This is how autostart starts it |
+| `--show` / `--settings` | Open the game library or the settings |
+| `--run <Source:ID>` | Launch a game via HDRpilot (HDR on first) |
+| `--toggle-hdr` | Toggle HDR now |
+| `--pause` / `--resume` | Pause or resume automation |
+| `--rescan` | Rescan games |
+| `--exit` | Exit the running instance |
+| `--wrap -- <command>` | Steam launch option (`--wrap -- %command%`): have HDR turned on, then start the command |
+| `--config-dir <folder>` | Separate storage instead of `%APPDATA%`/`%LOCALAPPDATA%` (tests); separate instance per folder |
+| `--autohdr-test-root <name>` | Only with `--config-dir` (tests): Auto HDR switch under `HKCU\Software\HDRpilot.Tests\AutoHdr\<name>`. With a separate storage, HDRpilot never writes to the real Windows setting; without this switch, it uses a name derived from the folder |
 
-Den Schlüssel `<Quelle:ID>` zeigt die Oberfläche nicht an. Du findest ihn in der ersten Spalte von
-`cli\hdrpilot.exe games list` oder im Ziel einer „(HDR)“-Verknüpfung hinter `--run`. Meist ist es einfacher, die
-Verknüpfung in den Details anlegen zu lassen.
+The interface doesn't show the `<Source:ID>` key. You'll find it in the first column of `cli\hdrpilot.exe games list` or
+in the target of an “(HDR)” shortcut after `--run`. Usually it's easier to have the shortcut created in the details.
 
-### Setup-Datei und Entfernen
+### Setup file and uninstall
 
-Für Skripte und die Fehlersuche; im Alltag reichen das Setup-Fenster und „Installierte Apps“.
+For scripts and troubleshooting; for everyday use, the setup window and “Installed apps” are enough.
 
-| Aufruf | Wirkung |
+| Call | Effect |
 |---|---|
-| `HDRpilot-Setup-1.5.0.exe --quiet` | Installieren oder aktualisieren ohne Fenster; das Ergebnis ist der Exit-Code. Danach startet HDRpilot (lief es nicht, mit der Spielebibliothek), außer mit `--no-launch` oder mit Administratorrechten. Skripte, die auf das Ende warten oder die Ausgabe lesen, nehmen `--no-launch` |
-| `--autostart on\|off` | Mit Windows starten, danach mit der installierten EXE (ohne Angabe: wie bisher, also an, wenn schon eine HDRpilot.exe mit Windows startet, auch aus einem anderen Ordner; bei einer neuen Installation an) |
-| `--desktop-shortcut on\|off` | Desktop-Verknüpfung (ohne Angabe: wie bisher, bei einer neuen Installation aus) |
-| `--no-launch` | HDRpilot danach nicht starten. Für Skripte, die auf das Ende warten (etwa `Start-Process -Wait`, das auch auf gestartete Programme wartet) oder die Ausgabe lesen |
-| `--allow-downgrade` | Eine ältere Version über eine neuere installieren |
-| `HDRpilot.exe --uninstall` | Entfernen wie aus „Installierte Apps“ (läuft aus einer Kopie im Temp-Ordner) |
-| `--quiet` | Entfernen ohne Fenster: kehrt sofort zurück. 0 heißt, die Kopie im Temp-Ordner entfernt jetzt; ihr Ergebnis steht danach als `ERGEBNIS: <Exit-Code>` im Protokoll. 1 (Kopie nicht gestartet), 2 (Aufruf falsch) und 7 (Container) kommen direkt vom ersten Aufruf, ohne `ERGEBNIS`-Zeile; dann wurde nichts entfernt |
-| `--remove-data` | Beim Entfernen auch Einstellungen, Spieleliste, Protokolle und HDR-Liste löschen |
-| `--test-root <ordner>` | Prüfläufe: Programmordner, Verknüpfungen und Ablage unter diesem Ordner, dazu ein eigener Registry-Zweig unter `HKCU\Software\HDRpilot.Tests` |
+| `HDRpilot-Setup-1.6.0.exe --quiet` | Install or update without a window; the result is the exit code. Afterwards HDRpilot starts (with the game library if it wasn't running), except with `--no-launch` or with administrator rights. Scripts that wait for the end or read the output use `--no-launch` |
+| `--autostart on\|off` | Start with Windows, afterwards with the installed EXE (if not specified: as before, i.e. on if an HDRpilot.exe already starts with Windows, even from a different folder; on for a new installation) |
+| `--desktop-shortcut on\|off` | Desktop shortcut (if not specified: as before; off for a new installation) |
+| `--no-launch` | Don't start HDRpilot afterwards. For scripts that wait for the end (such as `Start-Process -Wait`, which also waits for started programs) or read the output |
+| `--allow-downgrade` | Install an older version over a newer one |
+| `HDRpilot.exe --uninstall` | Uninstall as from “Installed apps” (runs from a copy in the temp folder) |
+| `--quiet` | Uninstall without a window: returns immediately. 0 means the copy in the temp folder is now uninstalling; its result then appears in the log as `ERGEBNIS: <exit code>`. 1 (copy not started), 2 (wrong usage) and 7 (container) come directly from the first call, without an `ERGEBNIS` line; in that case nothing was removed |
+| `--remove-data` | When uninstalling, also delete settings, game list, logs and HDR list |
+| `--test-root <folder>` | Test runs: program folder, shortcuts and storage under this folder, plus a separate registry branch under `HKCU\Software\HDRpilot.Tests` |
+| `--ui-language de\|en` | Only with `--test-root`: fixed window language instead of following Windows |
 
-Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 ältere Version abgelehnt, 4 HDRpilot ließ sich nicht beenden,
-5 abgebrochen, 6 nicht installiert, 7 aus dem Container einer anderen App gestartet, nichts geändert (siehe
-„Fehlersuche“). Beide schreiben ihr Protokoll nach `%TEMP%\HDRpilot-Setup.log`.
+Exit codes: 0 ok, 1 error, 2 wrong usage, 3 older version declined, 4 HDRpilot couldn't be closed, 5 canceled, 6 not
+installed, 7 started from another app's container, nothing changed (see “Troubleshooting”). Both write their log to
+`%TEMP%\HDRpilot-Setup.log`.
 
 ### cli\hdrpilot.exe
 
-Werkzeug für Fehlersuche und Skripte, im Alltag nicht nötig.
+A tool for troubleshooting and scripts, not needed for everyday use.
 
 ```
 hdrpilot hdr status [--json] [--api modern|legacy]
-hdrpilot hdr on|off|toggle [--display <auswahl>] [--api modern|legacy] [--hotkey-fallback] [--json]
-hdrpilot scan [--source <quelle>] [--search "<ordner>;<ordner>"] [--config-dir <ordner>]
+hdrpilot hdr on|off|toggle [--display <selection>] [--api modern|legacy] [--hotkey-fallback] [--json]
+hdrpilot scan [--source <source>] [--search "<folder>;<folder>"] [--config-dir <folder>]
 hdrpilot games list [--json]
 hdrpilot games import
-hdrpilot games add --path <exe|ordner> [--name <name>] [--hdr on|off]
-hdrpilot games set <schlüssel> [--hdr on|off] [--restore on|off] [--display <monitorDevicePath>|global]
+hdrpilot games add --path <exe|folder> [--name <name>] [--hdr on|off]
+hdrpilot games set <key> [--hdr on|off] [--restore on|off] [--display <monitorDevicePath>|global]
 hdrpilot watch [--verbose]
-hdrpilot run <schlüssel>
+hdrpilot run <key>
 ```
 
-`<auswahl>`: `primary` (Standard), `all`, Nummer aus `hdr status`, Teil des Namens oder `monitorDevicePath`.
-`<quelle>`: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver. `scan`, `games`, `watch` und `run` verstehen
-außerdem `--config-dir <ordner>`; `scan` nimmt dann die Suchordner und gemerkten Quiver-Ordner dieser Ablage hinzu
-(gelesen, nicht geschrieben) und sucht sonst wie immer. `hdrpilot --help` zeigt die vollständige Hilfe.
+`<selection>`: `primary` (default), `all`, number from `hdr status`, part of the name or `monitorDevicePath`.
+`<source>`: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver. `scan`, `games`, `watch` and `run` also accept
+`--config-dir <folder>`; `scan` then adds the search folders and remembered Quiver folders of that storage (read, not
+written) and otherwise searches as always. `hdrpilot --help` shows the full help. Output and scanner messages come in
+the language of the storage (`language` in `config.json`; without a file, like Windows).
 
-Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden, 4 Bildschirm ohne HDR,
-5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden.
+Exit codes: 0 ok, 1 error, 2 wrong usage, 3 display not found, 4 display without HDR, 5 switching failed, 6 game not
+found.
 
-Die `games`-Befehle kannst du neben der laufenden App benutzen; HDRpilot liest die Änderungen selbst neu ein.
-`hdrpilot watch` und `hdrpilot run` betreiben dagegen dieselbe Automatik wie die App und nutzen ohne `--config-dir`
-dieselbe Ablage. Sie prüfen nicht, ob die App läuft: Dann schalten beide unabhängig und überschreiben sich den
-gemerkten HDR-Zustand. Vorher HDRpilot beenden oder bei laufender App `HDRpilot.exe --run <Quelle:ID>` verwenden.
+You can use the `games` commands alongside the running app; HDRpilot rereads the changes by itself. `hdrpilot watch`
+and `hdrpilot run`, on the other hand, run the same automation as the app and, without `--config-dir`, use the same
+storage. They don't check whether the app is running: if it is, both switch independently and overwrite each other's
+remembered HDR state. Exit HDRpilot first, or use `HDRpilot.exe --run <Source:ID>` while the app is running.
 
-## Bekannte Grenzen
+## Known limitations
 
-- **Erkennung per Abfrage:** Zwischen Spielstart und HDR liegt bis zu ein Abfrageintervall (Standard 1 s) plus die
-  Schaltzeit, außer bei Epic und Steam mit Frühwarnung. Spiele, die HDR nur beim Start prüfen, über „Starten“,
-  eine „(HDR)“-Verknüpfung oder (bei Steam) die Steam-Startoption starten.
-- **Spiel-EXE außerhalb des Installationsordners:** Manche Starter starten die eigentliche EXE woanders. Solche Spiele
-  erkennt HDRpilot erst, wenn du die EXE in den Details hinzufügst; bis dahin stellt auch „Starten“ HDR nach
-  der Startfrist wieder zurück.
-- **Mehrere Bildschirme:** HDRpilot erkennt nicht, auf welchem Bildschirm ein Spiel läuft, sondern schaltet die
-  eingestellten (Standard: Hauptbildschirm). Läuft ein Spiel woanders, in den Details den richtigen **Bildschirm**
-  wählen. Auf echter Hardware geprüft wurde nur mit einem Bildschirm.
-- **Nicht automatisch gefunden** werden: in Steam eingetragene Fremdspiele, ältere Store-Spiele direkt unter
-  `C:\Program Files\WindowsApps`, Xbox-Spiele auf USB- oder Netzlaufwerken, GOG-Spiele ohne Registry-Eintrag und
-  Epic-Spiele ohne Manifest. Solche Spiele über „Spiel hinzufügen“ eintragen.
-- **Start über die Launcher:** Mit echten Spielen geprüft: Steam (Dying Light: The Beast), Epic (Dead Island 2), GOG
-  (Cyberpunk 2077), Ubisoft Connect (Avatar: Frontiers of Pandora), EA app (Battlefield 6, mit EA Javelin) und Xbox
-  (Palworld), jeweils über „Starten“ und über die Verknüpfung. HDR war jedes Mal an, bevor der Launcher das
-  Spiel gestartet hat. Battle.net ist ungeprüft (siehe unten).
-- **Umschalten während des Spielstarts:** Bei der automatischen Erkennung schaltet HDRpilot HDR, während das Spiel
-  gerade hochfährt. Das verkraften fast alle Spiele; Dead Island 2 blieb im Test bei einem von zwei automatischen
-  Starts hängen (ob wegen des Umschaltens, ist nicht sicher). Der Neustart-Puffer hilft beim zweiten Versuch, wenn der
-  Neustart in seine Zeit fällt (Standard 1 Minute; wer länger für den Neustart braucht, stellt ihn unter „Einstellungen“
-  höher); sicherer sind „Starten“, die Verknüpfung oder die Steam-Startoption.
-- **Frühwarnung:** nur für den Epic Games Launcher und Steam. Sie beruht auf deren Protokollformat, das sich mit einem
-  Launcher-Update ändern kann; dann greift wieder die normale Erkennung.
-- **Steam-Startoption:** wirkt nur, wenn HDRpilot läuft (Autostart empfohlen) und das Spiel beim letzten Einlesen schon
-  bekannt war. Läuft Steam mit Administratorrechten, HDRpilot aber nicht, kann sich der Start um bis zu 8 s verzögern.
-- **HDR-Liste:** Ohne Konto werden Spiele ohne Steam- oder GOG-ID nur gefunden, wenn ihr Name zur PCGamingWiki-Seite
-  passt. Der Konto-Weg ist nur gegen nachgebildete Antworten getestet, weil beim Bau kein Konto vorhanden war. Die
-  Angaben stammen von Freiwilligen und können lückenhaft sein.
-- **Hänger-Hinweis:** Ältere Store-Spiele (UWP), deren Fenster einem Windows-Rahmenprozess gehört, könnten im
-  minimierten Zustand fälschlich als hängend gemeldet werden. Es bleibt bei einem Hinweis.
-- **GOG:** „Starten“ startet die Spiel-EXE direkt, an GOG Galaxy vorbei. Cloud-Speicherstände, Overlay und
-  Spielzeit von Galaxy sind dann womöglich nicht aktiv.
-- **EA app:** Die Bibliotheksdatei der EA app ist verschlüsselt und an die Hardware gebunden; HDRpilot entschlüsselt
-  sie bewusst nicht und findet EA-Spiele über die Installationsdaten der Spiele selbst.
-- **Battle.net:** Am Testrechner war kein Blizzard-Spiel installiert. Das Einlesen von Blizzard-Spielen ist deshalb nur
-  mit nachgebildeten Daten getestet, das Starten über Battle.net gar nicht. Fehlt ein Blizzard-Spiel, seinen Ordner
-  über „Spiel hinzufügen“ eintragen.
-- **Quiver Launcher:** Keine Frühwarnung und keine Startoption wie bei Steam: Startest du ein Spiel in Quiver, schaltet
-  HDRpilot HDR erst, wenn es den Spielprozess sieht (bis zu ein Abfrageintervall). Spiele, die HDR nur beim Start
-  prüfen, über „Starten“ oder die „(HDR)“-Verknüpfung starten. Einen Quiver-Ordner außerhalb der durchsuchten Orte
-  findet HDRpilot erst, wenn Quiver einmal läuft, während HDRpilot läuft, oder wenn er (oder der Ordner darüber) als
-  Suchordner eingetragen ist; nach dem Verschieben gelten seine Spiele bis dahin als „Nicht installiert“. Quivers
-  Dateien sind keine offizielle Schnittstelle und können sich mit einem Update ändern; was HDRpilot nicht lesen kann,
-  meldet die Bibliothek als Fehler beim Einlesen. Titelbild und Logo hat Quiver nicht, die Cover sind meist WebP
-  (braucht die WebP-Erweiterung von Windows). Startskripte (BAT, CMD) startet HDRpilot nie, auch wenn Quiver ein Spiel
-  so startet. Ersetzt Quiver eine Datei genau in der Millisekunde, in der HDRpilot sie liest (ein Bild in `Cache` oder
-  die Verknüpfung `windows-installer.json`), meldet Windows Quiver einmal „Zugriff verweigert“; HDRpilot hält jede Datei
-  nur so kurz offen, wie das Lesen dauert. Am Testrechner geprüft mit Quiver 3.5.1 und einem Spiel („Black“), nur
-  lesend; Spiele aus dem Windows Installer und Quiver bis 2.4.x nur mit nachgebildeten Daten, der Start aus Quiver mit
-  HDR noch nicht.
-- **Ältere Version nach Quiver-Spielen:** HDRpilot 1.4.0 und älter kennen die Quelle „Quiver“ nicht. Steht ein
-  Quiver-Spiel in `config.json`, halten sie die ganze Datei für defekt, sichern sie als
-  `config.json.defekt-<Zeit>.bak` und beginnen leer. Der Setup installiert eine ältere Version deshalb nur mit
-  **Trotzdem die ältere Version installieren**; ab dieser Version bleiben Spiele unbekannter Quellen erhalten.
-- **Windows 10:** Die ältere Schnittstelle ist mit Tests abgedeckt und wurde auf echter Hardware unter Windows 11
-  (Build 26200) mitgeprüft; ein echtes Windows 10 stand nicht zur Verfügung.
-- **Tastenkürzel-Notlösung:** HDRpilot sendet Win+Alt+B nur, wenn sie eingeschaltet ist, die Windows-Schnittstelle
-  gescheitert ist und gerade kein Spiel läuft (siehe „Anti-Cheat“). Das Kürzel braucht die Xbox Game Bar, schaltet nur
-  um und wirkt auf alle HDR-fähigen Bildschirme; HDRpilot bestätigt aber nur den Zielbildschirm. Auf echter Hardware
-  ist die Notlösung nicht getestet.
-- **Spielsymbole:** Für manche Steam-Spiele liegt auf dem PC nur ein 32-px-Symbol; in der Liste wirkt es etwas
-  unscharf (gemessen: 24 von 636). Bilder im WebP-Format (GOG Galaxy) braucht die WebP-Erweiterung von Windows; fehlt
-  sie, nimmt HDRpilot die nächste Quelle. Ein eigenes Symbol gilt nur auf diesem PC, weil die PNG im lokalen Datenordner
-  liegt; auf einem anderen PC zeigt das Spiel wieder das automatische Symbol.
-- **Windows Auto HDR:** wirkt nur bei Spielen mit DirectX 11 oder 12 (nicht bei DirectX 9, OpenGL und Vulkan), nur bei
-  Spielen, die Windows dafür zulässt (vorab nicht abfragbar), nur bei einem Start über HDRpilot („Starten“,
-  „(HDR)“-Verknüpfung, Steam-Startoption, Frühwarnung) und nur, wenn Windows-HDR schon vor dem Spielstart an ist; ein
-  Spiel, das schon läuft, bekommt es erst beim nächsten Start (Livetest unter Windows 11 26H2). Solange HDRpilot den
-  Schalter hält, gilt Auto HDR auch für andere Spiele, die in dieser Zeit starten. Das Format der Windows-Einstellung ist
-  nicht dokumentiert und kann sich mit einem Windows-Update ändern; einen Wert in fremdem Format lässt HDRpilot dann
-  stehen. Ob Auto HDR wirkt, sieht HDRpilot nicht selbst (Prüfen über die Xbox Game Bar). Für Anti-Cheat-Systeme gibt es
-  keine Herstelleraussage. Intensität und Erzwingen für nicht zugelassene Spiele stellt HDRpilot nicht ein; RTX HDR von
-  NVIDIA gehört nicht zu HDRpilot.
-- **Nicht signiert:** SmartScreen und manche Virenscanner warnen bei unbekannten, unsignierten EXEs, auch beim Setup.
-- **Nur auf Deutsch:** Oberfläche, Hinweise, Fehlermeldungen der Launcher-Scanner, Kommandozeile und Protokoll.
+- **Detection by polling:** Between game launch and HDR there can be up to one polling interval (default 1 s) plus the
+  switching time, except for Epic and Steam with early warning. Launch games that only check HDR at startup via
+  “Launch”, an “(HDR)” shortcut or (for Steam) the Steam launch option.
+- **Game EXE outside the install folder:** Some launchers start the actual EXE somewhere else. HDRpilot only detects
+  such games once you add the EXE in the details; until then, “Launch” also restores HDR after the launch timeout.
+- **Multiple displays:** HDRpilot doesn't detect which display a game is running on, but switches the configured ones
+  (default: primary display). If a game runs elsewhere, choose the right **Display** in the details. On real hardware,
+  only a single display was tested.
+- **Not found automatically**: non-Steam games added to Steam, older Store games directly under
+  `C:\Program Files\WindowsApps`, Xbox games on USB or network drives, GOG games without a registry entry and Epic games
+  without a manifest. Add such games via “Add game”.
+- **Launching via the launchers:** Tested with real games: Steam (Dying Light: The Beast), Epic (Dead Island 2), GOG
+  (Cyberpunk 2077), Ubisoft Connect (Avatar: Frontiers of Pandora), EA app (Battlefield 6, with EA Javelin) and Xbox
+  (Palworld), each via “Launch” and via the shortcut. HDR was on every time before the launcher started the game.
+  Battle.net is untested (see below).
+- **Switching during game launch:** With automatic detection, HDRpilot switches HDR while the game is starting up. Almost
+  all games cope with this; in the test, Dead Island 2 hung on one of two automatic launches (whether because of the
+  switch isn't certain). The restart buffer helps on the second attempt if the restart falls within its time
+  (default 1 minute; if you need longer to restart, increase it under “Settings”); safer options are “Launch”, the
+  shortcut or the Steam launch option.
+- **Early warning:** only for the Epic Games Launcher and Steam. It relies on their log format, which can change with a
+  launcher update; normal detection then takes over again.
+- **Steam launch option:** only works if HDRpilot is running (autostart recommended) and the game was already known at
+  the last scan. If Steam runs with administrator rights but HDRpilot doesn't, the launch can be delayed by up to 8 s.
+- **HDR list:** Without an account, games without a Steam or GOG ID are only found if their name matches the
+  PCGamingWiki page. The account path is only tested against simulated responses, because no account was available
+  during development. The data comes from volunteers and can be incomplete.
+- **Hang notification:** Older Store games (UWP) whose window belongs to a Windows host process could be wrongly
+  reported as hanging while minimized. It stays at a notification.
+- **GOG:** “Launch” starts the game EXE directly, bypassing GOG Galaxy. Galaxy's cloud saves, overlay and play time
+  may then not be active.
+- **EA app:** The EA app's library file is encrypted and bound to the hardware; HDRpilot deliberately doesn't decrypt it
+  and finds EA games via the games' own installation data.
+- **Battle.net:** No Blizzard game was installed on the test PC. Scanning Blizzard games is therefore only tested with
+  simulated data, launching via Battle.net not at all. If a Blizzard game is missing, add its folder via “Add game”.
+- **Quiver Launcher:** No early warning and no launch option like Steam's: if you launch a game in Quiver, HDRpilot
+  only switches HDR when it sees the game process (up to one polling interval). Launch games that only check HDR at
+  startup via “Launch” or the “(HDR)” shortcut. HDRpilot only finds a Quiver folder outside the searched locations once
+  Quiver runs while HDRpilot is running, or if it (or its parent folder) is set as a search folder; after moving it, its
+  games count as “Not installed” until then. Quiver's files aren't an official interface and can change with an
+  update; whatever HDRpilot can't read, the library reports as a scan error. Quiver has no hero image or logo, and the
+  covers are mostly WebP (requires the Windows WebP extension). HDRpilot never starts launch scripts (BAT, CMD), even
+  if Quiver launches a game that way. If Quiver replaces a file in exactly the millisecond in which HDRpilot reads it
+  (an image in `Cache` or the `windows-installer.json` link), Windows reports “access denied” to Quiver once; HDRpilot
+  only keeps each file open as long as reading takes. Tested on the test PC with Quiver 3.5.1 and one game (“Black”),
+  read-only; games from Windows Installer and Quiver up to 2.4.x only with simulated data, launching from Quiver with
+  HDR not yet.
+- **Older version after Quiver games:** HDRpilot 1.4.0 and older don't know the “Quiver” source. If a Quiver game is in
+  `config.json`, they consider the whole file broken, back it up as `config.json.defekt-<time>.bak` and start empty.
+  The setup therefore only installs an older version with **Install the older version anyway**; from this version on,
+  games from unknown sources are kept.
+- **Windows 10:** The older API is covered by tests and was also checked on real hardware under Windows 11
+  (build 26200); a real Windows 10 wasn't available.
+- **Keyboard shortcut fallback:** HDRpilot only sends Win+Alt+B if the fallback is turned on, the Windows API has
+  failed and no game is running (see “Anti-cheat”). The shortcut requires the Xbox Game Bar, only toggles and affects
+  all HDR-capable displays; HDRpilot, however, only confirms the target display. The fallback isn't tested on real
+  hardware.
+- **Game icons:** For some Steam games, only a 32 px icon is on the PC; it looks a bit blurry in the list (measured: 24
+  of 636). Images in WebP format (GOG Galaxy) require the Windows WebP extension; if it's missing, HDRpilot uses the
+  next source. A custom icon only applies on this PC, because the PNG is in the local data folder; on another PC the
+  game shows the automatic icon again.
+- **Windows Auto HDR:** only works for games with DirectX 11 or 12 (not DirectX 9, OpenGL or Vulkan), only for games
+  that Windows allows for it (can't be queried in advance), only when launched via HDRpilot (“Launch”, “(HDR)”
+  shortcut, Steam launch option, early warning) and only if Windows HDR is already on before the game starts; a game
+  that's already running only gets it at the next launch (live test under Windows 11 26H2). While HDRpilot holds the
+  switch, Auto HDR also applies to other games that start during that time. The format of the Windows setting isn't
+  documented and can change with a Windows update; HDRpilot then leaves a value in an unknown format alone. HDRpilot
+  can't see by itself whether Auto HDR is working (check via the Xbox Game Bar). There's no statement from anti-cheat
+  vendors. HDRpilot doesn't set the intensity or force Auto HDR for games that aren't allowed; NVIDIA's RTX HDR isn't
+  part of HDRpilot.
+- **Not signed:** SmartScreen and some antivirus programs warn about unknown, unsigned EXEs, including the setup.
+- **German and English:** The interface, notifications, setup, launcher scanner messages and command line are
+  available in German and English, the log in German (messages that also appear in the interface are in its language).
+  Error texts that Windows or .NET provide themselves (such as “access denied” after a message) come in the language of
+  Windows.
 
-## Fehlersuche
+## Troubleshooting
 
-- **HDR schaltet gar nicht:** Lässt sich HDR in den Windows-Anzeigeeinstellungen von Hand einschalten? Zeigt der
-  Tooltip „kein HDR-fähiger Bildschirm“, meldet Windows für keinen Zielbildschirm HDR. Mit
-  `cli\hdrpilot.exe hdr status` siehst du, was Windows meldet; `hdr on` und `hdr off` schalten zum Test von Hand.
-  Hinweise während eines Vollbild-Spiels stehen nur im Protokoll.
-- **Spiel wird nicht erkannt:** Ist „HDR automatisch“ an und die Automatik nicht pausiert? Liegt die laufende EXE im
-  Installationsordner? Wenn nicht, die EXE in den Details hinzufügen. Ist sie dort als „ausgeschlossen“ markiert, mit
-  „Wieder aufnehmen“ zurückholen. Steht sie unter „Hilfsprozesse ausschließen“, das Muster dort entfernen.
-- **HDR kommt für ein Spiel zu spät oder das Spiel hängt beim automatischen Start:** über „Starten“, eine
-  „(HDR)“-Verknüpfung oder (bei Steam) die Steam-Startoption starten; dann ist HDR schon vor dem Spiel an.
-- **Steam-Startoption wirkt nicht:** Läuft HDRpilot? In `logs\wrap.log` steht je Start, ob HDR vorbereitet wurde und
-  warum nicht. Kennt HDRpilot das Spiel noch nicht, einmal „Neu einlesen“.
-- **HDR bleibt nach dem Spiel an:** Endete das Spiel weniger als 5 Minuten nach dem Start, hält der Neustart-Puffer HDR
-  noch an (Standard 1 Minute, der Tooltip zeigt die Restzeit). Ist dir das zu lang, stelle unter „Einstellungen“ beim
-  Neustart-Puffer eine kürzere Zeit oder 0:00 (aus) ein. Sonst die Nachlaufzeit abwarten (Standard 10 s). Nennt der
-  Tooltip das Spiel danach noch, läuft noch ein Programm aus seinem Ordner (etwa ein Launcher-Rest): im Task-Manager
-  nachsehen und diese EXE in den Details entfernen. Manche Spiele beenden sich nicht vollständig und laufen unsichtbar
-  weiter (im Test bei Palworld); HDRpilot weist nach 2 Minuten darauf hin. Dann den Spielprozess im Task-Manager
-  beenden. Weitere Gründe: Ein anderes HDR-Spiel läuft noch; HDR war schon vor dem Spiel an; „Nach dem Spiel
-  zurückstellen“ ist für dieses oder ein gleichzeitig gelaufenes Spiel aus. Nach „Starten“ ohne Spielstart
-  bleibt HDR bis zum Ende der Startfrist an.
-- **„Starten“ ist gesperrt:** Das Spiel ist nicht installiert, oder bei einem selbst eingetragenen Ordner kennt
-  HDRpilot keine Start-EXE. Dann das Spiel über seine EXE hinzufügen. Bei einem Spiel aus dem Quiver Launcher liegen
-  meist mehrere EXE-Dateien im Spielordner, die EXE liegt sehr tief, oder Quiver startet ein Skript (BAT oder CMD): das
-  Spiel einmal in Quiver starten, dort die EXE wählen, wenn Quiver danach fragt, und danach „Neu einlesen“.
-- **Windows Auto HDR wirkt nicht:** Hast du das Spiel über HDRpilot gestartet („Starten“, „(HDR)“-Verknüpfung
-  oder Steam-Startoption)? Ein Start direkt im Launcher ohne Startoption bekommt Auto HDR nur über die Frühwarnung, und
-  dann nur, wenn Windows-HDR schon an ist. Das Spiel muss DirectX 11 oder 12 nutzen und von Windows für Auto HDR
-  zugelassen sein; ob es greift, zeigt der Intensitätsregler in der Xbox Game Bar (Win+G). Das Einstellungsfenster der
-  Game Bar zeigt einen alten Stand, bis du es ganz schließt und neu öffnest. Wann HDRpilot den Schalter gesetzt und
-  zurückgestellt hat, steht mit dem Wert von vorher im Protokoll („Auto HDR global“). Den aktuellen Stand des
-  Windows-Schalters zeigt der Eintrag **Auto HDR** im Menü des Infobereichs.
-- **Keine HDR-Kennzeichen in der Liste:** Der erste Abgleich läuft 30 s nach dem Start; ohne Konto sind je Start nur
-  100 Spiele dran. Den Stand und den letzten Fehler zeigt der Bereich „HDR-Liste (PCGamingWiki)“ in den Einstellungen.
-- **HDRpilot war abgestürzt oder beendet:** einfach neu starten, der gemerkte Zustand wird dann wiederhergestellt.
-- **Setup oder Entfernen meldet einen Fehler:** Einzelheiten stehen in `%TEMP%\HDRpilot-Setup.log`; nach einem Fehler
-  im Setup ist die bisherige Version unverändert. Lässt sich HDRpilot nicht beenden, im Infobereich „HDRpilot beenden“
-  wählen und es erneut versuchen.
-- **HDRpilot startet nicht von selbst, oder Einstellungen sind weg nach einem Start aus einer anderen App:** Manche
-  Apps aus dem Microsoft Store oder als MSIX-Paket (etwa die Claude-App) lassen alles, was aus ihnen heraus startet, in
-  ihrem eigenen Container laufen. Windows leitet dann Registry-Einträge wie den Autostart in den privaten Speicher dieser
-  App um (`%LOCALAPPDATA%\Packages\<App>\LocalCache`), Einstellungen und Protokolle dann, wenn ihr Ordner außerhalb
-  noch fehlte oder schon dort liegt. Außerhalb fehlt, was umgeleitet wurde, und der Autostart wirkt nicht. HDRpilot
-  erkennt das, egal wo seine Ordner liegen: Beim Start steht eine Warnung „HDRpilot läuft im Container der App …“ im
-  Protokoll (je nach Ordner in der umgeleiteten Kopie unter `…\LocalCache\Local\HDRpilot\logs`), Setup und Entfernen
-  ändern nichts und sagen es (still: Exit-Code 7). Abhilfe: HDRpilot beenden und über das Startmenü oder die
-  Verknüpfung starten, Setup-Dateien per Doppelklick im Explorer ausführen, Entfernen über „Installierte Apps“.
-- **Ein Spiel fehlt in der Liste:** „Neu einlesen“ drücken; fehlt es weiter, über „Spiel hinzufügen“ eintragen oder
-  seinen übergeordneten Ordner als Suchordner angeben. Fehlen alle Spiele aus dem Quiver Launcher, kennt HDRpilot den
-  Quiver-Ordner noch nicht: Quiver einmal starten, während HDRpilot läuft, oder den Quiver-Ordner als Suchordner
-  eintragen (siehe „Quiver Launcher“). Fehler einzelner Launcher stehen in der Bibliothek und im Protokoll. Ist unter
-  „Einstellungen“ › „Bibliothek“ der Schalter „Nicht installierte Spiele ausblenden“ an, stehen nicht installierte
-  Spiele nicht in der Liste; ist sie deshalb leer, sagt sie das, und findet die Suche nur ausgeblendete Spiele, sagt es
-  der Hinweis „Keine Spiele für diese Auswahl“.
-- **Ein installiertes Spiel heißt „Nicht installiert“:** Liegt es auf einem Laufwerk, das gerade nicht verbunden ist,
-  steckt es im Launcher mitten in einem Update, oder hat das Einlesen den Launcher nicht gefunden (siehe Protokoll)?
-  Dann nicht „Einstellungen entfernen…“ wählen (die Rückfrage warnt, wenn das Laufwerk nicht verbunden ist, eine EXE
-  des Spiels noch da ist, Steam es noch als installiert führt oder sich das nicht prüfen lässt; ein Restordner nur mit
-  Spielständen zählt nicht): Nach dem Verbinden bzw. dem Update und „Neu einlesen“ gelten seine Einstellungen wieder.
-- **Protokoll:** Infobereich → „Protokollordner öffnen“. Für mehr Einzelheiten unter Einstellungen → Erweitert die
-  Protokollstufe auf „Ausführlich“ stellen. Jede Schaltung steht dort mit Auslöser, Bildschirm, Zustand vorher und
-  nachher.
-- **Alles zurücksetzen:** HDRpilot beenden und `%APPDATA%\HDRpilot\config.json` löschen. Die Spiele werden beim
-  nächsten Start neu eingelesen; deine Auswahl geht dabei verloren.
+- **HDR doesn't switch at all:** Can you turn HDR on manually in the Windows display settings? If the tooltip says “no
+  HDR-capable display”, Windows reports HDR for none of the target displays. `cli\hdrpilot.exe hdr status` shows what
+  Windows reports; `hdr on` and `hdr off` switch manually for testing. Notifications during a full-screen game only
+  appear in the log.
+- **Game isn't detected:** Is “HDR on launch” on and automation not paused? Is the running EXE in the install folder?
+  If not, add the EXE in the details. If it's marked as “excluded” there, bring it back with “Include again”. If it's
+  listed under “Exclude helper processes”, remove the pattern there.
+- **HDR comes too late for a game, or the game hangs on an automatic launch:** launch it via “Launch”, an “(HDR)”
+  shortcut or (for Steam) the Steam launch option; then HDR is already on before the game.
+- **Steam launch option has no effect:** Is HDRpilot running? `logs\wrap.log` shows for each launch whether HDR was
+  prepared and why not. If HDRpilot doesn't know the game yet, use “Rescan” once.
+- **HDR stays on after the game:** If the game ended less than 5 minutes after launch, the restart buffer keeps HDR on
+  (default 1 minute; the tooltip shows the remaining time). If that's too long for you, set a shorter time or 0:00 (off)
+  for the restart buffer under “Settings”. Otherwise, wait for the grace period (default 10 s). If the tooltip still
+  names the game after that, a program from its folder is still running (such as a launcher remnant): check in Task
+  Manager and remove that EXE in the details. Some games don't exit completely and keep running invisibly (in the test,
+  Palworld); HDRpilot points this out after 2 minutes. Then end the game process in Task Manager. Other reasons: another
+  HDR game is still running; HDR was already on before the game; “Restore after game” is off for this game or for a game
+  that ran at the same time. After “Launch” without the game starting, HDR stays on until the launch timeout ends.
+- **“Launch” is disabled:** The game isn't installed, or for a folder you added yourself HDRpilot doesn't know a launch
+  EXE. In that case, add the game via its EXE. For a game from the Quiver Launcher, there are usually several EXE files
+  in the game folder, the EXE is very deep, or Quiver starts a script (BAT or CMD): launch the game once in Quiver,
+  choose the EXE there when Quiver asks, and then use “Rescan”.
+- **Windows Auto HDR has no effect:** Did you launch the game via HDRpilot (“Launch”, “(HDR)” shortcut or Steam launch
+  option)? A launch directly in the launcher without the launch option only gets Auto HDR via the early warning, and
+  then only if Windows HDR is already on. The game has to use DirectX 11 or 12 and be allowed by Windows for Auto HDR;
+  the intensity slider in the Xbox Game Bar (Win+G) shows whether it applies. The Game Bar settings window shows an
+  outdated state until you close it completely and open it again. When HDRpilot set and restored the switch is in the
+  log with the previous value (“Auto HDR global”). The **Auto HDR** entry in the notification area menu shows the current
+  state of the Windows switch.
+- **No HDR badges in the list:** The first sync runs 30 s after startup; without an account, only 100 games are covered
+  per startup. The “HDR list (PCGamingWiki)” section in the settings shows the status and the last error.
+- **HDRpilot crashed or was closed:** just start it again; the remembered state is then restored.
+- **Setup or uninstall reports an error:** Details are in `%TEMP%\HDRpilot-Setup.log`; after an error in the setup, the
+  previous version is unchanged. If HDRpilot can't be closed, choose “Exit HDRpilot” in the notification area and try
+  again.
+- **HDRpilot doesn't start by itself, or settings are gone after a start from another app:** Some apps from the
+  Microsoft Store or packaged as MSIX (such as the Claude app) run everything started from within them in their own
+  container. Windows then redirects registry entries such as autostart to that app's private storage
+  (`%LOCALAPPDATA%\Packages\<App>\LocalCache`), and settings and logs if their folder outside was still missing or is
+  already there. What was redirected is missing outside, and autostart doesn't work. HDRpilot detects this wherever its
+  folders are: at startup, a warning “HDRpilot läuft im Container der App …” (HDRpilot is running in the container of
+  the app …) appears in the log (depending on the folder, in the redirected copy under
+  `…\LocalCache\Local\HDRpilot\logs`), and setup and uninstall change nothing and say so (quietly: exit code 7). Fix:
+  exit HDRpilot and start it from the Start menu or the shortcut, run setup files by double-clicking them in File
+  Explorer, and uninstall via “Installed apps”.
+- **A game is missing from the list:** Click “Rescan”; if it's still missing, add it via “Add game” or set its parent
+  folder as a search folder. If all games from the Quiver Launcher are missing, HDRpilot doesn't know the Quiver folder
+  yet: start Quiver once while HDRpilot is running, or set the Quiver folder as a search folder (see “Quiver
+  Launcher”). Errors of individual launchers are shown in the library and in the log. If the “Hide uninstalled games”
+  switch is on under “Settings” › “Library”, uninstalled games aren't in the list; if the list is empty because of
+  that, it says so, and if the search only finds hidden games, the note “No games for this selection” says so.
+- **An installed game says “Not installed”:** Is it on a drive that isn't connected right now, is it in the middle of
+  an update in the launcher, or did the scan not find the launcher (see the log)? Then don't choose “Remove settings…”
+  (the confirmation warns if the drive isn't connected, an EXE of the game is still there, Steam still lists it as
+  installed, or this can't be checked; a leftover folder with only saves doesn't count): after connecting the drive or
+  finishing the update and using “Rescan”, its settings apply again.
+- **Log:** Notification area → “Open log folder”. For more detail, set the log level to “Detailed” under Settings →
+  Advanced. Every switch is recorded there with its trigger, display, and state before and after.
+- **Reset everything:** Exit HDRpilot and delete `%APPDATA%\HDRpilot\config.json`. The games are scanned again at the
+  next start; your choices are lost.
 
-## Entfernen
+## Uninstalling
 
-Mit dem Setup installiert:
+Installed with the setup:
 
-1. In Steam die Startoption `--wrap -- %command%` bei den Spielen löschen, bei denen du sie eingetragen hast
-   (Rechtsklick auf das Spiel → Eigenschaften → Allgemein → Startoptionen), sonst starten diese Spiele nicht mehr.
-   Das Entfernen nennt dir die Spiele, bei denen sie noch steht.
-2. Unter *Einstellungen → Apps → Installierte Apps* bei HDRpilot *Deinstallieren* wählen. HDRpilot fragt nach: Ohne
-   Haken bei **Auch Einstellungen, Spieleliste und Protokolle löschen** (Standard) bleiben `%APPDATA%\HDRpilot` und
-   `%LOCALAPPDATA%\HDRpilot` erhalten und werden bei einer neuen Installation wieder benutzt; mit Haken sind sie weg,
-   samt HDR-Liste und gespeichertem PCGamingWiki-Konto.
-3. **Entfernen** beendet HDRpilot, stellt einen gemerkten HDR-Zustand wieder her, stellt den Auto-HDR-Schalter von
-   Windows zurück, falls ein Absturz von HDRpilot ihn eingeschaltet hinterlassen hat (Schritt **Auto HDR zurückstellen**),
-   und entfernt das Programm, seine Verknüpfungen und den Autostart. Das erledigt eine Kopie im Temp-Ordner, die danach
-   ihren Ordner und ihre entpackten Grafik-Bibliotheken (`%TEMP%\.net\HDRpilot-Uninstall`) selbst löscht.
-4. Bleiben „(HDR)“-Verknüpfungen für einzelne Spiele übrig, kannst du sie löschen, ebenso die entpackten
-   Grafik-Bibliotheken in `%TEMP%\.net\HDRpilot` und `%TEMP%\.net\HDRpilot-Setup-<Version>` (rund 8 MB je Ordner).
+1. In Steam, delete the launch option `--wrap -- %command%` from the games where you added it (right-click on the game
+   → Properties → General → Launch Options), otherwise these games won't start anymore. The uninstall lists the games
+   where it's still set.
+2. Under *Settings → Apps → Installed apps*, choose *Uninstall* for HDRpilot. HDRpilot asks for confirmation: without a
+   check mark at **Also delete settings, game list and logs** (default), `%APPDATA%\HDRpilot` and
+   `%LOCALAPPDATA%\HDRpilot` are kept and used again by a new installation; with the check mark they're gone, including
+   the HDR list and a saved PCGamingWiki account.
+3. **Uninstall** closes HDRpilot, restores a remembered HDR state, restores the Windows Auto HDR switch if a crash of
+   HDRpilot left it turned on (step **Restore Auto HDR**), and removes the program, its shortcuts and autostart. This is
+   done by a copy in the temp folder, which then deletes its folder and its unpacked graphics libraries
+   (`%TEMP%\.net\HDRpilot-Uninstall`) itself.
+4. If “(HDR)” shortcuts for individual games are left over, you can delete them, as well as the unpacked graphics
+   libraries in `%TEMP%\.net\HDRpilot` and `%TEMP%\.net\HDRpilot-Setup-<Version>` (about 8 MB per folder).
 
-Ohne Installation:
+Without installation:
 
-1. In den Einstellungen **Mit Windows starten** ausschalten und gegebenenfalls **Konto entfernen**.
-2. In Steam die Startoption `--wrap -- %command%` bei den Spielen wieder löschen, bei denen du sie eingetragen hast.
-3. Warten, bis kein Spiel mehr läuft und HDR zurückgestellt ist, dann im Infobereich **HDRpilot beenden**.
-4. Den Ordner `HDRpilot` löschen (`HDRpilot.exe`, `cli`, README, `LICENSE` und Lizenzhinweise), dazu die Ordner
-   `%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`, `%TEMP%\.net\HDRpilot`, den Startmenü-Ordner
-   `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot` und die „(HDR)“-Verknüpfungen auf dem Desktop.
+1. In the settings, turn off **Start with Windows** and, if applicable, **Remove account**.
+2. In Steam, delete the launch option `--wrap -- %command%` again from the games where you added it.
+3. Wait until no game is running anymore and HDR has been restored, then choose **Exit HDRpilot** in the notification
+   area.
+4. Delete the `HDRpilot` folder (`HDRpilot.exe`, `cli`, `README.md`, `README.de.md`, `LICENSE` and the third-party
+   notices), as well as the folders `%APPDATA%\HDRpilot`, `%LOCALAPPDATA%\HDRpilot`, `%TEMP%\.net\HDRpilot`, the Start
+   menu folder `%APPDATA%\Microsoft\Windows\Start Menu\Programs\HDRpilot` and the “(HDR)” shortcuts on the desktop.
 
-## Aus dem Quelltext bauen
+## Building from source
 
-Benötigt das .NET 10 SDK. Die Strukturtests brauchen außerdem vier Header des Windows SDK:
-`tools\fetch-sdk-headers.ps1` lädt sie einmalig (rund 153 MB von nuget.org) nach `.sdk\`. Alternativ zeigt die
-Umgebungsvariable `HDRPILOT_SDK_INCLUDE` auf den `um`-Ordner eines installierten Windows SDK. Ohne die Header
-überspringt der Testlauf diese Tests, und `test.ps1` meldet einen Fehler.
+Requires the .NET 10 SDK. The structure tests also need four Windows SDK headers: `tools\fetch-sdk-headers.ps1` downloads
+them once (about 153 MB from nuget.org) to `.sdk\`. Alternatively, the environment variable `HDRPILOT_SDK_INCLUDE` points
+to the `um` folder of an installed Windows SDK. Without the headers, the test run skips these tests and `test.ps1`
+reports an error.
 
 ```
 dotnet build HdrPilot.slnx
@@ -894,33 +930,33 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\gates\test.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
-`tools\publish.ps1` legt die fertige Auslieferung unter `artifacts\publish\HDRpilot\` ab und daneben den Setup
-`artifacts\publish\HDRpilot-Setup-1.5.0.exe` (dieselbe EXE mit angehängtem Paket aus README, Lizenztext,
-Lizenzhinweisen und Kommandozeile, siehe E83 in `docs\entscheidungen.md`). Projekte und Namensräume im Quelltext heißen weiter
-`HdrPilot.*`. Begründungen für Designentscheidungen stehen in `docs\entscheidungen.md`, die Prüfnachweise in
-`GATES.md`.
+`tools\publish.ps1` puts the finished release under `artifacts\publish\HDRpilot\` and the setup next to it as
+`artifacts\publish\HDRpilot-Setup-1.6.0.exe` (the same EXE with an appended package of both READMEs, license text,
+third-party notices and command line, see E83 in `docs\entscheidungen.md`). Projects and namespaces in the source code
+are still called `HdrPilot.*`. The reasons behind design decisions are in `docs\entscheidungen.md` and the verification
+records in `GATES.md` (both in German).
 
-## Lizenz
+## License
 
-HDRpilot steht unter der PolyForm Strict License 1.0.0, Copyright Dante_GE. Maßgeblich ist allein der Lizenztext in
-[`LICENSE`](LICENSE), der auch dem Setup und dem Ordner ohne Installation beiliegt; kurz gefasst:
+HDRpilot is licensed under the PolyForm Strict License 1.0.0, Copyright Dante_GE. Only the license text in
+[`LICENSE`](LICENSE) is authoritative; it's also included with the setup and the folder without installation. In
+short:
 
-- Erlaubt ist die Nutzung für nicht-kommerzielle Zwecke, etwa privat, zum Lernen und Ausprobieren, als Hobby oder in
-  gemeinnützigen und öffentlichen Einrichtungen.
-- Nicht erlaubt sind Änderungen und darauf aufbauende Werke, jede Weitergabe (verändert oder unverändert) und die
-  kommerzielle Nutzung.
+- Use for non-commercial purposes is permitted, for example privately, for learning and trying things out, as a hobby
+  or in charitable and public institutions.
+- Not permitted are changes and derivative works, any distribution (modified or unmodified) and commercial use.
 
-Fremdbestandteile behalten ihre eigenen Lizenzen (siehe „Lizenzen von Fremdbestandteilen“). Eine Ausnahme von der
-PolyForm-Lizenz sind auch die Testdaten aus PCGamingWiki (vor allem `tests\HdrPilot.Tests\Fixtures\Pcgw\`): Sie stehen
-wie ihre Quelle unter CC BY-NC-SA 3.0.
+Third-party components keep their own licenses (see “Third-party licenses”). The test data from PCGamingWiki (mainly
+`tests\HdrPilot.Tests\Fixtures\Pcgw\`) is also an exception to the PolyForm license: like its source, it's licensed
+under CC BY-NC-SA 3.0.
 
-Fertige Versionen (Setup-Datei und Ordner ohne Installation) erscheinen unter
+Ready-made releases (setup file and folder without installation) are published on
 [GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
 
-## Lizenzen von Fremdbestandteilen
+## Third-party licenses
 
-HDRpilot enthält die .NET-Laufzeit samt WPF und Windows Forms sowie die Pakete
-`Microsoft.Extensions.Logging.Abstractions` und `Microsoft.Extensions.DependencyInjection.Abstractions`, alle unter
-der MIT-Lizenz. Die HDR-Angaben stammen von PCGamingWiki (pcgamingwiki.com) unter der Lizenz CC BY-NC-SA 3.0; sie
-werden zur Laufzeit abgerufen, nicht mitgeliefert. Die Lizenztexte und die Hinweise zu Fremdcode innerhalb der
-.NET-Laufzeit liegen der Auslieferung als `THIRD-PARTY-NOTICES.txt` bei. Keine Bestandteile stehen unter GPL oder AGPL.
+HDRpilot contains the .NET runtime including WPF and Windows Forms as well as the packages
+`Microsoft.Extensions.Logging.Abstractions` and `Microsoft.Extensions.DependencyInjection.Abstractions`, all under the
+MIT license. The HDR data comes from PCGamingWiki (pcgamingwiki.com) under the CC BY-NC-SA 3.0 license; it's retrieved
+at runtime, not shipped. The license texts and the notices on third-party code within the .NET runtime are included in
+the release as `THIRD-PARTY-NOTICES.txt`. No components are licensed under GPL or AGPL.

@@ -1,6 +1,7 @@
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Ea;
 
@@ -39,7 +40,7 @@ internal static class EaInstallerDataParser
         var root = Load(bytes).Root;
         if (root is null || !Is(root, RootName))
         {
-            throw new InvalidDataException($"Wurzelelement ist nicht <{RootName}>, sondern <{root?.Name.LocalName}>.");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Ea_WrongRoot, RootName, root?.Name.LocalName));
         }
 
         var contentIds = Children(root, "contentIDs")
@@ -92,11 +93,11 @@ internal static class EaInstallerDataParser
         }
         catch (XmlException ex)
         {
-            throw new InvalidDataException("kein gültiges XML: " + ex.Message, ex);
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Xml_Invalid, ex.Message), ex);
         }
         catch (DecoderFallbackException ex)
         {
-            throw new InvalidDataException("Zeichen passen nicht zur angegebenen Kodierung: " + ex.Message, ex);
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Xml_WrongEncoding, ex.Message), ex);
         }
     }
 

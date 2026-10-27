@@ -665,6 +665,7 @@ public sealed partial class ArtworkService : IArtworkService, ISteamGridDbArtwor
     private void ForgetInMemory(string gameKey)
     {
         _states.TryRemove(gameKey, out _);
+        _forgotten.AddOrUpdate(gameKey, 1, (_, n) => n + 1);
         _memory.RemovePrefix(gameKey + "|");
     }
 

@@ -14,7 +14,7 @@ namespace HdrPilot.App.Views.Library;
 /// <summary>
 /// Lasche und Kapsel der Werkzeugleiste in einem Element (Vorschau #pill, Wunsch des Nutzers 2026-10-17). Ausgeklappt eine
 /// Lasche 36×18 mit Pfeil rechts über der Leiste (ihre Unterkante 8 px über der Leiste), die beim Überfahren nach links zu
-/// „Leiste ausblenden · Strg+Umschalt+F“ wächst; eingeklappt eine Kapsel 24 hoch auf der Bildkante mit Suchbegriff, Quelle,
+/// „Leiste ausblenden · Strg+F“ wächst; eingeklappt eine Kapsel 24 hoch auf der Bildkante mit Suchbegriff, Quelle,
 /// aktiven Filtern als Mini-Symbolen und „x/652“. Gefiltert hat sie einen Rahmen in AccentStrong und einen ruhenden Hof.
 /// Breite, Höhe, Lage und Deckkraft setzt das Fenster aus den Kanälen der <see cref="ToolbarChoreography"/>
 /// (<see cref="ApplyMotion"/>); das Element zeichnet nur. Klick, Eingabetaste und Leertaste melden
@@ -69,7 +69,7 @@ public sealed class ToolbarToggle : Grid
         Width = ToolbarChoreography.TabWidth;
         Height = ToolbarChoreography.TabHeight;
 
-        _halo.Background = HaloBrush();
+        _halo.Background = HaloBrush(PalettePresets.Default.Colors.Accent, PalettePresets.Default.Colors.Atmosphere);
         _restHalo.SetResourceReference(Border.BackgroundProperty, ThemeKeys.BrushAccentSoft);
         _arrow.RenderTransform = _turn;
         _arrow.SetResourceReference(Shape.StrokeProperty, ThemeKeys.BrushText);
@@ -79,7 +79,7 @@ public sealed class ToolbarToggle : Grid
         hintText.SetResourceReference(TextBlock.ForegroundProperty, ThemeKeys.BrushText);
         hintText.SetResourceReference(TextBlock.FontFamilyProperty, ThemeKeys.FontText);
         _hint.Children.Add(hintText);
-        _hint.Children.Add(Kbd(LibraryStrings.Key_CtrlShiftF, small: true, new Thickness(7, 0, 0, 0)));
+        _hint.Children.Add(Kbd(LibraryStrings.Key_CtrlF, small: true, new Thickness(7, 0, 0, 0)));
 
         _content.ClipToBounds = false;
         _content.Clip = _clip;
@@ -115,7 +115,7 @@ public sealed class ToolbarToggle : Grid
         set => SetValue(IsFilteredProperty, value);
     }
 
-    /// <summary>Breite der Lasche mit dem Hinweis „Leiste ausblenden · Strg+Umschalt+F“ (beim Überfahren).</summary>
+    /// <summary>Breite der Lasche mit dem Hinweis „Leiste ausblenden · Strg+F“ (beim Überfahren, nach dem gemessenen Inhalt).</summary>
     public double HoverWidth
     {
         get
@@ -322,8 +322,24 @@ public sealed class ToolbarToggle : Grid
         }
     }
 
+    /// <summary>
+    /// Akzentfarben für den Schein der Kapsel (gesetzt vom Fenster): die gezeigten Akzente, also Farbschema oder Spielfarben
+    /// (E94). Sofort, denn der Schein ist nur während des kurzen Aufleuchtens zu sehen.
+    /// </summary>
+    public void SetAccentColors(Color accent, Color atmosphere)
+    {
+        if (_halo.Background is RadialGradientBrush { GradientStops: [var a, var b, _] }
+            && a.Color == Color.FromArgb(0x8C, atmosphere.R, atmosphere.G, atmosphere.B)
+            && b.Color == Color.FromArgb(0x38, accent.R, accent.G, accent.B))
+        {
+            return;
+        }
+
+        _halo.Background = HaloBrush(accent, atmosphere);
+    }
+
     /// <summary>Großer Schein beim Aufleuchten der Kapsel (Vorschau .chalo): Akzentfarben, nach außen auslaufend.</summary>
-    private static RadialGradientBrush HaloBrush()
+    private static RadialGradientBrush HaloBrush(Color accent, Color atmosphere)
     {
         var brush = new RadialGradientBrush
         {
@@ -331,14 +347,17 @@ public sealed class ToolbarToggle : Grid
             RadiusY = 0.7,
             GradientStops =
             {
-                new GradientStop(Color.FromArgb(0x8C, 0xFF, 0x3D, 0x7F), 0),
-                new GradientStop(Color.FromArgb(0x38, 0xFF, 0x8A, 0x3D), 0.55),
-                new GradientStop(Color.FromArgb(0x00, 0xFF, 0x8A, 0x3D), 0.75),
+                new GradientStop(Color.FromArgb(0x8C, atmosphere.R, atmosphere.G, atmosphere.B), 0),
+                new GradientStop(Color.FromArgb(0x38, accent.R, accent.G, accent.B), 0.55),
+                new GradientStop(Color.FromArgb(0x00, accent.R, accent.G, accent.B), 0.75),
             },
         };
         brush.Freeze();
         return brush;
     }
+
+    /// <summary>Farben des Scheins der Kapsel (Tests).</summary>
+    public IReadOnlyList<Color> HaloColors => _halo.Background is GradientBrush g ? [.. g.GradientStops.Select(s => s.Color)] : [];
 
     private void UpdateLook()
     {

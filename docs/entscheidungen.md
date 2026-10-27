@@ -696,7 +696,9 @@ Schalter immer der Hinweis, dass Windows-HDR schon vor dem Spielstart an sein mu
 mit ein). Spiele mit eigenem HDR laut PCGamingWiki (`Native` oder `Limited`, dieselbe Regel wie das Kennzeichen
 „HDR“/„HDR*“) zeigen Titel und Schalter blasser (Deckkraft 0,7, deutlich heller als ein gesperrter Schalter mit 0,4),
 aber voll bedienbar, mit dem Hinweis, besser das HDR des Spiels zu nehmen; Erklärung und Hinweise bleiben voll lesbar.
-Das Schalten selbst ändert in Windows nichts.
+Das Schalten selbst ändert in Windows nichts. Seit 2026-10-22 stehen Erklärung und Hinweise zugeklappt hinter
+„Mehr erfahren“; nur „HDR automatisch ist aus …“ bleibt bei eingeschaltetem Auto HDR stehen (E89, Rückmeldungen vom
+2026-10-22).
 
 Livetest am 2026-10-12 mit dem Nutzer (G9.6, Windows 11 26H2, Build 26300; Werte per WMI außerhalb des Containers
 gesetzt, danach byte-gleich zurückgestellt): Auto HDR wirkt nur, wenn Windows-HDR und der globale Schalter (Token
@@ -807,7 +809,8 @@ solange ein Fenster offen ist. Eigene Bilder („Bild wählen…“) stehen je B
 SteamGridDB (G10.4) ist die einzige Ausnahme von „nur lokal“: standardmäßig aus (`settings.artwork.steamGridDb`), nur mit
 eigenem API-Schlüssel (mit DPAPI verschlüsselt in `steamgriddb-key.dat`, wie das PCGamingWiki-Bot-Passwort), füllt nur
 lokal fehlende Bilder und zeigt den Netzwerkzugriff in den Einstellungen an. Ist es aus oder fehlt der Schlüssel, gibt es
-keinen Netzwerkzugriff dafür; mit `--config-dir` läuft es nie von selbst.
+keinen Netzwerkzugriff dafür (seit E93 regelt der Schalter nur das automatische Füllen; mit gespeichertem Schlüssel
+sucht „Bild wählen…“ auf Klick auch bei ausgeschaltetem Schalter); mit `--config-dir` läuft es nie von selbst.
 
 Bildschirmwerte (G10.7) kommen über DXGI `IDXGIOutput6::GetDesc1` (Spitze, Vollbild, Minimum, Farbtiefe, HDR aktiv),
 gelesen nur nach einem HDR- oder Bildschirmwechsel und nur, solange ein Fenster sie zeigt. Das Maximum jeder Nit-Skala ist
@@ -882,6 +885,29 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   Unschärfe; schon 3 % Durchsicht ließen die Kopfzeile als Geisterschrift durchscheinen); die Polarlichter des Prototyps
   sind nicht umgesetzt. Im Dialog „Bild wählen…“ verschwindet die Liste des vorigen Reiters beim Wechsel sofort, damit
   eine Wahl nie für die falsche Bildart gilt.
+- Bildlaufleiste im Spalt (Wunsch des Nutzers 2026-10-22, Rückmeldung zum Testbuild 1.5.0): Die Pille im Spalt zwischen
+  Liste bzw. Raster und Detailbereich sah wie eine Bildlaufleiste aus, die echte war winzig und blendete sich aus. Jetzt
+  ist die Pille die Bildlaufleiste der aktiven Ansicht (`GapScrollBar`, eine `ScrollBar` über dem Trenner): Länge nach
+  sichtbarem Anteil (sichtbare durch gesamte Höhe, mindestens 36 px wie der frühere Griff), ihre Bahn reicht genau über
+  den sichtbaren Bereich (Liste: die Zeilen unter dem Kopf, Raster: ab der ersten Kachelreihe bis zum unteren Rand), ohne
+  Bildlauf ist sie weg. Die Pille ziehen scrollt pixelgenau, ein Klick über bzw. unter sie blättert eine Seite (weich
+  0,35 s, „Reduziert“ 0,3 s, „Aus“ sofort; folgt ein Klick, zählt die nächste Seite ab dem Ziel; Mausrad, Tasten und ein
+  Klick in die Ansicht beenden das Blättern), das Mausrad im Spalt scrollt die Ansicht. Die eigenen Bildlaufleisten von
+  Liste und Raster sind aus (`VerticalScrollBarVisibility="Hidden"`: Mausrad, Tastatur und das ScrollPattern der Liste
+  bleiben). Das Regal ist unverändert. Der Spalt bleibt der Trenner: Beim Überfahren außerhalb der Pille erscheint die
+  feine Linie (Zeiger mit Doppelpfeil), waagerecht ziehen ändert die Breite (über die Zieh-Ereignisse von
+  `LibrarySplitter`, der wie bisher rechnet, begrenzt, die Hysterese der Werkzeugleiste auslöst und die Aufteilung
+  merkt), Esc bricht ab, Doppelklick setzt zurück. Weil Bahn und Linie dieselbe Fläche sind, entscheidet die Bewegung:
+  Erst ab der Zieh-Schwelle von Windows waagerecht wird gezogen, darunter ist es ein Klick; wer vorher senkrecht über die
+  Schwelle rutscht, blättert nicht. Halten blättert nicht wiederholt (sonst blätterte die Liste, wer die Linie greift und
+  kurz wartet, bevor er zieht), und der zweite Klick eines Doppelklicks nimmt das Blättern des ersten zurück. Die Pille
+  hat Vorrang vor der Linie; ihre Trefferfläche ist 12 px breit in der Mitte des 24-px-Spalts, daneben bleibt die Linie
+  auch auf der Höhe einer langen Pille zu greifen. Tastatur (Pfeiltasten, Tab-Reihenfolge) und UI-Automation der Breite
+  bleiben beim Trenner, der mit Tastaturfokus die Linie in der Fokusfarbe zeigt; die Leiste nimmt nie den Fokus (nach
+  einem Klick also kein Fokusring) und ist für die UI-Automation eine Bildlaufleiste mit Wertebereich („Bildlaufleiste
+  der Spiele“, `LibraryScrollBar`). Beim Ein- und Ausklappen der Werkzeugleiste gleitet die Pille mit dem Inhalt. Prüfung:
+  `test.ps1 -Filter "FullyQualifiedName~GapScrollBar"`; Zustände `liste-spalt` (Linie wie beim Überfahren) und
+  `raster-gescrollt` für Bildschirmfotos.
 - Sichtprüfung (Bildschirmfotos aller Ansichten, hell und dunkel, 1100×680 bis 3440×1440): Der schmale Titelbereich von
   Liste und Raster zeigt wie im Prototyp rechts „Starten“ und „Beim Start …“; wird es eng, weicht erst die Angabe, dann
   der Knopf, danach bricht ein langer Name um bzw. wird das Logo kleiner, und erst unter 300 px fallen Kennzeile und
@@ -976,12 +1002,13 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   geht kein Fokus verloren. Was von der Höhe der Leiste abhängt (größter Titelbereich der Liste, Titelbereich des
   Rasters, Lage des Trenners), nimmt ihre ausgeklappte Höhe.
   Ein- und ausblenden: Lasche 36×18 rechts, ihre Unterkante 8 px über der Leiste (so viel wie zwischen den Knöpfen);
-  beim Überfahren wächst sie zu „Leiste ausblenden · Strg+Umschalt+F“. Eingeklappt sitzt eine Kapsel (24 px hoch) mittig
+  beim Überfahren wächst sie zu „Leiste ausblenden · Strg+Umschalt+F“ (seit 2026-10-22 „· Strg+F“, siehe unten). Eingeklappt sitzt eine Kapsel (24 px hoch) mittig
   auf der Bildkante, rechtsbündig mit der Liste (Liste 10 px, Raster 22 px darunter); sie zeigt „Suchen Strg+F“ (11 px
   zwischen Wort und Tastenkappe) oder die aktiven Filter (Suchbegriff, Quelle, Mini-Symbole, „x/652“, was nicht passt als
   „+2“) mit „Suche und Filter zurücksetzen“ (✕, nur eingeklappt und gefiltert da, sonst auch nicht im Automationsbaum),
   gefiltert dazu die Lichtnaht entlang der Bildkante. Die Leuchtlinie des Ziehgriffs endet 12 px vor Lasche bzw. Kapsel.
-  Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel, Strg+Umschalt+F, Strg+F1, Strg+F (blendet dauerhaft
+  Auslöser: Klick, Eingabe- oder Leertaste auf Lasche bzw. Kapsel, Strg+Umschalt+F (seit 2026-10-22 entfallen, Strg+F
+  schaltet um, siehe unten), Strg+F1, Strg+F (blendet dauerhaft
   ein und sucht) und das Menü der Leiste (Rechtsklick auf freie Fläche, Umschalt+F10 bzw. Menütaste: ein-/ausblenden,
   die drei Filter mit Zahl und Kürzel, alle zurücksetzen). Gemerkt in `settings.libraryToolbarCollapsed` (ohne Eintrag
   ausgeklappt); beim Start ohne Bewegung. Der Titelbereich springt nie: Höhe und Bereich des Griffs rechnen immer mit der
@@ -1038,7 +1065,100 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   (es gibt nichts zu wählen), sondern neutral „Kein Spiel gewählt“; ist nur nichts gewählt, bleibt es bei „Wähle ein
   Spiel“ mit der Erklärung (Prüfung 2026-10-20). Ebenso bei leerer Liste („Noch keine Spiele“, auch wenn alle Spiele
   ausgeblendet sind): dort sagt der Detailbereich „Noch kein Spiel in der Liste“ (Gegenprüfung 2026-10-20).
+- Rückmeldungen des Nutzers nach dem Test von 1.5.0 (2026-10-22), Kopf, Filterknöpfe und Detailbereich:
+  - Titel folgt der Quelle (Entscheidung des Nutzers: nur die Quelle im Titel). Groß steht die gewählte Quelle („Alle
+    Spiele“, „Steam-Spiele“, „GOG-Spiele“, „Epic-Spiele“, „Xbox-Spiele“, „Ubisoft-Spiele“, „EA-Spiele“,
+    „Battle.net-Spiele“, „Quiver-Spiele“, selbst hinzugefügte „Eigene Spiele“), darüber die Kennzeile „SPIELEBIBLIOTHEK“
+    (10 px, Zeilenhöhe 12); die Titelleiste des Fensters bleibt „HDRpilot – Spielebibliothek“. Die Kennzahlen zählen nur
+    die Auswahl: ohne Filter und Suche alle Spiele der Quelle („641 Spiele · 12 mit HDR automatisch · 3 neu“), mit
+    Filtern oder Suche die gezeigten, bezogen auf alle der Quelle („36 von 641 Spielen · 4 mit HDR automatisch · 1 neu“,
+    bei genau einem Spiel „… von 1 Spiel“); ausgeblendete nicht installierte Spiele zählen nie (E90). „neu“ steht nur,
+    wenn es welche gibt, und im schmalen Fenster fallen die Kennzahlen wie bisher weg. Die Zahlen der Filterknöpfe und
+    „Alle als gesehen markieren“ zählen weiter alle Spiele. Kennzeile, Titel und Kennzahlen beginnen auf derselben Kante;
+    der Block ist 55 px hoch und steht mittig im 52 px hohen Kopf (je knapp 2 px darüber hinaus, gemessen 1000×620 bis
+    3440×1440 in allen drei Ansichten, auch mit dem längsten Titel).
+  - Beim Wechsel blendet der Titel über (`CrossfadeText`): Voll 280 ms mit 4 px Weg, Reduziert 150 ms nur Deckkraft, Aus
+    sofort. Die Breite gleitet mit (der Pfeil dahinter wandert, statt zu springen); danach hängt keine Uhr mehr am Element.
+  - Ein Klick auf den Titel (kleiner Pfeil, heller Schleier beim Überfahren und bei offenem Menü, der Pfeil dreht sich)
+    öffnet das Quellenmenü (`MenuButton`, `SourceMenu`): alle Quellen der Bibliothek mit ihrer Zahl in der Reihenfolge
+    des Felds „Quelle“, die gewählte mit Haken, linksbündig 4 px unter dem Titel. Es setzt dieselbe Wahl wie das Feld
+    „Quelle“ (dieselben Einträge, `SelectedSource`), so folgen Leiste, Kapsel, Menü und Titel immer einander. Tastatur:
+    Eingabe-, Leertaste, Alt+Pfeil nach unten oder F4 öffnen (auch Umschalt+F10 und Rechtsklick); mit der Tastatur
+    geöffnet steht der Fokus auf der gewählten Quelle, dann Pfeile, Eingabe und Esc wie in jedem Menü. Für
+    UI-Automation ist der Titel der Knopf `SourceTitleButton` mit Auslösen und Aus-/Einklappen, Name „Quelle:
+    Steam-Spiele“ und Hilfetext; das Menü heißt „Quellen“, seine Einträge „Steam-Spiele (631)“, der gewählte mit Status
+    „gewählt“.
+  - Filterknöpfe „HDR automatisch“, „Neu“ und „HDR-fähig“: Nach einem Mausklick blieb ihr Fokusring stehen, ein
+    ausgeschalteter Filter sah weiter gewählt aus. Der Ring erscheint jetzt nur bei Bedienung mit der Tastatur
+    (`FocusCue`, wie :focus-visible im Browser): wenn der Fokus über die Tastatur kommt (Tab, Pfeile, auch ein Fokus, den
+    das Programm nach einer Taste setzt) oder auf dem Knopf eine Taste gedrückt wird (nur Umschalt, Strg, Alt oder die
+    Windows-Taste zählen nicht); ein Klick nimmt ihn wieder weg. Ist in Windows „Zugriffstasten unterstreichen“ an, zeigt
+    WPF Fokus immer, dann auch hier. Hervorgehoben ist ein Filter nur, solange er an ist. Titelknopf und „Mehr erfahren“
+    folgen derselben Regel; die übrigen Knöpfe bleiben, wie sie sind („Neu einlesen“ und „gesehen“ verlieren den Fokus
+    beim Klick ohnehin, weil sie dabei gesperrt werden).
+  - „Windows Auto HDR“ (E88) im Abschnitt „BILD“: Unter dem Titel stehen nur noch „Wirkt beim Start über HDRpilot“ und
+    „Mehr erfahren“ (`AutoHdrInfoToggle`, `DisclosureToggle`; Klick, Leer- oder Eingabetaste, für UI-Automation
+    Aus-/Einklappen und Umschalten). Aufgeklappt („Weniger“) folgen die Erklärung, „wirkt nur beim Start über HDRpilot“
+    und bei eigenem HDR der Rat, es im Spiel zu nehmen; sie blenden nach der Effektstufe ein. Der Zustand gilt für alle
+    Spiele, solange das Fenster offen ist, wird aber nicht gespeichert: Ein einmal vergessenes Aufklappen brächte sonst
+    dauerhaft genau die Texte zurück, die der Nutzer weghaben wollte, und die Konfiguration bekommt kein neues Feld.
+    Zugeklappt stehen bleibt nur der Hinweis „HDR automatisch ist aus …“, und nur bei eingeschaltetem Auto HDR: Dann
+    liefe die Wahl des Nutzers ohne Windows-HDR still ins Leere (etwa beim Start aus dem Launcher mit Frühwarnung); ohne
+    Auto HDR ist er nur Erklärung. Der Rat bei eigenem HDR ist kein Muss; das Kennzeichen neben dem Titel und die
+    blassere Zeile zeigen es weiter. Die Erklärung bleibt Hilfetext des Schalters.
+  - Prüfung: `test.ps1 -Filter "FullyQualifiedName~HeaderSourceTests|FullyQualifiedName~HeaderDetailsWindowTests|FullyQualifiedName~AutoHdr"`;
+    `phase9-autohdr-ui.ps1` klappt die Erklärungen per UI-Automation auf und zu; Zustände `liste-quelle`,
+    `liste-quelle-gefiltert`, `raster-quelle`, `regal-quelle`, `liste-quellenmenue`, `liste-autohdr` und
+    `liste-autohdr-mehr` für Bildschirmfotos.
+- Strg+F schaltet die Werkzeugleiste um (Wunsch des Nutzers 2026-10-22: „Nutze bitte STRG+F zum Toggeln der Leiste, die
+  3-Tasten-Kombination wird nicht benötigt.“; ändert die Auslöser der Werkzeugleiste oben): Eingeklappt klappt Strg+F sie
+  wie bisher dauerhaft aus und setzt den Cursor in die Suche; ausgeklappt klappt es sie ein wie Lasche und Menü, auch mit
+  dem Fokus in der Suche (der Fokus geht dann auf die Kapsel, Suche und Filter bleiben aktiv und stehen in der Kapsel).
+  Strg+Umschalt+F gibt es nicht mehr; Strg+F1 schaltet weiter still um. Lasche („Leiste ausblenden · Strg+F“, ihre
+  Breite folgt dem gemessenen Inhalt), Tooltip und AcceleratorKey von Lasche bzw. Kapsel, das Menü der Leiste, die
+  Tastenhinweise der Statuszeile und der Hilfetext nennen Strg+F. Das Suchfeld wirbt nicht mehr damit (kein Kürzel im
+  Tooltip, kein AcceleratorKey, keine Tastenkappe im Feld; damit entfällt deren Schwelle bei 204/216 px Suchbreite, rechts
+  bleiben 36 px für „Suche leeren“), denn bei sichtbarer Leiste blendet Strg+F sie aus; „Suchen Strg+F“ in der Kapsel
+  stimmt weiter. Prüfung: `ToolbarWindowTests` (beide Richtungen, Fokus, Strg+Umschalt+F ohne Wirkung, Texte) und
+  `phase10-ui.ps1` (zweimal `--test-toolbar-search`).
+- Menüknöpfe schließen ihr Menü (Wunsch des Nutzers 2026-10-22): „···“ und das große Symbol im Detailbereich sind wie der
+  Titel `MenuButton`. Ein zweiter Klick bei offenem Menü schließt es, statt es (wie vorher durch das Schließen beim
+  Drücken und das Öffnen beim Klick) gleich wieder zu öffnen; ebenso Eingabe- und Leertaste auf dem Knopf oder im Menü,
+  solange darin kein Eintrag gewählt ist (mit gewähltem Eintrag lösen sie den Eintrag aus), und Auslösen per
+  UI-Automation. Esc und ein Klick daneben schließen wie bisher, Aus-/Einklappen meldet den Zustand. Die Menüs von „···“
+  und Symbol stehen jetzt wie das Quellenmenü bündig 4 px unter dem Knopf. Die Felder „Quelle“ und „Sortierung“ der
+  Werkzeugleiste sind Auswahlfelder, die das schon können; Lasche, Kapsel und Leiste öffnen ihr Menü nur per Rechtsklick
+  (wie jedes Kontextmenü). Prüfung: `MenuToggleTests`.
 
+- Rückmeldungen des Nutzers nach dem Test von 1.5.0 (2026-10-22), Titelbereich, Griff, Kacheln und Lasche:
+  - Tiefenwirkung (Punkt 1): Verlässt der Zeiger Titelbild oder Fenster, gleiten Bildebenen und Inhalt (Titel,
+    Kennzeichen, Knöpfe) gemeinsam zurück, 0,8 s mit QuinticEase EaseOut (vorher sprang der Inhalt). Kommt der Zeiger
+    zurück, geht es vom aktuellen Wert weiter; ohne Dauer-Effekte (Stufe, minimiert, im Hintergrund, Spiel läuft) steht
+    alles sofort in der Mitte, auch mitten im Zurückgleiten.
+  - Griff in allen Ansichten (Punkt 5): Der Ziehgriff (`HeroSplitter`, Bedienung wie in der Liste) liegt auch in Raster
+    und Regal mittig auf der Bildkante. Jede Ansicht merkt ihre Höhe getrennt (`settings.libraryHeroRatio`,
+    `libraryGridHeroRatio`, `libraryShelfHeroRatio`; ohne Eintrag der Standard der Ansicht, ältere Konfigurationen gelten
+    unverändert); Zurücksetzen gilt nur für die gezeigte Ansicht. Raster: höchstens so hoch, dass eine ganze Kachelreihe
+    über der Statuszeile bleibt (H − 74 − Leiste − Kachel − Hinweise), mindestens 186 px. Regal: mindestens 447 px (die
+    Leiste bleibt unter der Automatik-Karte, der große Titel behält 108 px), höchstens H − 274 − Hinweise, dann ist die
+    Kachel 200 px; dazwischen tauscht der Titelbereich gegen die Kachelgröße. Solange die Kacheln des Rasters nicht
+    gemessen sind, reicht der Bereich bis zur aktuellen Höhe (ein Durchgang später gilt die Grenze).
+  - Kacheln (Punkt 6): Das Leuchten unter der gewählten Kachel ist eine Ellipse, die ganz in ihrer Fläche ausläuft (14 px
+    neben, 32 px unter der Kachel); Raster und Regal haben unten 32 px Innenabstand dafür (das Regal reicht 10 px unter die
+    Spalten). Kacheln ohne Platz nach oben (erste Reihe des Rasters, nach dem Scrollen die oberste) wachsen beim Überfahren
+    nach unten statt unter die Werkzeugleiste (`VirtualizingTilePanel.RisesOnHover`); im Regal ist oben Platz (die Reihe
+    beginnt an der Unterkante der Leiste mit 29 px Innenabstand, die Kachel 12 px unter der Bildkante).
+  - Lasche mittig auf der Bildkante (Punkt 8, ändert die 10-px-Luft von 2026-10-16): Die Lasche (18 hoch) liegt in Liste,
+    Raster und Regal mit ihrer Mitte auf der Bildkante, auf der auch Griff und (Liste, Raster) die Lichtnaht liegen, in
+    Gerätepixeln höchstens 0,5 px daneben; eingeklappt ebenso die Kapsel in Liste und Raster, das Verwandeln ist dort nur
+    eine Änderung der Größe. Daraus folgt die Luft je Ansicht: Liste 17 px von der Bildkante bis zur Leiste und 17 px bis
+    zum Rahmen der Liste; Raster 17 px über der Leiste und 17 px bis zur ersten Kachelreihe (10 bis zum Raster, 7
+    Innenabstand); Regal: Leiste endet 17 px über der Bildkante, die Lasche 8 px darunter, die Kachel beginnt 12 px unter
+    der Kante. Eingeklappt beginnt der Inhalt weiter 22 px unter der Kante (10 unter der Kapsel). Die Leuchtlinie des
+    Griffs endet 12 px vor der Lasche. Ausnahme Regal: Die Lichtnaht läuft dort weiter durch die Kapsel in der früheren
+    Leistenzeile (abgenommen 2026-10-17), nicht über die Bildkante.
+  - Prüfung: `test.ps1 -Filter "FullyQualifiedName~HeroPerView|FullyQualifiedName~HeroPointer|FullyQualifiedName~TileRoom|FullyQualifiedName~Showcase|FullyQualifiedName~Toolbar"`;
+    Zustände `raster-lasche`, `regal-lasche`, `raster-ueberfahren` und `regal-ueberfahren` für Bildschirmfotos.
 **E90 Nicht installierte Spiele: Einstellungen entfernen und ausblenden (Wunsch des Nutzers 2026-10-18, Entscheidungen
 2026-10-19, G11):** Launcher-Spiele, die ein Einlesen nicht mehr findet, bleiben wie bisher mit „Nicht installiert“ und
 allen Einstellungen in der Bibliothek, und „HDR automatisch“ und Windows Auto HDR wirken für sie weiter (E38). Neu lässt
@@ -1275,3 +1395,292 @@ Repository `DanteGE/HDRpilot`, als Version 1.5.0.
   per Regel) und mit `publish-check.ps1 -History` geprüft (G13.5): jede Blob-Version, jeder Pfadname, jede Nachricht
   sowie Autor und Committer jedes Commits (nur Dante_GE mit der Noreply-Adresse, als Committer auch GitHub selbst),
   mit eigener Positivkontrolle an einem Wegwerf-Repository.
+
+**E93 SteamGridDB-Suche in „Bild wählen…“ (Wunsch des Nutzers 2026-10-22, G14):** Im Dialog „Bild wählen…“ steht je
+Reiter (Titelbild, Logo, Cover) unter den lokalen Bildern („AUF DIESEM PC“) der Abschnitt „STEAMGRIDDB“ mit dem
+zugeordneten Spiel („Spiel: <Name> ▾“) und **Bei SteamGridDB suchen**.
+- Nur auf Klick: Öffnen, Reiterwechsel, Aufklappen der Spielwahl und Tippen fragen nichts ab. Online gehen nur
+  **Bei SteamGridDB suchen** (bei einer gemerkten Zuordnung dazu einmal Name und Jahr des Spiels), **Mehr laden**,
+  **Erneut versuchen**, die Suche der Spielwahl (Enter oder **Suchen**), die Wahl eines Treffers und **Übernehmen**
+  mit einem Bild von SteamGridDB. Jeder Reiter sucht erst nach seinem eigenen Klick. Auch während ein Spiel läuft, ist
+  die Suche erlaubt (ausdrücklicher Klick, klein und begrenzt).
+- Schlüssel statt Schalter (ändert E89 und G10.4): Ohne Schlüssel gibt es weiterhin keinen Netzwerkzugriff; der
+  Abschnitt zeigt dann einen Hinweis und **Zu den Einstellungen** (schließt den Dialog ohne Änderungen, öffnet
+  Darstellung › Bilder mit dem Fokus im Schlüsselfeld). Mit gespeichertem Schlüssel sucht der Dialog auch bei
+  ausgeschaltetem Schalter. Der Schalter **Fehlende Bilder automatisch laden** regelt nur das automatische Füllen und
+  steht in einer eigenen Zeile unter Schlüsselfeld, **Prüfen** und Statuszeile. Schlüsselfeld und **Prüfen** sind
+  immer bedienbar; „Prüfen“ bei ausgeschaltetem Schalter speichert nur.
+- Zuordnung: Steam-Spiele über ihre App-ID (kennt SteamGridDB sie nicht, einmal über den Namen), andere über die
+  gemerkte SteamGridDB-ID oder die Namenssuche. Ein Treffer mit gleichem Namen zählt; heißen mehrere so, der erste mit
+  dem Hinweis „Mehrere Spiele heißen so“. Sonst wählt der Nutzer aus bis zu 20 Treffern mit Jahr. Eine geänderte
+  Zuordnung gilt für alle Reiter; eine Wahl von SteamGridDB in den anderen Reitern gilt dann nicht mehr. Bei Spielen
+  ohne Steam-App-ID merkt HDRpilot sie mit **Übernehmen**, auch ohne geändertes Bild, nie nach **Abbrechen** oder einem
+  Fehler. Bisher automatisch geladene Bilder und Fehlanzeigen dieses Spiels gelten dann nicht mehr; ist das
+  automatische Laden an, füllt ein Lauf sie neu. Bei Steam-Spielen merkt HDRpilot nichts (die App-ID bleibt
+  maßgeblich). Ein Verzeichnis anderer Version beginnt leer und vergisst damit auch die gemerkte Zuordnung.
+- Ergebnisse: nur unbewegte Bilder ohne NSFW-, Humor- oder Epilepsie-Markierung, Cover im Hochformat (600×900,
+  342×482, 660×930; gespeichert auf 600×900 zugeschnitten, die Vorschau zeigt diesen Zuschnitt). Je Seite 24
+  Vorschauen mit „von <Autor>“, **Mehr laden** zeigt die nächsten 24 (abgefragt wird die Standardseite von 50; die
+  Liste endet mit einer leeren Seite), höchstens 240 je Reiter. Ohne Vorschau-Adresse zeigt die Kachel „Keine
+  Vorschau“; das volle Bild lädt nie vorher. Avatar und Steam-Kennung der Autoren liest HDRpilot nicht.
+- Kacheln: Lokale und Online-Kacheln haben je Bildart dieselbe Form und füllen die Breite genau (Cover 6 je Reihe im
+  Hochformat 2:3, Titelbild 4 je Reihe, Logo 4 je Reihe ganz auf einem Schachbrett, nie beschnitten).
+- Grenzen: Anfragen an die Schnittstelle haben mindestens 1 s Abstand vom Ende der vorigen, gemeinsam mit dem
+  automatischen Füllen und „Prüfen“ (es läuft immer nur eine). Vorschauen kommen ohne Abstand, höchstens 3
+  gleichzeitig. Je geöffnetem Dialog gelten höchstens 40 Anfragen, 800 Bildabrufe mit zusammen 128 MB und 6 volle
+  Bilder; dekodierte Vorschauen belegen höchstens 96 MB (zuerst geben verborgene Reiter ihre frei). Nach HTTP 429 folgt
+  eine Minute Pause, ohne automatische Wiederholung. Zeitgrenzen: 15 s bis zur Antwort, 15 s ohne Daten, insgesamt
+  30 s (90 s für ein volles Bild). Vorschauen sind höchstens 4 MB groß und kommen nur von https-Adressen unter
+  steamgriddb.com, ohne Weiterleitungen und ohne Schlüssel. HTTP 401/403 eines Bildes gilt nicht als abgelehnter
+  Schlüssel (auch beim automatischen Füllen). Vorschauen liegen nur im Speicher und werden beim Schließen freigegeben.
+- Übernehmen: Das volle Bild (höchstens 32 MB und 100 Megapixel) lädt HDRpilot erst beim **Übernehmen**, noch im
+  Dialog. Scheitert es, bleibt der Dialog im betroffenen Reiter mit einer Meldung offen; **Abbrechen** bricht ab.
+  Gespeichert wird es wie eine eigene Datei (`custom:`, `art\custom\`); es gilt unabhängig vom Schalter, und
+  **Zurücksetzen** wirkt wie bei eigenen Dateien. Die Herkunft wird nicht gespeichert; eigene Bilder heißen deshalb
+  „Eigenes Bild“.
+- Fenster: nie höher als die Arbeitsfläche des Bildschirms, auf dem die Bibliothek steht. Solange es offen ist, wächst
+  es nur (zur Mitte hin) und schrumpft nicht; nur die Mitte scrollt. Hoher Kontrast nutzt die Systemfarben.
+- Der Schlüssel geht nur an `www.steamgriddb.com`, nie ins Protokoll, in Meldungen oder an Bildschirmleser. Autoren,
+  Suchbegriffe und Spielnamen von SteamGridDB landen nicht im Protokoll; die Kennung beim Abruf bleibt wie in E92. Die
+  Einstellungen zeigen den letzten Netzwerkzugriff, Lauf oder Suche, mit der Zahl der Anfragen; ausgeschaltet mit
+  Schlüssel steht dort „Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick“.
+- Prüfläufe: `HDRPILOT_TEST_STEAMGRIDDB=fixture` wirkt nur mit `--config-dir` und ersetzt nur die Übertragung durch
+  erzeugte Antworten (erzeugte Bilder, erfundene Autoren, kein Netz). Bildschirmfotos nutzen dieselben Daten. Neues
+  Gate `phase14-sgdb-ui.ps1`.
+- Nebenbei behoben: ein Steam-Spiel mit leerer App-ID sucht beim automatischen Füllen über den Namen statt abzubrechen;
+  der Abstand der Anfragen vergibt die Reihe exklusiv (vorher konnten ein Lauf und „Prüfen“ gleichzeitig senden);
+  Antworten werden begrenzt und abbrechbar gelesen; die Prüfmeldung der Einstellungen bleibt nicht mehr stehen;
+  Vorschauen im Dialog werden nicht mehr beschnitten; die Fläche hinter Logos ist ein Farbwert des Themas
+  (`Hp.Brush.Plate`) statt einer festen Farbe; das Bildschirmfoto „hauptfenster-bildwahl“ gibt seinen Dialog frei.
+- Abweichungen bei der Umsetzung (2026-10-26, nachgeprüft 2026-10-27): Die Sitzung eines Dialogs entsteht wie geplant
+  erst mit dem ersten Klick, der ins Netz geht (Suchen, Suche der Spielwahl, Wahl eines Treffers); erst dann wird der
+  Schlüssel entschlüsselt, Öffnen und Schließen ohne Klick protokollieren nichts, und Verbindung und Handler entstehen
+  erst mit der ersten Anfrage (getestet). Davor zeigt die Spielwahl die Zuordnung ohne Netz (Steam-App-ID oder gemerkte
+  ID) und lässt sich aufklappen. Ohne oder mit unlesbarem Schlüssel bleibt die Überschrift „STEAMGRIDDB“ stehen, nur
+  die Spielwahl fehlt. Eine Wahl von SteamGridDB ohne geladene Daten wird nie geschrieben (auch nicht als
+  „Automatisch“); wird der Schlüssel entfernt, während der Dialog offen ist, fallen solche Wahlen mit einem Hinweis auf
+  die Standardwahl ihres Reiters zurück, sodass „Übernehmen“ nie still nichts tut. Eine Seite, deren Einträge alle
+  verworfen wurden, beendet die Liste nicht: Ein Klick holt dann bis zu drei weitere Seiten. „Warteschlange angehalten“ heißt: offene Vorschau-Abrufe werden abgebrochen und nach dem
+  Fehler wieder eingereiht. Die schmale Bildlaufleiste des Dialogs ist ein eigener Stil (`Lib.DialogScrollBar`), weil
+  es keinen wiederverwendbaren gab (`GapScrollBar` gehört zum Spalt der Bibliothek). Der Testdaten-Lieferant nennt für
+  `games/id` den zuletzt gesuchten Namen (sonst „Testspiel“). Die App-Tests sehen interne Prüfpunkte über
+  `InternalsVisibleTo` (Platzierung, Kontrast, Vorschau-Threads, Übernehmen mit Ergebnis).
+
+**E94 Farben folgen dem Spiel (Wunsch des Nutzers 2026-10-22, G15):** Neuer Schalter „Farben folgen dem Spiel“ (Standard aus,
+`colorsFollowGame`) neben „Hintergrund folgt dem Spiel“; beide wirken unabhängig. Ist er an, nehmen alle Akzente der Bibliothek,
+die sonst das Farbschema färbt, die Farben des gewählten Spiels an: Titelbereich, Starten- und HDR-Knopf samt Leuchten,
+Detailbereich, Auswahl in Liste, Raster und Regal, Werkzeugleiste samt Lichtnaht, Streif und Schein der Lasche, Schalter,
+Fokusrahmen, Kennzeichen, Zähler der Filter, Fensterkante und Partikel im HDR-Moment; ebenso Quellenmenü, Bildlaufleiste im
+Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
+- **Herkunft:** Der Akzent kommt aus dem Logo (Markenfarbe), wenn es farbig genug ist: mindestens ein Zehntel seiner Fläche
+  ist farbig, oder sein Farbton passt zu Cover bzw. Titelbild, oder diese sind grau. Sonst kommt er aus dem Cover, sonst aus
+  dem Titelbild. Atmosphäre und Glanz kommen aus Zweitfarben von Logo, Cover und Titelbild, sonst abgeleitet wie bei den
+  Vorlagen: ±40°, mindestens 30° Abstand, keine graue Mitte im Verlauf, im Tritonus auch nicht zwischen Akzent und Glanz.
+  Duoton/Tritonus des Nutzers gilt weiter. Sind beide Schalter an, wird die Zweitfarbe bevorzugt, die zum Leuchten des
+  Titelbilds passt.
+- **Was nie zählt:** dunkle oder graue Konturen und Schatten, Hauttöne auf Cover und Titelbild, kleine Punkte, erzeugte Bilder
+  und Farben aus dem Namen. Eine farbige Kontur um weiße Schrift kann dagegen die Markenfarbe sein.
+- **Graue Bilder:** Fast graue Bilder ergeben keine Spielfarbe; dann gilt genau das Farbschema. Es wird nicht gemischt, weil
+  Mischungen weit entfernter Farbtöne grau-braune Knöpfe ergeben.
+- **Auslesen:** nur bei eingeschaltetem Schalter (und für das Vorschauspiel der Seite „Darstellung“), einmal je Spiel und
+  Bildstand. Gelesen werden kleine Fassungen von Logo, Cover und Titelbild, auf dem Bilder-Thread mit niedriger Priorität;
+  das Verfahren arbeitet in OKLab mit fester Rasterung und ist deterministisch. Gespeichert wird das Ergebnis als `colors` in
+  `art\index.json` mit eigener Fassung; ändert sich ein Bild, wird neu gelesen. Bei ausgeschaltetem Schalter kostet die
+  Funktion nichts.
+- **Kontrast:** Die Farben werden in feste Wertebereiche gebracht: Helligkeit je Farbton und Mindest-Buntheit; dunkle
+  Markenfarben werden heller und kräftiger, nicht blass. Danach laufen sie durch dieselbe Kontrastrechnung wie die Vorlagen:
+  Text auf Akzent und Akzenttext mindestens 4,5:1, Bedienelemente mindestens 3:1, hell und dunkel, gegen die Flächen des
+  Schemas und gegen den hellsten bzw. dunkelsten möglichen Grundton der Bibliothek. Bei automatischer Textfarbe steht auf
+  Akzentflächen immer die dunkle Schrift. Gelb und Gold werden im hellen Thema für Text und Ränder zu Bernstein abgedunkelt
+  statt zu Oliv.
+- **Geltungsbereich:** Nur das Bibliotheksfenster folgt. Die Einstellungen (außer der Live-Vorschau), das Tray-Menü, die
+  Dialoge sowie Tray- und Fenstersymbol behalten das Farbschema. Bei hohem Kontrast gibt es keine Spielfarben.
+- **Umschalten:** Eine eigene Farbebene im Fenster mit bleibenden Pinseln wird einmalig überblendet, im OKLCH-Farbraum und vom
+  gerade gezeigten Farbton aus, damit keine graue Mitte entsteht: bei „Voll“ 0,9 s wie der Titelbereich, bei „Reduziert“
+  0,3 s, bei „Aus“ sofort. Ist das Fenster versteckt oder minimiert, läuft ein Spiel mit Pause oder wechselt das Thema, geht es
+  sofort. Leuchten, Punkte und Kennzeichen mit Rohfarben wechseln zu Beginn der Überblendung. Die Farben kommen zusammen mit
+  den Bildern des Spiels. Die Wörterbücher werden nicht je Spiel ausgetauscht.
+- **Schnelle Auswahl:** Wechselt die Auswahl schneller als alle 300 ms oder ist die Pfeiltaste gehalten, bleiben die Farben
+  stehen und folgen 300 ms nach dem letzten Wechsel. Das gilt für Tastatur und Maus gleich (Entscheidung des Nutzers
+  2026-10-27: auch schnelle Mausklicks halten die Farben).
+- **Leerlauf:** Im Leerlauf läuft nichts.
+- **Hintergrund:** Ist „Hintergrund folgt dem Spiel“ aus, bleibt der Hintergrund für alle Spiele gleich: ein ruhiger Grund im
+  Farbton des Schemas mit stark gesenkter Buntheit, damit keine Schemafarben neben den Spielfarben leuchten. Sind beide an,
+  mischen sich graue Titelbilder im Hintergrund mit den gezeigten Spielfarben.
+- **Bekannte Grenze:** Der weiße Knopf der Schalter erreicht auf hellen Akzenten weniger als 3:1, wie bei hellen Vorlagen; der
+  Zustand ist zusätzlich an der Lage des Knopfs zu sehen. Wer für ein Spiel andere Farben möchte, wählt ein anderes Logo oder
+  Cover („Bild wählen…“).
+- **Umsetzung (2026-10-26), wo sie vom Entwurf abweicht:** Der Randanteil einer Farbe im Logo ist der größere von „Anteil am
+  ganzen Rand“ und „Anteil der eigenen Fläche am Rand“, damit dicke Konturen, dünne Konturen und Kanten (Extrusion) gleich
+  als Rahmen gelten; eine Füllung gewinnt gegen ihre Kontur nur, wenn sie selbst kräftig ist (Chroma mindestens 0,07), sonst
+  würden Mischpixel am Rand weißer Schrift die Kontur verdrängen. Die abgeleitete Atmosphäre rückt bei grauer Mitte nur bis
+  32° heran (wie das Drehen der Kandidaten), damit nach dem Einpassen sicher 30° bleiben. Einpassen und Ableiten liegen ohne
+  WPF in `HdrPilot.Core` (`ColorScience`, `GameColorAnalysis`, `GameColorMapping`) und laufen so auch unter Linux in den
+  Tests. Kontextmenüs und Tooltips des Bibliotheksfensters bekommen die Farbebene beim Öffnen vorsorglich in ihre Ressourcen.
+  Ein Gelb, das mehr als 150° vom Akzent entfernt liegt (etwa im bunten Logo neben Blau), wird nie Glanz; dann gilt der Bogen
+  hinter der Atmosphäre.
+- **Nachbesserung nach der Durchsicht (2026-10-26):** Ein Lesefehler ergibt „unbekannt“, nicht „grau“: Die gezeigten Farben
+  bleiben (wie beim Laden), nichts wird gemerkt, bei der nächsten Auswahl wird neu gelesen. Eine kaputte, fremde oder zu große
+  Bilddatei fehlt als Quelle, das Ergebnis gilt aber für diesen Bildstand und wird nicht bei jeder Auswahl neu dekodiert; nur
+  vorübergehende Fehler (gesperrt, kein Zugriff, halb geschrieben) werden nicht gemerkt. Eine Anfrage nach neuen Bildern hängt
+  sich nie an eine laufende Rechnung für die alten. Gelesen wird erst, wenn die Entprellung ein Spiel anwendet; bei gehaltener
+  Taste übersprungene Spiele werden nie gelesen. Bei ausgeschaltetem Schalter kostet eine Auswahl nichts: keine Rechnung und
+  kein Zeitgeber; die Pinsel im Code werden nur beruhigt, solange sie überblenden (neues Schema). Der Ring der gewählten
+  Kachel zeichnet mit dem lebenden Pinsel der Farbebene, ohne ihn einzufrieren. Die Farbprobe der Seite „Darstellung“ wird
+  je Eingabe gemerkt, die Grenzen des Grundtons entstehen auf einem Hintergrund-Thread. Die Entprellung
+  (`GameAccentScheduler`) liegt ohne WPF in `HdrPilot.Core`.
+- **Widerspruch im Entwurf:** Die Bildtabelle des Entwurfs erwartet für „bunt-tri“ (buntes Logo: blauer Akzent, dazu Gelb)
+  einen gelben Glanz. Das Gelb liegt aber 161° vom Akzent entfernt, und die Grenze von 150° zwischen Akzent und Glanz (Auswahl,
+  Bogen, Durchsicht D12) hat Vorrang vor der Tabelle; der Glanz kommt dort deshalb vom Bogen hinter der Atmosphäre. Die
+  Grenze bleibt (Entscheidung des Nutzers 2026-10-27): Ein blaues Logo bekommt keinen gelben Glanz.
+
+**E95 Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, G16):** „Bitte eine komplette englische
+Übersetzung der App, mit Sprachwahl in den Einstellungen und automatischer Erkennung der Systemsprache bei der
+Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = Englisch).“ Umgesetzt auf
+`feature/english`; die Vorgaben der Sitzungsleitung (Punkte 1 bis 9) stehen unten mit ihrer Umsetzung.
+- Ressourcen: Neutral bleibt Deutsch (`NeutralLanguage` de). Zu jeder resx gibt es eine `.en.resx`: App
+  (`ArtworkStrings`, `CommonStrings`, `LibraryStrings`, `SetupStrings`, `ShellStrings`), Kern (`CoreStrings`, neu
+  `ScanStrings` für die Meldungen der Scanner) und Kommandozeile (neu `CliStrings` samt Hilfe). Die Texte stehen in den
+  Satellitenassemblies `en` (`SatelliteResourceLanguages` de;en, auch im Single-File-Paket); die englischen resx erzeugen
+  keine eigene Klasse. Platzhalter sind gleich ({0}, {1} …), Formatangaben dürfen abweichen: Uhrzeit `{0:t}` statt
+  `{0:HH:mm}`, Datum `{0:MMM d, yyyy}` statt `{0:d. MMM yyyy}`. Englische Daten stehen damit immer als Monat, Tag, Jahr
+  (wie en-US), auch mit britischem Regionsformat (en-GB, dort sonst Tag vor Monat): .NET kennt kein kulturabhängiges
+  Kurzformat mit abgekürztem Monat, `{0:D}` trüge in en-US den Wochentag, und eine eigene Vorlage je Region lohnt für
+  diese eine Datumsangabe nicht (Abwägung; die Uhrzeit `{0:t}` folgt weiter der Region). Wo im Englischen eine
+  Mehrzahl mit „1“ falsch wäre und es keine Einzahl-Variante gibt, ist der Satz umgestellt („Patterns: 12“, „requests:
+  3 · images added: 2“); neu sind `LibraryCardSummaryOne` („1 Spiel · …“, behebt auch das deutsche „1 Spiele“) und „0
+  von 1 Spiel“ in der Liste.
+- Einstellung `AppSettings.Language` (Feld `language`, Text "de" oder "en", wie `librarySortOrder` kein Enum):
+  - Gibt es noch keine `config.json` (Erstinstallation, erster Start einer Kopie ohne Installation, erste Benutzung der
+    Kommandozeile), bekommt die neue Konfiguration die Anzeigesprache von Windows: Deutsch, wenn ihre Sprache Deutsch ist
+    (de, de-DE, de-AT, de-CH …), sonst Englisch; der Wert wird gleich gespeichert. Gemeint ist die Anzeigesprache des
+    Benutzers (`CultureInfo.CurrentUICulture` beim Start, `GetUserDefaultUILanguage`), nicht die bei der Installation von
+    Windows (`InstalledUICulture`): Wer ein deutsches Windows auf Englisch umgestellt hat, will Englisch.
+  - Eine vorhandene Konfiguration ohne `language` (Aktualisierung von 1.5.x und älter) gilt als Deutsch: Bisherige Nutzer
+    werden nicht umgestellt. Ein unbekannter Wert (etwa aus einer neueren Version) gilt ebenso als Deutsch. In beiden
+    Fällen bleibt die Datei unverändert: Laden schreibt nichts, Speichern anderer Einstellungen fügt kein Feld hinzu und
+    lässt einen unbekannten Wert stehen. Eine unlesbare oder defekte Datei gilt als vorhanden (Deutsch).
+  - Der Setup legt nie eine Konfiguration an (unverändert: „Einstellungen fasst der Setup nie an“, E83); die Erkennung
+    geschieht beim ersten Start von HDRpilot. Der Setup selbst und das Entfernen sprechen die Anzeigesprache von Windows
+    nach derselben Regel, lesen dafür aber nie die Einstellungen; nur ein Prüflauf (`--test-root`) kann sie mit
+    `--ui-language de|en` festlegen (auch für die Kopie zum Entfernen).
+- Anwenden beim Start (`UiLanguage.Apply`): vor dem ersten Fenster und der ersten Ressource, in der App gleich nach der
+  Steam-Startoption und vor Einzelinstanz, Bildschirmfotos und Prüfmodi (auch die Meldung „läuft bereits, reagiert aber
+  nicht“ eines zweiten Starts ist so schon in der richtigen Sprache), im Setup vor dem Fenster, in der Kommandozeile in
+  `Program.cs`. Die Sprache liest `UiLanguage.ForStartup` nur aus `settings.language` der `config.json`, ohne die Datei
+  zu laden. Gesetzt werden `CultureInfo.DefaultThreadCurrentUICulture`/`DefaultThreadCurrentCulture` und die Kulturen
+  des aktuellen Threads: Texte de-DE bzw. en-US. Formate (Datum, Uhrzeit, Zahlen): die Regionseinstellungen von
+  Windows samt eigener Anpassungen, wenn deren Sprache zur Oberfläche passt (de-AT bzw. de-CH zu Deutsch, en-GB zu
+  Englisch); sonst de-DE bzw. en-US, damit ein englischer Satz kein deutsches Datum trägt und umgekehrt (Abwägung:
+  Wer Englisch mit deutschem Regionsformat nutzt, sieht en-US-Formate; dafür bleiben Satz und Format immer stimmig).
+  XAML formatiert nichts selbst (keine `StringFormat` mit Zahlen oder Datum), alle Formate entstehen im Code mit
+  `CurrentCulture`; die Sprache der WPF-Elemente (`FrameworkElement.Language`) bleibt deshalb unverändert.
+- Einstellungen: Auswahl „Sprache · Language“ in „Allgemein“ › „Start und Hinweise“ (Kennung `LanguageChoice`, ComboBox
+  wie die Protokollstufe, Tastatur und Bedienungshilfen wie dort, keine eigenen Farben). Die Einträge heißen in jeder
+  Sprache „Deutsch“ und „English“; die Beschriftung ist zweisprachig, damit sie auch findet, wer die angezeigte Sprache
+  nicht liest. Die Wahl gilt wie die übrigen allgemeinen Einstellungen mit „Speichern“ (Abbrechen verwirft sie) und wird
+  nur geschrieben, wenn sie geändert wurde. Weil die Texte beim Erzeugen der Fenster per `x:Static` feststehen, wirkt sie
+  erst nach einem Neustart: Weicht die Wahl von der angezeigten Sprache ab, erscheinen darunter ein Hinweis und „Jetzt
+  neu starten“ (`LanguageRestartButton`). Der Knopf speichert alle Einstellungen wie „Speichern“ (scheitert das, bleibt
+  alles, wie es ist), startet `HDRpilot.exe --restarted --settings` (mit derselben Ablage und Auto-HDR-Testwurzel) und
+  beendet die laufende Instanz wie „HDRpilot beenden“. Die neue Instanz versucht bis zu 30 s lang alle 100 ms, die
+  Einzelinstanz zu bekommen; die alte gibt sie (wie Tray-Symbol und Nachrichtenfenster) erst beim Beenden frei. So
+  wartet sie ohne ein Handle auf die alte Instanz (die Anti-Cheat-Regeln verbieten `Process.GetProcessById` und
+  `WaitForExit`, E65–E67). Bekommt sie die Einzelinstanz nicht, verhält sie sich wie ein zweiter Start. Scheitert der
+  Start der neuen Instanz, läuft die alte weiter und meldet das im Fuß der Einstellungen. Solange eine Sitzung besteht
+  (ein Spiel läuft oder wird vorbereitet), ist „Jetzt neu starten“ gesperrt, und ein Hinweis darunter sagt, dass der
+  Neustart nach dem Spiel geht und „Speichern“ die Sprache schon übernimmt: Ein Neustart mitten in der Sitzung überließe
+  das Zurückstellen von HDR den gemerkten Zuständen der neuen Instanz. Die Sperre folgt den Sitzungen
+  (`HdrStateChanged`, das auch bei Beginn und Ende einer Sitzung kommt).
+- Texte aus dem Code: Was Code zusammensetzt und in Oberfläche, Hinweisen, Setup oder Kommandozeile erscheint, kommt
+  jetzt aus den resx: die Meldungen aller Scanner und ihrer Leser (Bibliothek „Beim letzten Einlesen …“, `hdrpilot
+  scan`), die Gründe von „Spiel hinzufügen“ (`ManualGames`), „Konfiguration ließ sich nicht speichern“, alle Ausgaben
+  und die Hilfe der Kommandozeile. Zwei Stellen hingen am deutschen Wortlaut und sind jetzt Kennzeichen: Der Absturz
+  eines Scanners (`ScanError.ScannerCrashed`, sonst hätte das Einlesen auf Englisch die Spiele dieser Quelle als nicht
+  installiert markiert) und ein mehrdeutiger Bildschirm in `hdrpilot hdr --display` (sonst Exit-Code 3 statt 2).
+  Einzahl und Mehrzahl, „vor N Tagen“ und die Zahlen im Kopf (`LibraryText`, `RelativeTime`) waren schon Vorlagen mit
+  Einzahl-Varianten und funktionieren auf Englisch unverändert.
+- Ausnahmetexte von HDRpilot, die über ein „{0}“ in die Oberfläche gelangen („Das Symbol konnte nicht gespeichert
+  werden: {0}“, „Unerwarteter Fehler: {0}“ der Kommandozeile, die technische Angabe eines unerwarteten Setup-Fehlers),
+  kommen ebenfalls aus den resx: kein Ordner für eigene Symbole (`LibraryStrings.Icon_NoFolder`), Datei ohne lesbares
+  Bild (`Icon_Unreadable`), Spiel nicht in der Konfiguration (`CoreStrings.GameNotInConfig`, `UpdateGame`), der Schritt
+  „Dateien kopieren (…)“ des Setups (`SetupStrings.SetupDetailCopyFiles`) und die nicht gestartete Kopie zum Entfernen
+  (`UninstallCopyNotStarted`). Ausnahmen, deren Text hinter einer übersetzten Fehlerart verschwindet und nur im
+  Protokoll steht (etwa die abweichende Prüfsumme der abgelegten EXE: „Setup-Datei beschädigt“, oder „HDRpilot lief nach
+  N s noch“), bleiben deutsch. Andere Einzelheiten einer Ausnahme, die Windows oder .NET selbst liefern (etwa „Zugriff
+  verweigert“ oder „Der Datenträger ist voll“ hinter einer übersetzten Meldung), erscheinen in der Sprache von Windows,
+  nicht in der von HDRpilot; dafür gibt es keine Übersetzung.
+- Protokoll: Was HDRpilot selbst ins Protokoll schreibt (ILogger-Meldungen, das Setup-Protokoll, technische Angaben, die
+  nur dort stehen, etwa die Gründe der Quiver-Startwahl, Meldungen von PCGamingWiki und SteamGridDB, deren Oberfläche über
+  Fehlerarten übersetzt ist), bleibt deutsch. Texte aus den resx, die zugleich in der Oberfläche erscheinen und ins
+  Protokoll übernommen werden, stehen dort aber in der Sprache der Oberfläche: die Fehler der Scanner („Scanner {0}:
+  …“), die Ergebnisse und Gründe der Sitzungen (Schalten gescheitert, Start nicht möglich, Hinweise) und die technische
+  Angabe eines Setup-Fehlers. Ein englisches Protokoll ist deshalb gemischt; die festen Sätze drumherum bleiben deutsch.
+  Setup-Fehler zeigen wie bisher die übersetzte Art; die technische Angabe eines unerwarteten Fehlers ist die Meldung
+  der Ausnahme.
+- Glossar (verbindlich für weitere Texte):
+
+  | Deutsch | Englisch |
+  |---|---|
+  | HDR automatisch (Schalter je Spiel von HDRpilot) | HDR on launch (nie „Auto HDR“) |
+  | Windows Auto HDR / Auto HDR (Schalter von Windows) | Windows Auto HDR / Auto HDR |
+  | Automatik | automation |
+  | Nach dem Spiel zurückstellen / zurückstellen | Restore after game / restore |
+  | Spielebibliothek, Bibliothek, Spieleliste | game library, library, game list |
+  | Titelbild, Logo, Cover, Symbol | hero image, logo, cover, icon |
+  | Liste, Raster, Regal | List, Grid, Shelf |
+  | Werkzeugleiste, Leiste | toolbar |
+  | Quelle, Eigene Spiele, Manuell | source, My games, Manual |
+  | Neu einlesen, Einlesen | Rescan, scan |
+  | Infobereich, Tray | notification area, tray (nur in „Icons and tray“, „tray icon“) |
+  | Hinweise | notifications |
+  | Bildschirm, Hauptbildschirm | display, primary display |
+  | Spitze, Vollbild, Minimum | peak, full frame, minimum |
+  | Abfrageintervall, Nachlaufzeit, Neustart-Puffer, Startfrist | polling interval, grace period, restart buffer, launch timeout |
+  | Suchordner, Hilfsprozesse | search folders, helper processes |
+  | Steam-Startoption, Verknüpfung | Steam launch option, shortcut |
+  | Starten, Mit HDR starten | Launch, Launch with HDR |
+  | Darstellung, Thema, Effekte (Voll, Reduziert, Aus) | Appearance, Theme, Effects (Full, Reduced, Off) |
+  | Farbschema, Akzent, Atmosphäre, Glanz, Duoton, Tritonus | color scheme, accent, atmosphere, shine, Duotone, Tritone |
+  | Vorlagen Abendrot, Neongrün, Gletscher, Glut, Polarlicht | Sunset, Neon green, Glacier, Ember, Aurora (Cyber, Royal, Synthwave bleiben) |
+  | Bild wählen…, Eigene Datei…, eigenes Symbol, eigene Bilder, erzeugt, Monogramm | Choose image…, Custom file…, custom icon, custom images, generated, monogram |
+  | Eigener Bildschirm (je Spiel) | game-specific display |
+  | Kapsel (Steam-Bild „capsule“), verschmierte Kapsel | capsule (nur in Bildquellen; die Kapsel der Werkzeugleiste hat keinen sichtbaren Namen), blurred capsule |
+  | Einstellungen entfernen…, nicht installiert, NEU | Remove settings…, not installed, NEW |
+  | HDR-fähig, HDR-Liste, natives HDR, kein eigenes HDR, HDR teilweise, HDR per Mod | HDR-capable, HDR list, native HDR, no native HDR, limited HDR, HDR via mod |
+  | HDR einschalten, umschalten, (HDR) schalten | turn HDR on, toggle HDR, switch HDR (nie „switches HDR on“: liest sich als „einschalten“) |
+  | Protokoll, Protokollordner | log, log folder |
+  | Installierte Apps, Einstellungen → Apps | Installed apps, Settings → Apps (wie Windows) |
+  | Tasten Strg, Umschalt, Entf, Pos1, Ende, Bild auf/ab, Eingabetaste, Leertaste | Ctrl, Shift, Del, Home, End, Page Up/Down, Enter, Space |
+
+  Produkt- und Funktionsnamen bleiben: HDRpilot, Windows Auto HDR, SteamGridDB, PCGamingWiki, Steam, GOG (Galaxy), Epic
+  Games, Xbox, Ubisoft Connect, EA app, Battle.net, Quiver; ebenso die Anzeige „AUTO HDR“ und „HDR*“.
+- Prüfung: `ResourceTranslationTests` (laufen auch unter Linux, lesen die resx aus dem Repository): zu jeder neutralen
+  resx unter `src` eine `.en.resx`, dieselben Schlüssel in beide Richtungen, keine leeren Werte, gleiche Platzhalter,
+  gültige Formatvorlagen, keine deutschen Reste (Heuristik: Umlaute, ß, „ und eine Wortliste samt Endungen wie -ieren
+  und -ungen, mit Gegenprobe; erlaubt nur „Deutsch“ und die zweisprachige Beschriftung), Glossar in allen Dateien
+  („HDR automatisch“ immer „HDR on launch“, „Auto HDR“ nur, wo auch der deutsche Text den Schalter von Windows meint,
+  „custom“ und „no native HDR“, keine früheren Wörter wie „Own file“ oder „smeared“) und en-US-Typografie („…“ ohne
+  Leerzeichen davor, „0%“, „Canceled“), beide mit Gegenprobe. Neue Schlüssel anderer Zweige ohne Übersetzung (E93, E94) fallen nach dem Zusammenführen hier
+  auf; das ist gewollt. `UiLanguageTests` (Erkennung, Laderegeln, Kulturen), `EnglishOutputTests` (Satelliten, Scanner,
+  „Spiel hinzufügen“, Kommandozeile, Absturz und Mehrdeutigkeit unabhängig vom Wortlaut), in den App-Tests Sprachwahl,
+  Neustart, englisches Fenster und Tray-Menü, englische Zähl- und Zeitformen, `--restarted`, `--snapshot-language` und
+  `--ui-language`. Alle Tests laufen mit fester Kultur de-DE (`TestCulture`, Modul-Initialisierer, auch für die
+  STA-Threads); bisherige Tests prüfen weiter die deutschen Texte. Die Testablagen der Gates bekommen `"language":
+  "de"` (`TestConfigSeed.ps1`), `phase7-setup-ui.ps1` startet Setup und Entfernen mit `--ui-language de`, und
+  `phase5-readme.ps1` liest die Hilfe der Kommandozeile aus einer deutschen Testablage, damit die Gates auch auf einem
+  englischen Windows gelten. Neues Gate `phase16-english-ui.ps1` (G16.4). Bildschirmfotos mit `--snapshot-language en`
+  oder einer englischen Ablage heißen `…-en.png`.
+- README auf Englisch (Wunsch des Nutzers 2026-10-27: „Bitte die README komplett auf Englisch übersetzen.“): Seit
+  2026-10-27 ist `README.md` vollständig englisch; die bisherige deutsche Fassung bleibt wörtlich als `README.de.md`
+  (oben je ein Verweis auf die andere Sprache statt des früheren kurzen englischen Absatzes). Das ändert die Regel
+  „Doku auf Deutsch“ nur für die README; `docs/`, `GATES.md`, Kommentare und Commit-Nachrichten bleiben deutsch.
+  Bezeichnungen der Oberfläche stehen in `README.md` so, wie die englische Oberfläche sie zeigt (Werte der `.en.resx`,
+  Glossar oben), Hilfe und Beispiele der Kommandozeile wie `CliStrings.en.resx`; Schalter, Exit-Codes, Standardwerte und
+  Pfade sind dieselben. Was nur im Protokoll steht (deutsch, siehe oben), zitiert die englische README deutsch mit
+  Übersetzung in Klammern. `phase5-readme.ps1` prüft beide Fassungen (`README.de.md` gegen die neutralen resx und die
+  deutsche Hilfe, `README.md` gegen die `.en.resx` und die englische Hilfe, jede mit eigenen Gegenproben, G16.7),
+  `phase6-name.ps1` beide Dateien. Ausgeliefert werden beide (auf Wunsch des Nutzers vom selben Tag): portabler Ordner
+  und Paket der Setup-Datei enthalten `README.md` und `README.de.md` (`SetupBundle.PayloadEntryNames`,
+  `SetupLocations.InstalledFiles`); eine Aktualisierung von einer Setup-Datei ohne `README.de.md` (bis 1.5.0) legt sie
+  dazu, das Entfernen löscht sie, ältere Setup-Dateien bleiben gültig.

@@ -19,6 +19,8 @@
 #       (Ordner HDRpilot neben README.md) und im Paket der Setup-Datei byte-gleich mit dem Repository; nach (a) und (e)
 #       im Programmordner neben der README, (e) legt ihn zu einer Installation ohne LICENSE (vor 1.5.0) dazu; das
 #       Entfernen (d, f) löscht ihn wie die README
+#   README.de.md (E95): wie alle installierten Dateien nach (a) und (e) byte-gleich mit der Auslieferung; (e) legt sie zu
+#       einer Installation ohne deutsche README (bis 1.5.0) dazu, das Entfernen (d, f) löscht sie
 #   G9.4 Auto HDR (E88): Die Ablage enthält ein Spiel mit "Windows Auto HDR" (nie gestartet), die Testwurzel der Ablage
 #       (HKCU\Software\HDRpilot.Tests\AutoHdr\<Hash>) den globalen Wert wie beim Nutzer. Die laufende App ändert daran
 #       nichts (kein Start über HDRpilot) und schreibt keine Werte je EXE. Ein Absturz mitten in einer Sitzung wird
@@ -122,7 +124,7 @@ function Assert-Uninstalled([string]$step, $run, [string]$what) {
     Check ($left.Count -eq 0 -and -not (Test-Path -LiteralPath $layout.InstallDir)) ("$step Programmdateien und Programmordner entfernt" + $(if ($left) { ' (noch da: ' + ($left -join ', ') + ')' } else { '' }))
     Check (-not (Test-Path -LiteralPath $layout.StartMenuLnk) -and -not (Test-Path -LiteralPath $layout.DesktopLnk)) "$step Startmenü- und Desktop-Verknüpfung entfernt"
     Check ($null -eq (Get-RegValue $layout.RunKey $RunValueName)) "$step kein Autostart-Wert im Test-Zweig"
-    Check (-not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'LICENSE')) -and -not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'README.md'))) "$step LICENSE wie README.md entfernt"
+    Check (-not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'LICENSE')) -and -not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'README.md')) -and -not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'README.de.md'))) "$step LICENSE wie README.md und README.de.md entfernt"
     Check (-not (Test-InstanceRunning $layout.InstanceId)) "$step HDRpilot läuft nicht"
     Check ($run.TempDirs.Count -ge 1) ("{0} Kopie zum Entfernen lief aus dem Temp-Ordner (laut Setup-Protokoll: {1})" -f $step, ($run.TempDirs -join ', '))
     $gone = Wait-Until { @($run.TempDirs | Where-Object { Test-Path -LiteralPath $_ }).Count -eq 0 } 20000
@@ -256,7 +258,7 @@ try {
     $older = Initialize-OlderInstall $layout
     Check ($older.Version -eq '1.0.0' -and $older.ExeHash -ne $portableHashes['HDRpilot.exe']) ("(e) vorher: Attrappe HDRpilot.exe mit Dateiversion {0} und alte Beigaben im Programmordner" -f $older.Version)
     Check (-not (Test-Path $layout.UninstallKey) -and (Test-Contains (Get-RegValue $layout.RunKey $RunValueName) $layout.Exe)) '(e) vorher: kein Eintrag unter Installierte Apps, Autostart-Wert zeigt auf die EXE'
-    Check ((Test-Path -LiteralPath (Join-Path $layout.InstallDir 'README.md')) -and -not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'LICENSE'))) '(e) vorher: alte README.md da, kein LICENSE (wie eine Installation vor 1.5.0)'
+    Check ((Test-Path -LiteralPath (Join-Path $layout.InstallDir 'README.md')) -and -not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'LICENSE')) -and -not (Test-Path -LiteralPath (Join-Path $layout.InstallDir 'README.de.md'))) '(e) vorher: alte README.md da, kein LICENSE und keine README.de.md (wie eine Installation vor 1.5.0)'
     $cfgBefore = @(Get-TreeHashes $layout.Config)
     $offset = Get-FileLength $layout.SetupLog
     $e = Invoke-Setup @('--quiet', '--no-launch')
@@ -268,6 +270,8 @@ try {
         Check ($h -and $h -eq $portableHashes[$f]) "(e) $f ersetzt, byte-gleich mit der Auslieferung"
     }
     Check ($licenseHash -and (Get-Sha (Join-Path $layout.InstallDir 'LICENSE')) -eq $licenseHash) '(e) LICENSE dazugelegt, byte-gleich mit dem Repository'
+    $germanReadme = Get-Sha (Join-Path $Phase7Root 'README.de.md')
+    Check ($germanReadme -and (Get-Sha (Join-Path $layout.InstallDir 'README.de.md')) -eq $germanReadme) '(e) README.de.md dazugelegt, byte-gleich mit dem Repository (E95)'
     $leftovers = @(Get-ChildItem -LiteralPath $layout.InstallDir -Recurse -File | ForEach-Object { $_.FullName.Substring($layout.InstallDir.Length + 1) } | Where-Object { $_ -notin $InstalledFiles })
     Check ($leftovers.Count -eq 0) ("(e) keine Reste der Aktualisierung (.new/.old) im Programmordner{0}" -f $(if ($leftovers) { ': ' + ($leftovers -join ', ') } else { '' }))
     Check ((Get-RegValue $layout.UninstallKey 'DisplayVersion') -eq $version) "(e) Eintrag unter Installierte Apps angelegt, DisplayVersion $version"

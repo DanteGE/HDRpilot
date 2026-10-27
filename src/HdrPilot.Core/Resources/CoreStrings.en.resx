@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NotifyNoDisplayTitle" xml:space="preserve">
+    <value>No display</value>
+  </data>
+  <data name="NotifyNoDisplayMessage" xml:space="preserve">
+    <value>{0}: no active display found.</value>
+  </data>
+  <data name="NotifyNotConnectedTitle" xml:space="preserve">
+    <value>Display not connected</value>
+  </data>
+  <data name="NotifyNotConnectedMessage" xml:space="preserve">
+    <value>{0}: The selected display is not connected. HDR stays unchanged.</value>
+  </data>
+  <data name="NotifyNotCapableTitle" xml:space="preserve">
+    <value>HDR not available</value>
+  </data>
+  <data name="NotifyNotCapableMessage" xml:space="preserve">
+    <value>{0}: "{1}" doesn't support HDR right now. The game keeps running normally.</value>
+  </data>
+  <data name="NotifyHdrEnabledTitle" xml:space="preserve">
+    <value>HDR turned on</value>
+  </data>
+  <data name="NotifyHdrEnabledMessage" xml:space="preserve">
+    <value>{0}: HDR turned on on display "{1}".</value>
+  </data>
+  <data name="NotifyHdrRestoredTitle" xml:space="preserve">
+    <value>HDR restored</value>
+  </data>
+  <data name="NotifyHdrRestoredMessage" xml:space="preserve">
+    <value>HDR turned off again on display "{0}".</value>
+  </data>
+  <data name="NotifySwitchFailedTitle" xml:space="preserve">
+    <value>Switching HDR failed</value>
+  </data>
+  <data name="NotifyLaunchFailedTitle" xml:space="preserve">
+    <value>Launch failed</value>
+  </data>
+  <data name="NotifyStateNotSavedTitle" xml:space="preserve">
+    <value>HDR state not saved</value>
+  </data>
+  <data name="NotifyStateNotSavedMessage" xml:space="preserve">
+    <value>The HDR state from before the game couldn't be saved ({0}). If HDRpilot crashes during the game, HDR won't be restored automatically afterwards.</value>
+  </data>
+  <data name="NotifyGameSeemsHungTitle" xml:space="preserve">
+    <value>Game stuck in the background?</value>
+  </data>
+  <data name="NotifyGameSeemsHungMessage" xml:space="preserve">
+    <value>“{0}” seems to be stuck in the background (no window, no activity). HDR stays on until the game exits. To end it, use Task Manager, or choose “Turn HDR off now” in the notification area.</value>
+  </data>
+  <data name="LaunchUnknownGame" xml:space="preserve">
+    <value>Game {0} is unknown.</value>
+  </data>
+  <data name="LaunchNoCommand" xml:space="preserve">
+    <value>No launch command is known for "{0}".</value>
+  </data>
+  <data name="LaunchAlreadyRunning" xml:space="preserve">
+    <value>"{0}" is already running.</value>
+  </data>
+  <data name="LaunchAlreadyStarting" xml:space="preserve">
+    <value>"{0}" is already being launched.</value>
+  </data>
+  <data name="PrepareReady" xml:space="preserve">
+    <value>HDR is ready for "{0}", the game is starting.</value>
+  </data>
+  <data name="LaunchExecuted" xml:space="preserve">
+    <value>Launch command executed: {0}</value>
+  </data>
+  <data name="LaunchError" xml:space="preserve">
+    <value>Launching "{0}" failed: {1}</value>
+  </data>
+  <data name="WordOn" xml:space="preserve">
+    <value>on</value>
+  </data>
+  <data name="WordOff" xml:space="preserve">
+    <value>off</value>
+  </data>
+  <data name="UnnamedDisplay" xml:space="preserve">
+    <value>Unnamed display</value>
+  </data>
+  <data name="HdrNotConnected" xml:space="preserve">
+    <value>Display not connected or not active.</value>
+  </data>
+  <data name="HdrNotCapable" xml:space="preserve">
+    <value>Display "{0}" doesn't support HDR.</value>
+  </data>
+  <data name="HdrAlreadyInState" xml:space="preserve">
+    <value>HDR is already {0}.</value>
+  </data>
+  <data name="HdrConfirmed" xml:space="preserve">
+    <value>HDR {0} (confirmed).</value>
+  </data>
+  <data name="HdrFailedOn" xml:space="preserve">
+    <value>HDR couldn't be turned on. {0}</value>
+  </data>
+  <data name="HdrFailedOff" xml:space="preserve">
+    <value>HDR couldn't be turned off. {0}</value>
+  </data>
+  <data name="HdrDetailWin32" xml:space="preserve">
+    <value>Windows reports error {0}.</value>
+  </data>
+  <data name="HdrDetailGone" xml:space="preserve">
+    <value>Display no longer found after switching.</value>
+  </data>
+  <data name="HdrDetailPolicy" xml:space="preserve">
+    <value>The switch is set to {0}, but the active mode is {1} (possibly limited by a policy).</value>
+  </data>
+  <data name="HdrDetailUnchanged" xml:space="preserve">
+    <value>State still HDR {1} after {0} checks.</value>
+  </data>
+  <data name="HdrHotkeyDisplayGone" xml:space="preserve">
+    <value>Display no longer found before the keyboard shortcut fallback.</value>
+  </data>
+  <data name="HdrLateConfirmed" xml:space="preserve">
+    <value>HDR {0} (confirmed late).</value>
+  </data>
+  <data name="HdrHotkeyNotUsed" xml:space="preserve">
+    <value>The HDR switch is set correctly, but Windows doesn't activate the mode. Keyboard shortcut not used.</value>
+  </data>
+  <data name="HdrHotkeySendFailed" xml:space="preserve">
+    <value>The keyboard shortcut Win+Alt+B couldn't be sent.</value>
+  </data>
+  <data name="HdrHotkeyBlockedFullscreen" xml:space="preserve">
+    <value>Fallback Win+Alt+B not used: a full-screen app is running (protection against anti-cheat false alarms).</value>
+  </data>
+  <data name="HdrHotkeyConfirmed" xml:space="preserve">
+    <value>HDR {0} via Win+Alt+B (confirmed).</value>
+  </data>
+  <data name="HdrHotkeyNoEffect" xml:space="preserve">
+    <value>Win+Alt+B didn't change the state either (Xbox Game Bar active?).</value>
+  </data>
+  <data name="HdrSwitchException" xml:space="preserve">
+    <value>Exception while switching: {0}</value>
+  </data>
+  <data name="ManualNoPath" xml:space="preserve">
+    <value>No path was given.</value>
+  </data>
+  <data name="ManualRelative" xml:space="preserve">
+    <value>The path must be complete (with drive), not relative: "{0}".</value>
+  </data>
+  <data name="ManualNotExe" xml:space="preserve">
+    <value>Only EXE files or folders can be added: "{0}".</value>
+  </data>
+  <data name="ManualNotFound" xml:space="preserve">
+    <value>The path doesn't exist: "{0}".</value>
+  </data>
+  <data name="ManualDriveRoot" xml:space="preserve">
+    <value>A whole drive can't be a game folder, otherwise every process on it would count as the game: "{0}". Please put the EXE in a folder of its own or choose the game folder.</value>
+  </data>
+  <data name="ConfigSaveFailed" xml:space="preserve">
+    <value>Configuration {0} couldn't be saved: {1}</value>
+  </data>
+  <data name="GameNotInConfig" xml:space="preserve">
+    <value>Game not in the configuration: {0}</value>
+  </data>
+</root>

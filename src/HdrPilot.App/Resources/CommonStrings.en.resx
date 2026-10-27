@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppName" xml:space="preserve">
+    <value>HDRpilot</value>
+  </data>
+  <data name="AppVersionFormat" xml:space="preserve">
+    <value>HDRpilot {0}</value>
+  </data>
+  <data name="AppVersionLabelFormat" xml:space="preserve">
+    <value>Version {0}</value>
+  </data>
+  <data name="FirstRunTitle" xml:space="preserve">
+    <value>HDRpilot is running in the notification area</value>
+  </data>
+  <data name="FirstRunMessage" xml:space="preserve">
+    <value>Your games are being scanned. Double-click the icon to open the game list.</value>
+  </data>
+  <data name="LaunchFailedTitle" xml:space="preserve">
+    <value>Launch failed</value>
+  </data>
+  <data name="NoHdrDisplayTitle" xml:space="preserve">
+    <value>HDR not available</value>
+  </data>
+  <data name="NoHdrDisplayMessage" xml:space="preserve">
+    <value>None of the selected displays currently supports HDR.</value>
+  </data>
+  <data name="UnexpectedErrorTitle" xml:space="preserve">
+    <value>HDRpilot – unexpected error</value>
+  </data>
+  <data name="UnexpectedErrorMessage" xml:space="preserve">
+    <value>An unexpected error occurred and was logged. HDRpilot keeps running.</value>
+  </data>
+  <data name="ForwardFailed" xml:space="preserve">
+    <value>HDRpilot is already running but not responding. Please end it in Task Manager and start it again.</value>
+  </data>
+  <data name="CaptionMinimize" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
+  <data name="CaptionMaximize" xml:space="preserve">
+    <value>Maximize</value>
+  </data>
+  <data name="CaptionRestore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="CaptionClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+</root>

@@ -52,7 +52,6 @@ public sealed class ToolbarChoreography(MotionChannels channels)
     public const string SortWidth = "sortW";
     public const string SortLabelOpacity = "sortL:o";
     public const string SortLabelX = "sortL:x";
-    public const string SearchKey = "key:o";
     public const string PillWidth = "pill:w";
     public const string PillHeight = "pill:h";
     public const string PillTy = "pill:ty";
@@ -171,7 +170,7 @@ public sealed class ToolbarChoreography(MotionChannels channels)
     }
 
     /// <summary>
-    /// Lasche überfahren (nur ausgeklappt): Sie wächst nach links zu „Leiste ausblenden · Strg+Umschalt+F“ (160 ms) bzw.
+    /// Lasche überfahren (nur ausgeklappt): Sie wächst nach links zu „Leiste ausblenden · Strg+F“ (160 ms) bzw.
     /// zurück. <paramref name="hoverWidth"/> ist ihre Breite mit dem Hinweis.
     /// </summary>
     public void Hover(bool on, double hoverWidth, ToolbarMotionLevel level)
@@ -444,25 +443,12 @@ public sealed class ToolbarChoreography(MotionChannels channels)
         }
     }
 
-    /// <summary>Sortierung und Tastenkappe ohne Bewegung in den Endzustand (keine Hysterese, nicht gezogen).</summary>
+    /// <summary>Sortierung ohne Bewegung in den Endzustand (keine Hysterese, nicht gezogen).</summary>
     public void SettleSort(double width, bool icon)
     {
         channels.Set(SortWidth, width);
         channels.Set(SortLabelOpacity, icon ? 0 : 1);
         channels.Set(SortLabelX, icon ? -4 : 0);
-    }
-
-    /// <summary>Tastenkappe „Strg+F“ ein- bzw. ausblenden (120 ms nur beim Ziehen, sonst sofort).</summary>
-    public void SearchKeyTo(bool shown, bool animate)
-    {
-        if (animate)
-        {
-            channels.Animate(SearchKey, shown ? 1 : 0, 120, ToolbarEase.CubicOut);
-        }
-        else if (!channels.IsRunning(SearchKey))
-        {
-            channels.Set(SearchKey, shown ? 1 : 0);
-        }
     }
 
     /// <summary>Verschiebungen des Zeilenwechsels löschen (Endzustand der Anordnung).</summary>

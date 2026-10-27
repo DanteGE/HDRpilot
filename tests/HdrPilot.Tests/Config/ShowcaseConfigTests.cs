@@ -150,4 +150,37 @@ public sealed class ShowcaseConfigTests
         Assert.NotNull(s.Artwork);
         Assert.Contains("\"appearance\"", JsonSerializer.Serialize(new AppConfig(), ConfigJson.Options), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Colors_follow_game_is_off_in_old_configs()
+    {
+        var files = new InMemoryFileSystem();
+        files.AddFile(Path, """
+            { "version": 1, "settings": { "appearance": { "preset": "royal", "backgroundFollowsGame": false } }, "games": [] }
+            """);
+
+        var appearance = Store(files).Load().Config.Settings.Appearance;
+
+        Assert.False(appearance.ColorsFollowGame);
+        Assert.False(appearance.BackgroundFollowsGame);
+        Assert.False(new AppearanceSettings().ColorsFollowGame);
+    }
+
+    [Fact]
+    public void Colors_follow_game_survives_saving_and_standard_turns_it_off()
+    {
+        var files = new InMemoryFileSystem();
+        var config = new AppConfig();
+        config.Settings.Appearance.ColorsFollowGame = true;
+
+        Store(files).Save(config);
+        var text = files.ReadAllText(Path);
+        var loaded = Store(files).Load().Config;
+
+        Assert.Contains("\"colorsFollowGame\": true", text, StringComparison.Ordinal);
+        Assert.True(loaded.Settings.Appearance.ColorsFollowGame);
+        Assert.True(loaded.Settings.Appearance.BackgroundFollowsGame); // unabhängig voneinander
+        loaded.Settings.Appearance = new AppearanceSettings(); // „Standard“ der Seite „Darstellung“
+        Assert.False(loaded.Settings.Appearance.ColorsFollowGame);
+    }
 }

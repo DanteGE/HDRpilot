@@ -7,6 +7,7 @@ using System.Windows.Media.Animation;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Infrastructure.Effects;
 using HdrPilot.App.Theming;
+using HdrPilot.App.ViewModels;
 using HdrPilot.App.ViewModels.Shell;
 
 namespace HdrPilot.App.Views.Shell;
@@ -28,6 +29,7 @@ public partial class SettingsWindow : ChromeWindow
     private readonly List<(Button Nav, FrameworkElement Target)> _anchors;
     private SettingsViewModel? _model;
     private SettingsMotion? _motion;
+    private GameAccentLayer? _previewLayer;
 
     public SettingsWindow()
     {
@@ -67,6 +69,9 @@ public partial class SettingsWindow : ChromeWindow
     /// <summary>Navigationseintrag, dessen Bereich gerade oben steht (Prüfung).</summary>
     public string CurrentSection => _anchors.FirstOrDefault(a => SettingsSection.GetIsCurrent(a.Nav)).Nav?.Name ?? NavGeneral.Name;
 
+    /// <summary>Liegt die Farbebene der Spielfarben auf der Live-Vorschau (E94)?</summary>
+    public bool PreviewAccentLayerAttached => _previewLayer is { } layer && Stage.Resources.MergedDictionaries.Contains(layer.Dictionary);
+
     /// <summary>Laufen gerade Dauer-Effekte (Vorführkarte, Zoom der Vorschau)?</summary>
     public bool ContinuousEffectsRunning => _motion?.IsRunning == true;
 
@@ -79,6 +84,8 @@ public partial class SettingsWindow : ChromeWindow
         model.HdrList.PasswordClearRequested += OnPasswordClearRequested;
         model.Appearance.SteamGridDbKeyClearRequested += OnSteamGridDbKeyClearRequested;
         model.Appearance.PropertyChanged += OnAppearancePropertyChanged;
+        SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
+        UpdatePreviewAccents();
     }
 
     /// <summary>Springt zum Bereich eines Navigationseintrags (Name wie „NavAppearance“); false bei unbekanntem Namen.</summary>
@@ -92,6 +99,37 @@ public partial class SettingsWindow : ChromeWindow
 
         ScrollTo(anchor.Target);
         return true;
+    }
+
+    /// <summary>
+    /// Zeilen „Prüfung: …“ (nur in Prüfläufen mit --config-dir, von AppServices gesetzt; sonst null), etwa wohin
+    /// <see cref="ShowTarget"/> gesprungen ist.
+    /// </summary>
+    public Action<string>? TestLog { get; set; }
+
+    /// <summary>
+    /// Springt zu einer Stelle (E93: „Bild wählen…“ → „Zu den Einstellungen“ → Darstellung › Bilder mit dem Fokus im
+    /// Schlüsselfeld von SteamGridDB). Für <see cref="SettingsTarget.Start"/> nichts.
+    /// </summary>
+    public void ShowTarget(SettingsTarget target)
+    {
+        if (target != SettingsTarget.Artwork)
+        {
+            return;
+        }
+
+        ScrollToSection(NavAppearanceArtwork.Name);
+        SteamGridDbKey.Focus();
+        System.Windows.Input.Keyboard.Focus(SteamGridDbKey);
+        TestLog?.Invoke("Prüfung: Einstellungen bei " + SectionArtwork.Name + ", Fokus " + SteamGridDbKey.Name);
+    }
+
+    /// <summary>Bildschirmfoto „einstellungen-bilder-sgdb“ (E93): Darstellung › Bilder, bis zur Karte „SteamGridDB (online)“ gerollt.</summary>
+    internal void ScrollToSteamGridDbCard()
+    {
+        ScrollToSection(NavAppearanceArtwork.Name);
+        Page.ScrollToVerticalOffset(Math.Max(0, TopOf(SteamGridDbCard) - 8));
+        Page.UpdateLayout();
     }
 
     /// <summary>PasswordBox ist nicht bindbar: das Bot-Passwort geht nur in diese Richtung ans ViewModel.</summary>
@@ -137,13 +175,62 @@ public partial class SettingsWindow : ChromeWindow
             _model.HdrList.PasswordClearRequested -= OnPasswordClearRequested;
             _model.Appearance.SteamGridDbKeyClearRequested -= OnSteamGridDbKeyClearRequested;
             _model.Appearance.PropertyChanged -= OnAppearancePropertyChanged;
+            SystemParameters.StaticPropertyChanged -= OnSystemParameterChanged;
             _model.Dispose();
             _model = null;
         }
 
+        RemovePreviewLayer();
         PcgwPassword.Clear();
         SteamGridDbKey.Clear();
         DataContext = null;
+    }
+
+    // ---- Spielfarben der Live-Vorschau (E94) ----
+
+    /// <summary>
+    /// Solange der Schalter an ist und das Vorschauspiel Spielfarben hat, liegt die Farbebene auf der Bühne der Vorschau (sofort,
+    /// ohne Überblendung); die übrigen Einstellungen und die Kontrast-Kennzeichen zeigen weiter das Schema. Bei hohem Kontrast
+    /// keine Spielfarben.
+    /// </summary>
+    private void UpdatePreviewAccents()
+    {
+        if (_model?.Appearance is not { } page || page.PreviewAccents is not { } accents || SystemParameters.HighContrast)
+        {
+            RemovePreviewLayer();
+            return;
+        }
+
+        var dark = TryFindResource(ThemeKeys.BrushText) is not SolidColorBrush text || ColorMath.RelativeLuminance(text.Color) > 0.5;
+        var target = GamePalette.Compute(accents, page.State, dark);
+        if (_previewLayer is { } layer)
+        {
+            layer.TransitionTo(target, TimeSpan.Zero);
+            return;
+        }
+
+        _previewLayer = new GameAccentLayer(Dispatcher, target);
+        Stage.Resources.MergedDictionaries.Add(_previewLayer.Dictionary);
+    }
+
+    private void RemovePreviewLayer()
+    {
+        if (_previewLayer is not { } layer)
+        {
+            return;
+        }
+
+        Stage.Resources.MergedDictionaries.Remove(layer.Dictionary);
+        layer.Dispose();
+        _previewLayer = null;
+    }
+
+    private void OnSystemParameterChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SystemParameters.HighContrast))
+        {
+            Dispatcher.BeginInvoke(UpdatePreviewAccents);
+        }
     }
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e) => UpdateLibraryCard();
@@ -285,6 +372,11 @@ public partial class SettingsWindow : ChromeWindow
         {
             PlayPreviewMoment(model.Appearance.PreviewHdr);
         }
+
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(AppearancePageViewModel.PreviewAccents))
+        {
+            UpdatePreviewAccents();
+        }
     }
 
     private void PlayPreviewMoment(bool on)
@@ -295,7 +387,15 @@ public partial class SettingsWindow : ChromeWindow
         Fade(StageBoost, on ? 1 : 0, fade);
         Fade(StageBloom, on ? 1 : 0, fade);
         Fade(StageVeil, on ? 0 : 1, fade);
-        StageDot.Fill = on ? (Brush)FindResource(ThemeKeys.BrushShine) : new SolidColorBrush(Color.FromRgb(0x8A, 0x8F, 0xA5));
+        if (on)
+        {
+            // Aus der Bühne aufgelöst: folgt der Farbebene der Spielfarben und jedem Wechsel des Schemas.
+            StageDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, ThemeKeys.BrushShine);
+        }
+        else
+        {
+            StageDot.Fill = new SolidColorBrush(Color.FromRgb(0x8A, 0x8F, 0xA5));
+        }
         if (on && allowed && level == EffectLevel.Full)
         {
             // Lichtstreifen einmal über die Bühne (1,6 s), danach ist nichts mehr angemeldet.

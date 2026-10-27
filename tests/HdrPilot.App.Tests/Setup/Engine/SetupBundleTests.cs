@@ -17,7 +17,7 @@ public sealed class SetupBundleTests : IDisposable
 
         Assert.True(bundle.VerifyExe());
         Assert.Equal(SetupHarness.ExeBytes("1.1.0").Length, bundle.ExeLength);
-        Assert.Equal(["README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"], bundle.PayloadEntries());
+        Assert.Equal(["README.md", "README.de.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"], bundle.PayloadEntries());
 
         using var exe = new MemoryStream();
         bundle.CopyExeTo(exe);
@@ -27,27 +27,33 @@ public sealed class SetupBundleTests : IDisposable
         Assert.True(bundle.CopyPayloadEntryTo("cli/hdrpilot.exe", cli));
         Assert.Equal("CLI 1.1.0", Encoding.UTF8.GetString(cli.ToArray()));
 
+        using var german = new MemoryStream();
+        Assert.True(bundle.CopyPayloadEntryTo("README.de.md", german));
+        Assert.Equal("README DE 1.1.0", Encoding.UTF8.GetString(german.ToArray()));
+
         using var license = new MemoryStream();
         Assert.True(bundle.CopyPayloadEntryTo("LICENSE", license));
         Assert.Equal("LICENSE 1.1.0", Encoding.UTF8.GetString(license.ToArray()));
     }
 
     [Fact]
-    public void Allowed_entries_are_exactly_readme_license_notices_and_cli()
+    public void Allowed_entries_are_exactly_readmes_license_notices_and_cli()
     {
-        // E92: der Lizenztext liegt ab 1.5.0 bei; alles andere bleibt ausgeschlossen (E83).
-        Assert.Equal(["README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"], SetupBundle.PayloadEntryNames);
-        Assert.Equal(["HDRpilot.exe", "README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", @"cli\hdrpilot.exe"], SetupLocations.InstalledFiles);
+        // E92: der Lizenztext liegt ab 1.5.0 bei, E95: die deutsche README neben der englischen; alles andere bleibt
+        // ausgeschlossen (E83).
+        Assert.Equal(["README.md", "README.de.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"], SetupBundle.PayloadEntryNames);
+        Assert.Equal(["HDRpilot.exe", "README.md", "README.de.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", @"cli\hdrpilot.exe"], SetupLocations.InstalledFiles);
     }
 
     [Fact]
     public void Setup_file_from_before_1_5_without_license_stays_valid()
     {
-        var bundle = _h.Bundle("1.4.0", withLicense: false);
+        var bundle = _h.Bundle("1.4.0", withLicense: false, withGermanReadme: false);
 
         Assert.True(bundle.VerifyExe());
         Assert.Equal(["README.md", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"], bundle.PayloadEntries());
         Assert.False(bundle.CopyPayloadEntryTo("LICENSE", Stream.Null));
+        Assert.False(bundle.CopyPayloadEntryTo("README.de.md", Stream.Null));
     }
 
     [Fact]

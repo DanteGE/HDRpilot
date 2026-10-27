@@ -35,7 +35,25 @@ public sealed partial class ArtworkService
             .ContinueWith(t => (IReadOnlyList<ArtworkCandidate>?)t.Result ?? [], cancellationToken, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
     }
 
-    public string SaveCustomImage(GameConfig game, ArtworkKind kind, string sourcePath)
+    public string SaveCustomImage(GameConfig game, ArtworkKind kind, string sourcePath) =>
+        SaveCustom(game, kind, width => ArtworkImaging.Decode(sourcePath, width));
+
+    /// <summary>
+    /// Wie <see cref="SaveCustomImage"/>, aus Bytes (ein in „Bild wählen…“ von SteamGridDB übernommenes Bild, E93), ohne
+    /// Temp-Datei. Nicht auf dem UI-Thread.
+    /// </summary>
+    public string SaveCustomImageData(GameConfig game, ArtworkKind kind, byte[] data) =>
+        SaveCustom(game, kind, width => ArtworkImaging.Decode(data, width));
+
+    /// <summary>Höchste Breite, in der ein eigenes Bild dieser Art dekodiert und gespeichert wird.</summary>
+    internal static int CustomSaveWidth(ArtworkKind kind) => kind switch
+    {
+        ArtworkKind.Hero => CustomHeroWidth,
+        ArtworkKind.Logo => CustomLogoWidth,
+        _ => ArtworkRenderer.CoverWidth * 3,
+    };
+
+    private string SaveCustom(GameConfig game, ArtworkKind kind, Func<int, BitmapSource> decode)
     {
         if (kind is not (ArtworkKind.Hero or ArtworkKind.Logo or ArtworkKind.Cover))
         {
@@ -47,12 +65,7 @@ public sealed partial class ArtworkService
         BitmapSource source;
         try
         {
-            source = ArtworkImaging.Decode(sourcePath, kind switch
-            {
-                ArtworkKind.Hero => CustomHeroWidth,
-                ArtworkKind.Logo => CustomLogoWidth,
-                _ => ArtworkRenderer.CoverWidth * 3,
-            });
+            source = decode(CustomSaveWidth(kind));
         }
         catch (ImageTooLargeException)
         {

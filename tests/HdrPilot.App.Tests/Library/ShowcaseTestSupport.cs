@@ -9,10 +9,14 @@ namespace HdrPilot.App.Tests.Library;
 
 /// <summary>
 /// Bilddienst für Tests (E89): kleine, erzeugte Bilder (nie Spielbilder), Auswahl je Art aus festen Kandidaten, eigene
-/// Dateien nur als Einträge. Zählt Anfragen und gelöschte eigene Bilder.
+/// Dateien nur als Einträge. Zählt Anfragen und gelöschte eigene Bilder. Spielfarben (E94) kommen aus
+/// <paramref name="colors"/> (ohne: keine, also das Farbschema); mit <paramref name="colorsAsync"/> erst nach
+/// <see cref="CompleteColors"/> (Tests: die Farben werden noch gelesen) oder als Lesefehler nach <see cref="FailColors"/>.
 /// </summary>
-public sealed class FakeArtworkService : IArtworkService
+public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null, bool colorsAsync = false) : IArtworkService, IGameColorsSource
 {
+    private readonly Dictionary<string, TaskCompletionSource<GameColors?>> _pendingColors = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _completedColors = new(StringComparer.OrdinalIgnoreCase);
     private EventHandler<ArtworkChangedEventArgs>? _changed;
 
     public event EventHandler<ArtworkChangedEventArgs>? Changed
@@ -59,7 +63,64 @@ public sealed class FakeArtworkService : IArtworkService
 
     public List<(string Key, ArtworkKind Kind, string Path)> Saved { get; } = [];
 
+    /// <summary>Aus Bytes gespeicherte Bilder (von SteamGridDB übernommen, E93): Spiel, Art und Länge.</summary>
+    public List<(string Key, ArtworkKind Kind, int Length)> SavedData { get; } = [];
+
     public int Leases { get; private set; }
+
+    /// <summary>Umgebungsfarben je Spiel (ohne Eintrag: aus dem Namen), etwa ein graues Titelbild.</summary>
+    public Func<string, AmbientColors?>? AmbientFor { get; set; }
+
+    /// <summary>Anfragen nach Spielfarben (Spielschlüssel), ohne die aus <see cref="TryPeek"/>.</summary>
+    public List<string> ColorRequests { get; } = [];
+
+    /// <summary>Abgebrochene Anfragen nach Spielfarben (Spielschlüssel).</summary>
+    public List<string> CanceledColorRequests { get; } = [];
+
+    public bool TryPeek(GameConfig game, out GameColors result)
+    {
+        result = ColorsOf(game.Key);
+        return !colorsAsync || _completedColors.Contains(game.Key);
+    }
+
+    public Task<GameColors?> GetGameColorsAsync(GameConfig game, CancellationToken cancellationToken = default)
+    {
+        ColorRequests.Add(game.Key);
+        if (!colorsAsync || _completedColors.Contains(game.Key))
+        {
+            return Task.FromResult<GameColors?>(ColorsOf(game.Key));
+        }
+
+        if (!_pendingColors.TryGetValue(game.Key, out var pending))
+        {
+            _pendingColors[game.Key] = pending = new TaskCompletionSource<GameColors?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        var key = game.Key;
+        cancellationToken.Register(() => CanceledColorRequests.Add(key));
+        return pending.Task.WaitAsync(cancellationToken);
+    }
+
+    /// <summary>Die Farben eines Spiels sind gelesen: wartende Anfragen bekommen sie, <see cref="TryPeek"/> kennt sie.</summary>
+    public void CompleteColors(string key)
+    {
+        _completedColors.Add(key);
+        if (_pendingColors.Remove(key, out var pending))
+        {
+            pending.TrySetResult(ColorsOf(key));
+        }
+    }
+
+    /// <summary>Lesefehler: wartende Anfragen bekommen null (nicht gelesen), <see cref="TryPeek"/> kennt weiterhin nichts.</summary>
+    public void FailColors(string key)
+    {
+        if (_pendingColors.Remove(key, out var pending))
+        {
+            pending.TrySetResult(null);
+        }
+    }
+
+    private GameColors ColorsOf(string key) => colors?.Invoke(key) ?? GameColors.None;
 
     /// <summary>Kleines einfarbiges Bild (eingefroren).</summary>
     public static ImageSource Solid(int width, int height, Color color)
@@ -97,7 +158,7 @@ public sealed class FakeArtworkService : IArtworkService
             ? new ArtworkImage(Solid(40, 12, Colors.Gold), ArtworkKind.Logo, ArtworkOrigin.Launcher, 40, 12, "Steam")
             : null;
         var summary = new ArtworkSummary(hero.Origin, logo?.Origin ?? ArtworkOrigin.None, ArtworkOrigin.Generated, ArtworkOrigin.None, LogoIsName: logo is null, CoverFromSmear: false, "Testbilder");
-        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientColors.FromName(game.Name), summary));
+        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientFor?.Invoke(game.Key) ?? AmbientColors.FromName(game.Name), summary));
     }
 
     /// <summary>Helle Fassung (nur für Spiele mit Titelbild aus einer Quelle), je Anfrage ein neues Bild.</summary>
@@ -141,6 +202,12 @@ public sealed class FakeArtworkService : IArtworkService
     {
         Saved.Add((game.Key, kind, sourcePath));
         return ArtworkOverride.Custom("bild-" + Saved.Count + ".png");
+    }
+
+    public string SaveCustomImageData(GameConfig game, ArtworkKind kind, byte[] data)
+    {
+        SavedData.Add((game.Key, kind, data.Length));
+        return ArtworkOverride.Custom(game.Key.Replace(':', '-') + "-" + kind.ToString().ToLowerInvariant() + ".jpg");
     }
 
     public void DeleteCustomImage(string? token) => Deleted.Add(token);

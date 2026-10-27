@@ -1,7 +1,72 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-22. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-27. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Stand 2026-10-27: README auf Englisch (Wunsch des Nutzers, E95, G16.7)
+- `README.md` vollständig englisch (Bezeichnungen wie in den `.en.resx`, Hilfe wie `CliStrings.en.resx`), die deutsche
+  Fassung wörtlich als `README.de.md`; beide werden ausgeliefert, installiert und beim Entfernen gelöscht.
+- `phase5-readme.ps1` prüft beide Fassungen mit eigenen Gegenproben, `phase6-name.ps1` beide Dateien. Unter Linux mit
+  pwsh (Kopie mit Linux-Pfaden) grün; Bau ohne Warnungen, `HdrPilot.Tests` ohne neue Fehler.
+- **Offen (nur unter Windows):** `phase5-readme.ps1` und `phase6-name.ps1` im Original, `phase5-publish.ps1`,
+  `phase7-setup.ps1` und die App-Tests der Setup-Engine (neue Datei im Paket).
+
+## Stand 2026-10-27: Release 1.6.0 vorbereitet (noch nicht veröffentlicht)
+- Version 1.6.0 in `Directory.Build.props` und bei den Setup-Dateinamen beider READMEs; Release-Notizen (englisch und
+  deutsch) in `docs/release/1.6.0.md`; Pull Request von `integration/naechstes-update` nach `main` als Entwurf.
+- **Reihenfolge lokal (Windows):** Setup bauen (`tools/publish.ps1`), alle Gates und App-Tests, publish-check (auch
+  `-Rev` für alle Cloud-Zweige), Installation als Test-Update mit Sicherung und Abgleich der Einstellungen, Livetest
+  SteamGridDB, Abnahme durch den Nutzer; erst dann Merge nach `main`, Tag `v1.6.0` und GitHub-Release mit
+  `HDRpilot-Setup-1.6.0.exe` und dem Text aus `docs/release/1.6.0.md`.
+
+## Stand 2026-10-27: nächstes Test-Update zusammengeführt (Zweig `integration/naechstes-update`)
+- **Inhalt:** `ui/feedback` (zehn Punkte der Rückmeldung vom 2026-10-22) und die drei Stränge `feature/sgdb-search`
+  (E93), `feature/spielfarben` (E94) und `feature/english` (E95), jeder vor dem Zusammenführen unabhängig geprüft und
+  nachgebessert. Konflikte nur am Ende von `docs/entscheidungen.md`, `GATES.md` und dieser Datei (beide Teile übernommen).
+- **Englisch nachgezogen:** die neuen Texte der SteamGridDB-Suche und der Spielfarben (80 Schlüssel) und die Texte, deren
+  deutscher Wortlaut sich in diesen Strängen geändert hat („Eigenes Bild“, Karte SteamGridDB, Quellenhinweis im Dialog).
+  Der Paritätstest (`ResourceTranslationTests`) ist damit wieder grün.
+- **Unter Linux geprüft:** Bau ohne Warnungen; `HdrPilot.Tests` ohne neue Fehler gegenüber `ui/feedback`.
+- **Offen (nur unter Windows):** `HdrPilot.App.Tests`, alle Oberflächen-Gates (Phasen 10, 14, 15, 16 und die übrigen),
+  Bildschirmfotos (auch englisch), publish-check, Setup und Installation als Test-Update, Abnahme durch den Nutzer.
+
+## Stand 2026-10-26: SteamGridDB-Suche in „Bild wählen…“ umgesetzt (E93, Phase 14)
+- **Zweig:** `feature/sgdb-search` (von `ui/feedback`), acht Commits in der Reihenfolge der Spezifikation: Kern,
+  Bilddienst, Dienst und Sitzung samt Testdaten-Lieferant, ViewModel, Dialog, Einstellungen, Bildschirmfotos und Gate
+  `phase14-sgdb-ui.ps1`, Doku (E93, README, GATES). Spezifikation und Abweichungen stehen in E93.
+- **In der Cloud-Sitzung erledigt:** Code, Tests und Gate geschrieben; Bau ohne Warnungen; die Kern-Tests laufen unter
+  Linux grün (neue Ausfälle dort nur die bekannten Windows-Fälle). Die App-Tests (`HdrPilot.App.Tests`) und alle
+  UI-Gates sind nur gebaut, nie ausgeführt.
+- **Offen, nur lokal unter Windows** (einer nach dem anderen, gedrosselt): G14.1 bis G14.9 und G14.11 bis G14.13
+  ausführen, die Bildschirmfotos bei drei Größen hell und dunkel vermessen und dem Nutzer zeigen (G14.10), unabhängige
+  Prüfung mit Gegenproben, Livetest mit dem eigenen Schlüssel des Nutzers (G14.14), Abnahme (G14.15).
+- **Auslieferung:** als eigenes Test-Update nach dem UI-Paket, zusammen mit den Spielfarben (`Hp.Brush.Plate` steht in
+  beiden Token-Dateien; die Spielfarben ändern sie nicht, erledigt in `integration/naechstes-update`). Kleine Versionserhöhung beim
+  Release.
+
+## Stand 2026-10-26: Phase 15 „Farben folgen dem Spiel“ (E94) gebaut, Prüfung unter Windows offen
+- Zweig `feature/spielfarben` (auf `ui/feedback`): Schalter, Auslesen auf Anfrage, Einpassen und Kontrast, Farbebene,
+  OKLCH-Überblendung, Entprellung, Live-Vorschau, Bildtests und Gate `phase15-gamecolors.ps1`; README, E94, GATES.md
+  (G15.1–G15.10) und `docs/design/showcase-hero/umsetzung-theme.md` ergänzt.
+- In der Cloud-Sitzung gelaufen: Bau ohne Warnungen, die Tests aus `HdrPilot.Tests` (G15.1: 72 von 72). Offen unter
+  Windows: alle Tests von `HdrPilot.App.Tests` (G15.2–G15.4, G15.7), die Gates G15.5, G15.6, G15.8, G15.9 und die Abnahme
+  G15.10.
+
+## Stand 2026-10-26: Englische Oberfläche und Sprachwahl (Zweig `feature/english`, E95, Phase 16)
+- **Stand:** Zweig `feature/english` auf Basis von `ui/feedback`, lokal committet, nicht hochgeladen. Parallel entstehen
+  die SteamGridDB-Suche (E93, Phase 14) und „Farben folgen dem Spiel“ (E94, Phase 15); deren neue resx-Schlüssel sind
+  hier nicht übersetzt, der Paritätstest (`ResourceTranslationTests`) meldet sie nach dem Zusammenführen (nachgezogen im
+  Zweig `integration/naechstes-update`, siehe oben).
+- **Fertig:** `.en.resx` für alle resx (App, Kern samt neuem `ScanStrings`, Kommandozeile mit neuem `CliStrings`),
+  Einstellung `language` mit Erkennung der Anzeigesprache bei neuer Konfiguration, Kulturen beim Start, Setup nach
+  Windows (`--ui-language` nur im Prüflauf), Sprachwahl in den Einstellungen mit „Jetzt neu starten“ (`--restarted`),
+  Texte aus dem Code (Scanner, „Spiel hinzufügen“, Kommandozeile), englische Bildschirmfotos (`--snapshot-language`),
+  Tests (Linux: Parität, Laderegeln, Kulturen, englische Ausgaben; Windows: Einstellungen, Fenster, Tray-Menü, Setup),
+  Gate `phase16-english-ui.ps1`, feste Sprache Deutsch in den Testablagen der übrigen Gates, README, E95, GATES.md.
+- **Unter Linux geprüft:** Build ohne Warnungen; `HdrPilot.Tests` wie die Ausgangsbasis (dieselben unter Linux
+  scheiternden Windows-Tests, keine neuen), dazu die neuen Tests grün.
+- **Offen (nur unter Windows):** App-Tests (G16.3), `phase16-english-ui.ps1` (G16.4), Sichtprüfung der englischen
+  Bildschirmfotos auf abgeschnittene Texte (G16.5), alle bisherigen Gates einmal (G16.6), Abnahme durch den Nutzer.
 
 ## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
 - **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (f3da056), darauf dieser Stand;

@@ -138,18 +138,34 @@ public static class PathEllipsis
 }
 
 /// <summary>
-/// Bild als Füllung eines Rahmens (UniformToFill, abgerundete Ecken des Rahmens), ohne Bindung an einem Pinsel: Bindungen an
-/// Freezables in Vorlagen melden beim Wiederverwenden von Zeilen Fehler ohne Datenkontext. Steht im Rahmen schon ein
-/// <see cref="ImageBrush"/> (etwa mit Zoom-Transformation für eine Animation), bekommt eine Kopie davon das Bild.
+/// Bild als Füllung eines Rahmens (Standard UniformToFill, abgerundete Ecken des Rahmens), ohne Bindung an einem Pinsel:
+/// Bindungen an Freezables in Vorlagen melden beim Wiederverwenden von Zeilen Fehler ohne Datenkontext. Steht im Rahmen
+/// schon ein <see cref="ImageBrush"/> (etwa mit Zoom-Transformation für eine Animation), bekommt eine Kopie davon das Bild.
+/// <see cref="StretchProperty"/> wählt die Füllung (Logos in „Bild wählen…“: Uniform, nie beschnitten, E93);
+/// <see cref="FadeOnArrivalProperty"/> blendet ein später eintreffendes Bild in 160 ms ein (nicht auf der Effektstufe „Aus“).
 /// </summary>
 public static class ImageFill
 {
     public static readonly DependencyProperty SourceProperty = DependencyProperty.RegisterAttached(
         "Source", typeof(ImageSource), typeof(ImageFill), new PropertyMetadata(null, OnSourceChanged));
 
+    public static readonly DependencyProperty StretchProperty = DependencyProperty.RegisterAttached(
+        "Stretch", typeof(Stretch), typeof(ImageFill), new PropertyMetadata(Stretch.UniformToFill, OnStretchChanged));
+
+    public static readonly DependencyProperty FadeOnArrivalProperty = DependencyProperty.RegisterAttached(
+        "FadeOnArrival", typeof(bool), typeof(ImageFill), new PropertyMetadata(false));
+
     public static ImageSource? GetSource(DependencyObject d) => (ImageSource?)d.GetValue(SourceProperty);
 
     public static void SetSource(DependencyObject d, ImageSource? value) => d.SetValue(SourceProperty, value);
+
+    public static Stretch GetStretch(DependencyObject d) => (Stretch)d.GetValue(StretchProperty);
+
+    public static void SetStretch(DependencyObject d, Stretch value) => d.SetValue(StretchProperty, value);
+
+    public static bool GetFadeOnArrival(DependencyObject d) => (bool)d.GetValue(FadeOnArrivalProperty);
+
+    public static void SetFadeOnArrival(DependencyObject d, bool value) => d.SetValue(FadeOnArrivalProperty, value);
 
     private static void OnSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -166,9 +182,134 @@ public static class ImageFill
 
         var brush = border.Background is ImageBrush existing
             ? existing.CloneCurrentValue()
-            : new ImageBrush { Stretch = Stretch.UniformToFill };
+            : new ImageBrush { Stretch = GetStretch(border) };
         brush.ImageSource = source;
+        brush.Stretch = GetStretch(border);
         border.Background = brush;
+        if (e.OldValue is null && GetFadeOnArrival(border) && border.IsLoaded && LibraryMotion.Enabled)
+        {
+            var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
+            border.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+    }
+
+    private static void OnStretchChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is Border { Background: ImageBrush brush } border && brush.Stretch != (Stretch)e.NewValue)
+        {
+            var copy = brush.CloneCurrentValue();
+            copy.Stretch = (Stretch)e.NewValue;
+            border.Background = copy;
+        }
+    }
+}
+
+/// <summary>
+/// Knopf, der einen Bereich auf- und zuklappt (Spielwahl „Spiel: … ▾“ in „Bild wählen…“, E93): ein ToggleButton, dessen
+/// Automationspeer Umschalten und Auf-/Zuklappen (ExpandCollapse) bietet. Alt+Pfeil runter und F4 schalten wie bei einer
+/// Auswahlliste; der Winkel (<see cref="ChevronAngle"/>) dreht auf der Stufe „Voll“ in 160 ms, sonst sofort.
+/// </summary>
+public sealed class ExpandToggle : System.Windows.Controls.Primitives.ToggleButton
+{
+    public static readonly DependencyProperty ChevronAngleProperty = DependencyProperty.Register(
+        nameof(ChevronAngle), typeof(double), typeof(ExpandToggle), new PropertyMetadata(0.0));
+
+    /// <summary>Drehung des Winkels: 0 zugeklappt, 180 aufgeklappt.</summary>
+    public double ChevronAngle
+    {
+        get => (double)GetValue(ChevronAngleProperty);
+        set => SetValue(ChevronAngleProperty, value);
+    }
+
+    protected override void OnChecked(RoutedEventArgs e)
+    {
+        base.OnChecked(e);
+        Turn(180);
+        Raise(false, true);
+    }
+
+    protected override void OnUnchecked(RoutedEventArgs e)
+    {
+        base.OnUnchecked(e);
+        Turn(0);
+        Raise(true, false);
+    }
+
+    protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)
+    {
+        var key = e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key;
+        if (key == System.Windows.Input.Key.F4
+            || (key == System.Windows.Input.Key.Down && System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)))
+        {
+            OnToggle();
+            e.Handled = true;
+            return;
+        }
+
+        base.OnKeyDown(e);
+    }
+
+    protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new ExpandTogglePeer(this);
+
+    private void Turn(double angle)
+    {
+        if (IsLoaded && LibraryMotion.Instance.IsFull)
+        {
+            var turn = new System.Windows.Media.Animation.DoubleAnimation(angle, TimeSpan.FromMilliseconds(160)) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
+            turn.Completed += (_, _) => ChevronAngle = angle;
+            BeginAnimation(ChevronAngleProperty, turn);
+        }
+        else
+        {
+            BeginAnimation(ChevronAngleProperty, null);
+        }
+
+        ChevronAngle = angle;
+    }
+
+    private void Raise(bool oldExpanded, bool newExpanded)
+    {
+        if (System.Windows.Automation.Peers.UIElementAutomationPeer.FromElement(this) is ExpandTogglePeer peer)
+        {
+            peer.RaisePropertyChangedEvent(
+                System.Windows.Automation.ExpandCollapsePatternIdentifiers.ExpandCollapseStateProperty,
+                oldExpanded ? System.Windows.Automation.ExpandCollapseState.Expanded : System.Windows.Automation.ExpandCollapseState.Collapsed,
+                newExpanded ? System.Windows.Automation.ExpandCollapseState.Expanded : System.Windows.Automation.ExpandCollapseState.Collapsed);
+        }
+    }
+
+    /// <summary>Umschalten wie jeder ToggleButton und dazu Auf-/Zuklappen (aufgeklappt = angehakt).</summary>
+    private sealed class ExpandTogglePeer(ExpandToggle owner)
+        : System.Windows.Automation.Peers.ToggleButtonAutomationPeer(owner), System.Windows.Automation.Provider.IExpandCollapseProvider
+    {
+        public System.Windows.Automation.ExpandCollapseState ExpandCollapseState => owner.IsChecked == true
+            ? System.Windows.Automation.ExpandCollapseState.Expanded
+            : System.Windows.Automation.ExpandCollapseState.Collapsed;
+
+        public void Expand()
+        {
+            ThrowIfDisabled();
+            owner.SetCurrentValue(IsCheckedProperty, true);
+        }
+
+        public void Collapse()
+        {
+            ThrowIfDisabled();
+            owner.SetCurrentValue(IsCheckedProperty, false);
+        }
+
+        public override object? GetPattern(System.Windows.Automation.Peers.PatternInterface patternInterface) =>
+            patternInterface == System.Windows.Automation.Peers.PatternInterface.ExpandCollapse ? this : base.GetPattern(patternInterface);
+
+        protected override string GetClassNameCore() => nameof(ExpandToggle);
+
+        private void ThrowIfDisabled()
+        {
+            if (!IsEnabled())
+            {
+                throw new System.Windows.Automation.ElementNotEnabledException();
+            }
+        }
     }
 }
 

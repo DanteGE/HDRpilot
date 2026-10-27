@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HdrPilot.Cli.Resources;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -34,6 +35,28 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>Text aus <see cref="CliStrings"/> mit Werten, formatiert wie die Oberfläche (E95).</summary>
+    private static string Text(string template, params object?[] args) => string.Format(System.Globalization.CultureInfo.CurrentCulture, template, args);
+
+    /// <summary>
+    /// Sprache der Ausgaben (E95): die der Ablage (<c>--config-dir</c> oder die normale), ohne config.json nach der
+    /// Anzeigesprache von Windows wie bei einer neuen Konfiguration (<see cref="UiLanguage.ForStartup"/>). Liest nur.
+    /// </summary>
+    internal static string LanguageFor(IReadOnlyList<string> args, IFileSystem fileSystem, IAppEnvironment environment, Func<string>? newConfigLanguage = null)
+    {
+        try
+        {
+            var paths = CliArguments.Parse(args, out _).Get("--config-dir") is { } dir
+                ? AppPaths.InDirectory(Path.GetFullPath(dir))
+                : AppPaths.Default(environment);
+            return UiLanguage.ForStartup(fileSystem, paths.ConfigFile, newConfigLanguage);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or System.Security.SecurityException)
+        {
+            return (newConfigLanguage ?? UiLanguage.ForNewConfig)();
+        }
+    }
+
     public async Task<int> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken = default)
     {
         var parsed = CliArguments.Parse(args, out var parseError);
@@ -58,57 +81,30 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
                 "watch" => await RunWatchAsync(parsed, cancellationToken).ConfigureAwait(false),
                 "run" => await RunLaunchAsync(parsed, cancellationToken).ConfigureAwait(false),
                 "diag" => await RunDiagAsync(parsed, cancellationToken).ConfigureAwait(false),
-                _ => Usage($"Unbekannter Befehl \"{parsed.Positional[0]}\"."),
+                _ => Usage(Text(CliStrings.UnknownCommand, parsed.Positional[0])),
             };
         }
         catch (OperationCanceledException)
         {
-            stderr.WriteLine("Abgebrochen.");
+            stderr.WriteLine(CliStrings.Cancelled);
             return ExitCodes.Error;
         }
         catch (Exception ex)
         {
-            stderr.WriteLine("Unerwarteter Fehler: " + ex.Message);
+            stderr.WriteLine(Text(CliStrings.UnexpectedError, ex.Message));
             return ExitCodes.Error;
         }
     }
 
-    public const string HelpText = """
-        HDRpilot Kommandozeile (Diagnose und Tests)
-
-        hdrpilot hdr status [--json] [--api modern|legacy]
-            Listet alle aktiven Bildschirme mit Name, HDR-fähig und HDR an/aus.
-        hdrpilot hdr on|off|toggle [--display <auswahl>] [--api modern|legacy] [--hotkey-fallback] [--json]
-            Schaltet HDR und bestätigt den Zustand durch erneutes Lesen.
-            <auswahl>: primary (Standard), all, Nummer aus "hdr status", Teil des Namens oder monitorDevicePath.
-
-        hdrpilot scan [--source <quelle>] [--search "<ordner>;<ordner>"] [--config-dir <ordner>]
-            Gibt alle gefundenen Spiele und die Fehler je Scanner als JSON aus (nur lesen).
-            <quelle>: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver
-            Mit --config-dir zählen Suchordner und gelernte Quiver-Ordner dieser Ablage mit.
-
-        hdrpilot games list [--json]
-        hdrpilot games import
-            Liest alle Launcher ein und übernimmt das Ergebnis in die Konfiguration.
-        hdrpilot games add --path <exe|ordner> [--name <name>] [--hdr on|off]
-        hdrpilot games set <schlüssel> [--hdr on|off] [--restore on|off] [--display <monitorDevicePath>|global]
-            Schlüssel: Quelle:ID, etwa Steam:1091500 (siehe "games list").
-        hdrpilot watch [--verbose]
-            Überwacht Spielstarts im Vordergrund (wie die App, ohne Oberfläche). Beenden mit Strg+C.
-        hdrpilot run <schlüssel>
-            Start über HDRpilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
-        scan, games, watch und run: --config-dir <ordner> (statt %APPDATA%/%LOCALAPPDATA%\HDRpilot, für Tests).
-
-        Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
-                    4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden
-        """;
+    /// <summary>Hilfe der Kommandozeile in der Sprache der Oberfläche (E95).</summary>
+    public static string HelpText => CliStrings.Help;
 
     private async Task<int> RunScanAsync(CliArguments args, CancellationToken cancellationToken)
     {
         var unknown = args.UnknownOptions("--source", "--search", "--config-dir").ToList();
         if (unknown.Count > 0 || args.Positional.Count > 1)
         {
-            return Usage("Unbekannte Option oder Argument für scan.");
+            return Usage(CliStrings.ScanUnknownOption);
         }
 
         var scanners = services.CreateScanners();
@@ -116,7 +112,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         {
             if (!Enum.TryParse<GameSource>(sourceText, ignoreCase: true, out var source) || !Enum.IsDefined(source))
             {
-                return Usage($"Unbekannte Quelle \"{sourceText}\".");
+                return Usage(Text(CliStrings.UnknownSource, sourceText));
             }
 
             scanners = scanners.Where(s => s.Source == source).ToList();
@@ -164,7 +160,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
         }
         catch (JsonException ex)
         {
-            stderr.WriteLine($"Hinweis: Konfiguration {paths.ConfigFile} nicht lesbar ({ex.Message}); ohne ihre Ordner eingelesen.");
+            stderr.WriteLine(Text(CliStrings.ConfigUnreadableHint, paths.ConfigFile, ex.Message));
             return null;
         }
     }
@@ -183,13 +179,13 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
     {
         if (args.Positional.Count < 2)
         {
-            return Usage("hdr braucht einen Unterbefehl: status, on, off oder toggle.");
+            return Usage(CliStrings.HdrNeedsSubcommand);
         }
 
         var unknown = args.UnknownOptions("--api", "--display").ToList();
         if (unknown.Count > 0)
         {
-            return Usage("Unbekannte Option: " + string.Join(", ", unknown));
+            return Usage(Text(CliStrings.UnknownOption, string.Join(", ", unknown)));
         }
 
         HdrApi? forceApi = null;
@@ -205,7 +201,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             }
             else
             {
-                return Usage("--api erwartet modern oder legacy.");
+                return Usage(CliStrings.ApiExpects);
             }
         }
 
@@ -222,7 +218,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             "on" => await SwitchAsync(controller, args, target: true, cancellationToken).ConfigureAwait(false),
             "off" => await SwitchAsync(controller, args, target: false, cancellationToken).ConfigureAwait(false),
             "toggle" => await SwitchAsync(controller, args, target: null, cancellationToken).ConfigureAwait(false),
-            _ => Usage($"Unbekannter Unterbefehl \"{args.Positional[1]}\"."),
+            _ => Usage(Text(CliStrings.UnknownSubcommand, args.Positional[1])),
         };
     }
 
@@ -241,16 +237,21 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
 
         if (displays.Count == 0)
         {
-            stdout.WriteLine("Keine aktiven Bildschirme gefunden.");
+            stdout.WriteLine(CliStrings.NoActiveDisplays);
             return ExitCodes.DisplayNotFound;
         }
 
         for (var i = 0; i < displays.Count; i++)
         {
             var d = displays[i];
-            var mode = d.ActiveColorMode is { } m ? $", aktiver Modus {m}" : string.Empty;
-            stdout.WriteLine($"{i + 1}. {d.FriendlyName}{(d.IsPrimary ? " (Hauptbildschirm)" : string.Empty)}");
-            stdout.WriteLine($"   HDR-fähig: {(d.HdrSupported ? "ja" : "nein")}   HDR: {(d.HdrEnabled ? "an" : "aus")}{mode}   API: {d.Api}");
+            var mode = d.ActiveColorMode is { } m ? Text(CliStrings.StatusActiveMode, m) : string.Empty;
+            stdout.WriteLine($"{i + 1}. {d.FriendlyName}{(d.IsPrimary ? CliStrings.StatusPrimary : string.Empty)}");
+            stdout.WriteLine(Text(
+                CliStrings.StatusLine,
+                d.HdrSupported ? CliStrings.Yes : CliStrings.No,
+                d.HdrEnabled ? Core.Resources.CoreStrings.WordOn : Core.Resources.CoreStrings.WordOff,
+                mode,
+                d.Api));
             stdout.WriteLine($"   {d.MonitorDevicePath}");
         }
 
@@ -260,11 +261,11 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
     private async Task<int> SwitchAsync(IHdrController controller, CliArguments args, bool? target, CancellationToken cancellationToken)
     {
         var displays = controller.GetDisplays();
-        var selection = DisplaySelector.Select(displays, args.Get("--display"), out var selectError);
+        var selection = DisplaySelector.Select(displays, args.Get("--display"), out var selectError, out var ambiguous);
         if (selection is null)
         {
             stderr.WriteLine(selectError);
-            return selectError is not null && selectError.StartsWith("Mehrdeutig", StringComparison.Ordinal) ? ExitCodes.Usage : ExitCodes.DisplayNotFound;
+            return ambiguous ? ExitCodes.Usage : ExitCodes.DisplayNotFound;
         }
 
         var results = new List<HdrSetResult>();
@@ -301,7 +302,7 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
     private int Usage(string message)
     {
         stderr.WriteLine(message);
-        stderr.WriteLine("Hilfe: hdrpilot help");
+        stderr.WriteLine(CliStrings.HelpHint);
         return ExitCodes.Usage;
     }
 

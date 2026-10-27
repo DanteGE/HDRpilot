@@ -17,8 +17,65 @@
   <data name="Window_Title" xml:space="preserve">
     <value>HDRpilot – Spielebibliothek</value>
   </data>
-  <data name="Header_Title" xml:space="preserve">
-    <value>Spielebibliothek</value>
+  <data name="Header_Overline" xml:space="preserve">
+    <value>SPIELEBIBLIOTHEK</value>
+    <comment>Kennzeile über dem Titel; der Titel nennt die gewählte Quelle (Wunsch des Nutzers 2026-10-22)</comment>
+  </data>
+  <data name="Header_TitleAll" xml:space="preserve">
+    <value>Alle Spiele</value>
+  </data>
+  <data name="Header_TitleSteam" xml:space="preserve">
+    <value>Steam-Spiele</value>
+  </data>
+  <data name="Header_TitleEpic" xml:space="preserve">
+    <value>Epic-Spiele</value>
+  </data>
+  <data name="Header_TitleXbox" xml:space="preserve">
+    <value>Xbox-Spiele</value>
+  </data>
+  <data name="Header_TitleGog" xml:space="preserve">
+    <value>GOG-Spiele</value>
+  </data>
+  <data name="Header_TitleUbisoft" xml:space="preserve">
+    <value>Ubisoft-Spiele</value>
+  </data>
+  <data name="Header_TitleEA" xml:space="preserve">
+    <value>EA-Spiele</value>
+  </data>
+  <data name="Header_TitleBattleNet" xml:space="preserve">
+    <value>Battle.net-Spiele</value>
+  </data>
+  <data name="Header_TitleQuiver" xml:space="preserve">
+    <value>Quiver-Spiele</value>
+  </data>
+  <data name="Header_TitleManual" xml:space="preserve">
+    <value>Eigene Spiele</value>
+    <comment>Quelle „Manuell“: selbst hinzugefügte Spiele</comment>
+  </data>
+  <data name="Header_SourceName" xml:space="preserve">
+    <value>Quelle: {0}</value>
+    <comment>Name des Titels für Bildschirmleser; {0} = Titel, etwa „Steam-Spiele“</comment>
+  </data>
+  <data name="Header_SourceHelp" xml:space="preserve">
+    <value>Öffnet das Menü der Quellen mit der Zahl ihrer Spiele (Eingabe- oder Leertaste, Alt+Pfeil nach unten). Wählt wie das Feld „Quelle“ der Werkzeugleiste.</value>
+  </data>
+  <data name="Header_SourceTooltip" xml:space="preserve">
+    <value>Quelle wechseln</value>
+  </data>
+  <data name="SourceMenu_Name" xml:space="preserve">
+    <value>Quellen</value>
+  </data>
+  <data name="SourceMenu_Selected" xml:space="preserve">
+    <value>gewählt</value>
+    <comment>Zustand des gewählten Eintrags im Quellenmenü für Bildschirmleser</comment>
+  </data>
+  <data name="Stats_Filtered" xml:space="preserve">
+    <value>{0} von {1} Spielen</value>
+    <comment>Kopf mit Filtern oder Suche; {0} = sichtbare Spiele der Quelle, {1} = alle Spiele der Quelle</comment>
+  </data>
+  <data name="Stats_FilteredOfOne" xml:space="preserve">
+    <value>{0} von 1 Spiel</value>
+    <comment>wie Stats_Filtered, wenn die Quelle genau ein Spiel hat; {0} = sichtbare Spiele</comment>
   </data>
   <data name="Count_GamesOne" xml:space="preserve">
     <value>1 Spiel</value>
@@ -83,9 +140,6 @@
   </data>
 
   <!-- Werkzeugleiste -->
-  <data name="Search_Placeholder" xml:space="preserve">
-    <value>Spiele durchsuchen …   Strg+F</value>
-  </data>
   <data name="Search_Name" xml:space="preserve">
     <value>Spiele durchsuchen</value>
   </data>
@@ -137,6 +191,12 @@
   </data>
   <data name="Splitter_Tooltip" xml:space="preserve">
     <value>Ziehen oder Pfeiltasten: Breite ändern · Doppelklick: Standardbreite</value>
+  </data>
+  <data name="ScrollGap_Name" xml:space="preserve">
+    <value>Bildlaufleiste der Spiele</value>
+  </data>
+  <data name="ScrollGap_Tooltip" xml:space="preserve">
+    <value>Waagerecht ziehen: Breite ändern · Klick über oder unter die Leiste: eine Seite blättern · Doppelklick: Standardbreite</value>
   </data>
   <data name="HeroSplitter_Name" xml:space="preserve">
     <value>Höhe des Titelbereichs</value>
@@ -391,6 +451,20 @@
   </data>
   <data name="Details_AutoHdrNativeLimited" xml:space="preserve">
     <value>Dieses Spiel hat laut PCGamingWiki eingeschränktes eigenes HDR – meist besser im Spiel einschalten.</value>
+  </data>
+  <data name="Details_AutoHdrMore" xml:space="preserve">
+    <value>Mehr erfahren</value>
+    <comment>klappt Erklärung und Hinweise zu Windows Auto HDR auf (Rückmeldung des Nutzers 2026-10-22)</comment>
+  </data>
+  <data name="Details_AutoHdrLess" xml:space="preserve">
+    <value>Weniger</value>
+    <comment>klappt sie wieder zu</comment>
+  </data>
+  <data name="Details_AutoHdrInfoName" xml:space="preserve">
+    <value>Erklärungen zu Windows Auto HDR</value>
+  </data>
+  <data name="Details_AutoHdrInfoHelp" xml:space="preserve">
+    <value>Blendet die Erklärung und die Hinweise zu Windows Auto HDR ein oder aus.</value>
   </data>
   <data name="AutoHdrSteam_OfferTitle" xml:space="preserve">
     <value>Steam-Startoption kopieren?</value>
@@ -705,6 +779,14 @@
   <data name="Icon_SaveFailed" xml:space="preserve">
     <value>Das Symbol konnte nicht gespeichert werden: {0}</value>
     <comment>{0} = Fehlermeldung</comment>
+  </data>
+  <data name="Icon_NoFolder" xml:space="preserve">
+    <value>Kein Ordner für eigene Symbole festgelegt.</value>
+    <comment>E95: erscheint über Icon_SaveFailed</comment>
+  </data>
+  <data name="Icon_Unreadable" xml:space="preserve">
+    <value>Die Datei enthält kein lesbares Bild oder Symbol: {0}</value>
+    <comment>{0} = Pfad</comment>
   </data>
   <data name="View_Name" xml:space="preserve">
     <value>Ansicht</value>
@@ -1204,7 +1286,7 @@
     <value>Wird beim Übernehmen verkleinert im Datenordner gespeichert, die Datei selbst bleibt unverändert.</value>
   </data>
   <data name="Picker_SourceNote" xml:space="preserve">
-    <value>HDRpilot liest Bilder nur aus den lokalen Caches der Launcher (Steam, GOG Galaxy, Ubisoft, Xbox-Paket, Quiver). Fehlt eines, wird es aus Symbol und Name erzeugt. SteamGridDB (online) füllt nur fehlende Bilder und nur, wenn du es in den Einstellungen einschaltest.</value>
+    <value>Aus den Launchern auf diesem PC (Steam, GOG Galaxy, Ubisoft, Xbox-Paket, Quiver), sonst aus Symbol und Name erzeugt.</value>
   </data>
   <data name="Picker_Size" xml:space="preserve">
     <value>{0} × {1}</value>
@@ -1272,7 +1354,7 @@
     <value>Werkzeugleiste</value>
   </data>
   <data name="Toolbar_ToggleHelp" xml:space="preserve">
-    <value>Strg+Umschalt+F oder Strg+F1 blendet die Werkzeugleiste aus und ein, Strg+F sucht, Umschalt+F10 öffnet ihr Menü.</value>
+    <value>Strg+F blendet die Werkzeugleiste ein und aus; beim Einblenden steht der Cursor in der Suche. Strg+F1 geht auch, Umschalt+F10 öffnet ihr Menü.</value>
   </data>
   <data name="Toolbar_Hide" xml:space="preserve">
     <value>Leiste ausblenden</value>
@@ -1326,9 +1408,6 @@
   </data>
   <data name="Toolbar_ResetAll" xml:space="preserve">
     <value>Alle Filter zurücksetzen</value>
-  </data>
-  <data name="Key_CtrlShiftF" xml:space="preserve">
-    <value>Strg+Umschalt+F</value>
   </data>
   <data name="Key_AltA" xml:space="preserve">
     <value>Alt+A</value>
@@ -1656,5 +1735,309 @@
   <data name="List_EmptyHiddenTextMany" xml:space="preserve">
     <value>{0} nicht installierte Spiele sind ausgeblendet. Einblenden kannst du sie unter Einstellungen › Bibliothek.</value>
     <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Picker_LocalHeader" xml:space="preserve">
+    <value>AUF DIESEM PC</value>
+    <comment>„Bild wählen…“: Überschrift der lokalen Bilder (E93)</comment>
+  </data>
+  <data name="Picker_SgdbHeader" xml:space="preserve">
+    <value>STEAMGRIDDB</value>
+    <comment>„Bild wählen…“: Überschrift des Abschnitts SteamGridDB (E93)</comment>
+  </data>
+  <data name="Picker_SgdbSectionName" xml:space="preserve">
+    <value>Bilder von SteamGridDB</value>
+    <comment>Name des Abschnitts und der Ergebnisliste für Bildschirmleser</comment>
+  </data>
+  <data name="Picker_KindPluralHero" xml:space="preserve">
+    <value>Titelbilder</value>
+    <comment>Mehrzahl der Bildart in Sätzen wie „24 Titelbilder von SteamGridDB“</comment>
+  </data>
+  <data name="Picker_KindPluralLogo" xml:space="preserve">
+    <value>Logos</value>
+    <comment>Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_KindPluralCover" xml:space="preserve">
+    <value>Cover</value>
+    <comment>Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbMatch" xml:space="preserve">
+    <value>Spiel: {0}</value>
+    <comment>Knopf der Spielwahl; {0} = Name des zugeordneten Spiels</comment>
+  </data>
+  <data name="Picker_SgdbMatchYear" xml:space="preserve">
+    <value>{0} ({1})</value>
+    <comment>{0} = Name, {1} = Jahr</comment>
+  </data>
+  <data name="Picker_SgdbMatchName" xml:space="preserve">
+    <value>Spiel bei SteamGridDB: {0}. Anderes Spiel wählen</value>
+    <comment>Name des Knopfs der Spielwahl für Bildschirmleser; {0} = Name</comment>
+  </data>
+  <data name="Picker_SgdbMatchHowSteam" xml:space="preserve">
+    <value>Zugeordnet über die Steam-App-ID aus deiner Bibliothek.</value>
+    <comment>Tooltip und Hilfetext der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchHowRemembered" xml:space="preserve">
+    <value>Zugeordnet über das Spiel, das du früher bei SteamGridDB gewählt hast.</value>
+    <comment>Tooltip und Hilfetext der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchHowName" xml:space="preserve">
+    <value>Zugeordnet über den Namen. Stimmt das Spiel nicht, wähle hier ein anderes.</value>
+    <comment>Tooltip und Hilfetext der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchHowChosen" xml:space="preserve">
+    <value>Von dir gewählt.</value>
+    <comment>Tooltip und Hilfetext der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchAmbiguous" xml:space="preserve">
+    <value>Mehrere Spiele heißen so – prüfe das Jahr.</value>
+    <comment>Hinweis unter der Spielwahl, wenn mehrere Treffer gleich heißen</comment>
+  </data>
+  <data name="Picker_SgdbMatchSearchName" xml:space="preserve">
+    <value>Spielname für die Suche bei SteamGridDB</value>
+    <comment>Name des Suchfelds der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchSearch" xml:space="preserve">
+    <value>Suchen</value>
+    <comment>Knopf der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchHint" xml:space="preserve">
+    <value>Enter oder „Suchen“ fragt SteamGridDB nach diesem Namen.</value>
+    <comment>Hinweis unter dem Suchfeld der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbMatchSearching" xml:space="preserve">
+    <value>Sucht bei SteamGridDB …</value>
+    <comment>Hinweis, solange die Spielwahl sucht</comment>
+  </data>
+  <data name="Picker_SgdbMatchCommitHint" xml:space="preserve">
+    <value>Deine Wahl merkt sich HDRpilot für dieses Spiel, wenn du übernimmst.</value>
+    <comment>Nur bei Spielen ohne Steam-App-ID</comment>
+  </data>
+  <data name="Picker_SgdbMatchListName" xml:space="preserve">
+    <value>Spiele bei SteamGridDB</value>
+    <comment>Name der Trefferliste der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbSteamEntry" xml:space="preserve">
+    <value>{0} (Steam, aus deiner Bibliothek)</value>
+    <comment>Erster Eintrag der Spielwahl bei Steam-Spielen; {0} = Name</comment>
+  </data>
+  <data name="Picker_SgdbRememberedEntry" xml:space="preserve">
+    <value>{0} (gemerkt)</value>
+    <comment>Erster Eintrag der Spielwahl bei gemerkter Zuordnung; {0} = Name</comment>
+  </data>
+  <data name="Picker_SgdbVerified" xml:space="preserve">
+    <value>verifiziert</value>
+    <comment>Kennzeichen eines verifizierten Spiels in der Spielwahl</comment>
+  </data>
+  <data name="Picker_SgdbEntryCurrent" xml:space="preserve">
+    <value>gewählt</value>
+    <comment>Status des aktuell zugeordneten Eintrags für Bildschirmleser</comment>
+  </data>
+  <data name="Picker_SgdbHitName" xml:space="preserve">
+    <value>{0}, {1}</value>
+    <comment>Treffer für Bildschirmleser; {0} = Name, {1} = Jahr</comment>
+  </data>
+  <data name="Picker_SgdbHitNameVerified" xml:space="preserve">
+    <value>{0}, verifiziert</value>
+    <comment>Treffer für Bildschirmleser; {0} = Name (mit Jahr)</comment>
+  </data>
+  <data name="Picker_SgdbSearch" xml:space="preserve">
+    <value>Bei SteamGridDB suchen</value>
+    <comment>Knopf: erst jetzt geht eine Anfrage hinaus</comment>
+  </data>
+  <data name="Picker_SgdbSearchName" xml:space="preserve">
+    <value>Bei SteamGridDB nach {0} suchen</value>
+    <comment>Name des Suchknopfs für Bildschirmleser; {0} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbSearchHelp" xml:space="preserve">
+    <value>Fragt erst jetzt mit deinem API-Schlüssel bei SteamGridDB an. Gezeigt werden nur unbewegte Bilder ohne NSFW-, Humor- oder Epilepsie-Markierung; das gewählte Bild lädt HDRpilot erst beim Übernehmen.</value>
+    <comment>Hilfetext des Suchknopfs</comment>
+  </data>
+  <data name="Picker_SgdbSearching" xml:space="preserve">
+    <value>Sucht …</value>
+    <comment>Suchknopf, solange gesucht wird</comment>
+  </data>
+  <data name="Picker_SgdbReadyNote" xml:space="preserve">
+    <value>Erst auf Klick · nur unbewegte Bilder ohne NSFW- und Humor-Markierung</value>
+    <comment>Hinweis neben dem Suchknopf</comment>
+  </data>
+  <data name="Picker_SgdbNoKey" xml:space="preserve">
+    <value>Mit eigenem API-Schlüssel von steamgriddb.com suchst du hier nach weiteren Bildern.</value>
+    <comment>Ohne Schlüssel</comment>
+  </data>
+  <data name="Picker_SgdbKeyUnreadable" xml:space="preserve">
+    <value>Der gespeicherte SteamGridDB-Schlüssel ist nicht lesbar (anderes Windows-Konto?).</value>
+    <comment>Schlüssel nicht entschlüsselbar</comment>
+  </data>
+  <data name="Picker_SgdbOpenSettings" xml:space="preserve">
+    <value>Zu den Einstellungen</value>
+    <comment>Link: schließt „Bild wählen“ und öffnet Darstellung › Bilder beim Schlüsselfeld</comment>
+  </data>
+  <data name="Picker_SgdbOpenSettingsDiscard" xml:space="preserve">
+    <value>Zu den Einstellungen (Auswahl geht verloren)</value>
+    <comment>Wie Picker_SgdbOpenSettings, wenn schon etwas gewählt ist</comment>
+  </data>
+  <data name="Picker_SgdbOpenSettingsHelp" xml:space="preserve">
+    <value>Schließt „Bild wählen“ ohne Änderungen und öffnet Darstellung › Bilder beim Schlüsselfeld.</value>
+    <comment>Hilfetext des Links</comment>
+  </data>
+  <data name="Picker_SgdbResolving" xml:space="preserve">
+    <value>Sucht das Spiel bei SteamGridDB …</value>
+    <comment>Zustand: Namenssuche</comment>
+  </data>
+  <data name="Picker_SgdbLoading" xml:space="preserve">
+    <value>Lädt {0} von SteamGridDB …</value>
+    <comment>Zustand: Seite lädt; {0} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbSlow" xml:space="preserve">
+    <value>SteamGridDB antwortet langsam …</value>
+    <comment>Nach 4 s ohne Antwort</comment>
+  </data>
+  <data name="Picker_SgdbResults" xml:space="preserve">
+    <value>{0} {1} von SteamGridDB</value>
+    <comment>{0} = Anzahl, {1} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbResultsOne" xml:space="preserve">
+    <value>1 {0} von SteamGridDB</value>
+    <comment>{0} = Bildart (Einzahl)</comment>
+  </data>
+  <data name="Picker_SgdbPreviewProgress" xml:space="preserve">
+    <value>Vorschauen {0} von {1}</value>
+    <comment>{0} = geladen, {1} = alle der Seite</comment>
+  </data>
+  <data name="Picker_SgdbEnd" xml:space="preserve">
+    <value>Das sind alle passenden {0} bei SteamGridDB.</value>
+    <comment>Ende der Liste; {0} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbTabLimit" xml:space="preserve">
+    <value>Mehr {0} zeigt „Bild wählen“ nicht auf einmal. Passt keins, wähle unter „Spiel“ ein anderes Spiel.</value>
+    <comment>Grenze je Reiter; {0} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbMore" xml:space="preserve">
+    <value>Mehr laden</value>
+    <comment>Knopf unter den Ergebnissen</comment>
+  </data>
+  <data name="Picker_SgdbMoreName" xml:space="preserve">
+    <value>Weitere {0} von SteamGridDB laden</value>
+    <comment>Name für Bildschirmleser; {0} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbNoMatch" xml:space="preserve">
+    <value>SteamGridDB kennt kein Spiel, das genau „{0}“ heißt. Wähle das passende Spiel aus der Liste oder suche nach einem anderen Namen.</value>
+    <comment>{0} = gesuchter Name</comment>
+  </data>
+  <data name="Picker_SgdbSteamUnknown" xml:space="preserve">
+    <value>SteamGridDB kennt diese Steam-App nicht. Wähle das passende Spiel aus der Liste oder suche nach einem anderen Namen.</value>
+    <comment>Unbekannte Steam-App-ID</comment>
+  </data>
+  <data name="Picker_SgdbNoHits" xml:space="preserve">
+    <value>Zu „{0}“ hat SteamGridDB kein Spiel gefunden. Versuche einen anderen Namen.</value>
+    <comment>{0} = Suchbegriff</comment>
+  </data>
+  <data name="Picker_SgdbNoImages" xml:space="preserve">
+    <value>Für dieses Spiel hat SteamGridDB keine passenden {0} (nur unbewegte Bilder ohne NSFW- und Humor-Markierung).</value>
+    <comment>{0} = Mehrzahl der Bildart</comment>
+  </data>
+  <data name="Picker_SgdbUnauthorized" xml:space="preserve">
+    <value>SteamGridDB hat deinen API-Schlüssel abgelehnt. Prüfe ihn in den Einstellungen.</value>
+    <comment>HTTP 401/403 der Schnittstelle</comment>
+  </data>
+  <data name="Picker_SgdbRateLimited" xml:space="preserve">
+    <value>SteamGridDB meldet zu viele Anfragen. Versuche es in einer Minute erneut.</value>
+    <comment>HTTP 429</comment>
+  </data>
+  <data name="Picker_SgdbOffline" xml:space="preserve">
+    <value>SteamGridDB ist nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut.</value>
+    <comment>Keine Verbindung</comment>
+  </data>
+  <data name="Picker_SgdbTimeout" xml:space="preserve">
+    <value>SteamGridDB antwortet gerade nicht. Versuche es später erneut.</value>
+    <comment>Zeitgrenze überschritten</comment>
+  </data>
+  <data name="Picker_SgdbServerError" xml:space="preserve">
+    <value>SteamGridDB hat nicht wie erwartet geantwortet. Versuche es später erneut.</value>
+    <comment>Anderer HTTP-Status oder unlesbare Antwort</comment>
+  </data>
+  <data name="Picker_SgdbBudget" xml:space="preserve">
+    <value>Für dieses Fenster ist die Höchstzahl an Anfragen an SteamGridDB erreicht. Die gezeigten Bilder bleiben wählbar.</value>
+    <comment>Grenze je Dialog</comment>
+  </data>
+  <data name="Picker_SgdbRetry" xml:space="preserve">
+    <value>Erneut versuchen</value>
+    <comment>Knopf nach einem Fehler</comment>
+  </data>
+  <data name="Picker_SgdbAuthor" xml:space="preserve">
+    <value>von {0}</value>
+    <comment>Unter jedem Bild; {0} = Autor bei SteamGridDB</comment>
+  </data>
+  <data name="Picker_SgdbAuthorUnknown" xml:space="preserve">
+    <value>Autor unbekannt</value>
+    <comment>Bild ohne Autorenangabe</comment>
+  </data>
+  <data name="Picker_SgdbItemName" xml:space="preserve">
+    <value>{0} von {1}</value>
+    <comment>Bild für Bildschirmleser; {0} = Bildart, {1} = Autor</comment>
+  </data>
+  <data name="Picker_SgdbItemNameNoAuthor" xml:space="preserve">
+    <value>{0}, Autor unbekannt</value>
+    <comment>Bild für Bildschirmleser ohne Autor; {0} = Bildart</comment>
+  </data>
+  <data name="Picker_SgdbItemSize" xml:space="preserve">
+    <value>{0}, {1} × {2} Pixel</value>
+    <comment>{0} = Name, {1} × {2} = Größe des vollen Bildes</comment>
+  </data>
+  <data name="Picker_SgdbItemHelp" xml:space="preserve">
+    <value>Bild von SteamGridDB. Es wird beim Übernehmen geladen und wie ein eigenes Bild gespeichert.</value>
+    <comment>Hilfetext eines Bildes von SteamGridDB</comment>
+  </data>
+  <data name="Picker_SgdbPreviewFailed" xml:space="preserve">
+    <value>Vorschau nicht geladen</value>
+    <comment>Platzhalter einer Kachel</comment>
+  </data>
+  <data name="Picker_SgdbNoPreview" xml:space="preserve">
+    <value>Keine Vorschau</value>
+    <comment>Platzhalter einer Kachel ohne Vorschau-Adresse</comment>
+  </data>
+  <data name="Picker_SgdbDownloading" xml:space="preserve">
+    <value>Lädt das gewählte Bild von SteamGridDB …</value>
+    <comment>Zeile beim Übernehmen</comment>
+  </data>
+  <data name="Picker_SgdbDownloadingMany" xml:space="preserve">
+    <value>Lädt {0} gewählte Bilder von SteamGridDB …</value>
+    <comment>{0} = Anzahl</comment>
+  </data>
+  <data name="Picker_SgdbDownloadFailed" xml:space="preserve">
+    <value>Das Bild ließ sich nicht von SteamGridDB laden. Prüfe die Verbindung und versuche es erneut oder wähle ein anderes.</value>
+    <comment>Fehler beim Übernehmen</comment>
+  </data>
+  <data name="Picker_SgdbDownloadBlocked" xml:space="preserve">
+    <value>Dieses Bild ist größer als 32 MB oder liegt an einer unzulässigen Adresse. Wähle ein anderes.</value>
+    <comment>Fehler beim Übernehmen</comment>
+  </data>
+  <data name="Picker_SgdbDownloadNotAnImage" xml:space="preserve">
+    <value>Das Bild von SteamGridDB ist nicht lesbar. Wähle ein anderes.</value>
+    <comment>Fehler beim Übernehmen</comment>
+  </data>
+  <data name="Picker_SgdbPicksReset" xml:space="preserve">
+    <value>Deine Wahl von SteamGridDB in den anderen Reitern gilt nicht mehr, weil du ein anderes Spiel gewählt hast.</value>
+    <comment>Nach einer geänderten Zuordnung</comment>
+  </data>
+  <data name="Picker_SgdbPicksResetNoKey" xml:space="preserve">
+    <value>Deine Wahl von SteamGridDB gilt nicht mehr, weil der Schlüssel entfernt wurde.</value>
+    <comment>Schlüssel in den Einstellungen entfernt, während „Bild wählen…“ offen war</comment>
+  </data>
+  <data name="Picker_MatchRemembered" xml:space="preserve">
+    <value>Spiel bei SteamGridDB für „{0}“ gemerkt.</value>
+    <comment>Statuszeile der Bibliothek; {0} = Name des Spiels</comment>
+  </data>
+  <data name="Picker_KindSingularHero" xml:space="preserve">
+    <value>Titelbild</value>
+    <comment>Einzahl der Bildart im Satz („1 Titelbild von SteamGridDB“)</comment>
+  </data>
+  <data name="Picker_KindSingularLogo" xml:space="preserve">
+    <value>Logo</value>
+    <comment>Einzahl der Bildart im Satz („1 Titelbild von SteamGridDB“)</comment>
+  </data>
+  <data name="Picker_KindSingularCover" xml:space="preserve">
+    <value>Cover</value>
+    <comment>Einzahl der Bildart im Satz („1 Titelbild von SteamGridDB“)</comment>
   </data>
 </root>

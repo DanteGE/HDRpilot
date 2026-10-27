@@ -41,6 +41,13 @@ public sealed partial class AppServices
             GameRunning = () => Sessions.Sessions.Count > 0,
             PostToUi = action => Dispatcher.BeginInvoke(DispatcherPriority.Background, action),
             Logger = LoggerFactory.CreateLogger("SteamGridDB"),
+
+            // Prüfläufe (nur mit --config-dir): erzeugte Antworten statt des Netzes und Zeilen „Prüfung: …“ (E93).
+            HandlerFactory = SteamGridDbFixture.HandlerFactoryFor(
+                ConfigDirArgument() is null ? null : Paths.ConfigDirectory,
+                System.Environment.GetEnvironmentVariable,
+                Path.Combine(Paths.ConfigDirectory, "sgdb-fixture.log")),
+            TestLog = TestLog(),
         })
         : NullSteamGridDbService.Instance;
 

@@ -695,6 +695,18 @@ public sealed class TestLibraryContext : ILibraryContext
 
     public void ShowSettings() => SettingsShown++;
 
+    /// <summary>Wohin „Zu den Einstellungen“ springen sollte (E93).</summary>
+    public List<HdrPilot.App.ViewModels.SettingsTarget> SettingsTargets { get; } = [];
+
+    public void ShowSettings(HdrPilot.App.ViewModels.SettingsTarget target)
+    {
+        SettingsTargets.Add(target);
+        SettingsShown++;
+    }
+
+    /// <summary>SteamGridDB für „Bild wählen…“ (Standard: nicht verfügbar).</summary>
+    public HdrPilot.App.Services.Artwork.ISteamGridDbService SteamGridDb { get; set; } = HdrPilot.App.Services.Artwork.NullSteamGridDbService.Instance;
+
     /// <summary>Geöffnete Installationsordner („Installationsordner öffnen“; die Attrappe startet nichts).</summary>
     public List<string> OpenedFolders { get; } = [];
 

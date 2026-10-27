@@ -119,9 +119,25 @@ public sealed class AppSettings
     /// <summary>
     /// Höhe des Titelbereichs in der Liste der Spielebibliothek als Anteil der Fensterhöhe (0 bis 1), gemerkt erst, wenn der
     /// Ziehgriff gezogen oder per Tastatur verstellt wurde (Wunsch des Nutzers 2026-10-16). Null: Standard (ein Drittel). Die
-    /// Oberfläche begrenzt die Höhe auf das Fenster, der gemerkte Anteil bleibt dabei unverändert.
+    /// Oberfläche begrenzt die Höhe auf das Fenster, der gemerkte Anteil bleibt dabei unverändert. Raster und Regal merken ihre
+    /// Höhe getrennt (<see cref="LibraryGridHeroRatio"/>, <see cref="LibraryShelfHeroRatio"/>).
     /// </summary>
     public double? LibraryHeroRatio { get; set; }
+
+    /// <summary>
+    /// Höhe des Titelbereichs im Raster der Spielebibliothek als Anteil der Fensterhöhe (0 bis 1), gemerkt erst nach dem
+    /// Ziehgriff (Wunsch des Nutzers 2026-10-22: jede Ansicht merkt ihre eigene Höhe). Null: Standard des Rasters. Die
+    /// Oberfläche begrenzt die Höhe so, dass eine ganze Kachelreihe zu sehen bleibt; der gemerkte Anteil bleibt dabei
+    /// unverändert. Ältere Konfigurationen ohne das Feld gelten unverändert.
+    /// </summary>
+    public double? LibraryGridHeroRatio { get; set; }
+
+    /// <summary>
+    /// Höhe des Titelbereichs im Regal der Spielebibliothek als Anteil der Fensterhöhe (0 bis 1), gemerkt erst nach dem
+    /// Ziehgriff (Wunsch des Nutzers 2026-10-22). Null: Standard des Regals. Die Oberfläche begrenzt die Höhe zwischen dem Platz
+    /// für Automatik-Karte und großen Titel und der kleinsten Kachel; der gemerkte Anteil bleibt dabei unverändert.
+    /// </summary>
+    public double? LibraryShelfHeroRatio { get; set; }
 
     /// <summary>
     /// Gemerkte Ansicht der Spielebibliothek (E89): "List" (Standard), "Grid" (Raster) oder "Shelf" (Regal). Text statt
@@ -152,6 +168,13 @@ public sealed class AppSettings
     /// zuerst. Null (Standard, auch für ältere Konfigurationen): keiner, das Feld fehlt dann in der Datei.
     /// </summary>
     public List<string>? QuiverFolders { get; set; }
+
+    /// <summary>
+    /// Sprache der Oberfläche (E95): "de" oder "en", siehe <see cref="UiLanguage"/>. Eine neue Konfiguration bekommt die
+    /// Sprache von Windows (Deutsch bei Deutsch, sonst Englisch). Null (ältere Konfigurationen) oder ein unbekannter Wert
+    /// gilt als Deutsch und bleibt beim Speichern unverändert. Text statt Aufzählung wie <see cref="LibrarySortOrder"/>.
+    /// </summary>
+    public string? Language { get; set; }
 
     /// <summary>Darstellung: Farbschema, Thema, Effekte (E89). Ältere Konfigurationen: Standardwerte.</summary>
     public AppearanceSettings Appearance { get; set; } = new();

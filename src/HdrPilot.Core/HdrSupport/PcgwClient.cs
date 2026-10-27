@@ -39,15 +39,48 @@ public enum PcgwErrorKind
 }
 
 /// <summary>
-/// Abstand zwischen zwei Anfragen an PCGamingWiki, über alle Clients eines Dienstes hinweg (Abgleich und Kontotest
-/// nacheinander). Gemessen ab dem Ende der vorigen Anfrage.
+/// Abstand zwischen zwei Anfragen, über alle Clients eines Dienstes hinweg, gemessen ab dem Ende der vorigen Anfrage.
+/// PCGamingWiki nutzt <see cref="WaitTurn"/> und <see cref="MarkDone"/> (Abgleich und Kontotest laufen nacheinander).
+/// SteamGridDB nutzt den exklusiven Zug <see cref="Enter"/>, weil dort automatischer Lauf, „Prüfen“ und die Suche in
+/// „Bild wählen…“ gleichzeitig auf verschiedenen Threads fragen können (E93).
 /// </summary>
 public sealed class RequestPacer(IClock clock, TimeSpan interval)
 {
     private readonly object _gate = new();
+    private readonly SemaphoreSlim _turn = new(1, 1);
     private DateTimeOffset? _lastDone;
 
     public TimeSpan Interval => interval;
+
+    /// <summary>
+    /// Exklusiver Zug: höchstens ein Inhaber zugleich, frühestens <see cref="Interval"/> nach dem Ende des vorigen Zugs.
+    /// <see cref="RequestTurn.Dispose"/> vermerkt das Ende und gibt den Zug frei (genau einmal). Ein Abbruch beim Warten
+    /// gibt nur frei, was er hält.
+    /// </summary>
+    public RequestTurn Enter(CancellationToken cancellationToken)
+    {
+        _turn.Wait(cancellationToken);
+        try
+        {
+            DateTimeOffset? last;
+            lock (_gate)
+            {
+                last = _lastDone;
+            }
+
+            if (last is { } done && done + interval - clock.UtcNow is { } wait && wait > TimeSpan.Zero)
+            {
+                clock.Delay(wait, cancellationToken).GetAwaiter().GetResult();
+            }
+        }
+        catch
+        {
+            _turn.Release();
+            throw;
+        }
+
+        return new RequestTurn(new Lease(this));
+    }
 
     public void WaitTurn(CancellationToken cancellationToken)
     {
@@ -70,6 +103,32 @@ public sealed class RequestPacer(IClock clock, TimeSpan interval)
             _lastDone = clock.UtcNow;
         }
     }
+
+    /// <summary>Hält einen Zug; gibt ihn auch bei kopierten <see cref="RequestTurn"/>-Werten nur einmal frei.</summary>
+    internal sealed class Lease(RequestPacer pacer)
+    {
+        private int _released;
+
+        public void Release()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0)
+            {
+                pacer.MarkDone();
+                pacer._turn.Release();
+            }
+        }
+    }
+}
+
+/// <summary>Zug von <see cref="RequestPacer.Enter"/>; <c>default</c> hält nichts (ungetaktete Anfragen).</summary>
+public readonly struct RequestTurn : IDisposable
+{
+    private readonly RequestPacer.Lease? _lease;
+
+    internal RequestTurn(RequestPacer.Lease lease) => _lease = lease;
+
+    /// <summary>Vermerkt das Ende des Zugs und gibt ihn frei; weitere Aufrufe tun nichts.</summary>
+    public void Dispose() => _lease?.Release();
 }
 
 public sealed class PcgwException(PcgwErrorKind kind, string? code, string message, Exception? inner = null) : Exception(message, inner)

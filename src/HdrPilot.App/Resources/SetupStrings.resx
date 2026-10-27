@@ -175,6 +175,10 @@
     <value>Diese Befehlszeile passt nicht ({0}); es wurde nichts geändert. Einzelheiten stehen in {1}.</value>
     <comment>Setup oder Entfernen mit abgelehnten Schaltern; {0} = abgelehnte Schalter, {1} = Pfad des Setup-Protokolls</comment>
   </data>
+  <data name="SetupDetailCopyFiles" xml:space="preserve">
+    <value>Dateien kopieren ({0})</value>
+    <comment>Schritt in der technischen Angabe eines unerwarteten Fehlers (E95); {0} = Datei oder Programmordner</comment>
+  </data>
   <data name="SetupErrorContainer" xml:space="preserve">
     <value>Der Setup läuft im Container einer anderen App ({0}). Windows würde Registry-Einträge und Einstellungen dorthin umleiten, HDRpilot wäre danach nur halb installiert. Es wurde nichts geändert. Starte die Setup-Datei bitte per Doppelklick im Explorer.</value>
     <comment>Setup aus einer anderen App heraus gestartet, die Windows in einem eigenen Container laufen lässt (E84); {0} = Ordner dieser App unter %LOCALAPPDATA%\Packages</comment>
@@ -269,6 +273,10 @@
   <data name="UninstallErrorFilesInUse" xml:space="preserve">
     <value>Eine Datei ließ sich nicht entfernen, weil sie gerade benutzt wird: {0}. Lösche sie später von Hand.</value>
     <comment>Gesperrte Datei, nachdem der Eintrag unter „Installierte Apps“ schon entfernt ist (ein neuer Versuch geht nicht); {0} = Pfad der Datei</comment>
+  </data>
+  <data name="UninstallCopyNotStarted" xml:space="preserve">
+    <value>Die Kopie zum Entfernen wurde nicht gestartet</value>
+    <comment>Technische Angabe, wenn Windows den Start der Kopie im Temp-Ordner ohne Fehler ablehnt (E95)</comment>
   </data>
   <data name="UninstallCloseButton" xml:space="preserve">
     <value>Fertig</value>

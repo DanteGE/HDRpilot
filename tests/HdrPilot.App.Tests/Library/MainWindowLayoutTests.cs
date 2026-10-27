@@ -312,9 +312,9 @@ public sealed class MainWindowLayoutTests
 
             // Ende und Pos1: größte und kleinste Höhe; darüber hinaus geschieht nichts.
             Press(window, splitter, Key.End, size);
-            Assert.Equal(root - 368, window.HeroHeight); // eine Zeile Werkzeugleiste
+            Assert.Equal(root - 382, window.HeroHeight); // eine Zeile Werkzeugleiste
             Press(window, splitter, Key.PageDown, size);
-            Assert.Equal(root - 368, window.HeroHeight); // eine Zeile Werkzeugleiste
+            Assert.Equal(root - 382, window.HeroHeight); // eine Zeile Werkzeugleiste
             Press(window, splitter, Key.Home, size);
             Assert.Equal(ShowcaseLayout.MinListHero, window.HeroHeight);
             Press(window, splitter, Key.Up, size);

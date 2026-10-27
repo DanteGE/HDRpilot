@@ -43,7 +43,9 @@
     <Compile Include="..\HdrPilot.Tests\TestSupport\InMemoryFileSystem.cs" Link="TestSupport\InMemoryFileSystem.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\ListLogger.cs" Link="TestSupport\ListLogger.cs" />
     <Compile Include="..\HdrPilot.Tests\TestSupport\SessionFakes.cs" Link="TestSupport\SessionFakes.cs" />
+    <Compile Include="..\HdrPilot.Tests\TestSupport\TestCulture.cs" Link="TestSupport\TestCulture.cs" />
     <Compile Include="..\HdrPilot.Tests\Scanners\UbisoftCacheBuilder.cs" Link="TestSupport\UbisoftCacheBuilder.cs" />
+    <Compile Include="..\HdrPilot.Tests\Artwork\GeneratedArt.cs" Link="TestSupport\GeneratedArt.cs" />
   </ItemGroup>
 
 </Project>

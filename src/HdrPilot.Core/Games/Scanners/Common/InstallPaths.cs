@@ -1,4 +1,5 @@
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 
 namespace HdrPilot.Core.Games.Scanners.Common;
@@ -16,20 +17,20 @@ internal static class InstallPaths
         var normalized = PathUtil.Normalize(raw ?? string.Empty);
         if (normalized.Length == 0)
         {
-            problem = "Installationsordner ist leer.";
+            problem = ScanStrings.InstallDir_Empty;
             return null;
         }
 
         if (!Path.IsPathFullyQualified(normalized))
         {
-            problem = $"Installationsordner \"{normalized}\" ist kein absoluter Pfad.";
+            problem = ScanText.Format(ScanStrings.InstallDir_NotAbsolute, normalized);
             return null;
         }
 
         var root = Path.GetPathRoot(normalized);
         if (root is not null && PathUtil.PathEquals(root, normalized))
         {
-            problem = $"Installationsordner \"{normalized}\" ist eine Laufwerkswurzel.";
+            problem = ScanText.Format(ScanStrings.InstallDir_DriveRoot, normalized);
             return null;
         }
 

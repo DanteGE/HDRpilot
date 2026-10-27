@@ -152,6 +152,25 @@ public sealed class SteamGridDbServiceTests
     }
 
     [Fact]
+    public async Task Fill_treats_a_steam_game_with_an_empty_app_id_like_a_non_steam_game()
+    {
+        // §19.1 der Spezifikation zu E93: "".All(char.IsAsciiDigit) ist wahr; ohne Schutz fragte der Lauf steam/ ohne ID.
+        _config.Games.Add(new GameConfig { Source = GameSource.Steam, SourceId = string.Empty, Name = "Baldur's Gate 3" });
+        _artwork.Missing["Steam:"] = [ArtworkKind.Logo];
+        using var service = Service();
+        service.SaveKey(Key);
+        _config.Settings.Artwork.SteamGridDb = true;
+
+        await service.RunNowAsync(Ct);
+
+        var requests = _handlers.Single().Requests;
+        Assert.Contains("/search/autocomplete/", requests[0], StringComparison.Ordinal);
+        Assert.StartsWith("https://www.steamgriddb.com/api/v2/logos/game/5247826?", requests[1], StringComparison.Ordinal);
+        Assert.Null(service.Status.LastError);
+        Assert.Equal([("Steam:", ArtworkKind.Logo, ".png")], _artwork.Stored);
+    }
+
+    [Fact]
     public async Task Switching_off_or_removing_the_key_stops_a_running_run_at_once()
     {
         foreach (var stop in new[] { "aus", "schluessel" })

@@ -1,0 +1,1181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Tray: Tooltip (höchstens 127 Zeichen, wird gekürzt) -->
+  <data name="TrayTooltipHdrOn" xml:space="preserve">
+    <value>HDRpilot · HDR on</value>
+  </data>
+  <data name="TrayTooltipHdrOff" xml:space="preserve">
+    <value>HDRpilot · HDR off</value>
+  </data>
+  <data name="TrayTooltipNoHdr" xml:space="preserve">
+    <value>HDRpilot · no HDR-capable display</value>
+  </data>
+  <data name="TrayTooltipGame" xml:space="preserve">
+    <value>Game: {0}</value>
+  </data>
+  <data name="TrayTooltipGames" xml:space="preserve">
+    <value>Games: {0}</value>
+  </data>
+  <data name="TrayTooltipPaused" xml:space="preserve">
+    <value>Automation paused</value>
+  </data>
+  <data name="TrayTooltipActive" xml:space="preserve">
+    <value>Automation active</value>
+  </data>
+  <data name="TrayTooltipRestartBuffer" xml:space="preserve">
+    <value>HDR stays on for another {0}:{1:00} (restart buffer)</value>
+  </data>
+  <data name="TrayTooltipRestartBufferFullscreen" xml:space="preserve">
+    <value>HDR stays on until the full-screen app exits (restart buffer)</value>
+  </data>
+  <data name="ListSeparator" xml:space="preserve">
+    <value>, </value>
+  </data>
+  <data name="Ellipsis" xml:space="preserve">
+    <value>…</value>
+  </data>
+  <data name="TrayMenuName" xml:space="preserve">
+    <value>HDRpilot menu</value>
+  </data>
+  <data name="TrayMenuToggleHdrOn" xml:space="preserve">
+    <value>Turn HDR on now</value>
+  </data>
+  <data name="TrayMenuToggleHdrOff" xml:space="preserve">
+    <value>Turn HDR off now</value>
+  </data>
+  <data name="TrayMenuAutoHdr" xml:space="preserve">
+    <value>Auto HDR</value>
+  </data>
+  <data name="TrayMenuAutoHdrHint" xml:space="preserve">
+    <value>Windows “Auto HDR” switch: applies from the next game launch, even without HDRpilot</value>
+  </data>
+  <data name="TrayMenuAutoHdrUnknown" xml:space="preserve">
+    <value>Windows “Auto HDR” switch can't be read or has an unknown format: HDRpilot doesn't change it</value>
+  </data>
+  <data name="TrayMenuAutoHdrHeld" xml:space="preserve">
+    <value>Currently turned on by HDRpilot for a game, off again afterwards. Switching it here is your choice: applies from the next game launch, even without HDRpilot</value>
+  </data>
+  <data name="TrayMenuPause" xml:space="preserve">
+    <value>Pause automation</value>
+  </data>
+  <data name="TrayMenuOpen" xml:space="preserve">
+    <value>Open game list</value>
+  </data>
+  <data name="TrayMenuSettings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="TrayMenuLogs" xml:space="preserve">
+    <value>Open log folder</value>
+  </data>
+  <data name="TrayMenuExit" xml:space="preserve">
+    <value>Exit HDRpilot</value>
+  </data>
+  <data name="TrayStatusHdrOn" xml:space="preserve">
+    <value>HDR on</value>
+  </data>
+  <data name="TrayStatusHdrOff" xml:space="preserve">
+    <value>HDR off</value>
+  </data>
+  <data name="TrayStatusActive" xml:space="preserve">
+    <value>Automation active</value>
+  </data>
+  <data name="TrayStatusPaused" xml:space="preserve">
+    <value>Automation paused</value>
+  </data>
+  <data name="TrayStatusGame" xml:space="preserve">
+    <value>{0} is running</value>
+  </data>
+  <data name="TrayStatusGames" xml:space="preserve">
+    <value>{0} games running</value>
+  </data>
+  <data name="TrayStatusNoHdr" xml:space="preserve">
+    <value>No HDR-capable display</value>
+  </data>
+  <data name="SettingsWindowTitle" xml:space="preserve">
+    <value>HDRpilot – Settings</value>
+  </data>
+  <data name="SettingsHeading" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsSubheading" xml:space="preserve">
+    <value>Where, when and how HDRpilot switches HDR for your games.</value>
+  </data>
+  <data name="SaveSettings" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="CancelSettings" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="UnsavedChanges" xml:space="preserve">
+    <value>Unsaved changes</value>
+  </data>
+  <data name="NoChanges" xml:space="preserve">
+    <value>All saved</value>
+  </data>
+  <data name="AutostartFailed" xml:space="preserve">
+    <value>Couldn't change autostart: {0}</value>
+  </data>
+  <data name="AutostartPathUnknown" xml:space="preserve">
+    <value>The location of HDRpilot.exe is unknown.</value>
+  </data>
+  <data name="OpenLogFolderFailed" xml:space="preserve">
+    <value>Couldn't open the log folder: {0}</value>
+  </data>
+  <data name="SectionDisplays" xml:space="preserve">
+    <value>Displays</value>
+  </data>
+  <data name="DisplaysHint" xml:space="preserve">
+    <value>HDRpilot toggles HDR on these displays. Games with their own display choice keep their setting.</value>
+  </data>
+  <data name="DisplaysPrimaryFallback" xml:space="preserve">
+    <value>None selected: HDRpilot uses the primary display ({0}).</value>
+  </data>
+  <data name="DisplaysPrimaryFallbackUnknown" xml:space="preserve">
+    <value>None selected: HDRpilot uses the primary display.</value>
+  </data>
+  <data name="DisplaysSelected" xml:space="preserve">
+    <value>{0} of {1} selected</value>
+  </data>
+  <data name="DisplaysEmpty" xml:space="preserve">
+    <value>No active displays found.</value>
+  </data>
+  <data name="BadgePrimary" xml:space="preserve">
+    <value>Primary display</value>
+  </data>
+  <data name="BadgeHdrCapable" xml:space="preserve">
+    <value>HDR-capable</value>
+  </data>
+  <data name="BadgeNoHdr" xml:space="preserve">
+    <value>No HDR</value>
+  </data>
+  <data name="BadgeHdrOn" xml:space="preserve">
+    <value>HDR on</value>
+  </data>
+  <data name="BadgeDisconnected" xml:space="preserve">
+    <value>Not connected</value>
+  </data>
+  <data name="DisplayUnknownName" xml:space="preserve">
+    <value>Unknown display</value>
+  </data>
+  <data name="SectionAutomation" xml:space="preserve">
+    <value>Automation</value>
+  </data>
+  <data name="PollIntervalLabel" xml:space="preserve">
+    <value>Polling interval</value>
+  </data>
+  <data name="PollIntervalHint" xml:space="preserve">
+    <value>Shorter reacts faster to game launches, longer saves CPU time.</value>
+  </data>
+  <data name="GracePeriodLabel" xml:space="preserve">
+    <value>Grace period</value>
+  </data>
+  <data name="GracePeriodHint" xml:space="preserve">
+    <value>How long HDRpilot waits after a game ends before restoring HDR.</value>
+  </data>
+  <data name="RestartBufferLabel" xml:space="preserve">
+    <value>Restart buffer</value>
+  </data>
+  <data name="RestartBufferHint" xml:space="preserve">
+    <value>If a game ends less than 5 minutes after launch and HDRpilot turned HDR on for it, HDR stays on this long (for a quick restart). 0:00 = off.</value>
+  </data>
+  <data name="RestartBufferMinutesLabel" xml:space="preserve">
+    <value>Minutes</value>
+  </data>
+  <data name="RestartBufferSecondsLabel" xml:space="preserve">
+    <value>Seconds</value>
+  </data>
+  <data name="RestartBufferMinutesName" xml:space="preserve">
+    <value>Restart buffer, minutes</value>
+  </data>
+  <data name="RestartBufferSecondsName" xml:space="preserve">
+    <value>Restart buffer, seconds</value>
+  </data>
+  <data name="RestartBufferOff" xml:space="preserve">
+    <value>off</value>
+  </data>
+  <data name="LaunchTimeoutLabel" xml:space="preserve">
+    <value>Launch timeout</value>
+  </data>
+  <data name="LaunchTimeoutHint" xml:space="preserve">
+    <value>Launch via HDRpilot: how long to wait for the game.</value>
+  </data>
+  <data name="UnitMilliseconds" xml:space="preserve">
+    <value>{0:N0} ms</value>
+  </data>
+  <data name="UnitSeconds" xml:space="preserve">
+    <value>{0:N0} s</value>
+  </data>
+  <data name="UnitMinutesSeconds" xml:space="preserve">
+    <value>{0}:{1:00} min</value>
+  </data>
+  <data name="SectionStartup" xml:space="preserve">
+    <value>Startup and notifications</value>
+  </data>
+  <data name="AutostartLabel" xml:space="preserve">
+    <value>Start with Windows</value>
+  </data>
+  <data name="AutostartHint" xml:space="preserve">
+    <value>HDRpilot starts quietly in the notification area.</value>
+  </data>
+  <data name="NotificationsLabel" xml:space="preserve">
+    <value>Show notifications</value>
+  </data>
+  <data name="NotificationsHint" xml:space="preserve">
+    <value>Short messages when switching, never during full-screen games.</value>
+  </data>
+  <data name="LanguageLabel" xml:space="preserve">
+    <value>Language · Sprache</value>
+  </data>
+  <data name="LanguageHint" xml:space="preserve">
+    <value>Language of the interface. Takes effect after HDRpilot restarts.</value>
+  </data>
+  <data name="LanguageNameGerman" xml:space="preserve">
+    <value>Deutsch</value>
+  </data>
+  <data name="LanguageNameEnglish" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="LanguageRestartHint" xml:space="preserve">
+    <value>The new language takes effect after HDRpilot restarts. “Restart now” saves all settings first.</value>
+  </data>
+  <data name="LanguageRestartNow" xml:space="preserve">
+    <value>Restart now</value>
+  </data>
+  <data name="LanguageRestartBlocked" xml:space="preserve">
+    <value>A game is running. You can restart after the game, so HDRpilot restores HDR as usual; “Save” already stores the language.</value>
+  </data>
+  <data name="RestartFailed" xml:space="preserve">
+    <value>HDRpilot couldn't be restarted. Your settings are saved; the new language takes effect the next time it starts.</value>
+  </data>
+  <data name="HotkeyFallbackLabel" xml:space="preserve">
+    <value>Keyboard shortcut as fallback</value>
+  </data>
+  <data name="HotkeyFallbackHint" xml:space="preserve">
+    <value>Sends Win+Alt+B only if the Windows API fails, and never while a game is running (anti-cheat systems may treat simulated key presses as a macro). Affects all HDR displays and requires the Xbox Game Bar.</value>
+  </data>
+  <data name="SectionSearchFolders" xml:space="preserve">
+    <value>Search folders</value>
+  </data>
+  <data name="SearchFoldersHint" xml:space="preserve">
+    <value>Folders with games that have no launcher. Every subfolder containing an EXE is suggested when scanning.</value>
+  </data>
+  <data name="SearchFoldersEmpty" xml:space="preserve">
+    <value>No search folders yet. Add a folder to find DRM-free games.</value>
+  </data>
+  <data name="AddSearchFolder" xml:space="preserve">
+    <value>Add folder</value>
+  </data>
+  <data name="RemoveSearchFolder" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="SearchFolderDialogTitle" xml:space="preserve">
+    <value>Choose search folder</value>
+  </data>
+  <data name="SectionHelpers" xml:space="preserve">
+    <value>Exclude helper processes</value>
+  </data>
+  <data name="HelpersHint" xml:space="preserve">
+    <value>These programs in game folders never count as a game (crash reporters, installers, launchers). One pattern per line, * and ? as wildcards.</value>
+  </data>
+  <data name="HelperPatternsCount" xml:space="preserve">
+    <value>Patterns: {0}</value>
+  </data>
+  <data name="HelperPatternsDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="HelperPatternsCustom" xml:space="preserve">
+    <value>Customized</value>
+  </data>
+  <data name="ResetHelperPatterns" xml:space="preserve">
+    <value>Restore default</value>
+  </data>
+  <data name="HelperPatternFolder" xml:space="preserve">
+    <value>Line {0}: patterns can't contain folders (“{1}”).</value>
+  </data>
+  <data name="HelperPatternInvalidChars" xml:space="preserve">
+    <value>Line {0}: invalid characters in “{1}”.</value>
+  </data>
+  <data name="HelperPatternTooLong" xml:space="preserve">
+    <value>Line {0}: pattern is longer than {1} characters.</value>
+  </data>
+  <data name="HelperPatternTooMany" xml:space="preserve">
+    <value>At most {0} patterns allowed.</value>
+  </data>
+  <data name="SectionAdvanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="LogLevelLabel" xml:space="preserve">
+    <value>Log level</value>
+  </data>
+  <data name="LogLevelHint" xml:space="preserve">
+    <value>“Detailed” helps with troubleshooting.</value>
+  </data>
+  <data name="LogLevelTrace" xml:space="preserve">
+    <value>Everything (Trace)</value>
+  </data>
+  <data name="LogLevelDebug" xml:space="preserve">
+    <value>Detailed (Debug)</value>
+  </data>
+  <data name="LogLevelInformation" xml:space="preserve">
+    <value>Normal (Information)</value>
+  </data>
+  <data name="LogLevelWarning" xml:space="preserve">
+    <value>Warnings only</value>
+  </data>
+  <data name="LogLevelError" xml:space="preserve">
+    <value>Errors only</value>
+  </data>
+  <data name="OpenLogFolder" xml:space="preserve">
+    <value>Open log folder</value>
+  </data>
+  <data name="SaveFailed" xml:space="preserve">
+    <value>The settings couldn't be saved: {0}</value>
+  </data>
+  <data name="SectionHdrList" xml:space="preserve">
+    <value>HDR list (PCGamingWiki)</value>
+  </data>
+  <data name="HdrListHint" xml:space="preserve">
+    <value>Shows in the game list which games support HDR according to PCGamingWiki (“HDR”, limited “HDR*”). Without an account, HDRpilot looks up the names of your games on PCGamingWiki, at most 100 per startup.</value>
+  </data>
+  <data name="HdrListSyncLabel" xml:space="preserve">
+    <value>Sync at every startup</value>
+  </data>
+  <data name="HdrListSyncHint" xml:space="preserve">
+    <value>In the background 30 seconds after startup, at most once per hour.</value>
+  </data>
+  <data name="HdrListSyncNow" xml:space="preserve">
+    <value>Sync now</value>
+  </data>
+  <data name="HdrListStatusName" xml:space="preserve">
+    <value>Status of the HDR list</value>
+  </data>
+  <data name="HdrListNever" xml:space="preserve">
+    <value>Not synced yet.</value>
+  </data>
+  <data name="HdrListStand" xml:space="preserve">
+    <value>As of {0}, {1} of {2} games checked</value>
+  </data>
+  <data name="HdrListStandWithError" xml:space="preserve">
+    <value>{0} · Last attempt: {1}</value>
+  </data>
+  <data name="HdrListSyncing" xml:space="preserve">
+    <value>Syncing…</value>
+  </data>
+  <data name="HdrListModeAnonymous" xml:space="preserve">
+    <value>Without an account: game names are looked up one by one.</value>
+  </data>
+  <data name="HdrListModeAccount" xml:space="preserve">
+    <value>With account {0}: complete list, no game names are sent.</value>
+  </data>
+  <data name="HdrListModeAccountUnreadable" xml:space="preserve">
+    <value>Saved account can't be read – nothing is looked up. Enter it again or remove the account.</value>
+  </data>
+  <data name="HdrListErrorNetwork" xml:space="preserve">
+    <value>PCGamingWiki not reachable</value>
+  </data>
+  <data name="HdrListErrorRateLimited" xml:space="preserve">
+    <value>too many requests, try again later</value>
+  </data>
+  <data name="HdrListErrorHttp" xml:space="preserve">
+    <value>PCGamingWiki responded with an error</value>
+  </data>
+  <data name="HdrListErrorLoginFailed" xml:space="preserve">
+    <value>login rejected (wrong user name or bot password)</value>
+  </data>
+  <data name="HdrListErrorLoginThrottled" xml:space="preserve">
+    <value>too many login attempts, try again later</value>
+  </data>
+  <data name="HdrListErrorPermission" xml:space="preserve">
+    <value>the bot password lacks the Cargo permission</value>
+  </data>
+  <data name="HdrListErrorUnexpected" xml:space="preserve">
+    <value>unexpected response from PCGamingWiki</value>
+  </data>
+  <data name="HdrListErrorAccountUnreadable" xml:space="preserve">
+    <value>saved account can't be read, please enter it again</value>
+  </data>
+  <data name="HdrListErrorAccountNotSaved" xml:space="preserve">
+    <value>account couldn't be saved</value>
+  </data>
+  <data name="PcgwAccountTitle" xml:space="preserve">
+    <value>PCGamingWiki account (optional)</value>
+  </data>
+  <data name="PcgwAccountHint" xml:space="preserve">
+    <value>With a free account, HDRpilot downloads the complete HDR list and matches it on this PC only. No game names are sent, and games with a different name are found too.</value>
+  </data>
+  <data name="PcgwStep1" xml:space="preserve">
+    <value>1. Create an account on PCGamingWiki (“Create account”).</value>
+  </data>
+  <data name="PcgwStep2" xml:space="preserve">
+    <value>2. Under “Bot passwords”, create a bot password named HDRpilot and select only the grant “Create, query and delete data through the Cargo extension”.</value>
+  </data>
+  <data name="PcgwStep3" xml:space="preserve">
+    <value>3. Enter the user name shown there (Name@HDRpilot) and the bot password here.</value>
+  </data>
+  <data name="PcgwCreateAccount" xml:space="preserve">
+    <value>Create account</value>
+  </data>
+  <data name="PcgwBotPasswords" xml:space="preserve">
+    <value>Bot passwords</value>
+  </data>
+  <data name="PcgwUserNameLabel" xml:space="preserve">
+    <value>User name (Name@BotName)</value>
+  </data>
+  <data name="PcgwPasswordLabel" xml:space="preserve">
+    <value>Bot password</value>
+  </data>
+  <data name="PcgwSaveAccount" xml:space="preserve">
+    <value>Save and test</value>
+  </data>
+  <data name="PcgwRemoveAccount" xml:space="preserve">
+    <value>Remove account</value>
+  </data>
+  <data name="PcgwAccountStored" xml:space="preserve">
+    <value>Saved: {0} (password encrypted, readable only by your Windows user)</value>
+  </data>
+  <data name="PcgwPasswordStoredHint" xml:space="preserve">
+    <value>Leave empty to test the saved bot password again.</value>
+  </data>
+  <data name="PcgwTesting" xml:space="preserve">
+    <value>Checking login…</value>
+  </data>
+  <data name="PcgwSaved" xml:space="preserve">
+    <value>Account saved. Login and Cargo query work; the complete HDR list is being downloaded now.</value>
+  </data>
+  <data name="PcgwRemoved" xml:space="preserve">
+    <value>Account removed. HDRpilot syncs without an account again.</value>
+  </data>
+  <data name="PcgwUserInvalid" xml:space="preserve">
+    <value>Enter the user name in the format Name@BotName, exactly as PCGamingWiki shows it under “Bot passwords”.</value>
+  </data>
+  <data name="PcgwPasswordMissing" xml:space="preserve">
+    <value>Please enter the bot password.</value>
+  </data>
+  <data name="PcgwLoginFailed" xml:space="preserve">
+    <value>Login rejected: user name (Name@BotName) or bot password is wrong. Nothing saved.</value>
+  </data>
+  <data name="PcgwLoginThrottled" xml:space="preserve">
+    <value>Too many login attempts. Please wait a few minutes. Nothing saved.</value>
+  </data>
+  <data name="PcgwPermissionDenied" xml:space="preserve">
+    <value>Login works, but the bot password lacks the grant “Create, query and delete data through the Cargo extension”. Add it under “Bot passwords” and test again. Nothing saved.</value>
+  </data>
+  <data name="PcgwRateLimited" xml:space="preserve">
+    <value>PCGamingWiki reports too many requests. Please try again in a minute. Nothing saved.</value>
+  </data>
+  <data name="PcgwUnreachable" xml:space="preserve">
+    <value>PCGamingWiki is not reachable right now. Nothing saved.</value>
+  </data>
+  <data name="PcgwUnexpected" xml:space="preserve">
+    <value>Unexpected response from PCGamingWiki. Nothing saved.</value>
+  </data>
+  <data name="PcgwNotSaved" xml:space="preserve">
+    <value>Login works, but the account couldn't be saved.</value>
+  </data>
+  <data name="PcgwRemoveFailed" xml:space="preserve">
+    <value>Couldn't remove the account: {0}</value>
+  </data>
+  <data name="PcgwOpenFailed" xml:space="preserve">
+    <value>Couldn't open the page: {0}</value>
+  </data>
+  <data name="PcgwAttribution" xml:space="preserve">
+    <value>HDR data: PCGamingWiki (pcgamingwiki.com), license CC BY-NC-SA 3.0</value>
+  </data>
+  <data name="PcgwSiteLink" xml:space="preserve">
+    <value>pcgamingwiki.com</value>
+  </data>
+  <data name="PcgwLicenseLink" xml:space="preserve">
+    <value>CC BY-NC-SA 3.0</value>
+  </data>
+  <data name="SettingsNavName" xml:space="preserve">
+    <value>Settings sections</value>
+  </data>
+  <data name="NavGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="NavDisplays" xml:space="preserve">
+    <value>Displays</value>
+  </data>
+  <data name="NavAutomation" xml:space="preserve">
+    <value>Automation</value>
+  </data>
+  <data name="NavSearchFolders" xml:space="preserve">
+    <value>Search folders</value>
+  </data>
+  <data name="NavHelpers" xml:space="preserve">
+    <value>Helper processes</value>
+  </data>
+  <data name="NavAppearance" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="NavAppearanceColors" xml:space="preserve">
+    <value>Colors</value>
+  </data>
+  <data name="NavAppearanceArtwork" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="NavAppearanceTray" xml:space="preserve">
+    <value>Icons and tray</value>
+  </data>
+  <data name="NavAdvanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="NavLogs" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="LibraryCardOverline" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="LibraryCardSummary" xml:space="preserve">
+    <value>{0} games · {1} with HDR on launch</value>
+  </data>
+  <data name="LibraryCardSummaryOne" xml:space="preserve">
+    <value>1 game · {1} with HDR on launch</value>
+  </data>
+  <data name="OpenLibrary" xml:space="preserve">
+    <value>Open game library</value>
+  </data>
+  <data name="GroupGeneralHint" xml:space="preserve">
+    <value>Startup, language, displays, automation, search and library. Applied with “Save”.</value>
+  </data>
+  <data name="GroupAppearanceHint" xml:space="preserve">
+    <value>Colors, theme, effects and images. Affects the interface, tray icon and window icon.</value>
+  </data>
+  <data name="GroupAdvancedHint" xml:space="preserve">
+    <value>Fallback, HDR list and logs. Applied with “Save”; the HDR list buttons take effect immediately.</value>
+  </data>
+  <data name="AppearanceAppliedHint" xml:space="preserve">
+    <value>Applied immediately</value>
+  </data>
+  <data name="AppearanceReset" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="AppearanceResetName" xml:space="preserve">
+    <value>Reset appearance to default</value>
+  </data>
+  <data name="SectionStartupHint" xml:space="preserve">
+    <value>Start with Windows, notifications and language</value>
+  </data>
+  <data name="SectionDisplaysHint" xml:space="preserve">
+    <value>Where HDRpilot switches HDR</value>
+  </data>
+  <data name="SectionAutomationHint" xml:space="preserve">
+    <value>When HDR switches and how long it stays</value>
+  </data>
+  <data name="SectionSearchFoldersHint" xml:space="preserve">
+    <value>More folders with games</value>
+  </data>
+  <data name="SectionHelpersHint" xml:space="preserve">
+    <value>Programs that never count as a game</value>
+  </data>
+  <data name="SectionFallback" xml:space="preserve">
+    <value>Fallback</value>
+  </data>
+  <data name="SectionFallbackHint" xml:space="preserve">
+    <value>When Windows refuses to switch</value>
+  </data>
+  <data name="SectionLogs" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="SectionLogsHint" xml:space="preserve">
+    <value>What HDRpilot records</value>
+  </data>
+  <data name="SectionHdrListHint" xml:space="preserve">
+    <value>HDR support of your games from PCGamingWiki</value>
+  </data>
+  <data name="SectionPalette" xml:space="preserve">
+    <value>Color scheme</value>
+  </data>
+  <data name="SectionPaletteHint" xml:space="preserve">
+    <value>Each color has its own role</value>
+  </data>
+  <data name="PaletteModeName" xml:space="preserve">
+    <value>Number of colors</value>
+  </data>
+  <data name="PaletteModeDuotone" xml:space="preserve">
+    <value>Duotone</value>
+  </data>
+  <data name="PaletteModeTritone" xml:space="preserve">
+    <value>Tritone</value>
+  </data>
+  <data name="PaletteSwap" xml:space="preserve">
+    <value>Swap accent and atmosphere</value>
+  </data>
+  <data name="RoleAccent" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="RoleAccentHint" xml:space="preserve">
+    <value>Buttons, selection</value>
+  </data>
+  <data name="RoleAtmosphere" xml:space="preserve">
+    <value>Atmosphere</value>
+  </data>
+  <data name="RoleAtmosphereHint" xml:space="preserve">
+    <value>Background, glow</value>
+  </data>
+  <data name="RoleShine" xml:space="preserve">
+    <value>Shine</value>
+  </data>
+  <data name="RoleShineHint" xml:space="preserve">
+    <value>HDR moment, light streaks</value>
+  </data>
+  <data name="ColorAutomatic" xml:space="preserve">
+    <value>automatic</value>
+  </data>
+  <data name="ColorWellName" xml:space="preserve">
+    <value>Choose color {0}</value>
+  </data>
+  <data name="ColorWellAutomaticName" xml:space="preserve">
+    <value>{0}: automatic from the atmosphere (duotone)</value>
+  </data>
+  <data name="PresetsCaption" xml:space="preserve">
+    <value>Presets</value>
+  </data>
+  <data name="PresetsName" xml:space="preserve">
+    <value>Color presets</value>
+  </data>
+  <data name="PresetCaptionDuotone" xml:space="preserve">
+    <value>{0} · Duotone, automatic shine</value>
+  </data>
+  <data name="PresetCaptionTritone" xml:space="preserve">
+    <value>{0} · Tritone, 3 colors</value>
+  </data>
+  <data name="PresetCustom" xml:space="preserve">
+    <value>Custom colors</value>
+  </data>
+  <data name="PresetTagDuotone" xml:space="preserve">
+    <value>DUO</value>
+  </data>
+  <data name="PresetTagTritone" xml:space="preserve">
+    <value>TRI</value>
+  </data>
+  <data name="Preset_abendrot" xml:space="preserve">
+    <value>Sunset</value>
+  </data>
+  <data name="Preset_cyber" xml:space="preserve">
+    <value>Cyber</value>
+  </data>
+  <data name="Preset_neongruen" xml:space="preserve">
+    <value>Neon green</value>
+  </data>
+  <data name="Preset_royal" xml:space="preserve">
+    <value>Royal</value>
+  </data>
+  <data name="Preset_gletscher" xml:space="preserve">
+    <value>Glacier</value>
+  </data>
+  <data name="Preset_synthwave" xml:space="preserve">
+    <value>Synthwave</value>
+  </data>
+  <data name="Preset_glut" xml:space="preserve">
+    <value>Ember</value>
+  </data>
+  <data name="Preset_polarlicht" xml:space="preserve">
+    <value>Aurora</value>
+  </data>
+  <data name="AutoTextOnAccentLabel" xml:space="preserve">
+    <value>Automatic text color on accent surfaces</value>
+  </data>
+  <data name="ContrastSample" xml:space="preserve">
+    <value>Aa</value>
+  </data>
+  <data name="ContrastOnAccent" xml:space="preserve">
+    <value>On accent</value>
+  </data>
+  <data name="ContrastAccentText" xml:space="preserve">
+    <value>Accent text</value>
+  </data>
+  <data name="ContrastFormat" xml:space="preserve">
+    <value>{0:0.0}:1 · {1}</value>
+  </data>
+  <data name="ContrastAaa" xml:space="preserve">
+    <value>AAA</value>
+  </data>
+  <data name="ContrastAa" xml:space="preserve">
+    <value>AA</value>
+  </data>
+  <data name="ContrastAaLarge" xml:space="preserve">
+    <value>AA large</value>
+  </data>
+  <data name="ContrastTooLow" xml:space="preserve">
+    <value>too low</value>
+  </data>
+  <data name="BackgroundFollowsGameLabel" xml:space="preserve">
+    <value>Background follows the game</value>
+  </data>
+  <data name="BackgroundFollowsGameHint" xml:space="preserve">
+    <value>Ambient light and glow take on the colors of the selected hero image – read once per game</value>
+  </data>
+  <data name="SectionPreview" xml:space="preserve">
+    <value>Live preview</value>
+  </data>
+  <data name="SectionPreviewHint" xml:space="preserve">
+    <value>Real images from your library in your scheme</value>
+  </data>
+  <data name="PreviewHdr" xml:space="preserve">
+    <value>HDR</value>
+  </data>
+  <data name="PreviewHdrName" xml:space="preserve">
+    <value>HDR in the preview</value>
+  </data>
+  <data name="PreviewHdrOn" xml:space="preserve">
+    <value>HDR ON</value>
+  </data>
+  <data name="PreviewHdrOff" xml:space="preserve">
+    <value>HDR OFF</value>
+  </data>
+  <data name="PreviewNits" xml:space="preserve">
+    <value>{0} nits</value>
+  </data>
+  <data name="PreviewNitsUnknown" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="PreviewLaunch" xml:space="preserve">
+    <value>Launch</value>
+  </data>
+  <data name="PreviewDesktop" xml:space="preserve">
+    <value>Desktop</value>
+  </data>
+  <data name="PreviewEmpty" xml:space="preserve">
+    <value>No games in the library yet</value>
+  </data>
+  <data name="PreviewPickName" xml:space="preserve">
+    <value>Preview with {0}</value>
+  </data>
+  <data name="PreviewNeverPlayed" xml:space="preserve">
+    <value>not played yet</value>
+  </data>
+  <data name="SectionTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="ThemeCaptionSystem" xml:space="preserve">
+    <value>Follows Windows · currently {0}</value>
+  </data>
+  <data name="ThemeNowDark" xml:space="preserve">
+    <value>dark</value>
+  </data>
+  <data name="ThemeNowLight" xml:space="preserve">
+    <value>light</value>
+  </data>
+  <data name="ThemeCaptionLight" xml:space="preserve">
+    <value>Always light</value>
+  </data>
+  <data name="ThemeCaptionDark" xml:space="preserve">
+    <value>Always dark</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Automatic</value>
+  </data>
+  <data name="ThemeSystemHint" xml:space="preserve">
+    <value>like Windows</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="ThemeLightHint" xml:space="preserve">
+    <value>Light surfaces, images stay vivid</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="ThemeDarkHint" xml:space="preserve">
+    <value>Cinema look</value>
+  </data>
+  <data name="SectionEffects" xml:space="preserve">
+    <value>Effects</value>
+  </data>
+  <data name="SectionEffectsHint" xml:space="preserve">
+    <value>Parallax, Ken Burns drift, light when HDR switches</value>
+  </data>
+  <data name="EffectFull" xml:space="preserve">
+    <value>Full</value>
+  </data>
+  <data name="EffectFullHint" xml:space="preserve">
+    <value>Parallax, drift, light streaks, particles · particles only 2.5 s, idle max. 30 fps</value>
+  </data>
+  <data name="EffectReduced" xml:space="preserve">
+    <value>Reduced</value>
+  </data>
+  <data name="EffectReducedHint" xml:space="preserve">
+    <value>Only short transitions up to 0.3 s, no continuous animation</value>
+  </data>
+  <data name="EffectOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="EffectOffHint" xml:space="preserve">
+    <value>No motion, instant changes</value>
+  </data>
+  <data name="EffectEffectiveTag" xml:space="preserve">
+    <value>in effect</value>
+  </data>
+  <data name="PauseWhilePlayingLabel" xml:space="preserve">
+    <value>Pause while playing</value>
+  </data>
+  <data name="PauseWhilePlayingHint" xml:space="preserve">
+    <value>While a game is running, all animation stops</value>
+  </data>
+  <data name="PauseInBackgroundLabel" xml:space="preserve">
+    <value>Pause in the background</value>
+  </data>
+  <data name="PauseInBackgroundHint" xml:space="preserve">
+    <value>Minimized, covered or inactive: 0% GPU</value>
+  </data>
+  <data name="RespectWindowsAnimationsLabel" xml:space="preserve">
+    <value>Respect Windows animation effects</value>
+  </data>
+  <data name="RespectWindowsAnimationsHintOn" xml:space="preserve">
+    <value>If the option is off in Windows, at least “Reduced” applies · Windows: animations on</value>
+  </data>
+  <data name="RespectWindowsAnimationsHintReduced" xml:space="preserve">
+    <value>Windows: animations off → at least “Reduced” applies</value>
+  </data>
+  <data name="RespectWindowsAnimationsHintIgnored" xml:space="preserve">
+    <value>Windows: animations off – currently not respected</value>
+  </data>
+  <data name="MinimizeToTrayLabel" xml:space="preserve">
+    <value>Go to the notification area after launching a game</value>
+  </data>
+  <data name="MinimizeToTrayHint" xml:space="preserve">
+    <value>The window closes, HDRpilot keeps running in the tray</value>
+  </data>
+  <data name="EffectsPerformanceNote" xml:space="preserve">
+    <value>Minimized, in the background and while a game is running, all continuous animations stop; when closed, nothing runs at all. No large-area live blur: the ambient light is Steam's pre-made library_hero_blur.jpg or a stretched color field.</value>
+  </data>
+  <data name="SectionArtwork" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="SectionArtworkHint" xml:space="preserve">
+    <value>Where hero image, logo, cover and icon come from</value>
+  </data>
+  <data name="ArtworkLocalTitle" xml:space="preserve">
+    <value>Local · launcher caches</value>
+  </data>
+  <data name="ArtworkLocalTag" xml:space="preserve">
+    <value>Main source</value>
+  </data>
+  <data name="ArtworkLocalHint" xml:space="preserve">
+    <value>Read-only, no network. New images appear on their own as soon as a launcher caches them; for Quiver after the next scan.</value>
+  </data>
+  <data name="ArtworkAlwaysOn" xml:space="preserve">
+    <value>Always on</value>
+  </data>
+  <data name="ArtworkAlwaysOnHint" xml:space="preserve">
+    <value>Local images can't be turned off</value>
+  </data>
+  <data name="CoverageTableName" xml:space="preserve">
+    <value>Coverage with local images per launcher</value>
+  </data>
+  <data name="CoverageLauncher" xml:space="preserve">
+    <value>Launcher</value>
+  </data>
+  <data name="CoverageHero" xml:space="preserve">
+    <value>Hero image</value>
+  </data>
+  <data name="CoverageLogo" xml:space="preserve">
+    <value>Logo</value>
+  </data>
+  <data name="CoverageCover" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="CoverageIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="CoverageCellName" xml:space="preserve">
+    <value>{0}, {1}: {2} used, {3} found, games: {4}</value>
+  </data>
+  <data name="CoverageLegend" xml:space="preserve">
+    <value>Number = used / games, +n = found but not used (such as blurred capsules or engine logos); selectable under “Choose image…”.</value>
+  </data>
+  <data name="CoverageLoading" xml:space="preserve">
+    <value>Counting images…</value>
+  </data>
+  <data name="CoverageEmpty" xml:space="preserve">
+    <value>No games scanned yet.</value>
+  </data>
+  <data name="ArtworkGeneratedTitle" xml:space="preserve">
+    <value>Generated images</value>
+  </data>
+  <data name="ArtworkGeneratedHint" xml:space="preserve">
+    <value>Step in when something is missing – one real example from your library per case</value>
+  </data>
+  <data name="FallbackKind_HeroFromIcon" xml:space="preserve">
+    <value>Hero image from icon</value>
+  </data>
+  <data name="FallbackKind_NameInsteadOfLogo" xml:space="preserve">
+    <value>Name instead of logo</value>
+  </data>
+  <data name="FallbackKind_CoverGenerated" xml:space="preserve">
+    <value>Cover generated</value>
+  </data>
+  <data name="FallbackKind_CoverFromSmearedCapsule" xml:space="preserve">
+    <value>Blurred capsule → crop</value>
+  </data>
+  <data name="FallbackKind_Monogram" xml:space="preserve">
+    <value>Monogram</value>
+  </data>
+  <data name="FallbackExamplesEmpty" xml:space="preserve">
+    <value>No substitute images needed: all images come from the launcher caches.</value>
+  </data>
+  <data name="FallbackExampleName" xml:space="preserve">
+    <value>{0}: {1} · {2}</value>
+  </data>
+  <data name="SteamGridDbTitle" xml:space="preserve">
+    <value>SteamGridDB (online)</value>
+  </data>
+  <data name="SteamGridDbTag" xml:space="preserve">
+    <value>optional</value>
+  </data>
+  <data name="SteamGridDbHint" xml:space="preserve">
+    <value>Only fills missing images: hero images {0}, logos {1}, covers {2}. Local images stay untouched.</value>
+  </data>
+  <data name="SteamGridDbToggleName" xml:space="preserve">
+    <value>Load missing images from SteamGridDB automatically</value>
+  </data>
+  <data name="SteamGridDbKeyPlaceholder" xml:space="preserve">
+    <value>API key from steamgriddb.com</value>
+  </data>
+  <data name="SteamGridDbKeyName" xml:space="preserve">
+    <value>SteamGridDB API key</value>
+  </data>
+  <data name="SteamGridDbCheck" xml:space="preserve">
+    <value>Check</value>
+  </data>
+  <data name="SteamGridDbCheckName" xml:space="preserve">
+    <value>Check the key with SteamGridDB and save it</value>
+  </data>
+  <data name="SteamGridDbRunNow" xml:space="preserve">
+    <value>Download missing images now</value>
+  </data>
+  <data name="SteamGridDbRunNowName" xml:space="preserve">
+    <value>Download missing images from SteamGridDB now</value>
+  </data>
+  <data name="SteamGridDbRemoveKey" xml:space="preserve">
+    <value>Remove key</value>
+  </data>
+  <data name="SteamGridDbRemoveKeyName" xml:space="preserve">
+    <value>Remove the saved SteamGridDB key</value>
+  </data>
+  <data name="SteamGridDbKeyNote" xml:space="preserve">
+    <value>Default: off. The key is stored encrypted (DPAPI) for your Windows account and never written to the log. With a key, you can search SteamGridDB yourself in “Choose image…”, even when automatic loading is off.</value>
+  </data>
+  <data name="SteamGridDbStatusName" xml:space="preserve">
+    <value>Last SteamGridDB network access</value>
+  </data>
+  <data name="SteamGridDbStatusOff" xml:space="preserve">
+    <value>No key · no network access</value>
+  </data>
+  <data name="SteamGridDbStatusNoKey" xml:space="preserve">
+    <value>On · no network access without a key</value>
+  </data>
+  <data name="SteamGridDbStatusUnreadable" xml:space="preserve">
+    <value>Saved key can't be read (different Windows account?) – please enter it again</value>
+  </data>
+  <data name="SteamGridDbStatusReady" xml:space="preserve">
+    <value>On · key saved · no network access yet</value>
+  </data>
+  <data name="SteamGridDbStatusRunning" xml:space="preserve">
+    <value>Downloading missing images from SteamGridDB…</value>
+  </data>
+  <data name="SteamGridDbStatusLastRun" xml:space="preserve">
+    <value>Last access {0:g} · requests: {1} · images added: {2}</value>
+  </data>
+  <data name="SteamGridDbStatusError" xml:space="preserve">
+    <value>Last error: {0}</value>
+  </data>
+  <data name="SteamGridDbChecking" xml:space="preserve">
+    <value>Checking the key…</value>
+  </data>
+  <data name="SteamGridDbCheckValid" xml:space="preserve">
+    <value>Key valid and saved</value>
+  </data>
+  <data name="SteamGridDbCheckInvalid" xml:space="preserve">
+    <value>Key invalid</value>
+  </data>
+  <data name="SteamGridDbCheckNetworkError" xml:space="preserve">
+    <value>SteamGridDB not reachable</value>
+  </data>
+  <data name="SteamGridDbCheckRateLimited" xml:space="preserve">
+    <value>Too many requests – check again later</value>
+  </data>
+  <data name="SteamGridDbKeyMissing" xml:space="preserve">
+    <value>Please enter a key first</value>
+  </data>
+  <data name="SteamGridDbSaveFailed" xml:space="preserve">
+    <value>Couldn't save the key: {0}</value>
+  </data>
+  <data name="ArtworkPerGameHint" xml:space="preserve">
+    <value>Single game: right-click › “Choose image…” or “Change icon…”</value>
+  </data>
+  <data name="SectionTray" xml:space="preserve">
+    <value>Icons and tray</value>
+  </data>
+  <data name="SectionTrayHint" xml:space="preserve">
+    <value>Show the state in your colors</value>
+  </data>
+  <data name="TaskbarCaption" xml:space="preserve">
+    <value>Taskbar</value>
+  </data>
+  <data name="TaskbarName" xml:space="preserve">
+    <value>Preview taskbar</value>
+  </data>
+  <data name="TaskbarLight" xml:space="preserve">
+    <value>Light</value>
+  </data>
+  <data name="TaskbarDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="TrayPreviewName" xml:space="preserve">
+    <value>Preview of tray icon, window icon and taskbar</value>
+  </data>
+  <data name="TrayStateOff" xml:space="preserve">
+    <value>HDR off</value>
+  </data>
+  <data name="TrayStateOffHint" xml:space="preserve">
+    <value>waiting</value>
+  </data>
+  <data name="TrayStateOn" xml:space="preserve">
+    <value>HDR on</value>
+  </data>
+  <data name="TrayStateOnHint" xml:space="preserve">
+    <value>manual/auto</value>
+  </data>
+  <data name="TrayStatePaused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="TrayStatePausedHint" xml:space="preserve">
+    <value>Automation</value>
+  </data>
+  <data name="TrayStateRunning" xml:space="preserve">
+    <value>Game running</value>
+  </data>
+  <data name="TrayStateRunningHint" xml:space="preserve">
+    <value>HDR on</value>
+  </data>
+  <data name="TrayRealSize" xml:space="preserve">
+    <value>Actual size · off / on</value>
+  </data>
+  <data name="TraySizePixels" xml:space="preserve">
+    <value>{0} px</value>
+  </data>
+  <data name="TrayPreviewNote" xml:space="preserve">
+    <value>“HDR off” (the most common state) shows the accent → atmosphere gradient as a line, “HDR on” the filled tile. The colors are adjusted to at least 3:1 contrast for each taskbar.</value>
+  </data>
+  <data name="TrayMenuPreviewName" xml:space="preserve">
+    <value>Preview of the tray menu</value>
+  </data>
+  <data name="TrayPreviewStatus" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="WindowIconPreviewName" xml:space="preserve">
+    <value>HDRpilot window icon</value>
+  </data>
+  <data name="TrayIconPreviewName" xml:space="preserve">
+    <value>HDRpilot tray icon</value>
+  </data>
+  <data name="ColorPickerTitle" xml:space="preserve">
+    <value>Choose color</value>
+  </data>
+  <data name="ColorPickerField" xml:space="preserve">
+    <value>Saturation and brightness</value>
+  </data>
+  <data name="ColorPickerHue" xml:space="preserve">
+    <value>Hue</value>
+  </data>
+  <data name="ColorPickerHex" xml:space="preserve">
+    <value>Hex</value>
+  </data>
+  <data name="ColorPickerHexName" xml:space="preserve">
+    <value>Color as hex value (#RRGGBB)</value>
+  </data>
+  <data name="ColorPickerApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="ColorPickerCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ColorPickerInvalid" xml:space="preserve">
+    <value>Please enter as #RRGGBB</value>
+  </data>
+  <data name="RelativeToday" xml:space="preserve">
+    <value>today, {0:t}</value>
+  </data>
+  <data name="RelativeYesterday" xml:space="preserve">
+    <value>yesterday, {0:t}</value>
+  </data>
+  <data name="RelativeDays" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="RelativeOneWeek" xml:space="preserve">
+    <value>1 week ago</value>
+  </data>
+  <data name="RelativeWeeks" xml:space="preserve">
+    <value>{0} weeks ago</value>
+  </data>
+  <data name="RelativeDate" xml:space="preserve">
+    <value>{0:MMM d, yyyy}</value>
+  </data>
+  <data name="NavLibrary" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="SectionLibrary" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="SectionLibraryHint" xml:space="preserve">
+    <value>Hide uninstalled games or remove their settings</value>
+  </data>
+  <data name="HideUninstalledLabel" xml:space="preserve">
+    <value>Hide uninstalled games</value>
+  </data>
+  <data name="HideUninstalledHint" xml:space="preserve">
+    <value>They're then left out of all counts in the library. “HDR on launch” still applies to them.</value>
+  </data>
+  <data name="UninstalledCount" xml:space="preserve">
+    <value>currently {0}</value>
+  </data>
+  <data name="UninstalledCountName" xml:space="preserve">
+    <value>Uninstalled games currently: {0}</value>
+  </data>
+  <data name="RemoveUninstalledButton" xml:space="preserve">
+    <value>Remove settings for all uninstalled games…</value>
+  </data>
+  <data name="RemoveUninstalledHint" xml:space="preserve">
+    <value>After confirmation, removes what HDRpilot has stored about these games, immediately and regardless of “Save”. Nothing changes in the games or launchers; games you added yourself stay.</value>
+  </data>
+  <data name="RemoveUninstalledNone" xml:space="preserve">
+    <value>There are currently no uninstalled games from launchers.</value>
+  </data>
+  <data name="ColorsFollowGameLabel" xml:space="preserve">
+    <value>Colors follow the game</value>
+  </data>
+  <data name="ColorsFollowGameHint" xml:space="preserve">
+    <value>Library accents take on the colors of the selected game's logo and cover – read once per game; gray images, the settings, the tray menu and dialogs use the color scheme</value>
+  </data>
+  <data name="SteamGridDbSubtitle" xml:space="preserve">
+    <value>More images from the web, only with your own API key.</value>
+  </data>
+  <data name="SteamGridDbAutoLabel" xml:space="preserve">
+    <value>Load missing images automatically</value>
+  </data>
+  <data name="SteamGridDbStatusOffWithKey" xml:space="preserve">
+    <value>Automatic loading off · search in “Choose image…” only on click</value>
+  </data>
+  <data name="SteamGridDbStatusLastSearch" xml:space="preserve">
+    <value>Automatic loading off · last search {0:g} · requests: {1}</value>
+  </data>
+  <data name="SteamGridDbStatusLastSearchOn" xml:space="preserve">
+    <value>Last search in “Choose image…” {0:g} · requests: {1}</value>
+  </data>
+</root>

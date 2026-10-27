@@ -20,8 +20,8 @@ namespace HdrPilot.App.ViewModels.Library;
 /// Schreibvorgänge laufen über <see cref="ILibraryContext.UpdateConfigAsync"/> im Hintergrund; die Liste zeigt die
 /// Änderung sofort und gleicht sich danach mit der Konfiguration ab. Gefiltert und sortiert wird über eine
 /// CollectionView (Suche entprellt), damit 600+ Spiele flüssig bleiben. Sortierung, Breite des Detailbereichs und Höhe
-/// des Titelbereichs der Liste merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryPaneRatio,
-/// AppSettings.LibraryHeroRatio). Die HDR-Unterstützung laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“)
+/// des Titelbereichs je Ansicht merkt sich die Konfiguration (AppSettings.LibrarySortOrder, AppSettings.LibraryPaneRatio,
+/// AppSettings.LibraryHeroRatio, LibraryGridHeroRatio, LibraryShelfHeroRatio). Die HDR-Unterstützung laut PCGamingWiki (Kennzeichen, Sortierung, Filter „HDR-fähig“)
 /// wird beim Öffnen und nach jedem Abgleich aus dem Zwischenspeicher geladen und lebt nur, solange das Fenster offen ist.
 /// </para>
 /// <para>
@@ -67,9 +67,11 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     private IDisposable? _seenDelay;
     private IDisposable? _layoutDelay;
     private bool _layoutPending;
-    private bool _heroPending;
+
+    /// <summary>Gemerkte Höhen des Titelbereichs je Ansicht (Liste, Raster, Regal) und ob sie noch zu speichern sind.</summary>
+    private readonly double?[] _heroRatios = new double?[3];
+    private readonly bool[] _heroPending = new bool[3];
     private double? _detailsRatio;
-    private double? _heroRatio;
     private SortOption _selectedSort;
 
     private AppConfig? _syncedConfig;
@@ -116,7 +118,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         _context = context;
         _dialogs = dialogs;
-        _allSources = new SourceFilterOption(null, 0);
+        _allSources = new SourceFilterOption(null, 0) { IsSelected = true };
         _selectedSource = _allSources;
         SourceOptions = [_allSources];
 
@@ -126,7 +128,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         var order = GameSorting.Parse(settings.LibrarySortOrder);
         _selectedSort = SortOptions.First(o => o.Order == order);
         _detailsRatio = settings.LibraryPaneRatio;
-        _heroRatio = settings.LibraryHeroRatio;
+        _heroRatios[0] = settings.LibraryHeroRatio;
+        _heroRatios[1] = settings.LibraryGridHeroRatio;
+        _heroRatios[2] = settings.LibraryShelfHeroRatio;
 
         GamesView = new ListCollectionView(Games) { Filter = Matches };
         ApplySortToView();
@@ -246,6 +250,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
             if (!ReferenceEquals(next, _selectedSource))
             {
                 _selectedSource = next;
+                MarkSelectedSource();
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(IsFiltered));
                 RefreshView();
@@ -353,25 +358,44 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>Gemerkte Höhe des Titelbereichs der Liste als Anteil der Fensterhöhe (null: Standard, ein Drittel).</summary>
-    public double? HeroRatio => _heroRatio;
+    public double? HeroRatio => HeroRatioFor(LibraryViewMode.List);
 
     /// <summary>
-    /// Neue Höhe des Titelbereichs der Liste nach dem Ziehen am Griff oder per Tastatur (null: zurück zum Standard). Auf
-    /// vier Stellen gerundet (bei 1440 px Fensterhöhe unter 0,1 px), gespeichert wie <see cref="SetDetailsRatio"/>.
+    /// Gemerkte Höhe des Titelbereichs einer Ansicht als Anteil der Fensterhöhe (null: Standard der Ansicht). Jede Ansicht
+    /// merkt ihre eigene Höhe (Wunsch des Nutzers 2026-10-22).
     /// </summary>
-    public void SetHeroRatio(double? ratio)
+    public double? HeroRatioFor(LibraryViewMode view) => _heroRatios[HeroSlot(view)];
+
+    /// <summary>Neue Höhe des Titelbereichs der Liste, siehe <see cref="SetHeroRatio(LibraryViewMode, double?)"/>.</summary>
+    public void SetHeroRatio(double? ratio) => SetHeroRatio(LibraryViewMode.List, ratio);
+
+    /// <summary>
+    /// Neue Höhe des Titelbereichs einer Ansicht nach dem Ziehen am Griff oder per Tastatur (null: zurück zum Standard). Auf
+    /// vier Stellen gerundet (bei 1440 px Fensterhöhe unter 0,1 px), gespeichert wie <see cref="SetDetailsRatio"/>; die Höhen
+    /// der anderen Ansichten bleiben unberührt.
+    /// </summary>
+    public void SetHeroRatio(LibraryViewMode view, double? ratio)
     {
         double? value = ratio is { } r && double.IsFinite(r) ? Math.Round(Math.Clamp(r, 0.01, 0.99), 4) : null;
-        if (_disposed || Nullable.Equals(value, _heroRatio))
+        var slot = HeroSlot(view);
+        if (_disposed || Nullable.Equals(value, _heroRatios[slot]))
         {
             return;
         }
 
-        _heroRatio = value;
-        _heroPending = true;
+        _heroRatios[slot] = value;
+        _heroPending[slot] = true;
         _layoutDelay?.Dispose();
         _layoutDelay = _context.Ui.Delay(LayoutDelay, FlushLayout);
     }
+
+    /// <summary>Platz einer Ansicht in <see cref="_heroRatios"/> (Unbekanntes gilt als Liste).</summary>
+    private static int HeroSlot(LibraryViewMode view) => view switch
+    {
+        LibraryViewMode.Grid => 1,
+        LibraryViewMode.Shelf => 2,
+        _ => 0,
+    };
 
     // ---------- Auswahl und Details ----------
 
@@ -458,7 +482,9 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     public string NewText => LibraryText.Format(LibraryStrings.Stats_New, _newCount);
 
     public string ResultText => IsFiltered
-        ? LibraryText.Format(LibraryStrings.List_ResultFiltered, _visibleCount, _totalCount)
+        ? _totalCount == 1
+            ? LibraryText.Format(LibraryStrings.Stats_FilteredOfOne, _visibleCount)
+            : LibraryText.Format(LibraryStrings.List_ResultFiltered, _visibleCount, _totalCount)
         : LibraryText.Games(_totalCount);
 
     public bool IsLibraryEmpty => _totalCount == 0;
@@ -651,6 +677,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         _searchText = string.Empty;
         _searchTokens = [];
         _selectedSource = _allSources;
+        MarkSelectedSource();
         _onlySelected = false;
         _onlyNew = false;
         _onlyHdrCapable = false;
@@ -1338,18 +1365,18 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
     {
         _layoutDelay?.Dispose();
         _layoutDelay = null;
-        if (!_layoutPending && !_heroPending)
+        if (!_layoutPending && !_heroPending.Any(p => p))
         {
             return;
         }
 
-        // Nur, was sich geändert hat: Die andere Angabe bleibt, wie sie in der Konfiguration steht.
+        // Nur, was sich geändert hat: Die anderen Angaben bleiben, wie sie in der Konfiguration stehen.
         var pane = _layoutPending;
-        var hero = _heroPending;
+        bool[] hero = [.. _heroPending];
         _layoutPending = false;
-        _heroPending = false;
+        Array.Clear(_heroPending);
         var ratio = _detailsRatio;
-        var heroRatio = _heroRatio;
+        double?[] heroRatios = [.. _heroRatios];
         _ = WriteAsync(c =>
         {
             if (pane)
@@ -1357,9 +1384,19 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
                 c.Settings.LibraryPaneRatio = ratio;
             }
 
-            if (hero)
+            if (hero[0])
             {
-                c.Settings.LibraryHeroRatio = heroRatio;
+                c.Settings.LibraryHeroRatio = heroRatios[0];
+            }
+
+            if (hero[1])
+            {
+                c.Settings.LibraryGridHeroRatio = heroRatios[1];
+            }
+
+            if (hero[2])
+            {
+                c.Settings.LibraryShelfHeroRatio = heroRatios[2];
             }
         });
     }
@@ -1376,6 +1413,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ViewSummaryText));
         OnPropertyChanged(nameof(ListHeaderText));
         RaiseToolbarTexts();
+        UpdateHeader();
     }
 
     private int InsertIndex(GameItemViewModel item)
@@ -1459,6 +1497,7 @@ public sealed partial class LibraryViewModel : ObservableObject, IDisposable
         }
 
         RaiseToolbarTexts();
+        UpdateHeader();
     }
 
     private void ApplyRunningFlags()

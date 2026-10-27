@@ -49,6 +49,21 @@ internal sealed class FakeShellContext(ConfigService config, FakeHdrController h
 
     public void OnSettingsSaved(bool searchFoldersChanged) => SavedCalls.Add(searchFoldersChanged);
 
+    /// <summary>„Jetzt neu starten“ (E95): Zahl der Aufrufe; <see cref="RestartResult"/> ist die Antwort.</summary>
+    public int RestartCalls { get; private set; }
+
+    public bool RestartResult { get; set; } = true;
+
+    /// <summary>Gespeicherte Sprache im Moment des Neustarts (der Neustart muss nach dem Speichern kommen).</summary>
+    public string? LanguageAtRestart { get; private set; }
+
+    public Task<bool> RestartAsync()
+    {
+        RestartCalls++;
+        LanguageAtRestart = Config.Current.Settings.Language;
+        return Task.FromResult(RestartResult);
+    }
+
     public void RaiseHdrStateChanged() => HdrStateChanged?.Invoke(this, EventArgs.Empty);
 
     public FakeHdrListService FakeHdrList { get; } = new();

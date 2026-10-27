@@ -21,9 +21,10 @@ public sealed class SetupBundle
 
     /// <summary>
     /// Einträge, die das Zip enthalten darf (Pfade mit „/“); alles andere wird nie ausgepackt. <c>LICENSE</c> (Lizenztext
-    /// von HDRpilot, E92) gibt es ab 1.5.0; ältere Setup-Dateien ohne diesen Eintrag bleiben gültig.
+    /// von HDRpilot, E92) gibt es ab 1.5.0, die deutsche <c>README.de.md</c> neben der englischen README (E95) ab 1.6.0;
+    /// ältere Setup-Dateien ohne diese Einträge bleiben gültig.
     /// </summary>
-    public static readonly IReadOnlyList<string> PayloadEntryNames = ["README.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"];
+    public static readonly IReadOnlyList<string> PayloadEntryNames = ["README.md", "README.de.md", "LICENSE", "THIRD-PARTY-NOTICES.txt", "cli/hdrpilot.exe"];
 
     private SetupBundle(string path, long exeLength, long payloadLength, byte[] exeSha256)
     {

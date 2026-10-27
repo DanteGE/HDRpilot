@@ -225,7 +225,7 @@
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
-                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}">
                                     <DockPanel>
                                         <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="16,0,0,0"
                                                   Style="{StaticResource Hp.ToggleSwitch}"
@@ -238,6 +238,49 @@
                                             <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.NotificationsHint}" />
                                         </StackPanel>
                                     </DockPanel>
+                                </Border>
+                                <!-- Sprache (E95): gilt nach einem Neustart; weicht die Wahl ab, Hinweis und „Jetzt neu starten“ -->
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                    <StackPanel>
+                                        <DockPanel>
+                                            <ComboBox DockPanel.Dock="Right" Width="196" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                      Style="{StaticResource Hp.Shell.ComboBox}"
+                                                      AutomationProperties.AutomationId="LanguageChoice"
+                                                      AutomationProperties.Name="{x:Static res:ShellStrings.LanguageLabel}"
+                                                      AutomationProperties.HelpText="{x:Static res:ShellStrings.LanguageHint}"
+                                                      ItemsSource="{Binding Languages}"
+                                                      DisplayMemberPath="Label"
+                                                      SelectedValuePath="Value"
+                                                      SelectedValue="{Binding Language, Mode=TwoWay}" />
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Style="{StaticResource Hp.Shell.Label}" Text="{x:Static res:ShellStrings.LanguageLabel}" />
+                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.LanguageHint}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,12,0,0" Visibility="{Binding LanguageNeedsRestart, Converter={StaticResource Hp.Shell.BoolToVisibility}}">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource Hp.GhostButton}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                    AutomationProperties.AutomationId="LanguageRestartButton"
+                                                    AutomationProperties.Name="{x:Static res:ShellStrings.LanguageRestartNow}"
+                                                    AutomationProperties.HelpText="{x:Static res:ShellStrings.LanguageRestartHint}"
+                                                    Command="{Binding RestartNowCommand}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <views:LineIcon Style="{StaticResource Hp.Shell.ButtonIcon}" Data="{StaticResource Hp.Icon.Reset}" />
+                                                    <TextBlock Text="{x:Static res:ShellStrings.LanguageRestartNow}" />
+                                                </StackPanel>
+                                            </Button>
+                                            <views:LineIcon Width="14" Height="14" Margin="0,1,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.TextMuted}" Data="{StaticResource Hp.Icon.Info}" />
+                                            <StackPanel>
+                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" TextWrapping="Wrap"
+                                                           AutomationProperties.AutomationId="LanguageRestartHint"
+                                                           Text="{x:Static res:ShellStrings.LanguageRestartHint}" />
+                                                <!-- Während einer Sitzung gesperrt (E95): der Grund steht hier -->
+                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                           AutomationProperties.AutomationId="LanguageRestartBlockedHint"
+                                                           Text="{x:Static res:ShellStrings.LanguageRestartBlocked}"
+                                                           Visibility="{Binding LanguageRestartBlocked, Converter={StaticResource Hp.Shell.BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </StackPanel>
                                 </Border>
                             </StackPanel>
                         </views:SettingsCard>
@@ -692,16 +735,31 @@
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
-                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}">
                                     <DockPanel>
                                         <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="14,0,0,0" Style="{StaticResource Hp.ToggleSwitch}"
                                                   AutomationProperties.AutomationId="BackgroundFollowsGameToggle" AutomationProperties.Name="{x:Static res:ShellStrings.BackgroundFollowsGameLabel}"
+                                                  AutomationProperties.HelpText="{x:Static res:ShellStrings.BackgroundFollowsGameHint}"
                                                   IsChecked="{Binding BackgroundFollowsGame, Mode=TwoWay}" />
                                         <Border DockPanel.Dock="Left" Width="46" Height="36" CornerRadius="10" Margin="0,0,14,0" Background="{Binding FollowSample}"
                                                 BorderBrush="#33FFFFFF" BorderThickness="1" RenderOptions.BitmapScalingMode="Linear" />
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.BackgroundFollowsGameLabel}" />
                                             <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.BackgroundFollowsGameHint}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                    <DockPanel>
+                                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="14,0,0,0" Style="{StaticResource Hp.ToggleSwitch}"
+                                                  AutomationProperties.AutomationId="ColorsFollowGameToggle" AutomationProperties.Name="{x:Static res:ShellStrings.ColorsFollowGameLabel}"
+                                                  AutomationProperties.HelpText="{x:Static res:ShellStrings.ColorsFollowGameHint}"
+                                                  IsChecked="{Binding ColorsFollowGame, Mode=TwoWay}" />
+                                        <Border DockPanel.Dock="Left" Width="46" Height="36" CornerRadius="10" Margin="0,0,14,0" Background="{Binding ColorsFollowSample}"
+                                                BorderBrush="#33FFFFFF" BorderThickness="1" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.ColorsFollowGameLabel}" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.ColorsFollowGameHint}" />
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
@@ -1168,13 +1226,14 @@
                                     </StackPanel>
                                 </Border>
 
-                                <!-- SteamGridDB (online, optional) -->
-                                <Border Style="{StaticResource Hp.Shell.SubCard}" Margin="0,10,0,0">
+                                <!--
+                                    SteamGridDB (online, optional; E93): Der Schlüssel erlaubt die Suche in „Bild wählen…“ auf Klick, der
+                                    Schalter in eigener Zeile regelt nur das automatische Laden fehlender Bilder. Schlüsselfeld und „Prüfen“
+                                    sind immer bedienbar; „Prüfen“ bei ausgeschaltetem Schalter speichert nur.
+                                -->
+                                <Border x:Name="SteamGridDbCard" Style="{StaticResource Hp.Shell.SubCard}" Margin="0,10,0,0">
                                     <StackPanel>
                                         <DockPanel>
-                                            <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Style="{StaticResource Hp.ToggleSwitch}"
-                                                      AutomationProperties.AutomationId="SteamGridDbToggle" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbToggleName}"
-                                                      IsChecked="{Binding SteamGridDbEnabled, Mode=TwoWay}" />
                                             <Border DockPanel.Dock="Left" Width="36" Height="36" CornerRadius="11" Margin="0,0,12,0" VerticalAlignment="Top" Background="{DynamicResource Hp.Brush.Surface2}">
                                                 <views:LineIcon Width="17" Height="17" Foreground="{DynamicResource Hp.Brush.AccentText}" Data="{StaticResource Hp.Icon.Cloud}" />
                                             </Border>
@@ -1185,7 +1244,7 @@
                                                         <TextBlock Style="{StaticResource Hp.Shell.TagText}" Text="{Binding Source={x:Static res:ShellStrings.SteamGridDbTag}, Converter={StaticResource Hp.Shell.Upper}}" />
                                                     </Border>
                                                 </WrapPanel>
-                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{Binding SteamGridDbHint}" />
+                                                <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.SteamGridDbSubtitle}" />
                                             </StackPanel>
                                         </DockPanel>
                                         <Grid Margin="0,10,0,0">
@@ -1193,7 +1252,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <Grid x:Name="KeyField" IsEnabled="{Binding SteamGridDbEnabled}">
+                                            <Grid x:Name="KeyField">
                                                 <PasswordBox x:Name="SteamGridDbKey" Style="{StaticResource Hp.Shell.PasswordBox}" Padding="34,9,10,9" FontFamily="{DynamicResource Hp.Font.Mono}"
                                                              AutomationProperties.AutomationId="SteamGridDbKey" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbKeyName}"
                                                              PasswordChanged="OnSteamGridDbKeyChanged" />
@@ -1201,7 +1260,7 @@
                                                 <TextBlock x:Name="KeyPlaceholder" Margin="35,0,10,0" VerticalAlignment="Center" IsHitTestVisible="False" FontFamily="{DynamicResource Hp.Font.Mono}" FontSize="12.5"
                                                            Foreground="{DynamicResource Hp.Brush.TextMuted}" TextTrimming="CharacterEllipsis" Text="{x:Static res:ShellStrings.SteamGridDbKeyPlaceholder}" />
                                             </Grid>
-                                            <Button Grid.Column="1" Style="{StaticResource Hp.GhostButton}" Margin="8,0,0,0" IsEnabled="{Binding SteamGridDbEnabled}"
+                                            <Button x:Name="SteamGridDbCheckButton" Grid.Column="1" Style="{StaticResource Hp.GhostButton}" Margin="8,0,0,0"
                                                     AutomationProperties.AutomationId="SteamGridDbCheckButton" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbCheckName}"
                                                     Content="{x:Static res:ShellStrings.SteamGridDbCheck}" Command="{Binding CheckSteamGridDbCommand}" />
                                         </Grid>
@@ -1218,12 +1277,25 @@
                                             </TextBlock.Style>
                                         </TextBlock>
                                         <WrapPanel Margin="0,8,0,0">
-                                            <Button Style="{StaticResource Hp.GhostButton}" Margin="0,0,8,0" Command="{Binding RunSteamGridDbNowCommand}"
-                                                    AutomationProperties.AutomationId="SteamGridDbRunNowButton" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbRunNowName}"
-                                                    Content="{x:Static res:ShellStrings.SteamGridDbRunNow}" />
                                             <Button Style="{StaticResource Hp.GhostButton}" Command="{Binding RemoveSteamGridDbKeyCommand}"
                                                     AutomationProperties.AutomationId="SteamGridDbRemoveKeyButton" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbRemoveKeyName}"
                                                     Content="{x:Static res:ShellStrings.SteamGridDbRemoveKey}" />
+                                        </WrapPanel>
+                                        <Border Height="1" Margin="0,12,0,12" Background="{DynamicResource Hp.Brush.Line}" />
+
+                                        <!-- Automatisches Laden: eigene Zeile mit sichtbarer Beschriftung, darunter die Zahlen und „jetzt laden“ -->
+                                        <DockPanel x:Name="SteamGridDbAutoRow">
+                                            <CheckBox x:Name="SteamGridDbToggle" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Style="{StaticResource Hp.ToggleSwitch}"
+                                                      AutomationProperties.AutomationId="SteamGridDbToggle" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbToggleName}"
+                                                      IsChecked="{Binding SteamGridDbEnabled, Mode=TwoWay}" />
+                                            <TextBlock x:Name="SteamGridDbAutoLabel" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"
+                                                       Text="{x:Static res:ShellStrings.SteamGridDbAutoLabel}" AutomationProperties.AutomationId="SteamGridDbAutoLabel" />
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{Binding SteamGridDbHint}" TextWrapping="Wrap" />
+                                        <WrapPanel Margin="0,8,0,0">
+                                            <Button Style="{StaticResource Hp.GhostButton}" Command="{Binding RunSteamGridDbNowCommand}"
+                                                    AutomationProperties.AutomationId="SteamGridDbRunNowButton" AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbRunNowName}"
+                                                    Content="{x:Static res:ShellStrings.SteamGridDbRunNow}" />
                                         </WrapPanel>
                                         <DockPanel Margin="0,8,0,0">
                                             <views:LineIcon Width="13" Height="13" Margin="0,2,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.TextMuted}" Data="{StaticResource Hp.Icon.Info}" />

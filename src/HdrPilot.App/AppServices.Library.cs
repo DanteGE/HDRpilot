@@ -25,6 +25,12 @@ public sealed partial class AppServices
     /// <summary>Wie <see cref="TestIconFileVariable"/>, für „Bild wählen…“ → „Eigene Datei…“ (E89).</summary>
     public const string TestArtFileVariable = "HDRPILOT_TEST_ART_FILE";
 
+    /// <summary>
+    /// Wie <see cref="TestIconFileVariable"/>: „fixture“ ersetzt die Übertragung zu SteamGridDB durch den
+    /// Testdaten-Lieferanten (erzeugte Antworten, kein Netz, E93); Anfrageprotokoll in sgdb-fixture.log der Ablage.
+    /// </summary>
+    public const string TestSteamGridDbVariable = "HDRPILOT_TEST_STEAMGRIDDB";
+
     /// <summary>Wartezeit vor dem Bildschirmfoto: Bilder laden im Hintergrund, Überblendungen (bis 1,4 s) sollen fertig sein.</summary>
     private static readonly TimeSpan LibrarySettle = TimeSpan.FromSeconds(3);
 
@@ -83,6 +89,11 @@ public sealed partial class AppServices
     {
         scenes.Add(new SnapshotScene("hauptfenster", "liste", () => LibraryScene(LibraryViewMode.List)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-gescrollt", () => LibraryScene(LibraryViewMode.List), ScrollListAsync) { Settle = LibrarySettle });
+
+        // Bildlaufleiste im Spalt (Wunsch des Nutzers 2026-10-22): Liste gescrollt mit der feinen Linie des Trenners wie beim
+        // Überfahren des Spalts, Raster eine Seite weitergeblättert wie per Klick unter die Pille.
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-spalt", () => LibraryScene(LibraryViewMode.List), GapHoverAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-gescrollt", () => LibraryScene(LibraryViewMode.Grid), PageGridAsync) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "raster", () => LibraryScene(LibraryViewMode.Grid)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal", () => LibraryScene(LibraryViewMode.Shelf)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "regal-details", () => LibraryScene(LibraryViewMode.Shelf), OpenDrawerAsync) { Settle = LibrarySettle });
@@ -96,6 +107,7 @@ public sealed partial class AppServices
             Overlays = window => window is MainWindow main && main.CreateContextMenuPreview() is { } menu ? [menu] : [],
         });
         scenes.Add(new SnapshotScene("hauptfenster", "bildwahl", CreatePickerScene) { Settle = TimeSpan.FromSeconds(2), Resizable = false });
+        AddSteamGridDbPickerScenes(scenes);
 
         // Werkzeugleiste „Fließleiste mit Lichtnaht“ (Wunsch des Nutzers 2026-10-17): Filter an, eingeklappt (Kapsel), eingeklappt
         // und gefiltert (Lichtnaht), in allen Ansichten; Tooltip eines Filters, Lasche beim Überfahren, Menü der Leiste. Zwei
@@ -149,9 +161,81 @@ public sealed partial class AppServices
         scenes.Add(new SnapshotScene("hauptfenster", "quiver-gefiltert", () => LibraryScene(LibraryViewMode.List), w => SelectQuiverAsync(w, filter: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "quiver-kapsel", () => LibraryScene(LibraryViewMode.Grid), w => SelectQuiverAsync(w, filter: true, collapse: true)) { Settle = LibrarySettle });
 
+        // Rückmeldung des Nutzers 2026-10-22: Lasche beim Überfahren auch in Raster und Regal (mittig auf der Bildkante), Kacheln
+        // wie überfahren (die gewählte erste und eine zweite; im Raster wächst die erste Reihe nach unten, im Regal steigen sie).
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-lasche", () => LibraryScene(LibraryViewMode.Grid), HoverTabAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-lasche", () => LibraryScene(LibraryViewMode.Shelf), HoverTabAsync) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-ueberfahren", () => LibraryScene(LibraryViewMode.Grid), w => HoverTilesAsync(w, secondRow: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-ueberfahren", () => LibraryScene(LibraryViewMode.Shelf), w => HoverTilesAsync(w, secondRow: false)) { Settle = LibrarySettle });
+
         // Hoher Kontrast (ohne Umstellung des Systems): Kapsel ungefiltert und gefiltert in Systemfarben.
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: false, highContrast: true)) { Settle = LibrarySettle });
         scenes.Add(new SnapshotScene("hauptfenster", "liste-eingeklappt-gefiltert-kontrast", () => LibraryScene(LibraryViewMode.List), w => ToolbarStateAsync(w, collapsed: true, filtered: true, highContrast: true)) { Settle = LibrarySettle });
+
+        // Rückmeldungen des Nutzers 2026-10-22: Titel mit der Quelle (die größte einzelne Quelle der Ablage), dazu „HDR
+        // automatisch“ als Filter (Kennzahlen „x von y Spielen“), das Quellenmenü am Titel und der Abschnitt „BILD“ mit
+        // zugeklappten und aufgeklappten Erklärungen zu Windows Auto HDR (bevorzugt ein Spiel mit Auto HDR).
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-quelle", () => LibraryScene(LibraryViewMode.List), w => SelectLargestSourceAsync(w, filter: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-quelle-gefiltert", () => LibraryScene(LibraryViewMode.List), w => SelectLargestSourceAsync(w, filter: true)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "raster-quelle", () => LibraryScene(LibraryViewMode.Grid), w => SelectLargestSourceAsync(w, filter: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "regal-quelle", () => LibraryScene(LibraryViewMode.Shelf), w => SelectLargestSourceAsync(w, filter: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-quellenmenue", () => LibraryScene(LibraryViewMode.List))
+        {
+            Settle = LibrarySettle,
+            Overlays = window => window is MainWindow main && main.CreateSourceMenuPreview() is { } menu ? [menu] : [],
+        });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-autohdr", () => LibraryScene(LibraryViewMode.List), w => ShowAutoHdrSectionAsync(w, expanded: false)) { Settle = LibrarySettle });
+        scenes.Add(new SnapshotScene("hauptfenster", "liste-autohdr-mehr", () => LibraryScene(LibraryViewMode.List), w => ShowAutoHdrSectionAsync(w, expanded: true)) { Settle = LibrarySettle });
+    }
+
+    /// <summary>
+    /// Größte einzelne Quelle der Ablage wählen (Titel „Steam-Spiele“ …), auf Wunsch mit dem Filter „HDR automatisch“ (gibt es
+    /// keins, „Neu“). Nur im ViewModel, nichts wird gespeichert; danach laufen Überblendungen zu Ende.
+    /// </summary>
+    private static async Task SelectLargestSourceAsync(Window window, bool filter)
+    {
+        if (window is not MainWindow { ViewModel: { } vm } || vm.SourceOptions.Where(o => o.Source is not null).MaxBy(o => o.Count) is not { } option)
+        {
+            return;
+        }
+
+        vm.SelectedSource = option;
+        if (filter)
+        {
+            if (vm.Games.Any(g => g.Source == option.Source && g.HdrAuto))
+            {
+                vm.OnlySelected = true;
+            }
+            else
+            {
+                vm.OnlyNew = true;
+            }
+        }
+
+        await Task.Delay(1400);
+    }
+
+    /// <summary>
+    /// Abschnitt „BILD“ im Detailbereich zeigen: ein Spiel mit „Windows Auto HDR“ wählen (sonst bleibt die Auswahl), Bereich
+    /// dorthin scrollen, Erklärungen auf Wunsch aufklappen. Nur im ViewModel, nichts wird gespeichert.
+    /// </summary>
+    private static async Task ShowAutoHdrSectionAsync(Window window, bool expanded)
+    {
+        if (window is not MainWindow { ViewModel: { } vm } main)
+        {
+            return;
+        }
+
+        var candidates = vm.GamesView.Cast<GameItemViewModel>().ToList();
+        if ((candidates.FirstOrDefault(g => g.AutoHdr && !g.HdrAuto) ?? candidates.FirstOrDefault(g => g.AutoHdr)) is { } item)
+        {
+            vm.SelectQuietly(item);
+        }
+
+        vm.IsAutoHdrInfoExpanded = expanded;
+        await Task.Delay(1400);
+        main.ScrollDetailsToPicture();
+        await Task.Delay(300);
     }
 
     /// <summary>
@@ -275,7 +359,21 @@ public sealed partial class AppServices
         await Task.Delay(400);
     }
 
-    /// <summary>Lasche, wie sie beim Überfahren nach links zu „Leiste ausblenden · Strg+Umschalt+F“ gewachsen ist.</summary>
+    /// <summary>
+    /// Kacheln wie beim Überfahren (ohne Maus): die erste (gewählt) und im Raster die zweite der zweiten Reihe, im Regal die vierte.
+    /// </summary>
+    private static async Task HoverTilesAsync(Window window, bool secondRow)
+    {
+        if (window is MainWindow main)
+        {
+            var columns = secondRow && MainWindow.FindTilePanel((System.Windows.Controls.ListBox)main.FindName("GameGrid")) is { } grid ? grid.Columns : 2;
+            main.PreviewTileHover(0, columns + 1);
+        }
+
+        await Task.Delay(400);
+    }
+
+    /// <summary>Lasche, wie sie beim Überfahren nach links zu „Leiste ausblenden · Strg+F“ gewachsen ist.</summary>
     private static async Task HoverTabAsync(Window window)
     {
         if (window is MainWindow main)
@@ -306,7 +404,8 @@ public sealed partial class AppServices
     }
 
     /// <summary>
-    /// Prüfung (G10.5): Strg+F im offenen Hauptfenster wie gedrückt (MainWindow.HandleKey, ohne Tastatureingabe). Im
+    /// Prüfung (G10.5): Strg+F im offenen Hauptfenster wie gedrückt (MainWindow.HandleKey, ohne Tastatureingabe; schaltet die
+    /// Werkzeugleiste um, eingeklappt mit dem Cursor in der Suche). Im
     /// Protokoll stehen danach der Zustand der Werkzeugleiste und wohin der Fokus ging (in einem nicht aktiven Fenster der
     /// Fokus, den es beim Aktivieren wiederherstellt; er wird niemandem genommen).
     /// </summary>
@@ -352,6 +451,26 @@ public sealed partial class AppServices
         if (window is MainWindow main)
         {
             main.ScrollListBy(14);
+            await Task.Delay(1500);
+        }
+    }
+
+    private static async Task GapHoverAsync(Window window)
+    {
+        if (window is MainWindow main)
+        {
+            main.ScrollListBy(140);
+            main.PreviewGapHover();
+            await Task.Delay(1500);
+        }
+    }
+
+    private static async Task PageGridAsync(Window window)
+    {
+        if (window is MainWindow main)
+        {
+            await Task.Delay(300); // Raster angeordnet
+            main.PageLibraryBy(1);
             await Task.Delay(1500);
         }
     }
@@ -429,7 +548,143 @@ public sealed partial class AppServices
         var picker = new ArtworkPickerViewModel(library, item, ArtworkKind.Hero);
         _ = picker.LoadAsync();
         var dialog = new ArtworkPickerDialog(picker);
-        dialog.Closed += (_, _) => library.Dispose();
+        dialog.Closed += (_, _) =>
+        {
+            picker.Dispose();
+            library.Dispose();
+        };
         return dialog;
+    }
+
+    /// <summary>
+    /// „Bild wählen…“ mit dem Abschnitt „STEAMGRIDDB“ (E93, §14): je Zustand ein Fenster über dem Testdaten-Lieferanten
+    /// (erzeugte Bilder, kein Netz, nie der echte Dienst), für das erste Spiel „HDRpilot-Prüfspiel …“ der Ablage.
+    /// </summary>
+    private void AddSteamGridDbPickerScenes(List<SnapshotScene> scenes)
+    {
+        scenes.Add(SgdbScene("ohne-schluessel", ArtworkKind.Hero, keyState: SteamGridDbKeyState.Missing));
+        scenes.Add(SgdbScene("bereit", ArtworkKind.Cover));
+        scenes.Add(SgdbScene("titelbild", ArtworkKind.Hero, prepare: async (_, picker, _) =>
+        {
+            await SgdbSearchAsync(picker);
+            if (picker.Online.Results.Count > 1)
+            {
+                picker.Selected = picker.Online.Results[1];
+            }
+        }));
+        scenes.Add(SgdbScene("cover", ArtworkKind.Cover, prepare: async (dialog, picker, _) =>
+        {
+            await SgdbSearchAsync(picker);
+            await picker.Online.MoreAsync(picker.Kind);
+            await PreviewsSettledAsync(picker);
+            dialog.UpdateLayout();
+            dialog.Scroll.ScrollToEnd();
+        }));
+        scenes.Add(SgdbScene("logo", ArtworkKind.Logo, prepare: (_, picker, _) => SgdbSearchAsync(picker)));
+        scenes.Add(SgdbScene("spielwahl", ArtworkKind.Cover, prepare: async (_, picker, _) =>
+        {
+            await SgdbSearchAsync(picker);
+            picker.Online.IsMatchOpen = true;
+            picker.Online.MatchSearchText = picker.Item.Name;
+            await picker.Online.SearchGamesAsync();
+        }));
+        scenes.Add(SgdbScene("fehler", ArtworkKind.Hero, key: SteamGridDbFixture.LaterRejectedKey, prepare: (_, picker, _) => SgdbSearchAsync(picker)));
+        scenes.Add(SgdbScene("uebernehmen", ArtworkKind.Cover, prepare: async (dialog, picker, fixture) =>
+        {
+            await SgdbSearchAsync(picker);
+            if (picker.Online.Results.Count > 2)
+            {
+                picker.Selected = picker.Online.Results[2];
+            }
+
+            // Der Lieferant hält das volle Bild in der Leitung: die Zeile „Lädt …“ bleibt stehen, bis das Fenster schließt.
+            fixture.HoldFullDownloads = true;
+            _ = dialog.ApplyCoreAsync();
+            await Task.Delay(400);
+        }));
+        scenes.Add(SgdbScene("klein", ArtworkKind.Cover, setup: dialog => dialog.FitToWorkArea(new Rect(0, 0, 1024, 616))));
+        scenes.Add(SgdbScene("kontrast", ArtworkKind.Logo, setup: dialog => dialog.SetHighContrast(HighContrastPalette.NightSky),
+            prepare: (_, picker, _) => SgdbSearchAsync(picker)));
+    }
+
+    private SnapshotScene SgdbScene(string name, ArtworkKind kind, SteamGridDbKeyState keyState = SteamGridDbKeyState.Stored,
+        string key = SteamGridDbFixture.SnapshotKey, Action<ArtworkPickerDialog>? setup = null,
+        Func<ArtworkPickerDialog, ArtworkPickerViewModel, SteamGridDbFixtureService, Task>? prepare = null)
+    {
+        // Ein Zustand rendert seine Fenster nacheinander (je Thema neu): der Lieferant des gerade offenen Fensters.
+        SteamGridDbFixtureService? current = null;
+        return new SnapshotScene("hauptfenster", "bildwahl-sgdb-" + name, () =>
+        {
+            var fixture = new SteamGridDbFixtureService(keyState, key);
+            var window = CreateSgdbPickerScene(fixture, kind, setup);
+            current = window is ArtworkPickerDialog ? fixture : null;
+            if (current is null)
+            {
+                fixture.Dispose();
+            }
+
+            return window;
+        }, async window =>
+        {
+            if (window is ArtworkPickerDialog { DataContext: ArtworkPickerViewModel picker } dialog && current is { } fixture)
+            {
+                if (prepare is not null)
+                {
+                    await prepare(dialog, picker, fixture);
+                }
+
+                await PreviewsSettledAsync(picker);
+                await Task.Delay(300);
+            }
+        })
+        {
+            Settle = TimeSpan.FromSeconds(2),
+            Resizable = false,
+        };
+    }
+
+    /// <summary>Das Fenster; ohne Spiel „HDRpilot-Prüfspiel …“ ein leeres (die Prüfung „nicht leer“ schlägt dann fehl, kein Ersatzspiel).</summary>
+    private Window CreateSgdbPickerScene(SteamGridDbFixtureService fixture, ArtworkKind kind, Action<ArtworkPickerDialog>? setup)
+    {
+        var library = new LibraryViewModel(new AppLibraryContext(this, fixture), new LibraryDialogs(new Window()));
+        var item = library.Games.FirstOrDefault(g => g.Name.StartsWith(SnapshotGamePrefix, StringComparison.Ordinal));
+        if (item is null)
+        {
+            library.Dispose();
+            return new Window();
+        }
+
+        var picker = new ArtworkPickerViewModel(library, item, kind);
+        _ = picker.LoadAsync();
+        var dialog = new ArtworkPickerDialog(picker);
+        setup?.Invoke(dialog);
+        dialog.Closed += (_, _) =>
+        {
+            picker.Dispose();
+            library.Dispose();
+            fixture.Dispose();
+        };
+        return dialog;
+    }
+
+    /// <summary>Spiele der Prüfläufe von E93 (erfunden, von phase14-sgdb-ui.ps1 angelegt).</summary>
+    private const string SnapshotGamePrefix = "HDRpilot-Prüfspiel";
+
+    private static async Task SgdbSearchAsync(ArtworkPickerViewModel picker)
+    {
+        await picker.Online.SearchAsync(picker.Kind);
+        await PreviewsSettledAsync(picker);
+    }
+
+    /// <summary>Wartet, bis keine Suche mehr läuft und jede Kachel ihre Vorschau hat (oder keine bekommt), höchstens 20 s.</summary>
+    private static async Task PreviewsSettledAsync(ArtworkPickerViewModel picker)
+    {
+        var end = DateTime.UtcNow + TimeSpan.FromSeconds(20);
+        while (DateTime.UtcNow < end
+            && (picker.Online.IsSearchBusy || picker.Online.IsMoreBusy
+                || picker.Online.Results.Any(r => r.PreviewState is PreviewState.None or PreviewState.Loading)))
+        {
+            await Task.Delay(100);
+        }
     }
 }

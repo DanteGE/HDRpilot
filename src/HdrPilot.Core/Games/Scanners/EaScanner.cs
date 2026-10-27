@@ -1,5 +1,6 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Ea;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -239,7 +240,7 @@ public sealed class EaScanner : IGameScanner
         if (IsDriveRoot(installDir))
         {
             // Später gilt jeder Prozess unter InstallDir als Spiel; ein ganzes Laufwerk wäre als Spielordner falsch.
-            errors.Add(new ScanError("Spiel liegt direkt im Stammordner eines Laufwerks und wird übersprungen, weil sonst jeder Prozess auf dem Laufwerk als Spiel gälte.", path));
+            errors.Add(new ScanError(ScanStrings.Ea_DriveRoot, path));
             return null;
         }
 
@@ -250,18 +251,18 @@ public sealed class EaScanner : IGameScanner
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError("installerdata.xml ist defekt (" + ex.Message + ").", path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Ea_InstallerDataDamaged, ex.Message), path));
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            errors.Add(new ScanError("installerdata.xml ist nicht lesbar (" + ex.Message + ").", path));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Ea_InstallerDataUnreadable, ex.Message), path));
             return null;
         }
 
         if (data.ContentIds.Count == 0)
         {
-            errors.Add(new ScanError("installerdata.xml enthält keine contentID; das Spiel wird übersprungen.", path));
+            errors.Add(new ScanError(ScanStrings.Ea_NoContentId, path));
             return null;
         }
 

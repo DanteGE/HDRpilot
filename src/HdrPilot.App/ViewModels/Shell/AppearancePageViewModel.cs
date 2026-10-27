@@ -46,6 +46,10 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
     private bool _examplesLoaded;
     private PreviewGameItem? _previewGame;
     private GameArtwork? _previewArt;
+    private GameColors? _previewColors;
+    private (GameColors? Colors, PaletteMode Mode, PaletteColors Palette, bool AutoText)? _sampleInputs;
+    private Brush? _sample;
+    private bool _sampleBoundsPending;
     private bool _previewHdr;
     private int _previewVersion;
     private bool _taskbarLight;
@@ -53,6 +57,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
     private string? _steamGridDbKey;
     private string? _steamGridDbMessage;
     private bool _steamGridDbMessageIsError;
+    private StatusSnapshot? _steamGridDbMessageSnapshot;
     private ColorWellItem? _pickerWell;
     private Color _pickerColor;
     private string? _errorMessage;
@@ -241,6 +246,92 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
             {
                 Write(s => s.BackgroundFollowsGame = value);
             }
+        }
+    }
+
+    /// <summary>„Farben folgen dem Spiel“ (E94): Akzente der Bibliothek in den Farben des gewählten Spiels.</summary>
+    public bool ColorsFollowGame
+    {
+        get => State.ColorsFollowGame;
+        set
+        {
+            if (value != State.ColorsFollowGame)
+            {
+                Write(s => s.ColorsFollowGame = value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Spielfarben des Vorschauspiels für die Live-Vorschau, solange der Schalter an ist; null: das Schema (Schalter aus,
+    /// graues oder noch nicht gelesenes Spiel).
+    /// </summary>
+    public PaletteColors? PreviewAccents => ColorsFollowGame ? GamePalette.Map(_previewColors, State.Mode) : null;
+
+    /// <summary>
+    /// Farbprobe des Schalters: Akzentverlauf, den der Schalter für das Vorschauspiel ergäbe (auch wenn er aus ist); bei einem
+    /// grauen Spiel das Schema, denn das zeigt die Bibliothek dann. Gemerkt je Eingabe (Spielfarben, Modus, Schema, Textfarbe):
+    /// Jede Änderung der Darstellung liest alle Werte der Seite neu, gerechnet wird nur bei anderen Eingaben. Die Grenzen
+    /// des Grundtons der Bibliothek entstehen nie auf dem UI-Thread: Fehlen sie noch, gilt bis dahin die letzte Probe (anfangs
+    /// das Schema), und die Probe meldet sich neu, sobald sie berechnet sind.
+    /// </summary>
+    public Brush ColorsFollowSample
+    {
+        get
+        {
+            var state = State;
+            var inputs = (_previewColors, state.Mode, state.Palette, state.AutoTextOnAccent);
+            if (_sample is not null && _sampleInputs == inputs)
+            {
+                return _sample;
+            }
+
+            var game = GamePalette.Map(_previewColors, state.Mode);
+            if (game is not null && !GamePalette.BoundsReady(dark: true))
+            {
+                PrepareSampleBounds();
+                return _sample ??= Gradient(GamePalette.Scheme(state, dark: true));
+            }
+
+            _sampleInputs = inputs;
+            _sample = Gradient(game is { } g ? GamePalette.Compute(g, state, dark: true) : GamePalette.Scheme(state, dark: true));
+            ColorsSampleComputations++;
+            return _sample;
+
+            static Brush Gradient(ThemePalette palette) =>
+                Freeze(new LinearGradientBrush(palette.AccentFill1, palette.AccentFill2, new Point(0, 0), new Point(1, 1)));
+        }
+    }
+
+    /// <summary>Wie oft die Farbprobe gerechnet wurde (Tests).</summary>
+    public int ColorsSampleComputations { get; private set; }
+
+    /// <summary>Grenzen des Grundtons auf einem Hintergrund-Thread; danach die Farbprobe neu melden.</summary>
+    private async void PrepareSampleBounds()
+    {
+        if (_sampleBoundsPending)
+        {
+            return;
+        }
+
+        _sampleBoundsPending = true;
+        try
+        {
+            await GamePalette.PrepareAsync();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _logger.LogWarning(ex, "Grenzen der Farbprobe nicht berechnet.");
+            return;
+        }
+        finally
+        {
+            _sampleBoundsPending = false;
+        }
+
+        if (!_disposed)
+        {
+            OnPropertyChanged(nameof(ColorsFollowSample));
         }
     }
 
@@ -462,49 +553,15 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Stand des Netzwerkzugriffs (klare Anzeige, G10.4).</summary>
-    public string SteamGridDbStatusText
-    {
-        get
-        {
-            if (_steamGridDbMessage is { } message)
-            {
-                return message;
-            }
+    /// <summary>
+    /// Stand des Netzwerkzugriffs (klare Anzeige, G10.4, E93): der letzte Zugriff, Lauf oder Suche in „Bild wählen…“, mit
+    /// der Zahl der Anfragen; ausgeschaltet mit Schlüssel „Suche … nur auf Klick“. Eine Meldung von „Prüfen“ gilt, bis ein
+    /// neuer Stand kommt.
+    /// </summary>
+    public string SteamGridDbStatusText => SteamGridDbLine().Text;
 
-            var s = SteamGridDbStatus;
-            if (!s.Enabled)
-            {
-                return ShellStrings.SteamGridDbStatusOff;
-            }
-
-            if (s.Key == SteamGridDbKeyState.Unreadable)
-            {
-                return ShellStrings.SteamGridDbStatusUnreadable;
-            }
-
-            if (s.Key == SteamGridDbKeyState.Missing)
-            {
-                return ShellStrings.SteamGridDbStatusNoKey;
-            }
-
-            if (s.IsRunning)
-            {
-                return ShellStrings.SteamGridDbStatusRunning;
-            }
-
-            if (s.LastError is { } error)
-            {
-                return string.Format(CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusError, error);
-            }
-
-            return s.LastRun is { } last
-                ? string.Format(CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastRun, last.ToLocalTime(), s.LastRequests, s.LastFilled)
-                : ShellStrings.SteamGridDbStatusReady;
-        }
-    }
-
-    public bool SteamGridDbStatusIsError => _steamGridDbMessageIsError || SteamGridDbStatus.Key == SteamGridDbKeyState.Unreadable;
+    /// <summary>Rot: Fehlermeldung von „Prüfen“, unlesbarer Schlüssel oder ein abgelehnter Schlüssel.</summary>
+    public bool SteamGridDbStatusIsError => SteamGridDbLine().IsError;
 
     /// <summary>„Fehlende Bilder jetzt laden“: nur eingeschaltet, mit Schlüssel und wenn gerade kein Lauf läuft.</summary>
     public RelayCommand RunSteamGridDbNowCommand { get; }
@@ -531,6 +588,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
             _context.SteamGridDb.RemoveKey();
             _steamGridDbMessage = null;
             _steamGridDbMessageIsError = false;
+            _steamGridDbMessageSnapshot = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -948,6 +1006,7 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
         _previewGame = item;
         _previewArt = null;
+        _previewColors = null;
         RaisePreview();
         _ = LoadPreviewAsync(item, ++_previewVersion);
     }
@@ -968,10 +1027,81 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
     private void OnSteamGridDbChanged(object? sender, EventArgs e)
     {
-        if (!_disposed)
+        if (_disposed)
         {
-            RaiseSteamGridDb();
+            return;
         }
+
+        // Die Meldung von „Prüfen“ bleibt nur, solange der Stand derselbe ist (sonst verdeckte sie jeden späteren).
+        if (_steamGridDbMessage is not null && _steamGridDbMessageSnapshot != StatusSnapshot.Of(SteamGridDbStatus))
+        {
+            _steamGridDbMessage = null;
+            _steamGridDbMessageIsError = false;
+            _steamGridDbMessageSnapshot = null;
+        }
+
+        RaiseSteamGridDb();
+    }
+
+    /// <summary>Zeile unter dem Schlüssel samt Fehlerfarbe (Reihenfolge nach §10.2 der Spezifikation zu E93).</summary>
+    private (string Text, bool IsError) SteamGridDbLine()
+    {
+        if (_steamGridDbMessage is { } message)
+        {
+            return (message, _steamGridDbMessageIsError);
+        }
+
+        var s = SteamGridDbStatus;
+        if (s.Key == SteamGridDbKeyState.Unreadable)
+        {
+            return (ShellStrings.SteamGridDbStatusUnreadable, true);
+        }
+
+        if (!s.Enabled)
+        {
+            // Aus: alte Fehler eines Laufs (etwa „ein Spiel läuft“) zählen nicht mehr.
+            if (s.Key == SteamGridDbKeyState.Missing)
+            {
+                return (ShellStrings.SteamGridDbStatusOff, false);
+            }
+
+            if (s.LastSearchError is { } searchError)
+            {
+                return (Format(ShellStrings.SteamGridDbStatusError, searchError), true);
+            }
+
+            return s.LastSearch is { } search
+                ? (Format(ShellStrings.SteamGridDbStatusLastSearch, search.ToLocalTime(), s.LastSearchRequests), false)
+                : (ShellStrings.SteamGridDbStatusOffWithKey, false);
+        }
+
+        if (s.Key == SteamGridDbKeyState.Missing)
+        {
+            return (ShellStrings.SteamGridDbStatusNoKey, false);
+        }
+
+        if (s.IsRunning)
+        {
+            return (ShellStrings.SteamGridDbStatusRunning, false);
+        }
+
+        if (s.LastSearch is { } latest && (s.LastRun is not { } run || latest > run))
+        {
+            return s.LastSearchError is { } error
+                ? (Format(ShellStrings.SteamGridDbStatusError, error), true)
+                : (Format(ShellStrings.SteamGridDbStatusLastSearchOn, latest.ToLocalTime(), s.LastSearchRequests), false);
+        }
+
+        if (s.LastError is { } lastError)
+        {
+            return (Format(ShellStrings.SteamGridDbStatusError, lastError), lastError == ArtworkStrings.SteamGridDb_Error_Unauthorized);
+        }
+
+        return s.LastRun is { } last
+            ? (Format(ShellStrings.SteamGridDbStatusLastRun, last.ToLocalTime(), s.LastRequests, s.LastFilled), false)
+            : (ShellStrings.SteamGridDbStatusReady, false);
+
+        static string Format(string template, params object?[] args) => string.Format(CultureInfo.CurrentCulture, template, args);
     }
 
     private void OnLuminanceChanged(object? sender, EventArgs e)
@@ -1027,6 +1157,8 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(PreviewAmbientColors));
         OnPropertyChanged(nameof(PreviewGlow));
         OnPropertyChanged(nameof(FollowSample));
+        OnPropertyChanged(nameof(PreviewAccents));
+        OnPropertyChanged(nameof(ColorsFollowSample));
     }
 
     private void UpdatePalette()
@@ -1237,6 +1369,21 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
 
             _previewArt = art;
             RaisePreview();
+
+            // Spielfarben (E94) für Farbprobe und Vorschau, auch bei ausgeschaltetem Schalter: einmal je Vorschauspiel.
+            if (_context.Artwork is IGameColorsSource colors)
+            {
+                var read = await colors.GetGameColorsAsync(item.Game, _cancel.Token);
+                if (_disposed || version != _previewVersion)
+                {
+                    return;
+                }
+
+                _previewColors = read;
+                OnPropertyChanged(nameof(PreviewAccents));
+                OnPropertyChanged(nameof(ColorsFollowSample));
+            }
+
             if (_previewHdr)
             {
                 await LoadPreviewBoostAsync(version);
@@ -1359,6 +1506,13 @@ public sealed class AppearancePageViewModel : ObservableObject, IDisposable
     {
         _steamGridDbMessage = message;
         _steamGridDbMessageIsError = isError;
+        _steamGridDbMessageSnapshot = message is null ? null : StatusSnapshot.Of(SteamGridDbStatus);
         RaiseSteamGridDb();
+    }
+
+    /// <summary>Was die Meldung von „Prüfen“ überdauert; ändert sich etwas davon, gilt der neue Stand.</summary>
+    private sealed record StatusSnapshot(bool Enabled, SteamGridDbKeyState Key, bool IsRunning, DateTimeOffset? LastRun, DateTimeOffset? LastSearch, string? LastError, string? LastSearchError)
+    {
+        public static StatusSnapshot Of(SteamGridDbStatus s) => new(s.Enabled, s.Key, s.IsRunning, s.LastRun, s.LastSearch, s.LastError, s.LastSearchError);
     }
 }

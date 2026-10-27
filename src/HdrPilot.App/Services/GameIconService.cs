@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using HdrPilot.App.Resources;
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
@@ -182,7 +183,7 @@ public sealed class GameIconService : IGameIconService
 
     /// <summary>Erzeugt das eigene Symbol aus einer Bild- oder EXE-Datei; liefert den Namen für <see cref="GameConfig.CustomIcon"/>.</summary>
     public string SaveCustomIcon(GameConfig game, string sourcePath) =>
-        (_customIcons ?? throw new InvalidOperationException("Kein Ordner für eigene Symbole festgelegt.")).Save(game.Key, sourcePath);
+        (_customIcons ?? throw new InvalidOperationException(LibraryStrings.Icon_NoFolder)).Save(game.Key, sourcePath);
 
     /// <summary>Löscht die PNG eines eigenen Symbols (fehlt sie, passiert nichts).</summary>
     public void DeleteCustomIcon(string? fileName) => _customIcons?.Delete(fileName);

@@ -175,6 +175,9 @@ public sealed class ArtworkIndexEntry
 
     public IndexedSteamGridDb? SteamGridDb { get; set; }
 
+    /// <summary>Spielfarben (E94), nur gelesen, wenn jemand sie braucht (Schalter „Farben folgen dem Spiel“, Vorschau).</summary>
+    public IndexedGameColors? Colors { get; set; }
+
     /// <summary>Alles außer SteamGridDB verwerfen (geänderter Stand).</summary>
     public void ResetDerived(string signature)
     {
@@ -189,6 +192,7 @@ public sealed class ArtworkIndexEntry
         LogoTrim = null;
         Generated = null;
         Boost = null;
+        Colors = null;
     }
 }
 

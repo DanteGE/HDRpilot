@@ -23,6 +23,20 @@ public sealed class ThemeKeysTests
         var missing = ThemeKeys.All.Where(k => !keys.Contains(k)).ToList();
         Assert.True(missing.Count == 0, file + " ohne: " + string.Join(", ", missing));
         Assert.Contains("Hp.Brush.Accent", ThemeKeys.All); // Gegenprobe: bisherige Schlüssel gehören dazu
+        Assert.Contains(ThemeKeys.BrushPlate, keys); // Bildplatte in „Bild wählen…“ (E93)
+    }
+
+    [Fact]
+    public void Plate_is_dark_in_the_dark_theme_and_a_cool_grey_in_the_light_one()
+    {
+        var root = RepositoryRoot();
+        string PlateOf(string file) => (string)XDocument.Load(Path.Combine(root, "src", "HdrPilot.App", "Themes", file)).Root!.Elements()
+            .Single(e => (string?)e.Attribute(Xaml + "Key") == ThemeKeys.BrushPlate)
+            .Attribute("Color")!;
+
+        Assert.Equal("#FF0B0C11", PlateOf("Tokens.Dark.xaml"));
+        Assert.Equal("#FFE4E7EE", PlateOf("Tokens.Light.xaml")); // nicht das weiße Surface2: das Ladegerüst bliebe sichtbar
+        Assert.Equal("Hp.Brush.Plate", ThemeKeys.BrushPlate);
     }
 
     [Fact]

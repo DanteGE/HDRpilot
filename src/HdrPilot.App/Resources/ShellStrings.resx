@@ -258,6 +258,34 @@
   <data name="NotificationsHint" xml:space="preserve">
     <value>Kurze Meldungen beim Schalten, nie während Vollbild-Spielen.</value>
   </data>
+  <data name="LanguageLabel" xml:space="preserve">
+    <value>Sprache · Language</value>
+    <comment>E95: Auswahl der Sprache; zweisprachig, damit sie auch findet, wer die angezeigte Sprache nicht liest</comment>
+  </data>
+  <data name="LanguageHint" xml:space="preserve">
+    <value>Sprache der Oberfläche. Gilt nach einem Neustart von HDRpilot.</value>
+  </data>
+  <data name="LanguageNameGerman" xml:space="preserve">
+    <value>Deutsch</value>
+    <comment>Eigenbezeichnung, in jeder Sprache gleich (nie übersetzen)</comment>
+  </data>
+  <data name="LanguageNameEnglish" xml:space="preserve">
+    <value>English</value>
+    <comment>Eigenbezeichnung, in jeder Sprache gleich (nie übersetzen)</comment>
+  </data>
+  <data name="LanguageRestartHint" xml:space="preserve">
+    <value>Die neue Sprache gilt nach einem Neustart von HDRpilot. „Jetzt neu starten“ speichert vorher alle Einstellungen.</value>
+  </data>
+  <data name="LanguageRestartNow" xml:space="preserve">
+    <value>Jetzt neu starten</value>
+  </data>
+  <data name="LanguageRestartBlocked" xml:space="preserve">
+    <value>Ein Spiel läuft gerade. Neu starten geht nach dem Spiel, damit HDRpilot HDR wie gewohnt zurückstellt; „Speichern“ übernimmt die Sprache schon jetzt.</value>
+    <comment>Unter „Jetzt neu starten“, solange eine Sitzung läuft (Knopf gesperrt, E95)</comment>
+  </data>
+  <data name="RestartFailed" xml:space="preserve">
+    <value>HDRpilot ließ sich nicht neu starten. Die Einstellungen sind gespeichert; die neue Sprache gilt nach dem nächsten Start.</value>
+  </data>
   <data name="HotkeyFallbackLabel" xml:space="preserve">
     <value>Tastenkürzel als Notlösung</value>
   </data>
@@ -553,11 +581,15 @@
   <data name="LibraryCardSummary" xml:space="preserve">
     <value>{0} Spiele · {1} mit HDR automatisch</value>
   </data>
+  <data name="LibraryCardSummaryOne" xml:space="preserve">
+    <value>1 Spiel · {1} mit HDR automatisch</value>
+    <comment>Wie LibraryCardSummary bei genau einem Spiel (E95)</comment>
+  </data>
   <data name="OpenLibrary" xml:space="preserve">
     <value>Spielebibliothek öffnen</value>
   </data>
   <data name="GroupGeneralHint" xml:space="preserve">
-    <value>Start, Bildschirme, Automatik, Suche und Bibliothek. Übernommen mit „Speichern“.</value>
+    <value>Start, Sprache, Bildschirme, Automatik, Suche und Bibliothek. Übernommen mit „Speichern“.</value>
   </data>
   <data name="GroupAppearanceHint" xml:space="preserve">
     <value>Farben, Thema, Effekte und Bilder. Wirkt auf Oberfläche, Tray-Symbol und Fenstersymbol.</value>
@@ -575,7 +607,7 @@
     <value>Darstellung auf den Standard zurücksetzen</value>
   </data>
   <data name="SectionStartupHint" xml:space="preserve">
-    <value>Mit Windows starten und Hinweise im Infobereich</value>
+    <value>Mit Windows starten, Hinweise im Infobereich und Sprache</value>
   </data>
   <data name="SectionDisplaysHint" xml:space="preserve">
     <value>Wo HDRpilot HDR schaltet</value>
@@ -728,6 +760,12 @@
   </data>
   <data name="BackgroundFollowsGameHint" xml:space="preserve">
     <value>Umgebungslicht und Leuchten übernehmen die Farben des gewählten Titelbilds – einmal pro Spiel ausgelesen</value>
+  </data>
+  <data name="ColorsFollowGameLabel" xml:space="preserve">
+    <value>Farben folgen dem Spiel</value>
+  </data>
+  <data name="ColorsFollowGameHint" xml:space="preserve">
+    <value>Akzente der Bibliothek übernehmen die Farben von Logo und Cover des gewählten Spiels – einmal pro Spiel ausgelesen; bei grauen Bildern, in den Einstellungen, im Tray-Menü und in Dialogen gilt das Farbschema</value>
   </data>
 
   <!-- Darstellung: Live-Vorschau -->
@@ -960,7 +998,7 @@
     <value>Füllt nur fehlende Bilder: {0} Titelbilder, {1} Logos, {2} Cover. Lokale Bilder bleiben unangetastet.</value>
   </data>
   <data name="SteamGridDbToggleName" xml:space="preserve">
-    <value>SteamGridDB verwenden</value>
+    <value>Fehlende Bilder automatisch von SteamGridDB laden</value>
   </data>
   <data name="SteamGridDbKeyPlaceholder" xml:space="preserve">
     <value>API-Schlüssel von steamgriddb.com</value>
@@ -987,13 +1025,13 @@
     <value>Gespeicherten SteamGridDB-Schlüssel entfernen</value>
   </data>
   <data name="SteamGridDbKeyNote" xml:space="preserve">
-    <value>Standard: aus. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben.</value>
+    <value>Standard: aus. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben. Mit Schlüssel kannst du in „Bild wählen…“ selbst bei SteamGridDB suchen, auch wenn das automatische Laden aus ist.</value>
   </data>
   <data name="SteamGridDbStatusName" xml:space="preserve">
     <value>Letzter Netzwerkzugriff von SteamGridDB</value>
   </data>
   <data name="SteamGridDbStatusOff" xml:space="preserve">
-    <value>Aus · kein Netzwerkzugriff</value>
+    <value>Ohne Schlüssel · kein Netzwerkzugriff</value>
   </data>
   <data name="SteamGridDbStatusNoKey" xml:space="preserve">
     <value>Ein · ohne Schlüssel kein Netzwerkzugriff</value>
@@ -1183,5 +1221,25 @@
   </data>
   <data name="RemoveUninstalledNone" xml:space="preserve">
     <value>Zurzeit gibt es keine nicht installierten Spiele aus Launchern.</value>
+  </data>
+  <data name="SteamGridDbSubtitle" xml:space="preserve">
+    <value>Weitere Bilder aus dem Netz, nur mit deinem eigenen API-Schlüssel.</value>
+    <comment>Zeile unter „SteamGridDB (online)“ (E93)</comment>
+  </data>
+  <data name="SteamGridDbAutoLabel" xml:space="preserve">
+    <value>Fehlende Bilder automatisch laden</value>
+    <comment>Sichtbare Beschriftung des Schalters in eigener Zeile (E93)</comment>
+  </data>
+  <data name="SteamGridDbStatusOffWithKey" xml:space="preserve">
+    <value>Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick</value>
+    <comment>Schalter aus, Schlüssel gespeichert (E93)</comment>
+  </data>
+  <data name="SteamGridDbStatusLastSearch" xml:space="preserve">
+    <value>Automatisches Laden aus · letzte Suche {0:g} · {1} Anfragen</value>
+    <comment>{0} = Zeit der letzten Anfrage einer Suche in „Bild wählen…“, {1} = Anfragen</comment>
+  </data>
+  <data name="SteamGridDbStatusLastSearchOn" xml:space="preserve">
+    <value>Letzte Suche in „Bild wählen…“ {0:g} · {1} Anfragen</value>
+    <comment>Schalter an, die letzte Suche ist neuer als der letzte Lauf</comment>
   </data>
 </root>

@@ -1,4 +1,5 @@
 using System.Globalization;
+using HdrPilot.Cli.Resources;
 using HdrPilot.Core.Hdr;
 
 namespace HdrPilot.Cli;
@@ -9,12 +10,17 @@ public static class DisplaySelector
     /// Wählt Bildschirme: null/"primary" = Hauptbildschirm, "all" = alle HDR-fähigen, Zahl = Position aus
     /// "hdr status" (ab 1), sonst exakter monitorDevicePath oder eindeutiger Namensteil.
     /// </summary>
-    public static IReadOnlyList<DisplayInfo>? Select(IReadOnlyList<DisplayInfo> displays, string? selector, out string? error)
+    public static IReadOnlyList<DisplayInfo>? Select(IReadOnlyList<DisplayInfo> displays, string? selector, out string? error) =>
+        Select(displays, selector, out error, out _);
+
+    /// <summary>Wie oben; <paramref name="ambiguous"/>: Der Namensteil passt zu mehreren Bildschirmen (Aufruf falsch, E95 statt am Text erkannt).</summary>
+    public static IReadOnlyList<DisplayInfo>? Select(IReadOnlyList<DisplayInfo> displays, string? selector, out string? error, out bool ambiguous)
     {
         error = null;
+        ambiguous = false;
         if (displays.Count == 0)
         {
-            error = "Keine aktiven Bildschirme gefunden.";
+            error = CliStrings.NoActiveDisplays;
             return null;
         }
 
@@ -43,7 +49,7 @@ public static class DisplaySelector
                 return [displays[index - 1]];
             }
 
-            error = $"Bildschirm Nummer {index} nicht gefunden (vorhanden: 1 bis {displays.Count}).";
+            error = string.Format(CultureInfo.CurrentCulture, CliStrings.DisplayNumberNotFound, index, displays.Count);
             return null;
         }
 
@@ -59,9 +65,10 @@ public static class DisplaySelector
             return byName;
         }
 
-        error = byName.Count > 1
-            ? $"Mehrdeutig: \"{selector}\" passt zu {byName.Count} Bildschirmen. Nummer oder monitorDevicePath angeben."
-            : $"Kein Bildschirm passt zu \"{selector}\".";
+        ambiguous = byName.Count > 1;
+        error = ambiguous
+            ? string.Format(CultureInfo.CurrentCulture, CliStrings.DisplayAmbiguous, selector, byName.Count)
+            : string.Format(CultureInfo.CurrentCulture, CliStrings.DisplayNoMatch, selector);
         return null;
     }
 }

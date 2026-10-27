@@ -23,10 +23,11 @@ namespace HdrPilot.App;
 /// <param name="Width">Breite der Leiste (= Liste).</param>
 /// <param name="CapsuleTop">Oberkante der Kapsel (24 hoch); die Lasche liegt <paramref name="TabTy"/> darunter (negativ: darüber).</param>
 /// <param name="SeamY">Linie von Lichtnaht und Lichtstreif (Bildkante, im Regal Mitte der Kapsel).</param>
-/// <param name="GripCenter">Mitte des Ziehgriffs (NaN ohne Griff: Raster, Regal).</param>
+/// <param name="GripCenter">Mitte des Ziehgriffs auf der Linie der Lichtnaht (NaN im Regal: Naht und Griff liegen dort auf verschiedenen Linien).</param>
 /// <param name="CapsuleMax">Breiteste Kapsel (höchstens bis 32 px vor die Mitte des Griffs, im Regal neben dem Titelinhalt).</param>
 /// <param name="ToolbarTop">Oberkante der ausgeklappten Leiste.</param>
-internal readonly record struct ToolbarOverlayGeometry(double Left, double Width, double CapsuleTop, double TabTy, double SeamY, double GripCenter, double CapsuleMax, double ToolbarTop)
+/// <param name="EdgeY">Bildkante (Unterkante des Titelbilds), auf der Lasche und Griff mittig liegen.</param>
+internal readonly record struct ToolbarOverlayGeometry(double Left, double Width, double CapsuleTop, double TabTy, double SeamY, double GripCenter, double CapsuleMax, double ToolbarTop, double EdgeY)
 {
     public double Right => Left + Width;
 
@@ -123,7 +124,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Hoher Kontrast an oder aus (Systemeinstellung; Tests und Bildschirmfotos ohne Umstellung des Systems): Lasche, Kapsel
-    /// und ✕ in Systemfarben, Lichtnaht und Streif in der Markierungsfarbe ohne Schein.
+    /// und ✕ in Systemfarben, Lichtnaht und Streif in der Markierungsfarbe ohne Schein, keine Spielfarben.
     /// </summary>
     public void SetToolbarHighContrast(bool on)
     {
@@ -132,6 +133,9 @@ public partial class MainWindow
         ToolbarToggle.UseSystemColors(ToolbarResetButton.Resources, on);
         ApplyToolbarBrushes();
         _toolbarMotion.Apply();
+
+        // Spielfarben (E94): bei hohem Kontrast sofort keine Farbebene, danach wieder (sofort).
+        RefreshShownAccents(instant: true);
     }
 
     /// <summary>
@@ -196,7 +200,7 @@ public partial class MainWindow
         _toolbarMotion.Tick();
     }
 
-    /// <summary>Bildschirmfoto: Lasche beim Überfahren (Hinweis „Leiste ausblenden · Strg+Umschalt+F“), ohne Bewegung.</summary>
+    /// <summary>Bildschirmfoto: Lasche beim Überfahren (Hinweis „Leiste ausblenden · Strg+F“), ohne Bewegung.</summary>
     public void PreviewTabHover()
     {
         if (!_shownCollapsed)
@@ -312,7 +316,7 @@ public partial class MainWindow
     // ---------- Ein- und Ausklappen ----------
 
     /// <summary>
-    /// Zustand des ViewModels zeigen (Lasche, Kapsel, Strg+Umschalt+F, Menü, Strg+F): Endlayout sofort, die Liste wird nur
+    /// Zustand des ViewModels zeigen (Lasche, Kapsel, Strg+F, Strg+F1, Menü): Endlayout sofort, die Liste wird nur
     /// verschoben (FLIP), Bewegung nach Effektstufe; liegt der Fokus beim Einklappen in der Leiste, geht er auf die Kapsel.
     /// Eine Ansage meldet den neuen Zustand.
     /// </summary>
@@ -387,13 +391,16 @@ public partial class MainWindow
     }
 
     /// <summary>
-    /// Leuchtlinie des Ziehgriffs (Liste): endet <see cref="GripLineGap"/> vor Lasche bzw. Kapsel (Vorschau gripLine), nach
-    /// deren Zielbreite; Lasche und Kapsel liegen rechtsbündig mit dem Griff.
+    /// Leuchtlinie des Ziehgriffs: endet <see cref="GripLineGap"/> vor Lasche bzw. Kapsel (Vorschau gripLine), nach deren
+    /// Zielbreite; Lasche und Kapsel liegen rechtsbündig mit dem Griff. Im Regal steht die Kapsel nicht auf der Bildkante
+    /// (sondern in der früheren Leistenzeile): Eingeklappt reicht die Linie dort bis <see cref="HeroSplitter.LineInset"/> vor
+    /// den rechten Rand.
     /// </summary>
     private void UpdateGripLine()
     {
         var pill = _shownCollapsed ? _capsuleWidth : ToolbarChoreography.TabWidth;
-        var margin = new Thickness(HeroSplitter.LineInset, 0, pill + GripLineGap, 0);
+        var right = _shownCollapsed && _appliedView == LibraryViewMode.Shelf ? HeroSplitter.LineInset : pill + GripLineGap;
+        var margin = new Thickness(HeroSplitter.LineInset, 0, right, 0);
         if (HeroSplitter.LineMargin != margin)
         {
             HeroSplitter.LineMargin = margin;
@@ -465,7 +472,7 @@ public partial class MainWindow
 
     /// <summary>
     /// Neue Anordnung der Leiste (im selben Layout-Durchgang wie die neue Breite): Nur beim Ziehen werden die Schritte
-    /// bewegt (Zeilenwechsel als Morph bzw. Überblenden, Sortier-Schritt, Tastenkappe), sonst gilt sofort der Endzustand,
+    /// bewegt (Zeilenwechsel als Morph bzw. Überblenden, Sortier-Schritt), sonst gilt sofort der Endzustand,
     /// ebenso bei einer anderen Skalierung (DPI-Wechsel). Die Elemente stehen schon an ihrem neuen Platz; die Kanäle führen
     /// sie vom alten dorthin (FLIP).
     /// </summary>
@@ -529,21 +536,7 @@ public partial class MainWindow
             _toolbarMotion.Set(ToolbarChoreography.SortWidth, current[ToolbarSlot.Sort].Width);
         }
 
-        _choreography.SearchKeyTo(current.SearchKey, animate && e.SearchKeyChanged);
-        UpdateSearchPadding();
         _toolbarMotion.Apply();
-    }
-
-    /// <summary>Platz rechts im Suchfeld: so viel, wie die Tastenkappe „Strg+F“ gerade braucht.</summary>
-    private void UpdateSearchPadding()
-    {
-        var key = ToolbarArea.Arrangement?.SearchKey != false && _viewModel?.HasSearchText != true;
-        var padding = SearchBox.Padding;
-        var right = key ? 70 : 36;
-        if (Math.Abs(padding.Right - right) > 0.1)
-        {
-            SearchBox.Padding = new Thickness(padding.Left, padding.Top, right, padding.Bottom);
-        }
     }
 
     // ---------- Lasche, Kapsel, Lichtnaht ----------
@@ -824,13 +817,14 @@ public partial class MainWindow
         var shelf = view == LibraryViewMode.Shelf;
         var left = shelf ? ShowcaseLayout.Pad : 0;
         var width = ToolbarWidth();
+        var edge = hero - columnsTop;
         var capsuleTop = ShowcaseLayout.CapsuleTop(view, hero, toolbar) - columnsTop;
-        var tabTop = ShowcaseLayout.TabTop(view, hero, toolbar) - columnsTop;
-        var grip = view == LibraryViewMode.List ? left + Math.Round(width / 2) : double.NaN;
+        var tabTop = ShowcaseLayout.TabTop(hero) - columnsTop;
         var center = left + Math.Round(width / 2);
+        var grip = shelf ? double.NaN : center; // Griff auf der Linie der Naht (im Regal liegt die Naht in der Leistenzeile)
         var max = shelf ? 380 - 16 : left + width - (center + 32);
         var next = new ToolbarOverlayGeometry(
-            left, width, capsuleTop, tabTop - capsuleTop, shelf ? capsuleTop + (ShowcaseLayout.CapsuleHeight / 2) : hero - columnsTop, grip, max, ShowcaseLayout.ToolbarTop(view, hero, toolbar) - columnsTop);
+            left, width, capsuleTop, tabTop - capsuleTop, shelf ? capsuleTop + (ShowcaseLayout.CapsuleHeight / 2) : edge, grip, max, ShowcaseLayout.ToolbarTop(view, hero, toolbar) - columnsTop, edge);
         var changed = next != _overlay;
         var maxChanged = Math.Abs(next.CapsuleMax - _overlay.CapsuleMax) > 0.5;
         _overlay = next;
@@ -947,18 +941,22 @@ public partial class MainWindow
     /// <summary>Rechte Kante von Leiste, Lasche und Kapsel in Gerätepixeln des Fensters: der Pixel nächst der Kante der Liste.</summary>
     private double OverlayRightPx(ToolbarOverlayGeometry g) => Math.Round(_toolbarOriginPx.X + (g.Width * PixelScale()), MidpointRounding.AwayFromZero);
 
+    /// <summary>Bildkante in Gerätepixeln des Fensters (nicht gerundet: sie liegt bei 110 oder 125 % meist zwischen zwei Pixeln).</summary>
+    private double EdgePx(ToolbarOverlayGeometry g) => _overlayOriginPx.Y + (g.EdgeY * PixelScale());
+
     /// <summary>
-    /// Oberkante der Lasche in Gerätepixeln: über der Leiste mit genau round(8 · Skalierung) Luft (Liste, Raster), im Regal
-    /// in der Fuge darunter, je an den Pixeln der Leiste ausgerichtet.
+    /// Oberkante eines Teils der Höhe <paramref name="heightPx"/> (ganze Gerätepixel), das mittig auf der Bildkante liegt: auf
+    /// ganzen Pixeln, seine Mitte höchstens einen halben Pixel neben der Kante (bei jeder Skalierung, Wunsch des Nutzers
+    /// 2026-10-22). Den Abstand zur Leiste (round(8 · Skalierung)) trifft das auf einen Pixel genau.
     /// </summary>
-    private double TabTopPx(ToolbarOverlayGeometry g)
-    {
-        var s = PixelScale();
-        var toolbarTop = Math.Round(_toolbarOriginPx.Y + (_toolbarShiftY * s), MidpointRounding.AwayFromZero);
-        return _appliedView == LibraryViewMode.Shelf
-            ? toolbarTop + Math.Round(ToolbarLayout.ItemHeight * s, MidpointRounding.AwayFromZero) + Math.Round((g.TabTop - g.ToolbarTop - ToolbarLayout.ItemHeight) * s)
-            : toolbarTop - Math.Round(ShowcaseLayout.TabGap * s, MidpointRounding.AwayFromZero) - Math.Round(ShowcaseLayout.TabHeight * s);
-    }
+    private double CenteredOnEdgePx(ToolbarOverlayGeometry g, double heightPx) =>
+        Math.Round(EdgePx(g) - (heightPx / 2), MidpointRounding.AwayFromZero);
+
+    /// <summary>Oberkante der Lasche in Gerätepixeln: in allen Ansichten mittig auf der Bildkante.</summary>
+    private double TabTopPx(ToolbarOverlayGeometry g) => CenteredOnEdgePx(g, TabHeightPx());
+
+    /// <summary>Höhe der Lasche in Gerätepixeln (wie ApplyMotion sie zeichnet).</summary>
+    private double TabHeightPx() => Math.Max(1, Math.Round(ShowcaseLayout.TabHeight * PixelScale()));
 
     /// <summary>Bild eines Teils festhalten (Reduziert: alt blendet aus, neu blendet ein).</summary>
     private void CaptureGhost(FrameworkElement source, Image ghost)
@@ -1024,7 +1022,6 @@ public partial class MainWindow
             ((TranslateTransform)label.RenderTransform).X = ch.Get(ToolbarChoreography.SortLabelX);
         }
 
-        SearchKey.Opacity = ch.Get(ToolbarChoreography.SearchKey, 1);
         ApplyListShift(ch.Get(ToolbarChoreography.ListDy));
         ApplyTabMotion();
         if (HeroLargeSink.RenderTransform is TranslateTransform sink)
@@ -1065,6 +1062,8 @@ public partial class MainWindow
             notices.Y = dy;
         }
 
+        LibraryScroll.ShiftTrack(dy); // Pille gleitet mit dem Inhalt
+
         var moving = Math.Abs(dy) > 0.01;
         BodyArea.Clip = moving ? BodyClip(BodyArea.ActualWidth, BodyArea.ActualHeight) : null;
 
@@ -1078,7 +1077,7 @@ public partial class MainWindow
         }
         else
         {
-            var below = panelTop + (ToolbarArea.ReservesHeight ? ToolbarArea.ActualHeight : 0) + dy + ShowcaseLayout.ToolbarGap;
+            var below = panelTop + (ToolbarArea.ReservesHeight ? ToolbarArea.ActualHeight : 0) + dy + BodyArea.Margin.Top;
             var bottom = below - (panelTop + offset);
             ToolbarArea.Clip = new RectangleGeometry(new Rect(-24, -120, ToolbarArea.ActualWidth + 48, Math.Max(0, bottom + 120)));
         }
@@ -1108,17 +1107,31 @@ public partial class MainWindow
         var ty = ch.Get(ToolbarChoreography.PillTy, g.TabTy);
         var tabOpacity = ch.Get(ToolbarChoreography.TabOpacity, 1);
 
-        // Lasche bzw. Kapsel auf ganzen Gerätepixeln des Fensters, die rechte Kante auf der der Leiste; senkrecht zwischen
-        // Kapsel (mittig auf der Bildkante) und Lasche (an den Pixeln der Leiste), wie weit die Bewegung ist.
+        // Lasche bzw. Kapsel auf ganzen Gerätepixeln des Fensters, die rechte Kante auf der der Leiste. Senkrecht in Liste und
+        // Raster immer mittig auf der Bildkante (Lasche wie Kapsel, Wunsch des Nutzers 2026-10-22): Das Verwandeln ändert nur
+        // die Größe. Im Regal zwischen Kapsel (in der früheren Leistenzeile) und Lasche (mittig auf der Bildkante), wie weit
+        // die Bewegung ist.
         var s = PixelScale();
         var right = OverlayRightPx(g);
         var width = Math.Max(1, Math.Round(pw * s));
-        var capsuleTop = Math.Round(_overlayOriginPx.Y + (g.CapsuleTop * s));
-        var way = Math.Abs(g.TabTy) > 0.001 ? ty / g.TabTy : 0;
-        var top = Math.Round(capsuleTop + ((TabTopPx(g) - capsuleTop) * way));
+        var height = Math.Max(1, Math.Round(ph * s));
+        double capsuleTop;
+        double top;
+        if (_appliedView == LibraryViewMode.Shelf)
+        {
+            capsuleTop = Math.Round(_overlayOriginPx.Y + (g.CapsuleTop * s));
+            var way = Math.Abs(g.TabTy) > 0.001 ? ty / g.TabTy : 0;
+            top = Math.Round(capsuleTop + ((TabTopPx(g) - capsuleTop) * way));
+        }
+        else
+        {
+            capsuleTop = CenteredOnEdgePx(g, Math.Round(ToolbarChoreography.CapsuleHeight * s));
+            top = CenteredOnEdgePx(g, height);
+        }
+
         ToolbarToggle.ApplyMotion(
             width / s,
-            Math.Max(1, Math.Round(ph * s)) / s,
+            height / s,
             ch.Get(ToolbarChoreography.PillTurn),
             ch.Get(ToolbarChoreography.Divider),
             ch.Get(ToolbarChoreography.Hint),
@@ -1191,8 +1204,12 @@ public partial class MainWindow
         }
     }
 
-    /// <summary>Pinsel von Naht und Streif aus den Akzentfarben (Thema, Farbschema); hoher Kontrast: Systemfarbe, kein Schein.</summary>
-    private void ApplyToolbarBrushes()
+    /// <summary>
+    /// Pinsel von Naht und Streif aus den gezeigten Akzenten (Farbschema oder Spielfarben, E94; C1 Akzent, C2 Atmosphäre, C3
+    /// Glanz) als bleibende Pinsel, die mit <paramref name="duration"/> überblenden; der Schein der Lasche folgt sofort. Hoher
+    /// Kontrast: Systemfarbe, kein Schein.
+    /// </summary>
+    private void ApplyToolbarBrushes(TimeSpan duration = default)
     {
         if (_highContrast)
         {
@@ -1202,25 +1219,26 @@ public partial class MainWindow
             return;
         }
 
-        var c1 = TryFindResource(ThemeKeys.ColorC1) is Color a ? a : Color.FromRgb(0xFF, 0x8A, 0x3D);
-        var c2 = TryFindResource(ThemeKeys.ColorC2) is Color b ? b : Color.FromRgb(0xFF, 0x3D, 0x7F);
+        var c1 = _accents.Accent;
+        var c2 = _accents.Atmosphere;
         var mid = ColorMath.Mix(c1, c2, 0.6);
-        SeamCore.Fill = Frozen(new LinearGradientBrush(
+        SeamCore.Fill = _liveBrushes.Track(SeamCore.Fill, new LinearGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(c1, 0), 0), new GradientStop(AmbientPalette.Alpha(c1, 0.6), _dark ? 0.3 : 0.35), new GradientStop(AmbientPalette.Alpha(mid, 0.85), _dark ? 0.65 : 0.7), new GradientStop(AmbientPalette.Alpha(c2, 0.95), 1)],
             new Point(0, 0.5),
-            new Point(1, 0.5)));
-        SeamGlow.Fill = Frozen(new LinearGradientBrush(
+            new Point(1, 0.5)), duration);
+        SeamGlow.Fill = _liveBrushes.Track(SeamGlow.Fill, new LinearGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(c2, 0), 0), new GradientStop(AmbientPalette.Alpha(c2, 0.16), 0.4), new GradientStop(AmbientPalette.Alpha(c2, 0.42), 1)],
             new Point(0, 0.5),
-            new Point(1, 0.5)));
-        SeamGlow.OpacityMask = Frozen(new LinearGradientBrush(
+            new Point(1, 0.5)), duration);
+        SeamGlow.OpacityMask ??= Frozen(new LinearGradientBrush(
             [new GradientStop(Colors.Transparent, 0), new GradientStop(Colors.Black, 0.45), new GradientStop(Colors.Black, 0.55), new GradientStop(Colors.Transparent, 1)],
             new Point(0.5, 0),
             new Point(0.5, 1)));
-        ApplyStreakBrushes();
+        ToolbarToggle.SetAccentColors(c1, c2);
+        ApplyStreakBrushes(duration);
     }
 
-    private void ApplyStreakBrushes()
+    private void ApplyStreakBrushes(TimeSpan duration = default)
     {
         if (_highContrast)
         {
@@ -1229,23 +1247,23 @@ public partial class MainWindow
             return;
         }
 
-        var c1 = TryFindResource(ThemeKeys.ColorC1) is Color a ? a : Color.FromRgb(0xFF, 0x8A, 0x3D);
-        var c2 = TryFindResource(ThemeKeys.ColorC2) is Color b ? b : Color.FromRgb(0xFF, 0x3D, 0x7F);
-        var c3 = TryFindResource(ThemeKeys.ColorC3) is Color c ? c : Color.FromRgb(0xFF, 0x94, 0xB9);
+        var c1 = _accents.Accent;
+        var c2 = _accents.Atmosphere;
+        var c3 = _accents.Shine;
         var start = _streakReversed ? new Point(1, 0.5) : new Point(0, 0.5);
         var end = _streakReversed ? new Point(0, 0.5) : new Point(1, 0.5);
-        StreakCore.Background = Frozen(_dark
+        StreakCore.Background = _liveBrushes.Track(StreakCore.Background, _dark
             ? new LinearGradientBrush([new GradientStop(AmbientPalette.Alpha(c3, 0), 0), new GradientStop(ColorMath.Mix(c3, Colors.White, 0.55), 0.55), new GradientStop(Colors.White, 0.78), new GradientStop(AmbientPalette.Alpha(c1, 0), 1)], start, end)
-            : new LinearGradientBrush([new GradientStop(AmbientPalette.Alpha(c2, 0), 0), new GradientStop(c1, 0.45), new GradientStop(c2, 0.8), new GradientStop(AmbientPalette.Alpha(c2, 0), 1)], start, end));
+            : new LinearGradientBrush([new GradientStop(AmbientPalette.Alpha(c2, 0), 0), new GradientStop(c1, 0.45), new GradientStop(c2, 0.8), new GradientStop(AmbientPalette.Alpha(c2, 0), 1)], start, end), duration);
         var center = new Point(_streakReversed ? 0.28 : 0.72, 0.5);
-        StreakGlow.Background = Frozen(new RadialGradientBrush(
+        StreakGlow.Background = _liveBrushes.Track(StreakGlow.Background, new RadialGradientBrush(
             [new GradientStop(AmbientPalette.Alpha(c2, _dark ? 0.8 : 0.62), 0), new GradientStop(AmbientPalette.Alpha(c1, _dark ? 0.28 : 0.34), 0.6), new GradientStop(AmbientPalette.Alpha(c1, 0), 1)])
         {
             Center = center,
             GradientOrigin = center,
             RadiusX = 0.5,
             RadiusY = 0.5,
-        });
+        }, duration);
         StreakGlow.Margin = _streakReversed ? new Thickness(0, 0, 16, 0) : new Thickness(16, 0, 0, 0);
     }
 

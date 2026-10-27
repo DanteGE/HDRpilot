@@ -90,8 +90,12 @@ public static class InstallKinds
     public const string WindowsInstaller = "WindowsInstaller";
 }
 
-/// <summary>Nicht-fataler Fehler eines Scanners, etwa eine defekte Manifestdatei.</summary>
-public sealed record ScanError(string Message, string? Path = null);
+/// <summary>
+/// Nicht-fataler Fehler eines Scanners, etwa eine defekte Manifestdatei; die Meldung in der Sprache der Oberfläche (E95).
+/// <paramref name="ScannerCrashed"/>: Der Scanner selbst ist abgestürzt, das Einlesen markiert dann keine Spiele seiner Quelle
+/// als verschwunden (früher am deutschen Text der Meldung erkannt).
+/// </summary>
+public sealed record ScanError(string Message, string? Path = null, [property: JsonIgnore] bool ScannerCrashed = false);
 
 public sealed record ScanResult
 {

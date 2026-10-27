@@ -31,6 +31,9 @@ public sealed class AppearanceSettings
     /// <summary>Umgebungslicht und Leuchten übernehmen die Farben des gewählten Titelbilds.</summary>
     public bool BackgroundFollowsGame { get; set; } = true;
 
+    /// <summary>Akzente der Bibliothek übernehmen die Farben von Logo und Cover des gewählten Spiels (E94).</summary>
+    public bool ColorsFollowGame { get; set; }
+
     /// <summary>"Full" (Standard), "Reduced" oder "Off".</summary>
     public string? EffectLevel { get; set; }
 

@@ -33,7 +33,7 @@
     <comment>Herkunft eines Bildes (E91): Bildzwischenspeicher des Quiver Launchers (Cache im Quiver-Ordner), nur gelesen</comment>
   </data>
   <data name="Source_Custom" xml:space="preserve">
-    <value>Eigene Datei</value>
+    <value>Eigenes Bild</value>
     <comment>Herkunft eines Bildes: vom Nutzer über „Bild wählen…“ gewählt</comment>
   </data>
   <data name="Source_Generated" xml:space="preserve">
@@ -89,7 +89,7 @@
     <comment>Zeile unter den Bildern im Detailbereich, wenn kein Launcher-Bild vorhanden ist</comment>
   </data>
   <data name="Summary_Custom" xml:space="preserve">
-    <value>Eigene Datei · nur auf diesem PC</value>
+    <value>Eigenes Bild · nur auf diesem PC</value>
     <comment>Zeile im Detailbereich: Titelbild über „Bild wählen…“ gewählt</comment>
   </data>
   <data name="Summary_SteamGridDb" xml:space="preserve">
@@ -145,8 +145,8 @@
     <comment>„Bild wählen…“, Reiter Logo: kein Logo, der Name steht in der Titelschrift</comment>
   </data>
   <data name="Candidate_CustomFile" xml:space="preserve">
-    <value>Eigene Datei</value>
-    <comment>„Bild wählen…“: die zuletzt gewählte eigene Datei</comment>
+    <value>Eigenes Bild</value>
+    <comment>„Bild wählen…“: das zuletzt gewählte eigene Bild (eigene Datei oder von SteamGridDB übernommen, E93)</comment>
   </data>
   <data name="Candidate_Alternative" xml:space="preserve">
     <value>{0} ({1})</value>

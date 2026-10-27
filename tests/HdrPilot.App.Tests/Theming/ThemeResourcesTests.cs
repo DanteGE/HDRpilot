@@ -112,4 +112,54 @@ public sealed class ThemeResourcesTests
             Assert.False(ThemeResources.HasRunningTransitions(ThemeResources.BuildTransition(from, to, TimeSpan.Zero)));
         });
     }
+
+    [Fact]
+    public void Theme_accent_layer_keys_cover_every_key_that_follows_the_accent()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Gleiche Flächen (Schema-Atmosphäre), andere Akzentfarben: was sich dann ändert, muss in der Farbebene stehen
+            // oder ausdrücklich beim Schema bleiben (E94).
+            var surface = PalettePresets.Default.Colors.Atmosphere;
+            foreach (var dark in new[] { true, false })
+            {
+                var a = ThemeResources.Build(PaletteEngine.Compute(new PaletteColors(ColorMath.FromHex("#D62828"), ColorMath.FromHex("#F28C28"), ColorMath.FromHex("#FFD400")), dark, true, surface));
+                var b = ThemeResources.Build(PaletteEngine.Compute(new PaletteColors(ColorMath.FromHex("#1E64DC"), ColorMath.FromHex("#7C3AED"), ColorMath.FromHex("#9CC9F2")), dark, true, surface));
+                var known = GameAccentLayer.BrushKeys.Concat(GameAccentLayer.ColorKeys).Concat(GameAccentLayer.ExcludedKeys).Cast<string>().ToHashSet(StringComparer.Ordinal);
+
+                var changed = ThemeKeys.All.Where(k => Describe(a[k]) != Describe(b[k])).ToList();
+
+                Assert.NotEmpty(changed);
+                Assert.DoesNotContain(changed, k => !known.Contains(k));
+                Assert.Empty(GameAccentLayer.ExcludedKeys.Intersect(GameAccentLayer.BrushKeys.Concat(GameAccentLayer.ColorKeys)));
+            }
+        });
+    }
+
+    [Fact]
+    public void Theme_accent_entries_write_exactly_the_25_layer_keys()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var palette = PaletteEngine.Compute(PaletteEngineTests.Colors("cyber", PaletteMode.Tritone), true, true);
+            var d = new ResourceDictionary();
+
+            ThemeResources.AddAccentEntries(d, palette);
+
+            var expected = GameAccentLayer.BrushKeys.Concat(GameAccentLayer.ColorKeys).Cast<string>().OrderBy(k => k, StringComparer.Ordinal);
+            Assert.Equal(expected, d.Keys.Cast<string>().OrderBy(k => k, StringComparer.Ordinal));
+            Assert.Equal(25, d.Count);
+            var full = ThemeResources.Build(palette);
+            Assert.All(d.Keys.Cast<string>(), k => Assert.Equal(Describe(full[k]), Describe(d[k])));
+            Assert.All(d.Values.OfType<Freezable>(), f => Assert.True(f.IsFrozen));
+        });
+    }
+
+    private static string Describe(object? value) => value switch
+    {
+        Color c => ColorMath.ToHex(c) + c.A.ToString("X2", System.Globalization.CultureInfo.InvariantCulture),
+        SolidColorBrush s => "solid " + Describe(s.Color),
+        GradientBrush g => g.GetType().Name + " " + string.Join(",", g.GradientStops.Select(x => Describe(x.Color) + "@" + x.Offset.ToString(System.Globalization.CultureInfo.InvariantCulture))),
+        _ => value?.ToString() ?? "null",
+    };
 }

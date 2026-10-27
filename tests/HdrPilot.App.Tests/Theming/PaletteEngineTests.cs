@@ -127,6 +127,31 @@ public sealed class PaletteEngineTests
         Assert.Equal(orange, PaletteEngine.ReadableOnAll(orange, [ColorMath.FromHex("#14151D")], towardsWhite: true, 4.5)); // schon lesbar
     }
 
+    [Fact]
+    public void Palette_overload_with_own_atmosphere_and_no_extra_surfaces_equals_the_simple_form()
+    {
+        // Spielfarben (E94) nutzen die Überladung; für die Vorlagen bleibt alles bytegleich (Token-Dateien, Kennzahlen).
+        foreach (var preset in PalettePresets.All)
+        {
+            foreach (var mode in new[] { PaletteMode.Duotone, PaletteMode.Tritone })
+            {
+                var colors = Colors(preset.Id, mode);
+                foreach (var (dark, auto) in new[] { (true, true), (true, false), (false, true), (false, false) })
+                {
+                    Assert.Equal(PaletteEngine.Compute(colors, dark, auto), PaletteEngine.Compute(colors, dark, auto, colors.Atmosphere));
+                    Assert.Equal(PaletteEngine.Compute(colors, dark, auto), PaletteEngine.Compute(colors, dark, auto, colors.Atmosphere, []));
+                }
+            }
+        }
+
+        // Gegenprobe: eine weitere, hellere bzw. dunklere Fläche ändert die Textfarben, nicht die Flächen.
+        var abendrot = Colors("abendrot", PaletteMode.Duotone);
+        var plain = PaletteEngine.Compute(abendrot, dark: true, true);
+        var bounded = PaletteEngine.Compute(abendrot, dark: true, true, abendrot.Atmosphere, [ColorMath.FromHex("#3A3A3A")]);
+        Assert.Equal(plain.Background, bounded.Background);
+        Assert.NotEqual(plain.TextMuted, bounded.TextMuted);
+    }
+
     internal static PaletteColors Colors(string id, PaletteMode mode)
     {
         var preset = PalettePresets.Find(id)!;

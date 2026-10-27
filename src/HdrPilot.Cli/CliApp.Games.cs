@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HdrPilot.Cli.Resources;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Logging;
@@ -22,7 +23,7 @@ public sealed partial class CliApp
         var unknown = args.UnknownOptions("--config-dir", "--path", "--name", "--hdr", "--restore", "--display").ToList();
         if (unknown.Count > 0)
         {
-            return Usage("Unbekannte Option: " + string.Join(", ", unknown));
+            return Usage(Text(CliStrings.UnknownOption, string.Join(", ", unknown)));
         }
 
         var sub = args.Positional.Count > 1 ? args.Positional[1].ToLowerInvariant() : string.Empty;
@@ -40,11 +41,11 @@ public sealed partial class CliApp
 
                 foreach (var g in config.Games.OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase))
                 {
-                    var flags = (g.HdrAuto ? "HDR auto" : "        ") + (g.IsInstalled ? string.Empty : "  nicht installiert") + (g.IsNew ? "  neu" : string.Empty);
+                    var flags = (g.HdrAuto ? "HDR auto" : "        ") + (g.IsInstalled ? string.Empty : "  " + CliStrings.ListNotInstalled) + (g.IsNew ? "  " + CliStrings.ListNew : string.Empty);
                     stdout.WriteLine($"{g.Key,-45} {flags}  {g.Name}");
                 }
 
-                stdout.WriteLine($"{config.Games.Count} Spiele, davon {config.Games.Count(g => g.HdrAuto)} mit HDR automatisch.");
+                stdout.WriteLine(Text(CliStrings.ListSummary, config.Games.Count, config.Games.Count(g => g.HdrAuto)));
                 return ExitCodes.Ok;
             }
 
@@ -55,10 +56,10 @@ public sealed partial class CliApp
                     .ScanAsync(Core.Hosting.AutomationHost.ScanOptionsFor(config.Current), cancellationToken)
                     .ConfigureAwait(false);
                 var summary = config.ApplyScan(report, services.FileSystem);
-                stdout.WriteLine($"{report.Games.Count} Spiele eingelesen: {summary.Added} neu, {summary.Updated} aktualisiert, {summary.NoLongerInstalled} nicht mehr installiert.");
+                stdout.WriteLine(Text(CliStrings.ImportSummary, report.Games.Count, summary.Added, summary.Updated, summary.NoLongerInstalled));
                 foreach (var error in report.AllErrors)
                 {
-                    stderr.WriteLine($"Hinweis: {error.Message} {error.Path}");
+                    stderr.WriteLine(Text(CliStrings.ScanErrorHint, error.Message, error.Path));
                 }
 
                 return ExitCodes.Ok;
@@ -68,12 +69,12 @@ public sealed partial class CliApp
             {
                 if (args.Get("--path") is not { } path)
                 {
-                    return Usage("games add braucht --path <exe|ordner>.");
+                    return Usage(CliStrings.AddNeedsPath);
                 }
 
                 if (!TryOnOff(args.Get("--hdr"), false, out var hdr))
                 {
-                    return Usage("--hdr erwartet on oder off.");
+                    return Usage(CliStrings.HdrExpectsOnOff);
                 }
 
                 GameEntry entry;
@@ -90,7 +91,7 @@ public sealed partial class CliApp
                 var config = OpenConfig(paths);
                 foreach (var existing in config.Current.Games.Where(g => Core.Util.PathUtil.PathEquals(g.InstallDir, entry.InstallDir)))
                 {
-                    stderr.WriteLine($"Hinweis: Der Ordner gehört schon zu {existing.Key} ({existing.Name}). Dort lässt sich HDR mit \"hdrpilot games set {existing.Key} --hdr on\" einschalten. Bei gleichem Ordner gewinnt das Spiel mit HDR automatisch.");
+                    stderr.WriteLine(Text(CliStrings.AddFolderTaken, existing.Key, existing.Name));
                 }
 
                 config.Update(c => c.Games.Add(new GameConfig
@@ -115,20 +116,20 @@ public sealed partial class CliApp
             {
                 if (args.Positional.Count < 3)
                 {
-                    return Usage("games set braucht einen Schlüssel (Quelle:ID).");
+                    return Usage(CliStrings.SetNeedsKey);
                 }
 
                 var key = args.Positional[2];
                 var config = OpenConfig(paths);
                 if (config.Current.FindGame(key) is null)
                 {
-                    stderr.WriteLine($"Spiel {key} ist nicht in der Konfiguration.");
+                    stderr.WriteLine(Text(CliStrings.GameNotInConfig, key));
                     return ExitCodes.GameNotFound;
                 }
 
                 if (!TryOnOff(args.Get("--hdr"), null, out var hdr) || !TryOnOff(args.Get("--restore"), null, out var restore))
                 {
-                    return Usage("--hdr und --restore erwarten on oder off.");
+                    return Usage(CliStrings.HdrRestoreExpectOnOff);
                 }
 
                 var display = args.Get("--display");
@@ -156,12 +157,12 @@ public sealed partial class CliApp
 
                     g.IsNew = false;
                 });
-                stdout.WriteLine($"{key} gespeichert.");
+                stdout.WriteLine(Text(CliStrings.Saved, key));
                 return ExitCodes.Ok;
             }
 
             default:
-                return Usage("games braucht einen Unterbefehl: list, import, add oder set.");
+                return Usage(CliStrings.GamesNeedsSubcommand);
         }
     }
 
@@ -170,7 +171,7 @@ public sealed partial class CliApp
         var unknown = args.UnknownOptions("--config-dir").ToList();
         if (unknown.Count > 0)
         {
-            return Usage("Unbekannte Option: " + string.Join(", ", unknown));
+            return Usage(Text(CliStrings.UnknownOption, string.Join(", ", unknown)));
         }
 
         var level = args.Has("--verbose") ? LogLevel.Debug : LogLevel.Information;
@@ -180,7 +181,7 @@ public sealed partial class CliApp
         host.QuiverFolders.Learned += (_, _) => _ = RescanLaterAsync(host, cancellationToken);
         await host.StartAsync(cancellationToken).ConfigureAwait(false);
         var s = host.Config.Current.Settings;
-        stdout.WriteLine($"Überwachung läuft (Intervall {s.PollIntervalMs} ms, Nachlaufzeit {s.GracePeriodSeconds} s, Protokoll {host.Paths.LogDirectory}). Beenden mit Strg+C.");
+        stdout.WriteLine(Text(CliStrings.WatchRunning, s.PollIntervalMs, s.GracePeriodSeconds, host.Paths.LogDirectory));
         stdout.Flush();
         try
         {
@@ -216,7 +217,7 @@ public sealed partial class CliApp
     {
         if (args.Positional.Count < 2)
         {
-            return Usage("run braucht einen Schlüssel (Quelle:ID).");
+            return Usage(CliStrings.RunNeedsKey);
         }
 
         var key = args.Positional[1];
@@ -224,7 +225,7 @@ public sealed partial class CliApp
         await using var host = services.CreateHost(ResolvePaths(args), new TextWriterLoggerProvider(stdout, () => level));
         if (host.Config.Current.FindGame(key) is null)
         {
-            stderr.WriteLine($"Spiel {key} ist nicht in der Konfiguration.");
+            stderr.WriteLine(Text(CliStrings.GameNotInConfig, key));
             return ExitCodes.GameNotFound;
         }
 

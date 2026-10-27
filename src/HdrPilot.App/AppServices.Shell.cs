@@ -31,6 +31,55 @@ public sealed partial class AppServices
     /// </summary>
     private bool UsesDefaultPaths => Paths == AppPaths.Default(Environment);
 
+    /// <summary>
+    /// Befehlszeile des Neustarts über die Einstellungen (E95), gesetzt von <c>App</c> aus dem eigenen Aufruf (dieselbe
+    /// Ablage, dieselbe Auto-HDR-Testwurzel). Null: kein Neustart möglich (Bildschirmfotos, Prüfungen).
+    /// </summary>
+    public IReadOnlyList<string>? RestartArguments { get; init; }
+
+    /// <summary>
+    /// Neustart nach dem Wechsel der Sprache (E95): startet die EXE erneut mit <c>--restarted</c> und beendet diese
+    /// Instanz wie „HDRpilot beenden“. Der neue Prozess wartet, bis Einzelinstanz und Tray frei sind, und öffnet dann die
+    /// Einstellungen. Scheitert der Start, läuft diese Instanz weiter (false).
+    /// </summary>
+    public async Task<bool> RestartAsync()
+    {
+        if (RestartArguments is not { } restartArguments || System.Environment.ProcessPath is not { } exe)
+        {
+            _logger.LogWarning("Neustart nicht möglich: Programmpfad oder Befehlszeile unbekannt.");
+            return false;
+        }
+
+        var start = new System.Diagnostics.ProcessStartInfo(exe)
+        {
+            UseShellExecute = false,
+            WorkingDirectory = System.Environment.CurrentDirectory,
+        };
+        foreach (var argument in restartArguments)
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(start);
+            if (process is null)
+            {
+                _logger.LogWarning("Neustart nicht möglich: Der neue Prozess startete nicht.");
+                return false;
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException)
+        {
+            _logger.LogWarning(ex, "Neustart nicht möglich.");
+            return false;
+        }
+
+        _logger.LogInformation("Neustart für den Wechsel der Sprache: Diese Instanz wird beendet.");
+        await ExitAsync();
+        return true;
+    }
+
     private partial ITrayService CreateTrayService()
     {
         var logger = LoggerFactory.CreateLogger("Tray");
@@ -62,7 +111,7 @@ public sealed partial class AppServices
 
     private partial Window CreateSettingsWindow()
     {
-        var window = new SettingsWindow();
+        var window = new SettingsWindow { TestLog = TestLog() };
         window.Attach(new SettingsViewModel(
             ShellAdapter,
             new DialogFolderPicker(window),
@@ -82,6 +131,20 @@ public sealed partial class AppServices
         scenes.Add(SettingsScene("darstellung", "NavAppearance"));
         scenes.Add(SettingsScene("darstellung-bilder", "NavAppearanceArtwork"));
         scenes.Add(SettingsScene("darstellung-tray", "NavAppearanceTray"));
+
+        // Karte „SteamGridDB (online)“ im Zustand des Prüflaufs phase14-sgdb-ui.ps1 (Schlüssel gespeichert, Schalter aus; E93).
+        scenes.Add(new SnapshotScene("einstellungen", "bilder-sgdb", CreateSettingsWindow, async window =>
+        {
+            if (window is SettingsWindow settings && settings.DataContext is SettingsViewModel model)
+            {
+                await Task.WhenAny(model.Appearance.Loaded, Task.Delay(TimeSpan.FromSeconds(20)));
+                await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                settings.ScrollToSteamGridDbCard();
+            }
+        })
+        {
+            Settle = TimeSpan.FromMilliseconds(1800),
+        });
 
         // Karte „Bibliothek“ (E90) und die Rückfrage des Sammel-Entfernens mit allen entfernbaren Spielen der Ablage.
         scenes.Add(SettingsScene("bibliothek", "NavLibrary"));
@@ -244,6 +307,8 @@ public sealed partial class AppServices
         public Task ExitAsync() => app.ExitAsync();
 
         public void OpenLibrary() => app.ShowMainWindow();
+
+        public Task<bool> RestartAsync() => app.RestartAsync();
 
         public UninstalledGameCleanup Cleanup => app.GameCleanup;
 

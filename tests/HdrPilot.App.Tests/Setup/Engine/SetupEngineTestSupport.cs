@@ -68,21 +68,28 @@ public sealed class SetupHarness : IDisposable
     }
 
     /// <summary>
-    /// Setup-Datei einer Version: EXE-Attrappe, README, Lizenztext, Lizenzhinweise und Kommandozeile mit Versionstext.
-    /// <paramref name="withLicense"/> = false baut eine Setup-Datei wie vor 1.5.0, ohne Eintrag <c>LICENSE</c>.
+    /// Setup-Datei einer Version: EXE-Attrappe, beide READMEs, Lizenztext, Lizenzhinweise und Kommandozeile mit
+    /// Versionstext. <paramref name="withLicense"/> = false baut eine Setup-Datei wie vor 1.5.0, ohne Eintrag
+    /// <c>LICENSE</c>; <paramref name="withGermanReadme"/> = false eine wie bis 1.5.0, ohne <c>README.de.md</c> (E95).
     /// </summary>
-    public SetupBundle Bundle(string version, bool withLicense = true)
+    public SetupBundle Bundle(string version, bool withLicense = true, bool withGermanReadme = true)
     {
         var build = Path.Combine(Root, "Build", version + "-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(Path.Combine(build, "cli"));
         var exe = Path.Combine(build, "HDRpilot.exe");
         File.WriteAllBytes(exe, ExeBytes(version));
         File.WriteAllText(Path.Combine(build, "README.md"), "README " + version);
+        File.WriteAllText(Path.Combine(build, "README.de.md"), "README DE " + version);
         File.WriteAllText(Path.Combine(build, "LICENSE"), "LICENSE " + version);
         File.WriteAllText(Path.Combine(build, "THIRD-PARTY-NOTICES.txt"), "NOTICES " + version);
         File.WriteAllText(Path.Combine(build, "cli", "hdrpilot.exe"), "CLI " + version);
         var output = Path.Combine(build, "HDRpilot-Setup-" + version + ".exe");
         var payload = new Dictionary<string, string> { ["README.md"] = Path.Combine(build, "README.md") };
+        if (withGermanReadme)
+        {
+            payload["README.de.md"] = Path.Combine(build, "README.de.md");
+        }
+
         if (withLicense)
         {
             payload["LICENSE"] = Path.Combine(build, "LICENSE");

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows;
 using System.Windows.Media;
 using HdrPilot.App.Resources;
 using HdrPilot.App.Services;
@@ -219,13 +220,133 @@ public sealed class SettingsAppearancePageTests
         vm.SetSteamGridDbKey("  geheim  ");
         Assert.Empty(grid.Calls); // Eintippen speichert und prüft nichts
 
-        vm.SteamGridDbEnabled = true;
-        Assert.Equal(["enabled:True"], grid.Calls);
-
+        // E93: Prüfen geht auch bei ausgeschaltetem Schalter; der Schalter wird dabei nie berührt.
         vm.CheckSteamGridDbCommand.Execute(null);
-        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 3, TimeSpan.FromSeconds(5)));
-        Assert.Equal(["enabled:True", "check:geheim", "save:geheim"], grid.Calls);
+        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 2, TimeSpan.FromSeconds(5)));
+        Assert.Equal(["check:geheim", "save:geheim"], grid.Calls);
         Assert.Equal(ShellStrings.SteamGridDbCheckValid, vm.SteamGridDbStatusText);
+        Assert.False(vm.SteamGridDbEnabled);
+
+        vm.SteamGridDbEnabled = true;
+        Assert.Equal(["check:geheim", "save:geheim", "enabled:True"], grid.Calls);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_offers_the_key_check_with_the_switch_off()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb();
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.False(vm.SteamGridDbEnabled);
+        Assert.True(vm.CheckSteamGridDbCommand.CanExecute(null));
+        vm.SetSteamGridDbKey("HDRPILOT-FIXTURE-0001");
+        vm.CheckSteamGridDbCommand.Execute(null);
+
+        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 2, TimeSpan.FromSeconds(5)));
+        Assert.DoesNotContain(grid.Calls, c => c.StartsWith("enabled", StringComparison.Ordinal) || c == "run");
+        Assert.False(vm.RunSteamGridDbNowCommand.CanExecute(null)); // automatisches Laden bleibt aus
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_status_says_search_on_click_when_off_with_a_key()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb();
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.Equal(ShellStrings.SteamGridDbStatusOff, vm.SteamGridDbStatusText); // ohne Schlüssel
+        Assert.Equal("Ohne Schlüssel · kein Netzwerkzugriff", ShellStrings.SteamGridDbStatusOff);
+
+        grid.Key = SteamGridDbKeyState.Stored;
+        grid.Raise();
+        Assert.Equal(ShellStrings.SteamGridDbStatusOffWithKey, vm.SteamGridDbStatusText);
+        Assert.Equal("Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick", vm.SteamGridDbStatusText);
+        Assert.False(vm.SteamGridDbStatusIsError);
+
+        grid.Key = SteamGridDbKeyState.Unreadable;
+        grid.Raise();
+        Assert.Equal(ShellStrings.SteamGridDbStatusUnreadable, vm.SteamGridDbStatusText);
+        Assert.True(vm.SteamGridDbStatusIsError);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_status_names_the_latest_run_or_search()
+    {
+        var (page, _, context) = Create();
+        var run = new DateTimeOffset(2026, 3, 1, 10, 0, 0, TimeSpan.Zero);
+        var search = run.AddHours(2);
+        var grid = new RecordingSteamGridDb { Key = SteamGridDbKeyState.Stored, LastSearch = search, LastSearchRequests = 25 };
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        // Aus: die letzte Suche.
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastSearch, search.ToLocalTime(), 25), vm.SteamGridDbStatusText);
+
+        // An: die neuere von Lauf und Suche.
+        grid.Enabled = true;
+        grid.LastRun = run;
+        grid.Raise();
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastSearchOn, search.ToLocalTime(), 25), vm.SteamGridDbStatusText);
+
+        grid.LastRun = search.AddMinutes(5);
+        grid.Raise();
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastRun, search.AddMinutes(5).ToLocalTime(), 0, 0), vm.SteamGridDbStatusText);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_drops_the_check_message_on_the_next_new_status()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb { Key = SteamGridDbKeyState.Stored };
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+        vm.SetSteamGridDbKey("HDRPILOT-FIXTURE-0001");
+        vm.CheckSteamGridDbCommand.Execute(null);
+        Assert.True(SpinWait.SpinUntil(() => vm.SteamGridDbStatusText == ShellStrings.SteamGridDbCheckValid, TimeSpan.FromSeconds(5)));
+
+        grid.Raise(); // gleicher Stand: die Meldung bleibt
+        Assert.Equal(ShellStrings.SteamGridDbCheckValid, vm.SteamGridDbStatusText);
+
+        grid.LastSearch = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        grid.LastSearchRequests = 3;
+        grid.Raise(); // neuer Stand: die Meldung weicht
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastSearch, grid.LastSearch.Value.ToLocalTime(), 3), vm.SteamGridDbStatusText);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_shows_a_rejected_key_from_a_search_in_red_and_ignores_old_run_errors_while_off()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb { Key = SteamGridDbKeyState.Stored, LastError = "Übersprungen: Ein Spiel läuft" };
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.Equal(ShellStrings.SteamGridDbStatusOffWithKey, vm.SteamGridDbStatusText); // alter Fehler eines Laufs: aus, zählt nicht
+        Assert.False(vm.SteamGridDbStatusIsError);
+
+        grid.LastSearch = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        grid.LastSearchError = ArtworkStrings.SteamGridDb_Error_Unauthorized;
+        grid.Raise();
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusError, ArtworkStrings.SteamGridDb_Error_Unauthorized), vm.SteamGridDbStatusText);
+        Assert.True(vm.SteamGridDbStatusIsError);
+
+        grid.Enabled = true;
+        grid.LastRun = grid.LastSearch.Value.AddHours(-1);
+        grid.Raise();
+        Assert.True(vm.SteamGridDbStatusIsError); // an: die Suche ist neuer, ihr Fehler gilt
         vm.Dispose();
     }
 
@@ -284,6 +405,196 @@ public sealed class SettingsAppearancePageTests
 
         Assert.Equal(["Spiel 1", "Spiel 2", "Spiel 3", "Spiel 4"], AppearancePageViewModel.PickPreviewGames(games).Select(g => g.Name));
         Assert.Equal(["Spiel 6"], AppearancePageViewModel.PickPreviewGames([games[5]]).Select(g => g.Name));
+    }
+
+    [Fact]
+    public void Colors_follow_game_writes_immediately_independent_of_the_background_switch()
+    {
+        var (page, config, _) = Create();
+        Assert.False(page.ColorsFollowGame); // Standard aus
+
+        page.ColorsFollowGame = true;
+
+        Assert.True(config.Current.Settings.Appearance.ColorsFollowGame);
+        Assert.True(config.Current.Settings.Appearance.BackgroundFollowsGame);
+        Assert.True(page.State.ColorsFollowGame);
+        page.BackgroundFollowsGame = false;
+        Assert.True(config.Current.Settings.Appearance.ColorsFollowGame);
+        page.Dispose();
+    }
+
+    [Fact]
+    public void Standard_turns_colors_follow_game_off()
+    {
+        var (page, config, _) = Create();
+        page.ColorsFollowGame = true;
+
+        page.ResetCommand.Execute(null);
+
+        Assert.False(config.Current.Settings.Appearance.ColorsFollowGame);
+        Assert.False(page.ColorsFollowGame);
+        page.Dispose();
+    }
+
+    [Fact]
+    public async Task Colors_sample_shows_the_game_gradient_for_a_red_game_and_the_scheme_for_a_gray_one()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var red = new GameConfig { Source = GameSource.Steam, SourceId = "31", Name = "Testspiel Rot", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        var gray = new GameConfig { Source = GameSource.Steam, SourceId = "32", Name = "Testspiel Grau", LastPlayed = DateTimeOffset.Now.AddDays(-2) };
+        config.Update(c => c.Games.AddRange([red, gray]));
+        var redColors = new GameColors("#D62828", GameColorSource.Logo, 1, [], []);
+        context.Artwork = new HdrPilot.App.Tests.Library.FakeArtworkService(key => key == red.Key ? redColors : GameColors.None);
+
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await vm.Loaded;
+        await GamePalette.PrepareAsync(); // Grenzen des Grundtons (sonst bis dahin die vorige Probe)
+        var game = GamePalette.Compute(GamePalette.Map(redColors, vm.State.Mode)!.Value, vm.State, dark: true);
+        var redSample = Assert.IsType<LinearGradientBrush>(vm.ColorsFollowSample);
+        Assert.Equal([game.AccentFill1, game.AccentFill2], redSample.GradientStops.Select(s => s.Color));
+        Assert.Null(vm.PreviewAccents); // Schalter aus: die Vorschau zeigt das Schema, die Probe zeigt, was er ergäbe
+        vm.ColorsFollowGame = true;
+        Assert.Equal(GamePalette.Map(redColors, vm.State.Mode), vm.PreviewAccents);
+
+        vm.PreviewGames.Single(g => g.Game.Key == gray.Key).IsSelected = true;
+        await Task.Yield();
+        var scheme = GamePalette.Scheme(vm.State, dark: true);
+        var graySample = Assert.IsType<LinearGradientBrush>(vm.ColorsFollowSample);
+        Assert.Equal([scheme.AccentFill1, scheme.AccentFill2], graySample.GradientStops.Select(s => s.Color));
+        Assert.Null(vm.PreviewAccents);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public async Task Colors_sample_is_computed_once_per_input_not_on_every_page_refresh()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var red = new GameConfig { Source = GameSource.Steam, SourceId = "34", Name = "Testspiel Rot", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        config.Update(c => c.Games.Add(red));
+        context.Artwork = new HdrPilot.App.Tests.Library.FakeArtworkService(_ => new GameColors("#D62828", GameColorSource.Logo, 1, [], []));
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await vm.Loaded;
+        await GamePalette.PrepareAsync();
+
+        var sample = vm.ColorsFollowSample;
+        var computed = vm.ColorsSampleComputations;
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Same(sample, vm.ColorsFollowSample);
+        }
+
+        // Jede Änderung der Darstellung liest alle Werte der Seite neu (PropertyChanged „“): ohne andere Eingaben keine Rechnung.
+        var refreshed = 0;
+        vm.PropertyChanged += (_, e) => refreshed += string.IsNullOrEmpty(e.PropertyName) ? 1 : 0;
+        vm.BackgroundFollowsGame = !vm.BackgroundFollowsGame;
+        vm.ColorsFollowGame = !vm.ColorsFollowGame;
+        Assert.True(refreshed >= 2);
+        Assert.Same(sample, vm.ColorsFollowSample);
+        Assert.Equal(computed, vm.ColorsSampleComputations);
+
+        // Andere Eingabe (Modus): genau eine neue Rechnung.
+        if (vm.IsTritone)
+        {
+            vm.IsDuotone = true;
+        }
+        else
+        {
+            vm.IsTritone = true;
+        }
+
+        var changed = vm.ColorsFollowSample;
+        Assert.NotSame(sample, changed);
+        Assert.Same(changed, vm.ColorsFollowSample);
+        Assert.Equal(computed + 1, vm.ColorsSampleComputations);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public async Task Preview_colors_are_requested_only_through_the_colors_source_and_canceled_on_close()
+    {
+        var (page, config, context) = Create();
+        page.Dispose();
+        var game = new GameConfig { Source = GameSource.Steam, SourceId = "33", Name = "Testspiel Blau", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        config.Update(c => c.Games.Add(game));
+        var art = new HdrPilot.App.Tests.Library.FakeArtworkService(_ => new GameColors("#1E64DC", GameColorSource.Cover, 1, [], []), colorsAsync: true);
+        context.Artwork = art;
+
+        var vm = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await Task.Yield();
+        Assert.Equal([game.Key], art.ColorRequests); // einmal je Vorschauspiel, auch bei ausgeschaltetem Schalter
+        vm.Dispose();
+        Assert.Equal([game.Key], art.CanceledColorRequests);
+
+        // Ein Bilderdienst ohne Spielfarben: kein Fehler, die Probe zeigt das Schema.
+        context.Artwork = new LeaseCountingArtwork();
+        var plain = new AppearancePageViewModel(context, windowsAnimations: () => true);
+        await plain.Loaded;
+        plain.ColorsFollowGame = true;
+        Assert.Null(plain.PreviewAccents);
+        Assert.Equal(GamePalette.Scheme(plain.State, true).AccentFill1, Assert.IsType<LinearGradientBrush>(plain.ColorsFollowSample).GradientStops[0].Color);
+        plain.Dispose();
+    }
+
+    [Fact]
+    public void Preview_layer_is_attached_only_while_the_switch_is_on()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, appearance) = PreviewWindow(colorsFollowGame: true);
+            var model = (SettingsViewModel)window.DataContext;
+            WpfTestHost.DoEvents();
+
+            Assert.False(SystemParameters.HighContrast, "Testumgebung ohne hohen Kontrast");
+            Assert.NotNull(model.Appearance.PreviewAccents);
+            Assert.True(window.PreviewAccentLayerAttached);
+
+            appearance.Update(s => s.ColorsFollowGame = false);
+            Assert.Null(model.Appearance.PreviewAccents);
+            Assert.False(window.PreviewAccentLayerAttached);
+
+            appearance.Update(s => s.ColorsFollowGame = true);
+            Assert.True(window.PreviewAccentLayerAttached);
+            window.Close();
+            Assert.False(window.PreviewAccentLayerAttached);
+        });
+    }
+
+    [Fact]
+    public void Stage_dot_resolves_its_shine_from_inside_the_stage()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var (window, _) = PreviewWindow(colorsFollowGame: true);
+            var model = (SettingsViewModel)window.DataContext;
+            WpfTestHost.DoEvents();
+            var stage = (FrameworkElement)window.FindName("Stage");
+            var dot = (System.Windows.Shapes.Ellipse)window.FindName("StageDot");
+
+            model.Appearance.PreviewHdr = true;
+
+            Assert.Same(stage.FindResource(ThemeKeys.BrushShine), dot.Fill);
+            Assert.NotSame(Application.Current.FindResource(ThemeKeys.BrushShine), dot.Fill); // Spielfarbe, nicht das Schema
+            model.Appearance.PreviewHdr = false;
+            Assert.IsType<SolidColorBrush>(dot.Fill);
+            window.Close();
+        });
+    }
+
+    private static (HdrPilot.App.Views.Shell.SettingsWindow Window, StaticAppearanceService Appearance) PreviewWindow(bool colorsFollowGame)
+    {
+        var red = new GameConfig { Source = GameSource.Steam, SourceId = "41", Name = "Testspiel Rot", LastPlayed = DateTimeOffset.Now.AddDays(-1) };
+        var config = ShellTestFactory.NewConfig(new InMemoryFileSystem(), c => c.Games.Add(red));
+        var appearance = new StaticAppearanceService(new AppearanceSettings { ColorsFollowGame = colorsFollowGame });
+        var context = new FakeShellContext(config, ShellTestFactory.TwoDisplays(), new ConfigOnlyAutostartService(config))
+        {
+            Appearance = appearance,
+            Artwork = new HdrPilot.App.Tests.Library.FakeArtworkService(key => key == red.Key ? new GameColors("#D62828", GameColorSource.Logo, 1, [], []) : null),
+        };
+        var window = new HdrPilot.App.Views.Shell.SettingsWindow();
+        window.Attach(new SettingsViewModel(context, new FakeFolderPicker()));
+        return (window, appearance);
     }
 
     private static (AppearancePageViewModel Page, ConfigService Config, FakeShellContext Context) Create()
@@ -345,20 +656,39 @@ public sealed class SettingsAppearancePageTests
 
     private sealed class RecordingSteamGridDb : ISteamGridDbService
     {
-        private bool _enabled;
-
         public event EventHandler? Changed;
 
         public List<string> Calls { get; } = [];
 
+        public bool Enabled { get; set; }
+
         public SteamGridDbKeyState Key { get; set; } = SteamGridDbKeyState.Missing;
 
-        public SteamGridDbStatus Status => SteamGridDbStatus.Off with { Enabled = _enabled, Key = Key };
+        public DateTimeOffset? LastRun { get; set; }
+
+        public DateTimeOffset? LastSearch { get; set; }
+
+        public int LastSearchRequests { get; set; }
+
+        public string? LastError { get; set; }
+
+        public string? LastSearchError { get; set; }
+
+        public SteamGridDbKeyState KeyState => Key;
+
+        public SteamGridDbStatus Status => new SteamGridDbStatus(Enabled, Key, false, LastRun, 0, 0, LastError, 0, 0, 0)
+        {
+            LastSearch = LastSearch,
+            LastSearchRequests = LastSearchRequests,
+            LastSearchError = LastSearchError,
+        };
+
+        public void Raise() => Changed?.Invoke(this, EventArgs.Empty);
 
         public void SetEnabled(bool enabled)
         {
             Calls.Add("enabled:" + enabled);
-            _enabled = enabled;
+            Enabled = enabled;
             Changed?.Invoke(this, EventArgs.Empty);
         }
 

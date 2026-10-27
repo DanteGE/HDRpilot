@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Xbox;
 
@@ -26,12 +27,12 @@ public static class GamingRootFile
     {
         if (data.Length < HeaderLength)
         {
-            return new GamingRootContent([], 0, $"Datei ist zu kurz ({data.Length} Byte, erwartet mindestens {HeaderLength}).");
+            return new GamingRootContent([], 0, ScanText.Format(ScanStrings.GamingRoot_TooShort, data.Length, HeaderLength));
         }
 
         if (!data[..4].SequenceEqual(Magic))
         {
-            return new GamingRootContent([], 0, "Kennung \"RGBX\" fehlt, die Datei hat ein unbekanntes Format.");
+            return new GamingRootContent([], 0, ScanStrings.GamingRoot_NoMagic);
         }
 
         var header = BinaryPrimitives.ReadUInt32LittleEndian(data[4..HeaderLength]);
@@ -54,7 +55,7 @@ public static class GamingRootFile
                 current.Clear();
                 if (!IsPlausibleFolderName(name))
                 {
-                    return new GamingRootContent(folders, header, "Ungültiger Ordnername in der Datei (Steuerzeichen oder unzulässige Zeichen).");
+                    return new GamingRootContent(folders, header, ScanStrings.GamingRoot_InvalidFolder);
                 }
 
                 folders.Add(name);
@@ -63,11 +64,11 @@ public static class GamingRootFile
 
         if (current.Length > 0 || (body.Length % 2 != 0 && body[^1] != 0))
         {
-            return new GamingRootContent(folders, header, "Datei ist abgeschnitten: der letzte Ordnername endet nicht mit einem Nullzeichen.");
+            return new GamingRootContent(folders, header, ScanStrings.GamingRoot_Truncated);
         }
 
         return folders.Count == 0
-            ? new GamingRootContent(folders, header, "Datei enthält keinen Ordnernamen.")
+            ? new GamingRootContent(folders, header, ScanStrings.GamingRoot_NoFolders)
             : new GamingRootContent(folders, header, null);
     }
 

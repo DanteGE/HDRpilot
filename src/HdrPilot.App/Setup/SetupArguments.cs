@@ -7,7 +7,8 @@ namespace HdrPilot.App.Setup;
 /// bisheriger Stand, neu: Autostart an, Desktop aus), <c>--no-launch</c>, <c>--allow-downgrade</c>.</item>
 /// <item>Installierte EXE: <c>--uninstall</c> (aus „Installierte Apps“), <c>--quiet</c>, <c>--remove-data</c>.</item>
 /// <item>Intern: <c>--uninstall-continue --wait-pid &lt;pid&gt;</c> (die Kopie im Temp-Ordner setzt das Entfernen fort).</item>
-/// <item>Prüfläufe: <c>--test-root &lt;ordner&gt;</c>, siehe <see cref="SetupLocations.ForTestRoot"/>.</item>
+/// <item>Prüfläufe: <c>--test-root &lt;ordner&gt;</c>, siehe <see cref="SetupLocations.ForTestRoot"/>; nur damit auch
+/// <c>--ui-language de|en</c> (Sprache der Fenster statt der Anzeigesprache von Windows, E95).</item>
 /// </list>
 /// </summary>
 public sealed record SetupArguments
@@ -31,6 +32,17 @@ public sealed record SetupArguments
     public int? WaitPid { get; init; }
 
     public string? TestRoot { get; init; }
+
+    /// <summary>Prüfläufe (E95): Sprache der Fenster ("de" oder "en"); gilt nur zusammen mit <see cref="TestRoot"/>.</summary>
+    public string? UiLanguage { get; init; }
+
+    /// <summary>
+    /// Sprache von Setup und Entfernen (E95): wie die Anzeigesprache von Windows (Deutsch bei Deutsch, sonst Englisch), im
+    /// Prüflauf auf Wunsch fest (<see cref="UiLanguage"/>). Die Einstellungen von HDRpilot liest der Setup dafür nie.
+    /// </summary>
+    public string EffectiveUiLanguage => TestRoot is not null && Core.Config.UiLanguage.Parse(UiLanguage) is { } fixedLanguage
+        ? fixedLanguage
+        : Core.Config.UiLanguage.ForNewConfig();
 
     public IReadOnlyList<string> Unknown { get; init; } = [];
 
@@ -79,6 +91,10 @@ public sealed record SetupArguments
                 case "--test-root" when i + 1 < args.Count && !string.IsNullOrWhiteSpace(args[i + 1]):
                     result = result with { TestRoot = args[++i] };
                     break;
+                case "--ui-language" when i + 1 < args.Count && Core.Config.UiLanguage.Parse(args[i + 1]) is { } language:
+                    result = result with { UiLanguage = language };
+                    i++;
+                    break;
                 default:
                     unknown.Add(a);
                     break;
@@ -106,6 +122,11 @@ public sealed record SetupArguments
         {
             list.Add("--test-root");
             list.Add(TestRoot);
+            if (UiLanguage is not null)
+            {
+                list.Add("--ui-language");
+                list.Add(UiLanguage);
+            }
         }
 
         return list;

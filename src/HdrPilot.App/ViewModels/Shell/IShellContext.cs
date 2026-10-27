@@ -54,6 +54,12 @@ public interface IShellContext
     {
     }
 
+    /// <summary>
+    /// „Jetzt neu starten“ nach dem Wechsel der Sprache (E95): HDRpilot neu starten. False, wenn das nicht ging (die Instanz
+    /// läuft weiter). Standard: false (Tests, Prüfungen).
+    /// </summary>
+    Task<bool> RestartAsync() => Task.FromResult(false);
+
     /// <summary>Stand wie im Kopf des echten Tray-Menüs (HDR, Pause, laufende Spiele) für dessen Vorschau. Standard: null.</summary>
     TrayState? QueryTrayState() => null;
 

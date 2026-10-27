@@ -19,8 +19,8 @@ using Microsoft.Extensions.Logging;
 namespace HdrPilot.App;
 
 /// <summary>
-/// Hauptfenster „Spielebibliothek“ im Stil „Showcase Hero“ (E89). Die Ansicht ordnet an (Titelbereich je Ansicht, in der Liste
-/// per Ziehgriff in der Höhe einstellbar; Werkzeugleiste „Fließleiste mit Lichtnaht“ (MainWindow.Toolbar.cs), Liste/Raster/Regal, Detailbereich
+/// Hauptfenster „Spielebibliothek“ im Stil „Showcase Hero“ (E89). Die Ansicht ordnet an (Titelbereich je Ansicht, per Ziehgriff
+/// in der Höhe einstellbar, jede Ansicht mit ihrer eigenen Höhe; Werkzeugleiste „Fließleiste mit Lichtnaht“ (MainWindow.Toolbar.cs), Liste/Raster/Regal, Detailbereich
 /// bzw. Schublade, Statuszeile), überträgt Umgebungsfarben und Titelbild auf <see cref="AmbientBackdrop"/> und
 /// <see cref="HeroStage"/> und führt die Effekte über einen
 /// <see cref="MotionController"/>: Dauer-Effekte nur bei Stufe „Voll“, sichtbarem, aktivem Fenster und ohne laufendes Spiel,
@@ -69,6 +69,9 @@ public partial class MainWindow : ChromeWindow
     private static readonly TimeSpan DrawerMotion = TimeSpan.FromSeconds(0.55);
     private static readonly TimeSpan PointerDuration = TimeSpan.FromSeconds(0.6);
 
+    /// <summary>Rückweg der Tiefenwirkung, wenn der Zeiger Titelbild oder Fenster verlässt (etwas ruhiger als das Folgen).</summary>
+    public static readonly TimeSpan PointerReturnDuration = TimeSpan.FromSeconds(0.8);
+
     private readonly TimelineFrameClock _frameClock = new();
     private readonly StopwatchEffectTime _effectTime = new();
     private LibraryViewModel? _viewModel;
@@ -92,6 +95,7 @@ public partial class MainWindow : ChromeWindow
     private ScrollViewer? _listScroll;
     private long _pointerTick;
     private bool _pointerActive;
+    private bool _pointerReturning;
     private readonly TranslateTransform _sheenShift = new(1.2, 0);
     private VirtualizingTilePanel? _shelfPanel;
     private VirtualizingTilePanel? _gridPanel;
@@ -231,15 +235,15 @@ public partial class MainWindow : ChromeWindow
         OnMotionChanged(this, EventArgs.Empty);
         viewModel.SetWindowActive(_motion.WindowActive);
 
-        // Gemerkte Aufteilung sofort setzen (Sternbreiten); an die tatsächliche Breite angepasst wird beim Laden. Ebenso die
-        // gemerkte Höhe des Titelbereichs der Liste (Anteil an der Fensterhöhe, begrenzt beim Anordnen).
+        // Gemerkte Aufteilung sofort setzen (Sternbreiten); an die tatsächliche Breite angepasst wird beim Laden. Die gemerkte
+        // Höhe des Titelbereichs (je Ansicht ein Anteil an der Fensterhöhe, begrenzt beim Anordnen) holt ApplyView.
         ApplyDetailsRatio(LibraryLayout.Normalize(viewModel.DetailsRatio));
-        _heroRatio = viewModel.HeroRatio;
         viewModel.SelectInitial();
         ReadTheme();
         _shownCollapsed = viewModel.IsToolbarCollapsed;
         ApplyView(viewModel.ViewMode, animate: false);
         AttachToolbar(viewModel);
+        InitializeGameColors(viewModel);
         UpdateHero(instant: true);
         ApplyHdrState(instant: true);
     }
@@ -295,7 +299,7 @@ public partial class MainWindow : ChromeWindow
 
         vm.SetPreviewHdr(true);
         ApplyHdrState(instant: true);
-        _moment.Freeze(Hero.MomentScene(_palette.ParticleColors(_scheme, vm.Context.Appearance.Current.BackgroundFollowsGame)), fraction, transientBoost: false);
+        _moment.Freeze(Hero.MomentScene(MomentParticleColors), fraction, transientBoost: false);
     }
 
     /// <summary>Wie <see cref="FreezeHdrMoment"/>, wartet aber zuerst auf die helle Fassung (Bildschirmfotos).</summary>
@@ -356,8 +360,8 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Tastenkürzel der Bibliothek: Strg+F Suche (klappt eine eingeklappte Werkzeugleiste dauerhaft aus), Strg+Umschalt+F und
-    /// Strg+F1 Werkzeugleiste aus- bzw. einblenden, Alt+A/N/H die Filter (auch bei eingeklappter Leiste), Strg+1/2/3
+    /// Tastenkürzel der Bibliothek: Strg+F blendet die Werkzeugleiste ein und aus (eingeklappt: dauerhaft ausklappen, Cursor in
+    /// die Suche; Wunsch des Nutzers 2026-10-22), Strg+F1 ebenso ohne die Suche, Alt+A/N/H die Filter (auch bei eingeklappter Leiste), Strg+1/2/3
     /// Liste/Raster/Regal, Esc leert die Suche bzw. schließt die Schublade, auf einer Zeile oder Kachel Enter starten,
     /// Leertaste „HDR automatisch“, Entf entfernen (mit Rückfrage), I Details (Regal), Pfeile im Raster und Regal.
     /// Modifikatoren und Fokus kommen als Werte (Tests: ohne angezeigtes Fenster gibt es keinen Tastaturfokus).
@@ -372,7 +376,7 @@ public partial class MainWindow : ChromeWindow
 
         var ctrl = modifiers == ModifierKeys.Control;
         var inSearch = ReferenceEquals(focused, SearchBox);
-        if ((key == Key.F && modifiers == (ModifierKeys.Control | ModifierKeys.Shift)) || (key == Key.F1 && ctrl))
+        if (key == Key.F1 && ctrl)
         {
             vm.IsToolbarCollapsed = !vm.IsToolbarCollapsed;
             return true;
@@ -380,13 +384,17 @@ public partial class MainWindow : ChromeWindow
 
         if (key == Key.F && ctrl)
         {
-            // Eingeklappt: dauerhaft ausklappen (gemerkt), die Elemente entfalten sich von der Suche aus.
-            if (vm.IsToolbarCollapsed)
+            // Ausgeklappt: einklappen wie Lasche und Menü (der Fokus geht, auch aus der Suche, auf die Kapsel; Suche und
+            // Filter bleiben und stehen in der Kapsel).
+            if (!vm.IsToolbarCollapsed)
             {
-                _expandFromSearch = true;
-                vm.IsToolbarCollapsed = false;
+                vm.IsToolbarCollapsed = true;
+                return true;
             }
 
+            // Eingeklappt: dauerhaft ausklappen (gemerkt), die Elemente entfalten sich von der Suche aus.
+            _expandFromSearch = true;
+            vm.IsToolbarCollapsed = false;
             FocusInWindow(SearchBox);
             SearchBox.SelectAll();
             return true;
@@ -570,6 +578,11 @@ public partial class MainWindow : ChromeWindow
 
         var changed = _appliedView != view;
         _appliedView = view;
+        if (changed)
+        {
+            _heroRatio = vm.HeroRatioFor(view); // jede Ansicht mit ihrer eigenen gemerkten Höhe (Wunsch des Nutzers 2026-10-22)
+        }
+
         Hero.SetView(view);
         _ring?.SetWanted(view != LibraryViewMode.List);
         var shelf = view == LibraryViewMode.Shelf;
@@ -577,7 +590,6 @@ public partial class MainWindow : ChromeWindow
         HeroLarge.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
         ApplyAutomationCard();
         DrawerCloseButton.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
-        HeroSplitter.Visibility = view == LibraryViewMode.List ? Visibility.Visible : Visibility.Collapsed;
 
         // Nur die aktive Ansicht hat Daten und eine Auswahl-Bindung (sonst schriebe eine leere Liste die Auswahl auf null).
         Activate(GameList, view == LibraryViewMode.List, vm);
@@ -586,6 +598,7 @@ public partial class MainWindow : ChromeWindow
         ListCard.Visibility = view == LibraryViewMode.List ? Visibility.Visible : Visibility.Collapsed;
         GameGrid.Visibility = view == LibraryViewMode.Grid ? Visibility.Visible : Visibility.Collapsed;
         ShelfArea.Visibility = shelf ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLibraryScroll(view);
 
         // Spalten: im Regal nimmt die Liste die ganze Breite, der Detailbereich wird zur Schublade.
         Grid.SetColumnSpan(ListArea, shelf ? 3 : 1);
@@ -683,7 +696,7 @@ public partial class MainWindow : ChromeWindow
     /// Höhe des Titelbereichs neu bestimmen, wenn sich etwas geändert hat, das erst nach dem Anordnen feststeht (Hinweise,
     /// Zahl der Zeilen der Werkzeugleiste, etwa nach dem Wechsel der Ansicht, im Raster die Kachelgröße), und nur dann neu
     /// anordnen. Eine laufende Bewegung (Wechsel der Ansicht) läuft zum neuen Ziel weiter, sonst gilt die Höhe sofort. Der
-    /// gemerkte Anteil der Liste bleibt; nur die Grenze ändert sich.
+    /// gemerkte Anteil der Ansicht bleibt; nur die Grenze ändert sich.
     /// </summary>
     private void RefreshHeroHeight()
     {
@@ -697,21 +710,22 @@ public partial class MainWindow : ChromeWindow
         {
             ApplyLayout(animate: Math.Abs(HeroHeight - _heroTarget) > 0.5);
         }
-        else if (view == LibraryViewMode.List)
+        else
         {
-            ApplyHeroRange(height); // gleiche Höhe, aber anderer Bereich (etwa Hinweise weg)
+            ApplyHeroRange(view, height); // gleiche Höhe, aber anderer Bereich (etwa Hinweise weg, Kacheln gemessen)
         }
     }
 
     /// <summary>
-    /// Bereich des Ziehgriffs für diese Fensterhöhe, die Hinweise über der Liste und die Höhe der Werkzeugleiste; sein Wert
-    /// ist die Höhe, auf die der Titelbereich gerade geht.
+    /// Bereich des Ziehgriffs für die Ansicht, diese Fensterhöhe, die Hinweise über Liste bzw. Raster, die Höhe der
+    /// Werkzeugleiste und im Raster die Kachelgröße; sein Wert ist die Höhe, auf die der Titelbereich gerade geht. Solange
+    /// die Kacheln des Rasters nicht gemessen sind, reicht er bis dorthin.
     /// </summary>
-    private void ApplyHeroRange(double height)
+    private void ApplyHeroRange(LibraryViewMode view, double height)
     {
-        var (min, max) = ShowcaseLayout.ListHeroRange(height, NoticeArea.ActualHeight, ToolbarHeight());
+        var (min, max) = ShowcaseLayout.HeroRange(view, height, NoticeArea.ActualHeight, view == LibraryViewMode.Grid ? GridRow() : 0, ToolbarHeight());
         HeroSplitter.Minimum = min;
-        HeroSplitter.Maximum = max;
+        HeroSplitter.Maximum = double.IsFinite(max) ? max : Math.Max(min, _heroTarget);
         HeroSplitter.Value = _heroTarget;
     }
 
@@ -729,7 +743,7 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Höhe, auf die der Titelbereich gehört: je Ansicht und Fensterhöhe, in der Liste nach der gewählten Höhe, mit den
+    /// Höhe, auf die der Titelbereich gehört: je Ansicht und Fensterhöhe, nach der in dieser Ansicht gewählten Höhe, mit den
     /// Hinweisen über Liste bzw. Raster, der Höhe der Werkzeugleiste und im Raster nach Werkzeugleiste und Kachelgröße.
     /// </summary>
     private double HeroTarget(LibraryViewMode view, double height) =>
@@ -782,6 +796,10 @@ public partial class MainWindow : ChromeWindow
         // Regal: Werkzeugleiste über die ganze Breite (einzeilig bei jeder erlaubten Fenstergröße, ToolbarLayout).
         ToolbarArea.Margin = shelf ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad, 0) : default;
         NoticeArea.Margin = shelf ? new Thickness(ShowcaseLayout.Pad, 0, ShowcaseLayout.Pad, 0) : default;
+
+        // Luft unter der Werkzeugleiste: Liste 17 bis zum Rahmen, Raster 10 bis zu seiner Oberkante (die erste Reihe folgt nach
+        // seinem Innenabstand), Regal keine (die Kachelreihe hat sie als Innenabstand, Platz zum Anheben der Kacheln).
+        BodyArea.Margin = new Thickness(0, ShowcaseLayout.BodyGap(view), 0, 0);
         if (shelf)
         {
             DetailsArea.Width = Math.Min(420, Math.Max(300, width - 64));
@@ -801,10 +819,7 @@ public partial class MainWindow : ChromeWindow
         _gridRow = view == LibraryViewMode.Grid ? GridRow() : 0;
         var target = HeroTarget(view, height);
         _heroTarget = target;
-        if (view == LibraryViewMode.List)
-        {
-            ApplyHeroRange(height);
-        }
+        ApplyHeroRange(view, height);
 
         var duration = animate && _motion is { } motion ? motion.Transition(HeroMotion) : TimeSpan.Zero;
         if (duration > TimeSpan.Zero && Math.Abs(target - HeroHeight) > 0.5)
@@ -851,7 +866,7 @@ public partial class MainWindow : ChromeWindow
         // Eingeklappt (Liste, Raster): Die Leiste meldet keine Höhe, der Inhalt beginnt 22 unter der Bildkante (10 unter der
         // Kapsel); die Leiste selbst bleibt, wo sie ausgeklappt steht, solange sie noch ausblendet.
         var collapsed = _shownCollapsed && !shelf;
-        var listTop = collapsed ? ShowcaseLayout.BodyTop(view, hero, toolbar, collapsed: true) - ShowcaseLayout.ToolbarGap : toolbarTop;
+        var listTop = collapsed ? ShowcaseLayout.BodyTop(view, hero, toolbar, collapsed: true) - ShowcaseLayout.BodyGap(view) : toolbarTop;
         ListArea.Margin = new Thickness(0, Math.Max(0, listTop - columnsTop), 0, 0);
 
         // Regal: Die Zeile der Leiste bleibt auch eingeklappt (die Kapsel steht darin), die Kachelreihe rückt nicht.
@@ -865,7 +880,10 @@ public partial class MainWindow : ChromeWindow
         ApplyToolbarShift();
 
         LibrarySplitter.Margin = new Thickness(0, Math.Max(0, ShowcaseLayout.BodyTop(view, hero, toolbar, collapsed) - columnsTop), 0, 0);
-        HeroSplitter.Margin = new Thickness(0, Math.Max(0, hero - ShowcaseLayout.HeroSplitterOverlap - columnsTop), 0, 0);
+
+        // Ziehgriff mittig auf der Bildkante, so breit wie die Werkzeugleiste (im Regal die ganze Breite ohne Rand).
+        var gripSide = shelf ? ShowcaseLayout.Pad : 0;
+        HeroSplitter.Margin = new Thickness(gripSide, Math.Max(0, hero - ShowcaseLayout.HeroSplitterOverlap - columnsTop), gripSide, 0);
 
         // Text im Titelbereich: Liste/Raster links vom Detailbereich, Regal links von der Automatik-Karte.
         var width = Root.ActualWidth > 0 ? Root.ActualWidth : Width;
@@ -1046,59 +1064,57 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>
-    /// Ziehgriff unter dem Titelbereich der Liste bewegt (Ziehen, Taste, UI-Automation): Der Titelbereich folgt sofort, ohne
-    /// Animation. Ab jetzt gilt der neue Anteil an der Fensterhöhe (auch beim Ändern der Fenstergröße); gemerkt wird er erst
-    /// in <see cref="OnHeroSplitterCommitted"/>.
+    /// Ziehgriff unter dem Titelbereich bewegt (Ziehen, Taste, UI-Automation; in jeder Ansicht, Wunsch des Nutzers 2026-10-22):
+    /// Der Titelbereich folgt sofort, ohne Animation, im Regal dazu die Kachelgröße. Ab jetzt gilt der neue Anteil an der
+    /// Fensterhöhe (auch beim Ändern der Fenstergröße); gemerkt wird er für diese Ansicht erst in
+    /// <see cref="OnHeroSplitterCommitted"/>.
     /// </summary>
     private void OnHeroSplitterMoved(object? sender, EventArgs e)
     {
-        if (_appliedView != LibraryViewMode.List)
+        if (_appliedView is not { } view)
         {
             return;
         }
 
         var height = Root.ActualHeight > 0 ? Root.ActualHeight : Height;
-        _heroRatio = ShowcaseLayout.ListHeroRatio(HeroSplitter.Value, height);
+        _heroRatio = ShowcaseLayout.HeroRatio(HeroSplitter.Value, height);
         BeginAnimation(HeroHeightProperty, null);
-        _heroTarget = HeroTarget(LibraryViewMode.List, height);
+        _heroTarget = HeroTarget(view, height);
         HeroHeight = _heroTarget;
     }
 
-    /// <summary>Ziehen beendet, Taste oder UI-Automation: Anteil merken (gesammelt gespeichert, nach einem bloßen Klick nie).</summary>
-    private void OnHeroSplitterCommitted(object? sender, EventArgs e) => _viewModel?.SetHeroRatio(_heroRatio);
+    /// <summary>Ziehen beendet, Taste oder UI-Automation: Anteil dieser Ansicht merken (gesammelt gespeichert, nach einem bloßen Klick nie).</summary>
+    private void OnHeroSplitterCommitted(object? sender, EventArgs e)
+    {
+        if (_appliedView is { } view)
+        {
+            _viewModel?.SetHeroRatio(view, _heroRatio);
+        }
+    }
 
     /// <summary>
-    /// Ziehen ohne Ergebnis beendet (zurück an der Ausgangslage, Esc): wieder die gemerkte Höhe, nicht der Anteil, den das
-    /// Ziehen zuletzt ergab (sonst bliebe etwa eine im kleinen Fenster begrenzte Höhe bis zum Neustart kleiner).
+    /// Ziehen ohne Ergebnis beendet (zurück an der Ausgangslage, Esc): wieder die gemerkte Höhe der Ansicht, nicht der Anteil,
+    /// den das Ziehen zuletzt ergab (sonst bliebe etwa eine im kleinen Fenster begrenzte Höhe bis zum Neustart kleiner).
     /// </summary>
     private void OnHeroSplitterDiscarded(object? sender, EventArgs e)
     {
-        _heroRatio = _viewModel?.HeroRatio;
+        _heroRatio = _appliedView is { } view ? _viewModel?.HeroRatioFor(view) : null;
         ApplyLayout(animate: false);
     }
 
-    /// <summary>Doppelklick oder Eingabetaste am Ziehgriff: zurück zur Standardhöhe (nichts mehr gemerkt), mit Bewegung nach Stufe.</summary>
+    /// <summary>
+    /// Doppelklick oder Eingabetaste am Ziehgriff: diese Ansicht zurück zu ihrer Standardhöhe (nichts mehr gemerkt), mit
+    /// Bewegung nach Stufe; die anderen Ansichten behalten ihre Höhe.
+    /// </summary>
     private void OnHeroSplitterReset(object? sender, EventArgs e)
     {
         _heroRatio = null;
-        _viewModel?.SetHeroRatio(null);
-        ApplyLayout(animate: true);
-    }
-
-    /// <summary>Klick auf die Kachel „Symbol“ im Detailbereich: öffnet das Menü „Symbol ändern…“ darunter (E86).</summary>
-    private void OnDetailIconClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
-
-    /// <summary>„···“ im Kopf des Detailbereichs: Kontextmenü des Spiels.</summary>
-    private void OnProfileMenuClick(object sender, RoutedEventArgs e) => OpenMenuBelow(sender);
-
-    private static void OpenMenuBelow(object sender)
-    {
-        if (sender is FrameworkElement { ContextMenu: { } menu } target)
+        if (_appliedView is { } view)
         {
-            menu.PlacementTarget = target;
-            menu.Placement = PlacementMode.Bottom;
-            menu.IsOpen = true;
+            _viewModel?.SetHeroRatio(view, null);
         }
+
+        ApplyLayout(animate: true);
     }
 
     // ---------- Liste, Raster, Regal ----------
@@ -1112,6 +1128,53 @@ public partial class MainWindow : ChromeWindow
         if ((_listScroll ?? GameList.Template?.FindName("ScrollHost", GameList) as ScrollViewer) is { } scroll)
         {
             scroll.ScrollToVerticalOffset(scroll.VerticalOffset + (rows * ShowcaseLayout.ListRowHeight));
+        }
+    }
+
+    /// <summary>
+    /// Bildschirmfoto: Kacheln (Raster, Regal; nach ihrem Platz in der Ansicht) wie beim Überfahren auf der Stufe „Voll“, ohne
+    /// Maus und ohne Bewegung: 3,5 % größer, angehoben bzw. ohne Platz nach oben nach unten gewachsen
+    /// (<see cref="VirtualizingTilePanel.RisesOnHover"/>), mit Glanz, Name, Quelle und Schalter wie in der Vorlage.
+    /// </summary>
+    public void PreviewTileHover(params int[] indexes)
+    {
+        var list = ActiveGames();
+        foreach (var index in indexes)
+        {
+            if (list.ItemContainerGenerator.ContainerFromIndex(index) is not ListBoxItem item || FindNamed<Grid>(item, "TileRoot") is not { } root)
+            {
+                continue;
+            }
+
+            // Die Verschiebung der Vorlage ist geteilt und eingefroren (die Storyboards klonen sie ebenso).
+            if (root.RenderTransform.IsFrozen)
+            {
+                root.RenderTransform = root.RenderTransform.Clone();
+            }
+
+            if (root.RenderTransform is TransformGroup { Children: [ScaleTransform scale, TranslateTransform shift] })
+            {
+                scale.ScaleX = scale.ScaleY = VirtualizingTilePanel.HoverScale;
+                shift.Y = VirtualizingTilePanel.GetRisesOnHover(item) ? -VirtualizingTilePanel.HoverLift : 0;
+            }
+
+            foreach (var name in new[] { "Shine", "Scrim", "TileName", "TileSource" })
+            {
+                if (FindNamed<FrameworkElement>(item, name) is { } part)
+                {
+                    part.Opacity = 1;
+                }
+            }
+
+            if (FindNamed<FrameworkElement>(item, "TileSwitch") is { } toggle)
+            {
+                toggle.Visibility = Visibility.Visible;
+            }
+
+            if (FindNamed<FrameworkElement>(item, "SunBadge") is { } sun)
+            {
+                sun.Visibility = Visibility.Collapsed;
+            }
         }
     }
 
@@ -1396,9 +1459,6 @@ public partial class MainWindow : ChromeWindow
             case nameof(LibraryViewModel.ToolbarSummary):
                 UpdateCapsule(ToolbarLevel());
                 break;
-            case nameof(LibraryViewModel.HasSearchText):
-                UpdateSearchPadding();
-                break;
             case nameof(LibraryViewModel.SortTipCompactText) when ToolbarArea.Arrangement is { SortIconOnly: true }:
                 SortTip.Text = vm.SortTipCompactText;
                 break;
@@ -1419,6 +1479,7 @@ public partial class MainWindow : ChromeWindow
             hero.PropertyChanged += OnHeroPropertyChanged;
         }
 
+        OnGameAccentSelection(instant);
         ApplyAmbient(instant);
         Hero.Show(_hero, _hero?.Artwork, instant ? TimeSpan.Zero : HeroTransition());
         UpdateSheen();
@@ -1435,6 +1496,14 @@ public partial class MainWindow : ChromeWindow
         if (e.PropertyName == nameof(HeroViewModel.Artwork) && ReferenceEquals(sender, _hero))
         {
             ApplyAmbient(instant: false);
+            if (FollowColors)
+            {
+                // Das Bild kann sich geändert haben (Beobachtung, „Bild wählen…“): Farben neu nachsehen; sie kommen mit dem Bild.
+                _colorsKey = null;
+                RequestColors(_hero);
+                OnAccentInputsArrived();
+            }
+
             Hero.Show(_hero, _hero?.Artwork, HeroTransition());
             UpdateSheen();
 
@@ -1466,10 +1535,13 @@ public partial class MainWindow : ChromeWindow
         var follow = appearance.BackgroundFollowsGame;
         var artwork = _hero?.Artwork;
         var ambient = _hero is null ? null : artwork?.Ambient ?? _hero.Ambient;
-        _palette = AmbientPalette.Resolve(follow ? ambient : null, _scheme, follow, _dark);
+
+        // Spielfarben (E94): graue Bilder mischen sich mit den gezeigten Akzenten; ohne „Hintergrund folgt“ ein ruhiger Grund.
+        var schemeArg = !FollowColors ? _scheme : follow ? _accents : GamePalette.Calm(_scheme);
+        _palette = AmbientPalette.Resolve(follow ? ambient : null, schemeArg, follow, _dark);
         var transition = instant || _motion is null ? TimeSpan.Zero : _motion.Transition(AmbientBackdrop.ColorDuration);
         Ambient.Apply(_palette, follow ? artwork?.Field?.Image : null, _dark, transition);
-        Hero.SetPalette(_palette, _scheme, _dark);
+        Hero.SetPalette(_palette, _accents, _dark);
         ApplyWindowBrushes();
         UpdateLight();
     }
@@ -1479,12 +1551,7 @@ public partial class MainWindow : ChromeWindow
     {
         var p = _palette;
         var bg = p.Background;
-        Resources["Lib.Brush.RowSelection"] = _dark
-            ? Frozen(new LinearGradientBrush(
-                [new GradientStop(AmbientPalette.Alpha(p.A2, 0.30), 0), new GradientStop(AmbientPalette.Alpha(p.A2, 0.08), 0.6), new GradientStop(AmbientPalette.Alpha(p.A2, 0), 1)],
-                new Point(0, 0.5),
-                new Point(1, 0.5)))
-            : Frozen(new SolidColorBrush(ColorMath.WithAlpha(_scheme.Accent, 0.14)));
+        ApplyRowSelection(TimeSpan.Zero);
         Resources["Lib.Brush.ListCard"] = Frozen(new SolidColorBrush(_dark ? AmbientPalette.Alpha(bg, 0.55) : Color.FromArgb(0x9E, 255, 255, 255)));
 
         // Schublade im Regal: deckend (WPF hat keinen Weichzeichner für den Hintergrund wie der Prototyp; schon 3 % Durchsicht
@@ -1544,10 +1611,7 @@ public partial class MainWindow : ChromeWindow
         ApplyToolbarBrushes();
 
         // Fensterkante: Puls in den Spielfarben (HDR-Moment), feine Linie in der Leuchtfarbe bei HDR an.
-        EdgeGlow.BorderBrush = Frozen(new LinearGradientBrush(
-            [new GradientStop(p.A3, 0), new GradientStop(p.A2, 0.45), new GradientStop(_scheme.Accent, 0.75), new GradientStop(p.A3, 1)],
-            new Point(0, 0),
-            new Point(1, 1)));
+        ApplyEdgeGlow(accentDuration: TimeSpan.Zero);
         ApplyEdgeLine();
     }
 
@@ -1558,10 +1622,17 @@ public partial class MainWindow : ChromeWindow
     private void ApplySheenBrush() =>
         Resources["Lib.Brush.HeroSheen"] = Frozen(new SolidColorBrush(ColorMath.MixOklab(_palette.A3, Colors.White, 0.55)));
 
-    private void ApplyEdgeLine() =>
-        EdgeLine.BorderBrush = _viewModel?.ShowsHdrOn == true
-            ? Frozen(new SolidColorBrush(AmbientPalette.Alpha(_palette.A2, 0.55)))
-            : (Brush)FindResource(ThemeKeys.BrushLine);
+    private void ApplyEdgeLine()
+    {
+        if (_viewModel?.ShowsHdrOn == true)
+        {
+            EdgeLine.BorderBrush = Frozen(new SolidColorBrush(AmbientPalette.Alpha(_palette.A2, 0.55)));
+        }
+        else
+        {
+            EdgeLine.SetResourceReference(Border.BorderBrushProperty, ThemeKeys.BrushLine);
+        }
+    }
 
     /// <summary>Spitzlicht des Titelbilds, links vom Detailbereich bzw. der Karte und unter der Kopfzeile geklemmt.</summary>
     private void UpdateLight()
@@ -1591,28 +1662,45 @@ public partial class MainWindow : ChromeWindow
         var transition = instant || _motion is null ? TimeSpan.Zero : _motion.Transition(TimeSpan.FromSeconds(1.2));
         Hero.SetHdr(on, transition);
         _pulse?.SetWanted(on);
-        CapsuleDot.Fill = on ? (Brush)FindResource(ThemeKeys.BrushShine) : Frozen(new SolidColorBrush(Color.FromRgb(0x7A, 0x7F, 0x94)));
+        // Themenfarben als Verweis (nicht als Momentaufnahme): folgen der Farbebene der Spielfarben und jedem Schema.
+        if (on)
+        {
+            CapsuleDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, ThemeKeys.BrushShine);
+        }
+        else
+        {
+            CapsuleDot.Fill = Frozen(new SolidColorBrush(Color.FromRgb(0x7A, 0x7F, 0x94)));
+        }
+
         CapsuleRing.Opacity = on ? 1 : 0;
         CapsuleHalo.Opacity = on ? 0.6 : 0;
         CapsulePulse.Opacity = 0;
         BrandTileOn.Opacity = on ? 1 : 0;
         BrandFill.Opacity = on ? 1 : 0;
-        BrandGlyph.Stroke = on ? (Brush)FindResource(ThemeKeys.BrushTextOnAccent) : (Brush)FindResource(ThemeKeys.BrushAccentText);
+        BrandGlyph.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, on ? ThemeKeys.BrushTextOnAccent : ThemeKeys.BrushAccentText);
         var valueBrush = on ? Brushes.White : Frozen(new SolidColorBrush(Color.FromRgb(0xAE, 0xB3, 0xC6)));
         PeakValue.Foreground = valueBrush;
         FullFrameValue.Foreground = valueBrush;
         MinimumValue.Foreground = valueBrush;
-        NitsScale.Fill = on ? (Brush)FindResource(ThemeKeys.BrushAccentShine) : Frozen(new SolidColorBrush(Color.FromRgb(0x6E, 0x73, 0x88)));
+        if (on)
+        {
+            NitsScale.SetResourceReference(NitsScaleBar.FillProperty, ThemeKeys.BrushAccentShine);
+        }
+        else
+        {
+            NitsScale.Fill = Frozen(new SolidColorBrush(Color.FromRgb(0x6E, 0x73, 0x88)));
+        }
+
         ApplyEdgeLine();
     }
 
     private void ApplyStatusDot(AutomationState state) =>
-        StatusDot.Fill = state switch
+        StatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, state switch
         {
-            AutomationState.Paused => (Brush)FindResource("Lib.Brush.Amber"),
-            AutomationState.Running => (Brush)FindResource(ThemeKeys.BrushShine),
-            _ => (Brush)FindResource("Lib.Brush.Ok"),
-        };
+            AutomationState.Paused => "Lib.Brush.Amber",
+            AutomationState.Running => ThemeKeys.BrushShine,
+            _ => "Lib.Brush.Ok",
+        });
 
     /// <summary>Regal: Schublade ein- bzw. ausfahren (0,55 s nach Effektstufe), Karte aus, Abdunklung an.</summary>
     private void ApplyDrawer(bool instant)
@@ -1699,7 +1787,7 @@ public partial class MainWindow : ChromeWindow
             motion.Effects.Count(e => e.IsRunning && !e.IsPaused),
             motion.Effects.Count(e => e.IsPaused),
             motion.LiveClocks);
-        EffectsGlyph.Foreground = vm.EffectsPaused ? (Brush)FindResource("Lib.Brush.Amber") : (Brush)FindResource(ThemeKeys.BrushAccentText);
+        EffectsGlyph.SetResourceReference(TextBlock.ForegroundProperty, vm.EffectsPaused ? "Lib.Brush.Amber" : ThemeKeys.BrushAccentText);
         if (!motion.OneShotAllowed)
         {
             _moment?.Stop();
@@ -1707,7 +1795,7 @@ public partial class MainWindow : ChromeWindow
 
         if (!motion.ContinuousAllowed)
         {
-            ResetPointer();
+            ResetPointer(); // sofort in die Mitte, auch mitten im Zurückgleiten
         }
 
         if (ToolbarLevel() == ToolbarMotionLevel.Instant && _toolbarMotion.Running > 0)
@@ -1756,7 +1844,7 @@ public partial class MainWindow : ChromeWindow
         }
 
         UpdateLight();
-        var scene = Hero.MomentScene(_palette.ParticleColors(_scheme, vm.Context.Appearance.Current.BackgroundFollowsGame));
+        var scene = Hero.MomentScene(MomentParticleColors);
         var kind = _moment.Play(motion.Level, motion.Context, scene, transientBoost);
         if (kind == HdrMomentKind.Full)
         {
@@ -1778,7 +1866,7 @@ public partial class MainWindow : ChromeWindow
             {
                 Width = 7,
                 Height = 7,
-                Fill = new SolidColorBrush(i % 2 == 1 ? _scheme.Accent : _scheme.Shine),
+                Fill = new SolidColorBrush(ButtonBurstColors[i % 2 == 1 ? 0 : 1]),
                 Opacity = 0,
                 RenderTransformOrigin = new Point(0.5, 0.5),
             };
@@ -1808,15 +1896,22 @@ public partial class MainWindow : ChromeWindow
     }
 
     /// <summary>Tiefenwirkung: Zeiger über dem Titelbild verschiebt die Ebenen (nur Dauer-Effekte erlaubt, gedrosselt auf 30 Hz).</summary>
-    private void OnPointerMove(object sender, MouseEventArgs e)
+    private void OnPointerMove(object sender, MouseEventArgs e) => PointHero(e.GetPosition(Hero));
+
+    /// <summary>
+    /// Tiefenwirkung für einen Zeiger an <paramref name="position"/> (relativ zum Titelbild; die Maus ruft es über
+    /// PreviewMouseMove, Tests direkt): Bildebenen und Inhalt folgen ihm (0,6 s), außerhalb des Titelbilds gleiten sie zurück
+    /// (<see cref="ResetPointer"/>). Nur mit Dauer-Effekten, höchstens 30-mal je Sekunde; beim Ziehen am Griff bleibt das
+    /// Bild stehen. Jede Bewegung läuft vom aktuellen Wert aus weiter, auch mitten im Zurückgleiten.
+    /// </summary>
+    public void PointHero(Point position)
     {
         if (_motion is not { ContinuousAllowed: true } || Hero.ActualWidth <= 0 || HeroSplitter.IsDragging)
         {
-            return; // beim Ziehen am Griff bleibt das Bild stehen
+            return;
         }
 
-        var p = e.GetPosition(Hero);
-        if (p.Y < 0 || p.Y > Hero.ActualHeight)
+        if (position.Y < 0 || position.Y > Hero.ActualHeight)
         {
             ResetPointer();
             return;
@@ -1830,30 +1925,51 @@ public partial class MainWindow : ChromeWindow
 
         _pointerTick = tick;
         _pointerActive = true;
-        var px = ((p.X / Hero.ActualWidth) - 0.5) * 2;
-        var py = ((p.Y / Hero.ActualHeight) - 0.5) * 2;
+        _pointerReturning = false;
+        var px = ((position.X / Hero.ActualWidth) - 0.5) * 2;
+        var py = ((position.Y / Hero.ActualHeight) - 0.5) * 2;
         Hero.SetPointer(px, py, PointerDuration);
         var shift = OwnShift(HeroContent);
-        shift.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(7 * Math.Clamp(px, -1, 1), PointerDuration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
-        shift.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(4 * Math.Clamp(py, -1, 1), PointerDuration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } }, HandoffBehavior.SnapshotAndReplace);
+        shift.BeginAnimation(TranslateTransform.XProperty, PointerAnimation(7 * Math.Clamp(px, -1, 1), PointerDuration), HandoffBehavior.SnapshotAndReplace);
+        shift.BeginAnimation(TranslateTransform.YProperty, PointerAnimation(4 * Math.Clamp(py, -1, 1), PointerDuration), HandoffBehavior.SnapshotAndReplace);
     }
 
-    private void ResetPointer()
+    /// <summary>
+    /// Zeiger verlässt Titelbild oder Fenster: Bildebenen und Inhalt (Titel, Kennzeichen, Knöpfe) gleiten gemeinsam in
+    /// <see cref="PointerReturnDuration"/> mit derselben Kurve zurück, statt dass der Inhalt springt (Wunsch des Nutzers
+    /// 2026-10-22). Kommt der Zeiger zurück, geht es vom aktuellen Wert aus weiter. Ohne Dauer-Effekte (Stufe, minimiert,
+    /// im Hintergrund, Spiel läuft) steht alles sofort in der Mitte, auch mitten im Zurückgleiten.
+    /// </summary>
+    public void ResetPointer()
     {
-        if (!_pointerActive)
+        var glide = _motion?.ContinuousAllowed == true;
+        if (!_pointerActive && (glide || !_pointerReturning))
         {
-            return;
+            return; // steht schon in der Mitte oder gleitet schon dorthin
         }
 
         _pointerActive = false;
-        var duration = _motion?.ContinuousAllowed == true ? PointerDuration : TimeSpan.Zero;
-        Hero.SetPointer(0, 0, duration);
         var shift = OwnShift(HeroContent);
+        if (glide)
+        {
+            _pointerReturning = true;
+            Hero.SetPointer(0, 0, PointerReturnDuration);
+            shift.BeginAnimation(TranslateTransform.XProperty, PointerAnimation(0, PointerReturnDuration), HandoffBehavior.SnapshotAndReplace);
+            shift.BeginAnimation(TranslateTransform.YProperty, PointerAnimation(0, PointerReturnDuration), HandoffBehavior.SnapshotAndReplace);
+            return;
+        }
+
+        _pointerReturning = false;
+        Hero.SetPointer(0, 0, TimeSpan.Zero);
         shift.BeginAnimation(TranslateTransform.XProperty, null);
         shift.BeginAnimation(TranslateTransform.YProperty, null);
         shift.X = 0;
         shift.Y = 0;
     }
+
+    /// <summary>Bewegung der Tiefenwirkung: dieselbe Kurve wie die Bildebenen (HeroStage.SetPointer, QuinticEase EaseOut).</summary>
+    private static DoubleAnimation PointerAnimation(double to, TimeSpan duration) =>
+        new(to, duration) { EasingFunction = new QuinticEase { EasingMode = EasingMode.EaseOut } };
 
     private Storyboard CreatePulse()
     {
@@ -1899,6 +2015,7 @@ public partial class MainWindow : ChromeWindow
     {
         ReadTheme();
         ApplyAmbient(instant: true);
+        RefreshShownAccents(instant: true);
         ApplyHdrState(instant: true);
     }
 
@@ -1913,6 +2030,7 @@ public partial class MainWindow : ChromeWindow
     private void OnClosed(object? sender, EventArgs e)
     {
         ThemeManager.ThemeChanged -= OnThemeChanged;
+        DetachGameColors();
         DetachToolbar();
         _moment?.Dispose();
         _motion?.Dispose();

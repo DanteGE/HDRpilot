@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Steam;
 
@@ -7,7 +8,7 @@ namespace HdrPilot.Core.Games.Scanners.Steam;
 internal sealed class KeyValuesException : Exception
 {
     public KeyValuesException(string message, int line)
-        : base(message + " (Zeile " + line.ToString(CultureInfo.InvariantCulture) + ")")
+        : base(ScanText.Format(ScanStrings.KeyValues_AtLine, message, line.ToString(CultureInfo.InvariantCulture)))
     {
         Line = line;
     }
@@ -44,7 +45,7 @@ internal static class KeyValuesParser
     {
         if (depth > MaxDepth)
         {
-            throw new KeyValuesException("Zu tief verschachtelt", reader.Line);
+            throw new KeyValuesException(ScanStrings.KeyValues_TooDeep, reader.Line);
         }
 
         var isRoot = depth == 0;
@@ -57,13 +58,13 @@ internal static class KeyValuesParser
                 case TokenKind.End when isRoot:
                     return children;
                 case TokenKind.End:
-                    throw new KeyValuesException($"Block ab Zeile {openedAtLine} wird nicht geschlossen (Datei abgeschnitten?)", reader.Line);
+                    throw new KeyValuesException(ScanText.Format(ScanStrings.KeyValues_BlockNotClosed, openedAtLine), reader.Line);
                 case TokenKind.CloseBrace when isRoot:
-                    throw new KeyValuesException("Unerwartete schließende Klammer", token.Line);
+                    throw new KeyValuesException(ScanStrings.KeyValues_UnexpectedClose, token.Line);
                 case TokenKind.CloseBrace:
                     return children;
                 case TokenKind.OpenBrace:
-                    throw new KeyValuesException("Block ohne Schlüssel", token.Line);
+                    throw new KeyValuesException(ScanStrings.KeyValues_BlockWithoutKey, token.Line);
                 case TokenKind.Condition:
                     continue;
             }
@@ -84,9 +85,9 @@ internal static class KeyValuesParser
                     children.Add(KeyValueNode.CreateBlock(key, ParseBlockContents(reader, depth + 1, value.Line)));
                     break;
                 case TokenKind.End:
-                    throw new KeyValuesException($"Wert für \"{key}\" fehlt (Datei abgeschnitten?)", reader.Line);
+                    throw new KeyValuesException(ScanText.Format(ScanStrings.KeyValues_ValueMissingTruncated, key), reader.Line);
                 default:
-                    throw new KeyValuesException($"Wert für \"{key}\" fehlt", value.Line);
+                    throw new KeyValuesException(ScanText.Format(ScanStrings.KeyValues_ValueMissing, key), value.Line);
             }
 
             reader.SkipConditions();
@@ -232,13 +233,13 @@ internal static class KeyValuesParser
 
                 if (c == '\0')
                 {
-                    throw new KeyValuesException("Nullzeichen in Zeichenkette (Binärdaten oder falsche Kodierung?)", Line);
+                    throw new KeyValuesException(ScanStrings.KeyValues_NullChar, Line);
                 }
 
                 sb.Append(c);
             }
 
-            throw new KeyValuesException($"Zeichenkette ab Zeile {startLine} wird nicht geschlossen (Datei abgeschnitten?)", Line);
+            throw new KeyValuesException(ScanText.Format(ScanStrings.KeyValues_StringNotClosed, startLine), Line);
         }
 
         private Token ReadCondition()
@@ -252,7 +253,7 @@ internal static class KeyValuesParser
 
             if (_pos >= text.Length || text[_pos] != ']')
             {
-                throw new KeyValuesException("Bedingung in eckigen Klammern wird nicht geschlossen", startLine);
+                throw new KeyValuesException(ScanStrings.KeyValues_ConditionNotClosed, startLine);
             }
 
             _pos++;
@@ -273,7 +274,7 @@ internal static class KeyValuesParser
                 if (char.IsControl(c))
                 {
                     throw new KeyValuesException(
-                        "Ungültiges Steuerzeichen 0x" + ((int)c).ToString("X2", CultureInfo.InvariantCulture) + " (Binärdaten oder falsche Kodierung?)",
+                        ScanText.Format(ScanStrings.KeyValues_ControlChar, ((int)c).ToString("X2", CultureInfo.InvariantCulture)),
                         Line);
                 }
 

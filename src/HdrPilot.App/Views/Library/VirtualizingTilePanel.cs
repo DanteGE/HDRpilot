@@ -40,6 +40,25 @@ public sealed class VirtualizingTilePanel : VirtualizingPanel, IScrollInfo
         nameof(AnimatedOffset), typeof(double), typeof(VirtualizingTilePanel),
         new PropertyMetadata(0.0, (d, e) => ((VirtualizingTilePanel)d).SetOffset((double)e.NewValue)));
 
+    /// <summary>
+    /// Ob eine Kachel (ihr Container) beim Überfahren nach oben steigen kann (Vorlage GameTileTemplate: −10 px, 3,5 % größer
+    /// um die Mitte, dazu der Ring 3 px außen): Das Panel setzt es bei jeder Anordnung nach dem Platz über ihr im sichtbaren
+    /// Bereich. Ohne diesen Platz (die erste Reihe des Rasters, nach dem Scrollen die oberste) wächst die Kachel nach unten
+    /// (Ursprung oben, kein Anheben), statt oben abgeschnitten unter der Werkzeugleiste zu verschwinden (Wunsch des Nutzers
+    /// 2026-10-22). Im Regal ist immer Platz (<see cref="ShowcaseLayout.ShelfPaddingTop"/>).
+    /// </summary>
+    public static readonly DependencyProperty RisesOnHoverProperty = DependencyProperty.RegisterAttached(
+        "RisesOnHover", typeof(bool), typeof(VirtualizingTilePanel), new PropertyMetadata(true));
+
+    /// <summary>So weit steigt eine Kachel beim Überfahren (Vorlage GameTileTemplate).</summary>
+    public const double HoverLift = 10;
+
+    /// <summary>So viel größer wird eine Kachel beim Überfahren (Vorlage GameTileTemplate).</summary>
+    public const double HoverScale = 1.035;
+
+    /// <summary>So weit ragt der Ring der gewählten Kachel über ihren Rand (Vorlage GameTileTemplate, Margin −3).</summary>
+    public const double RingOutset = 3;
+
     private Size _extent;
     private Size _viewport;
     private Point _offset;
@@ -74,6 +93,16 @@ public sealed class VirtualizingTilePanel : VirtualizingPanel, IScrollInfo
         get => (double)GetValue(AnimatedOffsetProperty);
         set => SetValue(AnimatedOffsetProperty, value);
     }
+
+    public static bool GetRisesOnHover(DependencyObject element) => (bool)element.GetValue(RisesOnHoverProperty);
+
+    public static void SetRisesOnHover(DependencyObject element, bool value) => element.SetValue(RisesOnHoverProperty, value);
+
+    /// <summary>
+    /// Platz über einer Kachel dieser Höhe, damit sie beim Überfahren ganz zu sehen bleibt: Anheben, halbes Wachstum und
+    /// Ring.
+    /// </summary>
+    public static double HoverRoom(double tileHeight) => HoverLift + (tileHeight * (HoverScale - 1) / 2) + RingOutset;
 
     /// <summary>Spalten im Raster (Regal: so viele, wie ganz sichtbar sind).</summary>
     public int Columns => _columns;
@@ -226,6 +255,7 @@ public sealed class VirtualizingTilePanel : VirtualizingPanel, IScrollInfo
             return finalSize;
         }
 
+        var room = HoverRoom(_tileHeight);
         for (var i = 0; i < InternalChildren.Count; i++)
         {
             var child = InternalChildren[i];
@@ -235,7 +265,15 @@ public sealed class VirtualizingTilePanel : VirtualizingPanel, IScrollInfo
                 continue;
             }
 
-            child.Arrange(TileRect(index));
+            var rect = TileRect(index);
+            child.Arrange(rect);
+
+            // Steigt sie beim Überfahren, bleibt sie im sichtbaren Bereich? Nur bei einer Änderung setzen (Bildlauf ordnet oft an).
+            var rises = rect.Top >= room - 0.5;
+            if (GetRisesOnHover(child) != rises)
+            {
+                SetRisesOnHover(child, rises);
+            }
         }
 
         return finalSize;
@@ -286,7 +324,8 @@ public sealed class VirtualizingTilePanel : VirtualizingPanel, IScrollInfo
         var tileWidth = _tileWidth;
         if (IsShelf)
         {
-            var shelf = ShowcaseLayout.Shelf(width, height - Padding.Top - Padding.Bottom + 34, Gap);
+            // Kachel so hoch wie der Platz zwischen den Innenabständen (Shelf rechnet mit den 34 px der Kachelreihe).
+            var shelf = ShowcaseLayout.Shelf(width, height - Padding.Top - Padding.Bottom + ShowcaseLayout.ShelfPadding, Gap);
             _tileWidth = shelf.TileWidth;
             _tileHeight = shelf.TileHeight;
             _columns = shelf.Visible;

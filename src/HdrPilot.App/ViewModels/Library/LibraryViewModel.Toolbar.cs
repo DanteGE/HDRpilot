@@ -49,7 +49,7 @@ public sealed partial class LibraryViewModel
     /// <summary>Erster Eintrag im Menü der Leiste: „Leiste ausblenden“ bzw. „Leiste einblenden“.</summary>
     public string ToolbarToggleText => _toolbarCollapsed ? LibraryStrings.Toolbar_Show : LibraryStrings.Toolbar_Hide;
 
-    /// <summary>Strg+Umschalt+F, Strg+F1, Lasche, Kapsel und Menü: Werkzeugleiste aus- bzw. einblenden.</summary>
+    /// <summary>Strg+F, Strg+F1, Lasche, Kapsel und Menü: Werkzeugleiste aus- bzw. einblenden.</summary>
     public RelayCommand ToggleToolbarCommand { get; private set; } = null!;
 
     /// <summary>Filter umschalten (Parameter <see cref="ToolbarFilter"/> oder sein Name): Alt+A/N/H und Menü.</summary>

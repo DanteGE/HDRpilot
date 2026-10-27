@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+    <data name="Help" xml:space="preserve">
+    <value>HDRpilot Kommandozeile (Diagnose und Tests)
+
+hdrpilot hdr status [--json] [--api modern|legacy]
+    Listet alle aktiven Bildschirme mit Name, HDR-fähig und HDR an/aus.
+hdrpilot hdr on|off|toggle [--display &lt;auswahl&gt;] [--api modern|legacy] [--hotkey-fallback] [--json]
+    Schaltet HDR und bestätigt den Zustand durch erneutes Lesen.
+    &lt;auswahl&gt;: primary (Standard), all, Nummer aus "hdr status", Teil des Namens oder monitorDevicePath.
+
+hdrpilot scan [--source &lt;quelle&gt;] [--search "&lt;ordner&gt;;&lt;ordner&gt;"] [--config-dir &lt;ordner&gt;]
+    Gibt alle gefundenen Spiele und die Fehler je Scanner als JSON aus (nur lesen).
+    &lt;quelle&gt;: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver
+    Mit --config-dir zählen Suchordner und gelernte Quiver-Ordner dieser Ablage mit.
+
+hdrpilot games list [--json]
+hdrpilot games import
+    Liest alle Launcher ein und übernimmt das Ergebnis in die Konfiguration.
+hdrpilot games add --path &lt;exe|ordner&gt; [--name &lt;name&gt;] [--hdr on|off]
+hdrpilot games set &lt;schlüssel&gt; [--hdr on|off] [--restore on|off] [--display &lt;monitorDevicePath&gt;|global]
+    Schlüssel: Quelle:ID, etwa Steam:1091500 (siehe "games list").
+hdrpilot watch [--verbose]
+    Überwacht Spielstarts im Vordergrund (wie die App, ohne Oberfläche). Beenden mit Strg+C.
+hdrpilot run &lt;schlüssel&gt;
+    Start über HDRpilot: HDR einschalten, bestätigen, Spiel starten, bis Spielende überwachen.
+scan, games, watch und run: --config-dir &lt;ordner&gt; (statt %APPDATA%/%LOCALAPPDATA%\HDRpilot, für Tests).
+
+Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden,
+            4 Bildschirm ohne HDR, 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden</value>
+    <comment>Ausgabe von hdrpilot help; Zeilen umbrechen wie gezeigt</comment>
+  </data>
+  <data name="UnknownCommand" xml:space="preserve">
+    <value>Unbekannter Befehl "{0}".</value>
+  </data>
+  <data name="Cancelled" xml:space="preserve">
+    <value>Abgebrochen.</value>
+  </data>
+  <data name="UnexpectedError" xml:space="preserve">
+    <value>Unerwarteter Fehler: {0}</value>
+  </data>
+  <data name="ScanUnknownOption" xml:space="preserve">
+    <value>Unbekannte Option oder Argument für scan.</value>
+  </data>
+  <data name="UnknownSource" xml:space="preserve">
+    <value>Unbekannte Quelle "{0}".</value>
+  </data>
+  <data name="ConfigUnreadableHint" xml:space="preserve">
+    <value>Hinweis: Konfiguration {0} nicht lesbar ({1}); ohne ihre Ordner eingelesen.</value>
+  </data>
+  <data name="HdrNeedsSubcommand" xml:space="preserve">
+    <value>hdr braucht einen Unterbefehl: status, on, off oder toggle.</value>
+  </data>
+  <data name="UnknownOption" xml:space="preserve">
+    <value>Unbekannte Option: {0}</value>
+  </data>
+  <data name="ApiExpects" xml:space="preserve">
+    <value>--api erwartet modern oder legacy.</value>
+  </data>
+  <data name="UnknownSubcommand" xml:space="preserve">
+    <value>Unbekannter Unterbefehl "{0}".</value>
+  </data>
+  <data name="NoActiveDisplays" xml:space="preserve">
+    <value>Keine aktiven Bildschirme gefunden.</value>
+  </data>
+  <data name="StatusActiveMode" xml:space="preserve">
+    <value>, aktiver Modus {0}</value>
+    <comment>{0} = Farbmodus von Windows</comment>
+  </data>
+  <data name="StatusPrimary" xml:space="preserve">
+    <value> (Hauptbildschirm)</value>
+  </data>
+  <data name="StatusLine" xml:space="preserve">
+    <value>   HDR-fähig: {0}   HDR: {1}{2}   API: {3}</value>
+    <comment>{0} = ja/nein, {1} = an/aus, {2} = aktiver Modus, {3} = Schnittstelle</comment>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>ja</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>nein</value>
+  </data>
+  <data name="HelpHint" xml:space="preserve">
+    <value>Hilfe: hdrpilot help</value>
+  </data>
+  <data name="ListNotInstalled" xml:space="preserve">
+    <value>nicht installiert</value>
+  </data>
+  <data name="ListNew" xml:space="preserve">
+    <value>neu</value>
+  </data>
+  <data name="ListSummary" xml:space="preserve">
+    <value>{0} Spiele, davon {1} mit HDR automatisch.</value>
+  </data>
+  <data name="ImportSummary" xml:space="preserve">
+    <value>{0} Spiele eingelesen: {1} neu, {2} aktualisiert, {3} nicht mehr installiert.</value>
+  </data>
+  <data name="ScanErrorHint" xml:space="preserve">
+    <value>Hinweis: {0} {1}</value>
+    <comment>{0} = Meldung des Scanners, {1} = Pfad</comment>
+  </data>
+  <data name="AddNeedsPath" xml:space="preserve">
+    <value>games add braucht --path &lt;exe|ordner&gt;.</value>
+  </data>
+  <data name="HdrExpectsOnOff" xml:space="preserve">
+    <value>--hdr erwartet on oder off.</value>
+  </data>
+  <data name="AddFolderTaken" xml:space="preserve">
+    <value>Hinweis: Der Ordner gehört schon zu {0} ({1}). Dort lässt sich HDR mit "hdrpilot games set {0} --hdr on" einschalten. Bei gleichem Ordner gewinnt das Spiel mit HDR automatisch.</value>
+    <comment>{0} = Schlüssel, {1} = Name</comment>
+  </data>
+  <data name="SetNeedsKey" xml:space="preserve">
+    <value>games set braucht einen Schlüssel (Quelle:ID).</value>
+  </data>
+  <data name="GameNotInConfig" xml:space="preserve">
+    <value>Spiel {0} ist nicht in der Konfiguration.</value>
+  </data>
+  <data name="HdrRestoreExpectOnOff" xml:space="preserve">
+    <value>--hdr und --restore erwarten on oder off.</value>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>{0} gespeichert.</value>
+  </data>
+  <data name="GamesNeedsSubcommand" xml:space="preserve">
+    <value>games braucht einen Unterbefehl: list, import, add oder set.</value>
+  </data>
+  <data name="WatchRunning" xml:space="preserve">
+    <value>Überwachung läuft (Intervall {0} ms, Nachlaufzeit {1} s, Protokoll {2}). Beenden mit Strg+C.</value>
+  </data>
+  <data name="RunNeedsKey" xml:space="preserve">
+    <value>run braucht einen Schlüssel (Quelle:ID).</value>
+  </data>
+  <data name="DiagNeedsSubcommand" xml:space="preserve">
+    <value>diag braucht einen Unterbefehl: poll.</value>
+  </data>
+  <data name="DiagCounts" xml:space="preserve">
+    <value>Prozesse: {0}, Spiele in der Konfiguration: {1}, Zyklen: {2}</value>
+  </data>
+  <data name="DiagSnapshot" xml:space="preserve">
+    <value>Prozessliste (+ Pfade neuer Prozesse)        : {0:0.000} ms je Zyklus</value>
+  </data>
+  <data name="DiagDiff" xml:space="preserve">
+    <value>Differenz alt/neu:                                {0:0.000} ms je Zyklus</value>
+  </data>
+  <data name="DiagSessions" xml:space="preserve">
+    <value>Sitzungslogik (Zuordnung, Nachlauf):              {0:0.000} ms je Zyklus</value>
+  </data>
+  <data name="DiagCpu" xml:space="preserve">
+    <value>CPU-Zeit gesamt je Zyklus (2 Listenabfragen):     {0:0.000} ms</value>
+  </data>
+  <data name="DiagPathQueries" xml:space="preserve">
+    <value>Pfadabfragen gesamt: {0}, Verfahren: {1}</value>
+  </data>
+  <data name="OptionNeedsValue" xml:space="preserve">
+    <value>Option {0} braucht einen Wert.</value>
+  </data>
+  <data name="DisplayNumberNotFound" xml:space="preserve">
+    <value>Bildschirm Nummer {0} nicht gefunden (vorhanden: 1 bis {1}).</value>
+  </data>
+  <data name="DisplayAmbiguous" xml:space="preserve">
+    <value>Mehrdeutig: "{0}" passt zu {1} Bildschirmen. Nummer oder monitorDevicePath angeben.</value>
+  </data>
+  <data name="DisplayNoMatch" xml:space="preserve">
+    <value>Kein Bildschirm passt zu "{0}".</value>
+  </data>
+</root>

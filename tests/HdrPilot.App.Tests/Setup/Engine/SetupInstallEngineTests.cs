@@ -33,6 +33,7 @@ public sealed class SetupInstallEngineTests : IDisposable
         Assert.True(result.AppStarted);
         Assert.Equal(SetupHarness.ExeBytes("1.1.0"), File.ReadAllBytes(L.ExePath)); // byte-gleich mit der portablen EXE
         Assert.Equal("README 1.1.0", File.ReadAllText(_h.InstalledFile("README.md")));
+        Assert.Equal("README DE 1.1.0", File.ReadAllText(_h.InstalledFile("README.de.md")));
         Assert.Equal("LICENSE 1.1.0", File.ReadAllText(_h.InstalledFile("LICENSE")));
         Assert.Equal("NOTICES 1.1.0", File.ReadAllText(_h.InstalledFile("THIRD-PARTY-NOTICES.txt")));
         Assert.Equal("CLI 1.1.0", File.ReadAllText(_h.InstalledFile(@"cli\hdrpilot.exe")));
@@ -538,7 +539,7 @@ public sealed class SetupInstallEngineTests : IDisposable
     {
         // Setup-Dateien vor 1.5.0 hatten keinen Lizenztext (E92): die Installation bleibt gültig, die Aktualisierung legt
         // LICENSE dazu, das Entfernen löscht ihn mit den übrigen eigenen Dateien.
-        var old = await _h.Setup(_h.Bundle("1.4.0", withLicense: false), "1.4.0").InstallAsync(Quiet, null, TestContext.Current.CancellationToken);
+        var old = await _h.Setup(_h.Bundle("1.4.0", withLicense: false, withGermanReadme: false), "1.4.0").InstallAsync(Quiet, null, TestContext.Current.CancellationToken);
         Assert.True(old.Success, old.Message);
         Assert.False(File.Exists(_h.InstalledFile("LICENSE")));
         Assert.Equal("README 1.4.0", File.ReadAllText(_h.InstalledFile("README.md")));
@@ -555,6 +556,31 @@ public sealed class SetupInstallEngineTests : IDisposable
 
         Assert.True(removed.Success, removed.Message);
         Assert.False(File.Exists(_h.InstalledFile("LICENSE")));
+        Assert.False(Directory.Exists(L.InstallDirectory));
+    }
+
+    [Fact]
+    public async Task Update_from_a_setup_without_german_readme_adds_it_and_uninstall_removes_it()
+    {
+        // Bis 1.5.0 lag nur README.md bei (damals deutsch); seit E95 ist sie englisch und README.de.md liegt daneben:
+        // die Aktualisierung legt die deutsche dazu, das Entfernen löscht sie mit den übrigen eigenen Dateien.
+        var old = await _h.Setup(_h.Bundle("1.5.0", withGermanReadme: false), "1.5.0").InstallAsync(Quiet, null, TestContext.Current.CancellationToken);
+        Assert.True(old.Success, old.Message);
+        Assert.False(File.Exists(_h.InstalledFile("README.de.md")));
+        Assert.Equal("README 1.5.0", File.ReadAllText(_h.InstalledFile("README.md")));
+
+        var update = await _h.InstallAsync("1.6.0", Quiet);
+
+        Assert.True(update.Success, update.Message);
+        Assert.Equal(new Version(1, 5, 0), update.PreviousVersion);
+        Assert.Equal("README 1.6.0", File.ReadAllText(_h.InstalledFile("README.md")));
+        Assert.Equal("README DE 1.6.0", File.ReadAllText(_h.InstalledFile("README.de.md")));
+        AssertNoLeftovers();
+
+        var removed = await _h.UninstallAsync();
+
+        Assert.True(removed.Success, removed.Message);
+        Assert.False(File.Exists(_h.InstalledFile("README.de.md")));
         Assert.False(Directory.Exists(L.InstallDirectory));
     }
 

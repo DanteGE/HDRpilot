@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Common;
 
@@ -34,7 +35,7 @@ internal static class ScannerJson
         }
         catch (DecoderFallbackException)
         {
-            throw new InvalidDataException("Ungültige Zeichenkodierung (weder UTF-8 noch UTF-16 mit BOM).");
+            throw new InvalidDataException(ScanStrings.Json_InvalidEncoding);
         }
 
         JsonDocument document;
@@ -44,16 +45,16 @@ internal static class ScannerJson
         }
         catch (JsonException ex)
         {
-            var where = ex.LineNumber is { } line
-                ? string.Create(CultureInfo.InvariantCulture, $" (Zeile {line + 1}, Spalte {(ex.BytePositionInLine ?? 0) + 1})")
-                : string.Empty;
-            throw new InvalidDataException("Kein gültiges JSON" + where + ".", ex);
+            var message = ex.LineNumber is { } line
+                ? ScanText.Format(ScanStrings.Json_InvalidAt, (line + 1).ToString(CultureInfo.InvariantCulture), ((ex.BytePositionInLine ?? 0) + 1).ToString(CultureInfo.InvariantCulture))
+                : ScanStrings.Json_Invalid;
+            throw new InvalidDataException(message, ex);
         }
 
         if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
             document.Dispose();
-            throw new InvalidDataException("JSON-Wurzel ist kein Objekt.");
+            throw new InvalidDataException(ScanStrings.Json_RootNotObject);
         }
 
         return document;
@@ -152,7 +153,7 @@ internal static class ScannerJson
         }
         catch (InvalidOperationException)
         {
-            throw new InvalidDataException($"Feld \"{name}\" enthält eine ungültige Escape-Folge (einzelnes UTF-16-Surrogat).");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Json_LoneSurrogate, name));
         }
     }
 

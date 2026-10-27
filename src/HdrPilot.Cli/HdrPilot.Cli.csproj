@@ -10,6 +10,16 @@
     <ProjectReference Include="..\HdrPilot.Core\HdrPilot.Core.csproj" />
   </ItemGroup>
 
+  <!-- Ausgaben der Kommandozeile (E95): neutral = Deutsch, Englisch in CliStrings.en.resx. -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\CliStrings.resx">
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>HdrPilot.Cli.Resources</StronglyTypedNamespace>
+      <StronglyTypedClassName>CliStrings</StronglyTypedClassName>
+      <StronglyTypedFileName>$(IntermediateOutputPath)CliStrings.Designer.cs</StronglyTypedFileName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="HdrPilot.Tests" />
   </ItemGroup>

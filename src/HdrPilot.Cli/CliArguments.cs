@@ -1,3 +1,5 @@
+using HdrPilot.Cli.Resources;
+
 namespace HdrPilot.Cli;
 
 /// <summary>Einfacher Argumentleser: Positionsargumente plus --schalter und --name wert.</summary>
@@ -40,7 +42,7 @@ public sealed class CliArguments
 
                 if (i + 1 >= args.Count)
                 {
-                    error = $"Option {a} braucht einen Wert.";
+                    error = string.Format(System.Globalization.CultureInfo.CurrentCulture, CliStrings.OptionNeedsValue, a);
                     return result;
                 }
 

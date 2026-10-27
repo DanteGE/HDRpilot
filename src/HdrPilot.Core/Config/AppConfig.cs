@@ -169,6 +169,13 @@ public sealed class AppSettings
     /// </summary>
     public List<string>? QuiverFolders { get; set; }
 
+    /// <summary>
+    /// Sprache der Oberfläche (E95): "de" oder "en", siehe <see cref="UiLanguage"/>. Eine neue Konfiguration bekommt die
+    /// Sprache von Windows (Deutsch bei Deutsch, sonst Englisch). Null (ältere Konfigurationen) oder ein unbekannter Wert
+    /// gilt als Deutsch und bleibt beim Speichern unverändert. Text statt Aufzählung wie <see cref="LibrarySortOrder"/>.
+    /// </summary>
+    public string? Language { get; set; }
+
     /// <summary>Darstellung: Farbschema, Thema, Effekte (E89). Ältere Konfigurationen: Standardwerte.</summary>
     public AppearanceSettings Appearance { get; set; } = new();
 

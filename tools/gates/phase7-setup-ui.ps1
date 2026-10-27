@@ -147,7 +147,7 @@ try {
     Note ("Ablage vorbereitet: Kanarien-Datei {0}, Steam-Spiel 4711 mit HDRpilot-Startoption, {1} Dateien" -f $canary.Substring(0, 8), $cfgStart.Count)
 
     Note '--- Setup-Fenster'
-    $proc = Start-Exe $setup @('--test-root', $layout.Root)
+    $proc = Start-Exe $setup @('--test-root', $layout.Root, '--ui-language', 'de')
     $win = Find-Window 'SetupWindow' $proc.Id 30000
     Check ($null -ne $win) "Setup-Fenster geöffnet (SetupWindow, PID $($proc.Id))"
     if (-not $win) { throw 'Setup-Fenster fehlt' }
@@ -204,7 +204,7 @@ try {
     Set-AutoHdrCrashLeftover $autoHdr
     Check ((Get-RegValue $autoHdr.Key $AutoHdrGlobalName) -ceq $autoHdr.On -and (Test-Path -LiteralPath $autoHdr.GlobalFile)) 'Absturz mit gesetztem Auto-HDR-Schalter nachgestellt (Testwurzel an, autohdr-global.json)'
     $logOffset = Get-FileLength $layout.SetupLog
-    $first = Start-Exe $layout.Exe @('--uninstall', '--test-root', $layout.Root)
+    $first = Start-Exe $layout.Exe @('--uninstall', '--test-root', $layout.Root, '--ui-language', 'de')
     $uwin = Find-Window 'UninstallWindow' $first.Id 30000
     Check ($null -ne $uwin) "Rückfrage zum Entfernen geöffnet (UninstallWindow, PID $($first.Id))"
     if (-not $uwin) { throw 'Rückfrage fehlt' }
@@ -266,7 +266,7 @@ try {
     Note '--- Setup-Fenster: Aktualisieren einer älteren, nicht eingetragenen Version (wie beim Nutzer)'
     $older = Initialize-OlderInstall $layout
     Check ($older.Version -eq '1.0.0' -and -not (Test-Path $layout.UninstallKey) -and (Test-Contains (Get-RegValue $layout.RunKey $RunValueName) $layout.Exe)) ("Vorher: Attrappe HDRpilot.exe {0} im Programmordner, Autostart-Wert zeigt darauf, kein Eintrag" -f $older.Version)
-    $proc = Start-Exe $setup @('--test-root', $layout.Root)
+    $proc = Start-Exe $setup @('--test-root', $layout.Root, '--ui-language', 'de')
     $win = Find-Window 'SetupWindow' $proc.Id 30000
     Check ($null -ne $win) "Setup-Fenster geöffnet (SetupWindow, PID $($proc.Id))"
     if (-not $win) { throw 'Setup-Fenster zum Aktualisieren fehlt' }

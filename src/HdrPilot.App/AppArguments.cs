@@ -19,6 +19,9 @@ namespace HdrPilot.App;
 /// <see cref="Infrastructure.SnapshotPlan"/>),
 /// <c>--artwork-report &lt;datei&gt;</c>, <c>--settings-probe &lt;datei&gt;</c> (E90), <c>--test-hdr-moment</c> und
 /// <c>--test-toolbar-search</c> (die letzten beiden werden weitergereicht).</item>
+/// <item><c>--restarted</c> Neustart über die Einstellungen (E95): wartet, bis die alte Instanz beendet ist und die
+/// Einzelinstanz frei ist, dann wie ein normaler Start; wird nie weitergereicht. Mit <c>--snapshot</c> legt <c>--snapshot-language de|en</c> die
+/// Sprache der Bildschirmfotos fest (sonst die der Ablage).</item>
 /// <item><c>--</c> beendet die Befehle: alles danach (der Spielbefehl) wird nie als Befehl von HdrPilot gelesen.</item>
 /// </list>
 /// </summary>
@@ -71,6 +74,15 @@ public sealed record AppArguments
     /// „MAG 341C OLED;456;254;0;10“, wenn der Monitor aus ist und DXGI nichts meldet.
     /// </summary>
     public string? SnapshotDisplay { get; init; }
+
+    /// <summary>Entwicklung (E95): Sprache der Bildschirmfotos ("de" oder "en"); ohne Angabe die der eigenen Ablage.</summary>
+    public string? SnapshotLanguage { get; init; }
+
+    /// <summary>
+    /// Neustart über die Einstellungen (E95): Der neue Prozess wartet, bis die alte Instanz Einzelinstanz und Tray
+    /// freigegeben hat (sie beendet sich gleich nach dem Start des neuen), und startet dann normal. Wird nie weitergereicht.
+    /// </summary>
+    public bool Restarted { get; init; }
 
     /// <summary>
     /// Entwicklung (E89, G10.3): Abdeckung der Bibliothek mit lokalen Bildern als JSON in diese Datei schreiben, dann beenden.
@@ -179,6 +191,12 @@ public sealed record AppArguments
                 case "--snapshot-display" when i + 1 < args.Count:
                     result = result with { SnapshotDisplay = args[++i] };
                     break;
+                case "--snapshot-language" when i + 1 < args.Count:
+                    result = result with { SnapshotLanguage = args[++i] };
+                    break;
+                case "--restarted":
+                    result = result with { Restarted = true };
+                    break;
                 case "--artwork-report" when i + 1 < args.Count:
                     result = result with { ArtworkReport = args[++i] };
                     break;
@@ -229,6 +247,29 @@ public sealed record AppArguments
     /// nur <c>--minimized</c> (Autostart, während HdrPilot schon läuft): nichts.
     /// </summary>
     public IReadOnlyList<string> ToRunningInstance() => HasCommand ? ToForwardedArgs() : Minimized ? [] : ["--show"];
+
+    /// <summary>
+    /// Befehlszeile für den Neustart über die Einstellungen (E95): auf die alte Instanz warten, dieselbe Ablage und
+    /// Auto-HDR-Testwurzel wie dieser Aufruf, danach die Einstellungen öffnen.
+    /// </summary>
+    public IReadOnlyList<string> ToRestartArgs()
+    {
+        var list = new List<string> { "--restarted" };
+        if (ConfigDir is not null)
+        {
+            list.Add("--config-dir");
+            list.Add(ConfigDir);
+        }
+
+        if (AutoHdrTestRoot is not null)
+        {
+            list.Add("--autohdr-test-root");
+            list.Add(AutoHdrTestRoot);
+        }
+
+        list.Add("--settings");
+        return list;
+    }
 
     /// <summary>Befehle für die Weitergabe an die laufende Instanz (ohne --config-dir, --autohdr-test-root und --wrap).</summary>
     public IReadOnlyList<string> ToForwardedArgs()

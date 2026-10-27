@@ -22,7 +22,7 @@ public sealed class ShellViewTests
     private static readonly string[] SettingsIds =
     [
         "TargetDisplays", "PollInterval", "GracePeriod", "RestartBufferMinutes", "RestartBufferSeconds", "LaunchTimeout",
-        "AutostartToggle", "NotificationsToggle", "HotkeyFallbackToggle", "SearchFolders", "AddSearchFolderButton", "RemoveSearchFolderButton", "LogLevel",
+        "AutostartToggle", "NotificationsToggle", "LanguageChoice", "HotkeyFallbackToggle", "SearchFolders", "AddSearchFolderButton", "RemoveSearchFolderButton", "LogLevel",
         "HelperPatterns", "ResetHelperPatternsButton", "OpenLogFolderButton", "SaveSettingsButton", "CancelSettingsButton",
     ];
 
@@ -52,6 +52,7 @@ public sealed class ShellViewTests
             Assert.IsType<ListBox>(elements["TargetDisplays"]);
             Assert.IsType<ListBox>(elements["SearchFolders"]);
             Assert.IsType<ComboBox>(elements["LogLevel"]);
+            Assert.IsType<ComboBox>(elements["LanguageChoice"]);
             Assert.True(((TextBox)elements["HelperPatterns"]).AcceptsReturn);
             Assert.All(new[] { "AutostartToggle", "NotificationsToggle", "HotkeyFallbackToggle" }, id => Assert.IsType<CheckBox>(elements[id]));
         });

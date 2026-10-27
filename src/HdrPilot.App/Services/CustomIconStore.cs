@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.IO;
 using System.Windows.Media.Imaging;
+using HdrPilot.App.Resources;
 using HdrPilot.Core.Games;
 
 namespace HdrPilot.App.Services;
@@ -28,7 +30,7 @@ public sealed class CustomIconStore(string directory)
     public string Save(string gameKey, string sourcePath)
     {
         var image = Render(sourcePath, CustomIcons.StoredSize)
-            ?? throw new InvalidDataException("Die Datei enthält kein lesbares Bild oder Symbol: " + sourcePath);
+            ?? throw new InvalidDataException(string.Format(CultureInfo.CurrentCulture, LibraryStrings.Icon_Unreadable, sourcePath));
         var name = CustomIcons.FileNameFor(gameKey);
         System.IO.Directory.CreateDirectory(directory);
         var target = Path.Combine(directory, name);

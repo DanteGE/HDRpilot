@@ -1,3 +1,5 @@
+using HdrPilot.Core.Resources;
+
 namespace HdrPilot.Core.Games.Scanners.BattleNet;
 
 /// <summary>Ein Produkt aus product.db: uid, Produktcode und Installationsordner (so wie gespeichert, meist mit "/").</summary>
@@ -38,7 +40,7 @@ internal static class ProductDbReader
 
                 if (wireType != ProtoWireType.LengthDelimited)
                 {
-                    throw new InvalidDataException($"Produkteintrag hat den falschen Wire-Typ {(int)wireType}");
+                    throw new InvalidDataException(ScanText.Format(ScanStrings.BattleNet_WrongWireType, (int)wireType));
                 }
 
                 index++;
@@ -49,13 +51,13 @@ internal static class ProductDbReader
                 }
                 catch (InvalidDataException ex)
                 {
-                    errors.Add($"Eintrag {index} in product.db ist defekt und wird übersprungen ({ex.Message}).");
+                    errors.Add(ScanText.Format(ScanStrings.BattleNet_EntryDamaged, index, ex.Message));
                 }
             }
         }
         catch (InvalidDataException ex)
         {
-            errors.Add($"product.db ist defekt oder abgeschnitten (ab Byte {reader.Position}: {ex.Message}); Einträge danach fehlen.");
+            errors.Add(ScanText.Format(ScanStrings.BattleNet_Truncated, reader.Position, ex.Message));
         }
 
         return new ProductDbContent(installs, errors);
@@ -90,12 +92,12 @@ internal static class ProductDbReader
 
         if (string.IsNullOrWhiteSpace(uid))
         {
-            throw new InvalidDataException("ohne uid");
+            throw new InvalidDataException(ScanStrings.BattleNet_NoUid);
         }
 
         if (string.IsNullOrWhiteSpace(productCode))
         {
-            throw new InvalidDataException($"ohne Produktcode, uid {uid}");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.BattleNet_NoProductCode, uid));
         }
 
         return new BattleNetProductInstall(uid.Trim(), productCode.Trim(), installPath?.Trim() ?? string.Empty);

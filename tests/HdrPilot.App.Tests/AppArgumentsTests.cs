@@ -232,4 +232,43 @@ public sealed class AppArgumentsTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public void Restart_waits_for_the_old_instance_and_is_never_forwarded()
+    {
+        // Neustart über die Einstellungen (E95): eigene Schalter, kein Befehl an eine laufende Instanz.
+        var args = AppArguments.Parse(["--restarted", "--settings"]);
+
+        Assert.True(args.Restarted);
+        Assert.True(args.OpenSettings);
+        Assert.Equal(["--settings"], args.ToForwardedArgs());
+        Assert.False(AppArguments.Parse(["--restarted"]).HasCommand);
+        Assert.Equal(["--show"], AppArguments.Parse(["--restarted"]).ToRunningInstance());
+    }
+
+    [Fact]
+    public void Restart_keeps_the_storage_and_the_auto_hdr_test_root()
+    {
+        Assert.Equal(["--restarted", "--settings"], AppArguments.Parse([]).ToRestartArgs());
+        Assert.Equal(["--restarted", "--settings"], AppArguments.Parse(["--minimized", "--run", "Steam:1"]).ToRestartArgs());
+        Assert.Equal(
+            ["--restarted", "--config-dir", @"D:\Testablage", "--autohdr-test-root", "sprache", "--settings"],
+            AppArguments.Parse(["--config-dir", @"D:\Testablage", "--autohdr-test-root", "sprache"]).ToRestartArgs());
+
+        var again = AppArguments.Parse(AppArguments.Parse(["--config-dir", @"D:\Testablage"]).ToRestartArgs());
+        Assert.True(again.Restarted);
+        Assert.True(again.OpenSettings);
+        Assert.Equal(@"D:\Testablage", again.ConfigDir);
+        Assert.Empty(again.Unknown);
+    }
+
+    [Fact]
+    public void Snapshot_language_is_read_and_never_forwarded()
+    {
+        var args = AppArguments.Parse(["--snapshot", "fotos", "--config-dir", "ablage", "--snapshot-language", "en"]);
+
+        Assert.Equal("en", args.SnapshotLanguage);
+        Assert.Empty(args.ToForwardedArgs());
+        Assert.Empty(args.Unknown);
+    }
 }

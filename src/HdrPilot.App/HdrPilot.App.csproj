@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <!-- Oberflächentexte: Resources\*.resx (neutral = Deutsch), stark typisierte Klassen werden beim Build erzeugt.
-       Englisch kommt später als Resources\*.en.resx dazu. -->
+       Englisch steht in Resources\*.en.resx (Satellitenassembly en, E95), ohne eigene Klasse. -->
   <ItemGroup>
     <EmbeddedResource Update="Resources\*.resx">
       <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
@@ -42,6 +42,13 @@
       <StronglyTypedClassName>%(Filename)</StronglyTypedClassName>
       <StronglyTypedFileName>$(IntermediateOutputPath)%(Filename).Designer.cs</StronglyTypedFileName>
       <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\*.en.resx">
+      <StronglyTypedLanguage></StronglyTypedLanguage>
+      <StronglyTypedNamespace></StronglyTypedNamespace>
+      <StronglyTypedClassName></StronglyTypedClassName>
+      <StronglyTypedFileName></StronglyTypedFileName>
+      <PublicClass></PublicClass>
     </EmbeddedResource>
   </ItemGroup>
 

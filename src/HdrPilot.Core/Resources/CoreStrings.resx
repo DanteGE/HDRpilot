@@ -145,4 +145,32 @@
   <data name="HdrSwitchException" xml:space="preserve">
     <value>Ausnahme beim Schalten: {0}</value>
   </data>
+  <data name="ManualNoPath" xml:space="preserve">
+    <value>Es wurde kein Pfad angegeben.</value>
+    <comment>E95: Spiel hinzufügen (Dialog und hdrpilot games add)</comment>
+  </data>
+  <data name="ManualRelative" xml:space="preserve">
+    <value>Der Pfad muss vollständig sein (mit Laufwerk), nicht relativ: "{0}".</value>
+    <comment>{0} = Pfad</comment>
+  </data>
+  <data name="ManualNotExe" xml:space="preserve">
+    <value>Nur EXE-Dateien oder Ordner können hinzugefügt werden: "{0}".</value>
+    <comment>{0} = Pfad</comment>
+  </data>
+  <data name="ManualNotFound" xml:space="preserve">
+    <value>Der Pfad existiert nicht: "{0}".</value>
+    <comment>{0} = Pfad</comment>
+  </data>
+  <data name="ManualDriveRoot" xml:space="preserve">
+    <value>Ein ganzes Laufwerk kann kein Spielordner sein, sonst gälte jeder Prozess darauf als Spiel: "{0}". Bitte die EXE in einen eigenen Ordner legen oder den Spielordner wählen.</value>
+    <comment>{0} = Pfad</comment>
+  </data>
+  <data name="ConfigSaveFailed" xml:space="preserve">
+    <value>Konfiguration {0} ließ sich nicht speichern: {1}</value>
+    <comment>E95: erscheint in „Die Einstellungen ließen sich nicht speichern: …“; {0} = Pfad, {1} = Grund</comment>
+  </data>
+  <data name="GameNotInConfig" xml:space="preserve">
+    <value>Spiel nicht in der Konfiguration: {0}</value>
+    <comment>E95: kann in der Kommandozeile erscheinen; {0} = Schlüssel des Spiels</comment>
+  </data>
 </root>

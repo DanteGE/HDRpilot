@@ -8,8 +8,11 @@ namespace HdrPilot.Core.Config;
 
 public sealed record ConfigLoadResult(AppConfig Config, bool CreatedNew, string? Warning, string? Text = null);
 
-/// <summary>Liest und schreibt config.json. Schreiben ist atomar (temporäre Datei, dann ersetzen).</summary>
-public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock clock, ILogger? logger = null)
+/// <summary>
+/// Liest und schreibt config.json. Schreiben ist atomar (temporäre Datei, dann ersetzen). Eine neue Konfiguration bekommt
+/// die Sprache von <paramref name="newConfigLanguage"/> (Standard: Anzeigesprache von Windows, <see cref="UiLanguage"/>, E95).
+/// </summary>
+public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock clock, ILogger? logger = null, Func<string>? newConfigLanguage = null)
 {
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
@@ -19,7 +22,9 @@ public sealed class ConfigStore(IFileSystem fileSystem, string path, IClock cloc
     {
         if (!fileSystem.FileExists(path))
         {
-            return new ConfigLoadResult(new AppConfig(), CreatedNew: true, Warning: null);
+            var created = new AppConfig();
+            created.Settings.Language = (newConfigLanguage ?? UiLanguage.ForNewConfig)();
+            return new ConfigLoadResult(created, CreatedNew: true, Warning: null);
         }
 
         string text;

@@ -31,6 +31,55 @@ public sealed partial class AppServices
     /// </summary>
     private bool UsesDefaultPaths => Paths == AppPaths.Default(Environment);
 
+    /// <summary>
+    /// Befehlszeile des Neustarts über die Einstellungen (E95), gesetzt von <c>App</c> aus dem eigenen Aufruf (dieselbe
+    /// Ablage, dieselbe Auto-HDR-Testwurzel). Null: kein Neustart möglich (Bildschirmfotos, Prüfungen).
+    /// </summary>
+    public IReadOnlyList<string>? RestartArguments { get; init; }
+
+    /// <summary>
+    /// Neustart nach dem Wechsel der Sprache (E95): startet die EXE erneut mit <c>--restarted</c> und beendet diese
+    /// Instanz wie „HDRpilot beenden“. Der neue Prozess wartet, bis Einzelinstanz und Tray frei sind, und öffnet dann die
+    /// Einstellungen. Scheitert der Start, läuft diese Instanz weiter (false).
+    /// </summary>
+    public async Task<bool> RestartAsync()
+    {
+        if (RestartArguments is not { } restartArguments || System.Environment.ProcessPath is not { } exe)
+        {
+            _logger.LogWarning("Neustart nicht möglich: Programmpfad oder Befehlszeile unbekannt.");
+            return false;
+        }
+
+        var start = new System.Diagnostics.ProcessStartInfo(exe)
+        {
+            UseShellExecute = false,
+            WorkingDirectory = System.Environment.CurrentDirectory,
+        };
+        foreach (var argument in restartArguments)
+        {
+            start.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(start);
+            if (process is null)
+            {
+                _logger.LogWarning("Neustart nicht möglich: Der neue Prozess startete nicht.");
+                return false;
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException)
+        {
+            _logger.LogWarning(ex, "Neustart nicht möglich.");
+            return false;
+        }
+
+        _logger.LogInformation("Neustart für den Wechsel der Sprache: Diese Instanz wird beendet.");
+        await ExitAsync();
+        return true;
+    }
+
     private partial ITrayService CreateTrayService()
     {
         var logger = LoggerFactory.CreateLogger("Tray");
@@ -258,6 +307,8 @@ public sealed partial class AppServices
         public Task ExitAsync() => app.ExitAsync();
 
         public void OpenLibrary() => app.ShowMainWindow();
+
+        public Task<bool> RestartAsync() => app.RestartAsync();
 
         public UninstalledGameCleanup Cleanup => app.GameCleanup;
 

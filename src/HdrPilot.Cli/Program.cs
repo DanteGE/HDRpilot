@@ -1,8 +1,12 @@
 using HdrPilot.Cli;
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Hdr;
 using HdrPilot.Core.Native;
+
+// Sprache wie die App (E95): aus der Ablage, ohne config.json nach der Anzeigesprache von Windows. Legt nichts an.
+UiLanguage.Apply(CliApp.LanguageFor(args, PhysicalFileSystem.Instance, SystemEnvironment.Instance));
 
 using var cts = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) =>

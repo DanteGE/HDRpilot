@@ -20,7 +20,7 @@ namespace HdrPilot.App.ViewModels.Shell;
 /// Einstellungen: lädt den aktuellen Stand, prüft und begrenzt Eingaben und schreibt beim Speichern über
 /// <see cref="ConfigService.Update"/> (sofort auf der Platte). Abbrechen verwirft alles.
 /// </summary>
-public sealed class SettingsViewModel : ObservableObject, IDisposable
+public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 {
     public const int PollIntervalMin = 250;
     public const int PollIntervalMax = 5000;
@@ -103,6 +103,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _helperPatternsText = s.HelperExecutablePatterns is { } custom ? HelperPatternList.ToText(custom) : HelperPatternList.DefaultText;
         _helperPatterns = HelperPatternList.Parse(_helperPatternsText);
         LoadDisplays(s.TargetDisplays);
+        LoadLanguage(s);
 
         SearchFolders.CollectionChanged += (_, _) => OnSearchFoldersChanged();
         _original = Capture();
@@ -441,6 +442,18 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     /// <summary>Prüft, setzt den Autostart und schreibt die Konfiguration. False bei Fehlern (Fenster bleibt offen).</summary>
     public bool Save()
     {
+        if (!SaveSettings())
+        {
+            return false;
+        }
+
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>Wie <see cref="Save"/>, aber das Fenster bleibt offen (auch „Jetzt neu starten“, E95).</summary>
+    private bool SaveSettings()
+    {
         var parsed = HelperPatternList.Parse(_helperPatternsText);
         if (!parsed.IsValid)
         {
@@ -485,6 +498,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
                 s.SearchFolders = folders;
                 s.LogLevel = _logLevel;
                 s.HelperExecutablePatterns = patterns;
+                StoreLanguage(s);
             });
         }
         catch (IOException ex)
@@ -496,10 +510,10 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
 
         ErrorMessage = null;
         _patternErrorShown = false;
+        _loadedLanguage = _language;
         _original = Capture();
         HasChanges = false;
         _context.OnSettingsSaved(foldersChanged);
-        CloseRequested?.Invoke(this, EventArgs.Empty);
         return true;
     }
 
@@ -658,7 +672,10 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
     private static string DisplayName(DisplayInfo d) =>
         string.IsNullOrWhiteSpace(d.FriendlyName) ? DisplayOptionViewModel.NameFromPath(d.MonitorDevicePath) : d.FriendlyName;
 
-    /// <summary>Bildschirm angesteckt, abgezogen oder HDR umgeschaltet: Kennzeichen auffrischen, Auswahl behalten.</summary>
+    /// <summary>
+    /// Bildschirm angesteckt, abgezogen oder HDR umgeschaltet: Kennzeichen auffrischen, Auswahl behalten. Kommt auch, wenn eine
+    /// Sitzung beginnt oder endet (Sperre von „Jetzt neu starten“).
+    /// </summary>
     private void OnHdrStateChanged(object? sender, EventArgs e)
     {
         if (_disposed)
@@ -691,6 +708,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         }
 
         OnPropertyChanged(nameof(DisplaysSummary));
+        RefreshLanguageRestart();
     }
 
     private void OnDisplayChanged(object? sender, PropertyChangedEventArgs e)
@@ -736,7 +754,8 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         JoinFolders(SearchFolders),
         _logLevel,
         _helperPatterns.IsValid ? string.Join("\n", _helperPatterns.Patterns) : "\u0000" + _helperPatternsText,
-        _hideUninstalled);
+        _hideUninstalled,
+        _language);
 
     private sealed record Snapshot(
         string Targets,
@@ -751,7 +770,8 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         string Folders,
         LogLevel LogLevel,
         string Patterns,
-        bool HideUninstalled);
+        bool HideUninstalled,
+        string Language);
 
     /// <summary>
     /// Zahlen der Karte „Bibliothek“ und der Navigation aus dem aktuellen Stand der Konfiguration (beim Öffnen und nach dem
@@ -764,7 +784,7 @@ public sealed class SettingsViewModel : ObservableObject, IDisposable
         _uninstalledCount = LibraryCleanup.CountNotInstalled(config);
         _removableCount = LibraryCleanup.Removable(config).Count;
         var listed = config.Games.Where(g => !config.Settings.HideUninstalledGames || g.IsInstalled).ToList();
-        LibrarySummary = string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummary, listed.Count, listed.Count(g => g.HdrAuto));
+        LibrarySummary = string.Format(CultureInfo.CurrentCulture, listed.Count == 1 ? ShellStrings.LibraryCardSummaryOne : ShellStrings.LibraryCardSummary, listed.Count, listed.Count(g => g.HdrAuto));
         OnPropertyChanged(nameof(UninstalledCount));
         OnPropertyChanged(nameof(UninstalledCountText));
         OnPropertyChanged(nameof(UninstalledCountName));

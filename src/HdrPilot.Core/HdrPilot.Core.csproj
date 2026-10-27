@@ -9,7 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
   </ItemGroup>
 
-  <!-- Texte, die der Nutzer sieht (Tray-Hinweise, Schaltergebnisse); neutral = Deutsch, Englisch später als .en.resx. -->
+  <!-- Texte, die der Nutzer sieht (Tray-Hinweise, Schaltergebnisse); neutral = Deutsch, Englisch in CoreStrings.en.resx (E95). -->
   <ItemGroup>
     <EmbeddedResource Update="Resources\CoreStrings.resx">
       <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
@@ -17,6 +17,13 @@
       <StronglyTypedClassName>CoreStrings</StronglyTypedClassName>
       <StronglyTypedFileName>$(IntermediateOutputPath)CoreStrings.Designer.cs</StronglyTypedFileName>
       <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+    <!-- Meldungen der Scanner (E95): Bibliothek und hdrpilot scan, nur im Kern gebraucht. -->
+    <EmbeddedResource Update="Resources\ScanStrings.resx">
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>HdrPilot.Core.Resources</StronglyTypedNamespace>
+      <StronglyTypedClassName>ScanStrings</StronglyTypedClassName>
+      <StronglyTypedFileName>$(IntermediateOutputPath)ScanStrings.Designer.cs</StronglyTypedFileName>
     </EmbeddedResource>
   </ItemGroup>
 

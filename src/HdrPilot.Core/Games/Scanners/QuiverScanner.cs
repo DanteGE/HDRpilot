@@ -1,6 +1,7 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Common;
 using HdrPilot.Core.Games.Scanners.Quiver;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -100,18 +101,18 @@ public sealed class QuiverScanner : IGameScanner
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError("Quiver-Bibliothek defekt: " + ex.Message, appsJson));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_LibraryDamaged, ex.Message), appsJson));
             return result;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            errors.Add(new ScanError($"Quiver-Bibliothek nicht lesbar: {ex.GetType().Name}: {ex.Message}", appsJson));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_LibraryUnreadable, ex.GetType().Name, ex.Message), appsJson));
             return result;
         }
 
         foreach (var (index, problem) in problems)
         {
-            errors.Add(new ScanError($"Quiver-Eintrag {index + 1} unbrauchbar: {problem}", appsJson));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_EntryUnusable, index + 1, problem), appsJson));
         }
 
         var folderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -157,12 +158,12 @@ public sealed class QuiverScanner : IGameScanner
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError("Quiver-Einstellungen defekt, es gilt der Ordner Apps: " + ex.Message, settings));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_SettingsDamaged, ex.Message), settings));
             return standard;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            errors.Add(new ScanError($"Quiver-Einstellungen nicht lesbar, es gilt der Ordner Apps: {ex.GetType().Name}: {ex.Message}", settings));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_SettingsUnreadable, ex.GetType().Name, ex.Message), settings));
             return standard;
         }
 
@@ -174,7 +175,7 @@ public sealed class QuiverScanner : IGameScanner
         var folder = PathUtil.Normalize(appsPath);
         if (folder.Length == 0 || folder.IndexOfAny(Path.GetInvalidPathChars()) >= 0 || !Path.IsPathFullyQualified(folder))
         {
-            errors.Add(new ScanError($"Quiver-Einstellung AppsPath unbrauchbar, es gilt der Ordner Apps: \"{folder}\" ist kein gültiger absoluter Pfad.", settings));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_AppsPathUnusable, folder), settings));
             return standard;
         }
 
@@ -186,7 +187,7 @@ public sealed class QuiverScanner : IGameScanner
         var folderName = app.FolderName;
         if (ValidateFolderName(folderName) is { } invalid)
         {
-            errors.Add(new ScanError($"Quiver-Eintrag \"{app.DisplayName}\" abgelehnt: {invalid}", appsJson));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_EntryRejected, app.DisplayName, invalid), appsJson));
             return null;
         }
 
@@ -195,7 +196,7 @@ public sealed class QuiverScanner : IGameScanner
         {
             if (InstallPaths.NormalizeInstallDir(app.InstallPath, out var problem) is not { } custom)
             {
-                errors.Add(new ScanError($"Quiver-Eintrag \"{app.DisplayName}\": installPath unbrauchbar: {problem}", appsJson));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_InstallPathUnusable, app.DisplayName, problem), appsJson));
                 return null;
             }
 
@@ -253,12 +254,12 @@ public sealed class QuiverScanner : IGameScanner
         }
         catch (InvalidDataException ex)
         {
-            errors.Add(new ScanError($"Quiver-Eintrag \"{app.DisplayName}\": Verknüpfung des Windows Installers defekt: {ex.Message}", receipt));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_ReceiptDamaged, app.DisplayName, ex.Message), receipt));
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            errors.Add(new ScanError($"Quiver-Eintrag \"{app.DisplayName}\": Verknüpfung des Windows Installers nicht lesbar: {ex.GetType().Name}: {ex.Message}", receipt));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_ReceiptUnreadable, app.DisplayName, ex.GetType().Name, ex.Message), receipt));
             return null;
         }
 
@@ -271,7 +272,7 @@ public sealed class QuiverScanner : IGameScanner
 
         if (InstallPaths.NormalizeInstallDir(Path.GetDirectoryName(exe), out var problem) is not { } installDir)
         {
-            errors.Add(new ScanError($"Quiver-Eintrag \"{app.DisplayName}\": verknüpfte EXE unbrauchbar: {problem}", receipt));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Quiver_LinkedExeUnusable, app.DisplayName, problem), receipt));
             return null;
         }
 
@@ -299,31 +300,31 @@ public sealed class QuiverScanner : IGameScanner
     {
         if (string.IsNullOrWhiteSpace(folderName))
         {
-            return "folderName fehlt.";
+            return ScanStrings.Quiver_FolderNameMissing;
         }
 
         if (folderName == ".")
         {
-            return "folderName ist „.“.";
+            return ScanStrings.Quiver_FolderNameDot;
         }
 
         if (folderName.Contains("..", StringComparison.Ordinal))
         {
-            return $"folderName \"{folderName}\" enthält „..“.";
+            return ScanText.Format(ScanStrings.Quiver_FolderNameDotDot, folderName);
         }
 
         if (folderName.IndexOfAny(['\\', '/', ':']) >= 0 || folderName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
-            return $"folderName \"{folderName}\" enthält einen Pfadtrenner oder ein ungültiges Zeichen.";
+            return ScanText.Format(ScanStrings.Quiver_FolderNameInvalidChars, folderName);
         }
 
-        return folderName.EndsWith('.') || folderName.EndsWith(' ') ? $"folderName \"{folderName}\" endet mit Punkt oder Leerzeichen." : null;
+        return folderName.EndsWith('.') || folderName.EndsWith(' ') ? ScanText.Format(ScanStrings.Quiver_FolderNameTrailing, folderName) : null;
     }
 
     /// <summary>JSON-Datei von Quiver geteilt lesen; größer als <see cref="QuiverLibrary.MaxJsonBytes"/>: defekt.</summary>
     private byte[] ReadJson(string path)
     {
         var read = _fileSystem.ReadShared(path, QuiverLibrary.MaxJsonBytes);
-        return read.IsComplete ? read.Bytes : throw new InvalidDataException($"Datei größer als {QuiverLibrary.MaxJsonBytes / (1024 * 1024)} MB.");
+        return read.IsComplete ? read.Bytes : throw new InvalidDataException(ScanText.Format(ScanStrings.Scan_FileTooLarge, QuiverLibrary.MaxJsonBytes / (1024 * 1024)));
     }
 }

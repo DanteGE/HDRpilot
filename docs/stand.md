@@ -25,6 +25,21 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   Windows: alle Tests von `HdrPilot.App.Tests` (G15.2–G15.4, G15.7), die Gates G15.5, G15.6, G15.8, G15.9 und die Abnahme
   G15.10.
 
+## Stand 2026-10-26: Englische Oberfläche und Sprachwahl (Zweig `feature/english`, E95, Phase 16)
+- **Stand:** Zweig `feature/english` auf Basis von `ui/feedback`, lokal committet, nicht hochgeladen. Parallel entstehen
+  die SteamGridDB-Suche (E93, Phase 14) und „Farben folgen dem Spiel“ (E94, Phase 15); deren neue resx-Schlüssel sind
+  hier nicht übersetzt, der Paritätstest (`ResourceTranslationTests`) meldet sie nach dem Zusammenführen.
+- **Fertig:** `.en.resx` für alle resx (App, Kern samt neuem `ScanStrings`, Kommandozeile mit neuem `CliStrings`),
+  Einstellung `language` mit Erkennung der Anzeigesprache bei neuer Konfiguration, Kulturen beim Start, Setup nach
+  Windows (`--ui-language` nur im Prüflauf), Sprachwahl in den Einstellungen mit „Jetzt neu starten“ (`--restarted`),
+  Texte aus dem Code (Scanner, „Spiel hinzufügen“, Kommandozeile), englische Bildschirmfotos (`--snapshot-language`),
+  Tests (Linux: Parität, Laderegeln, Kulturen, englische Ausgaben; Windows: Einstellungen, Fenster, Tray-Menü, Setup),
+  Gate `phase16-english-ui.ps1`, feste Sprache Deutsch in den Testablagen der übrigen Gates, README, E95, GATES.md.
+- **Unter Linux geprüft:** Build ohne Warnungen; `HdrPilot.Tests` wie die Ausgangsbasis (dieselben unter Linux
+  scheiternden Windows-Tests, keine neuen), dazu die neuen Tests grün.
+- **Offen (nur unter Windows):** App-Tests (G16.3), `phase16-english-ui.ps1` (G16.4), Sichtprüfung der englischen
+  Bildschirmfotos auf abgeschnittene Texte (G16.5), alle bisherigen Gates einmal (G16.6), Abnahme durch den Nutzer.
+
 ## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
 - **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (f3da056), darauf dieser Stand;
   Version 1.5.0.

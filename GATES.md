@@ -696,3 +696,37 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
 
 - [ ] G15.10: Abnahme durch den Nutzer am echten System (echte Spiele, Hell und Dunkel, Pfeiltaste gehalten, beide Schalter einzeln und zusammen; Blick auf den ruhigen Grund bei „Hintergrund aus“ und auf Gold/Gelb im hellen Thema)
   EVIDENCE: pending
+
+## Phase 16: Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, E95)
+
+Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.en.resx` neben jeder neutralen (deutschen) resx; Sprachwahl „Sprache · Language“ in den Einstellungen mit Hinweis und „Jetzt neu starten“; neue Konfigurationen nach der Anzeigesprache von Windows (Deutsch bei Deutsch, sonst Englisch), vorhandene ohne Sprache bleiben Deutsch; Setup und Entfernen wie Windows, ohne die Einstellungen zu lesen. Texte, die Code zusammensetzt, kommen aus resx; das Protokoll bleibt deutsch, außer Meldungen, die auch in der Oberfläche stehen (Scanner, Sitzungen). Glossar in E95.
+
+- [ ] G16.1: Übersetzung vollständig: zu jeder neutralen resx unter `src` eine `.en.resx` mit denselben Schlüsseln (in beide Richtungen), ohne leere Werte, mit denselben Platzhaltern und gültigen Formatvorlagen, ohne deutsche Reste; Glossar „HDR on launch“ ≠ „Windows Auto HDR“ eingehalten.
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ResourceTranslationTests" -MinTests 30
+  EXPECT: TESTS_OK
+  EVIDENCE: pending unter Windows. 2026-10-26 unter Linux (Cloud-Sitzung, `feature/english`): `dotnet test --filter ResourceTranslationTests` 35 von 35 grün; Mutanten erkannt: Schlüssel in `LibraryStrings.en.resx` entfernt, Platzhalter `{1}` → `{2}` in `ShellStrings.en.resx`, deutscher Rest „Dateien kopieren“ in `SetupStrings.en.resx` (dieser erst nach Erweiterung der Wortliste).
+
+- [ ] G16.2: Sprache laden und anwenden: neue Konfiguration nach Windows und gespeichert; vorhandene ohne `language` oder mit unbekanntem Wert Deutsch und unverändert; Kulturen für Texte und Formate; Kommandozeile nach der Ablage; englische Meldungen aus Kern, Scannern und Kommandozeile; Absturz eines Scanners und mehrdeutiger Bildschirm unabhängig vom Wortlaut.
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.Tests.Localization" -MinTests 90
+  EXPECT: TESTS_OK
+  EVIDENCE: pending unter Windows. 2026-10-26 unter Linux: 92 von 92 grün; Mutanten erkannt: Absturz wieder am deutschen Text erkannt, Mehrdeutigkeit wieder am Text, Erkennung immer Englisch, neue Konfiguration ohne Sprache, Formate immer wie Windows, unbekannte Sprache als Englisch.
+
+- [ ] G16.3: Oberfläche: Sprachwahl in den Einstellungen (Hinweis und „Jetzt neu starten“ nur bei abweichender Wahl, erst speichern, dann neu starten, Fehler gemeldet, ältere Konfiguration ohne Feld bleibt ohne Feld), Einstellungen und Tray-Menü auf Englisch, englische Zähl- und Zeitformen der Bibliothek, `--restarted`, `--snapshot-language`, Setup mit `--ui-language`; alle bisherigen App-Tests mit fester Kultur de-DE weiter grün.
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: pending (WPF, nur unter Windows; unter Linux nur gebaut).
+
+- [ ] G16.4: Testinstanz mit englischer Ablage: Bibliothek, Einstellungen und Vorschau des Tray-Menüs englisch (Namen der Bedienungshilfen aus den `.en.resx`), Kommandozeile englisch; „Deutsch“ wählen und „Restart now“: alte Instanz endet, neue mit `--restarted` zeigt die Einstellungen und die Bibliothek deutsch, `language` = de; neue Ablage nach der Anzeigesprache von Windows; Setup an einer Testablage mit `--ui-language en` englisch, „Cancel“ ändert nichts; englische Bildschirmfotos mit „-en“ im Namen; echter Stand unverändert.
+  CHECK: ps tools\gates\phase16-english-ui.ps1
+  EXPECT: PHASE16_ENGLISH_UI_OK
+  EVIDENCE: pending (nur unter Windows).
+
+- [ ] G16.5: Sichtprüfung der englischen Oberfläche: Bibliothek (Liste, Raster, Regal, Details, Kontextmenü, „Bild wählen“, Rückfragen), Einstellungen (alle Bereiche) und Setup bei 1280×800 und 1920×1080, dunkel und hell; keine abgeschnittenen oder überlaufenden Texte (Englisch ist an einigen Stellen länger); danach Abnahme durch den Nutzer.
+  CHECK: HDRpilot.exe --snapshot <ordner> --config-dir <Kopie der Ablage> --snapshot-language en --snapshot-sizes 1280x800,1920x1080
+  EXPECT: Sichtprüfung
+  EVIDENCE: pending (Bilder und Abnahme nur unter Windows mit dem Nutzer).
+
+- [ ] G16.6: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (die bisherigen Gates mit deutscher Testablage auch auf einem englischen Windows), README und E95 passen zu den Texten.
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: pending.

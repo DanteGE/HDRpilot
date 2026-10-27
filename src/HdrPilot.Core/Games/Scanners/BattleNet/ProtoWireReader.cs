@@ -1,4 +1,5 @@
 using System.Text;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.BattleNet;
 
@@ -44,12 +45,12 @@ internal ref struct ProtoWireReader
         var wireType = tag & 7;
         if (field == 0 || field > MaxFieldNumber)
         {
-            throw new InvalidDataException($"ungültige Feldnummer {field}");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Proto_InvalidField, field));
         }
 
         if (wireType > (ulong)ProtoWireType.Fixed32)
         {
-            throw new InvalidDataException($"unbekannter Wire-Typ {wireType} bei Feld {field}");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Proto_UnknownWireType, wireType, field));
         }
 
         return ((int)field, (ProtoWireType)wireType);
@@ -62,7 +63,7 @@ internal ref struct ProtoWireReader
         {
             if (_position >= _data.Length)
             {
-                throw new InvalidDataException("Daten enden mitten in einer Zahl");
+                throw new InvalidDataException(ScanStrings.Proto_TruncatedNumber);
             }
 
             var b = _data[_position++];
@@ -73,7 +74,7 @@ internal ref struct ProtoWireReader
             }
         }
 
-        throw new InvalidDataException("Zahl länger als 10 Byte");
+        throw new InvalidDataException(ScanStrings.Proto_NumberTooLong);
     }
 
     public ReadOnlySpan<byte> ReadLengthDelimited()
@@ -81,7 +82,7 @@ internal ref struct ProtoWireReader
         var length = ReadVarint();
         if (length > (ulong)(_data.Length - _position))
         {
-            throw new InvalidDataException($"Längenangabe {length} reicht über das Ende der Daten");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Proto_LengthBeyondEnd, length));
         }
 
         var slice = _data.Slice(_position, (int)length);
@@ -99,7 +100,7 @@ internal ref struct ProtoWireReader
         }
         catch (DecoderFallbackException ex)
         {
-            throw new InvalidDataException("Text ist kein gültiges UTF-8", ex);
+            throw new InvalidDataException(ScanStrings.Proto_InvalidUtf8, ex);
         }
     }
 
@@ -121,7 +122,7 @@ internal ref struct ProtoWireReader
                 Advance(4);
                 break;
             default:
-                throw new InvalidDataException($"Wire-Typ {(int)wireType} (Gruppe) wird nicht unterstützt");
+                throw new InvalidDataException(ScanText.Format(ScanStrings.Proto_GroupUnsupported, (int)wireType));
         }
     }
 
@@ -129,7 +130,7 @@ internal ref struct ProtoWireReader
     {
         if (count > _data.Length - _position)
         {
-            throw new InvalidDataException("Daten enden mitten in einem Wert");
+            throw new InvalidDataException(ScanStrings.Proto_TruncatedValue);
         }
 
         _position += count;

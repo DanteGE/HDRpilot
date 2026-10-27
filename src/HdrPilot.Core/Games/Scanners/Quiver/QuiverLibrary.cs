@@ -1,5 +1,6 @@
 using System.Text.Json;
 using HdrPilot.Core.Games.Scanners.Common;
+using HdrPilot.Core.Resources;
 
 namespace HdrPilot.Core.Games.Scanners.Quiver;
 
@@ -56,7 +57,7 @@ internal static class QuiverLibrary
         using var document = ScannerJson.ParseObject(bytes);
         if (!ScannerJson.TryGetProperty(document.RootElement, "apps", out var apps) || apps.ValueKind != JsonValueKind.Array)
         {
-            throw new InvalidDataException("Feld \"apps\" fehlt oder ist keine Liste.");
+            throw new InvalidDataException(ScanStrings.Quiver_AppsMissing);
         }
 
         var result = new List<QuiverApp>();
@@ -66,7 +67,7 @@ internal static class QuiverLibrary
             index++;
             if (app.ValueKind != JsonValueKind.Object)
             {
-                problems.Add((index, "Eintrag ist kein Objekt."));
+                problems.Add((index, ScanStrings.Quiver_EntryNotObject));
                 continue;
             }
 
@@ -96,7 +97,7 @@ internal static class QuiverLibrary
         var phase = ScannerJson.GetString(document.RootElement, "Phase");
         if (phase is null || !KnownPhases.Contains(phase, StringComparer.Ordinal))
         {
-            throw new InvalidDataException($"Unbekannte Phase \"{phase}\".");
+            throw new InvalidDataException(ScanText.Format(ScanStrings.Quiver_UnknownPhase, phase));
         }
 
         return new QuiverInstallerReceipt(phase, ScannerJson.GetString(document.RootElement, "ExecutablePath"));

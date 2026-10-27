@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+    <data name="Help" xml:space="preserve">
+    <value>HDRpilot command line (diagnostics and tests)
+
+hdrpilot hdr status [--json] [--api modern|legacy]
+    Lists all active displays with name, HDR-capable and HDR on/off.
+hdrpilot hdr on|off|toggle [--display &lt;selection&gt;] [--api modern|legacy] [--hotkey-fallback] [--json]
+    Switches HDR and confirms the state by reading it again.
+    &lt;selection&gt;: primary (default), all, number from "hdr status", part of the name or monitorDevicePath.
+
+hdrpilot scan [--source &lt;source&gt;] [--search "&lt;folder&gt;;&lt;folder&gt;"] [--config-dir &lt;folder&gt;]
+    Prints all games found and the errors per scanner as JSON (read-only).
+    &lt;source&gt;: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver
+    With --config-dir, the search folders and learned Quiver folders of that storage count too.
+
+hdrpilot games list [--json]
+hdrpilot games import
+    Scans all launchers and applies the result to the configuration.
+hdrpilot games add --path &lt;exe|folder&gt; [--name &lt;name&gt;] [--hdr on|off]
+hdrpilot games set &lt;key&gt; [--hdr on|off] [--restore on|off] [--display &lt;monitorDevicePath&gt;|global]
+    Key: Source:ID, such as Steam:1091500 (see "games list").
+hdrpilot watch [--verbose]
+    Monitors game launches in the foreground (like the app, without a user interface). Press Ctrl+C to stop.
+hdrpilot run &lt;key&gt;
+    Launch via HDRpilot: turn HDR on, confirm, launch the game, monitor until the game ends.
+scan, games, watch and run: --config-dir &lt;folder&gt; (instead of %APPDATA%/%LOCALAPPDATA%\HDRpilot, for tests).
+
+Exit codes: 0 ok, 1 error, 2 wrong usage, 3 display not found,
+            4 display without HDR, 5 switching failed, 6 game not found</value>
+  </data>
+  <data name="UnknownCommand" xml:space="preserve">
+    <value>Unknown command "{0}".</value>
+  </data>
+  <data name="Cancelled" xml:space="preserve">
+    <value>Canceled.</value>
+  </data>
+  <data name="UnexpectedError" xml:space="preserve">
+    <value>Unexpected error: {0}</value>
+  </data>
+  <data name="ScanUnknownOption" xml:space="preserve">
+    <value>Unknown option or argument for scan.</value>
+  </data>
+  <data name="UnknownSource" xml:space="preserve">
+    <value>Unknown source "{0}".</value>
+  </data>
+  <data name="ConfigUnreadableHint" xml:space="preserve">
+    <value>Note: configuration {0} can't be read ({1}); scanned without its folders.</value>
+  </data>
+  <data name="HdrNeedsSubcommand" xml:space="preserve">
+    <value>hdr needs a subcommand: status, on, off or toggle.</value>
+  </data>
+  <data name="UnknownOption" xml:space="preserve">
+    <value>Unknown option: {0}</value>
+  </data>
+  <data name="ApiExpects" xml:space="preserve">
+    <value>--api expects modern or legacy.</value>
+  </data>
+  <data name="UnknownSubcommand" xml:space="preserve">
+    <value>Unknown subcommand "{0}".</value>
+  </data>
+  <data name="NoActiveDisplays" xml:space="preserve">
+    <value>No active displays found.</value>
+  </data>
+  <data name="StatusActiveMode" xml:space="preserve">
+    <value>, active mode {0}</value>
+  </data>
+  <data name="StatusPrimary" xml:space="preserve">
+    <value> (primary display)</value>
+  </data>
+  <data name="StatusLine" xml:space="preserve">
+    <value>   HDR-capable: {0}   HDR: {1}{2}   API: {3}</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>yes</value>
+  </data>
+  <data name="No" xml:space="preserve">
+    <value>no</value>
+  </data>
+  <data name="HelpHint" xml:space="preserve">
+    <value>Help: hdrpilot help</value>
+  </data>
+  <data name="ListNotInstalled" xml:space="preserve">
+    <value>not installed</value>
+  </data>
+  <data name="ListNew" xml:space="preserve">
+    <value>new</value>
+  </data>
+  <data name="ListSummary" xml:space="preserve">
+    <value>Games: {0}, with HDR on launch: {1}.</value>
+  </data>
+  <data name="ImportSummary" xml:space="preserve">
+    <value>Games scanned: {0} ({1} new, {2} updated, {3} no longer installed).</value>
+  </data>
+  <data name="ScanErrorHint" xml:space="preserve">
+    <value>Note: {0} {1}</value>
+  </data>
+  <data name="AddNeedsPath" xml:space="preserve">
+    <value>games add needs --path &lt;exe|folder&gt;.</value>
+  </data>
+  <data name="HdrExpectsOnOff" xml:space="preserve">
+    <value>--hdr expects on or off.</value>
+  </data>
+  <data name="AddFolderTaken" xml:space="preserve">
+    <value>Note: the folder already belongs to {0} ({1}). You can turn HDR on there with "hdrpilot games set {0} --hdr on". For the same folder, the game with HDR on launch wins.</value>
+  </data>
+  <data name="SetNeedsKey" xml:space="preserve">
+    <value>games set needs a key (Source:ID).</value>
+  </data>
+  <data name="GameNotInConfig" xml:space="preserve">
+    <value>Game {0} isn't in the configuration.</value>
+  </data>
+  <data name="HdrRestoreExpectOnOff" xml:space="preserve">
+    <value>--hdr and --restore expect on or off.</value>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>{0} saved.</value>
+  </data>
+  <data name="GamesNeedsSubcommand" xml:space="preserve">
+    <value>games needs a subcommand: list, import, add or set.</value>
+  </data>
+  <data name="WatchRunning" xml:space="preserve">
+    <value>Monitoring is running (interval {0} ms, grace period {1} s, log {2}). Press Ctrl+C to stop.</value>
+  </data>
+  <data name="RunNeedsKey" xml:space="preserve">
+    <value>run needs a key (Source:ID).</value>
+  </data>
+  <data name="DiagNeedsSubcommand" xml:space="preserve">
+    <value>diag needs a subcommand: poll.</value>
+  </data>
+  <data name="DiagCounts" xml:space="preserve">
+    <value>Processes: {0}, games in the configuration: {1}, cycles: {2}</value>
+  </data>
+  <data name="DiagSnapshot" xml:space="preserve">
+    <value>Process list (+ paths of new processes)      : {0:0.000} ms per cycle</value>
+  </data>
+  <data name="DiagDiff" xml:space="preserve">
+    <value>Difference old/new:                               {0:0.000} ms per cycle</value>
+  </data>
+  <data name="DiagSessions" xml:space="preserve">
+    <value>Session logic (matching, grace period):          {0:0.000} ms per cycle</value>
+  </data>
+  <data name="DiagCpu" xml:space="preserve">
+    <value>Total CPU time per cycle (2 list queries):        {0:0.000} ms</value>
+  </data>
+  <data name="DiagPathQueries" xml:space="preserve">
+    <value>Path queries in total: {0}, method: {1}</value>
+  </data>
+  <data name="OptionNeedsValue" xml:space="preserve">
+    <value>Option {0} needs a value.</value>
+  </data>
+  <data name="DisplayNumberNotFound" xml:space="preserve">
+    <value>Display number {0} not found (available: 1 to {1}).</value>
+  </data>
+  <data name="DisplayAmbiguous" xml:space="preserve">
+    <value>Ambiguous: "{0}" matches {1} displays. Specify a number or the monitorDevicePath.</value>
+  </data>
+  <data name="DisplayNoMatch" xml:space="preserve">
+    <value>No display matches "{0}".</value>
+  </data>
+</root>

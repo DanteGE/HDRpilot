@@ -1,4 +1,5 @@
 using HdrPilot.Core.Abstractions;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 
 namespace HdrPilot.Core.Games;
@@ -20,13 +21,13 @@ public static class ManualGames
         ArgumentNullException.ThrowIfNull(fileSystem);
         if (string.IsNullOrWhiteSpace(path))
         {
-            throw new ArgumentException("Es wurde kein Pfad angegeben.", nameof(path));
+            throw new ArgumentException(CoreStrings.ManualNoPath, nameof(path));
         }
 
         var full = PathUtil.Normalize(path);
         if (!Path.IsPathFullyQualified(full))
         {
-            throw new ArgumentException($"Der Pfad muss vollständig sein (mit Laufwerk), nicht relativ: \"{path}\".", nameof(path));
+            throw new ArgumentException(Format(CoreStrings.ManualRelative, path), nameof(path));
         }
 
         var sourceId = string.IsNullOrWhiteSpace(id) ? Guid.NewGuid().ToString("N") : id.Trim();
@@ -35,7 +36,7 @@ public static class ManualGames
         {
             if (!full.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentException($"Nur EXE-Dateien oder Ordner können hinzugefügt werden: \"{full}\".", nameof(path));
+                throw new ArgumentException(Format(CoreStrings.ManualNotExe, full), nameof(path));
             }
 
             var folder = PathUtil.Normalize(Path.GetDirectoryName(full) ?? string.Empty);
@@ -82,7 +83,7 @@ public static class ManualGames
             };
         }
 
-        throw new ArgumentException($"Der Pfad existiert nicht: \"{full}\".", nameof(path));
+        throw new ArgumentException(Format(CoreStrings.ManualNotFound, full), nameof(path));
     }
 
     private static string ChooseName(string? name, string fallback) =>
@@ -94,7 +95,9 @@ public static class ManualGames
     private static bool IsDriveRoot(string folder) =>
         string.IsNullOrEmpty(folder) || string.Equals(PathUtil.Normalize(Path.GetPathRoot(folder) ?? string.Empty), folder, StringComparison.OrdinalIgnoreCase);
 
-    private static string DriveRootMessage(string path) =>
-        $"Ein ganzes Laufwerk kann kein Spielordner sein, sonst gälte jeder Prozess darauf als Spiel: \"{path}\". " +
-        "Bitte die EXE in einen eigenen Ordner legen oder den Spielordner wählen.";
+    private static string DriveRootMessage(string path) => Format(CoreStrings.ManualDriveRoot, path);
+
+    /// <summary>Meldungen in der Sprache der Oberfläche (E95): Dialog „Spiel hinzufügen“ und <c>hdrpilot games add</c>.</summary>
+    private static string Format(string template, params object?[] args) =>
+        string.Format(System.Globalization.CultureInfo.CurrentCulture, template, args);
 }

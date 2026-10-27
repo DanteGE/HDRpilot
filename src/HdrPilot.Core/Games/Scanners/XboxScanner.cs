@@ -1,5 +1,6 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.Xbox;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -100,7 +101,7 @@ public sealed class XboxScanner : IGameScanner
         }
         catch (Exception ex) when (IsReadFailure(ex))
         {
-            errors.Add(new ScanError($"{GamingRootFile.FileName} konnte nicht gelesen werden: {ex.Message}", markerPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_FileUnreadable, GamingRootFile.FileName, ex.Message), markerPath));
             return [];
         }
 
@@ -121,7 +122,7 @@ public sealed class XboxScanner : IGameScanner
             if (!Path.IsPathFullyQualified(full))
             {
                 // Etwa "C:Spiele": relativ zum aktuellen Ordner des Laufwerks, ergäbe keinen absoluten Installationsordner.
-                errors.Add(new ScanError($"{GamingRootFile.FileName}: Ordnername \"{folder}\" ergibt keinen vollständigen Pfad und wird übersprungen.", markerPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_FolderNotFullPath, GamingRootFile.FileName, folder), markerPath));
                 continue;
             }
 
@@ -150,7 +151,7 @@ public sealed class XboxScanner : IGameScanner
         }
         catch (Exception ex) when (IsReadFailure(ex))
         {
-            errors.Add(new ScanError($"Spieleordner konnte nicht gelesen werden: {ex.Message}", library));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_LibraryUnreadable, ex.Message), library));
             return;
         }
 
@@ -175,7 +176,7 @@ public sealed class XboxScanner : IGameScanner
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                errors.Add(new ScanError($"Spielordner konnte nicht ausgewertet werden: {ex.GetType().Name}: {ex.Message}", gameFolder));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_GameFolderFailed, ex.GetType().Name, ex.Message), gameFolder));
             }
         }
     }
@@ -198,7 +199,7 @@ public sealed class XboxScanner : IGameScanner
         catch (Exception ex) when (ex is InvalidDataException || IsReadFailure(ex))
         {
             errors.Add(new ScanError(
-                ex is InvalidDataException ? ex.Message : $"{MicrosoftGameConfig.FileName} konnte nicht gelesen werden: {ex.Message}",
+                ex is InvalidDataException ? ex.Message : ScanText.Format(ScanStrings.Xbox_FileUnreadable, MicrosoftGameConfig.FileName, ex.Message),
                 configPath));
             return null;
         }
@@ -230,7 +231,7 @@ public sealed class XboxScanner : IGameScanner
 
         if (!PackageIdentity.IsValidPackageName(packageName))
         {
-            errors.Add(new ScanError($"Ungültiger Paketname \"{packageName}\" in Identity/@Name, Start-Befehl nicht bildbar.", configPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_InvalidPackageName, packageName), configPath));
             return null;
         }
 
@@ -246,14 +247,14 @@ public sealed class XboxScanner : IGameScanner
         if (appId is null)
         {
             errors.Add(new ScanError(
-                "Keine App-Id gefunden (weder appxmanifest.xml Applications/Application/@Id noch Executable/@Id), Start-Befehl nicht bildbar.",
+                ScanStrings.Xbox_NoAppId,
                 configPath));
             return null;
         }
 
         if (!PackageIdentity.IsValidApplicationId(appId))
         {
-            errors.Add(new ScanError($"Ungültige App-Id \"{appId}\", Start-Befehl nicht bildbar.", configPath));
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_InvalidAppId, appId), configPath));
             return null;
         }
 
@@ -308,8 +309,8 @@ public sealed class XboxScanner : IGameScanner
         }
         catch (Exception ex) when (ex is InvalidDataException || IsReadFailure(ex))
         {
-            var reason = ex is InvalidDataException ? ex.Message : $"{AppxManifest.FileName} konnte nicht gelesen werden: {ex.Message}";
-            errors.Add(new ScanError(reason + $" Es gelten die Angaben aus {MicrosoftGameConfig.FileName}.", path));
+            var reason = ex is InvalidDataException ? ex.Message : ScanText.Format(ScanStrings.Xbox_FileUnreadable, AppxManifest.FileName, ex.Message);
+            errors.Add(new ScanError(ScanText.Format(ScanStrings.Xbox_ManifestFallback, reason, MicrosoftGameConfig.FileName), path));
             return null;
         }
     }

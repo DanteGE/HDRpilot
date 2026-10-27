@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using HdrPilot.App.Infrastructure;
+using HdrPilot.App.Resources;
 using HdrPilot.Core.Abstractions;
 
 namespace HdrPilot.App.Setup;
@@ -145,7 +146,7 @@ public sealed class SetupEngine : ISetupEngine
             transaction.Rollback();
             RemoveIfEmpty(newFolders);
             var kind = ex is InvalidDataException ? SetupErrorKind.SetupFileDamaged : SetupSupport.Classify(ex, transaction.FailedOnExistingFile);
-            return FailAfterStop(kind, SetupSupport.Describe("Dateien kopieren (" + (transaction.CurrentFile ?? Locations.InstallDirectory) + ")", ex), previous, stoppedExe, SetupStep.CopyFiles);
+            return FailAfterStop(kind, SetupSupport.Describe(string.Format(CultureInfo.CurrentCulture, SetupStrings.SetupDetailCopyFiles, transaction.CurrentFile ?? Locations.InstallDirectory), ex), previous, stoppedExe, SetupStep.CopyFiles);
         }
 
         PreviousState? before = null;

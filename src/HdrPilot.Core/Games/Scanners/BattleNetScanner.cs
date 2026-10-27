@@ -1,5 +1,6 @@
 using HdrPilot.Core.Abstractions;
 using HdrPilot.Core.Games.Scanners.BattleNet;
+using HdrPilot.Core.Resources;
 using HdrPilot.Core.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -72,7 +73,7 @@ public sealed class BattleNetScanner : IGameScanner
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return Result(true, [], [new ScanError("product.db ist nicht lesbar (" + ex.Message + ").", productDbPath)]);
+            return Result(true, [], [new ScanError(ScanText.Format(ScanStrings.BattleNet_Unreadable, ex.Message), productDbPath)]);
         }
 
         var content = ProductDbReader.Read(bytes);
@@ -99,7 +100,7 @@ public sealed class BattleNetScanner : IGameScanner
             if (IsDriveRoot(installDir))
             {
                 // Später gilt jeder Prozess unter InstallDir als Spiel; ein ganzes Laufwerk wäre als Spielordner falsch.
-                errors.Add(new ScanError($"Eintrag {install.Uid} nennt den Stammordner eines Laufwerks ({installDir}) als Installationsordner und wird übersprungen, weil sonst jeder Prozess auf dem Laufwerk als Spiel gälte.", productDbPath));
+                errors.Add(new ScanError(ScanText.Format(ScanStrings.BattleNet_DriveRoot, install.Uid, installDir), productDbPath));
                 continue;
             }
 

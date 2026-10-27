@@ -780,6 +780,14 @@
     <value>Das Symbol konnte nicht gespeichert werden: {0}</value>
     <comment>{0} = Fehlermeldung</comment>
   </data>
+  <data name="Icon_NoFolder" xml:space="preserve">
+    <value>Kein Ordner für eigene Symbole festgelegt.</value>
+    <comment>E95: erscheint über Icon_SaveFailed</comment>
+  </data>
+  <data name="Icon_Unreadable" xml:space="preserve">
+    <value>Die Datei enthält kein lesbares Bild oder Symbol: {0}</value>
+    <comment>{0} = Pfad</comment>
+  </data>
   <data name="View_Name" xml:space="preserve">
     <value>Ansicht</value>
   </data>

@@ -1501,7 +1501,8 @@ Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
   sofort. Leuchten, Punkte und Kennzeichen mit Rohfarben wechseln zu Beginn der Überblendung. Die Farben kommen zusammen mit
   den Bildern des Spiels. Die Wörterbücher werden nicht je Spiel ausgetauscht.
 - **Schnelle Auswahl:** Wechselt die Auswahl schneller als alle 300 ms oder ist die Pfeiltaste gehalten, bleiben die Farben
-  stehen und folgen 300 ms nach dem letzten Wechsel.
+  stehen und folgen 300 ms nach dem letzten Wechsel. Das gilt für Tastatur und Maus gleich (Entscheidung des Nutzers
+  2026-10-27: auch schnelle Mausklicks halten die Farben).
 - **Leerlauf:** Im Leerlauf läuft nichts.
 - **Hintergrund:** Ist „Hintergrund folgt dem Spiel“ aus, bleibt der Hintergrund für alle Spiele gleich: ein ruhiger Grund im
   Farbton des Schemas mit stark gesenkter Buntheit, damit keine Schemafarben neben den Spielfarben leuchten. Sind beide an,
@@ -1530,7 +1531,8 @@ Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
   (`GameAccentScheduler`) liegt ohne WPF in `HdrPilot.Core`.
 - **Widerspruch im Entwurf:** Die Bildtabelle des Entwurfs erwartet für „bunt-tri“ (buntes Logo: blauer Akzent, dazu Gelb)
   einen gelben Glanz. Das Gelb liegt aber 161° vom Akzent entfernt, und die Grenze von 150° zwischen Akzent und Glanz (Auswahl,
-  Bogen, Durchsicht D12) hat Vorrang vor der Tabelle; der Glanz kommt dort deshalb vom Bogen hinter der Atmosphäre.
+  Bogen, Durchsicht D12) hat Vorrang vor der Tabelle; der Glanz kommt dort deshalb vom Bogen hinter der Atmosphäre. Die
+  Grenze bleibt (Entscheidung des Nutzers 2026-10-27): Ein blaues Logo bekommt keinen gelben Glanz.
 
 **E95 Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, G16):** „Bitte eine komplette englische
 Übersetzung der App, mit Sprachwahl in den Einstellungen und automatischer Erkennung der Systemsprache bei der

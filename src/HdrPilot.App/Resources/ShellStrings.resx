@@ -729,6 +729,12 @@
   <data name="BackgroundFollowsGameHint" xml:space="preserve">
     <value>Umgebungslicht und Leuchten übernehmen die Farben des gewählten Titelbilds – einmal pro Spiel ausgelesen</value>
   </data>
+  <data name="ColorsFollowGameLabel" xml:space="preserve">
+    <value>Farben folgen dem Spiel</value>
+  </data>
+  <data name="ColorsFollowGameHint" xml:space="preserve">
+    <value>Akzente der Bibliothek übernehmen die Farben von Logo und Cover des gewählten Spiels – einmal pro Spiel ausgelesen; bei grauen Bildern, in den Einstellungen, im Tray-Menü und in Dialogen gilt das Farbschema</value>
+  </data>
 
   <!-- Darstellung: Live-Vorschau -->
   <data name="SectionPreview" xml:space="preserve">

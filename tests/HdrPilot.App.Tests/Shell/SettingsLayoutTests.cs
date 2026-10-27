@@ -168,7 +168,7 @@ public sealed class SettingsLayoutTests
         "SettingsNav", "NavGeneral", "NavDisplays", "NavAutomation", "NavSearchFolders", "NavHelpers", "NavAppearance", "NavAppearanceColors",
         "NavAppearanceArtwork", "NavAppearanceTray", "NavAdvanced", "NavLogs", "SectionPalette", "SectionPreview", "SectionTheme", "SectionEffects",
         "SectionArtwork", "SectionTray", "PaletteModeDuotone", "PaletteModeTritone", "PaletteSwapButton", "PalettePresets", "AutoTextOnAccentToggle",
-        "BackgroundFollowsGameToggle", "ThemeSystem", "ThemeLight", "ThemeDark", "EffectFull", "EffectReduced", "EffectOff", "PauseWhilePlayingToggle",
+        "BackgroundFollowsGameToggle", "ColorsFollowGameToggle", "ThemeSystem", "ThemeLight", "ThemeDark", "EffectFull", "EffectReduced", "EffectOff", "PauseWhilePlayingToggle",
         "PauseInBackgroundToggle", "RespectWindowsAnimationsToggle", "MinimizeToTrayAfterLaunchToggle", "ArtworkCoverageTable", "FallbackExamples",
         "SteamGridDbToggle", "SteamGridDbKey", "SteamGridDbCheckButton", "SteamGridDbStatus", "TrayPreview", "TrayMenuPreview", "TaskbarPreviewLight",
         "TaskbarPreviewDark", "PreviewHdrToggle", "AppearanceResetButton", "AppearanceAppliedHint",

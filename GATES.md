@@ -638,3 +638,61 @@ Scope: Im Dialog „Bild wählen…“ je Reiter (Titelbild, Logo, Cover) ein Ab
 
 - [ ] G14.15: Abnahme durch den Nutzer am echten System (Aussehen bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel, Bedienung mit Tastatur)
   EVIDENCE: pending.
+
+## Phase 15: Farben folgen dem Spiel (Wunsch des Nutzers 2026-10-22, E94)
+
+Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrund folgt dem Spiel“; Akzente der Bibliothek aus Logo, Cover und Titelbild des gewählten Spiels. Tests und Bilder nur mit erzeugten Spielbildern; kein Gate dieser Phase liest echte Spielbilder oder Launcher-Caches.
+
+- [ ] G15.1: Spielfarben auslesen: Akzent aus dem Logo (Markenfarbe), wenn es farbig genug ist (mindestens ein Zehntel farbige Fläche oder passend zu Cover bzw. Titelbild oder diese grau), sonst Cover, sonst Titelbild; Zweitfarben für Atmosphäre und Glanz; dunkle oder graue Konturen und Schatten, Hauttöne auf Cover und Titelbild, kleine Punkte, erzeugte Bilder und Namensfarben ergeben nie den Akzent; fast graue Bilder ergeben keine Spielfarbe; deterministisch und stabil (Rauschen, halbes Pixel, 90 % Größe: ΔE_OK ≤ 0,03); gespeichert als `colors` in `art\index.json` mit eigener Fassung (unbekannte Werte verwerfen das Verzeichnis nicht, Fassung des Verzeichnisses bleibt 1); Einpassen in die Bänder samt Ableiten von Atmosphäre und Glanz ohne WPF; per Unit-Tests mit erzeugten Bildern und Gegenproben (Mutanten: ohne Ausschluss der Kontur, ohne Hautregel, ohne Füllung vor Kontur, ohne Leuchten, ohne Farbfamilien, ohne Vorrang-Regel des Logos) belegt
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.Tests.Artwork.GameColor|FullyQualifiedName~HdrPilot.Tests.Artwork.ColorScience" -MinTests 72
+  EXPECT: TESTS_OK
+  EVIDENCE: pending. Vorlauf 2026-10-26 in der Cloud-Sitzung (Linux, nur dieser Filter): 72 von 72 grün; Gegenproben im Code (kürzerer Bogen, Aufhellbonus, Randanteil, Mindest-Chroma der Füllung) je von mindestens einem Test erkannt.
+
+- [ ] G15.2: Zuordnung und Kontrast: Spielfarben in festen Wertebereichen (Helligkeit je Farbton, Mindest-Buntheit 0,12, dunkle Markenfarben heller und kräftiger, Abstand Akzent–Atmosphäre 30–120°, keine graue Mitte, im Tritonus auch zwischen Akzent und Glanz); Text auf Akzent und Akzenttext mindestens 4,5:1, Bedienelemente mindestens 3:1 in Hell und Dunkel gegen die Flächen aller Schemata und den möglichen Grundton der Bibliothek (Eigenschaftstest über mehr als 1000 erzeugte Paletten); bei automatischer Textfarbe immer dunkle Schrift und unveränderte Akzentflächen; Gelb und Gold im hellen Thema Bernstein statt Oliv; graue Spiele genau das Farbschema; die bisherigen Vorlagen und Token-Dateien unverändert
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Theming.GamePalette|FullyQualifiedName~HdrPilot.App.Tests.Theming.PaletteEngine|FullyQualifiedName~HdrPilot.App.Tests.Theming.ThemeResources|FullyQualifiedName~HdrPilot.App.Tests.Theming.ThemeKeys|FullyQualifiedName~HdrPilot.App.Tests.Theming.ThemeTokenFile" -MinTests 109
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G15.3: Umschalten in der Bibliothek: eigene Farbebene nur im Bibliotheksfenster (Einstellungen außer der Vorschau, Tray-Menü, Dialoge und Symbole behalten das Schema), bleibende Pinsel ohne Austausch der Wörterbücher je Spiel, Überblendung im OKLCH-Farbraum vom gezeigten Wert aus ohne graue Mitte (Voll 0,9 s, Reduziert 0,3 s, Aus sofort), Rohfarben wechseln zu Beginn, Farben kommen zusammen mit den Bildern, Entprellung 300 ms bei schneller Auswahl und gehaltener Taste, graue Bilder → Farbschema, ladende Bilder und leere Auswahl → Farben bleiben, hoher Kontrast → keine Spielfarben, Kontextmenüs, Tooltips und Kennzeichen folgen, Werkzeugleiste samt Schein der Lasche folgt, „Hintergrund aus“ ergibt einen ruhigen, gleichbleibenden Grund; danach keine Uhren und keine laufenden Animationen
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Theming.OklchFade|FullyQualifiedName~HdrPilot.App.Tests.Theming.LiveBrush|FullyQualifiedName~HdrPilot.App.Tests.Theming.GameAccent|FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentWindow" -MinTests 45
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G15.4: Einstellung und Seite „Darstellung“: `colorsFollowGame` Standard aus, alte Konfigurationen unverändert, „Standard“ setzt zurück; Schalter mit Kennung `ColorsFollowGameToggle`, Name und Hilfetext aus ShellStrings.resx (auch „Hintergrund folgt dem Spiel“ mit Hilfetext), Farbprobe und Live-Vorschau in den Spielfarben des Vorschauspiels, bei hohem Kontrast ohne Spielfarben
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.Tests.Config.ShowcaseConfig|FullyQualifiedName~HdrPilot.App.Tests.Shell.SettingsLayout|FullyQualifiedName~HdrPilot.App.Tests.Shell.SettingsAppearancePage" -MinTests 43
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G15.5: Einstellungen per UI-Automation mit der neuen Kennung (Schalter an und aus landet sofort in der Konfiguration)
+  CHECK: ps tools\gates\phase10-settings-ui.ps1
+  EXPECT: PHASE10_SETTINGS_UI_OK
+  EVIDENCE: pending
+
+- [ ] G15.6: Bilder mit erzeugten Spielbildern (rot/orange, weiß/blau, grau mit anderem Schema, bunt in Duoton und Tritonus, Hintergrund aus, Leuchten des Titelbilds, dunkle Markenfarbe, Gold im hellen Thema; Liste, Raster, Regal; hell und dunkel) in genauer Größe, Starten-Knopf im erwarteten Verlauf, graues Spiel gleich dem Farbschema
+  CHECK: ps tools\gates\phase15-gamecolors.ps1
+  EXPECT: PHASE15_GAMECOLORS_OK
+  EVIDENCE: pending
+
+- [ ] G15.7: Kosten: Auslesen nur bei eingeschaltetem Schalter bzw. für das Vorschauspiel, einmal je Spiel und Bildstand, nie für Kacheln, Kontaktbogen oder Bildschirmfotos; die Farbebene macht je angewendetem Wechsel höchstens einen Austausch der Farbwerte und keinen neuen Pinsel, bei gehaltener Pfeiltaste keine Arbeit, Speicher je Wechsel unter der gemessenen Grenze; Leerlauf mit geschlossenem Fenster wie bisher
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentCost|FullyQualifiedName~HdrPilot.App.Tests.Artwork.ArtworkServiceGameColors" -MinTests 17
+  EXPECT: TESTS_OK
+  CHECK: ps tools\gates\phase3-idle.ps1
+  EXPECT: PHASE3_IDLE_OK
+  EVIDENCE: pending (Grafikkartenlast mit eingeschaltetem Schalter wie G10.9 nur zusammen mit dem Nutzer: `phase10-gpu.ps1`, PHASE10_GPU_OK; den gemessenen Speicher je Wechsel aus der Ausgabe von GameAccentCostTests hier eintragen und die Grenze auf Mittelwert + 25 % setzen)
+
+- [ ] G15.8: README und E94 passen zu den resx-Texten; keine lokalen Pfade
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  CHECK: ps tools\gates\publish-check.ps1
+  EXPECT: PUBLISH_CHECK_OK
+  EVIDENCE: pending
+
+- [ ] G15.9: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und die UI-Gates ohne echte HDR-Umschaltung grün, unabhängige Prüfung mit Gegenprüfung
+  CHECK: ps tools\gates\build.ps1
+  EXPECT: BUILD_OK_0_WARNINGS
+  CHECK: ps tools\gates\test.ps1
+  EXPECT: TESTS_OK
+  EVIDENCE: pending
+
+- [ ] G15.10: Abnahme durch den Nutzer am echten System (echte Spiele, Hell und Dunkel, Pfeiltaste gehalten, beide Schalter einzeln und zusammen; Blick auf den ruhigen Grund bei „Hintergrund aus“ und auf Gold/Gelb im hellen Thema)
+  EVIDENCE: pending

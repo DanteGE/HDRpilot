@@ -55,7 +55,8 @@ public sealed record AppearanceState(
     bool PauseInBackground,
     bool RespectWindowsAnimations,
     bool MinimizeToTrayAfterLaunch,
-    bool LightTaskbar);
+    bool LightTaskbar,
+    bool ColorsFollowGame = false);
 
 /// <summary>
 /// Darstellung der ganzen App (E89, G10.1): Farbschema, Thema, Effektstufe. Erzeugt die Farb-Ressourcen

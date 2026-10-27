@@ -112,3 +112,60 @@ Fassung kommen aus den echten Diensten.
   `Hp.Brush.WarningSoft`, `Hp.Brush.DangerSoft` nach Bedarf; `Hp.Brush.AccentSolid` ist jetzt die lesbare Akzentfarbe (Text).
   `ChromeWindow.ContentUnderTitleBar` ist umgesetzt (Inhalt ab Zeile 0, Titel und Fensterknöpfe in `Hp.Brush.TextOnArt`),
   die Titelleiste ist 32 px hoch.
+
+## Spielfarben (E94)
+
+„Farben folgen dem Spiel“ (Schalter auf der Seite „Darstellung“, Standard aus) färbt die Akzente der Bibliothek in den
+Farben des gewählten Spiels. Was die App dafür baut:
+
+- **Auslesen auf Anfrage** über `IGameColorsSource` (`context.Artwork as IGameColorsSource`; `IArtworkService` bleibt
+  unverändert): `TryPeek` nur aus dem Speicher, `GetGameColorsAsync` aus dem Speicher, aus `colors` in `art\index.json` oder
+  einmal auf dem Bilder-Thread berechnet (`ArtworkService.GameColors.cs`). Fragen nur das Bibliotheksfenster bei
+  eingeschaltetem Schalter und die Seite „Darstellung“ für ihr Vorschauspiel; nie `LoadArtwork`, Kacheln, Kontaktbogen,
+  Bildschirmfotos oder die Vorschau in „Bild wählen…“. Analyse, Einpassen und Ableiten liegen ohne WPF in `HdrPilot.Core`
+  (`ColorScience`, `GameColorAnalysis`, `GameColorMapping`).
+- **Farbebene** `GameAccentLayer`: ein Wörterbuch an `MainWindow.Resources.MergedDictionaries[0]`, nur solange der Schalter an
+  ist und kein hoher Kontrast gilt. 14 bleibende Pinsel (`BrushKeys`: TextOnAccent, Accent, AccentShine, AccentSolid,
+  AccentText, AccentSoft, AccentStrong, AtmosphereSoft, Shine, SelectionFill, SelectionRing, FocusRing, HdrOn, ToggleOn;
+  19 Farben) und 11 Farbwerte (`ColorKeys`: C1–C3, OnAccent, AccentText, Accent1–3, Glow, Ambient2, Ambient3) in einem
+  Kind-Wörterbuch. Bewusst beim Schema (`ExcludedKeys`): Background, Ambient1, Shadow, WindowBackground, BackgroundGlow,
+  BackgroundGlow2 sowie alle Flächen-, Text-, Zustands-, Quellen- und Schrift-Schlüssel. Neue ThemeKeys gibt es nicht.
+- **`ThemeResources.AddAccentEntries`** schreibt genau diese 25 Schlüssel; `Build` ruft sie auf (Token-Dateien unverändert).
+- **Überblendung** `OklchFade`: vier Schlüsselbilder auf dem OKLCH-Weg (kürzerer Bogen) zu den Zeiten von CubicEase
+  EaseInOut (0,397 / 0,5 / 0,603 / 1), ohne `From`, also von der Farbe auf dem Bildschirm aus. Voll 0,9 s, Reduziert 0,3 s,
+  Aus, verstecktes oder minimiertes Fenster, Spiel mit Pause und Wechsel des Themas sofort (`MotionController.Transition`).
+- **Farbwerte zu Beginn:** Das Kind-Wörterbuch wird zu Beginn einer geänderten Überblendung einmal getauscht (eine
+  Invalidierung), wie die Ressourcen der App „Farben gelten sofort“; Leuchten, Punkte und Kennzeichen mit Rohfarben wechseln
+  so mit der Handlung des Nutzers.
+- **`LiveBrushSet`** führt bleibende Pinsel je Pinsel bzw. Verlaufsstopp zu ihrem Ziel; gleiches Ziel heißt nichts tun, so
+  bricht `ApplyAmbient` im selben Durchlauf keine Überblendung ab. Im Fenster: `Lib.Brush.RowSelection`, `EdgeGlow`
+  (Stopps der Umgebung sofort, Akzent-Stopp mit der Überblendung), Naht und Streif der Werkzeugleiste; der Schein der Lasche
+  kommt über `ToolbarToggle.SetAccentColors` (vorher fest Abendrot). Ersetzt wird ein Pinsel nur bei anderem Aufbau
+  (hell/dunkel, hoher Kontrast). Themenpinsel, die der Code bisher als Momentaufnahme setzte (Kapselpunkt, Markenzeichen,
+  Nit-Skala, Statuspunkt, Effekte-Symbol, Linie der Fensterkante), sind jetzt Verweise (`SetResourceReference`).
+- **Entprellung** `GameAccentScheduler` (in `HdrPilot.Core`, ohne WPF): einzelner Wechsel sofort; Wechsel schneller als 300 ms oder eine gehaltene Taste
+  (Wiederholung der letzten 150 ms) halten die gezeigten Farben, das letzte Spiel folgt 300 ms nach dem letzten Wechsel.
+  Die Farben kommen mit den Bildern des Spiels; graue Spiele zeigen genau das Schema, ladende Bilder und eine leere Auswahl
+  behalten die gezeigten Farben.
+- **Ruhiger Grund:** Ist „Hintergrund folgt dem Spiel“ aus, nimmt die Umgebung das ruhige Schema (`GamePalette.Calm`: Chroma
+  höchstens 0,03, gleiche Helligkeit und gleicher Farbton), für jedes Spiel gleich. Sind beide an, mischen sich graue
+  Titelbilder mit den gezeigten Akzenten.
+- **Kontrast:** `GamePalette.Compute` rechnet die Spielpalette mit `PaletteEngine` (Überladung mit der Flächen-Atmosphäre des
+  Schemas und dem hellsten bzw. dunkelsten möglichen Grundton der Bibliothek als weiterer Fläche); im hellen Thema
+  Bernstein (Farbton 75°) statt Oliv für Akzenttext und Bedienfarben aus Gelb und Gold. `GamePalette.Scheme` ist genau die
+  Palette der App.
+- **Popups:** Kontextmenüs und Tooltips des Bibliotheksfensters bekommen die Ebene beim Öffnen in ihre Ressourcen.
+- **Live-Vorschau:** Die Bühne der Seite „Darstellung“ trägt eine eigene Ebene (sofort, ohne Überblendung), solange der
+  Schalter an ist und das Vorschauspiel Spielfarben hat; bei hohem Kontrast nicht. Die Kontrast-Kennzeichen zeigen weiter
+  das Schema; die Farbprobe des Schalters zeigt, was er ergäbe.
+
+| Bereich | Farben | Grund |
+|---|---|---|
+| Bibliotheksfenster | Spielfarben (Schalter an) | Wunsch des Nutzers |
+| Live-Vorschau der Einstellungen | Spielfarben des Vorschauspiels | zeigt, was der Schalter tut |
+| Übrige Einstellungen | Schema | zeigt und bewertet das gewählte Schema (Kontrast-Kennzeichen) |
+| Tray-Menü, Tray-, Fenster- und Taskleistensymbol | Schema | E89: Symbole folgen dem Schema, kein Neuzeichnen je Spiel |
+| Dialoge (Bestätigung, Spiel hinzufügen, „Bild wählen…“, Einstellungen entfernen) | Schema | eigene Fenster auf den Ressourcen der App |
+| Titelbereich (`HeroStage`) | Spielfarben über die Palette | nur die Argumente ändern sich |
+
+Prüfungen: G15.1 bis G15.10 in `GATES.md`; Bildtests `GameColorRenderTests` und `tools/gates/phase15-gamecolors.ps1`.

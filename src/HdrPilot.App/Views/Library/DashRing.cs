@@ -38,7 +38,8 @@ public sealed class RingClock : Animatable
 /// <summary>
 /// Gestrichelter Ring um die gewählte Kachel (Prototyp .rg): abgerundetes Rechteck mit einem Strich von 24 % des Umfangs
 /// im Verlauf Akzent → Atmosphäre → Glanz, darunter ein breiter, halb durchsichtiger Lichtsaum. Die Lage kommt aus
-/// <see cref="Phase"/>; gezeichnet wird nur, solange der Ring sichtbar ist.
+/// <see cref="Phase"/>; gezeichnet wird nur, solange der Ring sichtbar ist. <see cref="Stroke"/> darf ein lebender
+/// (nicht eingefrorener, auch gerade animierter) Pinsel sein; er wird nie eingefroren.
 /// </summary>
 public sealed class DashRing : FrameworkElement
 {
@@ -101,14 +102,24 @@ public sealed class DashRing : FrameworkElement
     {
         var dash = 0.24 * perimeter / thickness;
         var gap = 0.76 * perimeter / thickness;
+        var dashes = new DashStyle([dash, gap], -Phase * perimeter / thickness);
+        dashes.Freeze();
         var pen = new Pen(Stroke, thickness)
         {
             StartLineCap = PenLineCap.Round,
             EndLineCap = PenLineCap.Round,
             DashCap = PenLineCap.Round,
-            DashStyle = new DashStyle([dash, gap], -Phase * perimeter / thickness),
+            DashStyle = dashes,
         };
-        pen.Freeze();
+
+        // Nur mit eingefrorenem Pinsel einfrieren: Freeze friert den Pinsel mit ein. Der Ring zeichnet mit dem bleibenden
+        // Pinsel der Spielfarben (Hp.Brush.HdrOn der Farbebene, E94); eingefroren könnte er nicht mehr überblenden, und
+        // während einer Überblendung würfe Freeze. Ungefroren folgt die Zeichnung dem Pinsel von selbst.
+        if (pen.Brush is null || pen.Brush.IsFrozen)
+        {
+            pen.Freeze();
+        }
+
         dc.PushOpacity(opacity);
         dc.DrawRoundedRectangle(null, pen, rect, radius, radius);
         dc.Pop();

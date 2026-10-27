@@ -177,7 +177,8 @@ public sealed class AppearanceService : IAppearanceService
             settings.PauseInBackground,
             settings.RespectWindowsAnimations,
             settings.MinimizeToTrayAfterLaunch,
-            lightTaskbar);
+            lightTaskbar,
+            settings.ColorsFollowGame);
     }
 
     /// <summary>Ob sich die Farben der Ressourcen ändern (Palette, Thema, Textfarbe auf Akzent).</summary>

@@ -1465,3 +1465,69 @@ zugeordneten Spiel („Spiel: <Name> ▾“) und **Bei SteamGridDB suchen**.
   es keinen wiederverwendbaren gab (`GapScrollBar` gehört zum Spalt der Bibliothek). Der Testdaten-Lieferant nennt für
   `games/id` den zuletzt gesuchten Namen (sonst „Testspiel“). Die App-Tests sehen interne Prüfpunkte über
   `InternalsVisibleTo` (Platzierung, Kontrast, Vorschau-Threads, Übernehmen mit Ergebnis).
+
+**E94 Farben folgen dem Spiel (Wunsch des Nutzers 2026-10-22, G15):** Neuer Schalter „Farben folgen dem Spiel“ (Standard aus,
+`colorsFollowGame`) neben „Hintergrund folgt dem Spiel“; beide wirken unabhängig. Ist er an, nehmen alle Akzente der Bibliothek,
+die sonst das Farbschema färbt, die Farben des gewählten Spiels an: Titelbereich, Starten- und HDR-Knopf samt Leuchten,
+Detailbereich, Auswahl in Liste, Raster und Regal, Werkzeugleiste samt Lichtnaht, Streif und Schein der Lasche, Schalter,
+Fokusrahmen, Kennzeichen, Zähler der Filter, Fensterkante und Partikel im HDR-Moment; ebenso Quellenmenü, Bildlaufleiste im
+Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
+- **Herkunft:** Der Akzent kommt aus dem Logo (Markenfarbe), wenn es farbig genug ist: mindestens ein Zehntel seiner Fläche
+  ist farbig, oder sein Farbton passt zu Cover bzw. Titelbild, oder diese sind grau. Sonst kommt er aus dem Cover, sonst aus
+  dem Titelbild. Atmosphäre und Glanz kommen aus Zweitfarben von Logo, Cover und Titelbild, sonst abgeleitet wie bei den
+  Vorlagen: ±40°, mindestens 30° Abstand, keine graue Mitte im Verlauf, im Tritonus auch nicht zwischen Akzent und Glanz.
+  Duoton/Tritonus des Nutzers gilt weiter. Sind beide Schalter an, wird die Zweitfarbe bevorzugt, die zum Leuchten des
+  Titelbilds passt.
+- **Was nie zählt:** dunkle oder graue Konturen und Schatten, Hauttöne auf Cover und Titelbild, kleine Punkte, erzeugte Bilder
+  und Farben aus dem Namen. Eine farbige Kontur um weiße Schrift kann dagegen die Markenfarbe sein.
+- **Graue Bilder:** Fast graue Bilder ergeben keine Spielfarbe; dann gilt genau das Farbschema. Es wird nicht gemischt, weil
+  Mischungen weit entfernter Farbtöne grau-braune Knöpfe ergeben.
+- **Auslesen:** nur bei eingeschaltetem Schalter (und für das Vorschauspiel der Seite „Darstellung“), einmal je Spiel und
+  Bildstand. Gelesen werden kleine Fassungen von Logo, Cover und Titelbild, auf dem Bilder-Thread mit niedriger Priorität;
+  das Verfahren arbeitet in OKLab mit fester Rasterung und ist deterministisch. Gespeichert wird das Ergebnis als `colors` in
+  `art\index.json` mit eigener Fassung; ändert sich ein Bild, wird neu gelesen. Bei ausgeschaltetem Schalter kostet die
+  Funktion nichts.
+- **Kontrast:** Die Farben werden in feste Wertebereiche gebracht: Helligkeit je Farbton und Mindest-Buntheit; dunkle
+  Markenfarben werden heller und kräftiger, nicht blass. Danach laufen sie durch dieselbe Kontrastrechnung wie die Vorlagen:
+  Text auf Akzent und Akzenttext mindestens 4,5:1, Bedienelemente mindestens 3:1, hell und dunkel, gegen die Flächen des
+  Schemas und gegen den hellsten bzw. dunkelsten möglichen Grundton der Bibliothek. Bei automatischer Textfarbe steht auf
+  Akzentflächen immer die dunkle Schrift. Gelb und Gold werden im hellen Thema für Text und Ränder zu Bernstein abgedunkelt
+  statt zu Oliv.
+- **Geltungsbereich:** Nur das Bibliotheksfenster folgt. Die Einstellungen (außer der Live-Vorschau), das Tray-Menü, die
+  Dialoge sowie Tray- und Fenstersymbol behalten das Farbschema. Bei hohem Kontrast gibt es keine Spielfarben.
+- **Umschalten:** Eine eigene Farbebene im Fenster mit bleibenden Pinseln wird einmalig überblendet, im OKLCH-Farbraum und vom
+  gerade gezeigten Farbton aus, damit keine graue Mitte entsteht: bei „Voll“ 0,9 s wie der Titelbereich, bei „Reduziert“
+  0,3 s, bei „Aus“ sofort. Ist das Fenster versteckt oder minimiert, läuft ein Spiel mit Pause oder wechselt das Thema, geht es
+  sofort. Leuchten, Punkte und Kennzeichen mit Rohfarben wechseln zu Beginn der Überblendung. Die Farben kommen zusammen mit
+  den Bildern des Spiels. Die Wörterbücher werden nicht je Spiel ausgetauscht.
+- **Schnelle Auswahl:** Wechselt die Auswahl schneller als alle 300 ms oder ist die Pfeiltaste gehalten, bleiben die Farben
+  stehen und folgen 300 ms nach dem letzten Wechsel.
+- **Leerlauf:** Im Leerlauf läuft nichts.
+- **Hintergrund:** Ist „Hintergrund folgt dem Spiel“ aus, bleibt der Hintergrund für alle Spiele gleich: ein ruhiger Grund im
+  Farbton des Schemas mit stark gesenkter Buntheit, damit keine Schemafarben neben den Spielfarben leuchten. Sind beide an,
+  mischen sich graue Titelbilder im Hintergrund mit den gezeigten Spielfarben.
+- **Bekannte Grenze:** Der weiße Knopf der Schalter erreicht auf hellen Akzenten weniger als 3:1, wie bei hellen Vorlagen; der
+  Zustand ist zusätzlich an der Lage des Knopfs zu sehen. Wer für ein Spiel andere Farben möchte, wählt ein anderes Logo oder
+  Cover („Bild wählen…“).
+- **Umsetzung (2026-10-26), wo sie vom Entwurf abweicht:** Der Randanteil einer Farbe im Logo ist der größere von „Anteil am
+  ganzen Rand“ und „Anteil der eigenen Fläche am Rand“, damit dicke Konturen, dünne Konturen und Kanten (Extrusion) gleich
+  als Rahmen gelten; eine Füllung gewinnt gegen ihre Kontur nur, wenn sie selbst kräftig ist (Chroma mindestens 0,07), sonst
+  würden Mischpixel am Rand weißer Schrift die Kontur verdrängen. Die abgeleitete Atmosphäre rückt bei grauer Mitte nur bis
+  32° heran (wie das Drehen der Kandidaten), damit nach dem Einpassen sicher 30° bleiben. Einpassen und Ableiten liegen ohne
+  WPF in `HdrPilot.Core` (`ColorScience`, `GameColorAnalysis`, `GameColorMapping`) und laufen so auch unter Linux in den
+  Tests. Kontextmenüs und Tooltips des Bibliotheksfensters bekommen die Farbebene beim Öffnen vorsorglich in ihre Ressourcen.
+  Ein Gelb, das mehr als 150° vom Akzent entfernt liegt (etwa im bunten Logo neben Blau), wird nie Glanz; dann gilt der Bogen
+  hinter der Atmosphäre.
+- **Nachbesserung nach der Durchsicht (2026-10-26):** Ein Lesefehler ergibt „unbekannt“, nicht „grau“: Die gezeigten Farben
+  bleiben (wie beim Laden), nichts wird gemerkt, bei der nächsten Auswahl wird neu gelesen. Eine kaputte, fremde oder zu große
+  Bilddatei fehlt als Quelle, das Ergebnis gilt aber für diesen Bildstand und wird nicht bei jeder Auswahl neu dekodiert; nur
+  vorübergehende Fehler (gesperrt, kein Zugriff, halb geschrieben) werden nicht gemerkt. Eine Anfrage nach neuen Bildern hängt
+  sich nie an eine laufende Rechnung für die alten. Gelesen wird erst, wenn die Entprellung ein Spiel anwendet; bei gehaltener
+  Taste übersprungene Spiele werden nie gelesen. Bei ausgeschaltetem Schalter kostet eine Auswahl nichts: keine Rechnung und
+  kein Zeitgeber; die Pinsel im Code werden nur beruhigt, solange sie überblenden (neues Schema). Der Ring der gewählten
+  Kachel zeichnet mit dem lebenden Pinsel der Farbebene, ohne ihn einzufrieren. Die Farbprobe der Seite „Darstellung“ wird
+  je Eingabe gemerkt, die Grenzen des Grundtons entstehen auf einem Hintergrund-Thread. Die Entprellung
+  (`GameAccentScheduler`) liegt ohne WPF in `HdrPilot.Core`.
+- **Widerspruch im Entwurf:** Die Bildtabelle des Entwurfs erwartet für „bunt-tri“ (buntes Logo: blauer Akzent, dazu Gelb)
+  einen gelben Glanz. Das Gelb liegt aber 161° vom Akzent entfernt, und die Grenze von 150° zwischen Akzent und Glanz (Auswahl,
+  Bogen, Durchsicht D12) hat Vorrang vor der Tabelle; der Glanz kommt dort deshalb vom Bogen hinter der Atmosphäre.

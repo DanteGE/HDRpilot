@@ -692,16 +692,31 @@
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>
-                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}">
                                     <DockPanel>
                                         <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="14,0,0,0" Style="{StaticResource Hp.ToggleSwitch}"
                                                   AutomationProperties.AutomationId="BackgroundFollowsGameToggle" AutomationProperties.Name="{x:Static res:ShellStrings.BackgroundFollowsGameLabel}"
+                                                  AutomationProperties.HelpText="{x:Static res:ShellStrings.BackgroundFollowsGameHint}"
                                                   IsChecked="{Binding BackgroundFollowsGame, Mode=TwoWay}" />
                                         <Border DockPanel.Dock="Left" Width="46" Height="36" CornerRadius="10" Margin="0,0,14,0" Background="{Binding FollowSample}"
                                                 BorderBrush="#33FFFFFF" BorderThickness="1" RenderOptions.BitmapScalingMode="Linear" />
                                         <StackPanel VerticalAlignment="Center">
                                             <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.BackgroundFollowsGameLabel}" />
                                             <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" Text="{x:Static res:ShellStrings.BackgroundFollowsGameHint}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <Border Style="{StaticResource Hp.Shell.SettingRow}" Margin="0">
+                                    <DockPanel>
+                                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" Margin="14,0,0,0" Style="{StaticResource Hp.ToggleSwitch}"
+                                                  AutomationProperties.AutomationId="ColorsFollowGameToggle" AutomationProperties.Name="{x:Static res:ShellStrings.ColorsFollowGameLabel}"
+                                                  AutomationProperties.HelpText="{x:Static res:ShellStrings.ColorsFollowGameHint}"
+                                                  IsChecked="{Binding ColorsFollowGame, Mode=TwoWay}" />
+                                        <Border DockPanel.Dock="Left" Width="46" Height="36" CornerRadius="10" Margin="0,0,14,0" Background="{Binding ColorsFollowSample}"
+                                                BorderBrush="#33FFFFFF" BorderThickness="1" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource Hp.Shell.Label}" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.ColorsFollowGameLabel}" />
+                                            <TextBlock Style="{StaticResource Hp.Text.Caption}" Margin="0,3,0,0" TextWrapping="Wrap" Text="{x:Static res:ShellStrings.ColorsFollowGameHint}" />
                                         </StackPanel>
                                     </DockPanel>
                                 </Border>

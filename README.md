@@ -765,9 +765,9 @@ remembered HDR state. Exit HDRpilot first, or use `HDRpilot.exe --run <Source:ID
   Battle.net is untested (see below).
 - **Switching during game launch:** With automatic detection, HDRpilot switches HDR while the game is starting up. Almost
   all games cope with this; in the test, Dead Island 2 hung on one of two automatic launches (whether because of the
-  switch isn't certain). The restart buffer helps on the second attempt if the restart falls within its time (default 1
-  minute; if you need longer to restart, increase it under “Settings”); safer options are “Launch”, the shortcut or the
-  Steam launch option.
+  switch isn't certain). The restart buffer helps on the second attempt if the restart falls within its time
+  (default 1 minute; if you need longer to restart, increase it under “Settings”); safer options are “Launch”, the
+  shortcut or the Steam launch option.
 - **Early warning:** only for the Epic Games Launcher and Steam. It relies on their log format, which can change with a
   launcher update; normal detection then takes over again.
 - **Steam launch option:** only works if HDRpilot is running (autostart recommended) and the game was already known at

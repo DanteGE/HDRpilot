@@ -60,12 +60,14 @@ foreach ($f in Get-ChildItem (Join-Path $root 'src') -Recurse -Filter *.cs | Whe
 }
 Check ($csHits.Count -eq 0) ("C#-Zeichenketten ohne 'HdrPilot' ({0} Reste) {1}" -f $csHits.Count, ($csHits | Select-Object -First 3) -join ' | ')
 
-# 5. README (erlaubt: Projektdatei, Hinweis auf Namensräume und auf die alten Ordner)
-$readme = [IO.File]::ReadAllText((Join-Path $root 'README.md'), [Text.Encoding]::UTF8)
-$readmeClean = $readme.Replace('HdrPilot.slnx', '').Replace('`HdrPilot.*`', '').Replace('Ordner `HdrPilot`', '')
-$readmeHits = Find-Old $readmeClean
-Check ($readmeHits.Count -eq 0) ("README ohne 'HdrPilot' ({0} Reste) {1}" -f $readmeHits.Count, ($readmeHits | Select-Object -First 3) -join ' | ')
-Check ($readme -cmatch '^# HDRpilot') 'README-Überschrift HDRpilot'
+# 5. README englisch und deutsch (E95; erlaubt: Projektdatei, Hinweis auf Namensräume und auf die alten Ordner)
+foreach ($readmeName in 'README.md', 'README.de.md') {
+    $readme = [IO.File]::ReadAllText((Join-Path $root $readmeName), [Text.Encoding]::UTF8)
+    $readmeClean = $readme.Replace('HdrPilot.slnx', '').Replace('`HdrPilot.*`', '').Replace('Ordner `HdrPilot`', '').Replace('`HdrPilot` folders', '')
+    $readmeHits = Find-Old $readmeClean
+    Check ($readmeHits.Count -eq 0) ("$readmeName ohne 'HdrPilot' ({0} Reste) {1}" -f $readmeHits.Count, ($readmeHits | Select-Object -First 3) -join ' | ')
+    Check ($readme -cmatch '^# HDRpilot') "$readmeName-Überschrift HDRpilot"
+}
 
 # 6. Kommandozeilen-Hilfe und Lizenzkopf
 $cli = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'

@@ -1671,3 +1671,16 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
   `phase5-readme.ps1` liest die Hilfe der Kommandozeile aus einer deutschen Testablage, damit die Gates auch auf einem
   englischen Windows gelten. Neues Gate `phase16-english-ui.ps1` (G16.4). Bildschirmfotos mit `--snapshot-language en`
   oder einer englischen Ablage heißen `…-en.png`.
+- README auf Englisch (Wunsch des Nutzers 2026-10-27: „Bitte die README komplett auf Englisch übersetzen.“): Seit
+  2026-10-27 ist `README.md` vollständig englisch; die bisherige deutsche Fassung bleibt wörtlich als `README.de.md`
+  (oben je ein Verweis auf die andere Sprache statt des früheren kurzen englischen Absatzes). Das ändert die Regel
+  „Doku auf Deutsch“ nur für die README; `docs/`, `GATES.md`, Kommentare und Commit-Nachrichten bleiben deutsch.
+  Bezeichnungen der Oberfläche stehen in `README.md` so, wie die englische Oberfläche sie zeigt (Werte der `.en.resx`,
+  Glossar oben), Hilfe und Beispiele der Kommandozeile wie `CliStrings.en.resx`; Schalter, Exit-Codes, Standardwerte und
+  Pfade sind dieselben. Was nur im Protokoll steht (deutsch, siehe oben), zitiert die englische README deutsch mit
+  Übersetzung in Klammern. `phase5-readme.ps1` prüft beide Fassungen (`README.de.md` gegen die neutralen resx und die
+  deutsche Hilfe, `README.md` gegen die `.en.resx` und die englische Hilfe, jede mit eigenen Gegenproben, G16.7),
+  `phase6-name.ps1` beide Dateien. Ausgeliefert werden beide (auf Wunsch des Nutzers vom selben Tag): portabler Ordner
+  und Paket der Setup-Datei enthalten `README.md` und `README.de.md` (`SetupBundle.PayloadEntryNames`,
+  `SetupLocations.InstalledFiles`); eine Aktualisierung von einer Setup-Datei ohne `README.de.md` (bis 1.5.0) legt sie
+  dazu, das Entfernen löscht sie, ältere Setup-Dateien bleiben gültig.

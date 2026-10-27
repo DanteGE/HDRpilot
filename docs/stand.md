@@ -3,6 +3,14 @@
 Zuletzt aktualisiert: 2026-10-27. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
+## Stand 2026-10-27: README auf Englisch (Wunsch des Nutzers, E95, G16.7)
+- `README.md` vollständig englisch (Bezeichnungen wie in den `.en.resx`, Hilfe wie `CliStrings.en.resx`), die deutsche
+  Fassung wörtlich als `README.de.md`; beide werden ausgeliefert, installiert und beim Entfernen gelöscht.
+- `phase5-readme.ps1` prüft beide Fassungen mit eigenen Gegenproben, `phase6-name.ps1` beide Dateien. Unter Linux mit
+  pwsh (Kopie mit Linux-Pfaden) grün; Bau ohne Warnungen, `HdrPilot.Tests` ohne neue Fehler.
+- **Offen (nur unter Windows):** `phase5-readme.ps1` und `phase6-name.ps1` im Original, `phase5-publish.ps1`,
+  `phase7-setup.ps1` und die App-Tests der Setup-Engine (neue Datei im Paket).
+
 ## Stand 2026-10-27: nächstes Test-Update zusammengeführt (Zweig `integration/naechstes-update`)
 - **Inhalt:** `ui/feedback` (zehn Punkte der Rückmeldung vom 2026-10-22) und die drei Stränge `feature/sgdb-search`
   (E93), `feature/spielfarben` (E94) und `feature/english` (E95), jeder vor dem Zusammenführen unabhängig geprüft und

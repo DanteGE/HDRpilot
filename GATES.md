@@ -159,7 +159,7 @@ und die EXPECT-Marke ausgibt.
   EXPECT: PHASE5_PUBLISH_OK
   EVIDENCE: 2026-10-07 14:07 exit 0, artifacts\publish\HdrPilot: HdrPilot.exe 168,3 MB und cli\hdrpilot.exe 39,0 MB (beide x64), README.md, THIRD-PARTY-NOTICES.txt (18 MIT-Texte); Version 1.0.0; Kopie in %TEMP% ohne erreichbares dotnet gestartet: 70 Module, keines aus einer installierten Runtime (Gegenprobe Debug-Build: 72 erkannt), WPF-Bibliotheken aus der EXE entpackt, Ende per --exit mit Exitcode 0, PHASE5_PUBLISH_OK
 
-- [x] G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche
+- [x] G5.2: README mit Einrichtung, Funktionsweise, bekannten Grenzen und Fehlersuche (seit 2026-10-27 zwei Fassungen, siehe G16.7: `README.de.md` gegen die deutschen, `README.md` gegen die englischen Texte)
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
   EVIDENCE: 2026-10-07 14:05 exit 0, alle Abschnitte, 10 App-Schalter, 9 CLI-Aufrufe und 7 Exit-Codes, Standardwerte, Ablageorte und fett gesetzte Bezeichnungen stimmen mit Code und resx (0 Probleme); Gegenprobe 7/7 eingebaute Fehler erkannt; inhaltlich von 5 unabhängigen Prüfern gelesen, 55 Hinweise eingearbeitet (E64), PHASE5_README_OK
@@ -730,3 +730,8 @@ Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
   EVIDENCE: pending.
+
+- [ ] G16.7: README auf Englisch (Wunsch des Nutzers 2026-10-27, E95): `README.md` vollständig englisch, die bisherige deutsche als `README.de.md` (oben je ein Verweis auf die andere Sprache). `phase5-readme.ps1` prüft beide Fassungen wie bisher: `README.de.md` gegen die neutralen resx und die Hilfe aus einer Testablage mit `"language": "de"`, `README.md` gegen die `.en.resx` und die Hilfe mit `"language": "en"`, jede mit eigenen Abschnittsnamen und eigenen Gegenproben (15 eingebaute Fehler, 3 beim Neustart-Puffer), dazu eine Gegenprobe über Kreuz (deutsche README gegen englische Texte scheitert); fett gesetzte Absatztitel mit Doppelpunkt („Sprache:“, „Language:“) zählen nicht als Bezeichnung. `phase6-name.ps1` prüft beide Dateien. Beide READMEs werden ausgeliefert: portabler Ordner und Paket der Setup-Datei, installiert, bei der Aktualisierung von einer Setup-Datei ohne `README.de.md` dazugelegt, beim Entfernen gelöscht (`phase5-publish.ps1`, `phase7-setup.ps1`, App-Tests der Setup-Engine).
+  CHECK: ps tools\gates\phase5-readme.ps1
+  EXPECT: PHASE5_README_OK
+  EVIDENCE: 2026-10-27 in der Cloud-Sitzung unter Linux mit pwsh und einer Kopie des Skripts mit Linux-Pfaden (Kommandozeile über `dotnet hdrpilot.dll`): PHASE5_README_OK, beide Fassungen 0 Probleme, Gegenproben je 15 von 15 und 3 von 3, über Kreuz 44 Probleme. Mutationen: englische Fassung mit deutscher Hilfe oder mit den deutschen resx geprüft, jeweils rot. Unter Windows offen: das Skript selbst, `phase6-name.ps1`, `phase5-publish.ps1`, `phase7-setup.ps1` und die App-Tests der Setup-Engine.

@@ -11,6 +11,14 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
 - **Offen (nur unter Windows):** `phase5-readme.ps1` und `phase6-name.ps1` im Original, `phase5-publish.ps1`,
   `phase7-setup.ps1` und die App-Tests der Setup-Engine (neue Datei im Paket).
 
+## Stand 2026-10-27: Release 1.6.0 vorbereitet (noch nicht veröffentlicht)
+- Version 1.6.0 in `Directory.Build.props` und bei den Setup-Dateinamen beider READMEs; Release-Notizen (englisch und
+  deutsch) in `docs/release/1.6.0.md`; Pull Request von `integration/naechstes-update` nach `main` als Entwurf.
+- **Reihenfolge lokal (Windows):** Setup bauen (`tools/publish.ps1`), alle Gates und App-Tests, publish-check (auch
+  `-Rev` für alle Cloud-Zweige), Installation als Test-Update mit Sicherung und Abgleich der Einstellungen, Livetest
+  SteamGridDB, Abnahme durch den Nutzer; erst dann Merge nach `main`, Tag `v1.6.0` und GitHub-Release mit
+  `HDRpilot-Setup-1.6.0.exe` und dem Text aus `docs/release/1.6.0.md`.
+
 ## Stand 2026-10-27: nächstes Test-Update zusammengeführt (Zweig `integration/naechstes-update`)
 - **Inhalt:** `ui/feedback` (zehn Punkte der Rückmeldung vom 2026-10-22) und die drei Stränge `feature/sgdb-search`
   (E93), `feature/spielfarben` (E94) und `feature/english` (E95), jeder vor dem Zusammenführen unabhängig geprüft und

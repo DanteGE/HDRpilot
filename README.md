@@ -22,11 +22,11 @@ which games support HDR according to PCGamingWiki. In everyday use it runs unobt
 
 ## Installation
 
-The recommended way is the setup `HDRpilot-Setup-1.5.0.exe`. It installs for your Windows user only and needs no
+The recommended way is the setup `HDRpilot-Setup-1.6.0.exe`. It installs for your Windows user only and needs no
 administrator rights. If you prefer to work without an installation, use the `HDRpilot` folder (see “Without
 installation”). Ready-made releases are available on [GitHub Releases](https://github.com/DanteGE/HDRpilot/releases).
 
-1. Run `HDRpilot-Setup-1.5.0.exe` (setup and uninstall use the language of Windows: German on a German Windows, English
+1. Run `HDRpilot-Setup-1.6.0.exe` (setup and uninstall use the language of Windows: German on a German Windows, English
    otherwise). The file isn't signed, so Windows SmartScreen asks the first time you run it (“More info” → “Run
    anyway”).
 2. The setup shows the program folder `%LOCALAPPDATA%\Programs\HDRpilot` and three options: **Start with Windows**
@@ -701,7 +701,7 @@ For scripts and troubleshooting; for everyday use, the setup window and “Insta
 
 | Call | Effect |
 |---|---|
-| `HDRpilot-Setup-1.5.0.exe --quiet` | Install or update without a window; the result is the exit code. Afterwards HDRpilot starts (with the game library if it wasn't running), except with `--no-launch` or with administrator rights. Scripts that wait for the end or read the output use `--no-launch` |
+| `HDRpilot-Setup-1.6.0.exe --quiet` | Install or update without a window; the result is the exit code. Afterwards HDRpilot starts (with the game library if it wasn't running), except with `--no-launch` or with administrator rights. Scripts that wait for the end or read the output use `--no-launch` |
 | `--autostart on\|off` | Start with Windows, afterwards with the installed EXE (if not specified: as before, i.e. on if an HDRpilot.exe already starts with Windows, even from a different folder; on for a new installation) |
 | `--desktop-shortcut on\|off` | Desktop shortcut (if not specified: as before; off for a new installation) |
 | `--no-launch` | Don't start HDRpilot afterwards. For scripts that wait for the end (such as `Start-Process -Wait`, which also waits for started programs) or read the output |
@@ -931,7 +931,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish.ps1
 ```
 
 `tools\publish.ps1` puts the finished release under `artifacts\publish\HDRpilot\` and the setup next to it as
-`artifacts\publish\HDRpilot-Setup-1.5.0.exe` (the same EXE with an appended package of both READMEs, license text,
+`artifacts\publish\HDRpilot-Setup-1.6.0.exe` (the same EXE with an appended package of both READMEs, license text,
 third-party notices and command line, see E83 in `docs\entscheidungen.md`). Projects and namespaces in the source code
 are still called `HdrPilot.*`. The reasons behind design decisions are in `docs\entscheidungen.md` and the verification
 records in `GATES.md` (both in German).

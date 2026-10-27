@@ -1161,7 +1161,7 @@
     <value>Colors follow the game</value>
   </data>
   <data name="ColorsFollowGameHint" xml:space="preserve">
-    <value>Library accents take on the colors of the selected game’s logo and cover – read once per game; gray images, the settings, the tray menu and dialogs use the color scheme</value>
+    <value>Library accents take on the colors of the selected game's logo and cover – read once per game; gray images, the settings, the tray menu and dialogs use the color scheme</value>
   </data>
   <data name="SteamGridDbSubtitle" xml:space="preserve">
     <value>More images from the web, only with your own API key.</value>
@@ -1173,9 +1173,9 @@
     <value>Automatic loading off · search in “Choose image…” only on click</value>
   </data>
   <data name="SteamGridDbStatusLastSearch" xml:space="preserve">
-    <value>Automatic loading off · last search {0:g} · {1} requests</value>
+    <value>Automatic loading off · last search {0:g} · requests: {1}</value>
   </data>
   <data name="SteamGridDbStatusLastSearchOn" xml:space="preserve">
-    <value>Last search in “Choose image…” {0:g} · {1} requests</value>
+    <value>Last search in “Choose image…” {0:g} · requests: {1}</value>
   </data>
 </root>

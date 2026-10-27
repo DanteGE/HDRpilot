@@ -1620,7 +1620,7 @@
     <value>Matched by the game you chose on SteamGridDB earlier.</value>
   </data>
   <data name="Picker_SgdbMatchHowName" xml:space="preserve">
-    <value>Matched by name. If it’s the wrong game, choose a different one here.</value>
+    <value>Matched by name. If it's the wrong game, choose a different one here.</value>
   </data>
   <data name="Picker_SgdbMatchHowChosen" xml:space="preserve">
     <value>Chosen by you.</value>
@@ -1683,7 +1683,7 @@
     <value>With your own API key from steamgriddb.com you can search for more images here.</value>
   </data>
   <data name="Picker_SgdbKeyUnreadable" xml:space="preserve">
-    <value>The stored SteamGridDB key can’t be read (different Windows account?).</value>
+    <value>The stored SteamGridDB key can't be read (different Windows account?).</value>
   </data>
   <data name="Picker_SgdbOpenSettings" xml:space="preserve">
     <value>Open settings</value>
@@ -1713,10 +1713,10 @@
     <value>Previews {0} of {1}</value>
   </data>
   <data name="Picker_SgdbEnd" xml:space="preserve">
-    <value>That’s all matching {0} on SteamGridDB.</value>
+    <value>That's all matching {0} on SteamGridDB.</value>
   </data>
   <data name="Picker_SgdbTabLimit" xml:space="preserve">
-    <value>“Choose image” doesn’t show more {0} at once. If none fits, choose a different game under “Game”.</value>
+    <value>“Choose image” doesn't show more {0} at once. If none fits, choose a different game under “Game”.</value>
   </data>
   <data name="Picker_SgdbMore" xml:space="preserve">
     <value>Load more</value>
@@ -1728,7 +1728,7 @@
     <value>SteamGridDB knows no game named exactly “{0}”. Choose the right game from the list or search for a different name.</value>
   </data>
   <data name="Picker_SgdbSteamUnknown" xml:space="preserve">
-    <value>SteamGridDB doesn’t know this Steam app. Choose the right game from the list or search for a different name.</value>
+    <value>SteamGridDB doesn't know this Steam app. Choose the right game from the list or search for a different name.</value>
   </data>
   <data name="Picker_SgdbNoHits" xml:space="preserve">
     <value>SteamGridDB found no game for “{0}”. Try a different name.</value>
@@ -1743,13 +1743,13 @@
     <value>SteamGridDB reports too many requests. Try again in a minute.</value>
   </data>
   <data name="Picker_SgdbOffline" xml:space="preserve">
-    <value>SteamGridDB can’t be reached. Check your internet connection and try again.</value>
+    <value>SteamGridDB can't be reached. Check your internet connection and try again.</value>
   </data>
   <data name="Picker_SgdbTimeout" xml:space="preserve">
-    <value>SteamGridDB isn’t responding right now. Try again later.</value>
+    <value>SteamGridDB isn't responding right now. Try again later.</value>
   </data>
   <data name="Picker_SgdbServerError" xml:space="preserve">
-    <value>SteamGridDB didn’t respond as expected. Try again later.</value>
+    <value>SteamGridDB didn't respond as expected. Try again later.</value>
   </data>
   <data name="Picker_SgdbBudget" xml:space="preserve">
     <value>This window has reached the maximum number of requests to SteamGridDB. The images shown can still be chosen.</value>
@@ -1773,7 +1773,7 @@
     <value>{0}, {1} × {2} pixels</value>
   </data>
   <data name="Picker_SgdbItemHelp" xml:space="preserve">
-    <value>Image from SteamGridDB. It’s downloaded when you apply and saved like a custom image.</value>
+    <value>Image from SteamGridDB. It's downloaded when you apply and saved like a custom image.</value>
   </data>
   <data name="Picker_SgdbPreviewFailed" xml:space="preserve">
     <value>Preview not loaded</value>
@@ -1788,13 +1788,13 @@
     <value>Downloading {0} chosen images from SteamGridDB…</value>
   </data>
   <data name="Picker_SgdbDownloadFailed" xml:space="preserve">
-    <value>The image couldn’t be downloaded from SteamGridDB. Check your connection and try again, or choose a different one.</value>
+    <value>The image couldn't be downloaded from SteamGridDB. Check your connection and try again, or choose a different one.</value>
   </data>
   <data name="Picker_SgdbDownloadBlocked" xml:space="preserve">
     <value>This image is larger than 32 MB or is at a disallowed address. Choose a different one.</value>
   </data>
   <data name="Picker_SgdbDownloadNotAnImage" xml:space="preserve">
-    <value>The image from SteamGridDB can’t be read. Choose a different one.</value>
+    <value>The image from SteamGridDB can't be read. Choose a different one.</value>
   </data>
   <data name="Picker_SgdbPicksReset" xml:space="preserve">
     <value>Your SteamGridDB choices in the other tabs no longer apply because you chose a different game.</value>
@@ -1804,5 +1804,14 @@
   </data>
   <data name="Picker_MatchRemembered" xml:space="preserve">
     <value>SteamGridDB game remembered for “{0}”.</value>
+  </data>
+  <data name="Picker_KindSingularHero" xml:space="preserve">
+    <value>hero image</value>
+  </data>
+  <data name="Picker_KindSingularLogo" xml:space="preserve">
+    <value>logo</value>
+  </data>
+  <data name="Picker_KindSingularCover" xml:space="preserve">
+    <value>cover</value>
   </data>
 </root>

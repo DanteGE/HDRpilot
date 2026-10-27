@@ -35,6 +35,19 @@ public sealed class EnglishTextTests
     }
 
     [Fact]
+    public void SteamGridDb_result_lines_name_the_image_kind_in_lowercase_mid_sentence()
+    {
+        using var _ = TestCulture.Use("en-US");
+
+        // Einzahl und Mehrzahl der Bildart stehen im Satz klein (nicht die Reiter „Hero image“, „Cover“), E93/E95.
+        Assert.Equal("1 hero image from SteamGridDB", LibraryText.Format(LibraryStrings.Picker_SgdbResultsOne, LibraryStrings.Picker_KindSingularHero));
+        Assert.Equal("1 cover from SteamGridDB", LibraryText.Format(LibraryStrings.Picker_SgdbResultsOne, LibraryStrings.Picker_KindSingularCover));
+        Assert.Equal("24 logos from SteamGridDB", LibraryText.Format(LibraryStrings.Picker_SgdbResults, 24, LibraryStrings.Picker_KindPluralLogo));
+        Assert.Equal("Loading hero images from SteamGridDB…", LibraryText.Format(LibraryStrings.Picker_SgdbLoading, LibraryStrings.Picker_KindPluralHero));
+        Assert.Equal("That's all matching covers on SteamGridDB.", LibraryText.Format(LibraryStrings.Picker_SgdbEnd, LibraryStrings.Picker_KindPluralCover));
+    }
+
+    [Fact]
     public void Relative_time_reads_naturally_in_english()
     {
         using var _ = TestCulture.Use("en-US");

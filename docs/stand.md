@@ -24,8 +24,8 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
 - **Offen, nur lokal unter Windows** (einer nach dem anderen, gedrosselt): G14.1 bis G14.9 und G14.11 bis G14.13
   ausführen, die Bildschirmfotos bei drei Größen hell und dunkel vermessen und dem Nutzer zeigen (G14.10), unabhängige
   Prüfung mit Gegenproben, Livetest mit dem eigenen Schlüssel des Nutzers (G14.14), Abnahme (G14.15).
-- **Auslieferung:** als eigenes Test-Update nach dem UI-Paket, zusammen mit den Spielfarben; wer zuletzt zusammenführt,
-  trägt `Hp.Brush.Plate` bzw. die eigenen Farbwerte in die Token-Dateien des anderen ein. Kleine Versionserhöhung beim
+- **Auslieferung:** als eigenes Test-Update nach dem UI-Paket, zusammen mit den Spielfarben (`Hp.Brush.Plate` steht in
+  beiden Token-Dateien; die Spielfarben ändern sie nicht, erledigt in `integration/naechstes-update`). Kleine Versionserhöhung beim
   Release.
 
 ## Stand 2026-10-26: Phase 15 „Farben folgen dem Spiel“ (E94) gebaut, Prüfung unter Windows offen

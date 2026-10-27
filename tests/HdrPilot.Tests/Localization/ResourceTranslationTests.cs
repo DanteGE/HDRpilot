@@ -43,7 +43,7 @@ public sealed class ResourceTranslationTests
     private static readonly Regex Avoided = new(@"\b(own (file|icon|images?)|HDR of its own|smeared)\b", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     /// <summary>Typografie (en-US): Leerzeichen vor „…“ oder vor „%“ nach einer Zahl, britisches „Cancelled“.</summary>
-    private static readonly Regex Typography = new(@" …|\d %|\bCancell", RegexOptions.CultureInvariant);
+    private static readonly Regex Typography = new(@" …|\d %|\bCancell|’", RegexOptions.CultureInvariant);
 
     private static readonly Regex Placeholder = new(@"(?<!\{)\{(\d+)(?:[,:][^}]*)?\}", RegexOptions.CultureInvariant);
 
@@ -241,6 +241,7 @@ public sealed class ResourceTranslationTests
         Assert.DoesNotMatch(Avoided, "Custom file: {0}");
         Assert.Matches(Typography, "Scanning …");
         Assert.Matches(Typography, "0 % GPU");
+        Assert.Matches(Typography, "can’t");
         Assert.Matches(Typography, "Cancelled.");
         Assert.DoesNotMatch(Typography, "Scanning…");
         Assert.DoesNotMatch(Typography, "0% GPU · Canceled.");

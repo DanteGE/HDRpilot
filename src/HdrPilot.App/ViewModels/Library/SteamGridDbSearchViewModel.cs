@@ -827,9 +827,9 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
     private static string Singular(ArtworkKind kind) => kind switch
     {
-        ArtworkKind.Hero => LibraryStrings.Picker_TabHero,
-        ArtworkKind.Logo => LibraryStrings.Picker_TabLogo,
-        _ => LibraryStrings.Picker_TabCover,
+        ArtworkKind.Hero => LibraryStrings.Picker_KindSingularHero,
+        ArtworkKind.Logo => LibraryStrings.Picker_KindSingularLogo,
+        _ => LibraryStrings.Picker_KindSingularCover,
     };
 
     private static string Label(string name, int? year) => year is { } y ? LibraryText.Format(LibraryStrings.Picker_SgdbMatchYear, name, y) : name;

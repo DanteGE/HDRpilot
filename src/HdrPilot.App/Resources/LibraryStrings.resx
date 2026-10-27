@@ -2028,4 +2028,16 @@
     <value>Spiel bei SteamGridDB für „{0}“ gemerkt.</value>
     <comment>Statuszeile der Bibliothek; {0} = Name des Spiels</comment>
   </data>
+  <data name="Picker_KindSingularHero" xml:space="preserve">
+    <value>Titelbild</value>
+    <comment>Einzahl der Bildart im Satz („1 Titelbild von SteamGridDB“)</comment>
+  </data>
+  <data name="Picker_KindSingularLogo" xml:space="preserve">
+    <value>Logo</value>
+    <comment>Einzahl der Bildart im Satz („1 Titelbild von SteamGridDB“)</comment>
+  </data>
+  <data name="Picker_KindSingularCover" xml:space="preserve">
+    <value>Cover</value>
+    <comment>Einzahl der Bildart im Satz („1 Titelbild von SteamGridDB“)</comment>
+  </data>
 </root>

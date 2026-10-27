@@ -1188,7 +1188,7 @@
     <value>Stored downscaled in the data folder when applied; the file itself stays unchanged.</value>
   </data>
   <data name="Picker_SourceNote" xml:space="preserve">
-    <value>HDRpilot reads images only from the launchers' local caches (Steam, GOG Galaxy, Ubisoft, Xbox package, Quiver). If one is missing, it's generated from the icon and name. SteamGridDB (online) only fills missing images, and only if you turn it on in the settings.</value>
+    <value>From the launchers on this PC (Steam, GOG Galaxy, Ubisoft, Xbox package, Quiver), otherwise generated from the icon and name.</value>
   </data>
   <data name="Picker_Size" xml:space="preserve">
     <value>{0} × {1}</value>
@@ -1585,5 +1585,224 @@
   </data>
   <data name="List_EmptyHiddenTextMany" xml:space="preserve">
     <value>{0} uninstalled games are hidden. You can show them under Settings › Library.</value>
+  </data>
+  <data name="Picker_LocalHeader" xml:space="preserve">
+    <value>ON THIS PC</value>
+  </data>
+  <data name="Picker_SgdbHeader" xml:space="preserve">
+    <value>STEAMGRIDDB</value>
+  </data>
+  <data name="Picker_SgdbSectionName" xml:space="preserve">
+    <value>Images from SteamGridDB</value>
+  </data>
+  <data name="Picker_KindPluralHero" xml:space="preserve">
+    <value>hero images</value>
+  </data>
+  <data name="Picker_KindPluralLogo" xml:space="preserve">
+    <value>logos</value>
+  </data>
+  <data name="Picker_KindPluralCover" xml:space="preserve">
+    <value>covers</value>
+  </data>
+  <data name="Picker_SgdbMatch" xml:space="preserve">
+    <value>Game: {0}</value>
+  </data>
+  <data name="Picker_SgdbMatchYear" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="Picker_SgdbMatchName" xml:space="preserve">
+    <value>Game on SteamGridDB: {0}. Choose a different game</value>
+  </data>
+  <data name="Picker_SgdbMatchHowSteam" xml:space="preserve">
+    <value>Matched by the Steam app ID from your library.</value>
+  </data>
+  <data name="Picker_SgdbMatchHowRemembered" xml:space="preserve">
+    <value>Matched by the game you chose on SteamGridDB earlier.</value>
+  </data>
+  <data name="Picker_SgdbMatchHowName" xml:space="preserve">
+    <value>Matched by name. If it’s the wrong game, choose a different one here.</value>
+  </data>
+  <data name="Picker_SgdbMatchHowChosen" xml:space="preserve">
+    <value>Chosen by you.</value>
+  </data>
+  <data name="Picker_SgdbMatchAmbiguous" xml:space="preserve">
+    <value>Several games have this name – check the year.</value>
+  </data>
+  <data name="Picker_SgdbMatchSearchName" xml:space="preserve">
+    <value>Game name to search for on SteamGridDB</value>
+  </data>
+  <data name="Picker_SgdbMatchSearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Picker_SgdbMatchHint" xml:space="preserve">
+    <value>Enter or “Search” asks SteamGridDB for this name.</value>
+  </data>
+  <data name="Picker_SgdbMatchSearching" xml:space="preserve">
+    <value>Searching SteamGridDB…</value>
+  </data>
+  <data name="Picker_SgdbMatchCommitHint" xml:space="preserve">
+    <value>HDRpilot remembers your choice for this game when you apply.</value>
+  </data>
+  <data name="Picker_SgdbMatchListName" xml:space="preserve">
+    <value>Games on SteamGridDB</value>
+  </data>
+  <data name="Picker_SgdbSteamEntry" xml:space="preserve">
+    <value>{0} (Steam, from your library)</value>
+  </data>
+  <data name="Picker_SgdbRememberedEntry" xml:space="preserve">
+    <value>{0} (remembered)</value>
+  </data>
+  <data name="Picker_SgdbVerified" xml:space="preserve">
+    <value>verified</value>
+  </data>
+  <data name="Picker_SgdbEntryCurrent" xml:space="preserve">
+    <value>selected</value>
+  </data>
+  <data name="Picker_SgdbHitName" xml:space="preserve">
+    <value>{0}, {1}</value>
+  </data>
+  <data name="Picker_SgdbHitNameVerified" xml:space="preserve">
+    <value>{0}, verified</value>
+  </data>
+  <data name="Picker_SgdbSearch" xml:space="preserve">
+    <value>Search SteamGridDB</value>
+  </data>
+  <data name="Picker_SgdbSearchName" xml:space="preserve">
+    <value>Search SteamGridDB for {0}</value>
+  </data>
+  <data name="Picker_SgdbSearchHelp" xml:space="preserve">
+    <value>Only now contacts SteamGridDB with your API key. Shows only still images without NSFW, humor or epilepsy tags; HDRpilot downloads the chosen image only when you apply.</value>
+  </data>
+  <data name="Picker_SgdbSearching" xml:space="preserve">
+    <value>Searching…</value>
+  </data>
+  <data name="Picker_SgdbReadyNote" xml:space="preserve">
+    <value>Only on click · still images only, without NSFW or humor tags</value>
+  </data>
+  <data name="Picker_SgdbNoKey" xml:space="preserve">
+    <value>With your own API key from steamgriddb.com you can search for more images here.</value>
+  </data>
+  <data name="Picker_SgdbKeyUnreadable" xml:space="preserve">
+    <value>The stored SteamGridDB key can’t be read (different Windows account?).</value>
+  </data>
+  <data name="Picker_SgdbOpenSettings" xml:space="preserve">
+    <value>Open settings</value>
+  </data>
+  <data name="Picker_SgdbOpenSettingsDiscard" xml:space="preserve">
+    <value>Open settings (selection will be lost)</value>
+  </data>
+  <data name="Picker_SgdbOpenSettingsHelp" xml:space="preserve">
+    <value>Closes “Choose image” without changes and opens Appearance › Images at the key field.</value>
+  </data>
+  <data name="Picker_SgdbResolving" xml:space="preserve">
+    <value>Looking up the game on SteamGridDB…</value>
+  </data>
+  <data name="Picker_SgdbLoading" xml:space="preserve">
+    <value>Loading {0} from SteamGridDB…</value>
+  </data>
+  <data name="Picker_SgdbSlow" xml:space="preserve">
+    <value>SteamGridDB is responding slowly…</value>
+  </data>
+  <data name="Picker_SgdbResults" xml:space="preserve">
+    <value>{0} {1} from SteamGridDB</value>
+  </data>
+  <data name="Picker_SgdbResultsOne" xml:space="preserve">
+    <value>1 {0} from SteamGridDB</value>
+  </data>
+  <data name="Picker_SgdbPreviewProgress" xml:space="preserve">
+    <value>Previews {0} of {1}</value>
+  </data>
+  <data name="Picker_SgdbEnd" xml:space="preserve">
+    <value>That’s all matching {0} on SteamGridDB.</value>
+  </data>
+  <data name="Picker_SgdbTabLimit" xml:space="preserve">
+    <value>“Choose image” doesn’t show more {0} at once. If none fits, choose a different game under “Game”.</value>
+  </data>
+  <data name="Picker_SgdbMore" xml:space="preserve">
+    <value>Load more</value>
+  </data>
+  <data name="Picker_SgdbMoreName" xml:space="preserve">
+    <value>Load more {0} from SteamGridDB</value>
+  </data>
+  <data name="Picker_SgdbNoMatch" xml:space="preserve">
+    <value>SteamGridDB knows no game named exactly “{0}”. Choose the right game from the list or search for a different name.</value>
+  </data>
+  <data name="Picker_SgdbSteamUnknown" xml:space="preserve">
+    <value>SteamGridDB doesn’t know this Steam app. Choose the right game from the list or search for a different name.</value>
+  </data>
+  <data name="Picker_SgdbNoHits" xml:space="preserve">
+    <value>SteamGridDB found no game for “{0}”. Try a different name.</value>
+  </data>
+  <data name="Picker_SgdbNoImages" xml:space="preserve">
+    <value>SteamGridDB has no matching {0} for this game (still images only, without NSFW or humor tags).</value>
+  </data>
+  <data name="Picker_SgdbUnauthorized" xml:space="preserve">
+    <value>SteamGridDB rejected your API key. Check it in the settings.</value>
+  </data>
+  <data name="Picker_SgdbRateLimited" xml:space="preserve">
+    <value>SteamGridDB reports too many requests. Try again in a minute.</value>
+  </data>
+  <data name="Picker_SgdbOffline" xml:space="preserve">
+    <value>SteamGridDB can’t be reached. Check your internet connection and try again.</value>
+  </data>
+  <data name="Picker_SgdbTimeout" xml:space="preserve">
+    <value>SteamGridDB isn’t responding right now. Try again later.</value>
+  </data>
+  <data name="Picker_SgdbServerError" xml:space="preserve">
+    <value>SteamGridDB didn’t respond as expected. Try again later.</value>
+  </data>
+  <data name="Picker_SgdbBudget" xml:space="preserve">
+    <value>This window has reached the maximum number of requests to SteamGridDB. The images shown can still be chosen.</value>
+  </data>
+  <data name="Picker_SgdbRetry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Picker_SgdbAuthor" xml:space="preserve">
+    <value>by {0}</value>
+  </data>
+  <data name="Picker_SgdbAuthorUnknown" xml:space="preserve">
+    <value>Author unknown</value>
+  </data>
+  <data name="Picker_SgdbItemName" xml:space="preserve">
+    <value>{0} by {1}</value>
+  </data>
+  <data name="Picker_SgdbItemNameNoAuthor" xml:space="preserve">
+    <value>{0}, author unknown</value>
+  </data>
+  <data name="Picker_SgdbItemSize" xml:space="preserve">
+    <value>{0}, {1} × {2} pixels</value>
+  </data>
+  <data name="Picker_SgdbItemHelp" xml:space="preserve">
+    <value>Image from SteamGridDB. It’s downloaded when you apply and saved like a custom image.</value>
+  </data>
+  <data name="Picker_SgdbPreviewFailed" xml:space="preserve">
+    <value>Preview not loaded</value>
+  </data>
+  <data name="Picker_SgdbNoPreview" xml:space="preserve">
+    <value>No preview</value>
+  </data>
+  <data name="Picker_SgdbDownloading" xml:space="preserve">
+    <value>Downloading the chosen image from SteamGridDB…</value>
+  </data>
+  <data name="Picker_SgdbDownloadingMany" xml:space="preserve">
+    <value>Downloading {0} chosen images from SteamGridDB…</value>
+  </data>
+  <data name="Picker_SgdbDownloadFailed" xml:space="preserve">
+    <value>The image couldn’t be downloaded from SteamGridDB. Check your connection and try again, or choose a different one.</value>
+  </data>
+  <data name="Picker_SgdbDownloadBlocked" xml:space="preserve">
+    <value>This image is larger than 32 MB or is at a disallowed address. Choose a different one.</value>
+  </data>
+  <data name="Picker_SgdbDownloadNotAnImage" xml:space="preserve">
+    <value>The image from SteamGridDB can’t be read. Choose a different one.</value>
+  </data>
+  <data name="Picker_SgdbPicksReset" xml:space="preserve">
+    <value>Your SteamGridDB choices in the other tabs no longer apply because you chose a different game.</value>
+  </data>
+  <data name="Picker_SgdbPicksResetNoKey" xml:space="preserve">
+    <value>Your SteamGridDB choice no longer applies because the key was removed.</value>
+  </data>
+  <data name="Picker_MatchRemembered" xml:space="preserve">
+    <value>SteamGridDB game remembered for “{0}”.</value>
   </data>
 </root>

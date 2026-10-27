@@ -1,7 +1,18 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-26. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-27. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Stand 2026-10-27: nächstes Test-Update zusammengeführt (Zweig `integration/naechstes-update`)
+- **Inhalt:** `ui/feedback` (zehn Punkte der Rückmeldung vom 2026-10-22) und die drei Stränge `feature/sgdb-search`
+  (E93), `feature/spielfarben` (E94) und `feature/english` (E95), jeder vor dem Zusammenführen unabhängig geprüft und
+  nachgebessert. Konflikte nur am Ende von `docs/entscheidungen.md`, `GATES.md` und dieser Datei (beide Teile übernommen).
+- **Englisch nachgezogen:** die neuen Texte der SteamGridDB-Suche und der Spielfarben (80 Schlüssel) und die Texte, deren
+  deutscher Wortlaut sich in diesen Strängen geändert hat („Eigenes Bild“, Karte SteamGridDB, Quellenhinweis im Dialog).
+  Der Paritätstest (`ResourceTranslationTests`) ist damit wieder grün.
+- **Unter Linux geprüft:** Bau ohne Warnungen; `HdrPilot.Tests` ohne neue Fehler gegenüber `ui/feedback`.
+- **Offen (nur unter Windows):** `HdrPilot.App.Tests`, alle Oberflächen-Gates (Phasen 10, 14, 15, 16 und die übrigen),
+  Bildschirmfotos (auch englisch), publish-check, Setup und Installation als Test-Update, Abnahme durch den Nutzer.
 
 ## Stand 2026-10-26: SteamGridDB-Suche in „Bild wählen…“ umgesetzt (E93, Phase 14)
 - **Zweig:** `feature/sgdb-search` (von `ui/feedback`), acht Commits in der Reihenfolge der Spezifikation: Kern,
@@ -28,7 +39,8 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
 ## Stand 2026-10-26: Englische Oberfläche und Sprachwahl (Zweig `feature/english`, E95, Phase 16)
 - **Stand:** Zweig `feature/english` auf Basis von `ui/feedback`, lokal committet, nicht hochgeladen. Parallel entstehen
   die SteamGridDB-Suche (E93, Phase 14) und „Farben folgen dem Spiel“ (E94, Phase 15); deren neue resx-Schlüssel sind
-  hier nicht übersetzt, der Paritätstest (`ResourceTranslationTests`) meldet sie nach dem Zusammenführen.
+  hier nicht übersetzt, der Paritätstest (`ResourceTranslationTests`) meldet sie nach dem Zusammenführen (nachgezogen im
+  Zweig `integration/naechstes-update`, siehe oben).
 - **Fertig:** `.en.resx` für alle resx (App, Kern samt neuem `ScanStrings`, Kommandozeile mit neuem `CliStrings`),
   Einstellung `language` mit Erkennung der Anzeigesprache bei neuer Konfiguration, Kulturen beim Start, Setup nach
   Windows (`--ui-language` nur im Prüflauf), Sprachwahl in den Einstellungen mit „Jetzt neu starten“ (`--restarted`),

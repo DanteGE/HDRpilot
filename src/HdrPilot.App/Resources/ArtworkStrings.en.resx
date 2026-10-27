@@ -28,7 +28,7 @@
     <value>Quiver cache</value>
   </data>
   <data name="Source_Custom" xml:space="preserve">
-    <value>Custom file</value>
+    <value>Custom image</value>
   </data>
   <data name="Source_Generated" xml:space="preserve">
     <value>Generated</value>
@@ -70,7 +70,7 @@
     <value>No local images found · substitute images</value>
   </data>
   <data name="Summary_Custom" xml:space="preserve">
-    <value>Custom file · only on this PC</value>
+    <value>Custom image · only on this PC</value>
   </data>
   <data name="Summary_SteamGridDb" xml:space="preserve">
     <value>Hero image from SteamGridDB · downloaded with your own key</value>
@@ -112,7 +112,7 @@
     <value>Name instead of logo</value>
   </data>
   <data name="Candidate_CustomFile" xml:space="preserve">
-    <value>Custom file</value>
+    <value>Custom image</value>
   </data>
   <data name="Candidate_Alternative" xml:space="preserve">
     <value>{0} ({1})</value>

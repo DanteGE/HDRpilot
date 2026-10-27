@@ -942,7 +942,7 @@
     <value>Only fills missing images: hero images {0}, logos {1}, covers {2}. Local images stay untouched.</value>
   </data>
   <data name="SteamGridDbToggleName" xml:space="preserve">
-    <value>Use SteamGridDB</value>
+    <value>Load missing images from SteamGridDB automatically</value>
   </data>
   <data name="SteamGridDbKeyPlaceholder" xml:space="preserve">
     <value>API key from steamgriddb.com</value>
@@ -969,13 +969,13 @@
     <value>Remove the saved SteamGridDB key</value>
   </data>
   <data name="SteamGridDbKeyNote" xml:space="preserve">
-    <value>Default: off. The key is stored encrypted (DPAPI) for your Windows account and never written to the log.</value>
+    <value>Default: off. The key is stored encrypted (DPAPI) for your Windows account and never written to the log. With a key, you can search SteamGridDB yourself in “Choose image…”, even when automatic loading is off.</value>
   </data>
   <data name="SteamGridDbStatusName" xml:space="preserve">
     <value>Last SteamGridDB network access</value>
   </data>
   <data name="SteamGridDbStatusOff" xml:space="preserve">
-    <value>Off · no network access</value>
+    <value>No key · no network access</value>
   </data>
   <data name="SteamGridDbStatusNoKey" xml:space="preserve">
     <value>On · no network access without a key</value>
@@ -1156,5 +1156,26 @@
   </data>
   <data name="RemoveUninstalledNone" xml:space="preserve">
     <value>There are currently no uninstalled games from launchers.</value>
+  </data>
+  <data name="ColorsFollowGameLabel" xml:space="preserve">
+    <value>Colors follow the game</value>
+  </data>
+  <data name="ColorsFollowGameHint" xml:space="preserve">
+    <value>Library accents take on the colors of the selected game’s logo and cover – read once per game; gray images, the settings, the tray menu and dialogs use the color scheme</value>
+  </data>
+  <data name="SteamGridDbSubtitle" xml:space="preserve">
+    <value>More images from the web, only with your own API key.</value>
+  </data>
+  <data name="SteamGridDbAutoLabel" xml:space="preserve">
+    <value>Load missing images automatically</value>
+  </data>
+  <data name="SteamGridDbStatusOffWithKey" xml:space="preserve">
+    <value>Automatic loading off · search in “Choose image…” only on click</value>
+  </data>
+  <data name="SteamGridDbStatusLastSearch" xml:space="preserve">
+    <value>Automatic loading off · last search {0:g} · {1} requests</value>
+  </data>
+  <data name="SteamGridDbStatusLastSearchOn" xml:space="preserve">
+    <value>Last search in “Choose image…” {0:g} · {1} requests</value>
   </data>
 </root>

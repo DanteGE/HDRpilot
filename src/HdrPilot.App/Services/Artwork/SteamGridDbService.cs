@@ -28,6 +28,22 @@ public interface ISteamGridDbArtwork
     void SetSteamGridDbGameId(GameConfig game, long id);
 
     /// <summary>
+    /// Setzt die ID nur, solange noch <paramref name="expected"/> gilt (Prüfen und Setzen unter der Sperre des Verzeichnisses):
+    /// Eine vom Nutzer inzwischen gewählte Zuordnung (E93) überschreibt der automatische Lauf so nie. False: nicht gesetzt.
+    /// Standard: prüft und setzt nacheinander.
+    /// </summary>
+    bool TrySetSteamGridDbGameId(GameConfig game, long? expected, long id)
+    {
+        if (SteamGridDbGameId(game) != expected)
+        {
+            return false;
+        }
+
+        SetSteamGridDbGameId(game, id);
+        return true;
+    }
+
+    /// <summary>
     /// Vom Nutzer in „Bild wählen…“ geänderte Zuordnung (E93): Ist die ID neu, gelten die bisher automatisch geladenen Bilder
     /// und Fehlanzeigen dieses Spiels nicht mehr (gelöscht und vergessen). Standard: nur die ID merken.
     /// </summary>
@@ -37,6 +53,22 @@ public interface ISteamGridDbArtwork
 
     /// <summary>Bild speichern (art\sgdb) und die Änderung melden; InvalidDataException für kein Bild.</summary>
     void StoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when);
+
+    /// <summary>
+    /// Wie <see cref="StoreSteamGridDbImage"/>, aber nur, solange die gemerkte ID noch <paramref name="expectedGameId"/> ist
+    /// (null: Steam-Spiel, keine Prüfung). False: verworfen, weil sich die Zuordnung geändert hat. Standard: prüft und
+    /// speichert nacheinander.
+    /// </summary>
+    bool TryStoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when, long? expectedGameId)
+    {
+        if (expectedGameId is not null && SteamGridDbGameId(game) != expectedGameId)
+        {
+            return false;
+        }
+
+        StoreSteamGridDbImage(game, kind, data, extension, when);
+        return true;
+    }
 
     void FlushIndex();
 
@@ -597,7 +629,12 @@ public sealed partial class SteamGridDbService : ISteamGridDbService
         long? gameId = null;
         if (appId is null)
         {
-            gameId = _options.Artwork.SteamGridDbGameId(game) ?? client.SearchGameId(game.Name, cancellationToken);
+            var remembered = _options.Artwork.SteamGridDbGameId(game);
+            gameId = remembered ?? client.SearchGameId(game.Name, cancellationToken);
+
+            // Die Namenssuche lief im Netz: Hat der Nutzer inzwischen eine Zuordnung gewählt (E93, RememberMatch bricht den
+            // Lauf ab), gilt seine.
+            cancellationToken.ThrowIfCancellationRequested();
             if (gameId is not { } id)
             {
                 foreach (var kind in kinds)
@@ -608,7 +645,11 @@ public sealed partial class SteamGridDbService : ISteamGridDbService
                 return 0;
             }
 
-            _options.Artwork.SetSteamGridDbGameId(game, id);
+            if (remembered is null && !_options.Artwork.TrySetSteamGridDbGameId(game, expected: null, id))
+            {
+                _logger.LogDebug("SteamGridDB: {Game} übersprungen, die Zuordnung hat sich geändert.", game.Key);
+                return 0;
+            }
         }
 
         var filled = 0;
@@ -636,15 +677,15 @@ public sealed partial class SteamGridDbService : ISteamGridDbService
 
                 var (data, extension) = client.Download(asset, cancellationToken);
 
-                // Hat der Nutzer die Zuordnung inzwischen geändert (E93), gehört das Bild zum alten Spiel: nicht speichern.
+                // Hat der Nutzer die Zuordnung inzwischen geändert (E93), gehört das Bild zum alten Spiel: nicht speichern
+                // (geprüft unter der Sperre des Verzeichnisses, zusammen mit dem Eintragen).
                 cancellationToken.ThrowIfCancellationRequested();
-                if (appId is null && _options.Artwork.SteamGridDbGameId(game) != gameId)
+                if (!_options.Artwork.TryStoreSteamGridDbImage(game, kind, data, extension, now, gameId))
                 {
                     _logger.LogDebug("SteamGridDB: {Kind} für {Game} verworfen, die Zuordnung hat sich geändert.", kind, game.Key);
                     continue;
                 }
 
-                _options.Artwork.StoreSteamGridDbImage(game, kind, data, extension, now);
                 filled++;
             }
             catch (SteamGridDbException ex) when (ex.Kind is SteamGridDbErrorKind.Blocked or SteamGridDbErrorKind.InvalidResponse or SteamGridDbErrorKind.HttpError)

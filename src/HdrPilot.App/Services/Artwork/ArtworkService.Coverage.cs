@@ -115,6 +115,27 @@ public sealed partial class ArtworkService
 
     public void SetSteamGridDbGameId(GameConfig game, long id) => WithEntry(game.Key, e => (e.SteamGridDb ??= new IndexedSteamGridDb()).GameId = id);
 
+    /// <summary>Setzt die ID nur, solange noch <paramref name="expected"/> gilt (Prüfen und Setzen unter der Sperre des Verzeichnisses).</summary>
+    public bool TrySetSteamGridDbGameId(GameConfig game, long? expected, long id)
+    {
+        var set = WithEntry(game.Key, e =>
+        {
+            if (e.SteamGridDb?.GameId != expected)
+            {
+                return false;
+            }
+
+            (e.SteamGridDb ??= new IndexedSteamGridDb()).GameId = id;
+            return true;
+        });
+        if (set)
+        {
+            MarkDirty();
+        }
+
+        return set;
+    }
+
     /// <summary>
     /// Neue, vom Nutzer gewählte Zuordnung (E93): Unter der Sperre des Verzeichnisses werden die Bilder und Fehlanzeigen der
     /// alten Zuordnung vergessen und die ID gesetzt; danach (außerhalb der Sperre) die Dateien in art\sgdb gelöscht, das Spiel
@@ -184,8 +205,21 @@ public sealed partial class ArtworkService
     /// Speichert ein Bild von SteamGridDB in art\sgdb (nur, wenn es sich als Bild dekodieren lässt) und meldet die Änderung.
     /// Wirft InvalidDataException für kein Bild und IO-Ausnahmen beim Schreiben.
     /// </summary>
-    public void StoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when)
+    public void StoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when) =>
+        TryStoreSteamGridDbImage(game, kind, data, extension, when, expectedGameId: null);
+
+    /// <summary>
+    /// Wie <see cref="StoreSteamGridDbImage"/>, aber nur, solange die gemerkte ID noch <paramref name="expectedGameId"/> ist
+    /// (null: keine Prüfung). Geprüft wird vor dem Schreiben und noch einmal unter der Sperre des Verzeichnisses beim
+    /// Eintragen; hat sich die Zuordnung dazwischen geändert, wird die eben geschriebene Datei wieder gelöscht. False: verworfen.
+    /// </summary>
+    public bool TryStoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when, long? expectedGameId)
     {
+        if (expectedGameId is not null && SteamGridDbGameId(game) != expectedGameId)
+        {
+            return false;
+        }
+
         try
         {
             // Größe aus dem Kopf vor dem Dekodieren (höchstens 36 MP), dann nur ein kleines Vorschaubild.
@@ -204,14 +238,29 @@ public sealed partial class ArtworkService
         }
 
         ArtworkImaging.WriteAtomic(Path.Combine(folder, file), data);
-        WithEntry(game.Key, e =>
+        var stored = WithEntry(game.Key, e =>
         {
+            if (expectedGameId is not null && e.SteamGridDb?.GameId != expectedGameId)
+            {
+                return false;
+            }
+
             var sgdb = e.SteamGridDb ??= new IndexedSteamGridDb();
             sgdb.Files[NameOf(kind)] = file;
             sgdb.Checked[NameOf(kind)] = when;
+            return true;
         });
+        if (!stored)
+        {
+            // Die neue Zuordnung kennt diese Datei nicht; ihr Lauf beginnt erst nach dem Ende dieses Laufs.
+            _fileSystem.DeleteFile(Path.Combine(folder, file));
+            return false;
+        }
+
+        MarkDirty();
         ForgetInMemory(game.Key);
         Raise(game.Key);
+        return true;
     }
 
     /// <summary>

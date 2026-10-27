@@ -199,6 +199,13 @@ public interface ISteamGridDbService : IDisposable
     ISteamGridDbSearchSession? OpenSearch(GameConfig game) => null;
 
     /// <summary>
+    /// Zuordnung, die ohne Schlüssel und ohne Netz feststeht (Steam-AppID oder gemerkte ID, Anzeige = Name in der
+    /// Bibliothek), für die Spielwahl vor dem ersten Klick; die Sitzung (<see cref="OpenSearch"/>) entsteht erst mit ihm.
+    /// Sonst null. Standard: null.
+    /// </summary>
+    SteamGridDbMatch? PeekMatch(GameConfig game) => null;
+
+    /// <summary>
     /// Eine vom Nutzer gewählte und übernommene Zuordnung merken (nur Spiele ohne Steam-AppID; Steam: nichts). Standard:
     /// nichts.
     /// </summary>

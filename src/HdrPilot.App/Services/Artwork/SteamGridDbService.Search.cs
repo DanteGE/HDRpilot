@@ -39,20 +39,7 @@ public sealed partial class SteamGridDbService
             return null;
         }
 
-        var appId = SteamAppId(game);
-        long? remembered = null;
-        if (appId is null)
-        {
-            try
-            {
-                remembered = _options.Artwork.SteamGridDbGameId(game) is > 0 and var id ? id : null;
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _logger.LogDebug("SteamGridDB: gemerkte Zuordnung nicht lesbar ({Error}).", ex.GetType().Name);
-            }
-        }
-
+        var (appId, remembered) = TargetOf(game);
         // Der entschlüsselte Schlüssel bleibt in dieser Fabrik und im Client; die Sitzung zeigt ihn nirgends.
         var limits = _options.Search;
         var session = new SteamGridDbSearchSession(new SteamGridDbSearchSetup
@@ -87,6 +74,12 @@ public sealed partial class SteamGridDbService
         return session;
     }
 
+    public SteamGridDbMatch? PeekMatch(GameConfig game)
+    {
+        var (appId, remembered) = TargetOf(game);
+        return SteamGridDbSearchSession.InitialMatchFor(game.Name, appId, remembered);
+    }
+
     public void RememberMatch(GameConfig game, long steamGridDbGameId)
     {
         if (SteamAppId(game) is not null || steamGridDbGameId <= 0)
@@ -117,6 +110,26 @@ public sealed partial class SteamGridDbService
         {
             // Die Bilder der neuen Zuordnung füllt ein Lauf nach den üblichen Regeln (nicht während eines Spiels).
             _ = RunAfterAsync(previous);
+        }
+    }
+
+    /// <summary>Steam-AppID oder (nur ohne sie) die gemerkte SteamGridDB-ID; nur lokal, ohne Schlüssel und Netz.</summary>
+    private (string? AppId, long? Remembered) TargetOf(GameConfig game)
+    {
+        var appId = SteamAppId(game);
+        if (appId is not null)
+        {
+            return (appId, null);
+        }
+
+        try
+        {
+            return (null, _options.Artwork.SteamGridDbGameId(game) is > 0 and var id ? id : null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogDebug("SteamGridDB: gemerkte Zuordnung nicht lesbar ({Error}).", ex.GetType().Name);
+            return (null, null);
         }
     }
 

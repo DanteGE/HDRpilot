@@ -579,6 +579,123 @@ public sealed class SteamGridDbSearchSessionTests
     }
 
     [Fact]
+    public async Task A_name_search_of_a_running_fill_never_overwrites_a_match_the_user_chose()
+    {
+        var manual = SgdbRig.Manual("Nebelfahrt");
+        _rig.Config.Games.Add(manual);
+        _rig.Artwork.Missing[manual.Key] = [ArtworkKind.Hero];
+        _rig.PageSizes[0] = 1;
+        using var service = _rig.Service();
+        service.SaveKey(SgdbRig.Key);
+        _rig.Config.Settings.Artwork.SteamGridDb = true;
+
+        // Die Namenssuche des Laufs fand 9101; genau dann übernimmt der Nutzer 9103 (RememberMatch bricht den Lauf ab).
+        _rig.Artwork.BeforeSetGameId = game =>
+        {
+            _rig.Artwork.BeforeSetGameId = null;
+            _rig.Config.Settings.Artwork.SteamGridDb = false; // kein neuer Lauf danach
+            service.RememberMatch(game, 9103);
+        };
+        try
+        {
+            await service.RunNowAsync(Ct);
+        }
+        catch (OperationCanceledException)
+        {
+            // angehalten
+        }
+
+        Assert.Equal(9103, _rig.Artwork.SteamGridDbGameId(manual));
+        Assert.Empty(_rig.Artwork.Stored);
+        Assert.DoesNotContain(_rig.Calls, c => c.Uri.Contains("/heroes/game/9101", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task An_image_of_the_old_match_is_refused_even_when_the_match_changes_while_it_is_stored()
+    {
+        var manual = SgdbRig.Manual("Nebelfahrt");
+        _rig.Config.Games.Add(manual);
+        _rig.Artwork.SetSteamGridDbGameId(manual, 9101);
+        _rig.Artwork.Missing[manual.Key] = [ArtworkKind.Hero];
+        _rig.PageSizes[0] = 1;
+        using var service = _rig.Service();
+        service.SaveKey(SgdbRig.Key);
+        _rig.Config.Settings.Artwork.SteamGridDb = true;
+
+        // Zwischen der Prüfung vor dem Speichern und dem Eintragen ändert sich die Zuordnung (ohne Abbruch).
+        _rig.Artwork.BeforeStore = game => _rig.Artwork.SetSteamGridDbGameId(game, 9102);
+        await service.RunNowAsync(Ct);
+
+        Assert.Empty(_rig.Artwork.Stored);
+        Assert.Equal(9102, _rig.Artwork.SteamGridDbGameId(manual));
+    }
+
+    [Fact]
+    public async Task An_unexpected_error_while_loading_a_preview_fails_only_that_preview()
+    {
+        using var service = _rig.Service();
+        service.SaveKey(SgdbRig.Key);
+        using var session = (SteamGridDbSearchSession)service.OpenSearch(SgdbRig.Steam("553850"))!;
+        var items = (await session.GetAssetsAsync(session.InitialMatch!, ArtworkKind.Cover, 0, Ct)).Items;
+        var broken = items[0];
+        _rig.Override = r => r.RequestUri!.AbsoluteUri == broken.ThumbUrl ? throw new InvalidCastException("Test") : null;
+
+        // Ohne Auffangen endete der Vorschau-Thread mit einer unbehandelten Ausnahme (und mit ihm die App).
+        await Assert.ThrowsAsync<InvalidCastException>(() => session.LoadPreviewAsync(broken, 130, Ct));
+        var next = await session.LoadPreviewAsync(items[1], 130, Ct);
+
+        Assert.NotNull(next.Image);
+        Assert.Contains(_rig.Log.Entries, e => e.Level == LogLevel.Error && e.Message == "SteamGridDB-Suche: Fehler beim Laden einer Vorschau.");
+    }
+
+    [Fact]
+    public async Task Previews_whose_queue_is_cancelled_while_they_are_queued_always_finish()
+    {
+        using var service = _rig.Service();
+        service.SaveKey(SgdbRig.Key);
+        using var session = (SteamGridDbSearchSession)service.OpenSearch(SgdbRig.Steam("553850"))!;
+        var items = (await session.GetAssetsAsync(session.InitialMatch!, ArtworkKind.Cover, 0, Ct)).Items;
+
+        // Abbruch der Warteschlange mitten im Einreihen (auch schon vor der Anmeldung): jede Aufgabe endet, geladen oder
+        // abgebrochen, und keine bleibt hängen.
+        for (var round = 0; round < 20; round++)
+        {
+            using var queue = new CancellationTokenSource();
+            var tasks = new List<Task<SteamGridDbPreview>>();
+            var cancel = Task.Run(async () =>
+            {
+                await Task.Yield();
+                queue.Cancel();
+            }, Ct);
+            foreach (var item in items.Take(8))
+            {
+                tasks.Add(session.LoadPreviewAsync(item, 64, queue.Token));
+            }
+
+            await cancel;
+            await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(10000, Ct)).WaitAsync(Ct);
+            Assert.All(tasks, t => Assert.True(t.IsCompleted));
+        }
+    }
+
+    [Fact]
+    public void Peek_shows_the_match_without_key_session_or_handler()
+    {
+        using var service = _rig.Service();
+        var manual = new HdrPilot.Core.Config.GameConfig { Source = HdrPilot.Core.Games.GameSource.Gog, SourceId = "1207658931", Name = "Nebelfahrt" };
+        var unknown = new HdrPilot.Core.Config.GameConfig { Source = HdrPilot.Core.Games.GameSource.Gog, SourceId = "1207658932", Name = "Kupferwald" };
+        _rig.Artwork.SetSteamGridDbGameId(manual, 9105);
+
+        Assert.Equal(SteamGridDbMatchKind.SteamAppId, service.PeekMatch(SgdbRig.Steam("553850"))!.Kind);
+        var remembered = service.PeekMatch(manual)!;
+        Assert.Equal((SteamGridDbMatchKind.Remembered, 9105L, "Nebelfahrt"), (remembered.Kind, remembered.Target.GameId!.Value, remembered.DisplayName));
+        Assert.Null(service.PeekMatch(unknown));
+        Assert.Null(((ISteamGridDbService)NullSteamGridDbService.Instance).PeekMatch(manual));
+        Assert.Equal(0, service.HandlersCreated);
+        Assert.DoesNotContain(_rig.Log.Entries, e => e.Message.StartsWith("SteamGridDB-Suche", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Preview_threads_end_and_shut_down_their_dispatcher()
     {
         using var service = _rig.Service();

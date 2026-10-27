@@ -136,6 +136,32 @@ public sealed class ArtworkCustomDataTests : IDisposable
         Assert.Contains(game.Key, changed);
     }
 
+    [Fact]
+    public void Images_and_ids_of_an_old_match_are_refused_under_the_index_lock()
+    {
+        var service = _art.Service();
+        var game = new HdrPilot.Core.Config.GameConfig { Source = HdrPilot.Core.Games.GameSource.Gog, SourceId = "1207658925", Name = "Kupferwald" };
+        var when = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        var png = Encode(ArtworkFixture.Hero(), png: true);
+        var file = Path.Combine(_art.ArtDirectory, ArtworkFiles.SteamGridDbFolder, ArtworkFiles.SteamGridDbFileName(game.Key, ArtworkKind.Hero, ".png"));
+
+        // Noch keine ID: Ein Lauf setzt die seiner Namenssuche, eine schon gesetzte (vom Nutzer gewählte) nie.
+        Assert.True(service.TrySetSteamGridDbGameId(game, expected: null, 9101));
+        Assert.False(service.TrySetSteamGridDbGameId(game, expected: null, 9200));
+        Assert.Equal(9101, service.SteamGridDbGameId(game));
+
+        // Ein Bild für eine andere als die geltende ID wird weder geschrieben noch eingetragen.
+        Assert.False(service.TryStoreSteamGridDbImage(game, ArtworkKind.Hero, png, ".png", when, expectedGameId: 9102));
+        Assert.False(File.Exists(file));
+        Assert.Null(service.SteamGridDbChecked(game, ArtworkKind.Hero));
+
+        Assert.True(service.TryStoreSteamGridDbImage(game, ArtworkKind.Hero, png, ".png", when, expectedGameId: 9101));
+        Assert.True(File.Exists(file));
+        Assert.Equal(when, service.SteamGridDbChecked(game, ArtworkKind.Hero));
+        Assert.True(service.TrySetSteamGridDbGameId(game, expected: 9101, 9102));
+        Assert.Equal(9102, service.SteamGridDbGameId(game));
+    }
+
     private static byte[] Encode(BitmapSource image, bool png)
     {
         BitmapEncoder encoder = png ? new PngBitmapEncoder() : new JpegBitmapEncoder { QualityLevel = 95 };

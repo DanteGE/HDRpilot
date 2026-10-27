@@ -606,7 +606,7 @@ internal sealed class SteamGridDbFixtureService(SteamGridDbKeyState keyState = S
             return null;
         }
 
-        var appId = game.Source == HdrPilot.Core.Games.GameSource.Steam && SteamGridDbTarget.IsSteamAppId(game.SourceId) ? game.SourceId : null;
+        var appId = SteamAppId(game);
         var search = limits ?? SteamGridDbSearchLimits.Default;
         return new SteamGridDbSearchSession(new SteamGridDbSearchSetup
         {
@@ -619,6 +619,8 @@ internal sealed class SteamGridDbFixtureService(SteamGridDbKeyState keyState = S
             Lifetime = _lifetime.Token,
         });
     }
+
+    public SteamGridDbMatch? PeekMatch(GameConfig game) => SteamGridDbSearchSession.InitialMatchFor(game.Name, SteamAppId(game), null);
 
     public void SetEnabled(bool enabled)
     {
@@ -646,4 +648,7 @@ internal sealed class SteamGridDbFixtureService(SteamGridDbKeyState keyState = S
         _hold.Set();
         _lifetime.Cancel();
     }
+
+    private static string? SteamAppId(GameConfig game) =>
+        game.Source == HdrPilot.Core.Games.GameSource.Steam && SteamGridDbTarget.IsSteamAppId(game.SourceId) ? game.SourceId : null;
 }

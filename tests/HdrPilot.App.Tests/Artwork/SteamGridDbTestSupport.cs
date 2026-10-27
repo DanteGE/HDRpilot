@@ -117,6 +117,9 @@ public sealed class FakeSgdbArtwork : ISteamGridDbArtwork
     /// <summary>Wird vor dem Speichern eines Bildes aufgerufen (etwa um mitten im Lauf die Zuordnung zu ändern).</summary>
     public Action<GameConfig>? BeforeStore { get; set; }
 
+    /// <summary>Wird vor dem Setzen der ID nach einer Namenssuche aufgerufen (zwischen Prüfen und Setzen eines Laufs).</summary>
+    public Action<GameConfig>? BeforeSetGameId { get; set; }
+
     /// <summary>Aufrufe von <see cref="MissingKinds"/> (Nachweis: der Zustand des Schlüssels zählt nichts).</summary>
     public int MissingCalls => Volatile.Read(ref _missingCalls);
 
@@ -146,6 +149,21 @@ public sealed class FakeSgdbArtwork : ISteamGridDbArtwork
         }
     }
 
+    public bool TrySetSteamGridDbGameId(GameConfig game, long? expected, long id)
+    {
+        BeforeSetGameId?.Invoke(game);
+        lock (GameIds)
+        {
+            if ((GameIds.TryGetValue(game.Key, out var current) ? current : (long?)null) != expected)
+            {
+                return false;
+            }
+
+            GameIds[game.Key] = id;
+            return true;
+        }
+    }
+
     public void ReplaceSteamGridDbGame(GameConfig game, long id)
     {
         Replaced.Add((game.Key, id));
@@ -158,9 +176,21 @@ public sealed class FakeSgdbArtwork : ISteamGridDbArtwork
         Stored.RemoveAll(s => s.Key == game.Key);
     }
 
-    public void StoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when)
+    public void StoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when) =>
+        TryStoreSteamGridDbImage(game, kind, data, extension, when, expectedGameId: null);
+
+    /// <summary>Prüft die ID wie der Bilderdienst unter seiner Sperre: nach <see cref="BeforeStore"/>, zusammen mit dem Eintragen.</summary>
+    public bool TryStoreSteamGridDbImage(GameConfig game, ArtworkKind kind, byte[] data, string extension, DateTimeOffset when, long? expectedGameId)
     {
         BeforeStore?.Invoke(game);
+        lock (GameIds)
+        {
+            if (expectedGameId is not null && (GameIds.TryGetValue(game.Key, out var current) ? current : (long?)null) != expectedGameId)
+            {
+                return false;
+            }
+        }
+
         Stored.Add((game.Key, kind, extension));
         if (Missing.TryGetValue(game.Key, out var kinds))
         {
@@ -168,6 +198,7 @@ public sealed class FakeSgdbArtwork : ISteamGridDbArtwork
         }
 
         Checked[(game.Key, kind)] = when;
+        return true;
     }
 
     public void FlushIndex() => Flushes++;

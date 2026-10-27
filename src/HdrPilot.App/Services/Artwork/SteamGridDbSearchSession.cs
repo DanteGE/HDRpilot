@@ -74,11 +74,7 @@ internal sealed class SteamGridDbSearchSession : ISteamGridDbSearchSession
     {
         _setup = setup;
         _budget = new SteamGridDbBudget(setup.Limits.MaxApiRequests, setup.Limits.MaxImageRequests, setup.Limits.MaxPreviewBytes);
-        InitialMatch = setup.SteamAppId is { } appId && SteamGridDbTarget.IsSteamAppId(appId)
-            ? new SteamGridDbMatch(SteamGridDbMatchKind.SteamAppId, SteamGridDbTarget.Steam(appId), setup.GameName, null, false)
-            : setup.RememberedId is > 0 and var id
-                ? new SteamGridDbMatch(SteamGridDbMatchKind.Remembered, SteamGridDbTarget.Game(id), setup.GameName, null, false)
-                : null;
+        InitialMatch = InitialMatchFor(setup.GameName, setup.SteamAppId, setup.RememberedId);
         _lifetime = setup.Lifetime.Register(static state => ((SteamGridDbSearchSession)state!).Dispose(), this);
     }
 
@@ -121,6 +117,14 @@ internal sealed class SteamGridDbSearchSession : ISteamGridDbSearchSession
             }
         }
     }
+
+    /// <summary>Zuordnung ohne Netz: Steam-AppID vor gemerkter ID (Anzeige = Name in der Bibliothek); sonst null.</summary>
+    internal static SteamGridDbMatch? InitialMatchFor(string gameName, string? steamAppId, long? rememberedId) =>
+        steamAppId is { } appId && SteamGridDbTarget.IsSteamAppId(appId)
+            ? new SteamGridDbMatch(SteamGridDbMatchKind.SteamAppId, SteamGridDbTarget.Steam(appId), gameName, null, false)
+            : rememberedId is > 0 and var id
+                ? new SteamGridDbMatch(SteamGridDbMatchKind.Remembered, SteamGridDbTarget.Game(id), gameName, null, false)
+                : null;
 
     public Task<SteamGridDbResolveResult> ResolveAsync(CancellationToken cancellationToken)
     {
@@ -181,6 +185,16 @@ internal sealed class SteamGridDbSearchSession : ISteamGridDbSearchSession
             }
 
             job.Node = _queue.AddLast(job);
+
+            // Solange sie wartet, nimmt das Token der Warteschlange sie wieder heraus. Angemeldet unter der Sperre, bevor
+            // ein Vorschau-Thread die Aufgabe sehen kann (er gibt die Anmeldung frei, wenn er sie nimmt). Ist das Token eben
+            // abgebrochen, läuft Unqueue hier sofort (die Sperre lässt denselben Thread wieder hinein).
+            job.Registration = queueToken.Register(() => Unqueue(job));
+            if (job.Node is null)
+            {
+                return job.Completion.Task;
+            }
+
             if (_idle > 0)
             {
                 Monitor.Pulse(_gate);
@@ -191,8 +205,6 @@ internal sealed class SteamGridDbSearchSession : ISteamGridDbSearchSession
             }
         }
 
-        // Solange sie wartet, nimmt das Token der Warteschlange sie wieder heraus.
-        job.Registration = queueToken.Register(() => Unqueue(job));
         return job.Completion.Task;
     }
 
@@ -556,6 +568,12 @@ internal sealed class SteamGridDbSearchSession : ISteamGridDbSearchSession
         catch (Exception ex) when (ArtworkImaging.IsDecodeFailure(ex) || ex is System.IO.InvalidDataException or NotSupportedException or ArgumentException)
         {
             _setup.Logger.LogInformation("SteamGridDB-Suche: Vorschau nicht lesbar ({Error}).", ex.GetType().Name);
+            job.Completion.TrySetException(ex);
+        }
+        catch (Exception ex)
+        {
+            // Ein eigener Thread ohne Auffangen beendete sonst die App; die Kachel zeigt „Vorschau nicht geladen“.
+            _setup.Logger.LogError(ex, "SteamGridDB-Suche: Fehler beim Laden einer Vorschau.");
             job.Completion.TrySetException(ex);
         }
     }

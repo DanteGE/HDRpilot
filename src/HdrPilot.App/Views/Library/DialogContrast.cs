@@ -22,20 +22,21 @@ public sealed record HighContrastPalette(Color Window, Color WindowText, Color G
 
 /// <summary>
 /// Hoher Kontrast für einen Dialog (E93, D23): Jeder Pinsel des Themas, den der Dialog nutzt, wird in seinen Ressourcen durch
-/// eine Systemfarbe ersetzt (Flächen → Fensterfarbe, Glanz und weiche Flächen → durchsichtig, Text und Linien →
+/// eine Systemfarbe ersetzt (Flächen und Glas → Fensterfarbe, Glanz und weiche Flächen → durchsichtig, Text und Linien →
 /// Fenstertext, gedämpfter Text → GrayText, Akzent und Ringe → Highlight, Akzenttext → HotTrack). Bedeutung tragen dann
-/// Symbol und Text. Ohne Palette werden die Ersetzungen wieder entfernt; alles darin folgt über DynamicResource.
+/// Symbol und Text. Ohne Palette werden die Ersetzungen wieder entfernt; alles darin folgt über DynamicResource. Dass jeder
+/// Pinsel, den Vorlagen und Stile des Dialogs erreichen, hier steht, prüft ein Test am XAML-Text (DialogContrastCoverageTests).
 /// </summary>
 public static class DialogContrast
 {
     /// <summary>Pinsel des Themas mit ihrer Rolle im Kontrastdesign.</summary>
     public static IReadOnlyList<(string Key, Func<HighContrastPalette, Brush> Brush)> Map { get; } =
     [
-        .. new[] { ThemeKeys.BrushWindowBackground, ThemeKeys.BrushTitleBar, ThemeKeys.BrushSurface, ThemeKeys.BrushSurface1, ThemeKeys.BrushSurface2, ThemeKeys.BrushSurface3, ThemeKeys.BrushSurfaceInput, ThemeKeys.BrushPanel, ThemeKeys.BrushPlate, ThemeKeys.BrushSurfaceHover, ThemeKeys.BrushSurfaceSelected, ThemeKeys.BrushMenu }
+        .. new[] { ThemeKeys.BrushWindowBackground, ThemeKeys.BrushTitleBar, ThemeKeys.BrushSurface, ThemeKeys.BrushSurface1, ThemeKeys.BrushSurface2, ThemeKeys.BrushSurface3, ThemeKeys.BrushSurfaceInput, ThemeKeys.BrushPanel, ThemeKeys.BrushPlate, ThemeKeys.BrushSurfaceHover, ThemeKeys.BrushSurfaceSelected, ThemeKeys.BrushMenu, ThemeKeys.BrushGlass }
             .Select(k => (k, (Func<HighContrastPalette, Brush>)(p => Solid(p.Window)))),
         .. new[] { ThemeKeys.BrushBackgroundGlow, ThemeKeys.BrushBackgroundGlow2, ThemeKeys.BrushAccentShine, ThemeKeys.BrushAtmosphereSoft, ThemeKeys.BrushShine, ThemeKeys.BrushAccentSoft, ThemeKeys.BrushSelectionFill, ThemeKeys.BrushSuccessSoft, ThemeKeys.BrushWarningSoft, ThemeKeys.BrushDangerSoft, ThemeKeys.BrushPanelHighlight }
             .Select(k => (k, (Func<HighContrastPalette, Brush>)(_ => Solid(Colors.Transparent)))),
-        .. new[] { ThemeKeys.BrushText, ThemeKeys.BrushTextSecondary, ThemeKeys.BrushLine, ThemeKeys.BrushLineStrong, ThemeKeys.BrushBorder, ThemeKeys.BrushBorderStrong, ThemeKeys.BrushDanger, ThemeKeys.BrushWarning, ThemeKeys.BrushSuccess }
+        .. new[] { ThemeKeys.BrushText, ThemeKeys.BrushTextSecondary, ThemeKeys.BrushLine, ThemeKeys.BrushLineStrong, ThemeKeys.BrushBorder, ThemeKeys.BrushBorderStrong, ThemeKeys.BrushDanger, ThemeKeys.BrushWarning, ThemeKeys.BrushSuccess, ThemeKeys.BrushTextOnArt, ThemeKeys.BrushTextOnArtSecondary }
             .Select(k => (k, (Func<HighContrastPalette, Brush>)(p => Solid(p.WindowText)))),
         (ThemeKeys.BrushTextMuted, p => Solid(p.GrayText)),
         .. new[] { ThemeKeys.BrushAccent, ThemeKeys.BrushAccentStrong, ThemeKeys.BrushAccentSolid, ThemeKeys.BrushSelectionRing, ThemeKeys.BrushFocusRing }

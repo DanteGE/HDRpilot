@@ -430,6 +430,44 @@ public sealed partial class ArtworkPickerSearchWindowTests
         });
     }
 
+    [Theory]
+    [MemberData(nameof(ContrastCases))]
+    public void High_contrast_leaves_no_theme_brush_on_screen(string theme, bool dark)
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Jeder sichtbare Pinsel stammt im Kontrastdesign aus DialogContrast, nie aus dem Thema (etwa das helle Glas hinter
+            // den Reitern unter weißem Text in „Nachthimmel“, Prüfung 2026-10-26).
+            var palette = theme == "Nachthimmel" ? HighContrastPalette.NightSky : HighContrastPalette.Desert;
+            var (dialog, picker, _) = Open(ArtworkKind.Logo);
+            UseTheme(dialog, dark);
+            var tokens = dialog.Resources.MergedDictionaries[^1];
+            var themeBrushes = tokens.Keys.OfType<string>().Where(k => k.StartsWith("Hp.Brush.", StringComparison.Ordinal))
+                .Select(k => (Key: k, Brush: tokens[k] as Brush)).Where(b => b.Brush is not null).ToList();
+            Load(picker);
+            Search(picker, ArtworkKind.Logo);
+            picker.Online.IsMatchOpen = true;
+            dialog.SetHighContrast(palette);
+            Arrange(dialog, double.PositiveInfinity);
+
+            var failures = new List<string>();
+            foreach (var element in Descendants(dialog).OfType<FrameworkElement>().Where(e => e.IsVisible))
+            {
+                foreach (var brush in BrushesOf(element))
+                {
+                    if (themeBrushes.FirstOrDefault(b => ReferenceEquals(b.Brush, brush)) is { Key: { } key })
+                    {
+                        failures.Add(element.GetType().Name + " " + element.Name + ": " + key);
+                    }
+                }
+            }
+
+            Assert.True(failures.Count == 0, string.Join(", ", failures.Distinct().Take(10)));
+            Assert.Equal(palette.Window, ((SolidColorBrush)dialog.FindResource(ThemeKeys.BrushGlass)).Color);
+            dialog.Close();
+        });
+    }
+
     [Fact]
     public void Effect_level_off_starts_no_animation_and_full_reveals_once()
     {
@@ -698,6 +736,21 @@ public sealed partial class ArtworkPickerSearchWindowTests
         }
 
         return fallback;
+    }
+
+    /// <summary>Pinsel, mit denen ein Element malt (Fläche, Rahmen, Schrift, Form).</summary>
+    private static IEnumerable<Brush> BrushesOf(FrameworkElement element)
+    {
+        Brush?[] brushes = element switch
+        {
+            Border border => [border.Background, border.BorderBrush],
+            Panel panel => [panel.Background],
+            Control control => [control.Background, control.BorderBrush, control.Foreground],
+            TextBlock text => [text.Background, text.Foreground],
+            System.Windows.Shapes.Shape shape => [shape.Fill, shape.Stroke],
+            _ => [],
+        };
+        return brushes.OfType<Brush>();
     }
 
     private static double Contrast(Color a, Color b)

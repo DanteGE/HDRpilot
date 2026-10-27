@@ -77,6 +77,7 @@
     <SolidColorBrush x:Key="Hp.Brush.PanelHighlight" Color="#24FFFFFF" />
     <SolidColorBrush x:Key="Hp.Brush.Menu" Color="#FA101118" />
     <SolidColorBrush x:Key="Hp.Brush.Glass" Color="#A80C0D13" />
+    <SolidColorBrush x:Key="Hp.Brush.Plate" Color="#FF0B0C11" />
     <SolidColorBrush x:Key="Hp.Brush.ToggleOff" Color="#FFC9CCD8" />
     <LinearGradientBrush x:Key="Hp.Brush.ToggleOn" StartPoint="0,0.32" EndPoint="1,0.68">
         <GradientStop Color="#FFFF8A3D" Offset="0" />

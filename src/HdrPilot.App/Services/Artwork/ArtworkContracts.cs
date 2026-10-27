@@ -159,6 +159,13 @@ public interface IArtworkService : IDisposable
     /// <summary>Eigene Datei zu einem Kennzeichen löschen (andere Kennzeichen: nichts).</summary>
     void DeleteCustomImage(string? token);
 
+    /// <summary>
+    /// Wie <see cref="SaveCustomImage"/>, aus Bytes (ein von SteamGridDB übernommenes Bild, E93). Nicht auf dem UI-Thread.
+    /// Standard: nicht unterstützt (keine Temp-Dateien mit fremden Bytes).
+    /// </summary>
+    string SaveCustomImageData(GameConfig game, ArtworkKind kind, byte[] data) =>
+        throw new NotSupportedException("Eigene Bilder aus Daten speichert nur der Bilddienst.");
+
     /// <summary>Abdeckung der Bibliothek mit lokalen Bildern je Launcher (im Hintergrund, nur lesend).</summary>
     Task<ArtworkCoverage> GetCoverageAsync(IReadOnlyList<GameConfig> games, CancellationToken cancellationToken = default);
 

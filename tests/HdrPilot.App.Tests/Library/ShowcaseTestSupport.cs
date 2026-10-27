@@ -59,6 +59,9 @@ public sealed class FakeArtworkService : IArtworkService
 
     public List<(string Key, ArtworkKind Kind, string Path)> Saved { get; } = [];
 
+    /// <summary>Aus Bytes gespeicherte Bilder (von SteamGridDB übernommen, E93): Spiel, Art und Länge.</summary>
+    public List<(string Key, ArtworkKind Kind, int Length)> SavedData { get; } = [];
+
     public int Leases { get; private set; }
 
     /// <summary>Kleines einfarbiges Bild (eingefroren).</summary>
@@ -141,6 +144,12 @@ public sealed class FakeArtworkService : IArtworkService
     {
         Saved.Add((game.Key, kind, sourcePath));
         return ArtworkOverride.Custom("bild-" + Saved.Count + ".png");
+    }
+
+    public string SaveCustomImageData(GameConfig game, ArtworkKind kind, byte[] data)
+    {
+        SavedData.Add((game.Key, kind, data.Length));
+        return ArtworkOverride.Custom(game.Key.Replace(':', '-') + "-" + kind.ToString().ToLowerInvariant() + ".jpg");
     }
 
     public void DeleteCustomImage(string? token) => Deleted.Add(token);

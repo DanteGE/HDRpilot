@@ -62,7 +62,7 @@ public sealed partial class AppServices
 
     private partial Window CreateSettingsWindow()
     {
-        var window = new SettingsWindow();
+        var window = new SettingsWindow { TestLog = TestLog() };
         window.Attach(new SettingsViewModel(
             ShellAdapter,
             new DialogFolderPicker(window),
@@ -82,6 +82,20 @@ public sealed partial class AppServices
         scenes.Add(SettingsScene("darstellung", "NavAppearance"));
         scenes.Add(SettingsScene("darstellung-bilder", "NavAppearanceArtwork"));
         scenes.Add(SettingsScene("darstellung-tray", "NavAppearanceTray"));
+
+        // Karte „SteamGridDB (online)“ im Zustand des Prüflaufs phase14-sgdb-ui.ps1 (Schlüssel gespeichert, Schalter aus; E93).
+        scenes.Add(new SnapshotScene("einstellungen", "bilder-sgdb", CreateSettingsWindow, async window =>
+        {
+            if (window is SettingsWindow settings && settings.DataContext is SettingsViewModel model)
+            {
+                await Task.WhenAny(model.Appearance.Loaded, Task.Delay(TimeSpan.FromSeconds(20)));
+                await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                settings.ScrollToSteamGridDbCard();
+            }
+        })
+        {
+            Settle = TimeSpan.FromMilliseconds(1800),
+        });
 
         // Karte „Bibliothek“ (E90) und die Rückfrage des Sammel-Entfernens mit allen entfernbaren Spielen der Ablage.
         scenes.Add(SettingsScene("bibliothek", "NavLibrary"));

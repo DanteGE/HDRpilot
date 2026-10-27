@@ -3,6 +3,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:infra="clr-namespace:HdrPilot.App.Infrastructure"
                     xmlns:lib="clr-namespace:HdrPilot.App.Views.Library"
+                    xmlns:shell="clr-namespace:HdrPilot.App.Views.Shell"
                     xmlns:res="clr-namespace:HdrPilot.App.Resources"
                     xmlns:vm="clr-namespace:HdrPilot.App.ViewModels.Library"
                     Title="{x:Static res:LibraryStrings.Picker_Title}"
@@ -11,127 +12,365 @@
                     Width="880" SizeToContent="Height" ResizeMode="NoResize" ShowInTaskbar="False"
                     WindowStartupLocation="CenterOwner">
     <infra:ChromeWindow.Resources>
-        <!-- Eine Möglichkeit (Prototyp .cho): Vorschau, „AKTUELL“, Beschriftung, Hinweis, Größe -->
-        <DataTemplate x:Key="ChoiceTemplate" DataType="{x:Type vm:ArtworkChoiceViewModel}">
+        <!--
+            Kachel (lokal und online, E93): Vorschau in der Form der Bildart (Cover 130 × 195 im Hochformat 2:3, Titelbild
+            200 × 65, Logo 200 × 104 ganz auf dem Schachbrett), darunter zwei feste Zeilen. Platten in Hp.Brush.Plate.
+        -->
+        <DataTemplate x:Key="TileTemplate" DataType="{x:Type vm:ArtworkChoiceViewModel}">
             <StackPanel>
-                <Grid x:Name="PreviewBox" Height="96" ClipToBounds="True">
-                    <Border CornerRadius="16,16,0,0" Background="#FF0B0C11" />
-                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xEB9F;" FontSize="26" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
-                    <Border CornerRadius="16,16,0,0" lib:ImageFill.Source="{Binding Preview}" Visibility="{Binding Preview, Converter={StaticResource Lib.BoolToVisibility}}" />
+                <Grid x:Name="PreviewBox" Height="65" ClipToBounds="True">
+                    <Border x:Name="Plate" CornerRadius="16,16,0,0" Background="{DynamicResource Hp.Brush.Plate}"
+                            BorderBrush="{DynamicResource Lib.Brush.ContrastFrame}" BorderThickness="{DynamicResource Lib.ContrastFrameThickness}" />
+                    <StackPanel x:Name="Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock x:Name="PlaceholderGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xEB9F;" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                        <TextBlock Text="{Binding PlaceholderText}" FontSize="11" Margin="6,4,6,0" TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextMuted}"
+                                   Visibility="{Binding ShowPlaceholderText, Converter={StaticResource Lib.BoolToVisibility}}" />
+                    </StackPanel>
+                    <Border x:Name="Art" CornerRadius="16,16,0,0" lib:ImageFill.Source="{Binding Preview}" lib:ImageFill.FadeOnArrival="True"
+                            Visibility="{Binding HasPreview, Converter={StaticResource Lib.BoolToVisibility}}" />
                     <Border CornerRadius="5" Padding="6,3" Margin="8" HorizontalAlignment="Left" VerticalAlignment="Top" Background="{DynamicResource Hp.Brush.Accent}"
                             Visibility="{Binding IsCurrent, Converter={StaticResource Lib.BoolToVisibility}}">
                         <TextBlock Text="{x:Static res:LibraryStrings.Picker_Current}" FontSize="9.5" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.TextOnAccent}" />
                     </Border>
                 </Grid>
-                <StackPanel Margin="11,9,11,11">
-                    <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.Text}" />
-                    <TextBlock Text="{Binding SizeText}" FontSize="11.5" Margin="0,3,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
-                               Visibility="{Binding SizeText, Converter={StaticResource Lib.BoolToVisibility}}" />
-                    <TextBlock Text="{Binding Note}" FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
-                               Visibility="{Binding HasNote, Converter={StaticResource Lib.BoolToVisibility}}" />
+                <StackPanel Margin="9,8,9,10">
+                    <TextBlock Text="{Binding Label}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"
+                               Foreground="{DynamicResource Hp.Brush.Text}" />
+                    <TextBlock x:Name="SecondLine" Text="{Binding SecondLine}" FontSize="11" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource Hp.Brush.TextSecondary}" ToolTip="{Binding Note}" AutomationProperties.HelpText="{Binding Note}" />
                 </StackPanel>
             </StackPanel>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding DataContext.IsCover, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                    <Setter TargetName="PreviewBox" Property="Height" Value="150" />
+                <DataTrigger Binding="{Binding Kind}" Value="Cover">
+                    <Setter TargetName="PreviewBox" Property="Height" Value="195" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Logo">
+                    <Setter TargetName="PreviewBox" Property="Height" Value="104" />
+                    <Setter TargetName="Plate" Property="Background" Value="{DynamicResource Lib.LogoPlate}" />
+                    <Setter TargetName="Art" Property="Margin" Value="12" />
+                    <Setter TargetName="Art" Property="CornerRadius" Value="0" />
+                    <Setter TargetName="Art" Property="lib:ImageFill.Stretch" Value="Uniform" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsOnline}" Value="True">
+                    <Setter TargetName="PlaceholderGlyph" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PreviewState}" Value="Failed">
+                    <Setter TargetName="PlaceholderGlyph" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="PlaceholderGlyph" Property="Text" Value="&#xE91B;" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding PreviewState}" Value="Missing">
+                    <Setter TargetName="PlaceholderGlyph" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="PlaceholderGlyph" Property="Text" Value="&#xE91B;" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
+
+        <!-- Ladegerüst: eine Reihe Platten in der Form der Bildart, ruhig (kein Schimmer) -->
+        <Style x:Key="SkeletonPlate" TargetType="Border">
+            <Setter Property="Width" Value="200" />
+            <Setter Property="Height" Value="109" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Background" Value="{DynamicResource Hp.Brush.Plate}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Lib.Brush.ContrastFrame}" />
+            <Setter Property="BorderThickness" Value="{DynamicResource Lib.ContrastFrameThickness}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCover}" Value="True">
+                    <Setter Property="Width" Value="130" />
+                    <Setter Property="Height" Value="239" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLogo}" Value="True">
+                    <Setter Property="Height" Value="148" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SkeletonExtra" TargetType="Border" BasedOn="{StaticResource SkeletonPlate}">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCover}" Value="True">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Setter Property="Width" Value="130" />
+                    <Setter Property="Height" Value="239" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- „Eigene Datei…“ in der Form der Kacheln dieser Bildart -->
+        <Style x:Key="PickFileTile" TargetType="Button" BasedOn="{StaticResource Lib.PickerButton}">
+            <Setter Property="Width" Value="200" />
+            <Setter Property="Height" Value="Auto" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCover}" Value="True">
+                    <Setter Property="Width" Value="130" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PickFileBox" TargetType="Grid">
+            <Setter Property="Height" Value="65" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsCover}" Value="True">
+                    <Setter Property="Height" Value="195" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLogo}" Value="True">
+                    <Setter Property="Height" Value="104" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </infra:ChromeWindow.Resources>
 
     <Grid x:Name="Body" Margin="24,0,24,20">
-        <Border Height="1" VerticalAlignment="Top" Margin="0,0,0,0" Background="{DynamicResource Hp.Brush.AccentShine}" Opacity="0.8" />
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition x:Name="MiddleRow" Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Border Height="1" VerticalAlignment="Top" Background="{DynamicResource Hp.Brush.AccentShine}" Opacity="0.8" />
         <StackPanel Margin="0,14,0,0">
-            <Grid>
-                <StackPanel>
-                    <TextBlock Text="{x:Static res:LibraryStrings.Picker_Title}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="21" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}" />
-                    <TextBlock Text="{Binding Subtitle}" FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
-                </StackPanel>
-            </Grid>
+            <TextBlock Text="{x:Static res:LibraryStrings.Picker_Title}" FontFamily="{StaticResource Lib.Font.Display}" FontSize="21" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}" />
+            <TextBlock Text="{Binding Subtitle}" FontSize="13" Margin="0,6,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+        </StackPanel>
 
-            <!-- Bildart -->
-            <Border Style="{StaticResource Lib.SegmentFrame}" HorizontalAlignment="Left" Margin="0,16,0,0" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_Tabs}">
-                <StackPanel Orientation="Horizontal">
-                    <RadioButton Style="{StaticResource Lib.SegmentRadio}" GroupName="ArtworkKind" IsChecked="{Binding IsHero}" Padding="12,0"
-                                 AutomationProperties.AutomationId="ArtworkTabHero" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_TabHero}"
-                                 Content="{x:Static res:LibraryStrings.Picker_TabHero}" />
-                    <RadioButton Style="{StaticResource Lib.SegmentRadio}" GroupName="ArtworkKind" IsChecked="{Binding IsLogo}" Padding="12,0"
-                                 AutomationProperties.AutomationId="ArtworkTabLogo" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_TabLogo}"
-                                 Content="{x:Static res:LibraryStrings.Picker_TabLogo}" />
-                    <RadioButton Style="{StaticResource Lib.SegmentRadio}" GroupName="ArtworkKind" IsChecked="{Binding IsCover}" Padding="12,0"
-                                 AutomationProperties.AutomationId="ArtworkTabCover" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_TabCover}"
-                                 Content="{x:Static res:LibraryStrings.Picker_TabCover}" />
-                </StackPanel>
-            </Border>
+        <!-- Bildart (Reihenfolge Titelbild, Logo, Cover) -->
+        <Border x:Name="Tabs" Grid.Row="1" Style="{StaticResource Lib.SegmentFrame}" HorizontalAlignment="Left" Margin="0,16,0,14" IsEnabled="{Binding CanEdit}"
+                AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_Tabs}">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="TabHero" Style="{StaticResource Lib.SegmentRadio}" GroupName="ArtworkKind" IsChecked="{Binding IsHero}" Padding="12,0"
+                             AutomationProperties.AutomationId="ArtworkTabHero" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_TabHero}"
+                             Content="{x:Static res:LibraryStrings.Picker_TabHero}" />
+                <RadioButton x:Name="TabLogo" Style="{StaticResource Lib.SegmentRadio}" GroupName="ArtworkKind" IsChecked="{Binding IsLogo}" Padding="12,0"
+                             AutomationProperties.AutomationId="ArtworkTabLogo" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_TabLogo}"
+                             Content="{x:Static res:LibraryStrings.Picker_TabLogo}" />
+                <RadioButton x:Name="TabCover" Style="{StaticResource Lib.SegmentRadio}" GroupName="ArtworkKind" IsChecked="{Binding IsCover}" Padding="12,0"
+                             AutomationProperties.AutomationId="ArtworkTabCover" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_TabCover}"
+                             Content="{x:Static res:LibraryStrings.Picker_TabCover}" />
+            </StackPanel>
+        </Border>
 
-            <!-- Möglichkeiten und „Eigene Datei…“ -->
-            <WrapPanel Margin="0,14,0,0">
-                <ListBox x:Name="Candidates" Style="{StaticResource Lib.ListBox}" ItemsSource="{Binding Candidates}" SelectedItem="{Binding Selected}"
-                         ItemContainerStyle="{StaticResource Lib.ChoiceItem}" ItemTemplate="{StaticResource ChoiceTemplate}"
-                         ScrollViewer.VerticalScrollBarVisibility="Disabled" MaxWidth="830"
-                         AutomationProperties.AutomationId="ArtworkCandidates" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_ListName}">
-                    <ListBox.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel IsItemsHost="True" />
-                        </ItemsPanelTemplate>
-                    </ListBox.ItemsPanel>
-                </ListBox>
-                <Button Width="150" Style="{StaticResource Lib.IconButton}" Margin="0,0,0,12" Command="{Binding PickFileCommand}" VerticalAlignment="Top"
-                        AutomationProperties.AutomationId="ArtworkPickFileButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_PickFile}">
-                    <Grid>
-                        <Border CornerRadius="16" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1" />
+        <!--
+            Mitte: der einzige Bildlaufbereich (lokale Bilder und SteamGridDB). Er reicht 20 DIP in den rechten Rand; dort steht
+            die Leiste, der Inhalt bleibt 830 DIP breit. Die Listen scrollen nie selbst und geben das Mausrad weiter.
+        -->
+        <ScrollViewer x:Name="Scroll" Grid.Row="2" Style="{StaticResource Lib.DialogScroll}" Margin="0,0,-20,0"
+                      AutomationProperties.AutomationId="ArtworkPickerScroll">
+            <StackPanel x:Name="ScrollContent" Width="830" HorizontalAlignment="Left">
+                <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Picker_LocalHeader}" />
+                <TextBlock x:Name="SourceNote" Text="{Binding SourceNote}" ToolTip="{Binding SourceNote}" FontSize="12.5" Margin="0,4,0,12" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+
+                <!-- Lokale Möglichkeiten und „Eigene Datei…“ in einem Raster (rechter Rand −10: die letzte Spalte endet bei 830) -->
+                <WrapPanel x:Name="LocalTiles" Margin="0,0,-10,0" IsEnabled="{Binding CanEdit}">
+                    <ListBox x:Name="Candidates" Style="{StaticResource Lib.ListBox}" ItemsSource="{Binding Candidates}" SelectedItem="{Binding Selected}"
+                             ItemContainerStyle="{StaticResource Lib.PickerTile}" ItemTemplate="{StaticResource TileTemplate}"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="False" MaxWidth="840"
+                             shell:ShellScroll.ChainWheel="True"
+                             AutomationProperties.AutomationId="ArtworkCandidates" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_ListName}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel IsItemsHost="True" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                    </ListBox>
+                    <Button x:Name="PickFileButton" Style="{StaticResource PickFileTile}" Command="{Binding PickFileCommand}"
+                            AutomationProperties.AutomationId="ArtworkPickFileButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_PickFile}">
                         <StackPanel>
-                            <Grid Height="96">
-                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE898;" FontSize="24" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                            <Grid Style="{StaticResource PickFileBox}">
+                                <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE898;" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                             </Grid>
-                            <StackPanel Margin="11,9,11,11">
-                                <TextBlock Text="{x:Static res:LibraryStrings.Picker_PickFile}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource Hp.Brush.Text}" />
-                                <TextBlock Text="{x:Static res:LibraryStrings.Picker_PickFileHint}" FontSize="11.5" Margin="0,3,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                            <StackPanel Margin="9,8,9,10">
+                                <TextBlock Text="{x:Static res:LibraryStrings.Picker_PickFile}" FontSize="12.5" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Hp.Brush.Text}" />
+                                <TextBlock Text="{x:Static res:LibraryStrings.Picker_PickFileHint}" FontSize="11" FontWeight="Normal" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"
+                                           ToolTip="{x:Static res:LibraryStrings.Picker_PickFileHint}" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                             </StackPanel>
                         </StackPanel>
-                    </Grid>
-                </Button>
-            </WrapPanel>
+                    </Button>
+                </WrapPanel>
 
-            <!-- Fehler beim Lesen einer Datei -->
-            <Grid Margin="0,2,0,0" Visibility="{Binding HasMessage, Converter={StaticResource Lib.BoolToVisibility}}">
-                <Border Style="{StaticResource Lib.StatusTint}" Tag="{x:Static vm:StatusKind.Error}" />
+                <Border x:Name="Divider" Height="1" Margin="0,6,0,16" Background="{DynamicResource Hp.Brush.Line}" />
+
+                <!-- Abschnitt SteamGridDB -->
+                <shell:GroupBorder x:Name="SgdbSection" AutomationProperties.AutomationId="ArtworkSgdbSection" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbSectionName}">
+                    <StackPanel>
+                        <DockPanel x:Name="SgdbHeader" LastChildFill="False">
+                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE753;" FontSize="14" Margin="0,0,8,0" Foreground="{DynamicResource Hp.Brush.AccentText}" />
+                            <TextBlock Style="{StaticResource Lib.SectionTitle}" Text="{x:Static res:LibraryStrings.Picker_SgdbHeader}" />
+                            <lib:ExpandToggle x:Name="MatchButton" Style="{StaticResource Lib.MatchToggle}" Content="{Binding Online.MatchText}"
+                                              IsChecked="{Binding Online.IsMatchOpen, Mode=TwoWay}" IsEnabled="{Binding CanEdit}"
+                                              Visibility="{Binding Online.ShowHeader, Converter={StaticResource Lib.BoolToVisibility}}"
+                                              ToolTip="{Binding Online.MatchToolTip}"
+                                              AutomationProperties.AutomationId="ArtworkSgdbMatchButton"
+                                              AutomationProperties.Name="{Binding Online.MatchAutomationName}"
+                                              AutomationProperties.HelpText="{Binding Online.MatchToolTip}" />
+                            <TextBlock FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding Online.MatchAmbiguousText}" Foreground="{DynamicResource Hp.Brush.Warning}"
+                                       Visibility="{Binding Online.IsMatchAmbiguous, Converter={StaticResource Lib.BoolToVisibility}}"
+                                       AutomationProperties.AutomationId="ArtworkSgdbAmbiguous" AutomationProperties.Name="{Binding Online.MatchAmbiguousText}" />
+                        </DockPanel>
+
+                        <!-- Spielwahl (aufgeklappt): Suchfeld, „Suchen“, Hinweise, Einträge als Knöpfe -->
+                        <shell:GroupBorder x:Name="MatchPanel" Margin="0,12,0,0" Padding="14,12" CornerRadius="14"
+                                           Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1"
+                                           Visibility="{Binding Online.IsMatchOpen, Converter={StaticResource Lib.BoolToVisibility}}" IsEnabled="{Binding CanEdit}"
+                                           PreviewKeyDown="OnMatchPanelKeyDown"
+                                           AutomationProperties.AutomationId="ArtworkSgdbMatchPanel" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchListName}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <Button x:Name="MatchSearchButton" DockPanel.Dock="Right" Style="{StaticResource Lib.PickerButton}" Height="40" Margin="10,0,0,0" Command="{Binding Online.SearchGamesCommand}"
+                                            Content="{x:Static res:LibraryStrings.Picker_SgdbMatchSearch}"
+                                            AutomationProperties.AutomationId="ArtworkSgdbMatchSearchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchSearch}" />
+                                    <TextBox x:Name="MatchSearch" Style="{StaticResource Lib.TextBox}" Text="{Binding Online.MatchSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             PreviewKeyDown="OnMatchSearchKeyDown"
+                                             AutomationProperties.AutomationId="ArtworkSgdbMatchSearch" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchSearchName}" />
+                                </DockPanel>
+                                <TextBlock Text="{Binding Online.MatchHint}" FontSize="11.5" Margin="2,6,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                                <TextBlock Text="{x:Static res:LibraryStrings.Picker_SgdbMatchCommitHint}" FontSize="11.5" Margin="2,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
+                                           Visibility="{Binding Online.ShowCommitHint, Converter={StaticResource Lib.BoolToVisibility}}" />
+                                <shell:GroupBorder x:Name="MatchList" Margin="0,10,0,0"
+                                                   AutomationProperties.AutomationId="ArtworkSgdbMatchList" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchListName}">
+                                    <ItemsControl x:Name="MatchEntries" ItemsSource="{Binding Online.MatchEntries}" Focusable="False"
+                                                  KeyboardNavigation.DirectionalNavigation="Contained" KeyboardNavigation.TabNavigation="Once">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:SteamGridDbMatchEntry}">
+                                                <Button Style="{StaticResource Lib.MatchEntry}"
+                                                        Command="{Binding DataContext.Online.ChooseMatchCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                        PreviewKeyDown="OnMatchEntryKeyDown"
+                                                        AutomationProperties.Name="{Binding AutomationName}" AutomationProperties.ItemStatus="{Binding ItemStatus}">
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Left" Style="{StaticResource Lib.Glyph}" Text="&#xE73E;" FontSize="12" Width="20" Foreground="{DynamicResource Hp.Brush.AccentText}"
+                                                                   Visibility="{Binding IsCurrent, Converter={StaticResource Lib.BoolToVisibility}}" />
+                                                        <TextBlock DockPanel.Dock="Right" Text="{x:Static res:LibraryStrings.Picker_SgdbVerified}" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                                   Foreground="{DynamicResource Hp.Brush.TextMuted}" Visibility="{Binding IsVerified, Converter={StaticResource Lib.BoolToVisibility}}" />
+                                                        <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    </DockPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </shell:GroupBorder>
+                            </StackPanel>
+                        </shell:GroupBorder>
+
+                        <!-- Bereit: Suchknopf mit Hinweis rechts daneben (bricht schmal darunter um) -->
+                        <WrapPanel x:Name="SearchRow" Margin="0,12,0,0" Visibility="{Binding Online.ShowSearchButton, Converter={StaticResource Lib.BoolToVisibility}}">
+                            <Button x:Name="SearchButton" Style="{StaticResource Lib.PickerButton}" Command="{Binding Online.SearchCommand}" HorizontalAlignment="Left"
+                                    AutomationProperties.AutomationId="ArtworkSgdbSearchButton" AutomationProperties.Name="{Binding Online.SearchAutomationName}"
+                                    AutomationProperties.HelpText="{x:Static res:LibraryStrings.Picker_SgdbSearchHelp}" AutomationProperties.ItemStatus="{Binding Online.SearchItemStatus}"
+                                    ToolTip="{x:Static res:LibraryStrings.Picker_SgdbSearchHelp}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE753;" FontSize="13" Margin="0,0,8,0" Foreground="{DynamicResource Hp.Brush.AccentText}" />
+                                    <TextBlock Text="{Binding Online.SearchButtonText}" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock x:Name="ReadyNote" Text="{x:Static res:LibraryStrings.Picker_SgdbReadyNote}" FontSize="12" Margin="14,0,0,0" MaxWidth="560" VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource Hp.Brush.TextSecondary}" Visibility="{Binding Online.ShowReadyNote, Converter={StaticResource Lib.BoolToVisibility}}" />
+                        </WrapPanel>
+
+                        <!-- Ladegerüst (eine Reihe Platten der Bildart) -->
+                        <WrapPanel x:Name="Skeleton" Margin="0,12,-10,0" IsHitTestVisible="False" Visibility="{Binding Online.ShowSkeleton, Converter={StaticResource Lib.BoolToVisibility}}">
+                            <Border Style="{StaticResource SkeletonPlate}" />
+                            <Border Style="{StaticResource SkeletonPlate}" />
+                            <Border Style="{StaticResource SkeletonPlate}" />
+                            <Border Style="{StaticResource SkeletonPlate}" />
+                            <Border Style="{StaticResource SkeletonExtra}" />
+                            <Border Style="{StaticResource SkeletonExtra}" />
+                        </WrapPanel>
+
+                        <!-- Ergebnisse (rechter Rand −10 wie oben) -->
+                        <ListBox x:Name="Results" Style="{StaticResource Lib.ListBox}" Margin="0,12,-10,0" ItemsSource="{Binding Online.Results}" SelectedItem="{Binding Selected}"
+                                 ItemContainerStyle="{StaticResource Lib.PickerTile}" ItemTemplate="{StaticResource TileTemplate}" IsEnabled="{Binding CanEdit}"
+                                 ScrollViewer.VerticalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="False" shell:ShellScroll.ChainWheel="True"
+                                 Visibility="{Binding Online.ShowResults, Converter={StaticResource Lib.BoolToVisibility}}"
+                                 AutomationProperties.AutomationId="ArtworkSgdbResults" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbSectionName}">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel IsItemsHost="True" />
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
+                        </ListBox>
+
+                        <!-- Zahl und Fortschritt links, „Mehr laden“ rechts -->
+                        <DockPanel x:Name="ResultsFooter" Margin="0,2,0,0" Visibility="{Binding Online.ShowResults, Converter={StaticResource Lib.BoolToVisibility}}">
+                            <Button x:Name="MoreButton" DockPanel.Dock="Right" Style="{StaticResource Lib.PickerButton}" Command="{Binding Online.MoreCommand}"
+                                    Content="{x:Static res:LibraryStrings.Picker_SgdbMore}" Visibility="{Binding Online.ShowMore, Converter={StaticResource Lib.BoolToVisibility}}"
+                                    AutomationProperties.AutomationId="ArtworkSgdbMoreButton" AutomationProperties.Name="{Binding Online.MoreAutomationName}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Online.CountText}" FontSize="12" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
+                                <TextBlock Text="{Binding Online.ProgressText}" FontSize="12" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
+                                           AutomationProperties.AutomationId="ArtworkSgdbProgress" />
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Hinweis, Zustand oder Fehler (mit „Zu den Einstellungen“ bzw. „Erneut versuchen“) -->
+                        <Grid x:Name="StatusRow" Margin="0,12,0,0" Visibility="{Binding Online.HasStatus, Converter={StaticResource Lib.BoolToVisibility}}">
+                            <Border Style="{StaticResource Lib.StatusTint}" Tag="{Binding Online.StatusTone}" Opacity="{DynamicResource Lib.StatusTintOpacity}" />
+                            <Border CornerRadius="10" BorderBrush="{DynamicResource Lib.Brush.ContrastFrame}" BorderThickness="{DynamicResource Lib.ContrastFrameThickness}" />
+                            <DockPanel Margin="12,9">
+                                <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{Binding Online.StatusTone}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                                <Button x:Name="SettingsLink" DockPanel.Dock="Right" Style="{StaticResource Lib.PickerLink}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                        Command="{Binding Online.OpenSettingsCommand}" Content="{Binding Online.SettingsLinkText}"
+                                        Visibility="{Binding Online.ShowSettingsLink, Converter={StaticResource Lib.BoolToVisibility}}"
+                                        AutomationProperties.AutomationId="ArtworkSgdbSettingsLink" AutomationProperties.Name="{Binding Online.SettingsLinkText}"
+                                        AutomationProperties.HelpText="{x:Static res:LibraryStrings.Picker_SgdbOpenSettingsHelp}" />
+                                <Button x:Name="RetryButton" DockPanel.Dock="Right" Style="{StaticResource Lib.PickerButton}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                        Command="{Binding Online.RetryCommand}" Content="{x:Static res:LibraryStrings.Picker_SgdbRetry}" ToolTip="{Binding Online.RetryToolTip}"
+                                        ToolTipService.ShowOnDisabled="True"
+                                        Visibility="{Binding Online.ShowRetry, Converter={StaticResource Lib.BoolToVisibility}}"
+                                        AutomationProperties.AutomationId="ArtworkSgdbRetryButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbRetry}" />
+                                <TextBlock Text="{Binding Online.StatusText}" TextWrapping="Wrap" FontSize="12.5" VerticalAlignment="Center" Foreground="{DynamicResource Hp.Brush.Text}"
+                                           AutomationProperties.AutomationId="ArtworkSgdbStatus" AutomationProperties.Name="{Binding Online.StatusText}" />
+                            </DockPanel>
+                        </Grid>
+
+                        <!-- Live-Ansage (sichtbar, aber null groß; nicht ausgeblendet): nur Zustandswechsel und fertige Seiten -->
+                        <TextBlock x:Name="Announcement" Width="0" Height="0" ClipToBounds="True" Text="{Binding Online.Announcement}"
+                                   AutomationProperties.AutomationId="ArtworkSgdbAnnouncement" AutomationProperties.Name="{Binding Online.Announcement}"
+                                   AutomationProperties.LiveSetting="Polite" />
+                    </StackPanel>
+                </shell:GroupBorder>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Meldung (Fehler oder Hinweis) und Ladezeile beim Übernehmen -->
+        <StackPanel Grid.Row="3">
+            <Grid Margin="0,12,0,0" Visibility="{Binding HasMessage, Converter={StaticResource Lib.BoolToVisibility}}">
+                <Border Style="{StaticResource Lib.StatusTint}" Tag="{Binding MessageKind}" Opacity="{DynamicResource Lib.StatusTintOpacity}" />
+                <Border CornerRadius="10" BorderBrush="{DynamicResource Lib.Brush.ContrastFrame}" BorderThickness="{DynamicResource Lib.ContrastFrameThickness}" />
                 <DockPanel Margin="12,9">
-                    <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{x:Static vm:StatusKind.Error}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                    <TextBlock Style="{StaticResource Lib.StatusGlyph}" Tag="{Binding MessageKind}" Margin="0,0,10,0" VerticalAlignment="Top" />
                     <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12.5" Foreground="{DynamicResource Hp.Brush.Text}"
                                AutomationProperties.AutomationId="ArtworkPickerMessage" />
                 </DockPanel>
             </Grid>
+            <TextBlock x:Name="BusyLine" Margin="2,12,0,0" FontSize="12.5" Text="{Binding BusyText}" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
+                       Visibility="{Binding HasBusyText, Converter={StaticResource Lib.BoolToVisibility}}"
+                       AutomationProperties.AutomationId="ArtworkPickerBusy" AutomationProperties.Name="{Binding BusyText}" AutomationProperties.LiveSetting="Polite" />
+        </StackPanel>
 
-            <!-- Herkunft der Bilder: nur lokal, SteamGridDB nur auf Wunsch -->
-            <Border Margin="0,10,0,0" CornerRadius="12" Padding="12,10" Background="{DynamicResource Hp.Brush.Surface1}" BorderBrush="{DynamicResource Hp.Brush.Line}" BorderThickness="1">
-                <DockPanel>
-                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE946;" FontSize="13" Margin="0,1,10,0" VerticalAlignment="Top" Foreground="{DynamicResource Hp.Brush.AccentText}" />
-                    <TextBlock Text="{Binding SourceNote}" FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
-                </DockPanel>
-            </Border>
-
-            <DockPanel Margin="0,18,0,0">
-                <Button DockPanel.Dock="Left" Style="{StaticResource Lib.PaneButton}" Padding="16,0" Command="{Binding ResetCommand}"
-                        AutomationProperties.AutomationId="ArtworkResetButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_Reset}">
+        <DockPanel Grid.Row="4" Margin="0,18,0,0">
+            <Button x:Name="ResetButton" DockPanel.Dock="Left" Style="{StaticResource Lib.PaneButton}" Padding="16,0" Command="{Binding ResetCommand}"
+                    AutomationProperties.AutomationId="ArtworkResetButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_Reset}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE777;" FontSize="12" Margin="0,0,8,0" />
+                    <TextBlock Text="{x:Static res:LibraryStrings.Picker_Reset}" />
+                </StackPanel>
+            </Button>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CancelButton" Style="{StaticResource Lib.PaneButton}" Padding="16,0" IsCancel="True" Click="OnCancel"
+                        AutomationProperties.AutomationId="ArtworkCancelButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}"
+                        Content="{x:Static res:LibraryStrings.Dialog_Cancel}" />
+                <Button x:Name="ApplyButton" Style="{StaticResource Lib.AccentButton}" Margin="8,0,0,0" Padding="18,0" IsDefault="True" Click="OnApply" IsEnabled="{Binding CanEdit}"
+                        AutomationProperties.AutomationId="ArtworkApplyButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_Apply}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE777;" FontSize="12" Margin="0,0,8,0" />
-                        <TextBlock Text="{x:Static res:LibraryStrings.Picker_Reset}" />
+                        <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE73E;" FontSize="12" Margin="0,0,8,0" />
+                        <TextBlock Text="{x:Static res:LibraryStrings.Picker_Apply}" />
                     </StackPanel>
                 </Button>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CancelButton" Style="{StaticResource Lib.PaneButton}" Padding="16,0" IsCancel="True" Click="OnCancel"
-                            AutomationProperties.AutomationId="ArtworkCancelButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Dialog_Cancel}"
-                            Content="{x:Static res:LibraryStrings.Dialog_Cancel}" />
-                    <Button x:Name="ApplyButton" Style="{StaticResource Lib.AccentButton}" Margin="8,0,0,0" Padding="18,0" IsDefault="True" Click="OnApply"
-                            AutomationProperties.AutomationId="ArtworkApplyButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_Apply}">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE73E;" FontSize="12" Margin="0,0,8,0" />
-                            <TextBlock Text="{x:Static res:LibraryStrings.Picker_Apply}" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </DockPanel>
-        </StackPanel>
+            </StackPanel>
+        </DockPanel>
     </Grid>
 </infra:ChromeWindow>

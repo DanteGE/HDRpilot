@@ -219,13 +219,133 @@ public sealed class SettingsAppearancePageTests
         vm.SetSteamGridDbKey("  geheim  ");
         Assert.Empty(grid.Calls); // Eintippen speichert und prüft nichts
 
-        vm.SteamGridDbEnabled = true;
-        Assert.Equal(["enabled:True"], grid.Calls);
-
+        // E93: Prüfen geht auch bei ausgeschaltetem Schalter; der Schalter wird dabei nie berührt.
         vm.CheckSteamGridDbCommand.Execute(null);
-        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 3, TimeSpan.FromSeconds(5)));
-        Assert.Equal(["enabled:True", "check:geheim", "save:geheim"], grid.Calls);
+        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 2, TimeSpan.FromSeconds(5)));
+        Assert.Equal(["check:geheim", "save:geheim"], grid.Calls);
         Assert.Equal(ShellStrings.SteamGridDbCheckValid, vm.SteamGridDbStatusText);
+        Assert.False(vm.SteamGridDbEnabled);
+
+        vm.SteamGridDbEnabled = true;
+        Assert.Equal(["check:geheim", "save:geheim", "enabled:True"], grid.Calls);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_offers_the_key_check_with_the_switch_off()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb();
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.False(vm.SteamGridDbEnabled);
+        Assert.True(vm.CheckSteamGridDbCommand.CanExecute(null));
+        vm.SetSteamGridDbKey("HDRPILOT-FIXTURE-0001");
+        vm.CheckSteamGridDbCommand.Execute(null);
+
+        Assert.True(SpinWait.SpinUntil(() => grid.Calls.Count >= 2, TimeSpan.FromSeconds(5)));
+        Assert.DoesNotContain(grid.Calls, c => c.StartsWith("enabled", StringComparison.Ordinal) || c == "run");
+        Assert.False(vm.RunSteamGridDbNowCommand.CanExecute(null)); // automatisches Laden bleibt aus
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_status_says_search_on_click_when_off_with_a_key()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb();
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.Equal(ShellStrings.SteamGridDbStatusOff, vm.SteamGridDbStatusText); // ohne Schlüssel
+        Assert.Equal("Ohne Schlüssel · kein Netzwerkzugriff", ShellStrings.SteamGridDbStatusOff);
+
+        grid.Key = SteamGridDbKeyState.Stored;
+        grid.Raise();
+        Assert.Equal(ShellStrings.SteamGridDbStatusOffWithKey, vm.SteamGridDbStatusText);
+        Assert.Equal("Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick", vm.SteamGridDbStatusText);
+        Assert.False(vm.SteamGridDbStatusIsError);
+
+        grid.Key = SteamGridDbKeyState.Unreadable;
+        grid.Raise();
+        Assert.Equal(ShellStrings.SteamGridDbStatusUnreadable, vm.SteamGridDbStatusText);
+        Assert.True(vm.SteamGridDbStatusIsError);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_status_names_the_latest_run_or_search()
+    {
+        var (page, _, context) = Create();
+        var run = new DateTimeOffset(2026, 3, 1, 10, 0, 0, TimeSpan.Zero);
+        var search = run.AddHours(2);
+        var grid = new RecordingSteamGridDb { Key = SteamGridDbKeyState.Stored, LastSearch = search, LastSearchRequests = 25 };
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        // Aus: die letzte Suche.
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastSearch, search.ToLocalTime(), 25), vm.SteamGridDbStatusText);
+
+        // An: die neuere von Lauf und Suche.
+        grid.Enabled = true;
+        grid.LastRun = run;
+        grid.Raise();
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastSearchOn, search.ToLocalTime(), 25), vm.SteamGridDbStatusText);
+
+        grid.LastRun = search.AddMinutes(5);
+        grid.Raise();
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastRun, search.AddMinutes(5).ToLocalTime(), 0, 0), vm.SteamGridDbStatusText);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_drops_the_check_message_on_the_next_new_status()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb { Key = SteamGridDbKeyState.Stored };
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+        vm.SetSteamGridDbKey("HDRPILOT-FIXTURE-0001");
+        vm.CheckSteamGridDbCommand.Execute(null);
+        Assert.True(SpinWait.SpinUntil(() => vm.SteamGridDbStatusText == ShellStrings.SteamGridDbCheckValid, TimeSpan.FromSeconds(5)));
+
+        grid.Raise(); // gleicher Stand: die Meldung bleibt
+        Assert.Equal(ShellStrings.SteamGridDbCheckValid, vm.SteamGridDbStatusText);
+
+        grid.LastSearch = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        grid.LastSearchRequests = 3;
+        grid.Raise(); // neuer Stand: die Meldung weicht
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusLastSearch, grid.LastSearch.Value.ToLocalTime(), 3), vm.SteamGridDbStatusText);
+        vm.Dispose();
+    }
+
+    [Fact]
+    public void Appearance_page_shows_a_rejected_key_from_a_search_in_red_and_ignores_old_run_errors_while_off()
+    {
+        var (page, _, context) = Create();
+        var grid = new RecordingSteamGridDb { Key = SteamGridDbKeyState.Stored, LastError = "Übersprungen: Ein Spiel läuft" };
+        context.SteamGridDb = grid;
+        var vm = new AppearancePageViewModel(context);
+        page.Dispose();
+
+        Assert.Equal(ShellStrings.SteamGridDbStatusOffWithKey, vm.SteamGridDbStatusText); // alter Fehler eines Laufs: aus, zählt nicht
+        Assert.False(vm.SteamGridDbStatusIsError);
+
+        grid.LastSearch = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+        grid.LastSearchError = ArtworkStrings.SteamGridDb_Error_Unauthorized;
+        grid.Raise();
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, ShellStrings.SteamGridDbStatusError, ArtworkStrings.SteamGridDb_Error_Unauthorized), vm.SteamGridDbStatusText);
+        Assert.True(vm.SteamGridDbStatusIsError);
+
+        grid.Enabled = true;
+        grid.LastRun = grid.LastSearch.Value.AddHours(-1);
+        grid.Raise();
+        Assert.True(vm.SteamGridDbStatusIsError); // an: die Suche ist neuer, ihr Fehler gilt
         vm.Dispose();
     }
 
@@ -345,20 +465,39 @@ public sealed class SettingsAppearancePageTests
 
     private sealed class RecordingSteamGridDb : ISteamGridDbService
     {
-        private bool _enabled;
-
         public event EventHandler? Changed;
 
         public List<string> Calls { get; } = [];
 
+        public bool Enabled { get; set; }
+
         public SteamGridDbKeyState Key { get; set; } = SteamGridDbKeyState.Missing;
 
-        public SteamGridDbStatus Status => SteamGridDbStatus.Off with { Enabled = _enabled, Key = Key };
+        public DateTimeOffset? LastRun { get; set; }
+
+        public DateTimeOffset? LastSearch { get; set; }
+
+        public int LastSearchRequests { get; set; }
+
+        public string? LastError { get; set; }
+
+        public string? LastSearchError { get; set; }
+
+        public SteamGridDbKeyState KeyState => Key;
+
+        public SteamGridDbStatus Status => new SteamGridDbStatus(Enabled, Key, false, LastRun, 0, 0, LastError, 0, 0, 0)
+        {
+            LastSearch = LastSearch,
+            LastSearchRequests = LastSearchRequests,
+            LastSearchError = LastSearchError,
+        };
+
+        public void Raise() => Changed?.Invoke(this, EventArgs.Empty);
 
         public void SetEnabled(bool enabled)
         {
             Calls.Add("enabled:" + enabled);
-            _enabled = enabled;
+            Enabled = enabled;
             Changed?.Invoke(this, EventArgs.Empty);
         }
 

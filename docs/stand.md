@@ -1,7 +1,21 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-22. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-26. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Stand 2026-10-26: SteamGridDB-Suche in „Bild wählen…“ umgesetzt (E93, Phase 14)
+- **Zweig:** `feature/sgdb-search` (von `ui/feedback`), acht Commits in der Reihenfolge der Spezifikation: Kern,
+  Bilddienst, Dienst und Sitzung samt Testdaten-Lieferant, ViewModel, Dialog, Einstellungen, Bildschirmfotos und Gate
+  `phase14-sgdb-ui.ps1`, Doku (E93, README, GATES). Spezifikation und Abweichungen stehen in E93.
+- **In der Cloud-Sitzung erledigt:** Code, Tests und Gate geschrieben; Bau ohne Warnungen; die Kern-Tests laufen unter
+  Linux grün (neue Ausfälle dort nur die bekannten Windows-Fälle). Die App-Tests (`HdrPilot.App.Tests`) und alle
+  UI-Gates sind nur gebaut, nie ausgeführt.
+- **Offen, nur lokal unter Windows** (einer nach dem anderen, gedrosselt): G14.1 bis G14.9 und G14.11 bis G14.13
+  ausführen, die Bildschirmfotos bei drei Größen hell und dunkel vermessen und dem Nutzer zeigen (G14.10), unabhängige
+  Prüfung mit Gegenproben, Livetest mit dem eigenen Schlüssel des Nutzers (G14.14), Abnahme (G14.15).
+- **Auslieferung:** als eigenes Test-Update nach dem UI-Paket, zusammen mit den Spielfarben; wer zuletzt zusammenführt,
+  trägt `Hp.Brush.Plate` bzw. die eigenen Farbwerte in die Token-Dateien des anderen ein. Kleine Versionserhöhung beim
+  Release.
 
 ## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
 - **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (f3da056), darauf dieser Stand;

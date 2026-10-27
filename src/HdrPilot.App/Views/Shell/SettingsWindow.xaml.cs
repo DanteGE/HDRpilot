@@ -7,6 +7,7 @@ using System.Windows.Media.Animation;
 using HdrPilot.App.Infrastructure;
 using HdrPilot.App.Infrastructure.Effects;
 using HdrPilot.App.Theming;
+using HdrPilot.App.ViewModels;
 using HdrPilot.App.ViewModels.Shell;
 
 namespace HdrPilot.App.Views.Shell;
@@ -92,6 +93,37 @@ public partial class SettingsWindow : ChromeWindow
 
         ScrollTo(anchor.Target);
         return true;
+    }
+
+    /// <summary>
+    /// Zeilen „Prüfung: …“ (nur in Prüfläufen mit --config-dir, von AppServices gesetzt; sonst null), etwa wohin
+    /// <see cref="ShowTarget"/> gesprungen ist.
+    /// </summary>
+    public Action<string>? TestLog { get; set; }
+
+    /// <summary>
+    /// Springt zu einer Stelle (E93: „Bild wählen…“ → „Zu den Einstellungen“ → Darstellung › Bilder mit dem Fokus im
+    /// Schlüsselfeld von SteamGridDB). Für <see cref="SettingsTarget.Start"/> nichts.
+    /// </summary>
+    public void ShowTarget(SettingsTarget target)
+    {
+        if (target != SettingsTarget.Artwork)
+        {
+            return;
+        }
+
+        ScrollToSection(NavAppearanceArtwork.Name);
+        SteamGridDbKey.Focus();
+        System.Windows.Input.Keyboard.Focus(SteamGridDbKey);
+        TestLog?.Invoke("Prüfung: Einstellungen bei " + SectionArtwork.Name + ", Fokus " + SteamGridDbKey.Name);
+    }
+
+    /// <summary>Bildschirmfoto „einstellungen-bilder-sgdb“ (E93): Darstellung › Bilder, bis zur Karte „SteamGridDB (online)“ gerollt.</summary>
+    internal void ScrollToSteamGridDbCard()
+    {
+        ScrollToSection(NavAppearanceArtwork.Name);
+        Page.ScrollToVerticalOffset(Math.Max(0, TopOf(SteamGridDbCard) - 8));
+        Page.UpdateLayout();
     }
 
     /// <summary>PasswordBox ist nicht bindbar: das Bot-Passwort geht nur in diese Richtung ans ViewModel.</summary>

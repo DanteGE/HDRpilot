@@ -89,6 +89,12 @@ public interface ILibraryContext : IDisposable
 
     void ShowSettings();
 
+    /// <summary>Einstellungen an einer bestimmten Stelle öffnen (E93: Schlüsselfeld von SteamGridDB). Standard: wie <see cref="ShowSettings()"/>.</summary>
+    void ShowSettings(SettingsTarget target) => ShowSettings();
+
+    /// <summary>SteamGridDB (E89, E93) für die Suche in „Bild wählen…“. Standard: nicht verfügbar (kein Netz).</summary>
+    ISteamGridDbService SteamGridDb => NullSteamGridDbService.Instance;
+
     /// <summary>
     /// Ordner im Explorer öffnen („Installationsordner öffnen“, E89). Der Aufrufer prüft vorher, dass es ihn gibt.
     /// Standard: nichts (Attrappen).

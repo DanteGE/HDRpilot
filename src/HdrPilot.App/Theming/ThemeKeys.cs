@@ -157,6 +157,12 @@ public static class ThemeKeys
     /// <summary>Glasfläche über Bildern (--glass), ohne Weichzeichner.</summary>
     public const string BrushGlass = "Hp.Brush.Glass";
 
+    /// <summary>
+    /// Bildplatte unter Vorschauen, Platzhaltern und dem Ladegerüst in „Bild wählen…“ (E93): dunkel fast schwarz, hell ein
+    /// kühles Grau (das weiße Surface2 des hellen Themas ließe das Gerüst verschwinden).
+    /// </summary>
+    public const string BrushPlate = "Hp.Brush.Plate";
+
     /// <summary>Daumen eines ausgeschalteten Schalters (--off).</summary>
     public const string BrushToggleOff = "Hp.Brush.ToggleOff";
 

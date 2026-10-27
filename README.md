@@ -131,12 +131,15 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
 - Titelbild, Logo und Cover kommen aus den Bild-Zwischenspeichern der Launcher auf dem PC (Steam, GOG Galaxy, Ubisoft
   Connect, Xbox-Paket, bei Quiver nur das Cover), nur lesend, nie aus dem Netz. Fehlt eines, erzeugt HDRpilot ein
   Ersatzbild aus Symbol und Name; neue Bilder eines Launchers erscheinen von selbst, bei Quiver nach dem nächsten
-  Einlesen (siehe „So funktioniert es“). Ein anderes Bild wählst du per Rechtsklick › **Bild wählen…** oder im
-  Abschnitt „BILDER“ der Details: Je Reiter **Titelbild**, **Logo** und **Cover** stehen **Automatisch**, weitere lokale
-  Bilder (etwa der Startbildschirm eines Xbox-Pakets), das erzeugte Bild und **Eigene Datei…** (PNG, JPG, WebP, BMP) zur
-  Wahl; **Übernehmen** speichert, **Zurücksetzen** wählt im aktuellen Reiter wieder **Automatisch**. Eigene Bilder legt
-  HDRpilot verkleinert in seinem Datenordner ab, die gewählte Datei bleibt unverändert. Optional füllt SteamGridDB
-  fehlende Bilder aus dem Netz (siehe „Einstellungen“).
+  Einlesen (siehe „So funktioniert es“). Ein anderes Bild wählst du per Rechtsklick › **Bild wählen…** oder im Abschnitt
+  „BILDER“ der Details: Je Reiter **Titelbild**, **Logo** und **Cover** stehen unter „AUF DIESEM PC“ **Automatisch**,
+  weitere lokale Bilder (etwa der Startbildschirm eines Xbox-Pakets), das erzeugte Bild und **Eigene Datei…** (PNG, JPG,
+  WebP, BMP) zur Wahl; **Übernehmen** speichert, **Zurücksetzen** wählt im aktuellen Reiter wieder **Automatisch**.
+  Eigene Bilder legt HDRpilot verkleinert in seinem Datenordner ab, die gewählte Datei bleibt unverändert. Mit eigenem
+  API-Schlüssel von SteamGridDB sucht **Bei SteamGridDB suchen** im Abschnitt „STEAMGRIDDB“ nach weiteren Bildern des
+  Spiels, immer nur auf Klick: 24 Vorschauen je Seite mit Autor, **Mehr laden** zeigt weitere; stimmt das Spiel nicht,
+  wählst du unter „Spiel“ ein anderes. Das gewählte Bild lädt HDRpilot erst beim **Übernehmen** und speichert es als
+  eigenes Bild. Ohne Schlüssel führt **Zu den Einstellungen** zum Schlüsselfeld (siehe „Einstellungen“).
 - Bewegung: Das Titelbild zoomt langsam und folgt leicht der Maus, Lichtstrahlen und Lichtpunkte ziehen darüber. Geht
   HDR an, während die Bibliothek offen ist, läuft ein kurzer HDR-Moment (Lichtstreifen, hellere Fassung des Titelbilds,
   Partikel für höchstens 2,5 s, leuchtender Rand). Wie viel sich bewegt, stellst du unter „Darstellung“ › „Effekte“
@@ -219,7 +222,7 @@ Auf eine Installation per Setup kannst du jederzeit wechseln; Einstellungen und 
     mit **Wieder aufnehmen** zurückholen. **Neu lernen** vergisst die beim Spielen erkannten EXEs.
   - Abschnitt „BILDER“: Titelbild, Logo, Cover und Symbol des Spiels; ein Klick öffnet **Bild wählen…**, beim Symbol
     das Menü mit **Symbol ändern…**. Darunter steht, woher die Bilder kommen, etwa „Lokal aus dem Steam-Cache · nichts
-    heruntergeladen“ oder „Eigene Datei · nur auf diesem PC“.
+    heruntergeladen“ oder „Eigenes Bild · nur auf diesem PC“.
   - **Aus der Bibliothek entfernen**: nur für selbst hinzugefügte Spiele.
   - **Einstellungen entfernen…** (ganz unten, rot): nur für nicht installierte Spiele aus Launchern, auch per
     Rechtsklick oder Entf. Nach einer Rückfrage vergisst HDRpilot, was es zu dem Spiel gespeichert hat: den Eintrag
@@ -282,7 +285,7 @@ Ein Klick auf einen Hinweis von HDRpilot öffnet ebenfalls die Spielebibliothek.
 | Im Hintergrund anhalten | Minimiert, verdeckt oder nicht aktiv steht jede Animation still | an |
 | Windows-Animationseffekte beachten | Ist „Animationseffekte“ in Windows aus, gilt mindestens „Reduziert“ | an |
 | Nach dem Start in den Infobereich | Nach einem Start aus der Bibliothek schließt sich das Fenster, HDRpilot läuft im Infobereich weiter | aus |
-| SteamGridDB (online) | Fehlende Titelbilder, Logos und Cover von steamgriddb.com laden, nur mit eigenem API-Schlüssel | aus |
+| SteamGridDB (online) | Mit eigenem API-Schlüssel: Suche in **Bild wählen…** auf Klick; **Fehlende Bilder automatisch laden** füllt zusätzlich fehlende Titelbilder, Logos und Cover | aus |
 | Bei jedem Start abgleichen | HDR-Liste von PCGamingWiki 30 s nach dem Start abgleichen, höchstens einmal pro Stunde (siehe „HDR-Liste“) | an |
 | Protokollstufe (Erweitert) | Wie ausführlich protokolliert wird | Normal |
 | Tastenkürzel als Notlösung (Erweitert) | Sendet Win+Alt+B, nur wenn die Windows-Schnittstelle scheitert und gerade kein Spiel läuft; braucht die Xbox Game Bar und schaltet alle HDR-fähigen Bildschirme um | aus |
@@ -336,15 +339,17 @@ bleibt der Rest frei, statt die Bereiche in die Länge zu ziehen.
 - **Symbole und Tray**: Tray- und Fenstersymbol in allen Zuständen und in echter Größe, das Tray-Menü und eine
   Taskleiste zur Vorschau (**Hell** oder **Dunkel**, nur für die Vorschau).
 
-**SteamGridDB (online)** ist die einzige Bildquelle aus dem Netz und standardmäßig aus. Eingeschaltet und mit eigenem
-API-Schlüssel von steamgriddb.com (eintragen, dann **Prüfen**) lädt HDRpilot nur Titelbilder, Logos und Cover, die lokal
-fehlen und die du nicht selbst gewählt hast: nach dem Einschalten, nach dem Prüfen eines Schlüssels, mit
-**Fehlende Bilder jetzt laden** und höchstens einmal am Tag eine Minute nach dem Start, nie während eines Spiels. Der
-Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins Protokoll geschrieben; die Zeile
-darunter zeigt den letzten Netzwerkzugriff, **Schlüssel entfernen** löscht ihn. Aus oder ohne Schlüssel gibt es keinen
-Netzwerkzugriff dafür: Ausschalten, Schlüssel entfernen oder ein Spielstart halten auch einen laufenden Abruf sofort an.
-Ausgeschaltet zeigt HDRpilot wieder die lokalen bzw. erzeugten Bilder; die geladenen bleiben für ein erneutes
-Einschalten liegen.
+**SteamGridDB (online)** ist die einzige Bildquelle aus dem Netz. Ohne eigenen API-Schlüssel von steamgriddb.com gibt es
+keinen Netzwerkzugriff dafür. Den Schlüssel trägst du ein und bestätigst ihn mit **Prüfen**; Feld und Knopf sind immer
+bedienbar, **Schlüssel entfernen** löscht ihn wieder und beendet auch eine laufende Suche. Mit Schlüssel kannst du in
+**Bild wählen…** selbst suchen, immer nur auf Klick. Darunter lädt **Fehlende Bilder automatisch laden** (Standard: aus)
+zusätzlich Titelbilder, Logos und Cover, die lokal fehlen und die du nicht selbst gewählt hast: nach dem Einschalten,
+nach dem Prüfen eines Schlüssels, mit **Fehlende Bilder jetzt laden** und höchstens einmal am Tag eine Minute nach dem
+Start, nie während eines Spiels. Der Schlüssel wird verschlüsselt (DPAPI) für dein Windows-Konto gespeichert und nie ins
+Protokoll geschrieben; die Zeile unter dem Schlüssel zeigt den letzten Netzwerkzugriff, Lauf oder Suche, mit der Zahl
+der Anfragen. Ausschalten oder ein Spielstart halten einen laufenden automatischen Abruf sofort an; ausgeschaltet zeigt
+HDRpilot wieder die lokalen bzw. erzeugten Bilder, die automatisch geladenen bleiben für ein erneutes Einschalten
+liegen. Bilder, die du in **Bild wählen…** übernommen hast, gelten wie eigene Bilder unabhängig vom Schalter.
 
 ## So funktioniert es
 
@@ -469,11 +474,16 @@ Quelle, die diese Version nicht kennt, zählen dabei als vorhanden. Eigene Bilde
 100 Megapixel, größere Fotos werden verkleinert) stehen je Bildart in `config.json` (`artwork`) und liegen in
 `art\custom\`.
 
-**SteamGridDB:** nur eingeschaltet und mit eigenem Schlüssel (siehe „Einstellungen“). Gefragt wird
-`www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen (nur ein Treffer mit gleichem Namen zählt),
-und nur nach unbewegten Bildern ohne NSFW- oder Spaß-Markierung. Bilder lädt HDRpilot nur von https-Adressen unter
-steamgriddb.com, ohne Weiterleitungen, höchstens 15 MB je Bild, mit mindestens 1 s Abstand und höchstens 200 Anfragen
-je Lauf; was SteamGridDB nicht hat, fragt es 30 Tage lang nicht erneut. Geladene Bilder liegen in `art\sgdb\`.
+**SteamGridDB:** nur mit eigenem Schlüssel (siehe „Einstellungen“); automatisch nur eingeschaltet, in **Bild wählen…**
+nur auf Klick. Gefragt wird `www.steamgriddb.com`, Steam-Spiele über ihre App-ID, andere über den Namen (automatisch
+zählt nur ein Treffer mit gleichem Namen; in **Bild wählen…** wählst du sonst aus der Trefferliste, und bei Spielen ohne
+Steam-App-ID merkt HDRpilot die Wahl mit **Übernehmen**), und nur nach unbewegten Bildern ohne NSFW-, Humor- oder
+Epilepsie-Markierung. Bilder lädt HDRpilot nur von https-Adressen unter steamgriddb.com, ohne Weiterleitungen und ohne
+Schlüssel. Anfragen an die Schnittstelle haben mindestens 1 s Abstand vom Ende der vorigen, und jede Übertragung hat
+Zeitgrenzen. Automatisch gelten höchstens 15 MB je Bild und 200 Anfragen je Lauf, und was SteamGridDB nicht hat, fragt
+es 30 Tage lang nicht erneut; geladene Bilder liegen in `art\sgdb\`. In **Bild wählen…** gelten je Fenster höchstens 40
+Anfragen; Vorschauen sind höchstens 4 MB groß, liegen nur im Speicher und laden höchstens zu dritt gleichzeitig. Ein
+übernommenes Bild ist höchstens 32 MB groß und liegt danach in `art\custom\`.
 
 **Bildschirmwerte:** Spitze, Vollbild, Minimum, Farbtiefe und ob HDR an ist, liest HDRpilot über die
 Grafikschnittstelle von Windows (DXGI), nur solange ein Fenster sie zeigt und nur nach einem HDR- oder
@@ -589,8 +599,8 @@ HDRpilot greift nicht in Spiele ein und ist so gebaut, dass Anti-Cheat-Systeme k
   sichtbare Fenster ebenfalls nur bei Windows ab.
 - Es liest und schreibt keinen Spielspeicher, schleust keinen Code ein, setzt keine Hooks, legt kein Overlay über das
   Spiel und ändert weder Priorität noch Prozessorzuteilung von Spielen. Die Protokolle von Epic und Steam liest es nur.
-- Es lädt keinen Treiber und braucht keine Administratorrechte. Netzwerk nutzt es nur für die HDR-Liste und, wenn du
-  es einschaltest, für SteamGridDB.
+- Es lädt keinen Treiber und braucht keine Administratorrechte. Netzwerk nutzt es nur für die HDR-Liste und, mit eigenem
+  Schlüssel, für SteamGridDB (automatisch nur, wenn du es einschaltest; in **Bild wählen…** nur auf Klick).
 - HDR schaltet es über die Anzeige-Einstellungen von Windows, wie der HDR-Schalter in den Windows-Einstellungen.
 - „Windows Auto HDR“ schaltet es nur über den Auto-HDR-Schalter in den Grafikeinstellungen von Windows unter HKCU, wie
   der Schalter in den Windows-Einstellungen selbst, und zwar vor dem Spielstart; das Spiel und seine Dateien fasst es

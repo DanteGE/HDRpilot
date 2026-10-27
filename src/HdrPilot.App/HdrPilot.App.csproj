@@ -59,6 +59,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="HdrPilot.Tests" />
+    <!-- Interne Prüfpunkte der SteamGridDB-Suche (E93): Platzierung, Kontrast, Vorschau-Threads, Übernehmen mit Ergebnis. -->
+    <InternalsVisibleTo Include="HdrPilot.App.Tests" />
   </ItemGroup>
 
 </Project>

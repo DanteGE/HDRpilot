@@ -522,7 +522,7 @@ try {
     $dialog = Find-Top $app.Id 'ArtworkPickerDialog' 8000
     Check ($null -ne $dialog) 'Dialog „Bild wählen…“ geöffnet'
     if ($dialog) {
-        foreach ($id in 'ArtworkTabHero', 'ArtworkTabLogo', 'ArtworkTabCover', 'ArtworkCandidates', 'ArtworkPickFileButton', 'ArtworkResetButton', 'ArtworkCancelButton', 'ArtworkApplyButton') {
+        foreach ($id in 'ArtworkTabHero', 'ArtworkTabLogo', 'ArtworkTabCover', 'ArtworkCandidates', 'ArtworkPickFileButton', 'ArtworkResetButton', 'ArtworkCancelButton', 'ArtworkApplyButton', 'ArtworkSgdbSection') {
             Check ($null -ne (Find-Id $dialog $id 3000)) "Dialog-Element $id vorhanden"
         }
         Check (Is-Selected (Find-Id $dialog 'ArtworkTabHero')) 'Reiter „Titelbild“ gewählt'

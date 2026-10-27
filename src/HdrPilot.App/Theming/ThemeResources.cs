@@ -70,6 +70,7 @@ public static class ThemeResources
         d[ThemeKeys.BrushPanelHighlight] = Solid(dark ? Argb(0x24, 0xFF, 0xFF, 0xFF) : Colors.White);
         d[ThemeKeys.BrushMenu] = Solid(dark ? Argb(0xFA, 0x10, 0x11, 0x18) : Argb(0xFC, 0xFF, 0xFF, 0xFF));
         d[ThemeKeys.BrushGlass] = Solid(dark ? Argb(0xA8, 0x0C, 0x0D, 0x13) : Argb(0xCC, 0xFF, 0xFF, 0xFF));
+        d[ThemeKeys.BrushPlate] = Solid(dark ? Rgb(0x0B, 0x0C, 0x11) : Rgb(0xE4, 0xE7, 0xEE));
 
         // ---- Text ----
         d[ThemeKeys.BrushText] = Solid(p.Text);

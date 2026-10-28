@@ -44,11 +44,30 @@ function Get-AllNames($el) {
     return $names
 }
 
+# Einstellungen: mit offener Bibliothek ein Fenster der Bibliothek (Owner), UI-Automation zeigt sie dann unter MainWindow
+function Find-Settings([int]$processId, [int]$timeoutMs = 20000) {
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
+        $w = Find-Window 'SettingsWindow' $processId 200
+        if ($w) { return $w }
+        $m = Find-Window 'MainWindow' $processId 200
+        if ($m) { $w = Find-Id $m 'SettingsWindow' 200; if ($w) { return $w } }
+    }
+    return $null
+}
+
 # Name des Elements mit dieser Kennung gegen den erwarteten Text (genau, Groß-/Kleinschreibung zählt).
 function Check-Name($parent, [string]$automationId, [string]$expected, [string]$label) {
     $el = Find-Id $parent $automationId 3000
     $name = if ($el) { $el.Current.Name } else { '(fehlt)' }
     Check ($el -and $name -ceq $expected) ("{0}: {1} = '{2}' (erwartet '{3}')" -f $label, $automationId, $name, $expected)
+}
+
+# Gewählter Eintrag einer ComboBox (ohne ValuePattern liefert Get-Text nur ihren Namen, die Beschriftung)
+function Get-ComboSelection($combo) {
+    $sel = $null
+    if ($combo -and $combo.TryGetCurrentPattern([Windows.Automation.SelectionPattern]::Pattern, [ref]$sel)) { return (($sel.Current.GetSelection() | ForEach-Object { $_.Current.Name }) -join '') }
+    return ''
 }
 
 # Wählt in einer ComboBox den Eintrag mit diesem Namen (aufklappen, wählen, zuklappen).
@@ -144,11 +163,11 @@ try {
     foreach ($id in $libraryChecks.Keys) { Check-Name $main $id $libEn[$libraryChecks[$id]] 'Bibliothek' }
     $count = Find-Id $main 'HeaderCount' 3000
     $countText = if ($count) { Get-Text $count } else { '' }
-    Check (Test-Contains $countText $libEn.Count_GamesOne) "Kopf zählt englisch: '$countText'"
+    Check ((Test-Contains $countText $libEn.Count_GamesOne) -or $countText -like ('*' + $libEn.Count_GamesMany.Replace('{0}', '*') + '*')) "Kopf zählt englisch: '$countText'"
 
     Note '--- Einstellungen englisch'
     $forward = Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfgEn`"", '--settings') -PassThru -Wait
-    $set = Find-Window 'SettingsWindow' $app.Id
+    $set = Find-Settings $app.Id
     Check ($null -ne $set) "Einstellungen der Testinstanz geöffnet (weitergereicht, exit $($forward.ExitCode))"
     if (-not $set) { throw 'Einstellungen fehlen' }
     Check ($set.Current.Name -ceq $shellEn.SettingsWindowTitle) "Fenstertitel: $($set.Current.Name)"
@@ -158,7 +177,7 @@ try {
     }
     foreach ($id in $settingsChecks.Keys) { Check-Name $set $id $shellEn[$settingsChecks[$id]] 'Einstellungen' }
     $combo = Find-Id $set 'LanguageChoice'
-    Check ((Get-Text $combo) -ceq 'English') "Sprache gewählt: '$(Get-Text $combo)'"
+    Check ((Get-ComboSelection $combo) -ceq 'English') "Sprache gewählt: '$(Get-ComboSelection $combo)'"
     Check (-not (Test-Shown (Find-Id $set 'LanguageRestartButton' 500))) 'Kein Neustart-Hinweis, solange die Wahl der angezeigten Sprache entspricht'
 
     Invoke-El (Find-Id $set 'NavAppearanceTray')
@@ -189,12 +208,12 @@ try {
     Check ($restartedPid -gt 0) "Neue Instanz mit --restarted gestartet (PID $restartedPid)"
     Check ((Read-Config $cfgEn).settings.language -eq 'de') 'config.json: language = de'
     if ($restartedPid -le 0) { throw 'Keine neue Instanz' }
-    $set = Find-Window 'SettingsWindow' $restartedPid 30000
+    $set = Find-Settings $restartedPid 30000
     Check ($set -and $set.Current.Name -ceq $shellDe.SettingsWindowTitle) ("Einstellungen nach dem Neustart deutsch: '{0}'" -f $(if ($set) { $set.Current.Name } else { 'fehlen' }))
     if ($set) {
         Check-Name $set 'SaveSettingsButton' $shellDe.SaveSettings 'Einstellungen (de)'
         Check-Name $set 'LanguageChoice' $shellDe.LanguageLabel 'Einstellungen (de)'
-        Check ((Get-Text (Find-Id $set 'LanguageChoice')) -ceq 'Deutsch') 'Sprache nach dem Neustart: Deutsch'
+        Check ((Get-ComboSelection (Find-Id $set 'LanguageChoice')) -ceq 'Deutsch') 'Sprache nach dem Neustart: Deutsch'
     }
     [void](Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfgEn`"", '--show') -PassThru -Wait)
     $main = Find-Window 'MainWindow' $restartedPid
@@ -225,7 +244,7 @@ try {
             Invoke-El (Find-Id $win 'SetupCancelButton')
         }
         $exited = $proc.WaitForExit(15000)
-        Check $exited ("Setup nach „Cancel“ beendet, Exitcode {0}" -f $(if ($exited) { $proc.ExitCode } else { 'läuft noch' }))
+        Check $exited ('Setup nach „Cancel“ beendet, Exitcode {0}' -f $(if ($exited) { $proc.ExitCode } else { 'läuft noch' }))
         Check (-not (Test-Path -LiteralPath $layout.Exe)) 'Nichts installiert'
         Check (@(Compare-TreeHashes $cfgStart @(Get-TreeHashes $layout.Config)).Count -eq 0) 'Ablage des Setups byte-gleich (der Setup fasst die Einstellungen nie an)'
     }

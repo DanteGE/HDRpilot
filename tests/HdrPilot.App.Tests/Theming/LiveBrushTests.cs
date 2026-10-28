@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
 using System.Windows.Media;
 using HdrPilot.App.Tests.Shell;
 using HdrPilot.App.Theming;
@@ -8,7 +10,8 @@ namespace HdrPilot.App.Tests.Theming;
 /// <summary>
 /// Bleibende Pinsel der Spielfarben (E94, G15.3): Überblendung von der gezeigten Farbe aus, dieselbe Instanz über Wechsel
 /// hinweg, nach dem Beruhigen Grundwerte gleich Zielen und keine Animation, unpassende oder eingefrorene Pinsel werden ersetzt,
-/// Dauer 0 ohne Uhr und je Verlaufsstopp nichts zu tun, wenn das Ziel gleich bleibt (eine laufende Überblendung überlebt).
+/// Stile, Vorlagen und Stifte frieren einen bleibenden Pinsel nie ein, Dauer 0 ohne Uhr und je Verlaufsstopp nichts zu tun,
+/// wenn das Ziel gleich bleibt (eine laufende Überblendung überlebt).
 /// </summary>
 public sealed class LiveBrushTests
 {
@@ -90,6 +93,59 @@ public sealed class LiveBrushTests
             Assert.False(replaced.IsFrozen);
             Assert.Equal(2, set.Stats.Replacements);
             Assert.False(replaced.HasAnimatedProperties); // ersetzt wird sofort
+        });
+    }
+
+    [Fact]
+    public void Styles_templates_and_pens_never_freeze_a_live_brush()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var set = new LiveBrushSet();
+            var live = set.Track(null, Gradient("#D62828", "#F28C28"), TimeSpan.Zero);
+            var plainStyled = Gradient("#D62828", "#F28C28").CloneCurrentValue(); // veränderbar, aber einfrierbar
+            var plainTemplated = plainStyled.CloneCurrentValue();
+
+            Assert.False(live.CanFreeze);
+            Assert.Equal(Transform.Identity, live.RelativeTransform); // die Bindung ändert nichts am Bild
+            Assert.True(plainStyled.CanFreeze);
+
+            // Wie in der Bibliothek: Stil-Setter (Fläche und Rand; der Rahmen legt den Rand in einen Stift) und Vorlagen holen
+            // die Pinsel über DynamicResource aus den Ressourcen des Fensters.
+            var root = (Grid)XamlReader.Parse(
+                "<Grid xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">"
+                + "<Grid.Resources><Style x:Key=\"LiveStyle\" TargetType=\"Border\">"
+                + "<Setter Property=\"BorderThickness\" Value=\"1\" /><Setter Property=\"CornerRadius\" Value=\"7\" />"
+                + "<Setter Property=\"Background\" Value=\"{DynamicResource Live}\" /><Setter Property=\"BorderBrush\" Value=\"{DynamicResource Live}\" />"
+                + "</Style><Style x:Key=\"PlainStyle\" TargetType=\"Border\"><Setter Property=\"Background\" Value=\"{DynamicResource PlainStyled}\" /></Style>"
+                + "</Grid.Resources>"
+                + "<Border Style=\"{StaticResource LiveStyle}\" Width=\"40\" Height=\"20\" HorizontalAlignment=\"Left\" />"
+                + "<Border Style=\"{StaticResource PlainStyle}\" Width=\"40\" Height=\"20\" HorizontalAlignment=\"Center\" />"
+                + "<ContentControl HorizontalAlignment=\"Right\"><ContentControl.Template><ControlTemplate><StackPanel>"
+                + "<Border Background=\"{DynamicResource Live}\" Width=\"40\" Height=\"10\" /><Border Background=\"{DynamicResource PlainTemplated}\" Width=\"40\" Height=\"10\" />"
+                + "</StackPanel></ControlTemplate></ContentControl.Template></ContentControl>"
+                + "</Grid>");
+            root.Resources["Live"] = live;
+            root.Resources["PlainStyled"] = plainStyled;
+            root.Resources["PlainTemplated"] = plainTemplated;
+            WpfTestHost.Layout(root, new Size(200, 40));
+            WpfTestHost.DoEvents();
+
+            // Gegenprobe: so friert WPF gewöhnliche Pinsel ein, aus einem Stil-Setter wie aus einer Vorlage.
+            Assert.True(plainStyled.IsFrozen);
+            Assert.True(plainTemplated.IsFrozen);
+            Assert.False(live.IsFrozen);
+            var styled = (Border)root.Children[0];
+            var templated = (Border)((Panel)VisualTreeHelper.GetChild(root.Children[2], 0)).Children[0];
+            Assert.Same(live, styled.Background);
+            Assert.Same(live, styled.BorderBrush);
+            Assert.Same(live, templated.Background);
+
+            // Und er überblendet weiter an Ort und Stelle (kein Ersatz).
+            Assert.Same(live, set.Track(live, Gradient("#1E64DC", "#7C3AED"), Fade));
+            Assert.Equal(0, set.Stats.Replacements);
+            Assert.True(((LinearGradientBrush)live).GradientStops[0].HasAnimatedProperties);
+            set.Settle();
         });
     }
 

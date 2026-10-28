@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 
@@ -39,15 +40,27 @@ public sealed class GameAccentStats
         $"angewendet {Applied}, gleich {SkippedEqual}, Farbwerte {ColorPartSwaps}, Ziele {Retargets}, Überblendungen {Animations}, ersetzt {Replacements}, gehalten {Held}, Anfragen {Requests}, berechnet {Computed}";
 }
 
-/// <summary>Bleibende (nicht eingefrorene) Pinsel für die Spielfarben (E94).</summary>
+/// <summary>
+/// Bleibende (nicht eingefrorene) Pinsel für die Spielfarben (E94). WPF friert einen Pinsel aus einem Ressourcen-Wörterbuch
+/// ein, sobald ein Stil-Setter oder eine Vorlage ihn über DynamicResource holt (geteilter Wert, sofern er sich einfrieren
+/// lässt). Ein eingefrorener Pinsel kann nicht mehr überblenden und müsste ersetzt werden: jeder Ersatz schreibt das
+/// Wörterbuch neu, und WPF geht dafür den ganzen Fensterbaum durch. Deshalb lassen sich diese Pinsel nie einfrieren
+/// (<see cref="Unfrozen{T}"/>); Stile, Vorlagen und Stifte benutzen dieselbe veränderbare Instanz.
+/// </summary>
 public static class LiveBrush
 {
-    /// <summary>Veränderbare Kopie mit den aktuellen Werten, nie eingefroren.</summary>
+    /// <summary>
+    /// Veränderbare Kopie mit den aktuellen Werten, die sich nicht einfrieren lässt (<see cref="Freezable.CanFreeze"/> false):
+    /// Eine Bindung hält <see cref="Brush.RelativeTransformProperty"/> auf <see cref="Transform.Identity"/>, dem Standardwert,
+    /// ändert also nichts am Bild. Ein Ausdruck an einer Eigenschaft verhindert jedes Einfrieren.
+    /// </summary>
     public static T Unfrozen<T>(T template)
         where T : Brush
     {
         ArgumentNullException.ThrowIfNull(template);
-        return (T)template.CloneCurrentValue();
+        var brush = (T)template.CloneCurrentValue();
+        BindingOperations.SetBinding(brush, Brush.RelativeTransformProperty, new Binding { Source = Transform.Identity });
+        return brush;
     }
 
     /// <summary>

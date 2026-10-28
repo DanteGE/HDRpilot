@@ -633,6 +633,9 @@ public sealed class GameAccentWindowTests
             Assert.False(hdrOn.IsFrozen);
 
             s.Select("rot"); // nächster Wechsel überblendet denselben Pinsel weiter
+            WpfTestHost.DoEvents();
+            ring = WpfTestHost.Visuals(s.Window).OfType<DashRing>().Single(r => r.Visibility == Visibility.Visible && r.ActualWidth > 4); // jetzt die Kachel von „rot“
+            Assert.Same(hdrOn, ring.Stroke);
             Assert.Null(Record.Exception(() => RenderRing(ring)));
             Assert.Same(hdrOn, layer.Dictionary[ThemeKeys.BrushHdrOn]);
             Assert.False(hdrOn.IsFrozen);

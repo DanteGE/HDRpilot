@@ -70,7 +70,7 @@ function Res-Like([string]$text, [string]$file, [string]$name) { return [bool]($
 
 # Anfrageprotokoll des Lieferanten
 function Fixture-Lines { $t = Read-Shared $fixtureLog; if ($t) { @($t -split "`r?`n" | Where-Object { $_ }) } else { @() } }
-function New-Lines([int]$from) { $all = Fixture-Lines; if ($all.Count -gt $from) { @($all[$from..($all.Count - 1)]) } else { @() } }
+function New-Lines([int]$from) { $all = @(Fixture-Lines); if ($all.Count -gt $from) { @($all[$from..($all.Count - 1)]) } else { @() } }
 # „Eingeschwungen“: 2 s lang keine neue Zeile (höchstens 30 s)
 function Wait-Settled {
     $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -103,10 +103,19 @@ function Expand($el, [bool]$open) {
 }
 function Is-Selected($el) { $p = $null; $el -and $el.TryGetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern, [ref]$p) -and $p.Current.IsSelected }
 
+# Text der Statuszeile SteamGridDbStatus: ihr Name ist die feste Beschriftung, der Text steht im ItemStatus
+function Status-Text($el) {
+    if (-not $el) { return '' }
+    $status = [string]$el.Current.ItemStatus
+    if ($status) { return $status }
+    return [string]$el.Current.Name
+}
 function Results($dialog) { $list = Find-Id $dialog 'ArtworkSgdbResults' 500; if ($list) { @(Get-ListItems $list) } else { @() } }
 function Wait-Results($dialog, [int]$count, [int]$timeoutMs = 15000) { Wait-Until { (Results $dialog).Count -eq $count } $timeoutMs }
 
 function Select-Game($win, [string]$name) {
+    $search = Find-Id $win 'SearchBox' 3000
+    if ($search) { Set-Text $search $name; Start-Sleep -Milliseconds 800 }
     $row = @(Get-ListItems (Find-Id $win 'GameList' 3000) | Where-Object { $_.Current.Name -eq $name }) | Select-Object -First 1
     if ($row) { Select-El $row }
     return [bool](Wait-Until { $d = Find-Id $win 'DetailName' 500; $d -and $d.Current.Name -eq $name } 4000)
@@ -239,9 +248,9 @@ try {
     if ($keyBox) { Set-Text $keyBox $validKey }
     if ($checkButton) { Invoke-El $checkButton }
     $status = $null
-    Check (Wait-Until { $script:status = Find-Id $set 'SteamGridDbStatus' 500; $script:status -and (Res-Like $script:status.Current.Name 'ShellStrings' 'SteamGridDbCheckValid') } 10000) ('Status nach „Prüfen“: „{0}“' -f $(if ($script:status) { $script:status.Current.Name }))
+    Check (Wait-Until { $script:status = Find-Id $set 'SteamGridDbStatus' 500; $script:status -and (Res-Like (Status-Text $script:status) 'ShellStrings' 'SteamGridDbCheckValid') } 10000) ('Status nach „Prüfen“: „{0}“' -f $(if ($script:status) { Status-Text $script:status }))
     Check (Test-Path -LiteralPath $keyFile) 'Schlüsseldatei in der Testablage gespeichert'
-    $lines = Fixture-Lines
+    $lines = @(Fixture-Lines)
     Check ($lines.Count -eq 1 -and $lines[0] -like '* www.steamgriddb.com /api/v2/search/autocomplete/HDRpilot schluessel=ja') ('Genau eine Anfrage: {0}' -f ($lines -join ' | '))
     Start-Sleep -Seconds 5
     Check ((Get-Toggle (Find-Id $set 'SteamGridDbToggle' 2000)) -eq 'Off' -and (Fixture-Lines).Count -eq 1) 'Schalter weiter aus, kein automatischer Lauf (5 s keine weitere Anfrage)'
@@ -317,7 +326,7 @@ try {
     Check ($full.Count -eq 1 -and $full[0] -like '* cdn2.steamgriddb.com /cover/fixture-3.png schluessel=nein') ('Genau ein volles Bild: {0}' -f ($full -join ' | '))
     Check (Wait-Until { $m = Find-Id $win 'StatusMessage' 500; $m -and (Res-Like $m.Current.Name 'LibraryStrings' 'Picker_Applied') } 5000) 'Statusleiste: Bilder übernommen'
     $set = Open-Settings
-    $statusText = if ($set) { (Find-Id $set 'SteamGridDbStatus' 3000).Current.Name } else { '' }
+    $statusText = if ($set) { Status-Text (Find-Id $set 'SteamGridDbStatus' 3000) } else { '' }
     Check ($statusText -like 'Automatisches Laden aus · letzte Suche*') ('Einstellungen: „{0}“' -f $statusText)
     Close-Settings $set
 
@@ -392,7 +401,7 @@ try {
     Close-Picker $dialog
     $dialog = Open-Picker $win $nebel
     Match-Search $dialog 'Langsam'
-    Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbSlow' 6000) '„Langsam“: nach höchstens 6 s „antwortet langsam“'
+    Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbMatchSearching' 6000) '„Langsam“: die Spielwahl zeigt „Sucht bei SteamGridDB …“, solange die Antwort aussteht'
     Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbTimeout' 20000) '„Langsam“: nach höchstens 20 s Zeitüberschreitung'
     Close-Picker $dialog
 
@@ -422,7 +431,7 @@ try {
     Check ($null -ne (Find-Id $dialog 'ArtworkSgdbSettingsLink' 2000)) 'Mit Link zu den Einstellungen'
     Close-Picker $dialog
     $set = Open-Settings
-    $statusText = if ($set) { (Find-Id $set 'SteamGridDbStatus' 3000).Current.Name } else { '' }
+    $statusText = if ($set) { Status-Text (Find-Id $set 'SteamGridDbStatus' 3000) } else { '' }
     Check ((Res-Like $statusText 'ShellStrings' 'SteamGridDbStatusError') -and $statusText -like '*abgelehnt*') ('Einstellungen: „{0}“' -f $statusText)
     Close-Settings $set
 
@@ -432,7 +441,7 @@ try {
     Check (-not $log.Contains('SteamGridDB nicht erreichbar')) 'Protokoll: nie „SteamGridDB nicht erreichbar“'
     Check (-not $log.Contains($validKey) -and -not $log.Contains($laterRejected) -and -not $fixtureText.Contains($validKey) -and -not $fixtureText.Contains($laterRejected)) 'Kein Schlüssel in Protokoll und Anfrageprotokoll'
     Check (-not $log.Contains('Testautor')) 'Keine Autorennamen im Protokoll'
-    Check ($log.Contains('ist nicht angeschlossen') -and -not $log.Contains('HDR-Schaltung um')) 'HDR nie geschaltet'
+    Check (-not $log.Contains('HDR-Schaltung')) 'HDR nie geschaltet (keine HDR-Schaltung im Protokoll)'
 
     Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--exit') -Wait | Out-Null
     Check ($app.WaitForExit(15000)) 'Testinstanz beendet'

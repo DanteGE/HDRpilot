@@ -378,6 +378,7 @@ public sealed class SteamGridDbSearchSessionTests
         var session = service.OpenSearch(SgdbRig.Steam("553850"))!;
 
         var pending = session.GetAssetsAsync(session.InitialMatch!, ArtworkKind.Cover, 0, Ct);
+        await SgdbRig.WaitUntil(() => _rig.LastHandler is not null); // der Handler entsteht erst auf dem Arbeits-Thread der Sitzung
         Assert.True(await _rig.LastHandler!.Held.WaitAsync(5000, Ct));
         service.RemoveKey();
 
@@ -419,6 +420,7 @@ public sealed class SteamGridDbSearchSessionTests
         var session = service.OpenSearch(SgdbRig.Manual())!;
 
         var pending = session.ResolveAsync(Ct);
+        await SgdbRig.WaitUntil(() => _rig.LastHandler is not null); // der Handler entsteht erst auf dem Arbeits-Thread der Sitzung
         Assert.True(await _rig.LastHandler!.Held.WaitAsync(5000, Ct));
         service.Dispose();
 
@@ -436,6 +438,7 @@ public sealed class SteamGridDbSearchSessionTests
         using var session = service.OpenSearch(SgdbRig.Steam("553850"))!;
 
         var pending = session.GetAssetsAsync(session.InitialMatch!, ArtworkKind.Cover, 0, Ct);
+        await SgdbRig.WaitUntil(() => _rig.LastHandler is not null); // der Handler entsteht erst auf dem Arbeits-Thread der Sitzung
         Assert.True(await _rig.LastHandler!.Held.WaitAsync(5000, Ct));
         service.SetEnabled(false);
         _rig.LastHandler.Release.Set();
@@ -550,6 +553,7 @@ public sealed class SteamGridDbSearchSessionTests
 
         // Während das Bild der alten Zuordnung lädt, ändert sich die gemerkte ID (ohne Abbruch des Laufs).
         var run = service.RunNowAsync(Ct);
+        await SgdbRig.WaitUntil(() => _rig.LastHandler is not null); // der Handler entsteht erst auf dem Arbeits-Thread der Sitzung
         Assert.True(await _rig.LastHandler!.Held.WaitAsync(5000, Ct));
         _rig.Artwork.SetSteamGridDbGameId(manual, 9102);
         _rig.LastHandler.Release.Set();

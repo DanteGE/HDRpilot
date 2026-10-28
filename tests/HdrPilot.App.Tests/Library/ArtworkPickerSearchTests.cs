@@ -268,13 +268,15 @@ public sealed class ArtworkPickerSearchTests
         Assert.False(online.ShowMore);
         Assert.Equal(LibraryText.Format(LibraryStrings.Picker_SgdbTabLimit, LibraryStrings.Picker_KindPluralLogo), online.StatusText);
 
-        // Speichergrenze: Die nächste Seite passte nicht mehr in 96 MB.
-        var big = new FakeSteamGridDbSearch { Setup = s => s.PreviewBytes = 4_500_000 };
+        // Speichergrenze (96 MB wie überall binär, 100.663.296 Bytes): 22 Vorschauen zu 4,55 MB liegen knapp darunter, mit der
+        // geschätzten nächsten Seite (24 Titelbilder zu 200 × 66 × 4 Bytes) nicht mehr.
+        var big = new FakeSteamGridDbSearch { Setup = s => s.PreviewBytes = 4_550_000 };
         var context = Context(big);
         using var vm2 = new LibraryViewModel(context, _dialogs);
         var heavy = new ArtworkPickerViewModel(vm2, vm2.Games.Single(g => g.Key == SteamKey), ArtworkKind.Hero);
         await heavy.Online.SearchAsync(ArtworkKind.Hero);
-        await WaitFor(() => heavy.Online.HeldBytes >= 22 * 4_500_000L);
+        await WaitFor(() => heavy.Online.HeldBytes >= 22 * 4_550_000L);
+        Assert.True(heavy.Online.HeldBytes <= SteamGridDbSearchViewModel.MaxHeldBytes);
         await heavy.Online.MoreAsync(ArtworkKind.Hero);
         Assert.False(heavy.Online.ShowMore);
         Assert.Equal(LibraryText.Format(LibraryStrings.Picker_SgdbTabLimit, LibraryStrings.Picker_KindPluralHero), heavy.Online.StatusText);

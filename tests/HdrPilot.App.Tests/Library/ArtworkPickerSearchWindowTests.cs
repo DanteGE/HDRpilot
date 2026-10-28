@@ -68,7 +68,7 @@ public sealed partial class ArtworkPickerSearchWindowTests
     {
         var work = new Rect(0, 0, 1280, 760);
 
-        Assert.Equal(400, DialogPlacement.GrowTop(work, 450, 500, 600)); // je 50 nach oben und unten
+        Assert.Equal(100, DialogPlacement.GrowTop(work, 150, 500, 600)); // je 50 nach oben und unten
         Assert.Equal(12, DialogPlacement.GrowTop(work, 30, 500, 700)); // oben nie über den Rand
         Assert.Equal(760 - 12 - 700, DialogPlacement.GrowTop(work, 200, 500, 700)); // unten nie darunter
         Assert.Equal(736, DialogPlacement.MaxHeightFor(work, 300));
@@ -78,7 +78,7 @@ public sealed partial class ArtworkPickerSearchWindowTests
         var upper = new Rect(-200, -1080, 1920, 1040);
         Assert.Equal(-1080 + 12, DialogPlacement.GrowTop(upper, -1070, 600, 900));
         Assert.Equal(-1080 + 1040 - 12 - 900, DialogPlacement.GrowTop(upper, -300, 600, 900));
-        Assert.Equal(-700, DialogPlacement.GrowTop(upper, -650, 600, 700));
+        Assert.Equal(-900, DialogPlacement.GrowTop(upper, -850, 600, 700));
     }
 
     [Fact]
@@ -125,7 +125,19 @@ public sealed partial class ArtworkPickerSearchWindowTests
             picker.Kind = ArtworkKind.Hero;
             dialog.Grow(results, ready);
             Assert.Equal(results, dialog.MinHeight);
-            Assert.True(Arrange(dialog, dialog.MaxHeight).DesiredSize.Height >= results - 0.5);
+
+            // Der Testhost misst nur den Inhalt, nicht das Fenster (dort wirkt MinHeight nicht). So hoch angeordnet, wie das
+            // Fenster bleibt, geht der freie Platz an die Mitte.
+            var root = Arrange(dialog, dialog.MaxHeight);
+            var less = root.DesiredSize.Height;
+            Assert.True(less < results - 0.5);
+            var scroll = Find<ScrollViewer>(dialog, "Scroll");
+            var middle = scroll.ActualHeight;
+            root.Measure(new Size(880, dialog.MinHeight));
+            root.Arrange(new Rect(0, 0, 880, dialog.MinHeight));
+            root.UpdateLayout();
+            Assert.Equal(results, root.ActualHeight, 0.5);
+            Assert.Equal(middle + (results - less), scroll.ActualHeight, 0.5);
 
             // Nie über die Arbeitsfläche hinaus.
             dialog.FitToWorkArea(new Rect(0, 0, 1024, 616));
@@ -246,7 +258,7 @@ public sealed partial class ArtworkPickerSearchWindowTests
             Arrange(dialog, dialog.MaxHeight);
             var scroll = Find<ScrollViewer>(dialog, "Scroll");
             var content = Find<StackPanel>(dialog, "ScrollContent");
-            var bar = Descendants(scroll).OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical);
+            var bar = Descendants(scroll).OfType<ScrollBar>().Single(b => b.Orientation == Orientation.Vertical && ReferenceEquals(b.TemplatedParent, scroll)); // nur die eigene Leiste (die Listen darin haben eingeklappte)
 
             Assert.Equal(850, scroll.ActualWidth, 1); // 830 Inhalt + 20 im rechten Rand
             Assert.Equal(830, content.ActualWidth, 1);

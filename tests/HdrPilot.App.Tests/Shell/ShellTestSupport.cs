@@ -294,8 +294,9 @@ internal sealed class ThrowingTrayHost : ITrayHost
 /// pumpt verschachtelt und ließe sonst einen parallelen Test den Schalter mitten im Test zurücksetzen), zählen
 /// GDI-/USER-Objekte des ganzen Testprozesses (parallele Tests würden mitzählen), hören mit dem
 /// <see cref="BindingErrorRecorder"/> die prozessweite Bindungs-Ablaufverfolgung ab (Bindungsfehler paralleler Tests
-/// landeten sonst im falschen Test) oder messen Übergänge über die Zeit (ein paralleler Test liefe sonst verschachtelt
-/// mitten in der Messung).
+/// landeten sonst im falschen Test), messen Übergänge über die Zeit (ein paralleler Test liefe sonst verschachtelt
+/// mitten in der Messung) oder stellen Kulturen um, die andere Tests mitbekämen (die des gemeinsamen WPF-Threads, die
+/// Vorgaben des Prozesses über <see cref="HdrPilot.Core.Config.UiLanguage.Apply"/>).
 /// </summary>
 [CollectionDefinition(Name, DisableParallelization = true)]
 public sealed class ShellSerialCollection

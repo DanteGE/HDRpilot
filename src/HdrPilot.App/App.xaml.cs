@@ -22,10 +22,33 @@ public partial class App : Application
     private AppServices? _services;
     private AutomationHost? _host;
 
-    protected override async void OnStartup(StartupEventArgs e)
+    /// <summary>Sprache, die <see cref="StartAsync"/> vor seinem ersten await gesetzt hat (E95, siehe <see cref="StartKeepingLanguage"/>).</summary>
+    private string? _uiLanguage;
+
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        StartKeepingLanguage(() => StartAsync(e), () => _uiLanguage);
+    }
 
+    /// <summary>
+    /// Startet <paramref name="startAsync"/> (den asynchronen Start, der die Sprache vor seinem ersten await setzt) und setzt
+    /// danach die gewählte Sprache (E95) noch einmal, hier außerhalb der async-Methode: CurrentUICulture fließt mit dem
+    /// ExecutionContext. In der async-Methode gesetzt, nimmt der Builder sie beim ersten await zurück, und WPF schreibt nach
+    /// dem Startereignis die Kultur von vorher (die von Windows) fest in den UI-Thread. Einstellungen über die Bibliothek,
+    /// das Tray-Menü oder einen zweiten Aufruf kämen sonst in der Sprache von Windows.
+    /// </summary>
+    internal static void StartKeepingLanguage(Action startAsync, Func<string?> chosenLanguage)
+    {
+        startAsync();
+        if (chosenLanguage() is { } language)
+        {
+            UiLanguage.Apply(language);
+        }
+    }
+
+    private async void StartAsync(StartupEventArgs e)
+    {
         // Steam-Startoption (--wrap -- %command%): vor allem anderen, ohne Fenster, Tray und Design. HDR vorbereiten
         // lassen, das Spiel starten, sofort enden. Die Tray-App startet hier nie: Steam zählt alle Nachkommen zum Spiel.
         if (WrapCommandLine.TryParse(RawCommandLine.Get()) is { } wrap)
@@ -47,7 +70,7 @@ public partial class App : Application
         // die Anzeigesprache von Windows (E95), nie aus den Einstellungen.
         if (SetupMode.TryDetect(Environment.ProcessPath, e.Args, out var setupMode))
         {
-            UiLanguage.Apply(setupMode.Arguments.EffectiveUiLanguage);
+            UiLanguage.Apply(_uiLanguage = setupMode.Arguments.EffectiveUiLanguage);
             var code = await SetupMode.RunAsync(this, setupMode);
             Environment.ExitCode = code;
             Shutdown(code);
@@ -63,7 +86,7 @@ public partial class App : Application
         }
 
         // Sprache (E95) vor dem ersten Fenster und der ersten Ressource: aus der Ablage, neu nach der Anzeigesprache von Windows.
-        var language = ApplyLanguage(args);
+        var language = _uiLanguage = ApplyLanguage(args);
 
         if (args.SnapshotDir is { } snapshotDir)
         {

@@ -14,8 +14,11 @@ namespace HdrPilot.App.Tests.Shell;
 
 /// <summary>
 /// Sprache in den Einstellungen (E95): Auswahl „Sprache · Language“ in „Start und Hinweise“, übernommen mit „Speichern“,
-/// wirksam nach einem Neustart; „Jetzt neu starten“ speichert zuerst und startet dann neu.
+/// wirksam nach einem Neustart; „Jetzt neu starten“ speichert zuerst und startet dann neu. Allein laufend: Zwei Tests stellen
+/// die Kultur des gemeinsamen WPF-Threads auf Englisch, und DoEvents pumpt dabei verschachtelt. WPF führt jede Operation mit
+/// der Kultur des Threads aus, auch die eines parallelen Tests, die so mitten in diesem Test läuft; der sähe englische Texte.
 /// </summary>
+[Collection(ShellSerialCollection.Name)]
 public sealed class LanguageSettingsTests
 {
     private const string Exe = @"D:\Programmordner\HDRpilot\HDRpilot.exe";

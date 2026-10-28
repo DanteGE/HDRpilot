@@ -17,7 +17,7 @@ namespace HdrPilot.App.Tests.Library;
 /// beide gleich weit sind, nicht die genaue Dauer.
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
-public sealed class HeroPointerTests
+public sealed class HeroPointerTests(ITestOutputHelper output)
 {
     private static (MainWindow Window, LibraryViewModel Model) Open(string effects)
     {
@@ -93,40 +93,59 @@ public sealed class HeroPointerTests
             var hero = window.HeroStage;
             var content = Content(window);
             Assert.Equal(TimeSpan.FromSeconds(0.8), MainWindow.PointerReturnDuration);
-            var (x0, image0) = PointBottomRight(window);
-            Thread.Sleep(40); // Drosselung (30 Hz) vorbei
-
             // Unter das Titelbild: Titel und Knöpfe springen nicht (vorher standen sie sofort in der Mitte), sie gleiten mit den
-            // Bildebenen zurück.
-            var started = DateTime.UtcNow;
-            window.PointHero(new Point(hero.ActualWidth * 0.5, hero.ActualHeight + 40));
-            Assert.Equal(x0, content.X, 0.5);
-            Assert.Equal(image0, hero.PointerShift.X, 0.5);
-            Assert.True(content.HasAnimatedProperties && hero.PointerShift.HasAnimatedProperties);
-
-            // Beide auf demselben Weg: gleich weit zurück (gleiche Dauer und Kurve), solange sie gleiten.
-            var samples = 0;
-            Assert.True(PumpUntil(() =>
+            // Bildebenen zurück. Beide auf demselben Weg: gleich weit zurück (gleiche Dauer und Kurve), solange sie gleiten.
+            // Geprüft wird an Bildern mit echter Zeit: Mitten im Weg sind beide nur in den ersten gut 430 ms der 0,8 s (danach
+            // fehlen weniger als 2 %). Stand der Testhost-Thread länger (Speicherbereinigung, ausgelastete Maschine im vollen
+            // Lauf), gab es kein Bild dazwischen, ohne dass etwas sprang: Dann wird das Zurückgleiten wiederholt, höchstens
+            // dreimal. Springt der Inhalt, gibt es trotz kurzer Pausen kein solches Bild, und der Test schlägt fehl.
+            for (var attempt = 1; ; attempt++)
             {
-                var a = content.X / x0;
-                var b = hero.PointerShift.X / image0;
-                if (a is > 0.02 and < 0.98 && b is > 0.02 and < 0.98)
+                var (x0, image0) = PointBottomRight(window);
+                Thread.Sleep(40); // Drosselung (30 Hz) vorbei
+                var started = DateTime.UtcNow;
+                window.PointHero(new Point(hero.ActualWidth * 0.5, hero.ActualHeight + 40));
+                Assert.Equal(x0, content.X, 0.5);
+                Assert.Equal(image0, hero.PointerShift.X, 0.5);
+                Assert.True(content.HasAnimatedProperties && hero.PointerShift.HasAnimatedProperties);
+
+                var samples = 0;
+                var last = started;
+                var longestPause = TimeSpan.Zero;
+                Assert.True(PumpUntil(() =>
                 {
-                    samples++;
-                    Assert.True(Math.Abs(a - b) < 0.2, FormattableString.Invariant($"Inhalt bei {a:0.##}, Bildebene bei {b:0.##} des Wegs"));
+                    var now = DateTime.UtcNow;
+                    longestPause = now - last > longestPause ? now - last : longestPause;
+                    last = now;
+                    var a = content.X / x0;
+                    var b = hero.PointerShift.X / image0;
+                    if (a is > 0.02 and < 0.98 && b is > 0.02 and < 0.98)
+                    {
+                        samples++;
+                        Assert.True(Math.Abs(a - b) < 0.2, FormattableString.Invariant($"Inhalt bei {a:0.##}, Bildebene bei {b:0.##} des Wegs"));
+                    }
+
+                    return Math.Abs(content.X) < 0.01 && Math.Abs(hero.PointerShift.X) < 0.01 && Math.Abs(hero.BokehShift.Y) < 0.01;
+                }), $"zurück in der Mitte: Inhalt {content.X:0.##}, Bild {hero.PointerShift.X:0.##}");
+                var took = DateTime.UtcNow - started;
+                output.WriteLine(FormattableString.Invariant($"Versuch {attempt}: {samples} Bilder mitten im Weg, längste Pause {longestPause.TotalMilliseconds:0} ms, zurück nach {took.TotalMilliseconds:0} ms"));
+                if (samples == 0 && longestPause >= TimeSpan.FromSeconds(0.3) && attempt < 3)
+                {
+                    continue; // nichts beobachtet, weil der Thread stand: noch einmal
                 }
 
-                return Math.Abs(content.X) < 0.01 && Math.Abs(hero.PointerShift.X) < 0.01 && Math.Abs(hero.BokehShift.Y) < 0.01;
-            }), $"zurück in der Mitte: Inhalt {content.X:0.##}, Bild {hero.PointerShift.X:0.##}");
-            Assert.True(samples > 0, "kein Bild, in dem beide noch gleiten");
-            Assert.True(DateTime.UtcNow - started >= TimeSpan.FromSeconds(0.4), "zu schnell in der Mitte: " + (DateTime.UtcNow - started));
+                Assert.True(samples > 0, FormattableString.Invariant($"kein Bild, in dem beide noch gleiten (längste Pause {longestPause.TotalMilliseconds:0} ms, Versuch {attempt})"));
+                Assert.True(took >= TimeSpan.FromSeconds(0.4), "zu schnell in der Mitte: " + took);
+                break;
+            }
+
             Assert.Equal(0, content.Y, 2);
 
             // Wieder hinein, mitten im Zurückgleiten: Es geht vom aktuellen Wert aus weiter, ohne Sprung.
-            (x0, _) = PointBottomRight(window);
+            var (again, _) = PointBottomRight(window);
             Thread.Sleep(40);
             window.PointHero(new Point(hero.ActualWidth * 0.5, -30)); // über dem Titelbild hinaus
-            Assert.True(PumpUntil(() => content.X < x0 * 0.7, 2), "gleitet zurück");
+            Assert.True(PumpUntil(() => content.X < again * 0.7, 2), "gleitet zurück");
             var mid = content.X;
             Thread.Sleep(40);
             window.PointHero(new Point(hero.ActualWidth * 0.1, hero.ActualHeight * 0.5));

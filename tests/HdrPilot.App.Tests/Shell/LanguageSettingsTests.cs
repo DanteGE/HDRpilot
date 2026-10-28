@@ -18,7 +18,7 @@ namespace HdrPilot.App.Tests.Shell;
 /// </summary>
 public sealed class LanguageSettingsTests
 {
-    private const string Exe = @"D:\Programme\HDRpilot\HDRpilot.exe";
+    private const string Exe = @"D:\Programmordner\HDRpilot\HDRpilot.exe";
 
     private readonly InMemoryFileSystem _fs = new();
     private readonly FakeRegistry _registry = new();

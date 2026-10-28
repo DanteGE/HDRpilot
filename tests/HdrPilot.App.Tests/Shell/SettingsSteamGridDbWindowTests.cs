@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Data;
 using HdrPilot.App.Resources;
 using HdrPilot.App.ViewModels;
 using HdrPilot.App.Views.Shell;
@@ -54,6 +56,25 @@ public sealed class SettingsSteamGridDbWindowTests
             var card = (FrameworkElement)window.FindName("SteamGridDbCard");
             Assert.True(row.TranslatePoint(default, card).Y > check.TranslatePoint(default, card).Y);
             Assert.Single(WpfTestHost.Visuals(card).OfType<CheckBox>());
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public void The_status_line_tells_screen_readers_its_text_next_to_its_label()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var window = SettingsLayoutTests.CreateWindow(out _);
+            WpfTestHost.Layout(window, new Size(1280, 800));
+            var status = WpfTestHost.Visuals(window).OfType<TextBlock>().Single(t => AutomationProperties.GetAutomationId(t) == "SteamGridDbStatus");
+            var peer = UIElementAutomationPeer.CreatePeerForElement(status);
+
+            // Der Name ist die feste Beschriftung; der Text selbst (Zugriff, Fehler) steht im ItemStatus und folgt der Bindung.
+            Assert.Equal(ShellStrings.SteamGridDbStatusOff, status.Text);
+            Assert.Equal(ShellStrings.SteamGridDbStatusName, peer.GetName());
+            Assert.Equal(status.Text, peer.GetItemStatus());
+            Assert.Equal("SteamGridDbStatusText", BindingOperations.GetBinding(status, AutomationProperties.ItemStatusProperty)?.Path.Path);
             window.Close();
         });
     }

@@ -1265,7 +1265,8 @@
                                                     Content="{x:Static res:ShellStrings.SteamGridDbCheck}" Command="{Binding CheckSteamGridDbCommand}" />
                                         </Grid>
                                         <TextBlock Margin="2,8,0,0" FontSize="12" AutomationProperties.AutomationId="SteamGridDbStatus"
-                                                   AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbStatusName}" Text="{Binding SteamGridDbStatusText}">
+                                                   AutomationProperties.Name="{x:Static res:ShellStrings.SteamGridDbStatusName}" AutomationProperties.ItemStatus="{Binding SteamGridDbStatusText}"
+                                                   Text="{Binding SteamGridDbStatusText}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock" BasedOn="{StaticResource Hp.Text.Caption}">
                                                     <Style.Triggers>

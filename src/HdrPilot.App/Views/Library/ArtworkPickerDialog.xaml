@@ -219,14 +219,18 @@
                                            PreviewKeyDown="OnMatchPanelKeyDown"
                                            AutomationProperties.AutomationId="ArtworkSgdbMatchPanel" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchListName}">
                             <StackPanel>
-                                <DockPanel>
-                                    <Button x:Name="MatchSearchButton" DockPanel.Dock="Right" Style="{StaticResource Lib.PickerButton}" Height="40" Margin="10,0,0,0" Command="{Binding Online.SearchGamesCommand}"
-                                            Content="{x:Static res:LibraryStrings.Picker_SgdbMatchSearch}"
-                                            AutomationProperties.AutomationId="ArtworkSgdbMatchSearchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchSearch}" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
                                     <TextBox x:Name="MatchSearch" Style="{StaticResource Lib.TextBox}" Text="{Binding Online.MatchSearchText, UpdateSourceTrigger=PropertyChanged}"
                                              PreviewKeyDown="OnMatchSearchKeyDown"
                                              AutomationProperties.AutomationId="ArtworkSgdbMatchSearch" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchSearchName}" />
-                                </DockPanel>
+                                    <Button x:Name="MatchSearchButton" Grid.Column="1" Style="{StaticResource Lib.PickerButton}" Height="40" Margin="10,0,0,0" Command="{Binding Online.SearchGamesCommand}"
+                                            Content="{x:Static res:LibraryStrings.Picker_SgdbMatchSearch}"
+                                            AutomationProperties.AutomationId="ArtworkSgdbMatchSearchButton" AutomationProperties.Name="{x:Static res:LibraryStrings.Picker_SgdbMatchSearch}" />
+                                </Grid>
                                 <TextBlock Text="{Binding Online.MatchHint}" FontSize="11.5" Margin="2,6,0,0" Foreground="{DynamicResource Hp.Brush.TextSecondary}" />
                                 <TextBlock Text="{x:Static res:LibraryStrings.Picker_SgdbMatchCommitHint}" FontSize="11.5" Margin="2,2,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextSecondary}"
                                            Visibility="{Binding Online.ShowCommitHint, Converter={StaticResource Lib.BoolToVisibility}}" />

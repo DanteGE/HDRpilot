@@ -1109,7 +1109,7 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
 
         var queue = st.QueueToken();
         var width = DecodeWidth(st.Kind);
-        var batch = 0;
+        var started = new List<(ArtworkChoiceViewModel Tile, Task<SteamGridDbPreview> Preview)>();
         foreach (var tile in tiles)
         {
             if (tile.Asset is not { } asset || tile.PreviewState is PreviewState.Loaded or PreviewState.Loading or PreviewState.Failed)
@@ -1124,20 +1124,26 @@ public sealed class SteamGridDbSearchViewModel : ObservableObject
             }
 
             tile.SetPreviewState(PreviewState.Loading);
-            batch++;
-            _ = ObservePreviewAsync(st, tile, session.LoadPreviewAsync(asset, width, queue));
+            started.Add((tile, session.LoadPreviewAsync(asset, width, queue)));
         }
 
-        if (batch > 0)
+        if (started.Count == 0)
         {
-            if (st.BatchDone >= st.BatchTotal)
-            {
-                st.BatchTotal = 0;
-                st.BatchDone = 0;
-            }
+            return;
+        }
 
-            st.BatchTotal += batch;
-            RaiseIfCurrent(st);
+        // Erst die Seite zählen, dann beobachten: Eine sofort fertige Vorschau (abgebrochen, Attrappe) zählte sonst vor ihr.
+        if (st.BatchDone >= st.BatchTotal)
+        {
+            st.BatchTotal = 0;
+            st.BatchDone = 0;
+        }
+
+        st.BatchTotal += started.Count;
+        RaiseIfCurrent(st);
+        foreach (var (tile, preview) in started)
+        {
+            _ = ObservePreviewAsync(st, tile, preview);
         }
     }
 

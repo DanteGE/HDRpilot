@@ -27,6 +27,9 @@ public sealed class GameColorRenderTests
 {
     private static readonly Size WindowSize = new(1600, 900);
 
+    /// <summary>Modus des grauen Spiels: royal im eigenen Modus (Tritonus, drei Farben), mit und ohne Schalter derselbe.</summary>
+    private const PaletteMode GrayMode = PaletteMode.Tritone;
+
     [Fact]
     public void Rot() => Run("rot", Scene.Red, [LibraryViewMode.List, LibraryViewMode.Shelf], [true, false]);
 
@@ -34,10 +37,10 @@ public sealed class GameColorRenderTests
     public void Blau() => Run("blau", Scene.Blue, [LibraryViewMode.List], [true, false]);
 
     [Fact]
-    public void Grau() => Run("grau", Scene.Gray, [LibraryViewMode.List], [true, false], preset: "royal", check: (r, dark) =>
+    public void Grau() => Run("grau", Scene.Gray, [LibraryViewMode.List], [true, false], mode: GrayMode, preset: "royal", check: (r, dark) =>
     {
-        // Gleich dem Bild ohne Schalter: genau das Farbschema.
-        var off = Render("grau", Scene.Gray, LibraryViewMode.List, dark, colors: false, background: true, PaletteMode.Tritone, "royal");
+        // Gleich dem Bild ohne Schalter mit demselben Schema (royal, Tritonus): genau das Farbschema.
+        var off = Render("grau", Scene.Gray, LibraryViewMode.List, dark, colors: false, background: true, GrayMode, "royal");
         Assert.True(MeanDeltaE(r.Bitmap, off.Bitmap) <= 0.01, $"mittlere Abweichung {MeanDeltaE(r.Bitmap, off.Bitmap):0.0000}");
         Assert.Equal(off.Window.ShownAccents, r.Window.ShownAccents);
         off.Window.Close();
@@ -71,7 +74,7 @@ public sealed class GameColorRenderTests
     });
 
     [Fact]
-    public void Hint() => Run("hint", Scene.RedOnSky, [LibraryViewMode.Shelf], [true], check: (r, _) =>
+    public void Hint() => Run("hint", Scene.RedAtSunset, [LibraryViewMode.Shelf], [true], check: (r, _) =>
     {
         var artwork = r.Window.ViewModel!.Hero!.Artwork!;
         var hint = LibraryArt.Parse(artwork.Ambient.Glow);
@@ -108,7 +111,7 @@ public sealed class GameColorRenderTests
         Blue,
         Gray,
         Colorful,
-        RedOnSky,
+        RedAtSunset,
         Navy,
         Gold,
     }
@@ -223,7 +226,7 @@ public sealed class GameColorRenderTests
             Scene.Blue => "Testspiel Blau",
             Scene.Gray => "Testspiel Grau",
             Scene.Colorful => "Testspiel Bunt",
-            Scene.RedOnSky => "Testspiel Rot",
+            Scene.RedAtSunset => "Testspiel Rot",
             Scene.Navy => "Testspiel Navy",
             _ => "Testspiel Gold",
         });
@@ -234,7 +237,10 @@ public sealed class GameColorRenderTests
             Scene.Blue => (GeneratedArt.Logo(new LogoSpec { Fill = GeneratedArt.C("#FFFFFF") }), GeneratedArt.Cover(CoverScene.Blue), null),
             Scene.Gray => (GeneratedArt.Logo(new LogoSpec { Fill = GeneratedArt.C("#101010") }), GeneratedArt.Cover(CoverScene.Gray), GeneratedArt.Hero(HeroScene.Gray)),
             Scene.Colorful => (GeneratedArt.Logo(new LogoSpec { Bands = [(0.5, GeneratedArt.C("#1E64DC")), (0.33, GeneratedArt.C("#FFD400")), (0.17, GeneratedArt.C("#E02020"))] }), GeneratedArt.Cover(CoverScene.Jungle), null),
-            Scene.RedOnSky => (red, GeneratedArt.Cover(CoverScene.NightPortrait), GeneratedArt.Hero(HeroScene.BlueSky)),
+            // Leuchten des Abendhimmels (Farbton 28°) nahe seiner Zweitfarbe Magenta (358°); ohne Hinweis gewänne das Violett
+            // (322°). Ein blauer Himmel taugt hier nicht: Atmosphären liegen höchstens 120° vom Akzent (Rot, 27°), Himmelblau
+            // (250°) liegt 137° davon, also gäbe es keine Zweitfarbe in seiner Nähe, die der Hinweis vorziehen könnte.
+            Scene.RedAtSunset => (red, GeneratedArt.Cover(CoverScene.NightPortrait), GeneratedArt.Hero(HeroScene.Sunset)),
             Scene.Navy => (GeneratedArt.Logo(new LogoSpec { Fill = GeneratedArt.C("#0B1F4D") }), null, null),
             _ => (GeneratedArt.Logo(new LogoSpec { Fill = GeneratedArt.C("#E8B500") }), null, null),
         };

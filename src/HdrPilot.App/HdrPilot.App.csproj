@@ -58,10 +58,12 @@
     Im Hauptprojekt fügt GenerateResource sie selbst hinzu (sonst doppelt). Der Pfad ist ausgeschrieben statt
     $(IntermediateOutputPath): Unter Linux (dotnet build -p:EnableWindowsTargeting=true) hängt das SDK im temporären
     Projekt das Zielframework ein zweites Mal an (obj/Debug/net10.0-windows/net10.0-windows/), unter Windows nicht.
+    Mit Laufzeitkennung (tools\publish.ps1, Profil win-x64) liegen die Klassen eine Ebene tiefer
+    (obj\Release\net10.0-windows\win-x64\), deshalb gehört $(RuntimeIdentifier) mit in den Pfad.
   -->
   <Target Name="HpGenerateResourceClassesEarly" BeforeTargets="MarkupCompilePass1" DependsOnTargets="PrepareResourceNames;ResolveReferences;CoreResGen" />
   <ItemGroup Condition="$(MSBuildProjectName.EndsWith('_wpftmp'))">
-    <Compile Include="$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\*Strings.Designer.cs" />
+    <Compile Include="$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\$([MSBuild]::EnsureTrailingSlash('$(RuntimeIdentifier)'))*Strings.Designer.cs" />
   </ItemGroup>
 
   <ItemGroup>

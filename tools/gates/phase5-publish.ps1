@@ -74,13 +74,14 @@ foreach ($exe in $appExe, $cliExe) {
         Check ($machine -eq 0x8664) ("{0}: x64 (Machine 0x{1:X4}), {2:N1} MB" -f (Split-Path $exe -Leaf), $machine, ((Get-Item $exe).Length / 1MB))
     }
 }
-$version = ([xml](Get-Content (Join-Path $root 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version
+# Directory.Build.props hat zwei PropertyGroup (die zweite nur für Release, E92): nur die mit Version nehmen, sonst ist $version ein Feld und "$version*" wird zu "1.6.0 *"
+$version = @(([xml](Get-Content (Join-Path $root 'Directory.Build.props') -Raw)).Project.PropertyGroup | ForEach-Object { $_.Version } | Where-Object { $_ }) | Select-Object -First 1
 $productVersion = (Get-Item $appExe).VersionInfo.ProductVersion
 Check ($productVersion -like "$version*") "Produktversion $productVersion passt zu $version"
 
 # 2b. Setup-Datei (E83, Format wie src\HdrPilot.App\Setup\SetupBundle.cs): Abschluss passt zur Dateigröße, der EXE-Teil
-# ist byte-gleich mit der portablen EXE (Prüfsumme im Abschluss und tatsächlich), das Paket enthält genau die drei
-# Beigaben, das Manifest verlangt keine Adminrechte. Gegenproben: ein gekipptes Byte im EXE-Teil fällt bei der
+# ist byte-gleich mit der portablen EXE (Prüfsumme im Abschluss und tatsächlich), das Paket enthält genau die Beigaben
+# aus $PayloadEntries (Phase7Common.ps1), das Manifest verlangt keine Adminrechte. Gegenproben: ein gekipptes Byte im EXE-Teil fällt bei der
 # Prüfsumme durch, ein abgeschnittenes Ende beim Abschluss, ein um ein Byte gekürztes Paket bei den Längen, die portable
 # EXE hat gar keinen.
 . (Join-Path $PSScriptRoot 'Phase7Common.ps1')
@@ -95,7 +96,7 @@ foreach ($p in $bundle.Problems) { Note "  - $p" }
 function Test-NoProblem($result, [string]$prefix) { @($result.Problems | Where-Object { $_.StartsWith($prefix) }).Count -eq 0 }
 Check ((Test-Path $setup) -and (Test-NoProblem $bundle 'Setup-Datei') -and (Test-NoProblem $bundle 'Abschluss')) ("Setup-Datei {0}: Kennung HDRPILOT-SETUP01, EXE {1:N0} + Paket {2:N0} + 64 Bytes = Dateigröße" -f (Split-Path $setup -Leaf), $bundle.ExeLength, $bundle.PayloadLength)
 Check ($bundle.ExeHash -and (Test-NoProblem $bundle 'EXE-Teil: SHA-256')) ("EXE-Teil SHA256 {0} = Abschluss = portable HDRpilot.exe" -f $bundle.ExeHash)
-Check (@($bundle.Entries).Count -eq 3 -and (Test-NoProblem $bundle 'Paket')) ("Paket enthält genau {0}, inhaltsgleich mit der Auslieferung" -f (@($bundle.Entries) -join ', '))
+Check (@($bundle.Entries).Count -eq $PayloadEntries.Count -and (Test-NoProblem $bundle 'Paket')) ("Paket enthält genau {0}, inhaltsgleich mit der Auslieferung" -f (@($bundle.Entries) -join ', '))
 Check ($bundle.AsInvoker -and (Test-NoProblem $bundle 'EXE-Teil: Manifest')) 'EXE-Teil enthält das Manifest mit asInvoker, keine erhöhten Rechte'
 if ($bundle.ExeLength -gt 0) {
     $controlDir = Join-Path $work 'setup-gegenprobe'

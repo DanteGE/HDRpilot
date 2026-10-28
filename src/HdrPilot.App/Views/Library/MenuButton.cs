@@ -17,8 +17,14 @@ namespace HdrPilot.App.Views.Library;
 /// der Vorlage dreht sich). Für UI-Automation ein Knopf mit Aus-/Einklappen (ExpandCollapse) und Auslösen.
 /// <para>
 /// Ein zweiter Klick, die Eingabe- oder Leertaste (und Auslösen per UI-Automation) bei offenem Menü schließt es, der Fokus
-/// bleibt auf dem Knopf (Wunsch des Nutzers 2026-10-22). Mit der Maus schließt das Menü schon beim Drücken (es gibt die
-/// Maus beim Klick daneben frei); der Klick, der danach auf dem Knopf ankommt, öffnet es deshalb nicht wieder.
+/// bleibt auf dem Knopf (Wunsch des Nutzers 2026-10-22). Mit der Maus schließt das Menü schon beim Drücken: Es hält die
+/// Maus, WPF meldet ihm das Drücken daneben zuerst (es geht zu) und reicht es dann mit demselben Zeitstempel an den Knopf
+/// weiter; der Klick, der danach auf dem Knopf ankommt, öffnet es deshalb nicht wieder.
+/// </para>
+/// <para>
+/// Ob das Menü offen ist, sagt sein IsOpen, nicht <see cref="IsMenuOpen"/>: Das folgt Opened/Closed, und Closed kommt erst,
+/// wenn Windows das Menü ausgeblendet hat. Gleich nach dem Schließen (Esc, Eintrag, Klick daneben) öffnen ein Klick, eine
+/// Taste oder Auslösen es also wieder, statt ins Leere zu gehen.
 /// </para>
 /// </summary>
 public sealed class MenuButton : Button
@@ -36,12 +42,12 @@ public sealed class MenuButton : Button
 
     private bool _focusOnOpen;
 
+    /// <summary>Zeitstempel des letzten Drückens (linke Taste), mit dem ein Klick daneben das offene Menü geschlossen hat.</summary>
+    private int? _outsidePress;
+
     /// <summary>Das laufende Drücken der Maus hat das Menü geschlossen: Der Klick darauf öffnet es nicht wieder.</summary>
     private bool _pressClosedMenu;
     private long _closedTick;
-
-    /// <summary>So kurz nach dem Schließen gehört ein Drücken noch dazu (die Maus geht erst ans Menü, dann an den Knopf).</summary>
-    private const long PressWindowMs = 250;
 
     /// <summary>Länger gehalten zählt das Drücken nicht mehr als „Menü zu“: Ein Klick danach öffnet wieder.</summary>
     private const long PressHoldMs = 3000;
@@ -90,7 +96,7 @@ public sealed class MenuButton : Button
             }
         }
 
-        if (IsMenuOpen)
+        if (ContextMenu is { IsOpen: true })
         {
             CloseMenu(); // Eingabe-, Leertaste oder UI-Automation bei offenem Menü
             return;
@@ -99,17 +105,18 @@ public sealed class MenuButton : Button
         OpenMenu(InputManager.Current.MostRecentInputDevice is KeyboardDevice);
     }
 
-    /// <summary>Drücken bei noch offenem Menü (erreicht den Knopf, bevor das Menü zugeht): schließen, nicht wieder öffnen.</summary>
+    /// <summary>
+    /// Hat genau dieses Drücken das offene Menü geschlossen (gleicher Zeitstempel wie das Drücken daneben, das WPF dem Menü
+    /// vorher gemeldet hat), öffnet der Klick darauf es nicht wieder. Jedes andere Drücken ist ein gewöhnlicher Klick, auch
+    /// eines, das nach einem nie losgelassenen übrig blieb.
+    /// </summary>
     protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
     {
-        if (IsMenuOpen)
+        _pressClosedMenu = _outsidePress == e.Timestamp;
+        _outsidePress = null;
+        if (_pressClosedMenu)
         {
-            _pressClosedMenu = true;
             _closedTick = Environment.TickCount64;
-        }
-        else if (_pressClosedMenu && Environment.TickCount64 - _closedTick > PressWindowMs)
-        {
-            _pressClosedMenu = false; // übrig von einem Drücken, das nie losgelassen wurde: ein neuer Klick öffnet
         }
 
         base.OnPreviewMouseLeftButtonDown(e);
@@ -135,9 +142,9 @@ public sealed class MenuButton : Button
     protected override void OnKeyDown(KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (!e.Handled && IsMenuOpen && Keyboard.Modifiers == ModifierKeys.None && key is Key.Enter or Key.Space)
+        if (!e.Handled && ContextMenu is { IsOpen: true } && Keyboard.Modifiers == ModifierKeys.None && key is Key.Enter or Key.Space)
         {
-            CloseMenu(); // Fokus noch auf dem Knopf (mit der Maus geöffnet): wie ein zweiter Klick
+            CloseMenu(); // Fokus bei offenem Menü auf dem Knopf (ein Menü, das ihn nicht nimmt): wie ein zweiter Klick
             e.Handled = true;
             return;
         }
@@ -188,6 +195,7 @@ public sealed class MenuButton : Button
             old.Opened -= OnMenuOpened;
             old.Closed -= OnMenuClosed;
             old.PreviewKeyDown -= OnMenuPreviewKeyDown;
+            old.RemoveHandler(Mouse.PreviewMouseDownOutsideCapturedElementEvent, new MouseButtonEventHandler(OnMenuPressedOutside));
         }
 
         if (e.NewValue is ContextMenu menu)
@@ -195,6 +203,19 @@ public sealed class MenuButton : Button
             menu.Opened += OnMenuOpened;
             menu.Closed += OnMenuClosed;
             menu.PreviewKeyDown += OnMenuPreviewKeyDown;
+            menu.AddHandler(Mouse.PreviewMouseDownOutsideCapturedElementEvent, new MouseButtonEventHandler(OnMenuPressedOutside), handledEventsToo: true);
+        }
+    }
+
+    /// <summary>
+    /// Drücken außerhalb des offenen Menüs, das die Maus hält: Das Menü geht dabei zu. Trifft dasselbe Drücken gleich danach
+    /// diesen Knopf, ist es der zweite Klick (<see cref="OnPreviewMouseLeftButtonDown"/>).
+    /// </summary>
+    private void OnMenuPressedOutside(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            _outsidePress = e.Timestamp;
         }
     }
 
@@ -240,14 +261,6 @@ public sealed class MenuButton : Button
 
     private void OnMenuClosed(object sender, RoutedEventArgs e)
     {
-        // Geschlossen, weil die Maus auf diesem Knopf gedrückt wurde: Der folgende Klick soll es nicht wieder öffnen. Nach der
-        // Lage gefragt, nicht nach IsMouseOver: Solange das Menü die Maus hält, meldet IsMouseOver dessen Elemente.
-        if (Mouse.LeftButton == MouseButtonState.Pressed && new Rect(RenderSize).Contains(Mouse.GetPosition(this)))
-        {
-            _pressClosedMenu = true;
-            _closedTick = Environment.TickCount64;
-        }
-
         SetValue(IsMenuOpenPropertyKey, false);
         RaiseExpandCollapse(true, false);
     }

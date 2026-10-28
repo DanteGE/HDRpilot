@@ -1128,7 +1128,16 @@ Umsetzung (Zusammenführung der drei Teile, G10.10), wo sie vom Entwurf abweicht
   UI-Automation. Esc und ein Klick daneben schließen wie bisher, Aus-/Einklappen meldet den Zustand. Die Menüs von „···“
   und Symbol stehen jetzt wie das Quellenmenü bündig 4 px unter dem Knopf. Die Felder „Quelle“ und „Sortierung“ der
   Werkzeugleiste sind Auswahlfelder, die das schon können; Lasche, Kapsel und Leiste öffnen ihr Menü nur per Rechtsklick
-  (wie jedes Kontextmenü). Prüfung: `MenuToggleTests`.
+  (wie jedes Kontextmenü). Das offene Menü hält die Maus: WPF meldet ihm ein Drücken daneben zuerst (es geht dabei zu)
+  und reicht es dann mit demselben Zeitstempel an das Element darunter weiter; ist das der Knopf, öffnet der Klick beim
+  Loslassen das Menü nicht wieder. Ob das Menü offen ist, sagt sein `IsOpen`, nicht `Closed`: Das kommt erst, wenn
+  Windows das Menü ausgeblendet hat. In dieser Zeit gingen ein Klick, die Eingabe- oder Leertaste auf dem Knopf und
+  Auslösen gleich nach Esc, einem Eintrag oder einem Klick daneben bisher ins Leere (sie „schlossen“ das schon
+  geschlossene Menü); jetzt öffnen sie es wieder.
+  Prüfung: `MenuToggleTests` in einem echten Testfenster (Entscheidung des Nutzers 2026-10-28; die Menüs gehen während
+  der Tests wirklich auf und halten kurz die Maus): klein, nicht aktiviert, ohne Taskleiste, oben links auf der
+  Arbeitsfläche. Echte Eingaben gibt es nicht: Klick über Auslösen, Drücken, Loslassen und Tasten als dieselben Routed
+  Events in der Reihenfolge des Eingabesystems, auch mit den echten Menüs von „···“, Symbol und Titel.
 
 - Rückmeldungen des Nutzers nach dem Test von 1.5.0 (2026-10-22), Titelbereich, Griff, Kacheln und Lasche:
   - Tiefenwirkung (Punkt 1): Verlässt der Zeiger Titelbild oder Fenster, gleiten Bildebenen und Inhalt (Titel,

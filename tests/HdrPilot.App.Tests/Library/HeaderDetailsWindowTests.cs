@@ -13,6 +13,7 @@ using HdrPilot.App.ViewModels.Library;
 using HdrPilot.App.Views.Library;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
+using HdrPilot.Tests.TestSupport;
 using static HdrPilot.App.Tests.Library.TestLibraryContext;
 
 namespace HdrPilot.App.Tests.Library;
@@ -205,6 +206,67 @@ public sealed class HeaderDetailsWindowTests(ITestOutputHelper output)
                 window.Close();
             }
         });
+    }
+
+    [Theory]
+    [InlineData("de-DE", "7 Spiele")]
+    [InlineData("en-US", "7 games")]
+    public void Overline_title_and_stats_are_never_clipped_at_any_scale_and_width(string culture, string count)
+    {
+        // Kennzeile, Titel und Kennzahlen sind zusammen gut 55 DIP hoch, der Kopf 52. Der Block steht oben und unten bis 2 DIP
+        // über; WPF darf ihn dabei nicht beschneiden (vorher fehlten ab 1366 DIP Breite die Unterlängen von „Spiele“/„games“).
+        WpfTestHost.Run(() =>
+        {
+            using var language = TestCulture.Use(culture);
+            foreach (var scale in new[] { 1.0, 1.25, 1.5, 1.75 })
+            {
+                var (window, _, _) = Open(new Size(1600, 1000));
+                VisualTreeHelper.SetRootDpi(window, new DpiScale(scale, scale));
+                foreach (var size in new[] { new Size(1280, 800), new Size(1440, 900), new Size(1600, 1000), new Size(1920, 1080), new Size(3440, 1440) })
+                {
+                    Arrange(window, size);
+                    var where = FormattableString.Invariant($"{culture} {scale * 100:0} % {size.Width}×{size.Height}");
+                    Assert.Equal(scale, VisualTreeHelper.GetDpi(window).DpiScaleX);
+                    Assert.Equal(count, Named<TextBlock>(window, "HeaderCount").Text);
+                    var withStats = size.Width > ShowcaseLayout.CompactWidth;
+                    Assert.Equal(withStats, Shown(Named<FrameworkElement>(window, "HeaderStats")));
+
+                    var header = Bounds(window, Named<FrameworkElement>(window, "HeaderArea"));
+                    var block = Bounds(window, Named<FrameworkElement>(window, "HeaderTitleBlock"));
+                    output.WriteLine(FormattableString.Invariant($"{where}: Kopf {header.Top:0.##}–{header.Bottom:0.##}, Titelblock {block.Top:0.##}–{block.Bottom:0.##}"));
+                    Assert.True(block.Top >= header.Top - 2 - 1e-6 && block.Bottom <= header.Bottom + 2 + 1e-6, $"{where}: Titelblock {block}, Kopf {header}");
+
+                    var texts = new[] { "HeaderOverline", "HeaderTitle", "HeaderCount", "HeaderHdrAuto", "HeaderNew" }.Select(n => Named<FrameworkElement>(window, n)).Where(Shown).ToList();
+                    Assert.Equal(withStats ? 5 : 2, texts.Count);
+                    foreach (var text in texts)
+                    {
+                        AssertNotClipped(window, text, where);
+                    }
+                }
+
+                window.Close();
+            }
+        });
+    }
+
+    /// <summary>Kein Element bis hinauf zum Fenster beschneidet <paramref name="element"/> (Layout-Beschnitt oder Clip), auch nicht um Bruchteile.</summary>
+    private static void AssertNotClipped(MainWindow window, FrameworkElement element, string where)
+    {
+        var box = new Rect(element.RenderSize);
+        for (var node = (DependencyObject)element; node is Visual visual && !ReferenceEquals(node, window); node = VisualTreeHelper.GetParent(node))
+        {
+            if (VisualTreeHelper.GetClip(visual) is not { } clip)
+            {
+                continue;
+            }
+
+            var local = ReferenceEquals(visual, element) ? box : element.TransformToAncestor(visual).TransformBounds(box);
+            var bounds = clip.Bounds;
+            var clipper = (visual as FrameworkElement)?.Name is { Length: > 0 } name ? name : visual.GetType().Name;
+            Assert.True(
+                local.Left >= bounds.Left - 0.01 && local.Top >= bounds.Top - 0.01 && local.Right <= bounds.Right + 0.01 && local.Bottom <= bounds.Bottom + 0.01,
+                FormattableString.Invariant($"{where}: {element.Name} {local} von {clipper} auf {bounds} beschnitten"));
+        }
     }
 
     [Fact]

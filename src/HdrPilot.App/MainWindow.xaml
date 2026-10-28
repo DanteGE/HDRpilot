@@ -982,8 +982,11 @@
                 <!--
                     Titel folgt der Quelle (Wunsch des Nutzers 2026-10-22): Kennzeile „SPIELEBIBLIOTHEK“, groß die gewählte Quelle
                     (überblendet beim Wechsel, ein Klick öffnet das Quellenmenü), darunter die Kennzahlen nur dieser Auswahl.
+                    Die drei Zeilen sind gut 55 DIP hoch, der Kopf 52: Der Block steht oben und unten bis 2 DIP über. Die negativen
+                    Ränder melden ihn dafür 4 DIP kleiner an, sonst beschnitte WPF ihn auf den Kopf (die Unterlängen der Kennzahlen
+                    fehlten); die Lage bleibt mittig wie zuvor.
                 -->
-                <StackPanel x:Name="HeaderTitleBlock" Margin="14,0,0,0" VerticalAlignment="Center">
+                <StackPanel x:Name="HeaderTitleBlock" Margin="14,-2,0,-2" VerticalAlignment="Center">
                     <TextBlock x:Name="HeaderOverline" Text="{x:Static res:LibraryStrings.Header_Overline}" FontSize="10" FontWeight="Bold"
                                LineHeight="12" LineStackingStrategy="BlockLineHeight" Foreground="{StaticResource Lib.Brush.ArtCaption}" />
                     <lib:MenuButton x:Name="SourceTitleButton" Style="{StaticResource Lib.HeaderTitleButton}" ContextMenu="{StaticResource SourceMenu}"

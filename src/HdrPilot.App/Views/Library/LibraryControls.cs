@@ -96,14 +96,20 @@ public static class GameListColumns
     }
 }
 
-/// <summary>Pfad mit Auslassung in der Mitte (Prototyp midPath): „C:\…\Binaries\Win64“ bleibt lesbar, keine Bidi-Tricks.</summary>
+/// <summary>
+/// Pfad mit Auslassung in der Mitte (Prototyp midPath): „C:\…\Binaries\Win64“ bleibt lesbar, keine Bidi-Tricks. Ein
+/// Startbefehl als Adresse ohne „\“ (etwa „com.epicgames.launcher://apps/…?action=launch“) wird an „/“ geteilt und behält
+/// Schema und ersten Teil: „uplay://launch/…/0“.
+/// </summary>
 public static class PathEllipsis
 {
     public const string Ellipsis = "…";
 
     /// <summary>
     /// Kürzt einen Pfad so, dass <paramref name="measure"/> höchstens <paramref name="maxWidth"/> ergibt: erst ganze
-    /// Ordner nach dem ersten Teil weglassen, dann vom Anfang des Rests kürzen.
+    /// Ordner nach dem ersten Teil weglassen, passt auch „erster Teil\…\letzter Teil“ nicht, alles nach dem ersten Teil
+    /// von vorn kürzen. Bei einer Adresse bleibt dabei der Anfang („Schema://erster Teil/“) stehen, solange er höchstens
+    /// die halbe Breite braucht; sonst zählt wie beim Pfad das Ende.
     /// </summary>
     public static string Shorten(string path, double maxWidth, Func<string, double> measure)
     {
@@ -112,10 +118,9 @@ public static class PathEllipsis
             return path ?? string.Empty;
         }
 
-        var parts = path.Split('\\');
-        var head = parts[0];
-        var tail = parts.Skip(1).ToList();
-        string Join() => string.Join('\\', new[] { head, Ellipsis }.Concat(tail));
+        var (head, separator, tail, isAddress) = Split(path);
+        var rest = string.Join(separator, tail);
+        string Join() => head + Ellipsis + separator + string.Join(separator, tail);
         while (tail.Count > 1 && measure(Join()) > maxWidth)
         {
             tail.RemoveAt(0);
@@ -127,13 +132,53 @@ public static class PathEllipsis
             return shortened;
         }
 
-        var rest = string.Join('\\', tail);
-        while (rest.Length > 4 && measure(Ellipsis + rest) > maxWidth)
+        if (isAddress && measure(head + Ellipsis) <= maxWidth / 2)
+        {
+            var end = Cut(rest, s => head + Ellipsis + s, maxWidth, measure);
+            if (measure(head + Ellipsis + end) <= maxWidth)
+            {
+                return head + Ellipsis + end;
+            }
+        }
+
+        return Ellipsis + Cut(rest, s => Ellipsis + s, maxWidth, measure);
+    }
+
+    /// <summary>Lässt am Anfang von <paramref name="rest"/> Zeichen weg, bis die Form passt (höchstens bis auf 4 Zeichen).</summary>
+    private static string Cut(string rest, Func<string, string> shape, double maxWidth, Func<string, double> measure)
+    {
+        while (rest.Length > 4 && measure(shape(rest)) > maxWidth)
         {
             rest = rest[1..];
         }
 
-        return Ellipsis + rest;
+        return rest;
+    }
+
+    /// <summary>
+    /// Anfang (bleibt stehen, samt Trenner), Trenner und die Teile danach. Pfad: Laufwerk oder erster Teil vor „\“ (wie
+    /// bisher). Adresse ohne „\“: „Schema://“ samt erstem Teil und „/“, Teile an „/“; ohne „/“ nach dem ersten Teil nur
+    /// „Schema://“. Sonst kein Anfang und ein einziger Teil.
+    /// </summary>
+    private static (string Head, string Separator, List<string> Tail, bool IsAddress) Split(string path)
+    {
+        if (path.Contains('\\', StringComparison.Ordinal))
+        {
+            var parts = path.Split('\\');
+            return (parts[0] + "\\", "\\", parts.Skip(1).ToList(), false);
+        }
+
+        var scheme = path.IndexOf("://", StringComparison.Ordinal);
+        if (scheme > 0)
+        {
+            var afterScheme = scheme + 3;
+            var slash = path.IndexOf('/', afterScheme);
+            return slash > afterScheme
+                ? (path[..(slash + 1)], "/", path[(slash + 1)..].Split('/').ToList(), true)
+                : (path[..afterScheme], "/", [path[afterScheme..]], true);
+        }
+
+        return (string.Empty, string.Empty, [path], false);
     }
 }
 

@@ -71,8 +71,19 @@ foreach ($readmeName in 'README.md', 'README.de.md') {
 
 # 6. Kommandozeilen-Hilfe und Lizenzkopf
 $cli = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'
-$help = & $cli --help | Out-String
-Check ($help -cmatch 'HDRpilot' -and (Find-Old $help).Count -eq 0) 'Kommandozeilen-Hilfe nennt HDRpilot'
+# Hilfe in beiden Sprachen (E95), je aus einer eigenen Testablage: Ohne --config-dir läse die Kommandozeile die Sprache
+# aus der echten Ablage, und die Prüfung hinge an deren Sprache.
+. (Join-Path $PSScriptRoot 'TestConfigSeed.ps1')
+$helps = @{}
+foreach ($language in 'de', 'en') {
+    $helpDir = Join-Path ([IO.Path]::GetTempPath()) ('HDRpilot-Gate6-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    Initialize-TestConfig $helpDir $language
+    $helps[$language] = & $cli --help --config-dir $helpDir | Out-String
+    Remove-Item $helpDir -Recurse -Force -ErrorAction SilentlyContinue
+    $help = $helps[$language]
+    Check ($help -cmatch 'HDRpilot' -and (Find-Old $help).Count -eq 0) "Kommandozeilen-Hilfe ($language) nennt HDRpilot"
+}
+Check ($helps['de'] -cmatch 'Kommandozeile' -and $helps['en'] -cmatch 'command line') 'Hilfe auf Deutsch und Englisch gelesen'
 $publish = [IO.File]::ReadAllText((Join-Path $root 'tools\publish.ps1'), [Text.Encoding]::UTF8)
 Check ($publish -cmatch 'HDRpilot – Lizenzhinweise' -and $publish -cmatch "Exe = 'HDRpilot\.exe'") 'Auslieferung: HDRpilot.exe und Lizenzkopf HDRpilot'
 # Ganzer Text der Lizenzhinweise: im Skript und, falls schon veröffentlicht, in der ausgelieferten Datei

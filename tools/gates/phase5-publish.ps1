@@ -151,7 +151,9 @@ if (Test-Path $cfg) { Remove-Item $cfg -Recurse -Force }
 $ErrorActionPreference = 'Continue' # Kommandozeile darf auf stderr schreiben
 $importOutput = & $runCli games import --config-dir $cfg 2>&1 | Out-String
 Check ($LASTEXITCODE -eq 0 -and (Test-Path (Join-Path $cfg 'config.json'))) ("Kommandozeile läuft eigenständig: games import exit={0}" -f $LASTEXITCODE)
-$statusOutput = & $runCli hdr status 2>&1 | Out-String
+# hdr status liest nur die Bildschirme, die Sprache der Ausgaben aber aus einer Ablage (E95): aus der Testablage dieses
+# Laufs, nie aus der echten.
+$statusOutput = & $runCli hdr status --config-dir $cfg 2>&1 | Out-String
 Check ($LASTEXITCODE -eq 0) ("Kommandozeile: hdr status exit={0}" -f $LASTEXITCODE)
 $ErrorActionPreference = 'Stop'
 

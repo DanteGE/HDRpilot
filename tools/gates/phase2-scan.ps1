@@ -6,11 +6,21 @@ param(
     [string[]]$ExpectedSources = @('Steam', 'Epic', 'Xbox', 'Gog', 'Ubisoft', 'EA')
 )
 $ErrorActionPreference = 'Stop'
+# Eigene, leere Ablage: Ohne --config-dir läse die Kommandozeile die Sprache ihrer Meldungen aus der echten Ablage (E95).
+# Ohne config.json nimmt scan daraus keine Suchordner, das Ergebnis ist dasselbe; die Ablage bleibt leer.
+$cfgDir = Join-Path ([IO.Path]::GetTempPath()) ('HDRpilot-Gate2-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+New-Item -ItemType Directory -Force $cfgDir | Out-Null
 $sw = [Diagnostics.Stopwatch]::StartNew()
-$raw = & $Exe scan | Out-String
-$code = $LASTEXITCODE
+try {
+    $raw = & $Exe scan --config-dir $cfgDir | Out-String
+    $code = $LASTEXITCODE
+    $left = @(Get-ChildItem $cfgDir -Force -Recurse).Count
+} finally {
+    Remove-Item $cfgDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 $sw.Stop()
 if ($code -ne 0) { Write-Output "scan exit=$code"; exit 1 }
+if ($left -ne 0) { Write-Output "FEHLER: scan hat in der leeren Testablage $left Einträge angelegt"; exit 1 }
 $data = $raw | ConvertFrom-Json
 $ok = $true
 $games = @($data.games)

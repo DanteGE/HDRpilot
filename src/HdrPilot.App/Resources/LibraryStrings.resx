@@ -1276,7 +1276,7 @@
     <value>Eigene Datei…</value>
   </data>
   <data name="Picker_PickFileHint" xml:space="preserve">
-    <value>PNG, JPG, WebP oder BMP von diesem PC</value>
+    <value>PNG, JPG, WebP, BMP</value>
   </data>
   <data name="Picker_OwnFile" xml:space="preserve">
     <value>Eigene Datei: {0}</value>

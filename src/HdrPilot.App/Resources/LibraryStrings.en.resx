@@ -1179,7 +1179,7 @@
     <value>Custom file…</value>
   </data>
   <data name="Picker_PickFileHint" xml:space="preserve">
-    <value>PNG, JPG, WebP or BMP from this PC</value>
+    <value>PNG, JPG, WebP, BMP</value>
   </data>
   <data name="Picker_OwnFile" xml:space="preserve">
     <value>Custom file: {0}</value>

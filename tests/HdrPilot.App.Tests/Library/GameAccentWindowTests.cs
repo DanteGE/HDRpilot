@@ -447,7 +447,7 @@ public sealed class GameAccentWindowTests
             try
             {
                 s.Appearance.RaiseChanged();
-                typeof(MainWindow).GetMethod("OnThemeChanged", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(s.Window, [null, EventArgs.Empty]);
+                typeof(MainWindow).GetMethod("OnThemeChanged", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!.Invoke(s.Window, [null, EventArgs.Empty]);
                 Assert.Equal(s.Expected(GameAccentSetup.Red, dark: false), s.Window.AccentLayer!.Target);
                 Assert.Equal(0, s.Window.AccentLayer.Animating);
             }

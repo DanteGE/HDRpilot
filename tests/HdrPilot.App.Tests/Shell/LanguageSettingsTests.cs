@@ -385,7 +385,7 @@ public sealed class LanguageSettingsTests
     /// <summary>Sichtbar im Sinne der Bindung (das Fenster selbst wird im Test nie angezeigt).</summary>
     private static bool IsShown(FrameworkElement element)
     {
-        for (DependencyObject? e = element; e is not null; e = LogicalTreeHelper.GetParent(e) ?? System.Windows.Media.VisualTreeHelper.GetParent(e))
+        for (DependencyObject? e = element; e is not null and not Window; e = LogicalTreeHelper.GetParent(e) ?? System.Windows.Media.VisualTreeHelper.GetParent(e))
         {
             if (e is UIElement { Visibility: not Visibility.Visible })
             {

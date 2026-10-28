@@ -243,7 +243,7 @@ public sealed class GameColorRenderTests
 
     private static bool IsShown(FrameworkElement element)
     {
-        for (DependencyObject? e = element; e is not null; e = VisualTreeHelper.GetParent(e))
+        for (DependencyObject? e = element; e is not null and not Window; e = VisualTreeHelper.GetParent(e)) // das Fenster selbst wird im Test nie gezeigt
         {
             if (e is UIElement { Visibility: not Visibility.Visible } || e is UIElement { Opacity: < 0.99 })
             {

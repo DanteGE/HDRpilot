@@ -83,7 +83,7 @@ public sealed class UninstalledSettingsCardTests
 
         Assert.True(vm.HideUninstalledGames);
         Assert.False(vm.HasChanges);
-        Assert.Equal(string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummary, 1, 1), vm.LibrarySummary);
+        Assert.Equal(string.Format(CultureInfo.CurrentCulture, ShellStrings.LibraryCardSummaryOne, 1, 1), vm.LibrarySummary);
     }
 
     [Fact]

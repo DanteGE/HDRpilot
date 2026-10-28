@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using HdrPilot.App.Tests.Shell;
@@ -116,7 +117,8 @@ internal sealed record GameAccentSetup(MainWindow Window, LibraryViewModel Model
 /// gestellter Uhr, hoher Kontrast, Verweise statt Momentaufnahmen, gleicher Baum, graue Spiele genau das Schema, Partikel,
 /// Änderung der Darstellung, Aus und wieder An vor dem Beruhigen, Farben und Bilder in beliebiger Reihenfolge, ruhiger
 /// Grund, Werkzeugleiste, helles Thema, Ring der Rasterkachel mitten in der Überblendung, Lesefehler (gezeigte Farben
-/// bleiben) und gehaltene Tasten ohne Anfrage für übersprungene Spiele.
+/// bleiben), gehaltene Tasten ohne Anfrage für übersprungene Spiele und Ränder der Kennzeichen (Ebene, Schalter aus, neues
+/// Schema).
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
 public sealed class GameAccentWindowTests
@@ -716,6 +718,56 @@ public sealed class GameAccentWindowTests
             Assert.Contains("Steam:bunt", s.Art.CanceledColorRequests);
             s.Close();
         });
+    }
+
+    [Fact]
+    public void W22_badge_lines_follow_the_layer_the_switch_and_a_new_scheme()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var s = GameAccentSetup.Open();
+            s.Context.ConfigService.Update(c => c.FindGame("Steam:rot")!.AutoHdr = true);
+            WpfTestHost.Layout(s.Window, new Size(1600, 900));
+            WpfTestHost.DoEvents();
+
+            // Die Rahmen in MainWindow.xaml: „AUTO HDR“ in der Zeile von „rot“, Hinweis auf erzeugte Bilder im Detailbereich.
+            var borders = WpfTestHost.Visuals(s.Window).OfType<Border>().ToList();
+            var autoHdr = borders.Single(b => b.Style == s.Window.FindResource("Lib.AutoHdrBadge") && b.DataContext is GameItemViewModel { Key: "Steam:rot" });
+            var note = borders.Single(b => BindingOperations.GetBinding(b, UIElement.VisibilityProperty)?.Path.Path == "HasGeneratedSummary");
+
+            void AssertLines(PaletteColors shown, string when)
+            {
+                Assert.Equal((Opaque(shown.Shine), 0.8), Line(autoHdr));
+                Assert.Equal((Opaque(shown.Atmosphere), 0.3), Line(note));
+                foreach (var (key, source, opacity) in MainWindow.BadgeLines)
+                {
+                    var line = Assert.IsType<SolidColorBrush>(s.Window.FindResource(key));
+                    Assert.True((Opaque(source(shown)), opacity) == (line.Color, line.Opacity), $"{key} ({when}): {line.Color}");
+                    Assert.False(line.IsFrozen);
+                }
+            }
+
+            AssertLines(s.Accents(GameAccentSetup.Red), "rot");
+            var instance = s.Window.FindResource("Lib.Brush.BadgeNativeLine");
+
+            s.Select("blau");
+            AssertLines(s.Accents(GameAccentSetup.Blue), "blau");
+
+            // Schalter aus: das Schema; danach ein anderes Schema: das neue (die Ränder blieben früher beim alten stehen).
+            s.Appearance.Update(a => a.ColorsFollowGame = false);
+            s.Settle();
+            Assert.Null(s.Window.AccentLayer);
+            AssertLines(s.State.Palette, "Schema");
+            s.Appearance.Update(a => a.Preset = "cyber");
+            AssertLines(s.State.Palette, "cyber");
+            Assert.Same(instance, s.Window.FindResource("Lib.Brush.BadgeNativeLine")); // bleibender Pinsel, kein neuer Eintrag
+            Assert.Same(autoHdr.BorderBrush, s.Window.FindResource("Lib.Brush.AutoHdrBadgeLine"));
+            s.Close();
+        });
+
+        static (Color, double) Line(Border b) => (Assert.IsType<SolidColorBrush>(b.BorderBrush).Color, b.BorderBrush.Opacity);
+
+        static Color Opaque(Color c) => Color.FromRgb(c.R, c.G, c.B);
     }
 
     internal static AppearanceState GamePaletteState(string preset) =>

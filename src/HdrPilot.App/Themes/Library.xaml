@@ -51,6 +51,17 @@
     -->
     <!-- Gewählte Listenzeile: dunkel ein Verlauf in der Spielfarbe, hell Akzent 14 % -->
     <SolidColorBrush x:Key="Lib.Brush.RowSelection" Color="#24FF8A3D" />
+    <!--
+        Ränder der Kennzeichen in Rohfarben („NATIV“ in Liste, Details und über dem Titelbild, „AUTO HDR“, Hinweis auf erzeugte
+        Bilder; Abendrot C3 bzw. C2 mit der Deckkraft der Stelle): als eigene Schlüssel statt inline am BorderBrush. Ein Rahmen
+        legt seinen Randpinsel auch in einen Stift, ein Pinsel mit DynamicResource darin verliert damit seinen Kontext und fände
+        weder die Spielfarben des Fensters (E94) noch ein neues Schema. Das Fenster hält bleibende Pinsel unter diesen Schlüsseln.
+    -->
+    <SolidColorBrush x:Key="Lib.Brush.BadgeNativeLine" Color="#FFFF94B9" Opacity="0.5" />
+    <SolidColorBrush x:Key="Lib.Brush.TagNativeLine" Color="#FFFF94B9" Opacity="0.45" />
+    <SolidColorBrush x:Key="Lib.Brush.ArtTagNativeLine" Color="#FFFF94B9" Opacity="0.7" />
+    <SolidColorBrush x:Key="Lib.Brush.AutoHdrBadgeLine" Color="#FFFF94B9" Opacity="0.8" />
+    <SolidColorBrush x:Key="Lib.Brush.GeneratedNoteLine" Color="#FFFF3D7F" Opacity="0.3" />
     <!-- Fläche der Liste (dunkel: Fenstergrund 55 %, hell: Weiß 62 %) -->
     <SolidColorBrush x:Key="Lib.Brush.ListCard" Color="#8C120B12" />
     <!-- Detailbereich als Schublade im Regal: deckend (MainWindow färbt nach dem Spiel) -->
@@ -588,11 +599,7 @@
                         <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.2" />
                     </Setter.Value>
                 </Setter>
-                <Setter Property="BorderBrush">
-                    <Setter.Value>
-                        <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.5" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="BorderBrush" Value="{DynamicResource Lib.Brush.BadgeNativeLine}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding HdrSupport}" Value="ModOnly">
                 <Setter Property="Background" Value="Transparent" />
@@ -642,11 +649,7 @@
         <Setter Property="TextElement.FontWeight" Value="Bold" />
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsHdrNative}" Value="True">
-                <Setter Property="BorderBrush">
-                    <Setter.Value>
-                        <SolidColorBrush Color="{DynamicResource Hp.Color.Ambient3}" Opacity="0.7" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="BorderBrush" Value="{DynamicResource Lib.Brush.ArtTagNativeLine}" />
                 <Setter Property="TextElement.Foreground" Value="#FFFFFFFF" />
             </DataTrigger>
         </Style.Triggers>
@@ -671,11 +674,7 @@
                         <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.22" />
                     </Setter.Value>
                 </Setter>
-                <Setter Property="BorderBrush">
-                    <Setter.Value>
-                        <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.45" />
-                    </Setter.Value>
-                </Setter>
+                <Setter Property="BorderBrush" Value="{DynamicResource Lib.Brush.TagNativeLine}" />
                 <Setter Property="TextElement.Foreground" Value="{DynamicResource Hp.Brush.Text}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding HdrSupport}" Value="Unknown">

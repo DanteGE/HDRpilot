@@ -259,13 +259,11 @@
                                Foreground="{DynamicResource Hp.Brush.Text}" VerticalAlignment="Center" />
                     <Border Style="{StaticResource Lib.AutoHdrBadge}" Margin="8,0,0,0"
                             Visibility="{Binding AutoHdr, Converter={StaticResource Lib.BoolToVisibility}}"
-                            ToolTip="{x:Static res:LibraryStrings.Badge_AutoHdrTooltip}">
+                            ToolTip="{x:Static res:LibraryStrings.Badge_AutoHdrTooltip}"
+                            BorderBrush="{DynamicResource Lib.Brush.AutoHdrBadgeLine}">
                         <Border.Background>
                             <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.28" />
                         </Border.Background>
-                        <Border.BorderBrush>
-                            <SolidColorBrush Color="{DynamicResource Hp.Color.C3}" Opacity="0.8" />
-                        </Border.BorderBrush>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Style="{StaticResource Lib.Glyph}" Text="{x:Static infra:AppGlyphs.AutoHdr}" FontSize="9" Margin="0,0,4,0" />
                             <!-- Kennung am Text: ein Border hat keinen Automation-Peer, UI-Automation sähe es sonst nicht -->
@@ -1992,13 +1990,11 @@
                                                            AutomationProperties.AutomationId="DetailArtworkSummary" />
                                             </DockPanel>
                                             <Border Margin="0,8,0,0" CornerRadius="10" Padding="10,8" BorderThickness="1"
+                                                    BorderBrush="{DynamicResource Lib.Brush.GeneratedNoteLine}"
                                                     Visibility="{Binding HasGeneratedSummary, Converter={StaticResource Lib.BoolToVisibility}}">
                                                 <Border.Background>
                                                     <SolidColorBrush Color="{DynamicResource Hp.Color.C2}" Opacity="0.12" />
                                                 </Border.Background>
-                                                <Border.BorderBrush>
-                                                    <SolidColorBrush Color="{DynamicResource Hp.Color.C2}" Opacity="0.3" />
-                                                </Border.BorderBrush>
                                                 <DockPanel>
                                                     <TextBlock Style="{StaticResource Lib.Glyph}" Text="&#xE945;" FontSize="13" Margin="0,0,8,0">
                                                         <TextBlock.Foreground>

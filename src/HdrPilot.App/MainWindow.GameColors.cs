@@ -83,6 +83,7 @@ public partial class MainWindow
         _colorsSource = vm.Context.Artwork as IGameColorsSource;
         var appearance = vm.Context.Appearance.Current;
         _accents = appearance.Palette;
+        ApplyBadgeLines();
         _seenAppearance = AppearanceSnapshot.Of(appearance);
         vm.Context.Appearance.Changed += OnGameColorsAppearanceChanged;
         PreviewKeyDown += OnAccentKeyDown;
@@ -423,12 +424,49 @@ public partial class MainWindow
             (int)duration.TotalMilliseconds);
     }
 
-    /// <summary>Pinsel im Code, die dem Akzent folgen (Tabelle 5.3 der Planung): Auswahl, Fensterkante, Werkzeugleiste.</summary>
+    /// <summary>Pinsel im Code, die dem Akzent folgen (Tabelle 5.3 der Planung): Auswahl, Fensterkante, Werkzeugleiste, Ränder.</summary>
     private void ApplyAccentBrushes(TimeSpan duration)
     {
         ApplyRowSelection(duration);
         ApplyEdgeGlow(accentDuration: duration);
         ApplyToolbarBrushes(duration);
+        ApplyBadgeLines();
+    }
+
+    /// <summary>
+    /// Ränder in Rohfarben (Kennzeichen „NATIV“ in Liste, Details und über dem Titelbild, „AUTO HDR“, Hinweis auf erzeugte
+    /// Bilder): Schlüssel, Farbe aus den gezeigten Akzenten (C2 = Atmosphäre, C3 = Ambient3 = Glanz, wie in
+    /// <see cref="PaletteEngine"/>) und Deckkraft wie früher inline. Ein Rahmen legt seinen Randpinsel auch in einen Stift; ein
+    /// Pinsel mit DynamicResource darin hat dann zwei Besitzer, verliert seinen Kontext und fände nur noch die App-Ressourcen:
+    /// nie die Farbebene und nach einem Schemawechsel nicht einmal das neue Schema. Deshalb hält das Fenster diese Ränder selbst.
+    /// </summary>
+    internal static readonly IReadOnlyList<(string Key, Func<PaletteColors, Color> Source, double Opacity)> BadgeLines =
+    [
+        ("Lib.Brush.BadgeNativeLine", p => p.Shine, 0.5),
+        ("Lib.Brush.TagNativeLine", p => p.Shine, 0.45),
+        ("Lib.Brush.ArtTagNativeLine", p => p.Shine, 0.7),
+        ("Lib.Brush.AutoHdrBadgeLine", p => p.Shine, 0.8),
+        ("Lib.Brush.GeneratedNoteLine", p => p.Atmosphere, 0.3),
+    ];
+
+    /// <summary>
+    /// Ränder der Kennzeichen (<see cref="BadgeLines"/>) als bleibende Pinsel des Fensters: einmal angelegt, danach nur die Farbe
+    /// gesetzt (kein neuer Ressourcen-Eintrag, also kein Gang durch den Fensterbaum). Wie alle Rohfarben wechseln sie zu Beginn
+    /// einer Überblendung, mit Schalter aus folgen sie dem Schema.
+    /// </summary>
+    private void ApplyBadgeLines()
+    {
+        foreach (var (key, source, opacity) in BadgeLines)
+        {
+            var c = source(_accents);
+            var target = new SolidColorBrush(Color.FromRgb(c.R, c.G, c.B)) { Opacity = opacity };
+            var live = Resources.Contains(key) ? Resources[key] as Brush : null;
+            var result = _liveBrushes.Track(live, target, TimeSpan.Zero);
+            if (!ReferenceEquals(result, live))
+            {
+                Resources[key] = result;
+            }
+        }
     }
 
     /// <summary>

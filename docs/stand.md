@@ -1,7 +1,43 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-27. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-10-28. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Stand 2026-10-28: Prüfrunde 1.6.0 unter Windows, Korrekturen lokal (noch nicht hochgeladen)
+- **Behoben**, jede Korrektur mit einem Test, der ohne sie scheitert:
+  - Die Release-Veröffentlichung baut wieder (Ressourcen-Klassen mit Laufzeitkennung), die Setup-Datei 1.6.0 entsteht.
+  - Englische Oberfläche: Die Sprache bleibt nach dem asynchronen Start erhalten; vorher zeigten die Einstellungen und
+    Teile der Bibliothek Deutsch.
+  - Spielfarben (E94): Die bleibenden Pinsel lassen sich nicht mehr einfrieren (sonst wurden sie ersetzt statt
+    übergeblendet), die Ränder der Kennzeichen folgen Farbebene und Schema, gehaltene Tasten lesen nichts, das erste Bild
+    fragt nicht doppelt.
+  - „Bild wählen…“: Tab-Reihenfolge der Spielwahl, Ansage der Vorschauen, Statuszeile für Bildschirmleser, Kachel
+    „Eigene Datei…“ ungekürzt, Bildschirmfotos erst nach dem Einblenden der Kacheln.
+  - Menüknöpfe: Gleich nach dem Schließen öffnet ein Klick wieder; die Tests laufen mit einem echten Testfenster.
+  - Kopfzeile ohne abgeschnittene Unterlängen; Startbefehle ohne Backslash (Adressen der Launcher) nicht mehr nur „…“.
+  - `hdr` nimmt `--config-dir`; die Gates rufen die Kommandozeile nur noch mit eigener Ablage auf.
+  - LibraryMotion gibt beendete Einblendungen frei.
+  - Tests und Gates: Wettläufe, Sichtbarkeit im Testfenster, Einzahl, Reflexion, Kosten- und Bildtests der Spielfarben;
+    zwei Tests mit echten Uhren (Tiefenwirkung, Bildschirmfoto-Szenen) wiederholen nur bei nachweislich stehendem Thread;
+    phase5-publish, phase14-sgdb-ui und phase16-english-ui korrigiert; der Filter von G15.3 enthält die Entprellung im Kern.
+- **Grün** (Baum von 726a4ab, nacheinander, ungedrosselt): `BUILD_OK_0_WARNINGS`, auch jeder neue Commit einzeln; G14.1 bis
+  G14.6, G15.1 bis G15.4, G16.1 und G16.2 (`TESTS_OK` 64, 60, 67, 34, 28, 165, 72, 110, 51, 49, 52, 110);
+  `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`, `PHASE2_SCANNER_TESTS_OK` (574), `PHASE2_SCAN_OK`,
+  `PHASE11_MIGRATION_OK`, `PHASE12_QUIVER_SCAN_OK`, `PHASE7_SETUP_OK`; `PUBLISH_CHECK_OK` für den Arbeitsstand und jeden
+  neuen Commit.
+- **Voller Testlauf:** 4119 Tests, 4068 grün, 1 rot, 50 übersprungen (die SDK-Header-Tests: `.sdk\` fehlt im frischen
+  Klon). Rot ist nur das Speicherbudget von G15.7 (unten). Die Verknüpfungstests scheitern nur bei einem sehr langen
+  Temp-Pfad (Pfadgrenze von Windows) und sind mit einem kürzeren grün; EffectReviewTests wackelten einmal (Klasse allein
+  und zweiter voller Lauf grün).
+- **Offen, Entscheidung des Nutzers:** G15.7, Speicher je angewendetem Farbwechsel rund 330 KB gegen die Planungsgrenze
+  256 KiB. Ein einziger Ressourcenwechsel im selben Fenster kostet allein rund 210 KB, die Spezifikation verlangt genau
+  einen. Vorschläge: Grenze wie in G15.7 vorgesehen auf Mittelwert + 25 % setzen, oder „ein Ressourcenwechsel desselben
+  Fensters + 150 KB“.
+- **Offen, nur lokal:** `phase5-publish.ps1` mit eingeschaltetem Bildschirm (alles grün außer `hdr status`: ohne aktiven
+  Bildschirm exit 3); alle Gates mit Oberfläche samt den Oberflächen-Teilen der Phasen 14, 15 und 16
+  (`phase14-sgdb-ui.ps1`, `phase15-gamecolors.ps1`, `phase16-english-ui.ps1`) und `phase3-idle.ps1`; Bildschirmfotos und
+  Kontaktbögen; `phase10-gpu.ps1` mit eingeschalteten Spielfarben; die Gates mit echter HDR-Umschaltung und das
+  Tray-Menü-Gate; Livetest SteamGridDB (G14.14); danach Test-Update mit Sicherung und Abnahme durch den Nutzer.
 
 ## Stand 2026-10-27: README auf Englisch (Wunsch des Nutzers, E95, G16.7)
 - `README.md` vollständig englisch (Bezeichnungen wie in den `.en.resx`, Hilfe wie `CliStrings.en.resx`), die deutsche

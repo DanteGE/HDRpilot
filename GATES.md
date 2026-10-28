@@ -573,32 +573,32 @@ Scope: Im Dialog „Bild wählen…“ je Reiter (Titelbild, Logo, Cover) ein Ab
 - [ ] G14.1: Schnittstelle im Kern: Seiten mit Vorschau, Autor, Größe und Filtern (static, nsfw/humor/epilepsy false, Cover 600×900/342×482/660×930, page ohne limit), Ende erst mit leerer Seite (404 ab Seite 1 = Ende), Trefferliste und games/id mit Jahr, bereinigte Suchbegriffe und Namen, erlaubte Rechner auch für Vorschauen und nach Weiterleitungen, Vorschau nur aus thumb, HTTP 401/403 eines Bildes kein abgelehnter Schlüssel, getrennte Budgets, Vorschauen ohne 1-s-Abstand, gemeinsamer exklusiver Abstand der Schnittstelle über Threads, Zeitgrenzen und sofortiger Abbruch hängender Übertragungen, Größengrenzen 4 MB/32 MB/15 MB, Fehlerarten, Schlüssel nie in Ausnahmen; mit Gegenproben
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDbSearchClient" -MinTests 30
   EXPECT: TESTS_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 64.
 
 - [ ] G14.2: Dienst, Sitzung und Bilddaten: ohne Schlüssel keine Sitzung und kein Handler, mit Schlüssel kein Handler vor dem ersten Klick; Suche auch bei ausgeschaltetem Schalter, automatischer Lauf weiter nur eingeschaltet; Zuordnung (App-ID, gemerkt mit Name und Jahr, gleicher Name, mehrdeutig, Trefferliste), geteilte Auflösung ohne gemerkte Fehlschläge, ein Abstand für Lauf, Prüfen und Sitzungen, höchstens 3 Vorschauen gleichzeitig, Warteschlange abbrechbar, Grenzen je Dialog, 60 s Pause nach 429, Schlüssel entfernen und Beenden brechen sofort ab, Zuordnung nur ohne Steam-App-ID gemerkt und danach neu gefüllt, kein Bild der alten Zuordnung gespeichert, keine Autoren/Begriffe/Namen/Adressen/Schlüssel im Protokoll; Bilder aus Daten speichern wie Dateien; Testdaten-Lieferant nur mit --config-dir, ohne echten Handler; mit Gegenproben
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDbSearchSession|FullyQualifiedName~SteamGridDbFixture|FullyQualifiedName~ArtworkCustomDataTests" -MinTests 37
   EXPECT: TESTS_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 60.
 
 - [ ] G14.3: ViewModel des Dialogs: Zustände und Texte aus resx (ohne Schlüssel, nicht lesbar, bereit, lädt, langsam, Ergebnisse, Ende, Grenze je Reiter, kein Treffer, keine Bilder, Schlüssel abgelehnt, zu viele Anfragen, offline, Zeitüberschreitung, Grenze erreicht), je Reiter eigener Klick, Mehr laden bis zur leeren Seite, Speicher verborgener Reiter freigegeben, Spielwahl, eine Wahl je Reiter über lokale und Online-Liste, Spielwechsel mit Hinweis, Herunterladen beim Übernehmen noch im Dialog mit Meldung im betroffenen Reiter, Abbrechen ohne Absturz, Speichern als eigenes Bild, Zurücksetzen, Abbrechen schreibt nichts, Schließen gibt frei und lässt die lokale Wahl bedienbar, Link zu den Einstellungen, Ansage nur bei Zustandswechseln; mit Gegenproben
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ArtworkPickerSearchTests" -MinTests 40
   EXPECT: TESTS_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 67.
 
 - [ ] G14.4: Fenster: nie höher als die Arbeitsfläche des Bildschirms der Bibliothek (1280×800 bei 100 und 125 %, 1920×1080, 3440×1440), wächst nur und zur Mitte hin, nur die Mitte scrollt (auch per Mausrad über Kacheln), die Bildlaufleiste kostet keine Breite, Kacheln füllen die 830 DIP genau (lokal und online), Logos ganz auf Schachbrett, Tab-Reihenfolge, Fokus nach Suche und Mehr laden nur aus dem Abschnitt heraus, Esc und Enter in der Spielwahl, Kennungen, Muster und Namen für Bildschirmleser, Live-Ansage, hoher Kontrast mit lesbarem Text, Effektstufen Aus/Reduziert/Voll, helles und dunkles Thema, Übernehmen nach Schließen ohne Fehler
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ArtworkPickerSearchWindowTests" -MinTests 17
   EXPECT: TESTS_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 34.
 
 - [ ] G14.5: Einstellungen: Schlüsselfeld und „Prüfen“ auch bei ausgeschaltetem Schalter, „Prüfen“ speichert dann ohne Lauf, Schalter in eigener Zeile mit sichtbarer Beschriftung, Statuszeile „Automatisches Laden aus · Suche in „Bild wählen…“ nur auf Klick“ bzw. letzter Zugriff (Lauf oder Suche), Prüfmeldung bleibt nicht hängen, abgelehnter Schlüssel aus einer Suche rot, Sprung zum Schlüsselfeld
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SettingsAppearancePageTests|FullyQualifiedName~SettingsSteamGridDbWindowTests" -MinTests 20
   EXPECT: TESTS_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 28.
 
 - [ ] G14.6: Bisherige Zusagen von G10.4 bleiben (aus: kein automatischer Netzwerkzugriff, ohne Schlüssel gar keiner), zusammen mit den neuen SteamGridDB-Tests
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~SteamGridDb" -MinTests 90
   EXPECT: TESTS_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 165.
 
 - [ ] G14.7: Testinstanz mit erzeugten SteamGridDB-Antworten (kein Netz, nur UI-Automation): Schlüssel bei ausgeschaltetem Schalter prüfen und speichern ohne Lauf; keine Anfrage vor dem Klick; 24/48/70 Ergebnisse mit Autor, Ende mit leerer Seite; nur www./cdn2.steamgriddb.com, Schlüssel nur an die Schnittstelle; Übernehmen speichert ein 600×900-Cover als eigenes Bild, Zurücksetzen entfernt es, Abbrechen schreibt nichts; Spielwahl, gemerkte Zuordnung nur ohne Steam-App-ID; Fehlerzustände samt Zeitüberschreitung; Link zum Schlüsselfeld; keine Vorschau-Threads nach dem Schließen; Bildschirmfotos aller Zustände hell und dunkel, auch klein und in hohem Kontrast, dazu die Einstellungskarte
   CHECK: ps tools\gates\phase14-sgdb-ui.ps1
@@ -626,12 +626,12 @@ Scope: Im Dialog „Bild wählen…“ je Reiter (Titelbild, Logo, Cover) ein Ab
 - [ ] G14.12: README, E93 und GATES passen zu den resx-Texten (fett gesetzte Bezeichnungen, Einstellungstabelle)
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, PHASE5_README_OK.
 
 - [ ] G14.13: Keine lokalen Pfade, Namen oder echten Spieldaten in neuen Dateien (Testdaten-Lieferant, Tests, Doku)
   CHECK: ps tools\gates\publish-check.ps1
   EXPECT: PUBLISH_CHECK_OK
-  EVIDENCE: pending.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, PUBLISH_CHECK_OK (Arbeitsstand mit der privaten Liste, dazu jeder neue Commit einzeln mit -Rev).
 
 - [ ] G14.14: Livetest nur mit dem Nutzer und seinem eigenen Schlüssel (der Nutzer klickt; Protokollstufe vorher auf „Ausführlich (Debug)“, danach zurück): Rechner der Vorschauen (das Debug-Protokoll nennt nur Rechnernamen), Seite 1 unterscheidet sich von Seite 0, ob eine Seite mit weniger als 50 Einträgen immer die letzte ist, was eine Seite hinter dem Ende liefert, ob `limit` in der Antwort steht, was der CDN für eine fehlende Vorschau antwortet (403 oder 404), Logo-Vorschauen behalten ihre Durchsichtigkeit, Namen mit „+“, „/“, Apostroph und Umlauten finden das Spiel, 342×482-Cover sehen zugeschnitten gut aus, WebP wird gezeigt, nie HTTP 429 bei normaler Nutzung
   EVIDENCE: pending. Nur zusammen mit dem Nutzer.
@@ -646,22 +646,22 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
 - [ ] G15.1: Spielfarben auslesen: Akzent aus dem Logo (Markenfarbe), wenn es farbig genug ist (mindestens ein Zehntel farbige Fläche oder passend zu Cover bzw. Titelbild oder diese grau), sonst Cover, sonst Titelbild; Zweitfarben für Atmosphäre und Glanz; dunkle oder graue Konturen und Schatten, Hauttöne auf Cover und Titelbild, kleine Punkte, erzeugte Bilder und Namensfarben ergeben nie den Akzent; fast graue Bilder ergeben keine Spielfarbe; deterministisch und stabil (Rauschen, halbes Pixel, 90 % Größe: ΔE_OK ≤ 0,03); gespeichert als `colors` in `art\index.json` mit eigener Fassung (unbekannte Werte verwerfen das Verzeichnis nicht, Fassung des Verzeichnisses bleibt 1); Einpassen in die Bänder samt Ableiten von Atmosphäre und Glanz ohne WPF; per Unit-Tests mit erzeugten Bildern und Gegenproben (Mutanten: ohne Ausschluss der Kontur, ohne Hautregel, ohne Füllung vor Kontur, ohne Leuchten, ohne Farbfamilien, ohne Vorrang-Regel des Logos) belegt
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.Tests.Artwork.GameColor|FullyQualifiedName~HdrPilot.Tests.Artwork.ColorScience" -MinTests 72
   EXPECT: TESTS_OK
-  EVIDENCE: pending. Vorlauf 2026-10-26 in der Cloud-Sitzung (Linux, nur dieser Filter): 72 von 72 grün; Gegenproben im Code (kürzerer Bogen, Aufhellbonus, Randanteil, Mindest-Chroma der Füllung) je von mindestens einem Test erkannt.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 72. Vorlauf 2026-10-26 in der Cloud-Sitzung (Linux, nur dieser Filter): 72 von 72 grün; Gegenproben im Code (kürzerer Bogen, Aufhellbonus, Randanteil, Mindest-Chroma der Füllung) je von mindestens einem Test erkannt.
 
 - [ ] G15.2: Zuordnung und Kontrast: Spielfarben in festen Wertebereichen (Helligkeit je Farbton, Mindest-Buntheit 0,12, dunkle Markenfarben heller und kräftiger, Abstand Akzent–Atmosphäre 30–120°, keine graue Mitte, im Tritonus auch zwischen Akzent und Glanz); Text auf Akzent und Akzenttext mindestens 4,5:1, Bedienelemente mindestens 3:1 in Hell und Dunkel gegen die Flächen aller Schemata und den möglichen Grundton der Bibliothek (Eigenschaftstest über mehr als 1000 erzeugte Paletten); bei automatischer Textfarbe immer dunkle Schrift und unveränderte Akzentflächen; Gelb und Gold im hellen Thema Bernstein statt Oliv; graue Spiele genau das Farbschema; die bisherigen Vorlagen und Token-Dateien unverändert
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Theming.GamePalette|FullyQualifiedName~HdrPilot.App.Tests.Theming.PaletteEngine|FullyQualifiedName~HdrPilot.App.Tests.Theming.ThemeResources|FullyQualifiedName~HdrPilot.App.Tests.Theming.ThemeKeys|FullyQualifiedName~HdrPilot.App.Tests.Theming.ThemeTokenFile" -MinTests 109
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 110.
 
 - [ ] G15.3: Umschalten in der Bibliothek: eigene Farbebene nur im Bibliotheksfenster (Einstellungen außer der Vorschau, Tray-Menü, Dialoge und Symbole behalten das Schema), bleibende Pinsel ohne Austausch der Wörterbücher je Spiel, Überblendung im OKLCH-Farbraum vom gezeigten Wert aus ohne graue Mitte (Voll 0,9 s, Reduziert 0,3 s, Aus sofort), Rohfarben wechseln zu Beginn, Farben kommen zusammen mit den Bildern, Entprellung 300 ms bei schneller Auswahl und gehaltener Taste, graue Bilder → Farbschema, ladende Bilder und leere Auswahl → Farben bleiben, hoher Kontrast → keine Spielfarben, Kontextmenüs, Tooltips und Kennzeichen folgen, Werkzeugleiste samt Schein der Lasche folgt, „Hintergrund aus“ ergibt einen ruhigen, gleichbleibenden Grund; danach keine Uhren und keine laufenden Animationen
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Theming.OklchFade|FullyQualifiedName~HdrPilot.App.Tests.Theming.LiveBrush|FullyQualifiedName~HdrPilot.App.Tests.Theming.GameAccent|FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentWindow|FullyQualifiedName~HdrPilot.Tests.Artwork.GameAccentScheduler" -MinTests 45
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 51.
 
 - [ ] G15.4: Einstellung und Seite „Darstellung“: `colorsFollowGame` Standard aus, alte Konfigurationen unverändert, „Standard“ setzt zurück; Schalter mit Kennung `ColorsFollowGameToggle`, Name und Hilfetext aus ShellStrings.resx (auch „Hintergrund folgt dem Spiel“ mit Hilfetext), Farbprobe und Live-Vorschau in den Spielfarben des Vorschauspiels, bei hohem Kontrast ohne Spielfarben
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.Tests.Config.ShowcaseConfig|FullyQualifiedName~HdrPilot.App.Tests.Shell.SettingsLayout|FullyQualifiedName~HdrPilot.App.Tests.Shell.SettingsAppearancePage" -MinTests 43
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 49.
 
 - [ ] G15.5: Einstellungen per UI-Automation mit der neuen Kennung (Schalter an und aus landet sofort in der Konfiguration)
   CHECK: ps tools\gates\phase10-settings-ui.ps1
@@ -685,7 +685,7 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
   EXPECT: PHASE5_README_OK
   CHECK: ps tools\gates\publish-check.ps1
   EXPECT: PUBLISH_CHECK_OK
-  EVIDENCE: pending
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, PHASE5_README_OK; exit 0, PUBLISH_CHECK_OK (Arbeitsstand mit der privaten Liste).
 
 - [ ] G15.9: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und die UI-Gates ohne echte HDR-Umschaltung grün, unabhängige Prüfung mit Gegenprüfung
   CHECK: ps tools\gates\build.ps1
@@ -704,12 +704,12 @@ Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.
 - [ ] G16.1: Übersetzung vollständig: zu jeder neutralen resx unter `src` eine `.en.resx` mit denselben Schlüsseln (in beide Richtungen), ohne leere Werte, mit denselben Platzhaltern und gültigen Formatvorlagen, ohne deutsche Reste; Glossar „HDR on launch“ ≠ „Windows Auto HDR“ eingehalten.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~ResourceTranslationTests" -MinTests 30
   EXPECT: TESTS_OK
-  EVIDENCE: pending unter Windows. 2026-10-26 unter Linux (Cloud-Sitzung, `feature/english`): `dotnet test --filter ResourceTranslationTests` 35 von 35 grün; Mutanten erkannt: Schlüssel in `LibraryStrings.en.resx` entfernt, Platzhalter `{1}` → `{2}` in `ShellStrings.en.resx`, deutscher Rest „Dateien kopieren“ in `SetupStrings.en.resx` (dieser erst nach Erweiterung der Wortliste).
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 52. 2026-10-26 unter Linux (Cloud-Sitzung, `feature/english`): `dotnet test --filter ResourceTranslationTests` 35 von 35 grün; Mutanten erkannt: Schlüssel in `LibraryStrings.en.resx` entfernt, Platzhalter `{1}` → `{2}` in `ShellStrings.en.resx`, deutscher Rest „Dateien kopieren“ in `SetupStrings.en.resx` (dieser erst nach Erweiterung der Wortliste).
 
 - [ ] G16.2: Sprache laden und anwenden: neue Konfiguration nach Windows und gespeichert; vorhandene ohne `language` oder mit unbekanntem Wert Deutsch und unverändert; Kulturen für Texte und Formate; Kommandozeile nach der Ablage; englische Meldungen aus Kern, Scannern und Kommandozeile; Absturz eines Scanners und mehrdeutiger Bildschirm unabhängig vom Wortlaut.
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.Tests.Localization" -MinTests 90
   EXPECT: TESTS_OK
-  EVIDENCE: pending unter Windows. 2026-10-26 unter Linux: 92 von 92 grün; Mutanten erkannt: Absturz wieder am deutschen Text erkannt, Mehrdeutigkeit wieder am Text, Erkennung immer Englisch, neue Konfiguration ohne Sprache, Formate immer wie Windows, unbekannte Sprache als Englisch.
+  EVIDENCE: 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): exit 0, TESTS_OK 110. 2026-10-26 unter Linux: 92 von 92 grün; Mutanten erkannt: Absturz wieder am deutschen Text erkannt, Mehrdeutigkeit wieder am Text, Erkennung immer Englisch, neue Konfiguration ohne Sprache, Formate immer wie Windows, unbekannte Sprache als Englisch.
 
 - [ ] G16.3: Oberfläche: Sprachwahl in den Einstellungen (Hinweis und „Jetzt neu starten“ nur bei abweichender Wahl, erst speichern, dann neu starten, Fehler gemeldet, ältere Konfiguration ohne Feld bleibt ohne Feld), Einstellungen und Tray-Menü auf Englisch, englische Zähl- und Zeitformen der Bibliothek, `--restarted`, `--snapshot-language`, Setup mit `--ui-language`; alle bisherigen App-Tests mit fester Kultur de-DE weiter grün.
   CHECK: ps tools\gates\test.ps1
@@ -729,9 +729,9 @@ Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.
 - [ ] G16.6: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (die bisherigen Gates mit deutscher Testablage auch auf einem englischen Windows), README und E95 passen zu den Texten.
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending.
+  EVIDENCE: pending (Gesamtstand). 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): phase5-readme.ps1 exit 0, PHASE5_README_OK; offen sind der volle Testlauf (G15.7) und die Gates mit Oberfläche.
 
 - [ ] G16.7: README auf Englisch (Wunsch des Nutzers 2026-10-27, E95): `README.md` vollständig englisch, die bisherige deutsche als `README.de.md` (oben je ein Verweis auf die andere Sprache). `phase5-readme.ps1` prüft beide Fassungen wie bisher: `README.de.md` gegen die neutralen resx und die Hilfe aus einer Testablage mit `"language": "de"`, `README.md` gegen die `.en.resx` und die Hilfe mit `"language": "en"`, jede mit eigenen Abschnittsnamen und eigenen Gegenproben (15 eingebaute Fehler, 3 beim Neustart-Puffer), dazu eine Gegenprobe über Kreuz (deutsche README gegen englische Texte scheitert); fett gesetzte Absatztitel mit Doppelpunkt („Sprache:“, „Language:“) zählen nicht als Bezeichnung. `phase6-name.ps1` prüft beide Dateien. Beide READMEs werden ausgeliefert: portabler Ordner und Paket der Setup-Datei, installiert, bei der Aktualisierung von einer Setup-Datei ohne `README.de.md` dazugelegt, beim Entfernen gelöscht (`phase5-publish.ps1`, `phase7-setup.ps1`, App-Tests der Setup-Engine).
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: 2026-10-27 in der Cloud-Sitzung unter Linux mit pwsh und einer Kopie des Skripts mit Linux-Pfaden (Kommandozeile über `dotnet hdrpilot.dll`): PHASE5_README_OK, beide Fassungen 0 Probleme, Gegenproben je 15 von 15 und 3 von 3, über Kreuz 44 Probleme. Mutationen: englische Fassung mit deutscher Hilfe oder mit den deutschen resx geprüft, jeweils rot. Unter Windows offen: das Skript selbst, `phase6-name.ps1`, `phase5-publish.ps1`, `phase7-setup.ps1` und die App-Tests der Setup-Engine.
+  EVIDENCE: 2026-10-27 in der Cloud-Sitzung unter Linux mit pwsh und einer Kopie des Skripts mit Linux-Pfaden (Kommandozeile über `dotnet hdrpilot.dll`): PHASE5_README_OK, beide Fassungen 0 Probleme, Gegenproben je 15 von 15 und 3 von 3, über Kreuz 44 Probleme. Mutationen: englische Fassung mit deutscher Hilfe oder mit den deutschen resx geprüft, jeweils rot. Unter Windows offen: das Skript selbst, `phase6-name.ps1`, `phase5-publish.ps1`, `phase7-setup.ps1` und die App-Tests der Setup-Engine. 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): phase5-readme.ps1 exit 0, PHASE5_README_OK; phase6-name.ps1 exit 0, PHASE6_NAME_OK; phase7-setup.ps1 exit 0, PHASE7_SETUP_OK; die App-Tests der Setup-Engine im vollen Testlauf grün. Weiter offen: phase5-publish.ps1, dort alle Prüfungen grün außer `hdr status` (exit 3, ohne eingeschalteten Bildschirm keine aktiven Bildschirme; umgebungsbedingt).

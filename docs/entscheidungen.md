@@ -1533,6 +1533,17 @@ Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
   einen gelben Glanz. Das Gelb liegt aber 161° vom Akzent entfernt, und die Grenze von 150° zwischen Akzent und Glanz (Auswahl,
   Bogen, Durchsicht D12) hat Vorrang vor der Tabelle; der Glanz kommt dort deshalb vom Bogen hinter der Atmosphäre. Die
   Grenze bleibt (Entscheidung des Nutzers 2026-10-27): Ein blaues Logo bekommt keinen gelben Glanz.
+- **Nachbesserung nach der Prüfung unter Windows (2026-10-28):** WPF friert einen Pinsel aus einem Wörterbuch ein, sobald
+  ein Stil-Setter oder eine Vorlage ihn über DynamicResource holt; die bleibenden Pinsel lassen sich deshalb nicht einfrieren
+  (eine Bindung an `RelativeTransform`, ohne Wirkung aufs Bild) und blenden an Ort und Stelle über, statt bei jedem Wechsel
+  ersetzt zu werden. Ränder mit einem Pinsel inline am `BorderBrush` verloren ihren Kontext (ein Rahmen legt den Pinsel auch
+  in einen Stift) und fanden nur die App-Ressourcen: Die fünf Ränder der Kennzeichen („NATIV“ in Liste, Details und über dem
+  Titelbild, „AUTO HDR“, Hinweis auf erzeugte Bilder) holen eigene Schlüssel (`Lib.Brush.*Line`, der vorab erlaubte Ausweg),
+  unter denen das Fenster bleibende Pinsel aus den gezeigten Akzenten hält; so folgen sie auch einem neuen Schema. Ankommende
+  Bilder lösen bei gehaltener Taste kein Lesen aus; neu gefragt wird nur bei anderen Bildquellen, nicht beim ersten Bild nach
+  der Auswahl und nicht bei der hellen Fassung. Bildtest „Hinweis“: Der blaue Himmel des Entwurfs liegt 137° vom roten Akzent,
+  Atmosphären höchstens 120°; der Hinweis hätte keine Zweitfarbe zur Wahl. Die Szene nimmt den Abendhimmel, dessen Leuchten
+  neben einer Zweitfarbe liegt. G15.3 prüft die Tests der Entprellung in `HdrPilot.Core` mit.
 
 **E95 Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, G16):** „Bitte eine komplette englische
 Übersetzung der App, mit Sprachwahl in den Einstellungen und automatischer Erkennung der Systemsprache bei der

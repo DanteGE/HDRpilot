@@ -654,7 +654,7 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
   EVIDENCE: pending
 
 - [ ] G15.3: Umschalten in der Bibliothek: eigene Farbebene nur im Bibliotheksfenster (Einstellungen außer der Vorschau, Tray-Menü, Dialoge und Symbole behalten das Schema), bleibende Pinsel ohne Austausch der Wörterbücher je Spiel, Überblendung im OKLCH-Farbraum vom gezeigten Wert aus ohne graue Mitte (Voll 0,9 s, Reduziert 0,3 s, Aus sofort), Rohfarben wechseln zu Beginn, Farben kommen zusammen mit den Bildern, Entprellung 300 ms bei schneller Auswahl und gehaltener Taste, graue Bilder → Farbschema, ladende Bilder und leere Auswahl → Farben bleiben, hoher Kontrast → keine Spielfarben, Kontextmenüs, Tooltips und Kennzeichen folgen, Werkzeugleiste samt Schein der Lasche folgt, „Hintergrund aus“ ergibt einen ruhigen, gleichbleibenden Grund; danach keine Uhren und keine laufenden Animationen
-  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Theming.OklchFade|FullyQualifiedName~HdrPilot.App.Tests.Theming.LiveBrush|FullyQualifiedName~HdrPilot.App.Tests.Theming.GameAccent|FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentWindow" -MinTests 45
+  CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Theming.OklchFade|FullyQualifiedName~HdrPilot.App.Tests.Theming.LiveBrush|FullyQualifiedName~HdrPilot.App.Tests.Theming.GameAccent|FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentWindow|FullyQualifiedName~HdrPilot.Tests.Artwork.GameAccentScheduler" -MinTests 45
   EXPECT: TESTS_OK
   EVIDENCE: pending
 

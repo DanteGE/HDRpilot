@@ -117,8 +117,8 @@ internal sealed record GameAccentSetup(MainWindow Window, LibraryViewModel Model
 /// gestellter Uhr, hoher Kontrast, Verweise statt Momentaufnahmen, gleicher Baum, graue Spiele genau das Schema, Partikel,
 /// Änderung der Darstellung, Aus und wieder An vor dem Beruhigen, Farben und Bilder in beliebiger Reihenfolge, ruhiger
 /// Grund, Werkzeugleiste, helles Thema, Ring der Rasterkachel mitten in der Überblendung, Lesefehler (gezeigte Farben
-/// bleiben), gehaltene Tasten ohne Anfrage für übersprungene Spiele und Ränder der Kennzeichen (Ebene, Schalter aus, neues
-/// Schema).
+/// bleiben), gehaltene Tasten ohne Anfrage für übersprungene Spiele, neue Bilder fragen neu (die helle Fassung nicht) und
+/// Ränder der Kennzeichen (Ebene, Schalter aus, neues Schema).
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
 public sealed class GameAccentWindowTests
@@ -514,17 +514,19 @@ public sealed class GameAccentWindowTests
 
         WpfTestHost.Run(() =>
         {
-            // Farben zuerst (bekannt), Bild danach: angewendet erst mit dem Bild.
+            // Farben zuerst (bekannt), Bild danach: angewendet erst mit dem Bild. Das Bild hält der Bilderdienst fest zurück; ob
+            // die Bibliothek es sofort oder verzögert holt, hängt sonst von der echten Zeit seit der letzten Auswahl ab.
             var s = GameAccentSetup.Open();
-            s.Context.Dispatcher.RunDelayed();
-            s.Now += TimeSpan.FromSeconds(1);
-            s.Model.SelectedGame = GameAccentSetup.Item(s.Model, "blau");
-            if (s.Context.Dispatcher.PendingDelays > 0)
-            {
-                Assert.Equal(s.Accents(GameAccentSetup.Red), s.Window.ShownAccents); // Bild fehlt noch
-                s.Context.Dispatcher.RunDelayed();
-            }
+            var art = new TaskCompletionSource();
+            s.Art.PendingArtwork = art;
+            s.Select("blau");
+            Assert.Null(s.Model.Hero!.Artwork);
+            Assert.Equal(s.Accents(GameAccentSetup.Red), s.Window.ShownAccents); // Bild fehlt noch, Farben sind bekannt
 
+            s.Art.PendingArtwork = null;
+            art.SetResult();
+            WpfTestHost.DoEvents();
+            Assert.NotNull(s.Model.Hero!.Artwork);
             Assert.Equal(s.Accents(GameAccentSetup.Blue), s.Window.ShownAccents);
             s.Close();
         });
@@ -716,6 +718,39 @@ public sealed class GameAccentWindowTests
             s.Select("blau");
             Assert.Equal(["Steam:bunt", "Steam:blau"], s.Art.ColorRequests);
             Assert.Contains("Steam:bunt", s.Art.CanceledColorRequests);
+            s.Close();
+        });
+    }
+
+    [Fact]
+    public void W21_new_art_of_the_selected_game_asks_again_the_bright_version_does_not()
+    {
+        WpfTestHost.Run(() =>
+        {
+            var s = GameAccentSetup.Open(colorsAsync: true);
+            Assert.Equal(["Steam:rot"], s.Art.ColorRequests); // die Farben werden noch gelesen
+
+            // Helle Fassung des Titelbilds, während gelesen wird: dieselben Bildquellen, die laufende Anfrage bleibt.
+            var hero = s.Model.Hero!;
+            hero.Artwork = hero.Artwork! with { HeroBoost = hero.Artwork.Hero };
+            Assert.Equal(["Steam:rot"], s.Art.ColorRequests);
+            Assert.Empty(s.Art.CanceledColorRequests);
+            s.Art.CompleteColors("Steam:rot");
+            WpfTestHost.DoEvents();
+            var red = s.Accents(GameAccentSetup.Red);
+            Assert.Equal(red, s.Window.ShownAccents);
+
+            // Neues Bild für das gewählte Spiel (Beobachtung, „Bild wählen…“): neuer Bildstand, also neu gefragt; bis die neuen
+            // Farben da sind, bleiben die gezeigten.
+            s.Art.ForgetColors("Steam:rot");
+            s.Art.Raise("Steam:rot");
+            WpfTestHost.DoEvents();
+            Assert.Equal(["Steam:rot", "Steam:rot"], s.Art.ColorRequests);
+            Assert.Equal(red, s.Window.ShownAccents);
+            s.Art.CompleteColors("Steam:rot");
+            WpfTestHost.DoEvents();
+            Assert.Equal(red, s.Window.ShownAccents);
+            Assert.Equal(2, s.Window.AccentStats.Requests);
             s.Close();
         });
     }

@@ -93,7 +93,9 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
 
         if (!_pendingColors.TryGetValue(game.Key, out var pending))
         {
-            _pendingColors[game.Key] = pending = new TaskCompletionSource<GameColors?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            // Ohne RunContinuationsAsynchronously: Die Fortsetzung läuft beim Abschluss gleich oder über den Dispatcher des Tests,
+            // nie über den Threadpool (sie liefe sonst mit DoEvents um die Wette und käme manchmal erst danach an).
+            _pendingColors[game.Key] = pending = new TaskCompletionSource<GameColors?>();
         }
 
         var key = game.Key;
@@ -110,6 +112,9 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
             pending.TrySetResult(ColorsOf(key));
         }
     }
+
+    /// <summary>Neuer Bildstand (anderes Bild gewählt): <see cref="TryPeek"/> kennt die Farben erst nach <see cref="CompleteColors"/> wieder.</summary>
+    public void ForgetColors(string key) => _completedColors.Remove(key);
 
     /// <summary>Lesefehler: wartende Anfragen bekommen null (nicht gelesen), <see cref="TryPeek"/> kennt weiterhin nichts.</summary>
     public void FailColors(string key)
@@ -148,9 +153,17 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
 
     public GameArtwork? GetCachedArtwork(GameConfig game) => null;
 
-    public Task<GameArtwork> GetArtworkAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
+    /// <summary>Gesetzt: Bildsätze kommen erst, wenn diese Quelle fertig ist (Tests: die Bilder laden noch).</summary>
+    public TaskCompletionSource? PendingArtwork { get; set; }
+
+    public async Task<GameArtwork> GetArtworkAsync(GameConfig game, int heroDecodeWidth, CancellationToken cancellationToken = default)
     {
         ArtworkRequests.Add(game.Key);
+        if (PendingArtwork is { } pending)
+        {
+            await pending.Task.WaitAsync(cancellationToken);
+        }
+
         var hero = WithHero.Contains(game.Key)
             ? new ArtworkImage(Solid(32, 9, Colors.DarkOrange), ArtworkKind.Hero, ArtworkOrigin.Launcher, 3840, 1240, "Steam")
             : new ArtworkImage(Solid(32, 9, Colors.DimGray), ArtworkKind.Hero, ArtworkOrigin.Generated, 32, 9, "erzeugt");
@@ -158,7 +171,7 @@ public sealed class FakeArtworkService(Func<string, GameColors?>? colors = null,
             ? new ArtworkImage(Solid(40, 12, Colors.Gold), ArtworkKind.Logo, ArtworkOrigin.Launcher, 40, 12, "Steam")
             : null;
         var summary = new ArtworkSummary(hero.Origin, logo?.Origin ?? ArtworkOrigin.None, ArtworkOrigin.Generated, ArtworkOrigin.None, LogoIsName: logo is null, CoverFromSmear: false, "Testbilder");
-        return Task.FromResult(new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientFor?.Invoke(game.Key) ?? AmbientColors.FromName(game.Name), summary));
+        return new GameArtwork(game.Key, hero, null, null, logo, null, null, AmbientFor?.Invoke(game.Key) ?? AmbientColors.FromName(game.Name), summary);
     }
 
     /// <summary>Helle Fassung (nur für Spiele mit Titelbild aus einer Quelle), je Anfrage ein neues Bild.</summary>

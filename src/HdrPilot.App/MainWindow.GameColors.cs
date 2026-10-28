@@ -41,6 +41,7 @@ public partial class MainWindow
     private string? _colorsKey;
     private GameColors? _colors;
     private CancellationTokenSource? _colorsRequest;
+    private GameArtwork? _accentArtwork;
     private TimeSpan? _lastKeyRepeat;
     private AppearanceSnapshot? _seenAppearance;
 
@@ -128,6 +129,7 @@ public partial class MainWindow
     /// <summary>Neue Auswahl (aus <see cref="UpdateHero"/>, vor den Umgebungsfarben).</summary>
     private void OnGameAccentSelection(bool instant)
     {
+        _accentArtwork = _hero?.Artwork;
         if (!FollowColors)
         {
             ApplySchemeAccents(instant);
@@ -168,10 +170,46 @@ public partial class MainWindow
         _colors = null;
     }
 
-    /// <summary>Farben des Spiels: aus dem Speicher des Bilderdienstes sofort, sonst einmal angefragt.</summary>
+    /// <summary>
+    /// Die Bilder der Auswahl sind da oder haben sich geändert (aus <see cref="OnHeroPropertyChanged"/>). Andere Bildquellen
+    /// (Beobachtung, „Bild wählen…“) heißen: Farben neu nachsehen. Das erste Bild nach der Auswahl und die helle Fassung ändern
+    /// an den Quellen nichts; eine laufende Anfrage bleibt dann (sonst fragte jede Auswahl zweimal). Die Farben kommen mit dem
+    /// Bild; während die Entprellung hält, fragt erst ihr Zeitgeber.
+    /// </summary>
+    private void OnAccentArtworkChanged()
+    {
+        if (_hero?.Artwork is not { } artwork)
+        {
+            return; // ohne Bild nichts anzuwenden; die Farben kommen mit dem nächsten
+        }
+
+        var changed = _accentArtwork is { } seen && !SameSources(seen, artwork);
+        _accentArtwork = artwork;
+        if (!FollowColors)
+        {
+            return;
+        }
+
+        if (changed)
+        {
+            CancelColorsRequest(); // Farben und Anfrage galten den alten Bildern; gezeigt bleibt, was zu sehen ist
+        }
+
+        RequestColors(_hero);
+        OnAccentInputsArrived();
+    }
+
+    /// <summary>Gleiche Bildquellen der Farben (Logo, Cover, Titelbild); die helle Fassung zählt nicht.</summary>
+    private static bool SameSources(GameArtwork a, GameArtwork b) =>
+        ReferenceEquals(a.Logo?.Image, b.Logo?.Image) && ReferenceEquals(a.Cover?.Image, b.Cover?.Image) && ReferenceEquals(a.Hero?.Image, b.Hero?.Image);
+
+    /// <summary>
+    /// Farben des Spiels: aus dem Speicher des Bilderdienstes sofort, sonst einmal angefragt. Während die Entprellung hält, wird
+    /// nicht gefragt: Gelesen wird erst, wenn sie ein Spiel anwendet; übersprungene Spiele werden nie gelesen.
+    /// </summary>
     private void RequestColors(HeroViewModel? hero)
     {
-        if (hero is null || _colorsSource is not { } source)
+        if (hero is null || _colorsSource is not { } source || _accentScheduler.IsHolding)
         {
             return;
         }

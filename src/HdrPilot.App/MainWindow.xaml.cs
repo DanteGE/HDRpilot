@@ -1496,13 +1496,7 @@ public partial class MainWindow : ChromeWindow
         if (e.PropertyName == nameof(HeroViewModel.Artwork) && ReferenceEquals(sender, _hero))
         {
             ApplyAmbient(instant: false);
-            if (FollowColors)
-            {
-                // Das Bild kann sich geändert haben (Beobachtung, „Bild wählen…“): Farben neu nachsehen; sie kommen mit dem Bild.
-                _colorsKey = null;
-                RequestColors(_hero);
-                OnAccentInputsArrived();
-            }
+            OnAccentArtworkChanged(); // Spielfarben kommen mit dem Bild; neue Bildquellen: Farben neu nachsehen
 
             Hero.Show(_hero, _hero?.Artwork, HeroTransition());
             UpdateSheen();

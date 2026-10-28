@@ -602,7 +602,7 @@ public sealed partial class AppServices
             _ = dialog.ApplyCoreAsync();
             await Task.Delay(400);
         }));
-        scenes.Add(SgdbScene("klein", ArtworkKind.Cover, setup: dialog => dialog.FitToWorkArea(new Rect(0, 0, 1024, 616))));
+        scenes.Add(SgdbScene("klein", ArtworkKind.Cover, setup: dialog => dialog.PinWorkArea(new Rect(0, 0, 1024, 616))));
         scenes.Add(SgdbScene("kontrast", ArtworkKind.Logo, setup: dialog => dialog.SetHighContrast(HighContrastPalette.NightSky),
             prepare: (_, picker, _) => SgdbSearchAsync(picker)));
     }

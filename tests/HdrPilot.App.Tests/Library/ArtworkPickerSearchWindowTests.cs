@@ -82,6 +82,31 @@ public sealed partial class ArtworkPickerSearchWindowTests
     }
 
     [Fact]
+    public void A_pinned_work_area_holds_when_the_window_gets_its_handle()
+    {
+        WpfTestHost.Run(() =>
+        {
+            // Bildschirmfotos (Szene „klein“): Das Handle entsteht erst beim Rendern, SourceInitialized fragt dann den Bildschirm.
+            var small = new Rect(0, 0, 1024, 616);
+            var (dialog, _, _) = Open(ArtworkKind.Cover);
+            dialog.PinWorkArea(small);
+
+            new System.Windows.Interop.WindowInteropHelper(dialog).EnsureHandle(); // ohne Anzeigen
+
+            Assert.Equal(small, dialog.WorkArea);
+            Assert.Equal(DialogPlacement.MaxHeightFor(small, dialog.MinHeight), dialog.MaxHeight);
+
+            // Gegenprobe: ohne feste Fläche richtet sich ein neues Fenster beim Handle nach dem Bildschirm.
+            var (other, _, _) = Open(ArtworkKind.Cover);
+            other.FitToWorkArea(small);
+            new System.Windows.Interop.WindowInteropHelper(other).EnsureHandle();
+            Assert.Equal(DialogPlacement.WorkAreaFor(null), other.WorkArea);
+            dialog.Close();
+            other.Close();
+        });
+    }
+
+    [Fact]
     public void The_window_never_shrinks_while_open()
     {
         WpfTestHost.Run(() =>

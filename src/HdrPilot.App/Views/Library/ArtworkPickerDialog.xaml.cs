@@ -22,6 +22,7 @@ public partial class ArtworkPickerDialog : ChromeWindow
     private readonly ArtworkPickerViewModel _viewModel;
     private readonly List<object> _reveal = [];
     private Rect? _workArea;
+    private Rect? _pinnedWorkArea;
     private bool _closing;
     private bool _applying;
     private bool _focusInSection;
@@ -41,7 +42,7 @@ public partial class ArtworkPickerDialog : ChromeWindow
         viewModel.Online.Results.CollectionChanged += OnResultsChanged;
         SgdbSection.IsKeyboardFocusWithinChanged += OnSectionFocusChanged;
         SizeChanged += OnSizeChanged;
-        SourceInitialized += (_, _) => FitToWorkArea(DialogPlacement.WorkAreaFor(Owner));
+        SourceInitialized += (_, _) => FitToWorkArea(_pinnedWorkArea ?? DialogPlacement.WorkAreaFor(Owner));
         Closing += (_, _) => BeginClosing();
         Closed += OnClosed;
         Loaded += (_, _) =>
@@ -60,6 +61,16 @@ public partial class ArtworkPickerDialog : ChromeWindow
     {
         _workArea = work;
         MaxHeight = DialogPlacement.MaxHeightFor(work, MinHeight);
+    }
+
+    /// <summary>
+    /// Feste Arbeitsfläche statt der des Bildschirms (Bildschirmfotos, Szene „klein“, E93): Sie gilt auch, wenn das Fenster sein
+    /// Handle bekommt; SourceInitialized richtete das Fenster sonst wieder nach dem echten Bildschirm aus.
+    /// </summary>
+    internal void PinWorkArea(Rect work)
+    {
+        _pinnedWorkArea = work;
+        FitToWorkArea(work);
     }
 
     /// <summary>Hoher Kontrast an (Palette) oder aus (null); für Tests und Bildschirmfotos auch mit vorgegebener Palette.</summary>

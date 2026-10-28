@@ -200,6 +200,9 @@ public static class ImageFill
     public static readonly DependencyProperty FadeOnArrivalProperty = DependencyProperty.RegisterAttached(
         "FadeOnArrival", typeof(bool), typeof(ImageFill), new PropertyMetadata(false));
 
+    /// <summary>Dauer des Einblendens eines später eintreffenden Bilds (<see cref="FadeOnArrivalProperty"/>).</summary>
+    internal static readonly TimeSpan ArrivalFade = TimeSpan.FromMilliseconds(160);
+
     public static ImageSource? GetSource(DependencyObject d) => (ImageSource?)d.GetValue(SourceProperty);
 
     public static void SetSource(DependencyObject d, ImageSource? value) => d.SetValue(SourceProperty, value);
@@ -233,7 +236,7 @@ public static class ImageFill
         border.Background = brush;
         if (e.OldValue is null && GetFadeOnArrival(border) && border.IsLoaded && LibraryMotion.Enabled)
         {
-            var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
+            var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1, ArrivalFade) { FillBehavior = System.Windows.Media.Animation.FillBehavior.Stop };
             border.BeginAnimation(UIElement.OpacityProperty, fade);
         }
     }

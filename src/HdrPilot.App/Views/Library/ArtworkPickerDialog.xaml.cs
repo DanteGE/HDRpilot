@@ -19,8 +19,19 @@ namespace HdrPilot.App.Views.Library;
 /// </summary>
 public partial class ArtworkPickerDialog : ChromeWindow
 {
+    /// <summary>Einblenden neuer Kacheln, Stufe „Voll“: je Kachel 18 ms später, höchstens 430 ms, je 220 ms lang.</summary>
+    internal static readonly TimeSpan RevealStep = TimeSpan.FromMilliseconds(18);
+
+    internal static readonly TimeSpan RevealLatestStart = TimeSpan.FromMilliseconds(430);
+
+    internal static readonly TimeSpan RevealDuration = TimeSpan.FromMilliseconds(220);
+
+    /// <summary>Stufe „Reduziert“: alle zugleich, nur kurz einblenden.</summary>
+    internal static readonly TimeSpan RevealDurationReduced = TimeSpan.FromMilliseconds(150);
+
     private readonly ArtworkPickerViewModel _viewModel;
     private readonly List<object> _reveal = [];
+    private DateTime _revealEnd = DateTime.MinValue;
     private Rect? _workArea;
     private Rect? _pinnedWorkArea;
     private bool _closing;
@@ -55,6 +66,14 @@ public partial class ArtworkPickerDialog : ChromeWindow
 
     /// <summary>Arbeitsfläche, nach der sich das Fenster richtet.</summary>
     internal Rect? WorkArea => _workArea;
+
+    /// <summary>
+    /// Wie lange das Einblenden neuer Kacheln noch läuft (0: es läuft keins); wartet eine Seite noch darauf, die längste
+    /// mögliche Dauer. Für Bildschirmfotos, die erst danach aufnehmen.
+    /// </summary>
+    internal TimeSpan RevealRemaining => _reveal.Count > 0
+        ? RevealLatestStart + RevealDuration
+        : _revealEnd > DateTime.UtcNow ? _revealEnd - DateTime.UtcNow : TimeSpan.Zero;
 
     /// <summary>Höchste Höhe nach der Arbeitsfläche (für Tests und Bildschirmfotos auch vorgegeben).</summary>
     internal void FitToWorkArea(Rect work)
@@ -366,6 +385,8 @@ public partial class ArtworkPickerDialog : ChromeWindow
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
         {
             var full = LibraryMotion.Instance.IsFull;
+            var duration = full ? RevealDuration : RevealDurationReduced;
+            var now = DateTime.UtcNow;
             var index = 0;
             var items = _reveal.ToList();
             _reveal.Clear();
@@ -373,8 +394,9 @@ public partial class ArtworkPickerDialog : ChromeWindow
             {
                 if (Container(Results, item) is { } container)
                 {
-                    var delay = full ? TimeSpan.FromMilliseconds(Math.Min(index * 18, 430)) : TimeSpan.Zero;
-                    LibraryMotion.FadeIn(container, delay, offsetY: full ? 10 : 0, durationMs: full ? 220 : 150);
+                    var delay = full ? TimeSpan.FromTicks(Math.Min(RevealStep.Ticks * index, RevealLatestStart.Ticks)) : TimeSpan.Zero;
+                    LibraryMotion.FadeIn(container, delay, offsetY: full ? 10 : 0, durationMs: duration.TotalMilliseconds);
+                    _revealEnd = now + delay + duration > _revealEnd ? now + delay + duration : _revealEnd;
                 }
 
                 index++;

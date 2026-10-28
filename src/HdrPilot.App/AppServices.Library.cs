@@ -634,7 +634,7 @@ public sealed partial class AppServices
                 }
 
                 await PreviewsSettledAsync(picker);
-                await Task.Delay(300);
+                await RevealEndedAsync(dialog);
             }
         })
         {
@@ -674,6 +674,20 @@ public sealed partial class AppServices
     {
         await picker.Online.SearchAsync(picker.Kind);
         await PreviewsSettledAsync(picker);
+    }
+
+    /// <summary>
+    /// Wartet, bis neue Kacheln ganz eingeblendet sind (<see cref="ArtworkPickerDialog.RevealRemaining"/>, gestaffelt bis
+    /// 650 ms) und eben eingetroffene Vorschauen auch (<see cref="ImageFill.ArrivalFade"/>). Vorher wartete die Szene fest
+    /// 300 ms, und das Bild fing die letzten Kacheln mitten im Einblenden.
+    /// </summary>
+    internal static async Task RevealEndedAsync(ArtworkPickerDialog dialog)
+    {
+        await Task.Delay(ImageFill.ArrivalFade);
+        while (dialog.RevealRemaining is var left && left > TimeSpan.Zero)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(Math.Ceiling(left.TotalMilliseconds)));
+        }
     }
 
     /// <summary>Wartet, bis keine Suche mehr läuft und jede Kachel ihre Vorschau hat (oder keine bekommt), höchstens 20 s.</summary>

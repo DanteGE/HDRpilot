@@ -10,11 +10,31 @@ public sealed class CliHdrTests
     private readonly FakeDisplayConfigApi _api = FakeDisplayConfigApi.WithSingleHdrMonitor(hdrOn: false);
     private readonly StringWriter _out = new();
     private readonly StringWriter _err = new();
+    private readonly InMemoryFileSystem _fs = new();
 
     private Task<int> Run(params string[] args)
     {
-        var services = new TestServices(_api);
+        var services = new TestServices(_api, _fs);
         return new CliApp(services, _out, _err).RunAsync(args, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public async Task Hdr_takes_config_dir_like_the_other_commands_and_touches_nothing_there()
+    {
+        // Wie scan, games, watch und run: Program.cs liest aus der Ablage die Sprache der Ausgaben (E95), so laufen auch
+        // Prüfläufe von hdr status ohne die echte Ablage. hdr selbst liest und schreibt dort nichts.
+        const string dir = @"D:\Programmordner\HDRpilot-Pruefablage";
+        Assert.Equal(ExitCodes.Ok, await Run("hdr", "status", "--config-dir", dir));
+        Assert.Contains("MAG 341C OLED", _out.ToString(), StringComparison.Ordinal);
+        Assert.Equal(ExitCodes.Ok, await Run("hdr", "status", "--json", "--config-dir=" + dir));
+        Assert.Equal(ExitCodes.Ok, await Run("hdr", "on", "--config-dir", dir));
+        Assert.True(_api.Monitors[0].HdrUserEnabled);
+        Assert.Equal(string.Empty, _err.ToString());
+        Assert.False(_fs.DirectoryExists(dir));
+        Assert.False(_fs.FileExists(Path.Combine(dir, "config.json")));
+
+        // Andere unbekannte Schalter bleiben ein Aufruffehler.
+        Assert.Equal(ExitCodes.Usage, await Run("hdr", "status", "--config", dir));
     }
 
     [Fact]
@@ -144,8 +164,10 @@ public sealed class CliHdrTests
         Assert.Contains("Unerwarteter Fehler", _err.ToString(), StringComparison.Ordinal);
     }
 
-    private sealed class TestServices(FakeDisplayConfigApi api) : ICliServices
+    private sealed class TestServices(FakeDisplayConfigApi api, InMemoryFileSystem fileSystem) : ICliServices
     {
+        public HdrPilot.Core.Abstractions.IFileSystem FileSystem => fileSystem;
+
         public IHdrController CreateHdrController(HdrControllerOptions options) =>
             new DisplayConfigHdrController(api, new FakeEnvironment(), new FakeClock(), options);
 

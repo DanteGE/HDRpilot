@@ -182,7 +182,9 @@ public sealed partial class CliApp(ICliServices services, TextWriter stdout, Tex
             return Usage(CliStrings.HdrNeedsSubcommand);
         }
 
-        var unknown = args.UnknownOptions("--api", "--display").ToList();
+        // --config-dir wie bei den übrigen Befehlen: Program.cs liest daraus die Sprache der Ausgaben (E95). Sonst liest und
+        // schreibt hdr nichts aus der Ablage; ohne den Schalter käme die Sprache aus der normalen Ablage.
+        var unknown = args.UnknownOptions("--api", "--display", "--config-dir").ToList();
         if (unknown.Count > 0)
         {
             return Usage(Text(CliStrings.UnknownOption, string.Join(", ", unknown)));

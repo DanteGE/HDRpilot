@@ -169,6 +169,7 @@ public sealed class EnglishOutputTests
         fs.AddFile(configFile, """{ "settings": { "language": "en" } }""");
         Assert.Equal("en", CliApp.LanguageFor(args, fs, environment, () => "de"));
         Assert.Equal("en", CliApp.LanguageFor(["games", "list", @"--config-dir=D:\Ablage\HDRpilot"], fs, environment, () => "de"));
+        Assert.Equal("en", CliApp.LanguageFor(["hdr", "status", "--config-dir", @"D:\Ablage\HDRpilot"], fs, environment, () => "de")); // auch hdr
 
         // Normale Ablage: %APPDATA%\HDRpilot\config.json ohne Sprache (ältere Version) gilt als Deutsch.
         fs.AddFile(Path.Combine(environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "HDRpilot", "config.json"), """{ "settings": {} }""");

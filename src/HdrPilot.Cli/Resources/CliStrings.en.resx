@@ -36,7 +36,8 @@ hdrpilot watch [--verbose]
     Monitors game launches in the foreground (like the app, without a user interface). Press Ctrl+C to stop.
 hdrpilot run &lt;key&gt;
     Launch via HDRpilot: turn HDR on, confirm, launch the game, monitor until the game ends.
-scan, games, watch and run: --config-dir &lt;folder&gt; (instead of %APPDATA%/%LOCALAPPDATA%\HDRpilot, for tests).
+hdr, scan, games, watch and run: --config-dir &lt;folder&gt; (instead of %APPDATA%/%LOCALAPPDATA%\HDRpilot, for tests;
+    hdr only reads the language from it).
 
 Exit codes: 0 ok, 1 error, 2 wrong usage, 3 display not found,
             4 display without HDR, 5 switching failed, 6 game not found</value>

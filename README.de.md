@@ -748,10 +748,11 @@ hdrpilot run <schlüssel>
 ```
 
 `<auswahl>`: `primary` (Standard), `all`, Nummer aus `hdr status`, Teil des Namens oder `monitorDevicePath`.
-`<quelle>`: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver. `scan`, `games`, `watch` und `run` verstehen
-außerdem `--config-dir <ordner>`; `scan` nimmt dann die Suchordner und gemerkten Quiver-Ordner dieser Ablage hinzu
-(gelesen, nicht geschrieben) und sucht sonst wie immer. `hdrpilot --help` zeigt die vollständige Hilfe. Ausgaben und
-Meldungen der Scanner kommen in der Sprache der Ablage (`language` in `config.json`; ohne Datei wie Windows).
+`<quelle>`: Steam, Epic, Xbox, Gog, Ubisoft, EA, BattleNet, Quiver. `hdr`, `scan`, `games`, `watch` und `run`
+verstehen außerdem `--config-dir <ordner>`; `hdr` liest daraus nur die Sprache, `scan` nimmt die Suchordner und
+gemerkten Quiver-Ordner dieser Ablage hinzu (gelesen, nicht geschrieben) und sucht sonst wie immer. `hdrpilot --help`
+zeigt die vollständige Hilfe. Ausgaben und Meldungen der Scanner kommen in der Sprache der Ablage (`language` in
+`config.json`; ohne Datei wie Windows).
 
 Exit-Codes: 0 ok, 1 Fehler, 2 Aufruf falsch, 3 Bildschirm nicht gefunden, 4 Bildschirm ohne HDR,
 5 Schalten fehlgeschlagen, 6 Spiel nicht gefunden.

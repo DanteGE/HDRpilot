@@ -39,6 +39,10 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
                 Assert.InRange(layer.Stats.ColorPartSwaps - swaps, 0, 1);
                 Assert.InRange(layer.Stats.Animations - layerAnimations, 1, 19);
                 Assert.InRange(s.Window.AccentBrushes.Stats.Animations - brushAnimations, 1, 22);
+
+                // Die gestellte Uhr steht, auf dem Bildschirm wäre also noch die Startfarbe: ohne Beruhigen hätte der nächste
+                // Wechsel (zurück) nichts zu überblenden. Beruhigt beginnt jeder Wechsel wie im Betrieb bei der zuletzt gezeigten Farbe.
+                s.Settle();
             }
 
             Assert.Equal(0, layer.Stats.Replacements);
@@ -69,8 +73,9 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
             }
 
             var perChange = (GC.GetAllocatedBytesForCurrentThread() - before) / 10;
-            output.WriteLine($"Speicher je angewendetem Wechsel (Akzentpfad): {perChange} Bytes");
-            Assert.True(perChange <= AppliedBudget, $"{perChange} Bytes je Wechsel");
+            var walk = ResourceChangeCost(s.Window);
+            output.WriteLine($"Speicher je angewendetem Wechsel (Akzentpfad): {perChange} Bytes; zum Vergleich eine Ressourcen-Änderung im selben Fenster (WPF geht den Baum durch): {walk} Bytes");
+            Assert.True(perChange <= AppliedBudget, $"{perChange} Bytes je Wechsel (eine Ressourcen-Änderung im selben Fenster allein: {walk} Bytes)");
             s.Settle();
             s.Close();
         });
@@ -189,6 +194,25 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
             Assert.Equal(clocks, s.Window.Motion.LiveClocks); // „Uhren“ unverändert: die Überblendung ist kein Dauer-Effekt
             s.Close();
         });
+    }
+
+    /// <summary>
+    /// Speicher einer einzelnen Ressourcen-Änderung im Fenster (ein Schlüssel, der nirgends benutzt wird): WPF meldet jede
+    /// Änderung über den ganzen Baum. Der Austausch der Farbwerte der Ebene kostet genau das, unabhängig von Schlüsseln und Werten.
+    /// </summary>
+    private static long ResourceChangeCost(MainWindow window)
+    {
+        const string probe = "Probe.Unbenutzt";
+        window.Resources[probe] = 0;
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 1; i <= 10; i++)
+        {
+            window.Resources[probe] = i;
+        }
+
+        var cost = (GC.GetAllocatedBytesForCurrentThread() - before) / 10;
+        window.Resources.Remove(probe);
+        return cost;
     }
 
     private static Action<PaletteColors?, bool> AccentPath(MainWindow window) =>

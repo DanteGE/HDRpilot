@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -16,6 +17,9 @@ namespace HdrPilot.App.Views.Library;
 /// </summary>
 public sealed class LibraryMotion : INotifyPropertyChanged
 {
+    /// <summary>Jüngste Einblendung je Element (nur sie setzt am Ende die Verschiebung zurück).</summary>
+    private static readonly ConditionalWeakTable<UIElement, FadeRun> Runs = new();
+
     private EffectLevel _level = EffectLevel.Full;
 
     private LibraryMotion()
@@ -67,14 +71,26 @@ public sealed class LibraryMotion : INotifyPropertyChanged
 
         // Grundwert 0: Nach dem Ende (FillBehavior.Stop) steht das Element ohne Sprung an seinem Platz. Eine eigene
         // Verschiebung des Elements (Schublade, Titelbereich) wird mitbenutzt und bleibt; sonst kommt eine vorübergehende.
+        // Läuft auf dem Element noch eine Einblendung, übernimmt die neue deren vorübergehende Verschiebung samt dem Wert
+        // davor: Zurückgesetzt wird erst am Ende der jüngsten (eine abgelöste meldet ihr Ende trotzdem).
         var own = element.RenderTransform as TranslateTransform;
-        var borrowed = own is { IsFrozen: false };
-        var shift = borrowed ? own! : new TranslateTransform();
-        var previous = element.ReadLocalValue(UIElement.RenderTransformProperty);
-        if (!borrowed)
+        FadeRun run;
+        if (Runs.TryGetValue(element, out var earlier) && earlier.Temporary is { } inherited && ReferenceEquals(own, inherited))
         {
-            element.RenderTransform = shift;
+            run = new FadeRun(inherited, earlier.Previous);
         }
+        else if (own is { IsFrozen: false })
+        {
+            run = new FadeRun(null, null);
+        }
+        else
+        {
+            run = new FadeRun(new TranslateTransform(), element.ReadLocalValue(UIElement.RenderTransformProperty));
+            element.RenderTransform = run.Temporary;
+        }
+
+        Runs.AddOrUpdate(element, run);
+        var shift = run.Temporary ?? own!;
 
         var move = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
         var property = offsetX != 0 ? TranslateTransform.XProperty : TranslateTransform.YProperty;
@@ -82,24 +98,39 @@ public sealed class LibraryMotion : INotifyPropertyChanged
         move.KeyFrames.Add(new DiscreteDoubleKeyFrame(start, KeyTime.FromTimeSpan(TimeSpan.Zero)));
         move.KeyFrames.Add(new DiscreteDoubleKeyFrame(start, KeyTime.FromTimeSpan(delay)));
         move.KeyFrames.Add(new EasingDoubleKeyFrame(0, KeyTime.FromTimeSpan(delay + duration), ease));
-        move.Completed += (_, _) =>
+        move.Freeze();
+
+        var opacityClock = opacity.CreateClock();
+        var moveClock = move.CreateClock();
+        moveClock.Completed += (_, _) =>
         {
-            // Aufräumen (Listen-Container werden wiederverwendet); eine neuere Einblendung behält ihre Verschiebung.
-            if (!borrowed && ReferenceEquals(element.RenderTransform, shift))
+            // Beendete Uhren abnehmen (FillBehavior.Stop allein lässt sie an Element und Verschiebung): danach läuft und hängt
+            // nichts mehr. Nur die eigenen; die einer neueren Einblendung laufen weiter.
+            opacityClock.Controller?.Remove();
+            moveClock.Controller?.Remove();
+            if (!Runs.TryGetValue(element, out var newest) || !ReferenceEquals(newest, run))
             {
-                if (previous == DependencyProperty.UnsetValue)
+                return;
+            }
+
+            Runs.Remove(element);
+
+            // Aufräumen (Listen-Container werden wiederverwendet); eine eigene Verschiebung bleibt.
+            if (run.Temporary is { } temporary && ReferenceEquals(element.RenderTransform, temporary))
+            {
+                if (run.Previous == DependencyProperty.UnsetValue)
                 {
                     element.ClearValue(UIElement.RenderTransformProperty);
                 }
                 else
                 {
-                    element.SetValue(UIElement.RenderTransformProperty, previous);
+                    element.SetValue(UIElement.RenderTransformProperty, run.Previous);
                 }
             }
         };
 
-        element.BeginAnimation(UIElement.OpacityProperty, opacity);
-        shift.BeginAnimation(property, move);
+        element.ApplyAnimationClock(UIElement.OpacityProperty, opacityClock);
+        shift.ApplyAnimationClock(property, moveClock);
     }
 
     private void Raise()
@@ -107,4 +138,10 @@ public sealed class LibraryMotion : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsEnabled)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsFull)));
     }
+
+    /// <summary>
+    /// Einblendung je Element: <paramref name="Temporary"/> ist die vorübergehende Verschiebung (null: die eigene des Elements),
+    /// <paramref name="Previous"/> der Wert von RenderTransform davor.
+    /// </summary>
+    private sealed record FadeRun(TranslateTransform? Temporary, object? Previous);
 }

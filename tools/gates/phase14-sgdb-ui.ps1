@@ -113,11 +113,26 @@ function Status-Text($el) {
 function Results($dialog) { $list = Find-Id $dialog 'ArtworkSgdbResults' 500; if ($list) { @(Get-ListItems $list) } else { @() } }
 function Wait-Results($dialog, [int]$count, [int]$timeoutMs = 15000) { Wait-Until { (Results $dialog).Count -eq $count } $timeoutMs }
 
+# Zeile des Spiels in der (virtualisierten) Liste, oder null; eine eben ersetzte Zeile zählt als nicht da
+function Find-GameRow($win, [string]$name) {
+    $list = Find-Id $win 'GameList' 500
+    if (-not $list) { return $null }
+    try { return @(Get-ListItems $list | Where-Object { $_.Current.Name -eq $name }) | Select-Object -First 1 }
+    catch [Windows.Automation.ElementNotAvailableException] { return $null }
+}
+
 function Select-Game($win, [string]$name) {
     $search = Find-Id $win 'SearchBox' 3000
-    if ($search) { Set-Text $search $name; Start-Sleep -Milliseconds 800 }
-    $row = @(Get-ListItems (Find-Id $win 'GameList' 3000) | Where-Object { $_.Current.Name -eq $name }) | Select-Object -First 1
-    if ($row) { Select-El $row }
+    if ($search) { Set-Text $search $name }
+    # Die Liste filtert erst nach der Entprellung der Suche (LibraryViewModel.SearchDelay) im UI-Thread, und die Testinstanz
+    # liest beim Start die Bibliothek ein: Gewartet wird auf die Zeile selbst statt einer festen Zeit. Wird die Liste genau
+    # dann neu aufgebaut, ist die gefundene Zeile weg; dann wird sie einmal neu gesucht.
+    for ($try = 1; $try -le 2; $try++) {
+        $script:gameRow = $null
+        if (-not (Wait-Until { $script:gameRow = Find-GameRow $win $name; [bool]$script:gameRow } 5000)) { break }
+        try { Select-El $script:gameRow; break }
+        catch [Windows.Automation.ElementNotAvailableException] { Note ('Zeile „{0}“ beim Auswählen ersetzt (Versuch {1})' -f $name, $try) }
+    }
     return [bool](Wait-Until { $d = Find-Id $win 'DetailName' 500; $d -and $d.Current.Name -eq $name } 4000)
 }
 

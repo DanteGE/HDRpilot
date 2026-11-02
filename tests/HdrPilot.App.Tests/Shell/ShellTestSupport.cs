@@ -363,6 +363,21 @@ internal static class WpfTestHost
         element.UpdateLayout();
     }
 
+    /// <summary>
+    /// Stellt die Bildschirmskalierung eines nie gezeigten Fensters (<see cref="System.Windows.Media.VisualTreeHelper.SetRootDpi"/>),
+    /// ohne spätere Fenster zu verändern. WPF führt die Skalierungen in einer Tabelle für den ganzen Prozess; neue Elemente
+    /// nehmen deren ersten Eintrag. Den legt sonst das erste gezeigte Fenster an. Wurde im Testlauf noch keins gezeigt, ist die
+    /// Tabelle leer, und die erste hier gesetzte Skalierung würde zum Eintrag aller später erzeugten Fenster (vorher maß dann
+    /// etwa die Ansichtswahl der Werkzeugleiste nach einem Test mit 125 % in jedem folgenden Fenster 123,2 statt 122 DIP).
+    /// Deshalb wird zuerst die Skalierung eingetragen, die ein neues Element ohnehin hat.
+    /// </summary>
+    public static void SetRootDpi(System.Windows.Media.Visual visual, DpiScale dpi)
+    {
+        var standard = new System.Windows.Media.DrawingVisual();
+        System.Windows.Media.VisualTreeHelper.SetRootDpi(standard, System.Windows.Media.VisualTreeHelper.GetDpi(standard));
+        System.Windows.Media.VisualTreeHelper.SetRootDpi(visual, dpi);
+    }
+
     /// <summary>Alle Elemente im visuellen Baum (Tiefensuche).</summary>
     public static IEnumerable<DependencyObject> Visuals(DependencyObject root)
     {

@@ -221,7 +221,7 @@ public sealed class HeaderDetailsWindowTests(ITestOutputHelper output)
             foreach (var scale in new[] { 1.0, 1.25, 1.5, 1.75 })
             {
                 var (window, _, _) = Open(new Size(1600, 1000));
-                VisualTreeHelper.SetRootDpi(window, new DpiScale(scale, scale));
+                WpfTestHost.SetRootDpi(window, new DpiScale(scale, scale));
                 foreach (var size in new[] { new Size(1280, 800), new Size(1440, 900), new Size(1600, 1000), new Size(1920, 1080), new Size(3440, 1440) })
                 {
                     Arrange(window, size);

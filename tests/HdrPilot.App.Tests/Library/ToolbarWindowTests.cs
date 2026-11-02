@@ -372,7 +372,7 @@ public sealed class ToolbarWindowTests(ITestOutputHelper output)
         WpfTestHost.Run(() =>
         {
             var (window, model, _) = Open(new Size(1600, 1000));
-            VisualTreeHelper.SetRootDpi(window, new DpiScale(scale, scale));
+            WpfTestHost.SetRootDpi(window, new DpiScale(scale, scale));
             var splitter = Named<HeroSplitter>(window, "HeroSplitter");
             var worst = 0.0;
             var checks = 0;

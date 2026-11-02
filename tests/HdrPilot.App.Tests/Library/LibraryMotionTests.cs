@@ -16,7 +16,7 @@ namespace HdrPilot.App.Tests.Library;
 /// Messung geht über die Zeit.
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
-public sealed class LibraryMotionTests
+public sealed class LibraryMotionTests(ITestOutputHelper output)
 {
     [Fact]
     public void A_finished_fade_in_leaves_nothing_running_and_restores_the_transform()
@@ -53,31 +53,50 @@ public sealed class LibraryMotionTests
     {
         WithFullMotion(() =>
         {
-            var (window, element) = Host();
-            var clock = Stopwatch.StartNew();
-            LibraryMotion.FadeIn(element, TimeSpan.Zero, offsetY: 14, durationMs: 400);
-            var shift = Assert.IsType<TranslateTransform>(element.RenderTransform);
-            Pump(window, () => clock.ElapsedMilliseconds >= 150);
+            // Mit echten Uhren entscheidet der Versuch nur, wenn die zweite Einblendung beginnt, solange die erste (400 ms)
+            // sicher noch läuft, und der Messpunkt nach deren Ende, aber vor dem Ende der zweiten (900 ms ab ihrem Beginn)
+            // liegt. Stand der Testhost-Thread länger (Speicherbereinigung, ausgelastete Maschine im vollen Lauf), trifft das
+            // nicht zu, ohne dass die Einblendung etwas falsch macht: Dann wird mit neuem Fenster wiederholt, höchstens dreimal;
+            // der letzte Versuch prüft immer.
+            for (var attempt = 1; ; attempt++)
+            {
+                var (window, element) = Host();
+                var clock = Stopwatch.StartNew();
+                LibraryMotion.FadeIn(element, TimeSpan.Zero, offsetY: 14, durationMs: 400);
+                var shift = Assert.IsType<TranslateTransform>(element.RenderTransform);
+                Pump(window, () => clock.ElapsedMilliseconds >= 150);
 
-            LibraryMotion.FadeIn(element, TimeSpan.Zero, offsetY: 14, durationMs: 900); // endet bei etwa 1050 ms
-            Assert.Same(shift, element.RenderTransform);
+                var second = clock.ElapsedMilliseconds;
+                LibraryMotion.FadeIn(element, TimeSpan.Zero, offsetY: 14, durationMs: 900);
+                var afterSecond = element.RenderTransform;
 
-            // Die erste endet bei etwa 400 ms; danach muss die zweite noch laufen.
-            Pump(window, () => clock.ElapsedMilliseconds >= 600);
-            var at = clock.ElapsedMilliseconds;
-            Assert.True(at < 950, $"Messpunkt zu spät ({at} ms), der Testlauf war zu langsam");
-            Assert.True(element.HasAnimatedProperties, $"Deckkraft läuft nicht mehr ({at} ms)");
-            Assert.True(element.Opacity < 0.99, $"Deckkraft schon {element.Opacity} ({at} ms)");
-            Assert.Same(shift, element.RenderTransform);
-            Assert.True(shift.HasAnimatedProperties, $"Verschiebung läuft nicht mehr ({at} ms)");
-            Assert.True(shift.Y > 0.5, $"Verschiebung schon {shift.Y} ({at} ms)");
+                // Die erste endet bei etwa 400 ms; danach muss die zweite noch laufen.
+                Pump(window, () => clock.ElapsedMilliseconds >= 600);
+                var at = clock.ElapsedMilliseconds;
+                output.WriteLine($"Versuch {attempt}: zweite Einblendung bei {second} ms, Messpunkt bei {at} ms");
+                if ((second >= 350 || at - second >= 800) && attempt < 3)
+                {
+                    window.Close();
+                    continue; // nichts entschieden, weil der Thread stand: noch einmal
+                }
 
-            Pump(window, () => !element.HasAnimatedProperties && !shift.HasAnimatedProperties && element.ReadLocalValue(UIElement.RenderTransformProperty) == DependencyProperty.UnsetValue);
-            Assert.False(element.HasAnimatedProperties);
-            Assert.False(shift.HasAnimatedProperties);
-            Assert.Equal(1, element.Opacity);
-            Assert.Equal(DependencyProperty.UnsetValue, element.ReadLocalValue(UIElement.RenderTransformProperty));
-            window.Close();
+                Assert.True(second < 350, $"Zweite Einblendung zu spät ({second} ms), die erste war schon fast vorbei; der Testlauf war zu langsam");
+                Assert.Same(shift, afterSecond);
+                Assert.True(at - second < 800, $"Messpunkt zu spät ({at} ms, zweite Einblendung bei {second} ms), der Testlauf war zu langsam");
+                Assert.True(element.HasAnimatedProperties, $"Deckkraft läuft nicht mehr ({at} ms)");
+                Assert.True(element.Opacity < 0.99, $"Deckkraft schon {element.Opacity} ({at} ms)");
+                Assert.Same(shift, element.RenderTransform);
+                Assert.True(shift.HasAnimatedProperties, $"Verschiebung läuft nicht mehr ({at} ms)");
+                Assert.True(shift.Y > 0.5, $"Verschiebung schon {shift.Y} ({at} ms)");
+
+                Pump(window, () => !element.HasAnimatedProperties && !shift.HasAnimatedProperties && element.ReadLocalValue(UIElement.RenderTransformProperty) == DependencyProperty.UnsetValue);
+                Assert.False(element.HasAnimatedProperties);
+                Assert.False(shift.HasAnimatedProperties);
+                Assert.Equal(1, element.Opacity);
+                Assert.Equal(DependencyProperty.UnsetValue, element.ReadLocalValue(UIElement.RenderTransformProperty));
+                window.Close();
+                break;
+            }
         });
     }
 

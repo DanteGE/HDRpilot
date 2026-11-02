@@ -27,11 +27,17 @@ namespace HdrPilot.App.Tests.Effects;
 /// laufen nur, wenn etwas sie zeigt, und die Stufe gilt auch für Einstellungen und Tray-Menü.
 /// Läuft allein: Die Prüfungen messen Übergänge über die Zeit und setzen <see cref="ShellMotion.Level"/>, und DoEvents pumpt
 /// den gemeinsamen Dispatcher verschachtelt; ein paralleler Test liefe sonst mitten in einer Messung (eine Überblendung war
-/// dann schon fertig, ein Moment schon vorbei).
+/// dann schon fertig, ein Moment schon vorbei). Die Übergänge der hellen Ebene laufen mit echten Uhren: Wo eine Prüfung
+/// einen Wert mitten im Übergang braucht, entscheidet ein Versuch nur, wenn der Messpunkt rechtzeitig kam; stand der
+/// Testhost-Thread länger (ausgelastete Maschine im vollen Lauf), wird wiederholt, höchstens dreimal, und der letzte Versuch
+/// prüft immer.
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
-public sealed class EffectReviewTests
+public sealed class EffectReviewTests(ITestOutputHelper output)
 {
+    /// <summary>Höchstens so viele Versuche für eine Prüfung mitten in einem Übergang (siehe oben).</summary>
+    private const int TimedAttempts = 3;
+
     private static readonly MotionContext Shown = new(WindowVisible: true, Minimized: false, Active: true, GameRunning: false, PauseInBackground: true, PauseWhilePlaying: true);
 
     private static (MainWindow Window, LibraryViewModel Model, FakeArtworkService Art, TestLibraryContext Context) Open(Action<FakeArtworkService>? setup = null, FakeLuminanceService? luminance = null)
@@ -298,14 +304,29 @@ public sealed class EffectReviewTests
             // Befund der Nachprüfung: Ein Abgleich meldet ShowsHdrOn dreimal hintereinander. Animierte vorher nichts die Ebene
             // (gleich nach Show), meldete WPF bis zum nächsten Bild schon ihr Ziel; der zweite Aufruf ersetzte den Übergang
             // durch einen von 1 nach 1, die helle Ebene sprang an.
-            var (stage, layer) = ShownStage(hdr: false);
-            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
-            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
-            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
-            PumpFor(0.2);
-            Assert.True(layer.Opacity < 0.3, "nach 0,2 s schon " + Format(layer.Opacity));
-            PumpFor(1.3);
-            Assert.Equal(1, layer.Opacity);
+            // Der Übergang (1,2 s, Sinus) steht bis 0,44 s nach dem Beginn unter 0,3: Der Versuch entscheidet, wenn der Messpunkt
+            // nach dem Pumpen bis 0,2 s spätestens 0,4 s nach dem Beginn liegt.
+            for (var attempt = 1; ; attempt++)
+            {
+                var (stage, layer) = ShownStage(hdr: false);
+                var start = DateTime.UtcNow;
+                stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+                stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+                stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+                PumpFor(0.2);
+                var early = layer.Opacity;
+                var at = (DateTime.UtcNow - start).TotalSeconds;
+                output.WriteLine($"Versuch {attempt}: Messpunkt nach {Format(at)} s, Deckkraft {Format(early)}");
+                if (at > 0.4 && attempt < TimedAttempts)
+                {
+                    continue; // nichts entschieden, weil der Thread stand: noch einmal
+                }
+
+                Assert.True(early < 0.3, $"nach {Format(at)} s schon {Format(early)}");
+                PumpFor(1.3);
+                Assert.Equal(1, layer.Opacity);
+                break;
+            }
         });
     }
 
@@ -409,11 +430,24 @@ public sealed class EffectReviewTests
             Assert.True(shown.Count > 0 && shown.All(s => s.Value > 0.99), Format(shown));
             Assert.Equal(1, layer.Opacity);
 
-            // Mitten im Einblenden: Es geht dort weiter, wo die Ebene gerade steht.
-            stage.SetHdr(false, TimeSpan.Zero);
-            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
-            PumpFor(0.4);
-            var before = layer.Opacity;
+            // Mitten im Einblenden: Es geht dort weiter, wo die Ebene gerade steht. Der Übergang (1,2 s, Sinus) erreicht 0,98 erst
+            // 1,09 s nach dem Beginn: Der Versuch entscheidet, wenn der Messpunkt spätestens 1 s nach dem Beginn liegt.
+            double before;
+            for (var attempt = 1; ; attempt++)
+            {
+                stage.SetHdr(false, TimeSpan.Zero);
+                var start = DateTime.UtcNow;
+                stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+                PumpFor(0.4);
+                before = layer.Opacity;
+                var at = (DateTime.UtcNow - start).TotalSeconds;
+                output.WriteLine($"Versuch {attempt}: Messpunkt nach {Format(at)} s, Deckkraft {Format(before)}");
+                if (at <= 1 || attempt >= TimedAttempts)
+                {
+                    break;
+                }
+            }
+
             Assert.InRange(before, 0.02, 0.98);
             stage.SetHdr(false, TimeSpan.FromSeconds(1.2));
             stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
@@ -469,14 +503,28 @@ public sealed class EffectReviewTests
         WpfTestHost.Run(() =>
         {
             // Neue Helligkeitswerte melden ShowsHdrOn später noch einmal: Der laufende Übergang bleibt, statt neu zu beginnen.
-            var (stage, layer) = ShownStage(hdr: false);
-            var start = DateTime.UtcNow;
-            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
-            PumpFor(0.5);
-            Assert.True(layer.Opacity < 0.99, Format(layer.Opacity));
-            stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
-            PumpUntil(() => DateTime.UtcNow - start >= TimeSpan.FromSeconds(1.45), 5);
-            Assert.Equal(1, layer.Opacity);
+            // Die zweite Meldung muss kommen, solange der Übergang (1,2 s, Sinus) noch läuft; unter 0,99 bleibt er bis 1,12 s
+            // nach dem Beginn: Der Versuch entscheidet, wenn der Messpunkt spätestens 1 s nach dem Beginn liegt.
+            for (var attempt = 1; ; attempt++)
+            {
+                var (stage, layer) = ShownStage(hdr: false);
+                var start = DateTime.UtcNow;
+                stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+                PumpFor(0.5);
+                var middle = layer.Opacity;
+                var at = (DateTime.UtcNow - start).TotalSeconds;
+                output.WriteLine($"Versuch {attempt}: Messpunkt nach {Format(at)} s, Deckkraft {Format(middle)}");
+                if (at > 1 && attempt < TimedAttempts)
+                {
+                    continue; // nichts entschieden, weil der Thread stand: noch einmal
+                }
+
+                Assert.True(middle < 0.99, $"nach {Format(at)} s schon {Format(middle)}");
+                stage.SetHdr(true, TimeSpan.FromSeconds(1.2));
+                PumpUntil(() => DateTime.UtcNow - start >= TimeSpan.FromSeconds(1.45), 5);
+                Assert.Equal(1, layer.Opacity);
+                break;
+            }
         });
     }
 

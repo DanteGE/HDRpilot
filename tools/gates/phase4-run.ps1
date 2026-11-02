@@ -9,10 +9,10 @@ function Check([bool]$cond, [string]$what) { if ($cond) { Note "ok   $what" } el
 
 $cfg = New-TestConfig 'phase4-run'
 $game = New-StandInGame $cfg 'Stellvertreter Run' $false
-$reg = Get-PrimaryRegistryKey
+$reg = Get-PrimaryRegistryKey $cfg
 if (-not $reg.Primary.hdrSupported) { Write-Output 'ABBRUCH: Hauptbildschirm meldet kein HDR'; exit 3 }
 $initial = Test-HdrOn $reg
-& $CliExe hdr off | Out-Null
+& $CliExe hdr off --config-dir $cfg | Out-Null
 try {
     $app = Start-App $cfg @('--minimized')
     Check ([bool](Wait-Log $cfg 'startet\. Konfiguration' 15000)) 'Erste Instanz läuft (minimiert)'
@@ -62,7 +62,7 @@ try {
 catch { Note "FEHLER Ausnahme: $($_.Exception.Message)"; $ok = $false }
 finally {
     Stop-Started
-    & $CliExe hdr $(if ($initial) { 'on' } else { 'off' }) | Out-Null
+    & $CliExe hdr $(if ($initial) { 'on' } else { 'off' }) --config-dir $cfg | Out-Null
 }
 if ($ok) { Write-Output 'PHASE4_SINGLE_INSTANCE_OK'; Write-Output 'PHASE4_RUN_OK'; exit 0 }
 exit 1

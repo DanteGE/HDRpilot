@@ -59,8 +59,10 @@ function Wait-Log([string]$cfg, [string]$pattern, [int]$timeoutMs = 15000) {
     return $null
 }
 
-function Get-PrimaryRegistryKey {
-    $primary = @(& $CliExe hdr status --json | Out-String | ConvertFrom-Json) | ForEach-Object { $_ } | Where-Object { $_.primary } | Select-Object -First 1
+# Mit der Testablage des Gates: hdr liest daraus nur die Sprache der Ausgaben (E95), ohne --config-dir aus der echten Ablage.
+function Get-PrimaryRegistryKey([string]$cfg) {
+    if (-not $cfg) { throw 'Get-PrimaryRegistryKey braucht die Testablage des Gates.' }
+    $primary = @(& $CliExe hdr status --json --config-dir $cfg | Out-String | ConvertFrom-Json) | ForEach-Object { $_ } | Where-Object { $_.primary } | Select-Object -First 1
     $edid = ($primary.monitorDevicePath -split '#')[1]
     $key = Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MonitorDataStore' |
         Where-Object { $_.PSChildName -like "$edid*" -and $null -ne (Get-ItemProperty $_.PSPath).HDREnabled } | Select-Object -First 1

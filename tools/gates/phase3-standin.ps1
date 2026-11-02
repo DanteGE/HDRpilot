@@ -48,7 +48,8 @@ $keyB = (& $Cli games add --config-dir $cfg --path $dirB --name 'Stellvertreter 
 Note "Eingetragen: $keyA ($dirA), $keyB ($dirB)"
 
 # --- Hauptbildschirm und unabhängige Messung ---
-$primary = @(& $Cli hdr status --json | Out-String | ConvertFrom-Json) | Where-Object { $_.primary } | Select-Object -First 1
+# hdr mit der Testablage: daraus nur die Sprache der Ausgaben (E95), nie aus der echten Ablage.
+$primary = @(& $Cli hdr status --json --config-dir $cfg | Out-String | ConvertFrom-Json) | Where-Object { $_.primary } | Select-Object -First 1
 if (-not $primary.hdrSupported) { Write-Output 'ABBRUCH: Hauptbildschirm meldet kein HDR'; exit 3 }
 $edid = ($primary.monitorDevicePath -split '#')[1]
 $regKey = Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MonitorDataStore' |
@@ -89,7 +90,7 @@ function WaitLog([string]$pattern, [int]$timeoutMs = 4000) {
 }
 
 try {
-    if ($Scenario -eq 'alreadyon') { & $Cli hdr on | Out-Null } else { & $Cli hdr off | Out-Null }
+    if ($Scenario -eq 'alreadyon') { & $Cli hdr on --config-dir $cfg | Out-Null } else { & $Cli hdr off --config-dir $cfg | Out-Null }
     Note "Ausgangszustand HDR an: $(HdrOn)"
 
     switch ($Scenario) {
@@ -167,7 +168,7 @@ try {
 finally {
     foreach ($p in $started) { try { if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } } catch {} }
     Start-Sleep -Milliseconds 300
-    & $Cli hdr $(if ($initial) { 'on' } else { 'off' }) | Out-Null
+    & $Cli hdr $(if ($initial) { 'on' } else { 'off' }) --config-dir $cfg | Out-Null
     Note "Ausgangszustand wiederhergestellt: HDR an = $(HdrOn)"
     Write-Output '--- Protokollauszug (HDR-Schaltungen, Sitzungen) ---'
     (LogText) -split "`r?`n" | Where-Object { $_ -match 'HDR-Schaltung|Sitzung|Spielprozess|Wiederanlauf|Kein ausgewähltes|schon an|Nachlaufzeit' } | ForEach-Object { Write-Output $_ }

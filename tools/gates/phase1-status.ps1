@@ -3,13 +3,27 @@
 param([string]$Exe = (Join-Path $PSScriptRoot '..\..\src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'))
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
-$text = & $Exe hdr status | Out-String
-$codeText = $LASTEXITCODE
-$rows = @(& $Exe hdr status --json | Out-String | ConvertFrom-Json)
-$codeJson = $LASTEXITCODE
+# Eigene Testablage mit deutscher Sprache (E95): Ohne --config-dir läse hdr die Sprache der Ausgaben aus der echten Ablage
+# oder nähme ohne sie die Anzeigesprache von Windows, und die deutschen Feldnamen unten fehlten. hdr liest daraus nur die
+# Sprache und schreibt nichts hinein (geprüft).
+. (Join-Path $PSScriptRoot 'TestConfigSeed.ps1')
+$cfgDir = Join-Path ([IO.Path]::GetTempPath()) ('HDRpilot-Gate1-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+Initialize-TestConfig $cfgDir 'de'
+$seed = [IO.File]::ReadAllText((Join-Path $cfgDir 'config.json'))
+try {
+    $text = & $Exe hdr status --config-dir $cfgDir | Out-String
+    $codeText = $LASTEXITCODE
+    $rows = @(& $Exe hdr status --json --config-dir $cfgDir | Out-String | ConvertFrom-Json)
+    $codeJson = $LASTEXITCODE
+    $entries = @(Get-ChildItem $cfgDir -Force -Recurse).Count
+    $untouched = ($entries -eq 1) -and ([IO.File]::ReadAllText((Join-Path $cfgDir 'config.json')) -eq $seed)
+} finally {
+    Remove-Item $cfgDir -Recurse -Force -ErrorAction SilentlyContinue
+}
 $screens = [System.Windows.Forms.Screen]::AllScreens.Count
 Write-Output $text.TrimEnd()
-$ok = ($codeText -eq 0) -and ($codeJson -eq 0) -and ($rows.Count -eq $screens) -and ($rows.Count -ge 1)
+if (-not $untouched) { Write-Output "FEHLER: hdr status hat die Testablage verändert ($entries Einträge)" }
+$ok = ($codeText -eq 0) -and ($codeJson -eq 0) -and ($rows.Count -eq $screens) -and ($rows.Count -ge 1) -and $untouched
 foreach ($r in $rows) {
     $line = ($text -split "`n") | Where-Object { $_ -match [regex]::Escape($r.name) } | Select-Object -First 1
     $hasFields = $text -match 'HDR-fähig: (ja|nein)' -and $text -match 'HDR: (an|aus)'

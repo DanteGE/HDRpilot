@@ -18,10 +18,10 @@ $json = $json.Replace('"source": "Manual"', '"source": "Steam"').Replace("`"sour
 [IO.File]::WriteAllText($configPath, $json, (New-Object Text.UTF8Encoding $false))
 $key = "Steam:$appId"
 
-$reg = Get-PrimaryRegistryKey
+$reg = Get-PrimaryRegistryKey $cfg
 if (-not $reg.Primary.hdrSupported) { Write-Output 'ABBRUCH: Hauptbildschirm meldet kein HDR'; exit 3 }
 $initial = Test-HdrOn $reg
-& $CliExe hdr off | Out-Null
+& $CliExe hdr off --config-dir $cfg | Out-Null
 
 function Invoke-Wrap {
     $env:SteamAppId = $appId
@@ -98,7 +98,7 @@ catch { Note "FEHLER Ausnahme: $($_.Exception.Message)"; $ok = $false }
 finally {
     Stop-Started
     Get-Process -Name $game.ProcessName -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-    & $CliExe hdr $(if ($initial) { 'on' } else { 'off' }) | Out-Null
+    & $CliExe hdr $(if ($initial) { 'on' } else { 'off' }) --config-dir $cfg | Out-Null
 }
 if ($ok) { Write-Output 'PHASE6_WRAP_OK'; exit 0 }
 exit 1

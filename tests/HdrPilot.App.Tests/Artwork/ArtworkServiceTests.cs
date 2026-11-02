@@ -442,7 +442,10 @@ public sealed class ArtworkServiceTests : IDisposable
 
         lease.Dispose();
 
-        await WaitUntil(() => File.Exists(Path.Combine(_art.ArtDirectory, "index.json")));
+        // Auf das Aufräumen nach der letzten Freigabe warten, das das Verzeichnis zuletzt schreibt: Das gesammelte Speichern
+        // (50 ms im Test) kann es schon während des Ladens geschrieben haben, bevor die Umgebungsfarben feststanden.
+        await service.WhenReleasedAsync().WaitAsync(TimeSpan.FromSeconds(10), Ct);
+        Assert.True(File.Exists(Path.Combine(_art.ArtDirectory, "index.json")));
         using var index = JsonDocument.Parse(File.ReadAllText(Path.Combine(_art.ArtDirectory, "index.json")));
         Assert.Equal(1, index.RootElement.GetProperty("version").GetInt32());
         Assert.True(index.RootElement.GetProperty("games").TryGetProperty("Steam:900", out var entry));

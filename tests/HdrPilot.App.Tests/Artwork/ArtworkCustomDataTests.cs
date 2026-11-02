@@ -137,6 +137,24 @@ public sealed class ArtworkCustomDataTests : IDisposable
     }
 
     [Fact]
+    public void Steamgriddb_id_and_check_time_reach_the_index_file_with_the_next_save()
+    {
+        // Gemerkte Zuordnung und Zeitpunkt der letzten Abfrage gelten nach einem Neustart (neuer Bilderdienst auf denselben
+        // Ordnern): Jede der beiden Änderungen merkt das Verzeichnis zum Speichern vor, auch wenn sonst nichts geändert ist.
+        var service = _art.Service();
+        var game = new HdrPilot.Core.Config.GameConfig { Source = HdrPilot.Core.Games.GameSource.Gog, SourceId = "1207658926", Name = "Kupferwald" };
+        var when = new DateTimeOffset(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
+
+        service.SetSteamGridDbGameId(game, 9101);
+        service.FlushIndex();
+        Assert.Equal(9101, _art.Service().SteamGridDbGameId(game));
+
+        service.MarkSteamGridDbChecked(game, ArtworkKind.Logo, when);
+        service.FlushIndex();
+        Assert.Equal(when, _art.Service().SteamGridDbChecked(game, ArtworkKind.Logo));
+    }
+
+    [Fact]
     public void Images_and_ids_of_an_old_match_are_refused_under_the_index_lock()
     {
         var service = _art.Service();

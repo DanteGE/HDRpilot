@@ -214,7 +214,7 @@ public sealed partial class ArtworkService
 
             var image = Sta.Run(() => Render(state, generator));
             ArtworkImaging.Save(image, path, 90);
-            WithEntry(state.Key, e =>
+            ChangeEntry(state.Key, e =>
             {
                 e.Generated ??= new Dictionary<string, string>(StringComparer.Ordinal);
                 e.Generated.Remove(NameOf(kind));
@@ -295,7 +295,7 @@ public sealed partial class ArtworkService
         var bounds = PixelAnalysis.OpaqueBounds(full.Pixels, full.Width, full.Height);
         if (bounds is not { } rect || (rect.Width == full.Width && rect.Height == full.Height))
         {
-            WithEntry(state.Key, e =>
+            ChangeEntry(state.Key, e =>
             {
                 e.Logo = null;
                 e.LogoTrim = [0, 0, full.Width, full.Height];
@@ -305,7 +305,7 @@ public sealed partial class ArtworkService
 
         var cropped = ArtworkImaging.Crop(full.ToBitmap(), rect);
         ArtworkImaging.Save(cropped, trimmedPath);
-        WithEntry(state.Key, e =>
+        ChangeEntry(state.Key, e =>
         {
             e.Logo = trimmedFile;
             e.LogoTrim = [rect.X, rect.Y, rect.Width, rect.Height];
@@ -354,7 +354,7 @@ public sealed partial class ArtworkService
             PixelAnalysis.Boost(pixels.Pixels);
             var boosted = pixels.ToBitmap();
             ArtworkImaging.Save(boosted, path, 90);
-            WithEntry(state.Key, e =>
+            ChangeEntry(state.Key, e =>
             {
                 e.Boost ??= new Dictionary<string, string>(StringComparer.Ordinal);
                 e.Boost[widthKey] = file;

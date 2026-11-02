@@ -108,12 +108,12 @@ public sealed partial class ArtworkService
         Entry(game.Key, e => e.SteamGridDb?.Checked.TryGetValue(NameOf(kind), out var when) == true ? when : (DateTimeOffset?)null);
 
     public void MarkSteamGridDbChecked(GameConfig game, ArtworkKind kind, DateTimeOffset when) =>
-        WithEntry(game.Key, e => (e.SteamGridDb ??= new IndexedSteamGridDb()).Checked[NameOf(kind)] = when);
+        ChangeEntry(game.Key, e => (e.SteamGridDb ??= new IndexedSteamGridDb()).Checked[NameOf(kind)] = when);
 
     /// <summary>Gemerkte SteamGridDB-ID eines Spiels ohne Steam-AppID.</summary>
     public long? SteamGridDbGameId(GameConfig game) => Entry(game.Key, e => e.SteamGridDb?.GameId);
 
-    public void SetSteamGridDbGameId(GameConfig game, long id) => WithEntry(game.Key, e => (e.SteamGridDb ??= new IndexedSteamGridDb()).GameId = id);
+    public void SetSteamGridDbGameId(GameConfig game, long id) => ChangeEntry(game.Key, e => (e.SteamGridDb ??= new IndexedSteamGridDb()).GameId = id);
 
     /// <summary>Setzt die ID nur, solange noch <paramref name="expected"/> gilt (Prüfen und Setzen unter der Sperre des Verzeichnisses).</summary>
     public bool TrySetSteamGridDbGameId(GameConfig game, long? expected, long id)
@@ -144,7 +144,7 @@ public sealed partial class ArtworkService
     public void ReplaceSteamGridDbGame(GameConfig game, long id)
     {
         List<string>? files = null;
-        WithEntry(game.Key, e =>
+        ChangeEntry(game.Key, e =>
         {
             var sgdb = e.SteamGridDb ??= new IndexedSteamGridDb();
             if (sgdb.GameId == id)

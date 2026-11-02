@@ -518,7 +518,7 @@ public sealed partial class ArtworkService
             smeared = false;
         }
 
-        WithEntry(gameKey, e =>
+        ChangeEntry(gameKey, e =>
         {
             e.CoverSmeared = smeared;
             e.SmearMetrics = metrics;
@@ -706,7 +706,14 @@ public sealed partial class ArtworkService
         }
     }
 
-    private void WithEntry(string gameKey, Action<ArtworkIndexEntry> action)
+    /// <summary>
+    /// Ändert den Eintrag eines Spiels und merkt das Verzeichnis zum Speichern vor. Eigener Name statt einer Überladung von
+    /// <see cref="WithEntry{T}"/>: Ein Lambda mit einer Zuweisung als Ausdruck (<c>e =&gt; e.Icon = icon</c>) hat einen Wert,
+    /// C# wählte dafür die Überladung mit Rückgabe, und die Änderung blieb ohne Vormerkung. Schrieb das gesammelte Speichern
+    /// das Verzeichnis gerade vorher, fehlte sie in index.json (Symbol, Umgebungsfarben, SteamGridDB-Zuordnung und Zeitpunkt
+    /// der letzten Abfrage), bis etwas anderes es wieder vormerkte.
+    /// </summary>
+    private void ChangeEntry(string gameKey, Action<ArtworkIndexEntry> action)
     {
         WithEntry(gameKey, e =>
         {
@@ -721,13 +728,13 @@ public sealed partial class ArtworkService
 
     private IndexedIcon StoreIcon(string gameKey, IndexedIcon icon)
     {
-        WithEntry(gameKey, e => e.Icon = icon);
+        ChangeEntry(gameKey, e => e.Icon = icon);
         return icon;
     }
 
     private IndexedAmbient StoreAmbient(string gameKey, IndexedAmbient ambient)
     {
-        WithEntry(gameKey, e => e.Ambient = ambient);
+        ChangeEntry(gameKey, e => e.Ambient = ambient);
         return ambient;
     }
 
@@ -906,7 +913,7 @@ public sealed partial class ArtworkService
         Add("cacheicon", located.CacheIcon);
         Add("tile", located.Tile);
         var alternatives = located.Alternatives.Select(Measured).ToList();
-        WithEntry(gameKey, e =>
+        ChangeEntry(gameKey, e =>
         {
             e.Located = images;
             e.Alternatives = alternatives;

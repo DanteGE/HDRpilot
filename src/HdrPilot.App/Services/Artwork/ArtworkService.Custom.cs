@@ -208,7 +208,7 @@ public sealed partial class ArtworkService
                 var chroma = PixelAnalysis.MeanChroma(ArtworkImaging.DecodeStretched(alternative.Path, 48, 27).Pixels);
                 stored = chroma < GrayscaleChroma ? "grayscale" : "titlecard";
                 var note = stored;
-                WithEntry(state.Key, e =>
+                ChangeEntry(state.Key, e =>
                 {
                     if (e.Alternatives?.FirstOrDefault(a => string.Equals(a.Path, alternative.Path, StringComparison.OrdinalIgnoreCase)) is { } indexed)
                     {

@@ -9,15 +9,32 @@ namespace HdrPilot.App.Tests.Library;
 /// <summary>
 /// Kosten der Spielfarben im Fenster (E94, G15.7), nur über Zähler und Speicher, nie über Zeit: je angewendetem Wechsel
 /// höchstens ein Austausch der Farbwerte, kein neuer Pinsel, höchstens 19 Überblendungen in der Ebene und 22 bei den Pinseln
-/// im Code; Speicher je Wechsel des Akzentpfads unter der Grenze; gehaltene Auswahl ohne Arbeit; Schalter aus (Effekte aus und
-/// voll) ohne Ebene, Anfrage, Rechnung und Zeitgeber, ein neues Schema beruhigt die Pinsel nur, solange sie überblenden; nach
-/// dem Beruhigen keine Zeitgeber und keine laufenden Animationen.
+/// im Code; Speicher je Wechsel des Akzentpfads höchstens eine Ressourcen-Änderung im selben Fenster plus 150 KiB eigener
+/// Anteil; gehaltene Auswahl ohne Arbeit; Schalter aus (Effekte aus und voll) ohne Ebene, Anfrage, Rechnung und Zeitgeber, ein
+/// neues Schema beruhigt die Pinsel nur, solange sie überblenden; nach dem Beruhigen keine Zeitgeber und keine laufenden
+/// Animationen.
 /// </summary>
 [Collection(ShellSerialCollection.Name)]
 public sealed class GameAccentCostTests(ITestOutputHelper output)
 {
-    /// <summary>Speichergrenze je angewendetem Wechsel des Akzentpfads (Planung 256 KB; gemessener Wert steht im Protokoll).</summary>
-    private const long AppliedBudget = 256 * 1024;
+    /// <summary>
+    /// Eigener Anteil der Spielfarben am Speicher je angewendetem Wechsel: 150 KiB = 153.600 Byte (Entscheidung des Nutzers
+    /// 2026-10-28, E94). Die Grenze ist eine Ressourcen-Änderung im selben Fenster (<see cref="ResourceChangeCost"/>) plus
+    /// dieser Anteil. Den einen Austausch der Farbwerte je Wechsel verlangt die Spezifikation; was WPF dafür im ganzen Baum tut,
+    /// wächst mit dem Fenster, und die Grenze wandert mit. Geprüft wird genau der Teil, den die Spielfarben selbst verursachen.
+    /// </summary>
+    private const long OwnShareBudget = 150 * 1024;
+
+    /// <summary>
+    /// Untergrenze der Vergleichsmessung (64 KiB, rund ein Drittel des gemessenen Werts): Eine Änderung in einem Wörterbuch ohne
+    /// Baum kostet rund 24 Byte, in einem Fenster mit 1000 Elementen ohne Ressourcen-Verweise rund 550 Byte, in diesem Fenster
+    /// rund 213 KB (rund 1250 Elemente, viele mit DynamicResource). Darunter hat die Messung den Baum des Fensters nicht oder nur
+    /// zum Teil erfasst, misst also nicht, was der Austausch der Farbwerte kostet.
+    /// </summary>
+    private const long MinResourceChange = 64 * 1024;
+
+    /// <summary>Gemessene Wechsel nach dem Aufwärmen (Spezifikation: 10).</summary>
+    private const int MeasuredChanges = 10;
 
     private const long HeldBudget = 1024;
 
@@ -59,23 +76,34 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
         {
             var s = GameAccentSetup.Open(effects: "Full");
             s.Window.Motion!.SetWindowState(visible: true, minimized: false, active: true);
-            s.Window.AccentLayer!.TimerHookForTest = (_, _) => { };
+            var layer = s.Window.AccentLayer!;
+            layer.TimerHookForTest = (_, _) => { };
             var update = AccentPath(s.Window);
             var red = s.Accents(GameAccentSetup.Red);
             var blue = s.Accents(GameAccentSetup.Blue);
             update(blue, false); // Aufwärmen (Grenzen der Bibliothek, Zwischenspeicher)
             update(red, false);
+            var (applied, swaps) = (layer.Stats.Applied, layer.Stats.ColorPartSwaps);
 
             var before = GC.GetAllocatedBytesForCurrentThread();
-            for (var i = 0; i < 10; i++)
+            for (var i = 0; i < MeasuredChanges; i++)
             {
                 update(i % 2 == 0 ? blue : red, false);
             }
 
-            var perChange = (GC.GetAllocatedBytesForCurrentThread() - before) / 10;
+            var perChange = (GC.GetAllocatedBytesForCurrentThread() - before) / MeasuredChanges;
             var walk = ResourceChangeCost(s.Window);
-            output.WriteLine($"Speicher je angewendetem Wechsel (Akzentpfad): {perChange} Bytes; zum Vergleich eine Ressourcen-Änderung im selben Fenster (WPF geht den Baum durch): {walk} Bytes");
-            Assert.True(perChange <= AppliedBudget, $"{perChange} Bytes je Wechsel (eine Ressourcen-Änderung im selben Fenster allein: {walk} Bytes)");
+            var limit = walk + OwnShareBudget;
+            output.WriteLine(
+                $"Speicher je angewendetem Wechsel (Akzentpfad): {perChange} Bytes; eine Ressourcen-Änderung im selben Fenster (WPF geht den Baum durch): {walk} Bytes; eigener Anteil der Spielfarben: {perChange - walk} Bytes; Grenze: {walk} + {OwnShareBudget} = {limit} Bytes");
+
+            // Gegen eine leere Messung: Jeder gemessene Wechsel wurde angewendet und tauschte die Farbwerte genau einmal, die
+            // Vergleichsmessung erfasste den Baum, und ein Wechsel kostet mindestens diesen einen Austausch.
+            Assert.Equal(MeasuredChanges, layer.Stats.Applied - applied);
+            Assert.Equal(MeasuredChanges, layer.Stats.ColorPartSwaps - swaps);
+            Assert.True(walk >= MinResourceChange, $"Ressourcen-Änderung im selben Fenster nur {walk} Bytes (mindestens {MinResourceChange}): Die Vergleichsmessung hat den Baum nicht erfasst");
+            Assert.True(perChange >= walk, $"{perChange} Bytes je Wechsel, weniger als eine Ressourcen-Änderung ({walk} Bytes), obwohl jeder Wechsel die Farbwerte austauscht: Die Messung ist kaputt");
+            Assert.True(perChange <= limit, $"{perChange} Bytes je Wechsel über der Grenze {limit} Bytes (Ressourcen-Änderung {walk} + eigener Anteil {OwnShareBudget}); eigener Anteil {perChange - walk} Bytes");
             s.Settle();
             s.Close();
         });
@@ -197,8 +225,9 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// Speicher einer einzelnen Ressourcen-Änderung im Fenster (ein Schlüssel, der nirgends benutzt wird): WPF meldet jede
-    /// Änderung über den ganzen Baum. Der Austausch der Farbwerte der Ebene kostet genau das, unabhängig von Schlüsseln und Werten.
+    /// Speicher einer einzelnen Ressourcen-Änderung im Fenster (ein Schlüssel, der nirgends benutzt wird), die Vergleichsgröße der
+    /// Speichergrenze: WPF meldet jede Änderung über den ganzen Baum. Der Austausch der Farbwerte der Ebene kostet in WPF ebenso
+    /// viel (gemessen bis auf 0,3 % gleich), unabhängig von Schlüsseln und Werten.
     /// </summary>
     private static long ResourceChangeCost(MainWindow window)
     {

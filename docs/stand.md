@@ -23,11 +23,13 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
     gesammelte Speichern gerade davor lief; eine Fehlanzeige bei SteamGridDB galt dann nach einem Neustart als nie
     abgefragt.
   - Tests und Gates: Wettläufe, Sichtbarkeit im Testfenster, Einzahl, Reflexion, Kosten- und Bildtests der Spielfarben;
-    drei Tests mit echten Uhren (Tiefenwirkung, Bildschirmfoto-Szenen, zweite Einblendung von LibraryMotion) wiederholen
-    nur bei nachweislich stehendem Thread; eine gestellte Bildschirmskalierung gilt nur noch für ihr Fenster (vorher maß
-    ToolbarWindowTests je nach Reihenfolge 123,2 statt 122 DIP); der Kostentest der Spielfarben misst seine
-    Vergleichsgröße vor den Wechseln und prüft, dass der Baum nicht wächst; phase5-publish, phase14-sgdb-ui (Spielauswahl
-    wartet auf die Zeile) und phase16-english-ui korrigiert; der Filter von G15.3 enthält die Entprellung im Kern.
+    Tests mit echten Uhren (Tiefenwirkung, Bildschirmfoto-Szenen, zweite Einblendung von LibraryMotion, drei Übergänge der
+    hellen Ebene in EffectReviewTests) wiederholen nur bei nachweislich stehendem Thread; `test.ps1` liest die
+    Zusammenfassung auch, wenn es ohne Konsole gestartet wird (aus Git Bash scheiterte es vorher trotz grüner Tests); eine
+    gestellte Bildschirmskalierung gilt nur noch für ihr Fenster (vorher maß ToolbarWindowTests je nach Reihenfolge 123,2
+    statt 122 DIP); der Kostentest der Spielfarben misst seine Vergleichsgröße vor den Wechseln und prüft, dass der Baum
+    nicht wächst; phase5-publish, phase14-sgdb-ui (Spielauswahl wartet auf die Zeile) und phase16-english-ui korrigiert;
+    der Filter von G15.3 enthält die Entprellung im Kern.
 - **Grün** (Baum von 35144d5, nacheinander, ungedrosselt): `BUILD_OK_0_WARNINGS`, auch jeder neue Commit einzeln; G14.1 bis
   G14.6, G15.1 bis G15.4, G16.1 und G16.2 (`TESTS_OK` 64, 60, 67, 34, 28, 165, 72, 110, 51, 49, 52, 110);
   `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`, `PHASE2_SCANNER_TESTS_OK` (574), `PHASE2_SCAN_OK`,
@@ -36,17 +38,22 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   `BUILD_OK_0_WARNINGS`, G15.1 bis G15.4 und der Testteil von G15.7 (`TESTS_OK` 72, 110, 51, 49, 29). Nach der
   unabhängigen Prüfung und der Nachbesserung (Stand 05074d4, 2026-11-02, gedrosselt, nacheinander):
   `BUILD_OK_0_WARNINGS`; G14.1 bis G14.6, G15.1 bis G15.4, der Testteil von G15.7, G16.1, G16.2 und G1.5 (`TESTS_OK` 64,
-  61, 67, 34, 28, 166, 72, 110, 51, 49, 29, 52, 110, 19); `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`;
-  `PUBLISH_CHECK_OK` für den Arbeitsstand mit diesem Eintrag und jeden Commit seit 7523bca einzeln.
+  61, 67, 34, 28, 166, 72, 110, 51, 49, 29, 52, 110, 19); `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`.
+  Zum Abschluss der Nachbesserung (Stand f3c3d6d, 2026-11-02, ungedrosselt, nacheinander): `BUILD_OK_0_WARNINGS`,
+  `TESTS_OK 4121`; `PUBLISH_CHECK_OK` für den Arbeitsstand mit diesem Eintrag und jeden Commit seit 7523bca einzeln (bis
+  67939e4 gedrosselt).
 - **Voller Testlauf** (mit den SDK-Headern in `.sdk\`): Stand fcb9aae `TESTS_OK 4119`, nach der Nachbesserung Stand
-  05074d4 `TESTS_OK 4121`, je keiner rot, keiner übersprungen.
-- **Bekannte Wackler** (echte Zeit oder Umgebung; im Produkt nichts gefunden): EffectReviewTests, drei Tests der hellen
-  Ebene („nach 0,2 s schon 1.00“ und Ähnliches), am 2026-10-28 in fünf vollen Läufen je ein- oder zweimal rot, allein
-  grün; RemoveSettingsTests „…checking_while_the_drive_answers_slowly“, am 2026-11-02 einmal mit 3,2 s statt höchstens
-  2 s Wartezeit im vollen Lauf, allein und im nächsten vollen Lauf grün; die Verknüpfungstests nur bei einem sehr langen
-  Temp-Pfad (Pfadgrenze von Windows), mit einem kürzeren grün. In der Nachbesserung behoben: zweite Einblendung von
-  LibraryMotion, Ansichtswahl in ToolbarWindowTests (Bildschirmskalierung), ArtworkServiceTests „Index_is_written…“
-  (Fehler im Bilderdienst, siehe oben).
+  05074d4 `TESTS_OK 4121`, zum Abschluss Stand f3c3d6d `TESTS_OK 4121` (bei voll ausgelasteter Maschine), je keiner rot,
+  keiner übersprungen.
+- **Bekannte Wackler** (echte Zeit oder Umgebung; im Produkt nichts gefunden): RemoveSettingsTests
+  „…checking_while_the_drive_answers_slowly“, am 2026-11-02 einmal mit 3,2 s statt höchstens 2 s Wartezeit im vollen
+  Lauf, allein und im nächsten vollen Lauf grün; HeroPointerTests „Content_glides_back…“ (Tiefenwirkung), am 2026-11-02
+  bei voll ausgelasteter Maschine einmal in allen drei Versuchen mit stehendem Thread (längste Pause 935 ms), allein
+  grün; die Verknüpfungstests nur bei einem sehr langen Temp-Pfad (Pfadgrenze von Windows), mit einem kürzeren grün. In
+  der Nachbesserung behoben: zweite Einblendung von LibraryMotion, Ansichtswahl in ToolbarWindowTests
+  (Bildschirmskalierung), ArtworkServiceTests „Index_is_written…“ (Fehler im Bilderdienst, siehe oben), EffectReviewTests
+  (drei Übergänge der hellen Ebene, „nach 0,2 s schon 1.00“ und Ähnliches; vom 2026-10-28 bis zum Abschluss in vielen
+  vollen Läufen ein- oder zweimal rot, allein grün).
 - **Entschieden (Nutzer, 2026-10-28):** G15.7, Speicher je angewendetem Farbwechsel. Die Grenze ist eine
   Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (E94); die feste
   Planungsgrenze von 256 KiB war nicht zu halten, weil schon der eine Austausch der Farbwerte, den die Spezifikation

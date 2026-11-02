@@ -416,7 +416,9 @@ try {
     Close-Picker $dialog
     $dialog = Open-Picker $win $nebel
     Match-Search $dialog 'Langsam'
-    Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbMatchSearching' 6000) '„Langsam“: die Spielwahl zeigt „Sucht bei SteamGridDB …“, solange die Antwort aussteht'
+    # Wie in der Spezifikation (Schritt J): „antwortet langsam“ auch bei der Suche in der Spielwahl. Die App zeigt es bisher
+    # nur bei der Suche im Reiter; ob die Spielwahl es zeigen soll, entscheidet der Nutzer (offen, siehe docs/stand.md).
+    Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbSlow' 6000) '„Langsam“: nach höchstens 6 s „antwortet langsam“'
     Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbTimeout' 20000) '„Langsam“: nach höchstens 20 s Zeitüberschreitung'
     Close-Picker $dialog
 

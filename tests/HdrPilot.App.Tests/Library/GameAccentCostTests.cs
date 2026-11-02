@@ -33,6 +33,13 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
     /// </summary>
     private const long MinResourceChange = 64 * 1024;
 
+    /// <summary>
+    /// Erlaubte Abweichung der Vergleichsmessung nach den gemessenen Wechseln von der davor (1 KiB). Ohne Fehler messen beide
+    /// auf das Byte dasselbe. Ein Rahmen mit einem Ressourcen-Verweis mehr im Baum kostet jede Ressourcen-Änderung rund 128 Byte
+    /// mehr; einer je angewendetem Wechsel (nach den zehn gemessenen 1280 Byte mehr) fällt also auf.
+    /// </summary>
+    private const long WalkDrift = 1024;
+
     /// <summary>Gemessene Wechsel nach dem Aufwärmen (Spezifikation: 10).</summary>
     private const int MeasuredChanges = 10;
 
@@ -83,6 +90,10 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
             var blue = s.Accents(GameAccentSetup.Blue);
             update(blue, false); // Aufwärmen (Grenzen der Bibliothek, Zwischenspeicher)
             update(red, false);
+
+            // Vergleichsgröße der Grenze vor den gemessenen Wechseln (nach dem Aufwärmen, das einmalig aufbauen darf), danach noch
+            // einmal: Wüchse der Baum mit jedem Wechsel, stiege eine danach gemessene Grenze mit dem Fehler mit.
+            var walk = ResourceChangeCost(s.Window);
             var (applied, swaps) = (layer.Stats.Applied, layer.Stats.ColorPartSwaps);
 
             var before = GC.GetAllocatedBytesForCurrentThread();
@@ -92,16 +103,18 @@ public sealed class GameAccentCostTests(ITestOutputHelper output)
             }
 
             var perChange = (GC.GetAllocatedBytesForCurrentThread() - before) / MeasuredChanges;
-            var walk = ResourceChangeCost(s.Window);
+            var walkAfter = ResourceChangeCost(s.Window);
             var limit = walk + OwnShareBudget;
             output.WriteLine(
-                $"Speicher je angewendetem Wechsel (Akzentpfad): {perChange} Bytes; eine Ressourcen-Änderung im selben Fenster (WPF geht den Baum durch): {walk} Bytes; eigener Anteil der Spielfarben: {perChange - walk} Bytes; Grenze: {walk} + {OwnShareBudget} = {limit} Bytes");
+                $"Speicher je angewendetem Wechsel (Akzentpfad): {perChange} Bytes; eine Ressourcen-Änderung im selben Fenster (WPF geht den Baum durch): {walk} Bytes vor den Wechseln, {walkAfter} Bytes danach; eigener Anteil der Spielfarben: {perChange - walk} Bytes; Grenze: {walk} + {OwnShareBudget} = {limit} Bytes");
 
             // Gegen eine leere Messung: Jeder gemessene Wechsel wurde angewendet und tauschte die Farbwerte genau einmal, die
-            // Vergleichsmessung erfasste den Baum, und ein Wechsel kostet mindestens diesen einen Austausch.
+            // Vergleichsmessung erfasste den Baum, und ein Wechsel kostet mindestens diesen einen Austausch. Der Baum ist durch
+            // die Wechsel nicht gewachsen.
             Assert.Equal(MeasuredChanges, layer.Stats.Applied - applied);
             Assert.Equal(MeasuredChanges, layer.Stats.ColorPartSwaps - swaps);
             Assert.True(walk >= MinResourceChange, $"Ressourcen-Änderung im selben Fenster nur {walk} Bytes (mindestens {MinResourceChange}): Die Vergleichsmessung hat den Baum nicht erfasst");
+            Assert.True(Math.Abs(walkAfter - walk) <= WalkDrift, $"Ressourcen-Änderung im selben Fenster vor den Wechseln {walk} Bytes, danach {walkAfter} Bytes (erlaubt ±{WalkDrift}): Der Baum des Fensters hat sich mit den Wechseln verändert");
             Assert.True(perChange >= walk, $"{perChange} Bytes je Wechsel, weniger als eine Ressourcen-Änderung ({walk} Bytes), obwohl jeder Wechsel die Farbwerte austauscht: Die Messung ist kaputt");
             Assert.True(perChange <= limit, $"{perChange} Bytes je Wechsel über der Grenze {limit} Bytes (Ressourcen-Änderung {walk} + eigener Anteil {OwnShareBudget}); eigener Anteil {perChange - walk} Bytes");
             s.Settle();

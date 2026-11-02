@@ -1,9 +1,9 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-10-28. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-11-02. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
-## Stand 2026-10-28: Prüfrunde 1.6.0 unter Windows, Korrekturen lokal (noch nicht hochgeladen)
+## Stand 2026-11-02: Prüfrunde 1.6.0 unter Windows, Korrekturen lokal (noch nicht hochgeladen)
 - **Behoben**, jede Korrektur mit einem Test, der ohne sie scheitert:
   - Die Release-Veröffentlichung baut wieder (Ressourcen-Klassen mit Laufzeitkennung), die Setup-Datei 1.6.0 entsteht.
   - Englische Oberfläche: Die Sprache bleibt nach dem asynchronen Start erhalten; vorher zeigten die Einstellungen und
@@ -24,15 +24,16 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   G14.6, G15.1 bis G15.4, G16.1 und G16.2 (`TESTS_OK` 64, 60, 67, 34, 28, 165, 72, 110, 51, 49, 52, 110);
   `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`, `PHASE2_SCANNER_TESTS_OK` (574), `PHASE2_SCAN_OK`,
   `PHASE11_MIGRATION_OK`, `PHASE12_QUIVER_SCAN_OK`, `PHASE7_SETUP_OK`; `PUBLISH_CHECK_OK` für den Arbeitsstand und jeden
-  neuen Commit.
-- **Voller Testlauf:** 4119 Tests, 4068 grün, 1 rot, 50 übersprungen (die SDK-Header-Tests: `.sdk\` fehlt im frischen
-  Klon). Rot ist nur das Speicherbudget von G15.7 (unten). Die Verknüpfungstests scheitern nur bei einem sehr langen
-  Temp-Pfad (Pfadgrenze von Windows) und sind mit einem kürzeren grün; EffectReviewTests wackelten einmal (Klasse allein
-  und zweiter voller Lauf grün).
-- **Offen, Entscheidung des Nutzers:** G15.7, Speicher je angewendetem Farbwechsel rund 330 KB gegen die Planungsgrenze
-  256 KiB. Ein einziger Ressourcenwechsel im selben Fenster kostet allein rund 210 KB, die Spezifikation verlangt genau
-  einen. Vorschläge: Grenze wie in G15.7 vorgesehen auf Mittelwert + 25 % setzen, oder „ein Ressourcenwechsel desselben
-  Fensters + 150 KB“.
+  neuen Commit. Nach der Entscheidung zu G15.7 (Stand 8d2cd36, 2026-11-02, gedrosselt, nacheinander):
+  `BUILD_OK_0_WARNINGS`, G15.1 bis G15.4 und der Testteil von G15.7 (`TESTS_OK` 72, 110, 51, 49, 29).
+- **Voller Testlauf** (Stand 8d2cd36, mit den SDK-Headern in `.sdk\`): `TESTS_OK 4119`, keiner rot, keiner übersprungen.
+  Die Verknüpfungstests scheitern nur bei einem sehr langen Temp-Pfad (Pfadgrenze von Windows) und sind mit einem kürzeren
+  grün; EffectReviewTests wackelten in der Runde vom 2026-10-28 einmal (Klasse allein und zweiter voller Lauf grün).
+- **Entschieden (Nutzer, 2026-10-28):** G15.7, Speicher je angewendetem Farbwechsel. Die Grenze ist eine
+  Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (E94); die feste
+  Planungsgrenze von 256 KiB war nicht zu halten, weil schon der eine Austausch der Farbwerte, den die Spezifikation
+  verlangt, rund 213 KB kostet. Gemessen 333 336 Byte je Wechsel gegen die Grenze 366 704 Byte; der Testteil von G15.7
+  ist grün, eine leere Messung ließe ihn scheitern.
 - **Offen, nur lokal:** `phase5-publish.ps1` mit eingeschaltetem Bildschirm (alles grün außer `hdr status`: ohne aktiven
   Bildschirm exit 3); alle Gates mit Oberfläche samt den Oberflächen-Teilen der Phasen 14, 15 und 16
   (`phase14-sgdb-ui.ps1`, `phase15-gamecolors.ps1`, `phase16-english-ui.ps1`) und `phase3-idle.ps1`; Bildschirmfotos und

@@ -673,12 +673,12 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
   EXPECT: PHASE15_GAMECOLORS_OK
   EVIDENCE: pending
 
-- [ ] G15.7: Kosten: Auslesen nur bei eingeschaltetem Schalter bzw. für das Vorschauspiel, einmal je Spiel und Bildstand, nie für Kacheln, Kontaktbogen oder Bildschirmfotos; die Farbebene macht je angewendetem Wechsel höchstens einen Austausch der Farbwerte und keinen neuen Pinsel, bei gehaltener Pfeiltaste keine Arbeit, Speicher je Wechsel unter der gemessenen Grenze; Leerlauf mit geschlossenem Fenster wie bisher
+- [ ] G15.7: Kosten: Auslesen nur bei eingeschaltetem Schalter bzw. für das Vorschauspiel, einmal je Spiel und Bildstand, nie für Kacheln, Kontaktbogen oder Bildschirmfotos; die Farbebene macht je angewendetem Wechsel höchstens einen Austausch der Farbwerte und keinen neuen Pinsel, bei gehaltener Pfeiltaste keine Arbeit, Speicher je angewendetem Wechsel höchstens eine Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (Entscheidung des Nutzers 2026-10-28, E94; ersetzt die feste Grenze von 256 KB); Leerlauf mit geschlossenem Fenster wie bisher
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentCost|FullyQualifiedName~HdrPilot.App.Tests.Artwork.ArtworkServiceGameColors" -MinTests 17
   EXPECT: TESTS_OK
   CHECK: ps tools\gates\phase3-idle.ps1
   EXPECT: PHASE3_IDLE_OK
-  EVIDENCE: pending (Grafikkartenlast mit eingeschaltetem Schalter wie G10.9 nur zusammen mit dem Nutzer: `phase10-gpu.ps1`, PHASE10_GPU_OK; den gemessenen Speicher je Wechsel aus der Ausgabe von GameAccentCostTests hier eintragen und die Grenze auf Mittelwert + 25 % setzen)
+  EVIDENCE: pending (`phase3-idle.ps1` und die Grafikkartenlast mit eingeschaltetem Schalter wie G10.9 nur zusammen mit dem Nutzer: `phase10-gpu.ps1`, PHASE10_GPU_OK). Testteil 2026-11-02 unter Windows (Stand 8d2cd36, gedrosselt, nacheinander): exit 0, TESTS_OK 29. GameAccentCostTests gibt aus: 333 336 Byte je angewendetem Wechsel, eine Ressourcen-Änderung im selben Fenster 213 104 Byte, eigener Anteil 120 232 Byte, Grenze 213 104 + 153 600 = 366 704 Byte; fünf Läufe der Klasse vor der Änderung maßen dieselben Werte. Gegenproben (nicht übernommen), je rot: rund 200 KB mehr je Wechsel im Akzentpfad (534 536 Byte), rund 40 KB mehr (373 576 Byte), wieder einfrierbare Pinsel (2 444 416 Byte), Vergleichsmessung ohne Baum (408 Byte, unter 64 KiB), Messschleife ohne angewendeten Wechsel, halbierte Messung; wiederhergestellt grün.
 
 - [ ] G15.8: README und E94 passen zu den resx-Texten; keine lokalen Pfade
   CHECK: ps tools\gates\phase5-readme.ps1
@@ -692,7 +692,7 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
   EXPECT: BUILD_OK_0_WARNINGS
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
-  EVIDENCE: pending
+  EVIDENCE: pending (Gesamtstand: UI-Gates und unabhängige Prüfung stehen aus). 2026-11-02 unter Windows (Stand 8d2cd36, gedrosselt, nacheinander): build.ps1 exit 0, BUILD_OK_0_WARNINGS; test.ps1 exit 0, TESTS_OK 4119 (mit den SDK-Headern, keiner übersprungen).
 
 - [ ] G15.10: Abnahme durch den Nutzer am echten System (echte Spiele, Hell und Dunkel, Pfeiltaste gehalten, beide Schalter einzeln und zusammen; Blick auf den ruhigen Grund bei „Hintergrund aus“ und auf Gold/Gelb im hellen Thema)
   EVIDENCE: pending
@@ -714,7 +714,7 @@ Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.
 - [ ] G16.3: Oberfläche: Sprachwahl in den Einstellungen (Hinweis und „Jetzt neu starten“ nur bei abweichender Wahl, erst speichern, dann neu starten, Fehler gemeldet, ältere Konfiguration ohne Feld bleibt ohne Feld), Einstellungen und Tray-Menü auf Englisch, englische Zähl- und Zeitformen der Bibliothek, `--restarted`, `--snapshot-language`, Setup mit `--ui-language`; alle bisherigen App-Tests mit fester Kultur de-DE weiter grün.
   CHECK: ps tools\gates\test.ps1
   EXPECT: TESTS_OK
-  EVIDENCE: pending (WPF, nur unter Windows; unter Linux nur gebaut).
+  EVIDENCE: 2026-11-02 unter Windows (Stand 8d2cd36, gedrosselt): exit 0, TESTS_OK 4119 (mit den SDK-Headern, keiner übersprungen). Vorher unter Linux nur gebaut.
 
 - [ ] G16.4: Testinstanz mit englischer Ablage: Bibliothek, Einstellungen und Vorschau des Tray-Menüs englisch (Namen der Bedienungshilfen aus den `.en.resx`), Kommandozeile englisch; „Deutsch“ wählen und „Restart now“: alte Instanz endet, neue mit `--restarted` zeigt die Einstellungen und die Bibliothek deutsch, `language` = de; neue Ablage nach der Anzeigesprache von Windows; Setup an einer Testablage mit `--ui-language en` englisch, „Cancel“ ändert nichts; englische Bildschirmfotos mit „-en“ im Namen; echter Stand unverändert.
   CHECK: ps tools\gates\phase16-english-ui.ps1
@@ -729,7 +729,7 @@ Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.
 - [ ] G16.6: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (die bisherigen Gates mit deutscher Testablage auch auf einem englischen Windows), README und E95 passen zu den Texten.
   CHECK: ps tools\gates\phase5-readme.ps1
   EXPECT: PHASE5_README_OK
-  EVIDENCE: pending (Gesamtstand). 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): phase5-readme.ps1 exit 0, PHASE5_README_OK; offen sind der volle Testlauf (G15.7) und die Gates mit Oberfläche.
+  EVIDENCE: pending (Gesamtstand). 2026-10-28 unter Windows (Stand 726a4ab, nacheinander): phase5-readme.ps1 exit 0, PHASE5_README_OK; offen sind die Gates mit Oberfläche. Der volle Testlauf ist seit der Entscheidung zu G15.7 grün (2026-11-02, Stand 8d2cd36: TESTS_OK 4119, siehe G15.9).
 
 - [ ] G16.7: README auf Englisch (Wunsch des Nutzers 2026-10-27, E95): `README.md` vollständig englisch, die bisherige deutsche als `README.de.md` (oben je ein Verweis auf die andere Sprache). `phase5-readme.ps1` prüft beide Fassungen wie bisher: `README.de.md` gegen die neutralen resx und die Hilfe aus einer Testablage mit `"language": "de"`, `README.md` gegen die `.en.resx` und die Hilfe mit `"language": "en"`, jede mit eigenen Abschnittsnamen und eigenen Gegenproben (15 eingebaute Fehler, 3 beim Neustart-Puffer), dazu eine Gegenprobe über Kreuz (deutsche README gegen englische Texte scheitert); fett gesetzte Absatztitel mit Doppelpunkt („Sprache:“, „Language:“) zählen nicht als Bezeichnung. `phase6-name.ps1` prüft beide Dateien. Beide READMEs werden ausgeliefert: portabler Ordner und Paket der Setup-Datei, installiert, bei der Aktualisierung von einer Setup-Datei ohne `README.de.md` dazugelegt, beim Entfernen gelöscht (`phase5-publish.ps1`, `phase7-setup.ps1`, App-Tests der Setup-Engine).
   CHECK: ps tools\gates\phase5-readme.ps1

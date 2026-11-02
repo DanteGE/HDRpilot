@@ -1553,6 +1553,18 @@ Spalt und „Mehr erfahren“ aus den Rückmeldungen vom 2026-10-22.
   der Auswahl und nicht bei der hellen Fassung. Bildtest „Hinweis“: Der blaue Himmel des Entwurfs liegt 137° vom roten Akzent,
   Atmosphären höchstens 120°; der Hinweis hätte keine Zweitfarbe zur Wahl. Die Szene nimmt den Abendhimmel, dessen Leuchten
   neben einer Zweitfarbe liegt. G15.3 prüft die Tests der Entprellung in `HdrPilot.Core` mit.
+- **Entscheidung 2026-10-28 (Speichergrenze je Farbwechsel, G15.7):** Die Grenze je angewendetem Wechsel ist eine
+  Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (Wahl des Nutzers:
+  „Eigener Anteil ≤ 150 KB“). Der Test misst beides im selben Fenster mit demselben Verfahren; wird das Fenster größer,
+  wandert die Grenze mit. Das ersetzt die feste Grenze des Entwurfs (Abschnitt 8: höchstens 256 KB, festgeschrieben auf
+  Mittelwert + 25 %). Grund: Der Entwurf verlangt je Wechsel genau einen Austausch der Farbwerte, also eine
+  Ressourcen-Änderung, und für die geht WPF den ganzen Fensterbaum durch. Im Testfenster kostet das allein rund 213 KB
+  (rund 170 Byte je Element bei rund 1250 Elementen; die Kosten hängen an den vielen DynamicResource-Verweisen, nicht an
+  Schlüssel oder Wert), 256 KiB sind so nicht zu halten. Bewachen soll die Grenze den Teil, den die Spielfarben selbst
+  verursachen. Damit die Prüfung nicht leer besteht, fällt sie auch durch, wenn ein gemessener Wechsel nicht angewendet
+  wurde oder die Farbwerte nicht genau einmal tauschte, wenn die Vergleichsmessung unter 64 KiB bleibt (dann hat sie den
+  Baum nicht erfasst) oder wenn ein Wechsel weniger kostet als sie. Zur Orientierung (2026-11-02, Testfenster 1600×900):
+  je Wechsel 333 336 Byte, davon 213 104 Byte die Ressourcen-Änderung, eigener Anteil 120 232 Byte, Grenze 366 704 Byte.
 
 **E95 Englische Oberfläche und Sprachwahl (Wunsch des Nutzers 2026-10-26, G16):** „Bitte eine komplette englische
 Übersetzung der App, mit Sprachwahl in den Einstellungen und automatischer Erkennung der Systemsprache bei der

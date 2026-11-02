@@ -15,30 +15,56 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
     „Eigene Datei…“ ungekürzt, Bildschirmfotos erst nach dem Einblenden der Kacheln.
   - Menüknöpfe: Gleich nach dem Schließen öffnet ein Klick wieder; die Tests laufen mit einem echten Testfenster.
   - Kopfzeile ohne abgeschnittene Unterlängen; Startbefehle ohne Backslash (Adressen der Launcher) nicht mehr nur „…“.
-  - `hdr` nimmt `--config-dir`; die Gates rufen die Kommandozeile nur noch mit eigener Ablage auf.
+  - `hdr` nimmt `--config-dir`; alle Gates rufen die Kommandozeile nur noch mit eigener Ablage auf, seit der Nachbesserung
+    auch phase1, phase3-standin, phase4 und phase6-wrap (phase1-status und phase1-negative mit deutscher Testablage).
   - LibraryMotion gibt beendete Einblendungen frei.
+  - Bilderdienst (Nachbesserung): Jede Änderung an `art\index.json` wird zum Speichern vorgemerkt. Vorher konnten
+    Symbol, Umgebungsfarben, SteamGridDB-Zuordnung und Zeitpunkt der letzten Abfrage in der Datei fehlen, wenn das
+    gesammelte Speichern gerade davor lief; eine Fehlanzeige bei SteamGridDB galt dann nach einem Neustart als nie
+    abgefragt.
   - Tests und Gates: Wettläufe, Sichtbarkeit im Testfenster, Einzahl, Reflexion, Kosten- und Bildtests der Spielfarben;
-    zwei Tests mit echten Uhren (Tiefenwirkung, Bildschirmfoto-Szenen) wiederholen nur bei nachweislich stehendem Thread;
-    phase5-publish, phase14-sgdb-ui und phase16-english-ui korrigiert; der Filter von G15.3 enthält die Entprellung im Kern.
-- **Grün** (Baum von 726a4ab, nacheinander, ungedrosselt): `BUILD_OK_0_WARNINGS`, auch jeder neue Commit einzeln; G14.1 bis
+    drei Tests mit echten Uhren (Tiefenwirkung, Bildschirmfoto-Szenen, zweite Einblendung von LibraryMotion) wiederholen
+    nur bei nachweislich stehendem Thread; eine gestellte Bildschirmskalierung gilt nur noch für ihr Fenster (vorher maß
+    ToolbarWindowTests je nach Reihenfolge 123,2 statt 122 DIP); der Kostentest der Spielfarben misst seine
+    Vergleichsgröße vor den Wechseln und prüft, dass der Baum nicht wächst; phase5-publish, phase14-sgdb-ui (Spielauswahl
+    wartet auf die Zeile) und phase16-english-ui korrigiert; der Filter von G15.3 enthält die Entprellung im Kern.
+- **Grün** (Baum von 35144d5, nacheinander, ungedrosselt): `BUILD_OK_0_WARNINGS`, auch jeder neue Commit einzeln; G14.1 bis
   G14.6, G15.1 bis G15.4, G16.1 und G16.2 (`TESTS_OK` 64, 60, 67, 34, 28, 165, 72, 110, 51, 49, 52, 110);
   `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`, `PHASE2_SCANNER_TESTS_OK` (574), `PHASE2_SCAN_OK`,
   `PHASE11_MIGRATION_OK`, `PHASE12_QUIVER_SCAN_OK`, `PHASE7_SETUP_OK`; `PUBLISH_CHECK_OK` für den Arbeitsstand und jeden
-  neuen Commit. Nach der Entscheidung zu G15.7 (Stand 8d2cd36, 2026-11-02, gedrosselt, nacheinander):
-  `BUILD_OK_0_WARNINGS`, G15.1 bis G15.4 und der Testteil von G15.7 (`TESTS_OK` 72, 110, 51, 49, 29).
-- **Voller Testlauf** (Stand 8d2cd36, mit den SDK-Headern in `.sdk\`): `TESTS_OK 4119`, keiner rot, keiner übersprungen.
-  Die Verknüpfungstests scheitern nur bei einem sehr langen Temp-Pfad (Pfadgrenze von Windows) und sind mit einem kürzeren
-  grün; EffectReviewTests wackelten in der Runde vom 2026-10-28 einmal (Klasse allein und zweiter voller Lauf grün).
+  Commit bis 35144d5. Nach der Entscheidung zu G15.7 (Stand fcb9aae, 2026-11-02, gedrosselt, nacheinander):
+  `BUILD_OK_0_WARNINGS`, G15.1 bis G15.4 und der Testteil von G15.7 (`TESTS_OK` 72, 110, 51, 49, 29). Nach der
+  unabhängigen Prüfung und der Nachbesserung (Stand 05074d4, 2026-11-02, gedrosselt, nacheinander):
+  `BUILD_OK_0_WARNINGS`; G14.1 bis G14.6, G15.1 bis G15.4, der Testteil von G15.7, G16.1, G16.2 und G1.5 (`TESTS_OK` 64,
+  61, 67, 34, 28, 166, 72, 110, 51, 49, 29, 52, 110, 19); `PHASE4_RESOURCES_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`;
+  `PUBLISH_CHECK_OK` für den Arbeitsstand mit diesem Eintrag und jeden Commit seit 7523bca einzeln.
+- **Voller Testlauf** (mit den SDK-Headern in `.sdk\`): Stand fcb9aae `TESTS_OK 4119`, nach der Nachbesserung Stand
+  05074d4 `TESTS_OK 4121`, je keiner rot, keiner übersprungen.
+- **Bekannte Wackler** (echte Zeit oder Umgebung; im Produkt nichts gefunden): EffectReviewTests, drei Tests der hellen
+  Ebene („nach 0,2 s schon 1.00“ und Ähnliches), am 2026-10-28 in fünf vollen Läufen je ein- oder zweimal rot, allein
+  grün; RemoveSettingsTests „…checking_while_the_drive_answers_slowly“, am 2026-11-02 einmal mit 3,2 s statt höchstens
+  2 s Wartezeit im vollen Lauf, allein und im nächsten vollen Lauf grün; die Verknüpfungstests nur bei einem sehr langen
+  Temp-Pfad (Pfadgrenze von Windows), mit einem kürzeren grün. In der Nachbesserung behoben: zweite Einblendung von
+  LibraryMotion, Ansichtswahl in ToolbarWindowTests (Bildschirmskalierung), ArtworkServiceTests „Index_is_written…“
+  (Fehler im Bilderdienst, siehe oben).
 - **Entschieden (Nutzer, 2026-10-28):** G15.7, Speicher je angewendetem Farbwechsel. Die Grenze ist eine
   Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (E94); die feste
   Planungsgrenze von 256 KiB war nicht zu halten, weil schon der eine Austausch der Farbwerte, den die Spezifikation
   verlangt, rund 213 KB kostet. Gemessen 333 336 Byte je Wechsel gegen die Grenze 366 704 Byte; der Testteil von G15.7
-  ist grün, eine leere Messung ließe ihn scheitern.
-- **Offen, nur lokal:** `phase5-publish.ps1` mit eingeschaltetem Bildschirm (alles grün außer `hdr status`: ohne aktiven
-  Bildschirm exit 3); alle Gates mit Oberfläche samt den Oberflächen-Teilen der Phasen 14, 15 und 16
-  (`phase14-sgdb-ui.ps1`, `phase15-gamecolors.ps1`, `phase16-english-ui.ps1`) und `phase3-idle.ps1`; Bildschirmfotos und
-  Kontaktbögen; `phase10-gpu.ps1` mit eingeschalteten Spielfarben; die Gates mit echter HDR-Umschaltung und das
-  Tray-Menü-Gate; Livetest SteamGridDB (G14.14); danach Test-Update mit Sicherung und Abnahme durch den Nutzer.
+  ist grün, eine leere Messung oder ein mit jedem Wechsel wachsender Baum ließe ihn scheitern.
+- **Offen, Entscheidung des Nutzers:** „antwortet langsam“ in der Spielwahl von „Bild wählen…“. Die Spezifikation von E93
+  verlangt den Text nach der Suche „Langsam“ in der Spielwahl (Schritt J des Gate-Ablaufs), ihre Tabelle der Zustände
+  nennt ihn nur beim Suchen und Laden im Reiter; die App zeigt ihn nur im Reiter. Entweder zeigt auch die Spielwahl den
+  Text, oder E93 hält fest, dass sie nur „Sucht bei SteamGridDB …“ und dann die Zeitüberschreitung zeigt. Bis dahin prüft
+  `phase14-sgdb-ui.ps1` wie die Spezifikation und scheitert an dieser Stelle.
+- **Offen, nur lokal:** `phase5-publish.ps1` und `phase1-status.ps1` mit eingeschaltetem Bildschirm (sonst findet
+  `hdr status` keinen aktiven Bildschirm, exit 3; phase5-publish ist sonst grün); alle Gates mit Oberfläche samt den
+  Oberflächen-Teilen der Phasen 14, 15 und 16 (`phase14-sgdb-ui.ps1`, `phase15-gamecolors.ps1`, `phase16-english-ui.ps1`)
+  und `phase3-idle.ps1`; Bildschirmfotos und Kontaktbögen, dazu mit dem Nutzer auch bei anderen Skalierungen als der des
+  Prüfrechners sowie Tiefenwirkung und Klick-Zustände (per Test bei 100 bis 175 % bisher nur die Kopfzeile sowie Lasche
+  und Kapsel der Werkzeugleiste); `phase10-gpu.ps1` mit eingeschalteten Spielfarben; die Gates mit echter HDR-Umschaltung
+  und das Tray-Menü-Gate; Livetest SteamGridDB (G14.14); vor dem Hochladen Titel und Beschreibung des Pull Requests nach
+  `main` prüfen; danach Test-Update mit Sicherung und Abnahme durch den Nutzer.
 
 ## Stand 2026-10-27: README auf Englisch (Wunsch des Nutzers, E95, G16.7)
 - `README.md` vollständig englisch (Bezeichnungen wie in den `.en.resx`, Hilfe wie `CliStrings.en.resx`), die deutsche

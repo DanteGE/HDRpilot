@@ -6,8 +6,18 @@ Push-Location $root
 try {
     $testArgs = @('test', 'HdrPilot.slnx', '-nologo')
     if ($Filter) { $testArgs += @('--filter', $Filter) }
-    $out = & dotnet @testArgs | Out-String
-    $code = $LASTEXITCODE
+    # Ohne Konsole (etwa aus Git Bash oder als Hintergrundprozess gestartet) schreibt dotnet UTF-8, Windows PowerShell liest
+    # dann aber mit der OEM-Codepage: Aus „übersprungen“ wurde „├╝bersprungen“, die Zusammenfassung fehlte, und das Gate
+    # scheiterte, obwohl alle Tests grün waren. Mit UTF-8 auf beiden Seiten (wie in publish-check.ps1) hängt das Ergebnis
+    # nicht davon ab, wie das Gate gestartet wurde; danach gilt wieder die vorige Codepage.
+    $encoding = [Console]::OutputEncoding
+    try {
+        [Console]::OutputEncoding = New-Object Text.UTF8Encoding $false
+        $out = & dotnet @testArgs | Out-String
+        $code = $LASTEXITCODE
+    } finally {
+        [Console]::OutputEncoding = $encoding
+    }
     $found = [regex]::Matches($out, '(Fehler|Failed):\s*(\d+),\s*(erfolgreich|Passed):\s*(\d+),\s*(übersprungen|Skipped):\s*(\d+),\s*(gesamt|Total):\s*(\d+)')
     if ($found.Count -eq 0) { Write-Output $out; Write-Output 'Zusammenfassung nicht gefunden'; exit 1 }
     $failed = 0; $passed = 0; $skipped = 0; $total = 0

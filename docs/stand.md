@@ -45,15 +45,20 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
 - **Voller Testlauf** (mit den SDK-Headern in `.sdk\`): Stand fcb9aae `TESTS_OK 4119`, nach der Nachbesserung Stand
   05074d4 `TESTS_OK 4121`, zum Abschluss Stand f3c3d6d `TESTS_OK 4121` (bei voll ausgelasteter Maschine), je keiner rot,
   keiner übersprungen.
-- **Bekannte Wackler** (echte Zeit oder Umgebung; im Produkt nichts gefunden): RemoveSettingsTests
-  „…checking_while_the_drive_answers_slowly“, am 2026-11-02 einmal mit 3,2 s statt höchstens 2 s Wartezeit im vollen
-  Lauf, allein und im nächsten vollen Lauf grün; HeroPointerTests „Content_glides_back…“ (Tiefenwirkung), am 2026-11-02
-  bei voll ausgelasteter Maschine einmal in allen drei Versuchen mit stehendem Thread (längste Pause 935 ms), allein
-  grün; die Verknüpfungstests nur bei einem sehr langen Temp-Pfad (Pfadgrenze von Windows), mit einem kürzeren grün. In
-  der Nachbesserung behoben: zweite Einblendung von LibraryMotion, Ansichtswahl in ToolbarWindowTests
-  (Bildschirmskalierung), ArtworkServiceTests „Index_is_written…“ (Fehler im Bilderdienst, siehe oben), EffectReviewTests
-  (drei Übergänge der hellen Ebene, „nach 0,2 s schon 1.00“ und Ähnliches; vom 2026-10-28 bis zum Abschluss in vielen
-  vollen Läufen ein- oder zweimal rot, allein grün).
+- **Bekannte Wackler** (echte Zeit oder Umgebung; im Produkt nichts gefunden; jeder allein grün): Tests, die echte
+  Wartezeiten messen, scheitern in vollen Läufen ohne Drosselung oder bei voll ausgelasteter Maschine gelegentlich, weil
+  ein Thread dort bis gut 1 s steht. Am 2026-11-02 so je einmal: RemoveSettingsTests
+  „…checking_while_the_drive_answers_slowly“ (3,2 s statt höchstens 2 s), UninstalledCleanupTests
+  „…without_an_answer_warns…“ (4,4 s statt höchstens 3,5 s), DisplayEventsServiceTests
+  „Dispatcher_timer_waits_for_the_last_event“ (die Fortsetzung nach 60 ms kam über 1 s zu spät),
+  ArtworkPickerSearchWindowTests „Effect_level_off_starts_no_animation_and_full_reveals_once“ (das Einblenden war schon
+  vorbei), HeroPointerTests „Content_glides_back…“ (Tiefenwirkung) und EffectReviewTests
+  „…comes_several_times_in_one_frame“ (je alle drei Versuche mit stehendem Thread). Die Verknüpfungstests scheitern nur
+  bei einem sehr langen Temp-Pfad (Pfadgrenze von Windows), mit einem kürzeren grün. In der Nachbesserung behoben: zweite
+  Einblendung von LibraryMotion, Ansichtswahl in ToolbarWindowTests (Bildschirmskalierung), ArtworkServiceTests
+  „Index_is_written…“ (Fehler im Bilderdienst, siehe oben); EffectReviewTests (drei Übergänge der hellen Ebene, „nach
+  0,2 s schon 1.00“ und Ähnliches) waren vom 2026-10-28 an in vielen vollen Läufen ein- oder zweimal rot und scheitern
+  seit f3c3d6d nur noch, wenn alle drei Versuche stehen.
 - **Entschieden (Nutzer, 2026-10-28):** G15.7, Speicher je angewendetem Farbwechsel. Die Grenze ist eine
   Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (E94); die feste
   Planungsgrenze von 256 KiB war nicht zu halten, weil schon der eine Austausch der Farbwerte, den die Spezifikation

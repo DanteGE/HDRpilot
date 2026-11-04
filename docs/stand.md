@@ -63,11 +63,20 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   `docs/manual.md` und `docs/handbuch.md` (die READMEs nennen keine Versionsnummer). Release-Notizen englisch und deutsch
   in `docs/release/1.6.1.md`: 1.6.0 war nur Vorabversion, deshalb nennen sie alles Neue seit 1.5.0 und dazu „Behoben in
   1.6.1“; `docs/release/1.6.0.md` bleibt unverändert. Das normale Release wird 1.6.1.
-- **Offen:** Prüfung des Stands 1.6.1 (Bau, alle Tests, Oberflächen-Gates, Setup, publish-check; Nachweise in
-  `GATES.md`); `phase10-gpu.ps1` mit der neuen Messung, normal und mit `-ColorsFollowGame`, zusammen mit dem Nutzer bei
-  ruhigem PC; die Gates mit echter HDR-Umschaltung und das Tray-Menü-Gate; Livetest SteamGridDB (G14.14); Abnahme durch
-  den Nutzer (Test-Update 1.6.1 mit Sicherung); danach Release 1.6.1 (Tag `v1.6.1`, `HDRpilot-Setup-1.6.1.exe`, Text
-  aus `docs/release/1.6.1.md`), nur nach ausdrücklichem Go.
+- **Geprüft (2026-11-04, nacheinander, Nachweise in `GATES.md`):** auf dem Arbeitsstand 1.6.1 `BUILD_OK_0_WARNINGS`,
+  voller Lauf `TESTS_OK 4143`, `PHASE5_PUBLISH_OK`, `PHASE5_README_OK`, `PHASE6_NAME_OK`, `PHASE7_SETUP_OK`,
+  `PHASE3_IDLE_OK`, `PHASE4_UI_OK`/`PHASE4_PERSIST_OK`, `PHASE6_UI_OK`, `PHASE7_SETUP_UI_OK`, `PHASE8_ICONS_OK`,
+  `PHASE9_AUTOHDR_UI_OK`, `PHASE10_UI_OK`, `PHASE10_SETTINGS_UI_OK`, `PHASE11_UI_OK`, `PHASE12_QUIVER_UI_OK`,
+  `PHASE15_GAMECOLORS_OK`, `PHASE16_ENGLISH_UI_OK`; Vorher/Nachher-Bilder (Abweichungen nur an den gewollten Stellen,
+  Rand des leeren Kästchens mindestens 3,03:1), Code- und Bildprüfung mit Nachbesserung und Nachprüfung. Auf 7100f36,
+  Nutzer nicht am PC und das andere Programm beendet: `PHASE14_SGDB_UI_OK`; `phase10-gpu.ps1` mit der Messung nach E97
+  `PHASE10_GPU_OK` (HDR-Moment im Median 24,28 %, in Ruhe höchstens 1,74 %) und mit `-ColorsFollowGame -SkipIdleGate`
+  `PHASE10_GPU_OK` (27,31 %, in Ruhe höchstens 1,80 %). publish-check mit der privaten Liste für den Arbeitsstand und
+  jeden Commit einzeln.
+- **Offen:** `Find-Window` in `Phase4Common.ps1` über Win32 (siehe oben); die Gates mit echter HDR-Umschaltung und das
+  Tray-Menü-Gate; Livetest SteamGridDB (G14.14); Abnahme durch den Nutzer (Test-Update 1.6.1 mit Sicherung); danach
+  Release 1.6.1 (Tag `v1.6.1`, `HDRpilot-Setup-1.6.1.exe`, Text aus `docs/release/1.6.1.md`), nur nach ausdrücklichem
+  Go.
 
 ## Stand 2026-11-04: README schlank mit Bildschirmfotos (Wunsch des Nutzers, E96, G5.2)
 - `README.md` (englisch, 119 Zeilen) und `README.de.md` (deutsch, 123 Zeilen) sind kurz: Einleitung, Bildschirmfotos

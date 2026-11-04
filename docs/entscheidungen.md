@@ -1753,7 +1753,7 @@ das ganze Handbuch (rund 960 Zeilen).
 - Erste Zeile (Kurzbeschreibung aus dem GitHub-Repository, E92): nennt seit 2026-11-04 alle acht Launcher (Steam, Epic
   Games, Xbox/Game Pass, GOG, Ubisoft Connect, EA app, Battle.net, Quiver Launcher) wie die Liste der Funktionen; in
   `README.de.md` steht sie auf Deutsch (beides Wunsch des Nutzers). Die Beschreibung im Feld „About“ des Repositorys
-  ist davon unberührt.
+  hat seit 2026-11-04 denselben englischen Text (ebenfalls auf Wunsch des Nutzers).
 - Auslieferung unverändert: Setup-Datei und Ordner ohne Installation enthalten weiter `README.md` und `README.de.md`
   (jetzt die kurzen), `LICENSE`, die Lizenzhinweise und die Kommandozeile; das Handbuch wird nicht ausgeliefert. In der
   installierten Kopie gehen Bilder und relative Verweise nicht, deshalb nennt jede README das Handbuch zusätzlich mit

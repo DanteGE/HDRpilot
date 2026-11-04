@@ -1804,4 +1804,4 @@ knapp unter der Grenze „Spitze unter 30 %“. Das war keine Verschlechterung, 
 - Am Gate außerdem: `-ColorsFollowGame` schaltet „Farben folgen dem Spiel“ in der Testablage ein; damit misst
   `phase10-gpu.ps1 -ColorsFollowGame -SkipIdleGate` die Grafikkartenlast mit eingeschaltetem Schalter für G15.7.
   `phase6-ui.ps1` (G6.1) nimmt als Steam- und als GOG-Spiel je das erste installierte mit einfachem Namen aus der
-  Testablage statt eines fest eingetragenen, weil sich die eingelesene echte Bibliothek ändert.
+  Testablage statt eines fest eingetragenen, damit das Gate nicht von einem bestimmten Spiel abhängt.

@@ -9,7 +9,7 @@ $ok = $true
 function Check([bool]$cond, [string]$what) { if ($cond) { Note "ok   $what" } else { Note "FEHLER $what"; $script:ok = $false } }
 function Rect($el) { $el.Current.BoundingRectangle }
 
-# Die Testablage ist eine Kopie der echten Bibliothek und ändert sich mit ihr, darum kein fest eingetragenes Spiel: je
+# Damit das Gate nicht von einem bestimmten Spiel der Testablage abhängt, kein fest eingetragenes Spiel: je
 # Quelle das erste installierte nach Namen mit einfachem Namen (nur Buchstaben, Ziffern und Leerzeichen, mindestens 6
 # Zeichen). Gibt es keins, sucht das Gate nichts und meldet einen klaren FEHLER.
 function Pick-Game($games, [string]$source) {

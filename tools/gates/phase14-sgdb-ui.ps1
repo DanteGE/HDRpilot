@@ -415,10 +415,14 @@ try {
     Check (-not $retry -or -not $retry.Current.IsEnabled) '„Erneut versuchen“ gesperrt'
     Close-Picker $dialog
     $dialog = Open-Picker $win $nebel
+    $slowClock = [Diagnostics.Stopwatch]::StartNew()
     Match-Search $dialog 'Langsam'
-    # Wie in der Spezifikation (Schritt J): „antwortet langsam“ auch bei der Suche in der Spielwahl. Die App zeigt es bisher
-    # nur bei der Suche im Reiter; ob die Spielwahl es zeigen soll, entscheidet der Nutzer (offen, siehe docs/stand.md).
-    Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbSlow' 6000) '„Langsam“: nach höchstens 6 s „antwortet langsam“'
+    # Entscheidung des Nutzers 2026-11-04 (E93): Die Spielwahl zeigt bei langsamer Antwort „Sucht bei SteamGridDB …“ bis
+    # zur Zeitüberschreitung; „antwortet langsam“ (nach SteamGridDbSearchViewModel.SlowAfter, 4 s) zeigt nur die Suche im
+    # Reiter. Deshalb steht nach 6,5 s noch „Sucht …“, ohne „antwortet langsam“ und ohne Zeitüberschreitung.
+    Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbMatchSearching' 3000) '„Langsam“: die Spielwahl zeigt „Sucht bei SteamGridDB …“'
+    while ($slowClock.ElapsedMilliseconds -lt 6500) { Start-Sleep -Milliseconds 100 }
+    Check ((Has-Res $dialog 'LibraryStrings' 'Picker_SgdbMatchSearching') -and -not (Has-Res $dialog 'LibraryStrings' 'Picker_SgdbSlow') -and -not (Has-Res $dialog 'LibraryStrings' 'Picker_SgdbTimeout')) '„Langsam“: nach 6,5 s noch „Sucht …“, ohne „antwortet langsam“ (E93)'
     Check (Wait-Res $dialog 'LibraryStrings' 'Picker_SgdbTimeout' 20000) '„Langsam“: nach höchstens 20 s Zeitüberschreitung'
     Close-Picker $dialog
 

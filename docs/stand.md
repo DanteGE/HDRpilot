@@ -64,11 +64,12 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   Planungsgrenze von 256 KiB war nicht zu halten, weil schon der eine Austausch der Farbwerte, den die Spezifikation
   verlangt, rund 213 KB kostet. Gemessen 333 336 Byte je Wechsel gegen die Grenze 366 704 Byte; der Testteil von G15.7
   ist grün, eine leere Messung oder ein mit jedem Wechsel wachsender Baum ließe ihn scheitern.
-- **Offen, Entscheidung des Nutzers:** „antwortet langsam“ in der Spielwahl von „Bild wählen…“. Die Spezifikation von E93
-  verlangt den Text nach der Suche „Langsam“ in der Spielwahl (Schritt J des Gate-Ablaufs), ihre Tabelle der Zustände
-  nennt ihn nur beim Suchen und Laden im Reiter; die App zeigt ihn nur im Reiter. Entweder zeigt auch die Spielwahl den
-  Text, oder E93 hält fest, dass sie nur „Sucht bei SteamGridDB …“ und dann die Zeitüberschreitung zeigt. Bis dahin prüft
-  `phase14-sgdb-ui.ps1` wie die Spezifikation und scheitert an dieser Stelle.
+- **Entschieden (Nutzer, 2026-11-04):** „antwortet langsam“ in der Spielwahl von „Bild wählen…“. Die Spielwahl zeigt bei
+  langsamer Antwort „Sucht bei SteamGridDB …“ bis zur Zeitüberschreitung; „antwortet langsam“ zeigt nur die Suche im
+  Reiter, wie die Tabelle der Zustände der Spezifikation (E93). Schritt J von `phase14-sgdb-ui.ps1` prüft das jetzt
+  (nach 6,5 s noch „Sucht …“ ohne „antwortet langsam“, dann die Zeitüberschreitung); nach der Änderung noch nicht gelaufen.
+- **Vorabversion (2026-11-04):** Release `v1.6.0` auf GitHub als Pre-release mit `HDRpilot-Setup-1.6.0.exe` aus
+  bd86529; `main` bleibt bis zur Abnahme unverändert. Danach wird es das normale Release und `main` rückt nach.
 - **Offen, nur lokal:** `phase5-publish.ps1` und `phase1-status.ps1` mit eingeschaltetem Bildschirm (sonst findet
   `hdr status` keinen aktiven Bildschirm, exit 3; phase5-publish ist sonst grün); alle Gates mit Oberfläche samt den
   Oberflächen-Teilen der Phasen 14, 15 und 16 (`phase14-sgdb-ui.ps1`, `phase15-gamecolors.ps1`, `phase16-english-ui.ps1`)

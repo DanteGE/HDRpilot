@@ -603,7 +603,7 @@ Scope: Im Dialog „Bild wählen…“ je Reiter (Titelbild, Logo, Cover) ein Ab
 - [ ] G14.7: Testinstanz mit erzeugten SteamGridDB-Antworten (kein Netz, nur UI-Automation): Schlüssel bei ausgeschaltetem Schalter prüfen und speichern ohne Lauf; keine Anfrage vor dem Klick; 24/48/70 Ergebnisse mit Autor, Ende mit leerer Seite; nur www./cdn2.steamgriddb.com, Schlüssel nur an die Schnittstelle; Übernehmen speichert ein 600×900-Cover als eigenes Bild, Zurücksetzen entfernt es, Abbrechen schreibt nichts; Spielwahl, gemerkte Zuordnung nur ohne Steam-App-ID; Fehlerzustände samt Zeitüberschreitung; Link zum Schlüsselfeld; keine Vorschau-Threads nach dem Schließen; Bildschirmfotos aller Zustände hell und dunkel, auch klein und in hohem Kontrast, dazu die Einstellungskarte
   CHECK: ps tools\gates\phase14-sgdb-ui.ps1
   EXPECT: PHASE14_SGDB_UI_OK
-  EVIDENCE: pending. Offen ist außerdem eine Entscheidung des Nutzers: Die Spezifikation verlangt nach der Suche „Langsam“ in der Spielwahl „antwortet langsam“, die App zeigt den Text nur bei der Suche im Reiter. Das Gate prüft wie die Spezifikation und scheitert dort, bis entschieden ist (docs/stand.md).
+  EVIDENCE: pending. Entschieden (Nutzer, 2026-11-04, E93): Die Spielwahl zeigt bei langsamer Antwort „Sucht bei SteamGridDB …“ bis zur Zeitüberschreitung, „antwortet langsam“ nur die Suche im Reiter. Das Gate prüft das in Schritt J (nach 6,5 s noch „Sucht …“ ohne „antwortet langsam“, dann Zeitüberschreitung); nach der Änderung noch nicht gelaufen.
 
 - [ ] G14.8: Einstellungen per UI-Automation weiter grün, mit der angepassten Prüfung „Prüfen auch bei ausgeschaltetem Schalter bedienbar“
   CHECK: ps tools\gates\phase10-settings-ui.ps1

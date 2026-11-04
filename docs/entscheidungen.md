@@ -1474,6 +1474,11 @@ zugeordneten Spiel („Spiel: <Name> ▾“) und **Bei SteamGridDB suchen**.
   es keinen wiederverwendbaren gab (`GapScrollBar` gehört zum Spalt der Bibliothek). Der Testdaten-Lieferant nennt für
   `games/id` den zuletzt gesuchten Namen (sonst „Testspiel“). Die App-Tests sehen interne Prüfpunkte über
   `InternalsVisibleTo` (Platzierung, Kontrast, Vorschau-Threads, Übernehmen mit Ergebnis).
+- Spielwahl bei langsamer Antwort (Entscheidung des Nutzers 2026-11-04): Die Suche der Spielwahl zeigt
+  „Sucht bei SteamGridDB …“ bis zur Antwort und nach der Zeitgrenze die Zeitüberschreitung; „antwortet langsam“ zeigt
+  nur die Suche im Reiter (wie die Tabelle der Zustände der Spezifikation). Schritt J des Gate-Ablaufs der Spezifikation,
+  der den Text auch in der Spielwahl verlangte, gilt damit nicht; `phase14-sgdb-ui.ps1` prüft, dass nach 6,5 s noch
+  „Sucht …“ ohne „antwortet langsam“ steht und danach die Zeitüberschreitung kommt.
 
 **E94 Farben folgen dem Spiel (Wunsch des Nutzers 2026-10-22, G15):** Neuer Schalter „Farben folgen dem Spiel“ (Standard aus,
 `colorsFollowGame`) neben „Hintergrund folgt dem Spiel“; beide wirken unabhängig. Ist er an, nehmen alle Akzente der Bibliothek,

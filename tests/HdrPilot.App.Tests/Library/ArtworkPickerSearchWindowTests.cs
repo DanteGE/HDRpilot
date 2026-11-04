@@ -224,6 +224,77 @@ public sealed partial class ArtworkPickerSearchWindowTests
         });
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Logo_placeholders_stay_readable_on_the_checker_plate_and_never_shine_through_a_logo(bool dark)
+    {
+        // Prüfung 2026-11-04: Auf dem Schachbrett der Logos waren Symbol und „Keine Vorschau“ in TextMuted kaum zu sehen (1,1 bis
+        // 1,5:1), bei SteamGridDB ohne Vorschau wie bei den lokalen Kacheln ohne Bild. Jetzt hell, der Text auf einem dunklen
+        // Schild: auf beiden Feldern Text mindestens 4,5:1 und Symbol 3:1. Unter einem Bild liegt kein Platzhalter mehr; durch
+        // die durchsichtigen Stellen eines Logos schiene das helle Symbol sonst hindurch.
+        WpfTestHost.Run(() =>
+        {
+            var (dialog, picker, _) = Open(ArtworkKind.Logo, art => art.Candidates[ArtworkKind.Logo] =
+                [new ArtworkCandidate("alt:logo_1.png", ArtworkKind.Logo, ArtworkOrigin.Alternative, "Steam 1", null, FakeArtworkService.Solid(40, 12, Colors.Gold), 40, 12, IsCurrent: false)]);
+            UseTheme(dialog, dark);
+            Load(picker);
+            Search(picker, ArtworkKind.Logo);
+            Pump(() => picker.Online.Results.All(r => r.PreviewState is not (PreviewState.None or PreviewState.Loading)));
+            Arrange(dialog, double.PositiveInfinity);
+            var results = Find<ListBox>(dialog, "Results");
+            var local = Find<ListBox>(dialog, "Candidates");
+            var squares = ((DrawingGroup)((DrawingBrush)dialog.FindResource("Lib.LogoPlate")).Drawing).Children.OfType<GeometryDrawing>()
+                .Select(d => ((SolidColorBrush)d.Brush).Color).ToList();
+            Assert.Equal(2, squares.Count);
+
+            // SteamGridDB ohne Vorschau: Symbol und Text hell, der Text auf dem Schild.
+            var missing = picker.Online.Results.First(r => r.PreviewState == PreviewState.Missing);
+            var label = TilePart<TextBlock>(results, missing, "PlaceholderLabel");
+            var back = TilePart<Border>(results, missing, "PlaceholderLabelBack");
+            var glyph = TilePart<TextBlock>(results, missing, "PlaceholderGlyph");
+            Assert.Equal(LibraryStrings.Picker_SgdbNoPreview, label.Text);
+            Assert.Equal(Visibility.Visible, TilePart<Panel>(results, missing, "Placeholder").Visibility);
+            Assert.Equal(Visibility.Visible, back.Visibility);
+            Assert.Equal(Visibility.Visible, glyph.Visibility);
+            var text = Assert.IsType<SolidColorBrush>(label.Foreground).Color;
+            var shield = Assert.IsType<SolidColorBrush>(back.Background).Color;
+            Assert.Equal(((SolidColorBrush)dialog.FindResource("Lib.Brush.LogoPlateText")).Color, text);
+            Assert.Equal(text, ((SolidColorBrush)glyph.Foreground).Color);
+            foreach (var square in squares)
+            {
+                var under = Over(shield, square);
+                var onShield = Contrast(Over(text, under), under);
+                var onSquare = Contrast(Over(text, square), square);
+                Assert.True(onShield >= 4.5, FormattableString.Invariant($"Text auf dem Schild über {square}: {onShield:0.00}:1"));
+                Assert.True(onSquare >= 3.0, FormattableString.Invariant($"Symbol auf {square}: {onSquare:0.00}:1"));
+            }
+
+            // Lokal ohne Bild („Automatisch“): dasselbe helle Symbol, ohne Text und Schild.
+            var automatic = picker.Candidates.First(c => !c.HasPreview);
+            Assert.Equal(Visibility.Visible, TilePart<Panel>(local, automatic, "Placeholder").Visibility);
+            Assert.Equal(text, ((SolidColorBrush)TilePart<TextBlock>(local, automatic, "PlaceholderGlyph").Foreground).Color);
+            Assert.Equal(Visibility.Collapsed, TilePart<Border>(local, automatic, "PlaceholderLabelBack").Visibility);
+
+            // Mit Bild, lokal und von SteamGridDB: kein Platzhalter unter dem Logo.
+            Assert.Equal(Visibility.Collapsed, TilePart<Panel>(local, picker.Candidates.Single(c => c.HasPreview), "Placeholder").Visibility);
+            Assert.Equal(Visibility.Collapsed, TilePart<Panel>(results, picker.Online.Results.First(r => r.HasPreview), "Placeholder").Visibility);
+            dialog.Close();
+
+            // Gegenprobe: Ohne Schachbrett (Titelbild) bleibt der Platzhalter gedämpft und ohne Schild.
+            var (hero, heroPicker, _) = Open(ArtworkKind.Hero);
+            UseTheme(hero, dark);
+            Search(heroPicker, ArtworkKind.Hero);
+            Pump(() => heroPicker.Online.Results.All(r => r.PreviewState is not (PreviewState.None or PreviewState.Loading)));
+            Arrange(hero, double.PositiveInfinity);
+            var heroResults = Find<ListBox>(hero, "Results");
+            var heroMissing = heroPicker.Online.Results.First(r => r.PreviewState == PreviewState.Missing);
+            Assert.Equal(((SolidColorBrush)hero.FindResource(ThemeKeys.BrushTextMuted)).Color, ((SolidColorBrush)TilePart<TextBlock>(heroResults, heroMissing, "PlaceholderLabel").Foreground).Color);
+            Assert.Null(TilePart<Border>(heroResults, heroMissing, "PlaceholderLabelBack").Background);
+            hero.Close();
+        });
+    }
+
     [Fact]
     public void Mouse_wheel_over_tiles_scrolls_the_dialog()
     {
@@ -456,6 +527,8 @@ public sealed partial class ArtworkPickerSearchWindowTests
             Assert.True(failures.Count == 0, string.Join(", ", failures.Take(10)));
             Assert.Equal(palette.Window, ((SolidColorBrush)dialog.FindResource(ThemeKeys.BrushPlate)).Color);
             Assert.Equal(palette.Window, ((SolidColorBrush)dialog.FindResource("Lib.LogoPlate")).Color);
+            Assert.Equal(palette.WindowText, ((SolidColorBrush)dialog.FindResource("Lib.Brush.LogoPlateText")).Color);
+            Assert.Equal(palette.Window, ((SolidColorBrush)dialog.FindResource("Lib.Brush.LogoPlateTextBack")).Color);
             Assert.Equal(palette.Highlight, ((SolidColorBrush)dialog.FindResource(ThemeKeys.BrushSelectionRing)).Color);
             Assert.Equal(palette.WindowText, ((SolidColorBrush)dialog.FindResource("Lib.Brush.ContrastFrame")).Color);
             Assert.Equal(new Thickness(1), (Thickness)dialog.FindResource("Lib.ContrastFrameThickness"));
@@ -523,14 +596,38 @@ public sealed partial class ArtworkPickerSearchWindowTests
                 dialog.Close();
 
                 LibraryMotion.Instance.SetLevel(EffectLevel.Full);
-                var (full, fullPicker, _) = Open(ArtworkKind.Hero);
-                Arrange(full, double.PositiveInfinity);
-                Search(fullPicker, ArtworkKind.Hero);
-                Arrange(full, double.PositiveInfinity);
-                WpfTestHost.DoEvents();
-                if (LibraryMotion.Enabled)
+
+                // Echte Uhren: Das Einblenden dauert höchstens 650 ms (430 + 220). Stand der Thread des Testhosts zwischen Suche
+                // und Prüfung so lange (voller Lauf auf ausgelasteter Maschine, 2026-11-04 zweimal), ist es schon vorbei, ohne
+                // dass etwas falsch läuft: dann mit neuem Dialog wiederholen, höchstens dreimal; der dritte Versuch prüft immer.
+                // Ist weniger Zeit vergangen, entscheidet der Versuch; die Meldung nennt dann Zeit, Kacheln und Stand des Einblendens.
+                ArtworkPickerDialog full;
+                for (var attempt = 1; ; attempt++)
                 {
-                    Assert.Contains(Descendants(full).OfType<ListBoxItem>(), e => e.HasAnimatedProperties); // einmal eingeblendet
+                    (full, var fullPicker, _) = Open(ArtworkKind.Hero);
+                    Arrange(full, double.PositiveInfinity);
+                    var sinceSearch = System.Diagnostics.Stopwatch.StartNew();
+                    Search(fullPicker, ArtworkKind.Hero);
+                    Arrange(full, double.PositiveInfinity);
+                    WpfTestHost.DoEvents();
+                    var elapsed = sinceSearch.Elapsed;
+                    if (!LibraryMotion.Enabled)
+                    {
+                        break;
+                    }
+
+                    var animated = Descendants(full).OfType<ListBoxItem>().Any(e => e.HasAnimatedProperties);
+                    if (!animated && elapsed >= ArtworkPickerDialog.RevealLatestStart + ArtworkPickerDialog.RevealDuration && attempt < 3)
+                    {
+                        full.Close();
+                        continue;
+                    }
+
+                    // einmal eingeblendet
+                    var tiles = Descendants(Find<ListBox>(full, "Results")).OfType<ListBoxItem>().Count();
+                    Assert.True(animated, FormattableString.Invariant(
+                        $"Keine Kachel blendet ein, {elapsed.TotalMilliseconds:0} ms nach Beginn der Suche (Versuch {attempt}; {tiles} Kacheln zu {fullPicker.Online.Results.Count} Ergebnissen, Einblenden noch {full.RevealRemaining.TotalMilliseconds:0} ms)"));
+                    break;
                 }
 
                 var until = DateTime.UtcNow.AddSeconds(2);
@@ -566,7 +663,12 @@ public sealed partial class ArtworkPickerSearchWindowTests
         var plate = Regex.Match(block, "<DrawingBrush x:Key=\"Lib.LogoPlate\".*?</DrawingBrush>", RegexOptions.Singleline);
         Assert.True(plate.Success);
         Assert.Equal(2, LiteralColor().Matches(plate.Value).Count); // die beiden Grautöne des Schachbretts
-        Assert.Equal(2, LiteralColor().Matches(block).Count); // sonst keine feste Farbe
+
+        // Der Platzhalter darauf (Symbol und Text, Schild unter dem Text) hängt wie das Schachbrett nicht vom Thema ab.
+        var onPlate = Regex.Matches(block, "<SolidColorBrush x:Key=\"Lib\\.Brush\\.LogoPlateText(?:Back)?\"[^>]*/>");
+        Assert.Equal(2, onPlate.Count);
+        Assert.All(onPlate, m => Assert.Single(LiteralColor().Matches(m.Value)));
+        Assert.Equal(4, LiteralColor().Matches(block).Count); // sonst keine feste Farbe
 
         WpfTestHost.Run(() =>
         {
@@ -643,15 +745,17 @@ public sealed partial class ArtworkPickerSearchWindowTests
 
     private static string StripComments(string xaml) => Regex.Replace(xaml, "<!--.*?-->", string.Empty, RegexOptions.Singleline);
 
-    private static (ArtworkPickerDialog Dialog, ArtworkPickerViewModel Picker, FakeSteamGridDbSearch Sgdb) Open(ArtworkKind kind)
+    private static (ArtworkPickerDialog Dialog, ArtworkPickerViewModel Picker, FakeSteamGridDbSearch Sgdb) Open(ArtworkKind kind, Action<FakeArtworkService>? artwork = null)
     {
         EnsureLibraryResources();
         var sgdb = new FakeSteamGridDbSearch();
+        var art = new FakeArtworkService();
+        artwork?.Invoke(art);
         var context = new TestLibraryContext(
             Game(GameSource.Steam, "9990150", "Kupferwald", isNew: false),
             Game(GameSource.Gog, "1207658930", "Nebelfahrt", isNew: false))
         {
-            Artwork = new FakeArtworkService(),
+            Artwork = art,
         };
         context.SteamGridDb = sgdb;
         var vm = new LibraryViewModel(context, new FakeDialogs());
@@ -712,6 +816,23 @@ public sealed partial class ArtworkPickerSearchWindowTests
 
     private static T Find<T>(Window window, string name)
         where T : class => Assert.IsAssignableFrom<T>(window.FindName(name) ?? throw new InvalidOperationException(name + " fehlt"));
+
+    /// <summary>Benanntes Element der Kachelvorlage für einen Eintrag der Liste.</summary>
+    private static T TilePart<T>(ListBox list, object item, string name)
+        where T : class
+    {
+        var container = Assert.IsType<ListBoxItem>(list.ItemContainerGenerator.ContainerFromItem(item));
+        var presenter = Descendants(container).OfType<ContentPresenter>().First();
+        return Assert.IsAssignableFrom<T>(presenter.ContentTemplate.FindName(name, presenter) ?? throw new InvalidOperationException(name + " fehlt"));
+    }
+
+    /// <summary>Farbe <paramref name="top"/> (mit Deckkraft) über der deckenden Farbe <paramref name="under"/>.</summary>
+    private static Color Over(Color top, Color under)
+    {
+        var a = top.A / 255.0;
+        byte Channel(byte t, byte u) => (byte)Math.Round((t * a) + (u * (1 - a)));
+        return Color.FromRgb(Channel(top.R, under.R), Channel(top.G, under.G), Channel(top.B, under.B));
+    }
 
     private static KeyEventArgs Press(UIElement target, Key key)
     {

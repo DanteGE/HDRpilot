@@ -44,6 +44,8 @@ public static class DialogContrast
         (ThemeKeys.BrushTextOnAccent, p => Solid(p.HighlightText)),
         (ThemeKeys.BrushAccentText, p => Solid(p.HotTrack)),
         ("Lib.LogoPlate", p => Solid(p.Window)),
+        ("Lib.Brush.LogoPlateText", p => Solid(p.WindowText)),
+        ("Lib.Brush.LogoPlateTextBack", p => Solid(p.Window)),
         ("Lib.Brush.ContrastFrame", p => Solid(p.WindowText)),
     ];
 

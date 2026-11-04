@@ -444,9 +444,13 @@
                                 <TextBlock Text="{x:Static res:LibraryStrings.Badge_New}" />
                             </Border>
                         </StackPanel>
-                        <!-- Name und Quelle unten -->
+                        <!--
+                            Name und Quelle unten. Name in höchstens zwei Zeilen, dann „…“ (Prototyp .tn: 13 px, Zeilenhöhe 1,22): Zeilen
+                            fest 16 px. Mit der natürlichen Zeilenhöhe (17,3 px) passte nur eine Zeile in 34 px (Prüfung 2026-11-04);
+                            die 2 px darüber lassen den Unterlängen der zweiten Zeile Platz.
+                        -->
                         <StackPanel x:Name="Footer" VerticalAlignment="Bottom" Margin="11,0,50,10">
-                            <TextBlock x:Name="TileName" Text="{Binding Name}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" MaxHeight="34" TextTrimming="CharacterEllipsis"
+                            <TextBlock x:Name="TileName" Text="{Binding Name}" FontSize="13" FontWeight="Bold" TextWrapping="Wrap" LineHeight="16" LineStackingStrategy="BlockLineHeight" MaxHeight="34" TextTrimming="CharacterEllipsis"
                                        Foreground="#FFFFFFFF" Opacity="0" />
                             <StackPanel x:Name="TileSource" Orientation="Horizontal" Margin="0,6,0,0" Opacity="0">
                                 <Ellipse Style="{StaticResource Lib.SourceDot}" Width="6" Height="6" />

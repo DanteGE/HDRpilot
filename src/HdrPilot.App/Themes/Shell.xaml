@@ -520,7 +520,9 @@
 
     <!--
         Auswahl-Kästchen als Karte (Bildschirm-Auswahl): ganze Zeile klickbar, Haken im Akzentverlauf, gewählt mit Ring.
-        Der Haken „springt“ kurz auf, wenn Animationen erlaubt sind; sonst erscheint er sofort.
+        Der Haken „springt“ kurz auf, wenn Animationen erlaubt sind; sonst erscheint er sofort. Rand des leeren Kästchens in
+        TextMuted, beim Überfahren im Auswahlring: beide halten mindestens 3:1 zur Karte (WCAG 1.4.11; LineStrong lag bei
+        etwa 1,5:1, Prüfung 2026-11-04). Gewählt deckt der Akzent das Kästchen ganz, der Rand entfällt.
     -->
     <Style x:Key="Hp.Shell.CheckCard" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource Hp.Brush.Text}" />
@@ -539,7 +541,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid Width="22" Height="22" VerticalAlignment="Center">
-                                <Border x:Name="Box" CornerRadius="7" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.LineStrong}" Background="{DynamicResource Hp.Brush.Surface2}" />
+                                <Border x:Name="Box" CornerRadius="7" BorderThickness="1.5" BorderBrush="{DynamicResource Hp.Brush.TextMuted}" Background="{DynamicResource Hp.Brush.Surface2}" />
                                 <Border x:Name="Fill" CornerRadius="7" Background="{DynamicResource Hp.Brush.Accent}" Opacity="0" />
                                 <TextBlock x:Name="Check" Style="{StaticResource Hp.Shell.Glyph}" Text="&#xE73E;" FontSize="12" FontWeight="Bold"
                                            Foreground="{DynamicResource Hp.Brush.TextOnAccent}" HorizontalAlignment="Center" Opacity="0" RenderTransformOrigin="0.5,0.5">
@@ -555,13 +557,14 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.Surface2}" />
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Hp.Brush.AccentStrong}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Hp.Brush.SelectionRing}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Fill" Property="Opacity" Value="1" />
                             <Setter TargetName="Check" Property="Opacity" Value="1" />
                             <Setter TargetName="Selected" Property="Opacity" Value="1" />
                             <Setter TargetName="Body" Property="Background" Value="{DynamicResource Hp.Brush.SelectionFill}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="Transparent" />
                         </Trigger>
                         <MultiDataTrigger>
                             <MultiDataTrigger.Conditions>

@@ -4,6 +4,7 @@ using HdrPilot.App.ViewModels.Library;
 using HdrPilot.Core.Config;
 using HdrPilot.Core.Games;
 using HdrPilot.Core.Sessions;
+using HdrPilot.Tests.TestSupport;
 using static HdrPilot.App.Tests.Library.TestLibraryContext;
 
 namespace HdrPilot.App.Tests.Library;
@@ -143,6 +144,34 @@ public sealed class RemoveSettingsTests
         Assert.True(request.IsDanger);
         Assert.Null(RemoveSettingsText.ForGames([klippe], [InstallTrace.None], shortcuts: 0).Warning);
         Assert.Equal(LibraryStrings.RemoveSettings_ShortcutHintOne, RemoveSettingsText.ForGames([klippe], [InstallTrace.None], shortcuts: 1).OptionHint);
+    }
+
+    [Theory]
+    [InlineData("de-DE", "HDRpilot vergisst, was es zu diesem Spiel gespeichert hat", "HDRpilot vergisst, was es zu diesen Spielen gespeichert hat")]
+    [InlineData("en-US", "HDRpilot forgets what it has stored about this game", "HDRpilot forgets what it has stored about these games")]
+    public void RemoveSettings_bulk_confirmation_for_exactly_one_game_reads_in_the_singular(string culture, string one, string many)
+    {
+        // Prüfung 2026-11-04: Mit genau einem nicht installierten Spiel stand die Überschrift in der Einzahl, der Text darunter
+        // aber in der Mehrzahl („… zu diesen Spielen …“). Jetzt der Text wie beim Entfernen eines einzelnen Spiels; ab zwei
+        // Spielen bleibt die Mehrzahl.
+        using var _ = TestCulture.Use(culture);
+        var moosgrund = Game(GameSource.Steam, "9990301", "Moosgrund", isNew: false, installed: false);
+        var kreidekap = Game(GameSource.Gog, "9990302", "Kreidekap", isNew: false, installed: false);
+        var funkenhain = Game(GameSource.Epic, "Funkenhain", "Funkenhain", isNew: false, installed: false);
+
+        var single = RemoveSettingsText.ForGames([moosgrund], [InstallTrace.None], shortcuts: 0);
+
+        Assert.Equal(LibraryStrings.RemoveAll_ConfirmTitleOne, single.Title);
+        Assert.Equal(LibraryStrings.RemoveSettings_ConfirmText, single.Message);
+        Assert.StartsWith(one, single.Message, StringComparison.Ordinal);
+        Assert.Equal(RemoveSettingsText.ForGame(moosgrund, InstallTrace.None, 0).Message, single.Message);
+        foreach (var games in new GameConfig[][] { [moosgrund, kreidekap], [moosgrund, kreidekap, funkenhain] })
+        {
+            var request = RemoveSettingsText.ForGames(games, [.. games.Select(g => InstallTrace.None)], shortcuts: 0);
+            Assert.Equal(LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, games.Length), request.Title);
+            Assert.Equal(LibraryStrings.RemoveAll_ConfirmText, request.Message);
+            Assert.StartsWith(many, request.Message, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

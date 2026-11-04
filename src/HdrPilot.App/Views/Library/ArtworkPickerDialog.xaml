@@ -21,10 +21,13 @@
                 <Grid x:Name="PreviewBox" Height="65" ClipToBounds="True">
                     <Border x:Name="Plate" CornerRadius="16,16,0,0" Background="{DynamicResource Hp.Brush.Plate}"
                             BorderBrush="{DynamicResource Lib.Brush.ContrastFrame}" BorderThickness="{DynamicResource Lib.ContrastFrameThickness}" />
+                    <!-- Platzhalter (Symbol, bei SteamGridDB ohne Vorschau dazu „Keine Vorschau“); auf dem Schachbrett der Logos hell, der Text auf einem dunklen Schild -->
                     <StackPanel x:Name="Placeholder" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock x:Name="PlaceholderGlyph" Style="{StaticResource Lib.Glyph}" Text="&#xEB9F;" FontSize="22" HorizontalAlignment="Center" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
-                        <TextBlock Text="{Binding PlaceholderText}" FontSize="11" Margin="6,4,6,0" TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextMuted}"
-                                   Visibility="{Binding ShowPlaceholderText, Converter={StaticResource Lib.BoolToVisibility}}" />
+                        <Border x:Name="PlaceholderLabelBack" Margin="6,4,6,0" CornerRadius="6" HorizontalAlignment="Center"
+                                Visibility="{Binding ShowPlaceholderText, Converter={StaticResource Lib.BoolToVisibility}}">
+                            <TextBlock x:Name="PlaceholderLabel" Text="{Binding PlaceholderText}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource Hp.Brush.TextMuted}" />
+                        </Border>
                     </StackPanel>
                     <Border x:Name="Art" CornerRadius="16,16,0,0" lib:ImageFill.Source="{Binding Preview}" lib:ImageFill.FadeOnArrival="True"
                             Visibility="{Binding HasPreview, Converter={StaticResource Lib.BoolToVisibility}}" />
@@ -47,6 +50,10 @@
                 <DataTrigger Binding="{Binding Kind}" Value="Logo">
                     <Setter TargetName="PreviewBox" Property="Height" Value="104" />
                     <Setter TargetName="Plate" Property="Background" Value="{DynamicResource Lib.LogoPlate}" />
+                    <Setter TargetName="PlaceholderGlyph" Property="Foreground" Value="{DynamicResource Lib.Brush.LogoPlateText}" />
+                    <Setter TargetName="PlaceholderLabel" Property="Foreground" Value="{DynamicResource Lib.Brush.LogoPlateText}" />
+                    <Setter TargetName="PlaceholderLabelBack" Property="Background" Value="{DynamicResource Lib.Brush.LogoPlateTextBack}" />
+                    <Setter TargetName="PlaceholderLabelBack" Property="Padding" Value="7,2,7,3" />
                     <Setter TargetName="Art" Property="Margin" Value="12" />
                     <Setter TargetName="Art" Property="CornerRadius" Value="0" />
                     <Setter TargetName="Art" Property="lib:ImageFill.Stretch" Value="Uniform" />
@@ -61,6 +68,10 @@
                 <DataTrigger Binding="{Binding PreviewState}" Value="Missing">
                     <Setter TargetName="PlaceholderGlyph" Property="Visibility" Value="Visible" />
                     <Setter TargetName="PlaceholderGlyph" Property="Text" Value="&#xE91B;" />
+                </DataTrigger>
+                <!-- Mit Vorschau kein Platzhalter darunter: Durch die durchsichtigen Stellen eines Logos schiene er sonst hindurch -->
+                <DataTrigger Binding="{Binding HasPreview}" Value="True">
+                    <Setter TargetName="Placeholder" Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>

@@ -20,7 +20,7 @@ namespace HdrPilot.App.Tests.Library;
 [Collection(ShellSerialCollection.Name)]
 public sealed class TileRoomTests
 {
-    private static (MainWindow Window, LibraryViewModel Model) Open(LibraryViewMode view, Size size)
+    private static (MainWindow Window, LibraryViewModel Model) Open(LibraryViewMode view, Size size, GameConfig[]? games = null)
     {
         var merged = Application.Current.Resources.MergedDictionaries;
         if (!merged.Any(d => d.Source?.OriginalString.EndsWith("/Themes/Library.xaml", StringComparison.Ordinal) == true))
@@ -28,7 +28,7 @@ public sealed class TileRoomTests
             merged.Add(new ResourceDictionary { Source = new Uri("pack://application:,,,/HdrPilot;component/Themes/Library.xaml", UriKind.Absolute) });
         }
 
-        var context = new TestLibraryContext([.. Enumerable.Range(1, 60).Select(i => Game(GameSource.Steam, "g" + i, $"Spiel {i:00}", isNew: false))]);
+        var context = new TestLibraryContext(games ?? [.. Enumerable.Range(1, 60).Select(i => Game(GameSource.Steam, "g" + i, $"Spiel {i:00}", isNew: false))]);
         context.ConfigService.Update(c => c.Settings.LibraryView = LibraryViewModes.ToConfig(view));
         var model = new LibraryViewModel(context, new FakeDialogs());
         var window = new MainWindow();
@@ -186,6 +186,75 @@ public sealed class TileRoomTests
             var steps = Enumerable.Range(from, to - from).Select(y => Math.Abs(Alpha(x, y + 1) - Alpha(x, y))).ToList();
             Assert.True(steps.Max() <= 8, $"Kante im Leuchten: Sprung {steps.Max()} bei {from + steps.IndexOf(steps.Max())} (Kachel endet {tileBox.Bottom:0}, Leuchten {box.Bottom:0})");
             Assert.True(Alpha(x, to) <= 2, $"Leuchten ausgelaufen: Deckkraft {Alpha(x, to)}");
+            window.Close();
+        });
+    }
+
+    [Theory]
+    [InlineData(LibraryViewMode.Grid)]
+    [InlineData(LibraryViewMode.Shelf)]
+    public void Hovered_tile_name_shows_two_lines_and_then_ends_with_an_ellipsis(LibraryViewMode view)
+    {
+        // Prüfung 2026-11-04: Der Name einer überfahrenen Kachel zeigte nur eine Zeile und „…“; zwei Zeilen in der natürlichen
+        // Zeilenhöhe (17,3 px bei 13 px) passten nicht in 34 px. Jetzt Zeilen fest 16 px wie im Prototyp (13 px, Zeilenhöhe 1,22).
+        WpfTestHost.Run(() =>
+        {
+            const string Long = "Die Chroniken von Moosgrund: Rückkehr in das gläserne Kupferwaldtal";
+            const string Short = "Kreidekap";
+            var size = new Size(1745, 982);
+            GameConfig[] games =
+            [
+                Game(GameSource.Steam, "9990401", Long, isNew: false), Game(GameSource.Gog, "9990402", Short, isNew: false),
+                .. Enumerable.Range(1, 4).Select(i => Game(GameSource.Steam, "g" + i, $"Spiel {i:00}", isNew: false)),
+            ];
+            var (window, model) = Open(view, size, games);
+            var list = Named<ListBox>(window, view == LibraryViewMode.Grid ? "GameGrid" : "GameShelf");
+
+            foreach (var name in new[] { Long, Short })
+            {
+                // Der Name steht nur auf Kacheln mit Cover unten (ohne Cover trägt das erzeugte Cover ihn); hier ohne Bilddienst
+                // wie mit Cover sichtbar gemacht. Breite und Zeilen hängen nur von Kachel und Vorlage ab.
+                var item = model.Games.Single(g => g.Name == name);
+                var tile = Assert.IsType<ListBoxItem>(list.ItemContainerGenerator.ContainerFromItem(item));
+                var text = Part<TextBlock>(tile, "TileName");
+                Assert.Equal(Visibility.Collapsed, text.Visibility);
+                text.Visibility = Visibility.Visible;
+                Arrange(window, size);
+                Assert.Equal(name, text.Text);
+                Assert.Equal(16, text.LineHeight);
+                Assert.Equal(LineStackingStrategy.BlockLineHeight, text.LineStackingStrategy);
+                Assert.Equal(TextTrimming.CharacterEllipsis, text.TextTrimming);
+                Assert.InRange(text.MaxHeight, 2 * text.LineHeight, (3 * text.LineHeight) - 1); // Platz für genau zwei Zeilen
+
+                // Zwei Zeilen, wenn der Name sie braucht; was darüber hinausgeht, endet mit „…“ in der zweiten Zeile.
+                var typeface = new Typeface(text.FontFamily, text.FontStyle, text.FontWeight, text.FontStretch);
+                var full = new FormattedText(name, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, typeface, text.FontSize, Brushes.White, 1.0)
+                {
+                    MaxTextWidth = text.ActualWidth,
+                    LineHeight = text.LineHeight,
+                };
+                var needed = (int)Math.Round(full.Height / text.LineHeight);
+                var lines = (int)Math.Round(text.ActualHeight / text.LineHeight);
+                Assert.Equal(text.ActualHeight, lines * text.LineHeight, 0.5);
+                Assert.Equal(Math.Min(needed, 2), lines);
+                if (name == Long)
+                {
+                    Assert.True(needed > 2, $"{view}: der lange Name bräuchte {needed} Zeilen bei {text.ActualWidth:0} px");
+                }
+                else
+                {
+                    Assert.Equal(1, lines);
+                }
+
+                // Unterlängen der letzten Zeile bleiben innerhalb der Höchsthöhe (nichts wird abgeschnitten).
+                var descenders = new FormattedText("gjpqy", System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, typeface, text.FontSize, Brushes.White, 1.0)
+                {
+                    LineHeight = text.LineHeight,
+                };
+                Assert.True((2 * text.LineHeight) + descenders.OverhangAfter <= text.MaxHeight, $"Unterlängen enden {descenders.OverhangAfter:0.00} px unter der Zeile");
+                Assert.False(text.ClipToBounds);
+            }
+
             window.Close();
         });
     }

@@ -64,9 +64,10 @@ public static class RemoveSettingsText
             warnings.Add(unsure == 1 ? LibraryStrings.RemoveAll_UnsureOne : LibraryText.Format(LibraryStrings.RemoveAll_UnsureMany, unsure));
         }
 
+        // Ein Spiel: Überschrift und Text in der Einzahl (der Text wie beim Entfernen eines einzelnen Spiels, Prüfung 2026-11-04).
         return new(
             games.Count == 1 ? LibraryStrings.RemoveAll_ConfirmTitleOne : LibraryText.Format(LibraryStrings.RemoveAll_ConfirmTitleMany, games.Count),
-            LibraryStrings.RemoveAll_ConfirmText,
+            games.Count == 1 ? LibraryStrings.RemoveSettings_ConfirmText : LibraryStrings.RemoveAll_ConfirmText,
             LibraryStrings.RemoveSettings_Confirm,
             IsDanger: true)
         {

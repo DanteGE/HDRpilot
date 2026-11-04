@@ -3,6 +3,72 @@
 Zuletzt aktualisiert: 2026-11-04. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
 
+## Stand 2026-11-04: Version 1.6.1 vorbereitet
+- **Oberflächen-Prüfung von 1.6.0 fertig** (Stand 5b96faf, Nutzer am PC, nacheinander). Vorbereitung:
+  `BUILD_OK_0_WARNINGS`, `PHASE1_STATUS_OK`, `PHASE5_PUBLISH_OK` (jetzt mit eingeschaltetem Bildschirm),
+  `PHASE5_README_OK`, `PHASE6_NAME_OK`. Oberflächen-Gates, grün nach zwei Korrekturen an Gates (`phase6-ui.ps1`, unten;
+  Schritt J in `phase14-sgdb-ui.ps1` nach der Entscheidung zu E93, ad10b8c): `PHASE3_IDLE_OK`,
+  `PHASE4_UI_OK`/`PHASE4_PERSIST_OK`, `PHASE6_UI_OK`, `PHASE7_SETUP_UI_OK`, `PHASE8_ICONS_OK`, `PHASE9_AUTOHDR_UI_OK`,
+  `PHASE10_UI_OK`, `PHASE10_SETTINGS_UI_OK`, `PHASE11_UI_OK`, `PHASE12_QUIVER_UI_OK`, `PHASE14_SGDB_UI_OK` (mit
+  Schritt J), `PHASE15_GAMECOLORS_OK`, `PHASE16_ENGLISH_UI_OK`. Ausnahme ist der HDR-Moment in `phase10-gpu.ps1`: je
+  nach Lauf `PHASE10_GPU_OK` (Spitze 29,36 %) oder FEHLER am HDR-Moment (30,53 %, mit eingeschalteten Spielfarben
+  30,15 %) gegen die alte Grenze „unter 30 %“ (siehe Entscheidung 1). Läufe mit `PHASE10_GPU_UMGEBUNG` (anderes Fenster
+  im Vordergrund) zählen nicht.
+- **Bildschirmfotos:** deutsch und englisch bei 1280, 1920 und 3440 Pixel Breite, Spielfarben mit fünf Spielen, Setup
+  und Entfernen; 21 Kontaktbögen angesehen und unabhängig ausgewertet. Keine unübersetzten Texte; Funde: drei kleine
+  Fehler und ein schwacher Rand (unten).
+- **Entschieden (Nutzer, 2026-11-04):**
+  1. HDR-Moment (G10.9, E97) „Genauer messen, 35 %“: `phase10-gpu.ps1` liest die Rohzähler der Grafikkarte alle 250 ms,
+     nimmt die höchste Last in einem beliebigen 1-s-Fenster, spielt den Moment dreimal und nimmt den Median. Die Grenze
+     ist 35 % auf diesen Median der 1-s-Spitze; der Mittelwert über den Moment steht im Protokoll, ohne Grenze. Grund:
+     Es gibt keine Regression. In einer Sitzung gemessen 1.5.0 29,65 % gegen 1.6.0 26,82 %; der Code des Effekts
+     (`src/HdrPilot.App/Infrastructure/Effects`) ist seit 8fe23c6 byte-gleich. Das alte Gate nahm vier feste 1-s-Proben,
+     die Spitze hing davon ab, wo die Last im Raster lag (±2 Punkte; Läufe von 26,8 bis 30,5 %). Die „rund 24 %“ vom
+     2026-10-16 waren ein Einzellauf auf einem älteren Zweig, kein Wert von 1.5.0.
+  2. Die drei kleinen Fehler jetzt beheben und als Version 1.6.1 ausliefern.
+  3. Den Rand des ungehakten Kästchens der Auswahlkarten (`Hp.Shell.CheckCard`, etwa „Auch Einstellungen, Spieleliste
+     und Protokolle löschen“ beim Entfernen) deutlicher machen: bisher etwa 1,5–1,6:1, Ziel mindestens 3:1 gegen den
+     Hintergrund (WCAG 1.4.11).
+- **Produkt (1.6.1):**
+  - „Bild wählen…“, Reiter „Logo“: Der Platzhalter „Keine Vorschau“ und sein Symbol (auch auf den Kacheln
+    „Automatisch“ und „Name statt Logo“) waren auf dem Schachbrett kaum zu sehen; jetzt sind sie gut lesbar.
+  - Überfahrene Kacheln in Raster und Regal zeigen den Namen auf bis zu zwei Zeilen (feste Zeilenhöhe; vorher passte in
+    die Höchsthöhe nur eine Zeile).
+  - „Einstellungen aller nicht installierten Spiele entfernen…“ mit genau einem Spiel: Der Text der Rückfrage steht jetzt
+    in der Einzahl wie beim Entfernen eines einzelnen Spiels (vorher Titel in der Einzahl, Text in der Mehrzahl).
+  - Ungehaktes Kästchen der Auswahlkarten mit deutlicherem Rand (Entscheidung 3).
+- **Gates:**
+  - `phase6-ui.ps1` nimmt als Steam- und als GOG-Spiel je das erste installierte mit einfachem Namen aus der Testablage
+    statt eines fest eingetragenen; die Testablage ist eine Kopie der echten Bibliothek und ändert sich mit ihr.
+  - `phase10-gpu.ps1 -ColorsFollowGame`: dieselbe Messung mit eingeschaltetem „Farben folgen dem Spiel“ (G15.7).
+  - `phase10-gpu.ps1`: HDR-Moment gemessen und begrenzt nach Entscheidung 1 (E97, G10.9).
+  - `phase12-quiver-ui.ps1`: Erreicht der Pfad des Prüfprogramms samt „.config“ oder seiner Ausgabedatei 260 Zeichen
+    (Klon in einem tiefen Ordner), meldet das Gate vor dem Start der Testinstanz `PHASE12_QUIVER_UI_UMGEBUNG` (exit 2)
+    statt das Prüfprogramm zu starten; das .NET-Framework-Programm bräche sonst mit einem Meldungsfenster ab.
+  - `phase14-sgdb-ui.ps1`: Die Meldungen „Bilder übernommen“ und „Spiel gemerkt“ stehen nur 5 s. Das Gate sucht sie
+    jetzt gleich nach „Übernehmen“ und prüft erst danach, dass der Dialog zu ist. Vorher bemerkte es den geschlossenen
+    Dialog erst 4,8 bis 4,9 s nach dem Schließen (Protokoll der Testinstanz), und die Meldung war schon wieder weg: zwei
+    Läufe auf dem Stand 1.6.1 rot an der Statusleiste, obwohl das Speichern belegt war. Ursache der Verzögerung: Die Suche
+    nach den Fenstern der Testinstanz fragte über UI-Automation jedes sichtbare Fenster aller Programme ab, und das
+    Fenster eines fremden Programms antwortete jedes Mal erst nach rund 3,2 bis 3,4 s. `Find-Top` nimmt die Fenster der
+    Testinstanz jetzt über Win32 (nur sichtbare, wie UI-Automation). Noch offen: `Find-Window` in `Phase4Common.ps1` (Start
+    jedes Oberflächen-Gates) fragt weiter den ganzen Desktop ab; am 2026-11-04 brach so je ein Lauf mit einer
+    Zeitüberschreitung der UI-Automation ab, einmal dort und einmal noch im alten `Find-Top`.
+- **Test mit echter Uhr:** `ArtworkPickerSearchWindowTests`
+  „Effect_level_off_starts_no_animation_and_full_reveals_once“ war in zwei vollen Läufen bei ausgelasteter Maschine rot
+  (keine Kachel blendete mehr ein). Er versucht es jetzt wie die Nachbartests mit neuem Dialog höchstens dreimal, aber
+  nur, wenn seit Beginn der Suche schon die ganze Einblendzeit (430 + 220 ms) vergangen ist; die Meldung nennt die
+  gemessene Zeit und den Stand des Einblendens. Ist weniger Zeit vergangen und blendet nichts ein, bleibt er rot.
+- **Version 1.6.1:** `Directory.Build.props` und der Name der Setup-Datei `HDRpilot-Setup-1.6.1.exe` in
+  `docs/manual.md` und `docs/handbuch.md` (die READMEs nennen keine Versionsnummer). Release-Notizen englisch und deutsch
+  in `docs/release/1.6.1.md`: 1.6.0 war nur Vorabversion, deshalb nennen sie alles Neue seit 1.5.0 und dazu „Behoben in
+  1.6.1“; `docs/release/1.6.0.md` bleibt unverändert. Das normale Release wird 1.6.1.
+- **Offen:** Prüfung des Stands 1.6.1 (Bau, alle Tests, Oberflächen-Gates, Setup, publish-check; Nachweise in
+  `GATES.md`); `phase10-gpu.ps1` mit der neuen Messung, normal und mit `-ColorsFollowGame`, zusammen mit dem Nutzer bei
+  ruhigem PC; die Gates mit echter HDR-Umschaltung und das Tray-Menü-Gate; Livetest SteamGridDB (G14.14); Abnahme durch
+  den Nutzer (Test-Update 1.6.1 mit Sicherung); danach Release 1.6.1 (Tag `v1.6.1`, `HDRpilot-Setup-1.6.1.exe`, Text
+  aus `docs/release/1.6.1.md`), nur nach ausdrücklichem Go.
+
 ## Stand 2026-11-04: README schlank mit Bildschirmfotos (Wunsch des Nutzers, E96, G5.2)
 - `README.md` (englisch, 119 Zeilen) und `README.de.md` (deutsch, 123 Zeilen) sind kurz: Einleitung, Bildschirmfotos
   aus der Demo-Bibliothek (`docs/images/`, `tools/readme-screenshots.ps1`), Funktionen, Herunterladen und Installieren,
@@ -89,25 +155,27 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
 - **Entschieden (Nutzer, 2026-11-04):** „antwortet langsam“ in der Spielwahl von „Bild wählen…“. Die Spielwahl zeigt bei
   langsamer Antwort „Sucht bei SteamGridDB …“ bis zur Zeitüberschreitung; „antwortet langsam“ zeigt nur die Suche im
   Reiter, wie die Tabelle der Zustände der Spezifikation (E93). Schritt J von `phase14-sgdb-ui.ps1` prüft das jetzt
-  (nach 6,5 s noch „Sucht …“ ohne „antwortet langsam“, dann die Zeitüberschreitung); nach der Änderung noch nicht gelaufen.
+  (nach 6,5 s noch „Sucht …“ ohne „antwortet langsam“, dann die Zeitüberschreitung); nach der Änderung am 2026-11-04 auf
+  1.6.0 grün gelaufen (siehe oben).
 - **Vorabversion (2026-11-04):** Release `v1.6.0` auf GitHub als Pre-release mit `HDRpilot-Setup-1.6.0.exe` aus
   bd86529; `main` bleibt bis zur Abnahme unverändert. Danach wird es das normale Release und `main` rückt nach.
-- **Offen, nur lokal:** `phase5-publish.ps1` und `phase1-status.ps1` mit eingeschaltetem Bildschirm (sonst findet
-  `hdr status` keinen aktiven Bildschirm, exit 3; phase5-publish ist sonst grün); alle Gates mit Oberfläche samt den
-  Oberflächen-Teilen der Phasen 14, 15 und 16 (`phase14-sgdb-ui.ps1`, `phase15-gamecolors.ps1`, `phase16-english-ui.ps1`)
-  und `phase3-idle.ps1`; Bildschirmfotos und Kontaktbögen, dazu mit dem Nutzer auch bei anderen Skalierungen als der des
+- **Offen, nur lokal** (Stand 2026-11-04; erledigt sind `phase5-publish.ps1` und `phase1-status.ps1` mit
+  eingeschaltetem Bildschirm, alle Gates mit Oberfläche samt den Oberflächen-Teilen der Phasen 14, 15 und 16 und
+  `phase3-idle.ps1`, Bildschirmfotos und Kontaktbögen (siehe oben), Titel und Beschreibung des Pull Requests nach
+  `main`, dazu das Test-Update 1.6.0 mit Sicherung am 2026-11-04): mit dem Nutzer andere Skalierungen als die des
   Prüfrechners sowie Tiefenwirkung und Klick-Zustände (per Test bei 100 bis 175 % bisher nur die Kopfzeile sowie Lasche
-  und Kapsel der Werkzeugleiste); `phase10-gpu.ps1` mit eingeschalteten Spielfarben; die Gates mit echter HDR-Umschaltung
-  und das Tray-Menü-Gate; Livetest SteamGridDB (G14.14); vor dem Hochladen Titel und Beschreibung des Pull Requests nach
-  `main` prüfen; danach Test-Update mit Sicherung und Abnahme durch den Nutzer.
+  und Kapsel der Werkzeugleiste); `phase10-gpu.ps1` mit der neuen Messung des HDR-Moments (E97), normal und mit
+  eingeschalteten Spielfarben; die Gates mit echter HDR-Umschaltung und das Tray-Menü-Gate; Livetest SteamGridDB
+  (G14.14); Abnahme durch den Nutzer.
 
 ## Stand 2026-10-27: README auf Englisch (Wunsch des Nutzers, E95, G16.7)
 - `README.md` vollständig englisch (Bezeichnungen wie in den `.en.resx`, Hilfe wie `CliStrings.en.resx`), die deutsche
   Fassung wörtlich als `README.de.md`; beide werden ausgeliefert, installiert und beim Entfernen gelöscht.
 - `phase5-readme.ps1` prüft beide Fassungen mit eigenen Gegenproben, `phase6-name.ps1` beide Dateien. Unter Linux mit
   pwsh (Kopie mit Linux-Pfaden) grün; Bau ohne Warnungen, `HdrPilot.Tests` ohne neue Fehler.
-- **Offen (nur unter Windows):** `phase5-readme.ps1` und `phase6-name.ps1` im Original, `phase5-publish.ps1`,
-  `phase7-setup.ps1` und die App-Tests der Setup-Engine (neue Datei im Paket).
+- **Offen (nur unter Windows), inzwischen erledigt:** `phase5-readme.ps1` und `phase6-name.ps1` im Original,
+  `phase7-setup.ps1` und die App-Tests der Setup-Engine (neue Datei im Paket) am 2026-11-02, `phase5-publish.ps1` am
+  2026-11-04 (siehe oben).
 
 ## Stand 2026-10-27: Release 1.6.0 vorbereitet (noch nicht veröffentlicht)
 - Version 1.6.0 in `Directory.Build.props` und bei den Setup-Dateinamen beider READMEs; Release-Notizen (englisch und
@@ -125,8 +193,10 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   deutscher Wortlaut sich in diesen Strängen geändert hat („Eigenes Bild“, Karte SteamGridDB, Quellenhinweis im Dialog).
   Der Paritätstest (`ResourceTranslationTests`) ist damit wieder grün.
 - **Unter Linux geprüft:** Bau ohne Warnungen; `HdrPilot.Tests` ohne neue Fehler gegenüber `ui/feedback`.
-- **Offen (nur unter Windows):** `HdrPilot.App.Tests`, alle Oberflächen-Gates (Phasen 10, 14, 15, 16 und die übrigen),
-  Bildschirmfotos (auch englisch), publish-check, Setup und Installation als Test-Update, Abnahme durch den Nutzer.
+- **Offen (nur unter Windows):** Abnahme durch den Nutzer. Inzwischen erledigt (siehe oben): `HdrPilot.App.Tests`
+  (2026-11-02), die Oberflächen-Gates (Phasen 10, 14, 15, 16 und die übrigen; `phase10-gpu.ps1` mit der neuen Messung
+  steht noch aus) und die Bildschirmfotos auch englisch (2026-11-04), publish-check, Setup und Installation als
+  Test-Update (1.6.0, 2026-11-04).
 
 ## Stand 2026-10-26: SteamGridDB-Suche in „Bild wählen…“ umgesetzt (E93, Phase 14)
 - **Zweig:** `feature/sgdb-search` (von `ui/feedback`), acht Commits in der Reihenfolge der Spezifikation: Kern,
@@ -137,7 +207,10 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   UI-Gates sind nur gebaut, nie ausgeführt.
 - **Offen, nur lokal unter Windows** (einer nach dem anderen, gedrosselt): G14.1 bis G14.9 und G14.11 bis G14.13
   ausführen, die Bildschirmfotos bei drei Größen hell und dunkel vermessen und dem Nutzer zeigen (G14.10), unabhängige
-  Prüfung mit Gegenproben, Livetest mit dem eigenen Schlüssel des Nutzers (G14.14), Abnahme (G14.15).
+  Prüfung mit Gegenproben, Livetest mit dem eigenen Schlüssel des Nutzers (G14.14), Abnahme (G14.15). Stand
+  2026-11-04: G14.1 bis G14.6 (Tests, 2026-11-02), G14.7 bis G14.9 (Oberflächen-Gates, 2026-11-04), G14.12 und G14.13
+  grün gelaufen, die unabhängigen Prüfungen mit Gegenproben ebenso (siehe oben); offen bleiben das Vermessen der
+  Bildschirmfotos (G14.10, bisher nur angesehen), der Gesamtstand (G14.11), Livetest (G14.14) und Abnahme (G14.15).
 - **Auslieferung:** als eigenes Test-Update nach dem UI-Paket, zusammen mit den Spielfarben (`Hp.Brush.Plate` steht in
   beiden Token-Dateien; die Spielfarben ändern sie nicht, erledigt in `integration/naechstes-update`). Kleine Versionserhöhung beim
   Release.
@@ -148,7 +221,9 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   (G15.1–G15.10) und `docs/design/showcase-hero/umsetzung-theme.md` ergänzt.
 - In der Cloud-Sitzung gelaufen: Bau ohne Warnungen, die Tests aus `HdrPilot.Tests` (G15.1: 72 von 72). Offen unter
   Windows: alle Tests von `HdrPilot.App.Tests` (G15.2–G15.4, G15.7), die Gates G15.5, G15.6, G15.8, G15.9 und die Abnahme
-  G15.10.
+  G15.10. Stand 2026-11-04: G15.2 bis G15.4 und der Testteil von G15.7 (2026-11-02), G15.5 und G15.6 (2026-11-04) sowie
+  G15.8 grün gelaufen; offen bleiben `phase10-gpu.ps1 -ColorsFollowGame` mit der neuen Messung des HDR-Moments (G15.7,
+  E97), der Gesamtstand (G15.9) und die Abnahme (G15.10).
 
 ## Stand 2026-10-26: Englische Oberfläche und Sprachwahl (Zweig `feature/english`, E95, Phase 16)
 - **Stand:** Zweig `feature/english` auf Basis von `ui/feedback`, lokal committet, nicht hochgeladen. Parallel entstehen
@@ -165,6 +240,10 @@ fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begrün
   scheiternden Windows-Tests, keine neuen), dazu die neuen Tests grün.
 - **Offen (nur unter Windows):** App-Tests (G16.3), `phase16-english-ui.ps1` (G16.4), Sichtprüfung der englischen
   Bildschirmfotos auf abgeschnittene Texte (G16.5), alle bisherigen Gates einmal (G16.6), Abnahme durch den Nutzer.
+  Stand 2026-11-04: App-Tests (2026-11-02) und `phase16-english-ui.ps1` grün, englische Bildschirmfotos angesehen (Funde
+  behoben in 1.6.1, siehe oben), die übrigen Gates ohne echte HDR-Umschaltung und ohne echte Eingaben am 2026-11-02 und
+  2026-11-04 grün; offen bleiben `phase10-gpu.ps1` mit der neuen Messung, der Gesamtstand (G16.6) für 1.6.1 und die
+  Abnahme durch den Nutzer.
 
 ## Stand 2026-10-22: Anonymisierung fertig, als Nächstes die Veröffentlichung (nächste Sitzung zuerst)
 - **Stand:** `main` = `phase5/release`, Zusammenführung von `release/publish-paths` (f3da056), darauf dieser Stand;
@@ -377,10 +456,13 @@ Stresstests und keine künstliche Last.
   - **Stand 2026-10-21:** Phase-11-Fund behoben (3532608: nicht lesbare Ordner gelten als „nicht prüfbar“);
     Abschlussprüfung von `feature/library-toolbar` mit Korrekturen und Gegenprüfung (c5d0a1f, 8f47e30, 948102a);
     Zusammenführung und 1.5.0 erledigt (siehe oben). Offen: Schritt 4 und G12.7 mit dem Nutzer; die Setup-Datei erst
-    aus dem umgeschriebenen Repository bauen.
+    aus dem umgeschriebenen Repository bauen. Stand 2026-11-04: Der Nutzer hat 1.5.0 als Test-Update installiert und
+    getestet (Rückmeldung vom 2026-10-22), die Setup-Datei 1.6.0 entstand aus dem veröffentlichten Repository; offen
+    bleibt G12.7.
 - **Danach (Plan vom 2026-10-20):** Abschlussprüfung, Stand sichern. Zusammenführung, 1.5.0 und Setup erst, nachdem
   der Nutzer die neuen Funktionen gesehen hat. Zusammenführung und 1.5.0 kamen mit dem Ablauf der Veröffentlichung
-  (oben) früher; die Vorführung beim Nutzer steht noch aus, die Setup-Datei ist noch nicht gebaut.
+  (oben) früher; die Vorführung beim Nutzer stand damals noch aus, die Setup-Datei war noch nicht gebaut (beides
+  inzwischen erledigt, siehe Stand 2026-11-04 oben).
 - **Wunsch des Nutzers:** gründlich bleiben, Tempo ist zweitrangig.
 
 ## Neue Wünsche des Nutzers (2026-10-18)
@@ -682,7 +764,8 @@ grün):
   `HdrPilot-vorher.exe.bak` im Programmordner. Die 6 Desktop-Verknüpfungen „(HDR)“ hat der Nutzer am 07.10. selbst gelöscht.
 - Setup: Aktualisieren über eine laufende ältere Version lief am 2026-10-12 beim Nutzer live: 1.2.0 lief, der Setup
   beendete die App, ersetzte sie durch 1.3.0 und startete sie neu. Neue Version: `tools\publish.ps1`, dann Setup.
-- Optional: Fehlermeldungen des Einlesens (ScanError) und von ManualGames in Ressourcen verschieben; englische Oberfläche.
+- Erledigt mit 1.6.0 (E95): Fehlermeldungen des Einlesens (ScanError) und von ManualGames stehen in Ressourcen, die
+  Oberfläche gibt es auch auf Englisch.
 
 ## Zurückgestellt (Entscheidung des Nutzers)
 - Auto HDR (Windows) und RTX HDR (NVIDIA) pro Spiel für Spiele ohne natives HDR, recherchiert am 2026-10-10.

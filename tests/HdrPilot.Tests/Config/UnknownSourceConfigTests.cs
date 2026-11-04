@@ -107,7 +107,7 @@ public sealed class UnknownSourceConfigTests
 
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AppConfig>(FutureConfig, previous));
 
-        // So liest 1.4.0 „Quiver“: Name fehlt in seiner Aufzählung, also scheitert die ganze Datei (E91, README).
+        // So liest 1.4.0 „Quiver“: Name fehlt in seiner Aufzählung, also scheitert die ganze Datei (E91, Handbuch).
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<OldGame>("""{ "source": "Quiver" }""", previous));
         Assert.Equal(2, JsonSerializer.Deserialize<AppConfig>(FutureConfig, ConfigJson.Options)!.Games.Count);
     }

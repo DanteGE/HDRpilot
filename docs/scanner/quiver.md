@@ -167,7 +167,7 @@ Nachgerechnet: `appIconUrl` von „Black“ ist `https://cdn2.steamgriddb.com/gr
 die Kopie mit Breite 480 heißt `Cache\Images\8C8FC6677FB84678288E4615E4E470A5` (WebP 480×480, rund 38 KB, dekodiert
 mit dem WebP-Decoder von Windows). Die Kandidaten stehen je Spiel in `config.json` (`coverCandidates`), damit die
 Bibliothek ohne neues Einlesen weiß, wo sie suchen soll; dekodiert wird erst in der App. Titelbild und Logo hat Quiver
-nicht: HDRpilot erzeugt sie wie bei Spielen anderer Launcher ohne solche Bilder (README, „Spielbilder“), optional füllt
+nicht: HDRpilot erzeugt sie wie bei Spielen anderer Launcher ohne solche Bilder (Handbuch, „Spielbilder“), optional füllt
 SteamGridDB sie. Das Symbol kommt aus der Spiel-EXE (`BLACK.exe` hat keins, daher das Monogramm). Ein Quiver-Logo und
 Programmsymbole von Quiver werden nie verwendet. Neue Bilder von Quiver erscheinen nach dem nächsten Einlesen; den
 Cache-Ordner beobachtet HDRpilot nicht (er liegt oft in Downloads, wo ein Beobachter viele fremde Änderungen sähe).

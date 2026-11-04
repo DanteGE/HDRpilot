@@ -1,7 +1,29 @@
 # Zwischenstand (Übergabe)
 
-Zuletzt aktualisiert: 2026-11-02. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
+Zuletzt aktualisiert: 2026-11-04. Dieses Dokument hält fest, wo die Arbeit steht, damit sie jederzeit nahtlos
 fortgesetzt werden kann. Maßgeblich für Nachweise ist `GATES.md`, für Begründungen `docs/entscheidungen.md`.
+
+## Stand 2026-11-04: README schlank mit Bildschirmfotos (Wunsch des Nutzers, E96, G5.2)
+- `README.md` (englisch, 119 Zeilen) und `README.de.md` (deutsch, 123 Zeilen) sind kurz: Einleitung, Bildschirmfotos
+  aus der Demo-Bibliothek (`docs/images/`, `tools/readme-screenshots.ps1`), Funktionen, Herunterladen und Installieren,
+  Schnellstart, Voraussetzungen, Datenschutz und Netz, Verweise auf das Handbuch, Lizenz. Der vollständige Text steht
+  als Handbuch in `docs/manual.md` und `docs/handbuch.md`. Ausgeliefert werden weiter die beiden READMEs (jetzt die
+  kurzen, mit der Adresse des Handbuchs auf GitHub); Setup, Tests und Gates hängen nur an den Dateinamen.
+- `phase5-readme.ps1` prüft die Handbücher wie bisher die READMEs, dazu ihre Verweise und Anker, und die kurzen READMEs
+  leicht (Abschnitte, Länge, Bilder, Verweisziele, Pflichtverweise, Bezeichnungen, englische Überschriften), jeweils
+  mit Gegenprobe; `phase6-name.ps1` prüft auch die Handbücher (`PHASE6_NAME_OK`).
+- Bilder: fünf PNGs unter `docs/images/`, Namen wie in den Verweisdefinitionen am Ende beider READMEs. Nachbesserung
+  nach zwei unabhängigen Prüfungen: Die Demo-Bibliothek nutzte zwei echte Installationsordner des Prüfrechners
+  (`publish-check.ps1` rot, einer davon im Bild „Colors follow the game“ zu sehen); jetzt liegen alle unter dem
+  erfundenen `D:\Demo Library\…`, die Bilder sind neu erzeugt und einzeln angesehen. Dazu Bildtexte (Regal: HDR-Moment
+  mit Automatik-Karte; Darstellung: ohne Effekte) und der Sprachpunkt der READMEs (Deutsch nur bei deutschem Windows).
+- Geprüft im Arbeitsstand: `phase5-readme.ps1` → `PHASE5_README_OK` (G5.2 abgehakt, Gegenprobe „kein PNG“ mit
+  `settings-appearance.png` wiederholt), `phase6-name.ps1` → `PHASE6_NAME_OK`, `publish-check.ps1` mit privater Liste
+  und den neuen Dateien → `PUBLISH_CHECK_OK`.
+- **Entschieden (Nutzer, 2026-11-04):** Die Einleitung (Beschreibung aus dem GitHub-Repository, E92) nennt jetzt alle
+  acht Launcher und steht in `README.de.md` auf Deutsch; unter den Bildern steht, dass sie aus Urheberrechtsgründen
+  erfundene Spiele zeigen. Danach `main` vorspulen (Wunsch des Nutzers: ganz 1.6.0 auf `main`), damit die Adressen
+  `…/blob/main/docs/manual.md` und `…/handbuch.md` gelten.
 
 ## Stand 2026-11-02: Prüfrunde 1.6.0 unter Windows, Korrekturen lokal (noch nicht hochgeladen)
 - **Behoben**, jede Korrektur mit einem Test, der ohne sie scheitert:

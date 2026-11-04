@@ -542,8 +542,9 @@ ConfigService wie die Einstellungen: Eine Änderung gilt ohne Neustart ab dem n�
 Puffer behält sein Ende. Der Countdown im Tooltip bleibt unverändert. Prüfung: G7.6 (Unit-Tests mit `RestartBuffer` im
 Namen, auch Einstellungen und Sitzungslogik über einen gemeinsamen ConfigService; `phase4-ui.ps1` stellt an einer
 Testinstanz 30:05 ein, prüft die Begrenzung auf 30:00, speichert 0:45 und prüft `restartBufferSeconds` = 45, auch nach
-einem Neustart); `phase5-readme.ps1` gleicht den Standard in der Einstellungstabelle der README und in jedem Absatz von
-„So funktioniert es“, „Bekannte Grenzen“ und „Fehlersuche“, der den Puffer nennt, mit dem Quelltext ab.
+einem Neustart); `phase5-readme.ps1` gleicht den Standard in der Einstellungstabelle der README (seit E96 der
+Handbücher) und in jedem Absatz von „So funktioniert es“, „Bekannte Grenzen“ und „Fehlersuche“, der den Puffer nennt,
+mit dem Quelltext ab.
 
 **E86 Spielsymbole aus lokalen Quellen und eigenes Symbol (Wunsch des Nutzers, G8.2/G8.3):** Die Messung an der
 Bibliothek des Nutzers (647 Spiele, 2026-10-10, `docs/recherche/symbole`) ergab 53 Spiele ohne gutes Symbol: 19 ohne
@@ -1720,4 +1721,53 @@ Installation implementieren (Deutsch = Deutsch, Englisch oder andere Sprache = E
   `phase6-name.ps1` beide Dateien. Ausgeliefert werden beide (auf Wunsch des Nutzers vom selben Tag): portabler Ordner
   und Paket der Setup-Datei enthalten `README.md` und `README.de.md` (`SetupBundle.PayloadEntryNames`,
   `SetupLocations.InstalledFiles`); eine Aktualisierung von einer Setup-Datei ohne `README.de.md` (bis 1.5.0) legt sie
-  dazu, das Entfernen löscht sie, ältere Setup-Dateien bleiben gültig.
+  dazu, das Entfernen löscht sie, ältere Setup-Dateien bleiben gültig. Seit 2026-11-04 (E96) steht dieser vollständige
+  Text als Handbuch in `docs/manual.md` und `docs/handbuch.md`, und `phase5-readme.ps1` prüft ihn dort; `README.md` und
+  `README.de.md` sind kurz und werden weiter ausgeliefert.
+
+**E96 README schlank, Handbuch in docs/ (Wunsch des Nutzers 2026-11-04):** „Bitte schauen, dass die README Texte auf
+Englisch sind, bitte ein paar Bilder der App mit einbauen. Die ganze README etwas schlanker gestalten, es wird extrem
+viel Text auf der GitHub Seite angezeigt.“ Die README ist die Startseite des Repositorys auf GitHub; dort stand bisher
+das ganze Handbuch (rund 960 Zeilen).
+- Aufteilung: Der vollständige Text der bisherigen READMEs steht als Handbuch in `docs/manual.md` (englisch) und
+  `docs/handbuch.md` (deutsch). Geändert sind nur Titel und Einleitung (Verweise auf die README und das Handbuch der
+  anderen Sprache), der Verweis auf `../LICENSE`, der Satz zur README im Programmordner (jetzt ein kurzer Überblick mit
+  Verweis auf das Handbuch im Netz) und in der Einleitung der Netzzugriff: Dort fehlte SteamGridDB, das mit eigenem
+  API-Schlüssel ebenfalls ins Netz geht (E93; im Abschnitt „Anti-Cheat“ stand es schon richtig).
+- `README.md` (englisch) und `README.de.md` (deutsch) sind kurz, je rund 120 Zeilen: Titel und Einleitung aus dem
+  GitHub-Repository (E92), ein großes Bildschirmfoto, was HDRpilot macht, die Funktionen als kurze Liste, vier weitere
+  Bildschirmfotos, Herunterladen und Installieren samt SmartScreen, Aktualisieren und Entfernen, ein Schnellstart in
+  fünf Schritten, Voraussetzungen, Datenschutz und Netz (was wann ins Netz geht: PCGamingWiki, abschaltbar, und
+  SteamGridDB nur mit eigenem Schlüssel), Verweise auf die Abschnitte des Handbuchs und die Lizenz. Jede Aussage ist
+  gegen Handbuch und Code geprüft; fett gesetzt ist nur, was die Oberfläche derselben Sprache so zeigt. Einen
+  Setup-Dateinamen mit Version nennen die READMEs nicht (`HDRpilot-Setup-<version>.exe`), damit sie mit jeder Version
+  stimmen.
+- Bildschirmfotos: aus Urheberrechtsgründen aus einer Demo-Bibliothek mit erfundenen Spielen und erzeugten Bildern
+  (`tools/readme-screenshots.ps1`), ohne echte Spiele und ohne Bilder aus Launchern oder von SteamGridDB, abgelegt in
+  `docs/images/`. Jede README nennt alle Bilddateien an einer Stelle (Verweisdefinitionen am Ende), damit Namen leicht
+  zu ändern sind. IDs und Installationsordner sind ebenfalls erfunden, alle unter `D:\Demo Library\…`, nie unter den
+  üblichen Ordnernamen der Launcher: Die gibt es auf echten Rechnern, und das Bild „Colors follow the game“ zeigt den
+  Installationsordner. `publish-check.ps1` prüft dafür das Skript, die Pixel kann es nicht lesen (Fund der Prüfung
+  2026-11-04: Die erste Fassung nutzte zwei echte Installationsordner des Prüfrechners, einer stand im Bild).
+  Unter den Bildern steht der Hinweis darauf (Wunsch des Nutzers 2026-11-04).
+- Erste Zeile (Kurzbeschreibung aus dem GitHub-Repository, E92): nennt seit 2026-11-04 alle acht Launcher (Steam, Epic
+  Games, Xbox/Game Pass, GOG, Ubisoft Connect, EA app, Battle.net, Quiver Launcher) wie die Liste der Funktionen; in
+  `README.de.md` steht sie auf Deutsch (beides Wunsch des Nutzers). Die Beschreibung im Feld „About“ des Repositorys
+  ist davon unberührt.
+- Auslieferung unverändert: Setup-Datei und Ordner ohne Installation enthalten weiter `README.md` und `README.de.md`
+  (jetzt die kurzen), `LICENSE`, die Lizenzhinweise und die Kommandozeile; das Handbuch wird nicht ausgeliefert. In der
+  installierten Kopie gehen Bilder und relative Verweise nicht, deshalb nennt jede README das Handbuch zusätzlich mit
+  seiner Adresse auf GitHub (`https://github.com/DanteGE/HDRpilot/blob/main/docs/manual.md` bzw. `…/handbuch.md`;
+  erreichbar, sobald `main` diesen Stand hat). Setup, Tests und Gates hängen nur an den Dateinamen, nicht an Inhalt
+  oder Größe der READMEs (durchgesehen: `SetupBundle`, `SetupLocations`, die App-Tests der Setup-Engine,
+  `tools/publish.ps1`, `phase5-publish.ps1`, `Phase7Common.ps1`, `phase7-setup.ps1`, `phase7-setup-ui.ps1`).
+- Prüfung (G5.2): `phase5-readme.ps1` prüft die Handbücher so tief wie bisher die READMEs (Abschnitte, Schalter, Hilfe,
+  Standardwerte, Ablageorte, Bezeichnungen, Setup, Neustart-Puffer; Gegenproben mit 15 und 3 eingebauten Fehlern je
+  Sprache und über Kreuz), dazu ihre Verweise, Anker und Pflichtverweise (Gegenprobe mit 4 eingebauten Fehlern je
+  Sprache). Die kurzen READMEs prüft es leicht: Pflichtabschnitte, höchstens 200 Zeilen, mindestens drei Bilder, jedes
+  relative Verweis- und Bildziel vorhanden (Bilder als PNG, Anker wie bei GitHub), Online-Verweise auf dieses
+  Repository zeigen auf vorhandene Dateien, Pflichtverweise (Handbuch, andere Sprache, Handbuch im Netz, `LICENSE`,
+  Releases), fett gesetzte Bezeichnungen wie in den resx derselben Sprache, ein genannter Setup-Dateiname passt zur
+  Version, in `README.md` keine deutsche Überschrift. Gegenproben: 10 bzw. 9 eingebaute Fehler, jede Überschrift der
+  deutschen README gilt als deutsch, und die deutsche README scheitert gegen die englischen Texte. `phase6-name.ps1`
+  prüft auch die Handbücher auf Reste von „HdrPilot“.

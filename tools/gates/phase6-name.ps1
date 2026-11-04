@@ -1,6 +1,6 @@
 ﻿# Gate G6.4: Produktname "HDRpilot" überall sichtbar, keine sichtbaren Reste "HdrPilot".
 # Geprüft: EXE-Name und Produktname des Builds, alle resx-Werte, Texte in XAML, Zeichenketten im C#-Code (ohne interne
-# Namen: Einzelinstanz, Ereignisse, Fensterklassen, Verschlüsselungs-Kennung, Symboldatei), README, Kommandozeilen-
+# Namen: Einzelinstanz, Ereignisse, Fensterklassen, Verschlüsselungs-Kennung, Symboldatei), README und Handbücher, Kommandozeilen-
 # Hilfe, Kopf der Lizenzhinweise. Gegenprobe: die Suche findet einen eingebauten Rest.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
@@ -60,8 +60,9 @@ foreach ($f in Get-ChildItem (Join-Path $root 'src') -Recurse -Filter *.cs | Whe
 }
 Check ($csHits.Count -eq 0) ("C#-Zeichenketten ohne 'HdrPilot' ({0} Reste) {1}" -f $csHits.Count, ($csHits | Select-Object -First 3) -join ' | ')
 
-# 5. README englisch und deutsch (E95; erlaubt: Projektdatei, Hinweis auf Namensräume und auf die alten Ordner)
-foreach ($readmeName in 'README.md', 'README.de.md') {
+# 5. README englisch und deutsch (E95) und, seit sie kurz sind, die Handbücher mit dem vollständigen Text (E96);
+# erlaubt: Projektdatei, Hinweis auf Namensräume und auf die alten Ordner
+foreach ($readmeName in 'README.md', 'README.de.md', 'docs\manual.md', 'docs\handbuch.md') {
     $readme = [IO.File]::ReadAllText((Join-Path $root $readmeName), [Text.Encoding]::UTF8)
     $readmeClean = $readme.Replace('HdrPilot.slnx', '').Replace('`HdrPilot.*`', '').Replace('Ordner `HdrPilot`', '').Replace('`HdrPilot` folders', '')
     $readmeHits = Find-Old $readmeClean

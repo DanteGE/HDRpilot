@@ -1,6 +1,6 @@
 namespace HdrPilot.Cli;
 
-/// <summary>Exit-Codes der Kommandozeile. Dokumentiert in README und `hdrpilot help`.</summary>
+/// <summary>Exit-Codes der Kommandozeile. Dokumentiert im Handbuch (docs/manual.md, docs/handbuch.md) und in `hdrpilot help`.</summary>
 public static class ExitCodes
 {
     public const int Ok = 0;

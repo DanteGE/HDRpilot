@@ -6,6 +6,12 @@
 # nennt (E85). Gegenprobe: eine absichtlich verfälschte README muss genau die eingebauten Fehler liefern.
 # Seit 2026-10-27 (E95) zwei Fassungen: README.de.md gegen die neutralen (deutschen) resx und die deutsche Hilfe,
 # README.md gegen die .en.resx und die englische Hilfe, jede mit eigenen Abschnittsnamen und eigenen Gegenproben.
+# Seit 2026-11-04 (E96) steht der vollständige Text in den Handbüchern: Die Prüfung oben läuft gegen docs/handbuch.md
+# (deutsch) und docs/manual.md (englisch), dazu deren Verweise und Anker. README.md und README.de.md sind kurz und
+# bekommen eine leichte Prüfung: Pflichtabschnitte, höchstens 200 Zeilen, jedes relative Verweis- und Bildziel
+# vorhanden (Bilder als PNG, Anker in den Handbüchern), Pflichtverweise auf Handbuch, andere Sprache, Lizenz und Releases
+# samt Online-Verweis auf das Handbuch, fett gesetzte Bezeichnungen wie in den resx derselben Sprache, keine deutschen
+# Überschriften in README.md; jede mit eigener Gegenprobe.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $cliExe = Join-Path $root 'src\HdrPilot.Cli\bin\Debug\net10.0-windows\hdrpilot.exe'
@@ -96,12 +102,13 @@ function Read-CliHelp([string]$language) {
     return [pscustomobject]@{ Text = $text; Exit = $exit; Usage = $usage; ExitPairs = $pairs }
 }
 
-# Sprachfassungen: Datei, Texte, Hilfe und die Wörter, an denen die Prüfung Abschnitte und Fakten erkennt
+# Sprachfassungen der Handbücher (E96, vorher der READMEs): Datei, Texte, Hilfe, die Wörter, an denen die Prüfung
+# Abschnitte und Fakten erkennt, und die Pflichtverweise (Rückweg zur README und zum Handbuch der anderen Sprache)
 $german = Read-UiLabels ''
 $english = Read-UiLabels '.en'
 $profiles = @(
     [pscustomobject]@{
-        Name = 'README.de.md'; Language = 'de'; Ui = $german; Help = (Read-CliHelp 'de')
+        Name = 'docs/handbuch.md'; Language = 'de'; Ui = $german; Help = (Read-CliHelp 'de'); Required = @('../README.de.md', 'manual.md')
         Sections = @('Voraussetzungen', 'Einrichtung', 'Bedienung', 'So funktioniert es', 'Speicherorte', 'Befehlszeile', 'Bekannte Grenzen', 'Fehlersuche', 'Entfernen')
         CommandLine = 'Befehlszeile'; SetupHeading = 'Setup-Datei und Entfernen'; ExitCodesLabel = 'Exit-Codes:'; QuietUninstall = 'Entfernen'
         PollRow = "| Abfrageintervall | Wie oft nach Spielstarts gesehen wird | $($defaults.Poll) ms |"; GraceFact = "Nachlaufzeit ($($defaults.Grace) s)"
@@ -111,7 +118,7 @@ $profiles = @(
         UiSections = 'Einrichtung|Bedienung|Entfernen'; SettingsHeading = 'Einstellungen'; SettingsHeader = 'Einstellung'; AdvancedSuffix = ' (Erweitert)'
     },
     [pscustomobject]@{
-        Name = 'README.md'; Language = 'en'; Ui = $english; Help = (Read-CliHelp 'en')
+        Name = 'docs/manual.md'; Language = 'en'; Ui = $english; Help = (Read-CliHelp 'en'); Required = @('../README.md', 'handbuch.md')
         Sections = @('Requirements', 'Installation', 'Usage', 'How it works', 'File locations', 'Command line', 'Known limitations', 'Troubleshooting', 'Uninstalling')
         CommandLine = 'Command line'; SetupHeading = 'Setup file and uninstall'; ExitCodesLabel = 'Exit codes:'; QuietUninstall = 'Uninstall'
         PollRow = "| Polling interval | How often HDRpilot checks for game launches | $($defaults.Poll) ms |"; GraceFact = "grace period ($($defaults.Grace) s)"
@@ -134,7 +141,7 @@ Check ($setupSwitches.Count -ge 8 -and $setupExitCodes.Count -ge 7) ("Setup-Scha
 Check ($directUninstallCodes.Count -eq 3) ("Stilles Entfernen, Exit-Codes direkt vom ersten Aufruf: {0}" -f ($directUninstallCodes -join ' '))
 Check ($programDir -eq '%LOCALAPPDATA%\Programs\HDRpilot' -and $uninstallKey -like 'HKCU\Software\*\Uninstall\HDRpilot' -and $setupLog -like '%TEMP%\*.log') ("Setup-Orte: {0}, {1}, {2}, {3}" -f $setupFile, $programDir, $uninstallKey, $setupLog)
 
-# --- Prüfung einer README in einer Sprachfassung, liefert die Liste der Probleme (jedes einmal) ---
+# --- Prüfung eines Handbuchs (bis E96 der README) in einer Sprachfassung, liefert die Liste der Probleme (jedes einmal) ---
 function Test-Readme([string]$text, $p) {
     $problems = New-Object System.Collections.ArrayList
     $flat = Normalize $text
@@ -263,14 +270,114 @@ function Get-BrokenBuffer([string]$readme, $p) {
     return [pscustomobject]@{ Text = $broken; Expected = $expected; Valid = ($broken -match [regex]::Escape($removed) -and $broken -notmatch [regex]::Escape($old)) }
 }
 
+# --- Verweise (E96): relative Ziele samt Bildern und Ankern, Verweise auf Bildziele, Online-Verweise auf dieses
+# Repository. Code-Blöcke, Code-Spannen und HTML-Kommentare enthalten keine Verweise. ---
+$repoUrl = 'https://github.com/DanteGE/HDRpilot'
+$rootPrefix = $root.TrimEnd('\') + '\'
+function Remove-Fences([string]$text) {
+    $t = [regex]::Replace($text, '(?ms)^[ \t]*```.*?^[ \t]*```[^\r\n]*', '')
+    return [regex]::Replace($t, '(?s)<!--.*?-->', '')
+}
+function Remove-Code([string]$text) { [regex]::Replace((Remove-Fences $text), '`[^`\r\n]*`', '') }
+# Überschriften ohne Code-Blöcke; Code-Spannen behalten ihren Text (wie bei GitHub)
+function Get-Headings([string]$text) { @([regex]::Matches(((Remove-Fences $text) -replace '`', ''), '(?m)^#{1,6}[ \t]+(.+?)[ \t]*\r?$') | ForEach-Object { $_.Groups[1].Value }) }
+# Anker wie GitHub: klein, ohne Satzzeichen (außer - und _), Leerzeichen zu -, Wiederholungen mit -1, -2 …
+function Get-Anchors([string]$text) {
+    $set = New-Object System.Collections.Generic.HashSet[string]
+    $seen = @{}
+    foreach ($m in [regex]::Matches(((Remove-Fences $text) -replace '`', ''), '(?m)^#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*\r?$')) {
+        $slug = ([regex]::Replace($m.Groups[1].Value.Trim().ToLowerInvariant(), '[^\p{L}\p{Nd}\s_-]', '')) -replace '\s', '-'
+        if ($seen.ContainsKey($slug)) { $seen[$slug]++; $slug = "$slug-$($seen[$slug])" } else { $seen[$slug] = 0 }
+        [void]$set.Add($slug)
+    }
+    return ,$set
+}
+function Get-Links([string]$text) {
+    $t = Remove-Code $text
+    $targets = New-Object System.Collections.ArrayList
+    $images = New-Object System.Collections.ArrayList
+    $undefined = New-Object System.Collections.ArrayList
+    foreach ($m in [regex]::Matches($t, '(!?)\[[^\]\r\n]*\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)')) {
+        [void]$targets.Add($m.Groups[2].Value)
+        if ($m.Groups[1].Value) { [void]$images.Add($m.Groups[2].Value) }
+    }
+    $definitions = @{}
+    foreach ($m in [regex]::Matches($t, '(?m)^ {0,3}\[([^\]\r\n]+)\]:[ \t]*<?([^\s>]+)>?')) {
+        $definitions[$m.Groups[1].Value.ToLowerInvariant()] = $m.Groups[2].Value
+        [void]$targets.Add($m.Groups[2].Value)
+    }
+    foreach ($m in [regex]::Matches($t, '(!?)\[[^\]\r\n]*\]\[([^\]\r\n]+)\]')) {
+        $id = $m.Groups[2].Value.ToLowerInvariant()
+        if (-not $definitions.ContainsKey($id)) { [void]$undefined.Add($m.Groups[2].Value) }
+        elseif ($m.Groups[1].Value) { [void]$images.Add($definitions[$id]) }
+    }
+    foreach ($m in [regex]::Matches($t, '<(https?://[^>\s]+)>|(?:src|href)="([^"]+)"')) {
+        [void]$targets.Add($(if ($m.Groups[1].Success) { $m.Groups[1].Value } else { $m.Groups[2].Value }))
+    }
+    return [pscustomobject]@{ Targets = @($targets | Select-Object -Unique); Images = @($images); Undefined = @($undefined | Select-Object -Unique) }
+}
+# Ziel eines relativen Verweises als vollständiger Pfad und als Anzeige relativ zum Repository (mit /)
+function Resolve-Target([string]$fromFile, [string]$path) {
+    $full = [IO.Path]::GetFullPath((Join-Path (Split-Path (Join-Path $root $fromFile) -Parent) ([uri]::UnescapeDataString($path) -replace '/', '\')))
+    $inside = $full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)
+    return [pscustomobject]@{ Full = $full; Inside = $inside; Shown = $(if ($inside) { $full.Substring($rootPrefix.Length) -replace '\\', '/' } else { $path }) }
+}
+function Test-Links([string]$text, [string]$file) {
+    $problems = New-Object System.Collections.ArrayList
+    $links = Get-Links $text
+    foreach ($id in $links.Undefined) { [void]$problems.Add("Bildverweis ohne Ziel: $id") }
+    foreach ($target in $links.Targets) {
+        if ($target -match '^(?i)https?://') {
+            $online = [regex]::Match($target, '^' + [regex]::Escape($repoUrl) + '/(?:blob|tree)/main/([^#?]+)')
+            if ($online.Success -and -not (Test-Path -LiteralPath (Join-Path $root ([uri]::UnescapeDataString($online.Groups[1].Value) -replace '/', '\')))) {
+                [void]$problems.Add("Online-Verweis auf eine fehlende Datei: $($online.Groups[1].Value)")
+            }
+            continue
+        }
+        if ($target -match '^(?i)[a-z][a-z0-9+.-]*:') { continue } # mailto: und Ähnliches
+        $path, $anchor = $target -split '#', 2
+        if ($path) {
+            $resolved = Resolve-Target $file $path
+            if (-not $resolved.Inside -or -not (Test-Path -LiteralPath $resolved.Full)) { [void]$problems.Add("Verweisziel fehlt: $($resolved.Shown)"); continue }
+            $anchorText = if ($anchor -and $resolved.Full -like '*.md') { [IO.File]::ReadAllText($resolved.Full, [Text.Encoding]::UTF8) } else { $null }
+            $shown = $resolved.Shown
+        } else {
+            $anchorText = $text; $shown = $file
+        }
+        if ($null -ne $anchorText -and $anchor -and -not (Get-Anchors $anchorText).Contains($anchor.ToLowerInvariant())) { [void]$problems.Add("Anker fehlt: $shown#$anchor") }
+    }
+    foreach ($image in $links.Images) {
+        if ($image -match '^(?i)[a-z][a-z0-9+.-]*:' -or $image -notmatch '(?i)\.png(#.*)?$') { continue }
+        $resolved = Resolve-Target $file (($image -split '#', 2)[0])
+        if (-not ($resolved.Inside -and (Test-Path -LiteralPath $resolved.Full -PathType Leaf))) { continue } # schon als fehlendes Ziel gemeldet
+        $head = New-Object byte[] 8
+        $stream = [IO.File]::OpenRead($resolved.Full)
+        try { $read = $stream.Read($head, 0, 8) } finally { $stream.Dispose() }
+        if ($read -ne 8 -or (($head | ForEach-Object { $_ }) -join ',') -ne '137,80,78,71,13,10,26,10') { [void]$problems.Add("Bild ist kein PNG: $($resolved.Shown)") }
+    }
+    return ,@($problems | Select-Object -Unique)
+}
+# Pflichtverweise: ein Verweis (ohne Anker) mit genau diesem Ziel muss vorkommen
+function Test-Required([string]$text, [string[]]$required) {
+    $present = @((Get-Links $text).Targets | ForEach-Object { ($_ -split '#', 2)[0] })
+    return ,@($required | Where-Object { $_ -notin $present } | ForEach-Object { "Pflichtverweis fehlt: $_" })
+}
+# Listen der Prüffunktionen (je ein Feld als ein Objekt geliefert) zu einer Liste zusammenfügen
+function Join-Problems([object[]]$first, [object[]]$second) { return ,@(@($first) + @($second) | Where-Object { $_ }) }
+
 foreach ($p in $profiles) {
-    Note "--- $($p.Name) ($($p.Language))"
+    Note "--- $($p.Name) ($($p.Language), Handbuch)"
     $readmePath = Join-Path $root $p.Name
     Check (Test-Path $readmePath) "$($p.Name) vorhanden"
     $readme = [IO.File]::ReadAllText($readmePath, [Text.Encoding]::UTF8)
     $problems = Test-Readme $readme $p
     foreach ($x in $problems) { Note "  - $x" }
     Check ($problems.Count -eq 0) ("{0} stimmt mit dem Quelltext überein ({1} Probleme)" -f $p.Name, $problems.Count)
+
+    # Verweise nach dem Umzug nach docs/ (E96): LICENSE, README, anderes Handbuch, Anker
+    $linkProblems = Join-Problems (Test-Links $readme $p.Name) (Test-Required $readme $p.Required)
+    foreach ($x in $linkProblems) { Note "  - $x" }
+    Check ($linkProblems.Count -eq 0) ("{0}: Verweise, Anker und Pflichtverweise ({1}) stimmen ({2} Probleme)" -f $p.Name, ($p.Required -join ', '), $linkProblems.Count)
 
     $b = Get-Broken $readme $p
     $found = Test-Readme $b.Text $p
@@ -281,11 +388,116 @@ foreach ($p in $profiles) {
     $foundBuffer = Test-Readme $bb.Text $p
     $missedBuffer = @($bb.Expected | Where-Object { $_ -notin $foundBuffer })
     Check ($missedBuffer.Count -eq 0 -and $foundBuffer.Count -eq $bb.Expected.Count -and $bb.Valid) ("{0} Gegenprobe Neustart-Puffer im Fließtext: {1} von {2} erkannt, {3} Meldungen insgesamt{4}" -f $p.Name, ($bb.Expected.Count - $missedBuffer.Count), $bb.Expected.Count, $foundBuffer.Count, $(if ($missedBuffer) { '; übersehen: ' + ($missedBuffer -join ' | ') } else { '' }))
+
+    # Gegenprobe Verweise: LICENSE und README wie vor dem Umzug (ohne ../), Anker im anderen Handbuch, den es nicht gibt
+    $brokenLinks = $readme.Replace('](../LICENSE)', '](LICENSE)').Replace("]($($p.Required[0]))", "]($($p.Required[0].Substring(3)))").Replace("]($($p.Required[1]))", "]($($p.Required[1])#gibt-es-nicht)")
+    $expectedLinks = @('Verweisziel fehlt: docs/LICENSE', "Verweisziel fehlt: docs/$($p.Required[0].Substring(3))", "Pflichtverweis fehlt: $($p.Required[0])", "Anker fehlt: docs/$($p.Required[1])#gibt-es-nicht")
+    $foundLinks = Join-Problems (Test-Links $brokenLinks $p.Name) (Test-Required $brokenLinks $p.Required)
+    $missedLinks = @($expectedLinks | Where-Object { $_ -notin $foundLinks })
+    Check ($missedLinks.Count -eq 0 -and $foundLinks.Count -eq $expectedLinks.Count) ("{0} Gegenprobe Verweise: {1} von {2} erkannt, {3} Meldungen insgesamt{4}" -f $p.Name, ($expectedLinks.Count - $missedLinks.Count), $expectedLinks.Count, $foundLinks.Count, $(if ($missedLinks) { '; übersehen: ' + ($missedLinks -join ' | ') } else { '' }))
 }
 
-# Gegenprobe über Kreuz: die deutsche README gegen die englische Fassung muss scheitern (die Prüfung hängt an der Sprache)
-$crossProblems = Test-Readme ([IO.File]::ReadAllText((Join-Path $root 'README.de.md'), [Text.Encoding]::UTF8)) $profiles[1]
-Check ($crossProblems.Count -gt 0) ("Gegenprobe über Kreuz: README.de.md gegen die englischen Texte liefert {0} Probleme" -f $crossProblems.Count)
+# Gegenprobe über Kreuz: das deutsche Handbuch gegen die englische Fassung muss scheitern (die Prüfung hängt an der Sprache)
+$crossProblems = Test-Readme ([IO.File]::ReadAllText((Join-Path $root 'docs/handbuch.md'), [Text.Encoding]::UTF8)) $profiles[1]
+Check ($crossProblems.Count -gt 0) ("Gegenprobe über Kreuz: docs/handbuch.md gegen die englischen Texte liefert {0} Probleme" -f $crossProblems.Count)
+
+# --- Kurze READMEs (E96): Startseite auf GitHub und installierte Kopie ---
+$maxShortLines = 200
+# Wörter, an denen eine deutsche Überschrift zu erkennen ist (dazu Umlaute und ß); keine, die auch englisch vorkommen
+# („was“, „die“, „so“, „mit“ wie MIT-Lizenz)
+$germanHeadingWords = 'und|oder|ohne|für|der|das|dem|den|des|ein|eine|von|zum|zur|auf|aus|macht|funktioniert|funktionen|bilder|bildschirmfotos|herunterladen|installieren|schnellstart|voraussetzungen|datenschutz|netz|dokumentation|lizenz|lizenzen|fremdbestandteilen|einrichtung|bedienung|speicherorte|befehlszeile|bekannte|grenzen|fehlersuche|entfernen|aktualisieren|spielebibliothek|infobereich|einstellungen|quelltext|bauen|handbuch|liste'
+function Get-LineCount([string]$text) { @($text.TrimEnd("`r", "`n") -split '\r?\n').Count }
+function Test-GermanHeading([string]$heading) { $heading -match '[äöüÄÖÜß]' -or $heading -match "(?i)\b($germanHeadingWords)\b" }
+
+$shortProfiles = @(
+    [pscustomobject]@{
+        Name = 'README.md'; Language = 'en'; Ui = $english; EnglishHeadings = $true
+        Sections = @('What it does', 'Features', 'Screenshots', 'Download and install', 'Quick start', 'Requirements', 'Privacy and network', 'Documentation', 'License')
+        Required = @('docs/manual.md', 'README.de.md', "$repoUrl/blob/main/docs/manual.md", 'LICENSE', "$repoUrl/releases")
+    },
+    [pscustomobject]@{
+        Name = 'README.de.md'; Language = 'de'; Ui = $german; EnglishHeadings = $false
+        Sections = @('Was es macht', 'Funktionen', 'Bildschirmfotos', 'Herunterladen und installieren', 'Schnellstart', 'Voraussetzungen', 'Datenschutz und Netz', 'Dokumentation', 'Lizenz')
+        Required = @('docs/handbuch.md', 'README.md', "$repoUrl/blob/main/docs/handbuch.md", 'LICENSE', "$repoUrl/releases")
+    }
+)
+
+function Test-ShortReadme([string]$text, $sp) {
+    $problems = New-Object System.Collections.ArrayList
+    if ($text -cnotmatch '^# HDRpilot\r?\n') { [void]$problems.Add('Titel fehlt: # HDRpilot') }
+    foreach ($section in $sp.Sections) {
+        if ($text -notmatch "(?m)^## $([regex]::Escape($section))\s*$") { [void]$problems.Add("Abschnitt fehlt: $section") }
+    }
+    foreach ($word in 'TODO', 'FIXME', 'TBD', 'XXX') {
+        if ($text -cmatch "\b$word\b") { [void]$problems.Add("Platzhalter: $word") }
+    }
+    $lines = Get-LineCount $text
+    if ($lines -gt $maxShortLines) { [void]$problems.Add("Zu lang: $lines Zeilen (höchstens $maxShortLines)") }
+    $images = @((Get-Links $text).Images)
+    if ($images.Count -lt 3) { [void]$problems.Add("Zu wenige Bildschirmfotos: $($images.Count)") }
+    foreach ($x in (Test-Links $text $sp.Name)) { [void]$problems.Add($x) }
+    foreach ($x in (Test-Required $text $sp.Required)) { [void]$problems.Add($x) }
+    # Name der Setup-Datei, falls genannt, wie die Produktversion
+    foreach ($m in [regex]::Matches($text, 'HDRpilot-Setup-\d+\.\d+\.\d+\.exe')) {
+        if ($m.Value -ne $setupFile) { [void]$problems.Add("Setup-Datei weicht ab: $($m.Value) statt $setupFile") }
+    }
+    # Fett gesetzt ist nur, was die Oberfläche derselben Sprache so zeigt (Absatztitel mit Doppelpunkt ausgenommen)
+    foreach ($m in [regex]::Matches((Remove-Code $text), '\*\*([^*]+)\*\*')) {
+        $label = Normalize $m.Groups[1].Value
+        if ($label.EndsWith(':')) { continue }
+        foreach ($part in @($label -split ' / ')) {
+            if (-not $sp.Ui.Labels.Contains($part)) { [void]$problems.Add("Bezeichnung nicht in der Oberfläche: $part") }
+        }
+    }
+    if ($sp.EnglishHeadings) {
+        foreach ($h in (Get-Headings $text)) { if (Test-GermanHeading $h) { [void]$problems.Add("Deutsch in einer Überschrift: $h") } }
+    }
+    return ,@($problems | Select-Object -Unique)
+}
+
+# Gegenprobe je Sprache: Bezeichnung, Abschnitt (in README.md deutsch benannt), fehlendes Bild, Bildverweis ohne Ziel,
+# Verweis auf die andere Sprache, Online-Verweis auf das Handbuch und ein Anker, den es im Handbuch nicht gibt
+function Get-BrokenShort([string]$text, $sp) {
+    if ($sp.Language -eq 'de') {
+        $broken = $text.Replace('**HDR automatisch**', '**HDR beim Start**').Replace('## Schnellstart', '## Loslegen').Replace('(README.md)', '(README.md.bak)')
+        $broken = $broken.Replace('blob/main/docs/handbuch.md', 'blob/main/docs/handbuh.md').Replace('docs/handbuch.md#fehlersuche', 'docs/handbuch.md#troubleshooting')
+        $expected = @('Bezeichnung nicht in der Oberfläche: HDR beim Start', 'Abschnitt fehlt: Schnellstart', 'Verweisziel fehlt: README.md.bak', 'Pflichtverweis fehlt: README.md',
+                      'Online-Verweis auf eine fehlende Datei: docs/handbuh.md', "Pflichtverweis fehlt: $repoUrl/blob/main/docs/handbuch.md", 'Anker fehlt: docs/handbuch.md#troubleshooting')
+    } else {
+        $broken = $text.Replace('**HDR on launch**', '**HDR on start**').Replace('## Quick start', '## Schnellstart').Replace('(README.de.md)', '(README.de.md.bak)')
+        $broken = $broken.Replace('blob/main/docs/manual.md', 'blob/main/docs/manuel.md').Replace('docs/manual.md#troubleshooting', 'docs/manual.md#fehlersuche')
+        $expected = @('Bezeichnung nicht in der Oberfläche: HDR on start', 'Abschnitt fehlt: Quick start', 'Deutsch in einer Überschrift: Schnellstart', 'Verweisziel fehlt: README.de.md.bak', 'Pflichtverweis fehlt: README.de.md',
+                      'Online-Verweis auf eine fehlende Datei: docs/manuel.md', "Pflichtverweis fehlt: $repoUrl/blob/main/docs/manual.md", 'Anker fehlt: docs/manual.md#fehlersuche')
+    }
+    $broken = $broken.Replace('docs/images/library-shelf.png', 'docs/images/library-shelve.png').Replace('][shot-grid]', '][shot-gird]')
+    $expected += @('Verweisziel fehlt: docs/images/library-shelve.png', 'Bildverweis ohne Ziel: shot-gird')
+    return [pscustomobject]@{ Text = $broken; Expected = $expected }
+}
+
+foreach ($sp in $shortProfiles) {
+    Note "--- $($sp.Name) ($($sp.Language), kurz)"
+    $shortPath = Join-Path $root $sp.Name
+    Check (Test-Path $shortPath) "$($sp.Name) vorhanden"
+    $short = [IO.File]::ReadAllText($shortPath, [Text.Encoding]::UTF8)
+    $shortProblems = Test-ShortReadme $short $sp
+    foreach ($x in $shortProblems) { Note "  - $x" }
+    $shortLinks = Get-Links $short
+    Check ($shortProblems.Count -eq 0) ("{0}: {1} Zeilen, {2} Abschnitte, {3} Bilder, {4} Verweisziele, Pflichtverweise und Bezeichnungen stimmen ({5} Probleme)" -f $sp.Name, (Get-LineCount $short), $sp.Sections.Count, $shortLinks.Images.Count, $shortLinks.Targets.Count, $shortProblems.Count)
+
+    $bs = Get-BrokenShort $short $sp
+    $foundShort = Test-ShortReadme $bs.Text $sp
+    $missedShort = @($bs.Expected | Where-Object { $_ -notin $foundShort })
+    Check ($missedShort.Count -eq 0 -and $foundShort.Count -eq $bs.Expected.Count) ("{0} Gegenprobe: {1} von {2} eingebauten Fehlern erkannt, {3} Meldungen insgesamt{4}" -f $sp.Name, ($bs.Expected.Count - $missedShort.Count), $bs.Expected.Count, $foundShort.Count, $(if ($missedShort) { '; übersehen: ' + ($missedShort -join ' | ') } else { '' }))
+}
+
+# Gegenproben der leichten Prüfung: Jede Überschrift der deutschen README gilt als deutsch (sonst fände die Prüfung der
+# englischen nichts), und die deutsche README scheitert gegen die englischen Texte.
+$shortGerman = [IO.File]::ReadAllText((Join-Path $root 'README.de.md'), [Text.Encoding]::UTF8)
+$germanHeadings = @(Get-Headings $shortGerman | Where-Object { $_ -ne 'HDRpilot' })
+$notDetected = @($germanHeadings | Where-Object { -not (Test-GermanHeading $_) })
+Check ($germanHeadings.Count -ge $shortProfiles[1].Sections.Count -and $notDetected.Count -eq 0) ("Gegenprobe Überschriften: {0} von {1} Überschriften der README.de.md als deutsch erkannt{2}" -f ($germanHeadings.Count - $notDetected.Count), $germanHeadings.Count, $(if ($notDetected) { '; übersehen: ' + ($notDetected -join ' | ') } else { '' }))
+$shortCross = Test-ShortReadme $shortGerman $shortProfiles[0]
+Check ($shortCross.Count -gt 0) ("Gegenprobe über Kreuz: README.de.md gegen die englischen Texte liefert {0} Probleme" -f $shortCross.Count)
 
 if ($ok) { Write-Output 'PHASE5_README_OK'; exit 0 }
 Write-Output 'PHASE5_README_FAILED'

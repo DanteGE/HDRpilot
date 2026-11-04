@@ -9,6 +9,21 @@ $ok = $true
 function Check([bool]$cond, [string]$what) { if ($cond) { Note "ok   $what" } else { Note "FEHLER $what"; $script:ok = $false } }
 function Rect($el) { $el.Current.BoundingRectangle }
 
+# Die Testablage ist eine Kopie der echten Bibliothek und ändert sich mit ihr, darum kein fest eingetragenes Spiel: je
+# Quelle das erste installierte nach Namen mit einfachem Namen (nur Buchstaben, Ziffern und Leerzeichen, mindestens 6
+# Zeichen). Gibt es keins, sucht das Gate nichts und meldet einen klaren FEHLER.
+function Pick-Game($games, [string]$source) {
+    $game = @($games | Where-Object { $_.source -eq $source -and $_.isInstalled -and $_.name -match '^[A-Za-z0-9 ]{6,}$' } | Sort-Object name) | Select-Object -First 1
+    if ($game) { return [string]$game.name }
+    return ''
+}
+function Find-Game($search, $list, [string]$name) {
+    if (-not $name) { return $null }
+    Set-Text $search $name
+    Start-Sleep -Milliseconds 800
+    return Get-ListItems $list | Where-Object { $_.Current.Name.Contains($name) } | Select-Object -First 1
+}
+
 $cfg = New-TestConfig 'phase6-ui' -Import
 try {
     $app = Start-App $cfg @('--show')
@@ -20,11 +35,12 @@ try {
     $search = Find-Id $win 'SearchBox'
     $list = Find-Id $win 'GameList'
 
+    $games = @((Read-Config $cfg).games)
+
     # Steam-Spiel: Starten über Automatik, Steam-Knopf sichtbar
-    Set-Text $search 'Dying Light: The Beast'
-    Start-Sleep -Milliseconds 800
-    $item = Get-ListItems $list | Where-Object { $_.Current.Name -match 'Dying Light: The Beast' } | Select-Object -First 1
-    Check ($null -ne $item) 'Steam-Spiel gefunden'
+    $steamName = Pick-Game $games 'Steam'
+    $item = Find-Game $search $list $steamName
+    Check ($null -ne $item) ('Steam-Spiel gefunden ({0})' -f $(if ($steamName) { $steamName } else { 'keins mit einfachem Namen in der Testablage' }))
     if ($item) {
         Select-El $item
         $launch = Find-Id $win 'LaunchButton' 3000
@@ -35,15 +51,15 @@ try {
     }
 
     # GOG-Spiel: kein Steam-Knopf
-    Set-Text $search 'Cyberpunk 2077'
-    Start-Sleep -Milliseconds 800
-    $item = Get-ListItems $list | Where-Object { $_.Current.Name -match 'Cyberpunk 2077' } | Select-Object -First 1
+    $gogName = Pick-Game $games 'Gog'
+    $item = Find-Game $search $list $gogName
+    Check ($null -ne $item) ('GOG-Spiel gefunden ({0})' -f $(if ($gogName) { $gogName } else { 'keins mit einfachem Namen in der Testablage' }))
     if ($item) {
         Select-El $item
         Start-Sleep -Milliseconds 400
         $steam = Find-Id $win 'CopySteamLaunchOptionButton' 1500
         Check ($null -eq $steam -or $steam.Current.IsOffscreen) 'Kein Steam-Knopf bei GOG-Spiel'
-    } else { Check $false 'GOG-Spiel gefunden' }
+    }
     Set-Text $search ''
     Start-Sleep -Milliseconds 600
 

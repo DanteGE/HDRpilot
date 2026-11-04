@@ -41,15 +41,41 @@ function Read-Log([string]$cfg) {
     (Get-ChildItem (Join-Path $cfg 'logs') -Filter '*.log' -ErrorAction SilentlyContinue | ForEach-Object { Read-Shared $_.FullName }) -join "`n"
 }
 
+# Sichtbare Fenster der Testinstanz über Win32 statt über die Kinder des Desktops: UI-Automation fragte dafür jedes
+# sichtbare Fenster aller Programme ab. Antwortet eines davon langsam, dauerte jede Suche Sekunden (2026-11-04 rund 3,2 s
+# allein am Fenster eines anderen Programms; das Gate bemerkte den geschlossenen Dialog erst nach 4,8 bis 6 s) oder brach
+# mit einer Zeitüberschreitung der UI-Automation ab. Wie bei UI-Automation zählen nur sichtbare Fenster.
+Add-Type -Namespace HdrPilotGate -Name TopWindows -MemberDefinition @'
+private delegate bool EnumProc(IntPtr hwnd, IntPtr lParam);
+[DllImport("user32.dll")] private static extern bool EnumWindows(EnumProc callback, IntPtr lParam);
+[DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+[DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hwnd);
+public static IntPtr[] Of(int processId)
+{
+    var list = new System.Collections.Generic.List<IntPtr>();
+    EnumWindows((hwnd, lParam) =>
+    {
+        uint owner;
+        GetWindowThreadProcessId(hwnd, out owner);
+        if (owner == processId && IsWindowVisible(hwnd)) { list.Add(hwnd); }
+        return true;
+    }, IntPtr.Zero);
+    return list.ToArray();
+}
+'@
+
 function Find-Top([int]$processId, [string]$automationId, [int]$timeoutMs = 5000) {
-    $byPid = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::ProcessIdProperty, $processId)
     $byId = New-Object Windows.Automation.PropertyCondition([Windows.Automation.AutomationElement]::AutomationIdProperty, $automationId)
     $sw = [Diagnostics.Stopwatch]::StartNew()
     while ($sw.ElapsedMilliseconds -lt $timeoutMs) {
-        foreach ($top in $UiaRoot.FindAll([Windows.Automation.TreeScope]::Children, $byPid)) {
-            if ($top.Current.AutomationId -eq $automationId) { return $top }
-            $e = $top.FindFirst([Windows.Automation.TreeScope]::Descendants, $byId)
-            if ($e) { return $e }
+        foreach ($hwnd in [HdrPilotGate.TopWindows]::Of($processId)) {
+            # Ein Fenster, das gerade schließt, ist nicht mehr da (nur diese Ausnahme; jede andere bricht das Gate ab)
+            try {
+                $top = [Windows.Automation.AutomationElement]::FromHandle($hwnd)
+                if ($top.Current.AutomationId -eq $automationId) { return $top }
+                $e = $top.FindFirst([Windows.Automation.TreeScope]::Descendants, $byId)
+                if ($e) { return $e }
+            } catch [Windows.Automation.ElementNotAvailableException] { }
         }
         Start-Sleep -Milliseconds 100
     }
@@ -331,6 +357,11 @@ try {
     $count = (Fixture-Lines).Count
     Select-El (Results $dialog)[2]
     Invoke-El (Find-Id $dialog 'ArtworkApplyButton' 2000)
+    # Die Meldung steht nur 5 s (LibraryViewModel.StatusDuration): zuerst nach ihr schauen, danach nach geschlossenem Dialog
+    # und Ablage, die bleiben. 2026-11-04 bemerkte Find-Top den geschlossenen Dialog bei ausgelasteter Maschine erst 4,8 bis
+    # 4,9 s nach dem Schließen (Protokoll der Testinstanz), und die Meldung war danach schon wieder weg; die Suche nach der
+    # Meldung im Hauptfenster brauchte dabei unter 1 s.
+    Check (Wait-Until { $m = Find-Id $win 'StatusMessage' 500; $m -and (Res-Like $m.Current.Name 'LibraryStrings' 'Picker_Applied') } 15000) 'Statusleiste: Bilder übernommen'
     Check (Wait-Until { -not (Find-Top $app.Id 'ArtworkPickerDialog' 300) } 15000) '„Übernehmen“ schließt den Dialog'
     $cover = $null
     Check (Wait-Until { $g = Find-GameConfig (Read-Config $cfg) $nebelKey; $script:cover = if ($g -and $g.artwork) { [string]$g.artwork.cover } else { $null }; $script:cover -like 'custom:*-cover.jpg' } 8000) "Ablage: artwork.cover = $cover"
@@ -339,7 +370,6 @@ try {
     Check ($info -and $info.Width -eq 600 -and $info.Height -eq 900) ('Datei {0}: {1} × {2}' -f $coverFile, $(if ($info) { $info.Width }), $(if ($info) { $info.Height }))
     $full = @(New-Lines $count | Where-Object { $_ -notlike '* cdn2.steamgriddb.com /thumb/*' })
     Check ($full.Count -eq 1 -and $full[0] -like '* cdn2.steamgriddb.com /cover/fixture-3.png schluessel=nein') ('Genau ein volles Bild: {0}' -f ($full -join ' | '))
-    Check (Wait-Until { $m = Find-Id $win 'StatusMessage' 500; $m -and (Res-Like $m.Current.Name 'LibraryStrings' 'Picker_Applied') } 5000) 'Statusleiste: Bilder übernommen'
     $set = Open-Settings
     $statusText = if ($set) { Status-Text (Find-Id $set 'SteamGridDbStatus' 3000) } else { '' }
     Check ($statusText -like 'Automatisches Laden aus · letzte Suche*') ('Einstellungen: „{0}“' -f $statusText)
@@ -382,9 +412,10 @@ try {
     Check (Wait-Until { @(New-Lines $count | Where-Object { $_ -like '*/heroes/game/9102?*page=0*' }).Count -eq 1 } 10000) 'Wahl lädt heroes/game/9102 Seite 0'
     [void](Wait-Settled)
     Invoke-El (Find-Id $dialog 'ArtworkApplyButton' 2000)
+    # Wie in Abschnitt E: zuerst die Meldung (steht nur 5 s), danach geschlossener Dialog und Verzeichnis, die bleiben.
+    Check (Wait-Until { $m = Find-Id $win 'StatusMessage' 500; $m -and (Res-Like $m.Current.Name 'LibraryStrings' 'Picker_MatchRemembered') } 15000) 'Statusleiste: Spiel gemerkt'
     Check (Wait-Until { -not (Find-Top $app.Id 'ArtworkPickerDialog' 300) } 8000) '„Übernehmen“ ohne Bildwechsel schließt den Dialog'
     Check (Wait-Until { $t = Read-Shared $indexFile; $t -and ($e = ($t | ConvertFrom-Json).games.$nebelKey) -and $e.steamGridDb -and $e.steamGridDb.gameId -eq 9102 } 8000) 'art\index.json: gameId 9102 gemerkt'
-    Check (Wait-Until { $m = Find-Id $win 'StatusMessage' 500; $m -and (Res-Like $m.Current.Name 'LibraryStrings' 'Picker_MatchRemembered') } 5000) 'Statusleiste: Spiel gemerkt'
 
     $dialog = Open-Picker $win $kupfer
     Check ($null -ne $dialog) ('„Bild wählen…“ für {0} geöffnet' -f $kupfer)

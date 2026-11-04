@@ -3,7 +3,7 @@
 # Fenster dieser Prozess-ID, keine Maus- oder Tastatureingaben). Gemessen wird die Busy-Zeit der Grafik-Engines dieses
 # Prozesses über WMI (Win32_PerfRawData_GPUPerformanceCounters_GPUEngine, sprachunabhängig, mit Nachkommastellen; nur
 # ohne Rohdaten die ganzzahligen Prozente), je Probe die ausgelastetste Engine-Art (wie der Task-Manager), einmal pro
-# Sekunde.
+# Sekunde (im HDR-Moment alle 250 ms).
 #   Teil 1, ohne Bildschirmwerte prüfbar:
 #   - Gemessen wird erst, wenn das Laden der Bilder nach dem Öffnen fertig ist (Protokoll der Testinstanz auf Stufe Debug:
 #     „Bilder: nichts mehr in Arbeit.“ nach dem letzten „Bilder: Laden beginnt.“, seit 2 s unverändert).
@@ -14,7 +14,11 @@
 #   Teil 2, braucht den eingeschalteten Bildschirm:
 #   - Offenes, aktives Fenster in Ruhe (Dauer-Effekte laufen): Liste bei 1600×1000, Regal und Raster bei 3440×1440 (der
 #     größte bewegte Titelbereich): je Mittel unter 5 %, nie über 20 %
-#   - HDR-Moment (--test-hdr-moment, ohne HDR-Schaltung, mit heller Fassung): Spitze unter 30 %
+#   - HDR-Moment (--test-hdr-moment, ohne HDR-Schaltung, mit heller Fassung): Spitze in 1 s, Median über 3 Momente, unter
+#     35 % (Entscheidung des Nutzers 2026-11-04, E97). Spitze = höchste Last in einem beliebig liegenden Fenster von 1 s
+#     (Rohwerte alle 250 ms von kurz vor dem Auslösen bis 4 s danach, Fenster nach den Zeitstempeln der Zähler, Busy-Zeit
+#     zwischen zwei Rohwerten gleichmäßig verteilt); das Mittel über den Moment steht nur im Protokoll, ohne Grenze.
+#     Zwischen zwei Messungen 4,5 s Pause.
 #   Teil 3, ohne Bildschirm prüfbar:
 #   - Fenster geschlossen: nach 10 s Aufräumen (Bilder freigeben, index.json schreiben) 30 s lang CPU höchstens 0,5 % eines
 #     Kerns wie im Infobereich ohne Fenster, Handles höchstens +20 (mit Bildschirm auch: keine Grafiklast); der Leerlauf
@@ -24,6 +28,8 @@
 # meldet Exit-Code 1. Verliert das Testfenster während einer Messung in Teil 2 den Vordergrund (jemand arbeitet am PC),
 # wird es einmal neu aktiviert und die Messung wiederholt; bleibt es nicht aktiv, ebenso UMGEBUNG mit dem Prozess im
 # Vordergrund. Werte über den Grenzen bleiben FEHLER. Schaltet kein HDR, startet kein Spiel.
+# -ColorsFollowGame (G15.7): dieselbe Messung mit eingeschaltetem „Farben folgen dem Spiel“
+# (settings.appearance.colorsFollowGame in der Testablage).
 param(
     [int]$IdleSeconds = 20,
     [int]$QuietSeconds = 8,
@@ -33,13 +39,16 @@ param(
     [int]$WideHeight = 1440,
     [double]$MaxIdleMean = 5,
     [double]$MaxIdlePeak = 20,
-    [double]$MaxMomentPeak = 30,
+    [double]$MaxMomentPeak = 35,
+    [ValidateRange(1, 9)][int]$MomentRuns = 3,
+    [ValidateRange(0.5, 10)][double]$MomentSeconds = 2.5,
     [double]$MaxQuiet = 1,
     [double]$MaxPausedCpu = 1,
     [int]$LoadTimeoutSeconds = 60,
     [double]$MaxClosedCpu = 0.5,
     [int]$MaxClosedHandleGrowth = 20,
-    [switch]$SkipIdleGate
+    [switch]$SkipIdleGate,
+    [switch]$ColorsFollowGame
 )
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
 $ok = $true
@@ -97,6 +106,115 @@ function Gpu-Measure([int]$processId, [int]$seconds, [string]$label) {
     # Out-Host: sonst landete die Zeile im Rückgabewert der Funktion statt im Protokoll
     Note ("{0}: {1} Proben, Mittel {2:N2} %, Spitze {3:N2} % ({4})" -f $label, $values.Count, $mean, $peakAll, (($values | ForEach-Object { '{0:N1}' -f $_ }) -join ' ')) | Out-Host
     return [pscustomobject]@{ Mean = [double]$mean; Peak = [double]$peakAll }
+}
+
+# Anteil der ausgelastetsten Engine-Art zwischen zwei Rohwerten (wie in Gpu-Measure); 0 ohne gemeinsame Zeitspanne
+function Gpu-Share($from, $to) {
+    $peak = 0.0
+    foreach ($type in $to.Keys) {
+        if ($from.ContainsKey($type) -and $to[$type].Time -gt $from[$type].Time) {
+            $share = 100.0 * ($to[$type].Busy - $from[$type].Busy) / ($to[$type].Time - $from[$type].Time)
+            if ($share -gt $peak) { $peak = $share }
+        }
+    }
+    return [Math]::Max(0.0, $peak)
+}
+
+# Zeitstempel eines Rohwerts (100 ns), 0 ohne Engine
+function Gpu-Time($raw) { $t = 0.0; foreach ($v in $raw.Values) { if ($v.Time -gt $t) { $t = $v.Time } }; return $t }
+
+# Busy-Zeit einer Engine-Art zum Zeitpunkt $at (100 ns), linear zwischen den beiden Rohwerten davor und danach (die
+# Busy-Zeit eines Abstands gleichmäßig verteilt); $null außerhalb der Messung oder wenn einem der beiden die Art fehlt
+function Gpu-Interpolate([double[]]$times, [double[]]$busy, [bool[]]$has, [double]$at) {
+    for ($i = 1; $i -lt $times.Count; $i++) {
+        if ($times[$i] -ge $at) {
+            if ($at -lt $times[$i - 1] -or -not $has[$i - 1] -or -not $has[$i]) { return $null }
+            return $busy[$i - 1] + ($busy[$i] - $busy[$i - 1]) * ($at - $times[$i - 1]) / ($times[$i] - $times[$i - 1])
+        }
+    }
+    return $null
+}
+
+# Auswertung der Rohwerte eines HDR-Moments (rechnet nur, misst nicht). Es zählen nur Rohwerte mit Engines des Prozesses
+# und mit neuerem Zeitstempel als der vorige. Spitze: höchste Last der ausgelastetsten Engine-Art in einem beliebig
+# liegenden Fenster von genau 1 s nach den Zeitstempeln der Zähler; zwischen zwei Rohwerten gilt die Busy-Zeit als
+# gleichmäßig verteilt, dann liegt das höchste Fenster mit Anfang oder Ende auf einem Rohwert, und nur diese werden
+# gerechnet. Ein Fenster „ab einem Rohwert bis zum ersten mindestens 1 s späteren“ wäre bei wenigen Millisekunden
+# Versatz der Zeitstempel bis zu 1,25 s lang und die Spitze zu niedrig (mit erzeugten Rohwerten 26,6 statt 30 %,
+# gleichmäßig verteilt 29,9 %). Mittel: Busy-Zeit vom ersten bis zum letzten Rohwert je Sekunde Moment; die Ruhelast
+# der übrigen Messzeit ist eingerechnet, das Mittel also eher etwas zu hoch. Weniger als zwei Rohwerte: alles 0, weniger
+# als 1 s Messung: Spitze 0.
+function Gpu-MomentStats($readings, [double]$momentSeconds) {
+    $valid = New-Object Collections.Generic.List[object]
+    foreach ($r in $readings) {
+        if ($null -eq $r -or $r.Count -eq 0) { continue }
+        if ($valid.Count -gt 0 -and (Gpu-Time $r) -le (Gpu-Time $valid[$valid.Count - 1])) { continue }
+        $valid.Add($r)
+    }
+    $stats = [pscustomobject]@{ Readings = $valid.Count; Span = 0.0; MaxGapMs = 0.0; Peak = 0.0; PeakFrom = 0.0; Mean = 0.0 }
+    $n = $valid.Count
+    if ($n -lt 2) { return $stats }
+    $times = New-Object double[] $n
+    for ($i = 0; $i -lt $n; $i++) { $times[$i] = Gpu-Time $valid[$i] }
+    for ($i = 1; $i -lt $n; $i++) { $stats.MaxGapMs = [Math]::Max($stats.MaxGapMs, ($times[$i] - $times[$i - 1]) / 1e4) }
+    # Fenster von 1 s: jeder Rohwert als Anfang und jeder Rohwert als Ende
+    $windows = New-Object Collections.Generic.List[double[]]
+    foreach ($t in $times) {
+        if ($t + 1e7 -le $times[$n - 1]) { $windows.Add([double[]]@($t, ($t + 1e7))) }
+        if ($t - 1e7 -ge $times[0]) { $windows.Add([double[]]@(($t - 1e7), $t)) }
+    }
+    $types = @($valid | ForEach-Object { $_.Keys } | Sort-Object -Unique)
+    foreach ($type in $types) {
+        $busy = New-Object double[] $n; $has = New-Object bool[] $n
+        for ($i = 0; $i -lt $n; $i++) { if ($valid[$i].ContainsKey($type)) { $busy[$i] = $valid[$i][$type].Busy; $has[$i] = $true } }
+        foreach ($w in $windows) {
+            $b0 = Gpu-Interpolate $times $busy $has $w[0]
+            $b1 = Gpu-Interpolate $times $busy $has $w[1]
+            if ($null -eq $b0 -or $null -eq $b1) { continue }
+            $share = 100.0 * ($b1 - $b0) / ($w[1] - $w[0])
+            if ($share -gt $stats.Peak) { $stats.Peak = $share; $stats.PeakFrom = ($w[0] - $times[0]) / 1e7 }
+        }
+    }
+    $stats.Span = ($times[$n - 1] - $times[0]) / 1e7
+    $stats.Mean = (Gpu-Share $valid[0] $valid[$n - 1]) * $stats.Span / $momentSeconds
+    return $stats
+}
+
+# Ein HDR-Moment, unabhängig davon, wo er in einer Sekundenprobe beginnt (E97): ein Rohwert vor dem Auslösen ($trigger
+# startet den Moment), dann Rohwerte alle 250 ms bis 4 s nach dem Auslösen (der Moment dauert 2,5 s und beginnt etwa
+# 0,2 s nach dem Auslösen). Dauert eine Abfrage länger als ein Takt, entfällt nur der verpasste Takt. Ohne Rohdaten wie
+# bisher vier Sekundenproben nach dem Auslösen (ganze Prozente, Spitze dann vom Raster der Sekunden abhängig).
+function Gpu-Moment([int]$processId, [string]$label, [scriptblock]$trigger, [double]$seconds = 4, [int]$stepMs = 250) {
+    if (-not $rawCounters) {
+        & $trigger | Out-Null
+        return Gpu-Measure $processId ([int][Math]::Ceiling($seconds)) ($label + ' (ohne Rohdaten: Sekundenproben)')
+    }
+    $readings = New-Object Collections.Generic.List[object]
+    $readings.Add((Gpu-Raw $processId))
+    & $trigger | Out-Null
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $end = $seconds * 1000
+    $next = [double]$stepMs
+    while ($true) {
+        $wait = [int]($next - $sw.ElapsedMilliseconds)
+        if ($wait -gt 0) { Start-Sleep -Milliseconds $wait }
+        $readings.Add((Gpu-Raw $processId))
+        $elapsed = $sw.ElapsedMilliseconds
+        if ($elapsed -ge $end) { break }
+        $next = [Math]::Min($end, ([Math]::Floor($elapsed / $stepMs) + 1) * $stepMs)
+    }
+    $s = Gpu-MomentStats $readings $MomentSeconds
+    Note ("{0}: {1} Rohwerte über {2:N2} s (Abstand höchstens {3:N0} ms), Spitze in 1 s {4:N2} % (Fenster ab {5:N2} s), Mittel über den Moment ({6} s) {7:N2} %" -f $label, $s.Readings, $s.Span, $s.MaxGapMs, $s.Peak, $s.PeakFrom, $MomentSeconds, $s.Mean) | Out-Host
+    return [pscustomobject]@{ Mean = [double]$s.Mean; Peak = [double]$s.Peak }
+}
+
+# Median (bei gerader Anzahl das Mittel der beiden mittleren Werte), 0 ohne Werte
+function Median-Of([double[]]$values) {
+    $sorted = @($values | Sort-Object)
+    if ($sorted.Count -eq 0) { return 0.0 }
+    $mid = [int][Math]::Floor($sorted.Count / 2)
+    if ($sorted.Count % 2 -eq 1) { return [double]$sorted[$mid] }
+    return ([double]$sorted[$mid - 1] + [double]$sorted[$mid]) / 2
 }
 
 # CPU der Instanz in % eines Kerns während einer Messung der Grafikkarte
@@ -200,6 +318,11 @@ try {
     foreach ($game in @($config.games)) { $game.hdrAuto = $false; if ($game.PSObject.Properties['autoHdr']) { $game.autoHdr = $false } }
     # Stufe Debug: Effekte (Uhren) und Bilderdienst (Laden fertig) melden sich im Protokoll
     $config.settings | Add-Member -NotePropertyName logLevel -NotePropertyValue 'Debug' -Force
+    if ($ColorsFollowGame) {
+        if (-not $config.settings.PSObject.Properties['appearance'] -or $null -eq $config.settings.appearance) { $config.settings | Add-Member -NotePropertyName appearance -NotePropertyValue ([pscustomobject]@{}) -Force }
+        $config.settings.appearance | Add-Member -NotePropertyName colorsFollowGame -NotePropertyValue $true -Force
+    }
+    Note ("Farben folgen dem Spiel: {0}" -f [bool]$ColorsFollowGame)
     [IO.File]::WriteAllText((Join-Path $cfg 'config.json'), ($config | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding $false))
     Note "Spiele in der Testablage: $(@($config.games).Count)"
 
@@ -282,14 +405,31 @@ try {
     }
 
     if (-not $umgebung) {
-        # HDR-Moment ohne HDR-Schaltung, mit heller Fassung (die Instanz lädt sie vor dem Abspielen)
+        # HDR-Moment ohne HDR-Schaltung, mit heller Fassung (die Instanz lädt sie vor dem Abspielen). Mehrere Momente,
+        # Median (E97): eine einzelne Messung schwankte mit festen Sekundenproben um etwa ±2 Prozentpunkte. Jeder Moment
+        # wird bei aktivem Fenster gemessen wie die Ruhe (Measure-Active: bei Fokusverlust einmal wiederholt, sonst UMGEBUNG)
         $logBefore = (Read-Log $cfg).Length
-        Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--test-hdr-moment') | Out-Null
-        $moment = Gpu-Measure $app.Id 4 'HDR-Moment'
-        Start-Sleep -Milliseconds 500
+        $runs = @()
+        for ($n = 1; $n -le $MomentRuns; $n++) {
+            if ($n -gt 1) { Start-Sleep -Seconds 4 }   # voriger Moment ganz vorbei, Grafikkarte wieder in Ruhe
+            $what = "HDR-Moment {0}/{1}" -f $n, $MomentRuns
+            $before = (Read-Log $cfg).Length
+            $one = Measure-Active { Gpu-Moment $app.Id $what { Start-Process $AppExe -ArgumentList @('--config-dir', "`"$cfg`"", '--test-hdr-moment') | Out-Null } } $what
+            if (-not $one) { break }   # Vordergrund verloren: UMGEBUNG
+            Start-Sleep -Milliseconds 500
+            $part = Read-Log $cfg
+            $part = $part.Substring([Math]::Min($before, $part.Length))
+            $one | Add-Member -NotePropertyName Kind -NotePropertyValue $(if ($part -match 'HDR-Moment gespielt \((\w+), helle Fassung (\w+)\)') { $Matches[1] + ', helle Fassung ' + $Matches[2] } else { '?' })
+            $runs += $one
+        }
+    }
+
+    if (-not $umgebung) {
+        $moment = [pscustomobject]@{ Peak = (Median-Of @($runs | ForEach-Object { $_.Peak })); Mean = (Median-Of @($runs | ForEach-Object { $_.Mean })) }
+        Note ("HDR-Moment, Median über {0}: Spitze in 1 s {1:N2} %, Mittel über den Moment {2:N2} % (nur protokolliert; Spitzen {3}; Mittel {4})" -f $runs.Count, $moment.Peak, $moment.Mean, (($runs | ForEach-Object { '{0:N2}' -f $_.Peak }) -join ' '), (($runs | ForEach-Object { '{0:N2}' -f $_.Mean }) -join ' '))
         $log = Read-Log $cfg
         $log = $log.Substring([Math]::Min($logBefore, $log.Length))
-        $kind = if ($log -match 'HDR-Moment gespielt \((\w+), helle Fassung (\w+)\)') { $Matches[1] + ', helle Fassung ' + $Matches[2] } else { '?' }
+        $kind = @($runs | ForEach-Object { $_.Kind } | Sort-Object -Unique) -join ' / '
         Note "HDR-Moment laut Protokoll: $kind"
         if ($moment.Peak -le 0 -and $idle.Gpu.Peak -le 0) { $umgebung = 'Kein messbarer Bildaufbau (Bildschirm aus oder im Energiesparmodus?)' }
     }
@@ -297,7 +437,7 @@ try {
     if (-not $umgebung) {
         Check ($kind -eq 'Full, helle Fassung da') ('HDR-Moment in Stufe „Voll“ mit heller Fassung gespielt ({0})' -f $kind)
         Check ($idle.Gpu.Mean -lt $MaxIdleMean -and $idle.Gpu.Peak -le $MaxIdlePeak) ("Liste in Ruhe: Mittel {0:N2} % < {1} %, Spitze {2:N2} % <= {3} %" -f $idle.Gpu.Mean, $MaxIdleMean, $idle.Gpu.Peak, $MaxIdlePeak)
-        Check ($moment.Peak -lt $MaxMomentPeak) ("HDR-Moment: Spitze {0:N2} % < {1} %" -f $moment.Peak, $MaxMomentPeak)
+        Check ($moment.Peak -lt $MaxMomentPeak) ("HDR-Moment: Spitze in 1 s, Median über {0} Momente, {1:N2} % unter {2} % (Mittel über den Moment {3:N2} %, nur protokolliert)" -f $runs.Count, $moment.Peak, $MaxMomentPeak, $moment.Mean)
         Check (-not $log.Contains('HDR-Schaltung')) 'Keine HDR-Schaltung im Protokoll'
 
         # Größter bewegter Titelbereich: Regal und Raster im Vollbild des Nutzers

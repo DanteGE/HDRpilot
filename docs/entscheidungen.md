@@ -1771,3 +1771,37 @@ das ganze Handbuch (rund 960 Zeilen).
   Version, in `README.md` keine deutsche Überschrift. Gegenproben: 10 bzw. 9 eingebaute Fehler, jede Überschrift der
   deutschen README gilt als deutsch, und die deutsche README scheitert gegen die englischen Texte. `phase6-name.ps1`
   prüft auch die Handbücher auf Reste von „HdrPilot“.
+
+**E97 HDR-Moment: genauer messen, Grenze 35 % (Entscheidung des Nutzers 2026-11-04):** „Genauer messen, 35 %“. Bei
+der Prüfung von 1.6.0 unter Windows (2026-11-04) lag der HDR-Moment in G10.9 (`phase10-gpu.ps1`) mal knapp über, mal
+knapp unter der Grenze „Spitze unter 30 %“. Das war keine Verschlechterung, sondern Messrauschen.
+- Befund: Fünf Messungen nach der bisherigen Methode lagen zwischen 26,8 und 30,5 % (1.6.0 als Debug-Build 30,53 %,
+  29,36 % und mit „Farben folgen dem Spiel“ 30,15 %). Im Vergleich in derselben Sitzung mit den veröffentlichten
+  Programmdateien maß 1.5.0 29,65 % und 1.6.0 26,82 %. Der Effekt-Code, der den Moment spielt
+  (`src/HdrPilot.App/Infrastructure/Effects`), ist von 8fe23c6 bis 1.6.0 (5b96faf) Byte für Byte gleich. Die „rund
+  24 %“ vom 2026-10-16 waren ein einzelner Lauf auf einem älteren Zweig (`feature/showcase`, vor Werkzeugleiste,
+  Phase 11 und Quiver), kein Wert von 1.5.0.
+- Ursache: Das Gate nahm vier feste Sekundenproben ab dem Auslösen eines einzigen Moments. Der Moment dauert 2,5 s und
+  beginnt etwa 0,2 s nach dem Auslösen; seine Last liegt vor allem in einer Sekunde (Proben etwa 14–16 / 27–31 / 13–18 /
+  1 %). Die höchste Probe hing also davon ab, wie diese Sekunde ins Raster fiel: Ein Lauf schwankte um etwa ±2
+  Prozentpunkte, ein einzelner Lauf entschied nichts.
+- Neue Messung (`phase10-gpu.ps1`, G10.9): Rohwerte der Zähler (Busy-Zeit je Engine-Art mit Zeitstempel) alle 250 ms,
+  einer kurz vor dem Auslösen, dann bis 4 s danach. Spitze = höchste Last der ausgelastetsten Engine-Art in einem
+  beliebig liegenden Fenster von genau 1 s nach den Zeitstempeln der Zähler; eine länger dauernde Abfrage verschiebt
+  nur ihren Rohwert, die Busy-Zeit zwischen zwei Rohwerten gilt als gleichmäßig verteilt. (Ein Fenster „ab einem
+  Rohwert bis zum ersten mindestens 1 s späteren“ wäre bei wenigen Millisekunden Versatz der Zeitstempel bis zu 1,25 s
+  lang und verwässerte die Spitze.) Drei Momente mit 4,5 s Pause zwischen den Messungen, gewertet wird der Median der
+  drei Spitzen. Das Mittel über den Moment (Busy-Zeit der Messung je Sekunde Moment) steht nur im Protokoll und hat
+  keine Grenze. Verliert das Fenster während eines Moments den Vordergrund, wird er einmal wiederholt, sonst meldet das
+  Gate UMGEBUNG wie bei den übrigen Messungen in Teil 2. Ohne Rohdaten bleibt es bei vier Sekundenproben.
+- Grenze: Median der Spitzen in 1 s unter 35 % (bisher unter 30 % auf die höchste Sekundenprobe). Begründung: Der
+  HDR-Moment ist ein einmaliger Effekt von 2,5 s beim Einschalten von HDR. Mit einer Messung, die nicht mehr vom Raster
+  abhängt, liegt seine Spitze in 1 s voraussichtlich bei etwa 30 bis 32 %; eine strenge Grenze von 30 % fiele damit
+  eher öfter als seltener. Die Grenzen für Dauerlast bleiben unverändert: offenes Fenster in Ruhe im Mittel unter 5 %
+  und nie über 20 %, inaktiv, minimiert und geschlossen Grafikkarte unter 1 %, Leerlauf wie bisher.
+- Zur Wahl standen auch, das Mittel über den Moment statt der Spitze zu begrenzen oder den Moment günstiger zu machen;
+  der Nutzer wählte die genauere Messung mit 35 %.
+- Am Gate außerdem: `-ColorsFollowGame` schaltet „Farben folgen dem Spiel“ in der Testablage ein; damit misst
+  `phase10-gpu.ps1 -ColorsFollowGame -SkipIdleGate` die Grafikkartenlast mit eingeschaltetem Schalter für G15.7.
+  `phase6-ui.ps1` (G6.1) nimmt als Steam- und als GOG-Spiel je das erste installierte mit einfachem Namen aus der
+  Testablage statt eines fest eingetragenen, weil sich die eingelesene echte Bibliothek ändert.

@@ -20,6 +20,8 @@
 # „nicht angeschlossen“ und keine einzige „HDR-Schaltung“ enthalten). Hinweise und Tastenkürzel-Notlösung sind aus. Startet
 # weder Quiver noch ein Spiel. Die Bildschirmfotos enthalten Spielbilder und landen nie im Projektordner, sondern in -ShotsDir.
 #   PHASE12_QUIVER_UI_OK
+# Liegt der Projektordner so tief, dass das Prüfprogramm nicht starten kann (Pfad ab 260 Zeichen), meldet das Gate vor dem
+# Start der Testinstanz PHASE12_QUIVER_UI_UMGEBUNG mit Exit-Code 2.
 param([string]$ShotsDir = (Join-Path ([IO.Path]::GetTempPath()) 'hdrpilot-phase12-quiver-ui'))
 . (Join-Path $PSScriptRoot 'Phase4Common.ps1')
 Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase
@@ -114,6 +116,16 @@ $quiver = Join-Path $cfg 'quiver\QuiverLauncher-Pruefung'
 $gameDir = Join-Path $quiver "Apps\$folderName"
 $exe = Join-Path $gameDir 'QuiverPruefspiel.exe'
 $probeOut = Join-Path $gameDir 'pruefprogramm-start.txt'
+# Das Prüfprogramm ist ein .NET-Framework-Programm ohne Freigabe langer Pfade: Erreicht der Pfad seiner EXE samt „.config“
+# (die Laufzeit sucht die Datei beim Start) oder seiner Ausgabedatei 260 Zeichen, bricht es schon beim Start mit einem
+# Meldungsfenster „CLR-Fehler: 8007007a“ ab (2026-11-04 in einem Klon unter einem tiefen Ordner: 264 Zeichen). Dann nicht
+# starten, sondern UMGEBUNG melden.
+$longestProbePath = [Math]::Max(($exe + '.config').Length, $probeOut.Length)
+if ($longestProbePath -ge 260) {
+    Note ("UMGEBUNG Ordner zu tief für das Prüfprogramm ({0} Zeichen, höchstens 259): das Gate aus einem kürzeren Pfad starten" -f $longestProbePath)
+    Write-Output 'PHASE12_QUIVER_UI_UMGEBUNG'
+    exit 2
+}
 $fixtures = Join-Path $root 'tests\HdrPilot.Tests\Fixtures\Quiver'
 $app = $null
 try {

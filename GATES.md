@@ -449,12 +449,12 @@ Kriterien. Installation beim Nutzer nur mit ausdrücklicher Zustimmung.
 - [ ] G10.9: Leistung, gemessen am echten Desktop mit eingeschaltetem Bildschirm:
   - Bei geschlossenem Fenster bleibt der Leerlauf wie bisher (`phase3-idle.ps1`).
   - Offenes Fenster in Ruhe: Grafikkartenlast der Testinstanz im Mittel unter 5 % und nie über 20 %.
-  - HDR-Moment: unter 30 % Spitze.
+  - HDR-Moment: Spitze in 1 s, Median über 3 Momente, unter 35 % (Entscheidung des Nutzers 2026-11-04, E97; bis dahin unter 30 % auf die höchste von vier festen Sekundenproben eines einzigen Moments). Gemessen mit den Rohwerten der Zähler alle 250 ms von kurz vor dem Auslösen bis 4 s danach; Spitze = höchste Last in einem beliebig liegenden Fenster von 1 s (nach den Zeitstempeln der Zähler, Busy-Zeit zwischen zwei Rohwerten gleichmäßig verteilt). Das Mittel über den Moment steht nur im Protokoll, ohne Grenze. Verliert das Fenster während eines Moments den Vordergrund, wird der Moment einmal wiederholt, sonst UMGEBUNG.
   - Minimiert oder inaktiv: keine Bildaufrufe.
   - Ohne aktiven Bildschirm meldet das Gate UMGEBUNG und gilt nicht als bestanden.
   CHECK: ps tools\gates\phase10-gpu.ps1
   EXPECT: PHASE10_GPU_OK
-  EVIDENCE: pending. Auf dem Stand 1.5.0 nicht gemessen: `phase10-gpu.ps1` braucht den echten Desktop mit eingeschaltetem Bildschirm und läuft nur zusammen mit dem Nutzer. Früherer Lauf 2026-10-16 auf feature/showcase (vor Werkzeugleiste, Phase 11 und Quiver): PHASE10_GPU_OK, Liste in Ruhe 1,2 % GPU, HDR-Moment Spitze rund 24 % GPU, minimiert 0,2 % CPU.
+  EVIDENCE: pending: Mit der Messung nach E97 noch nicht gelaufen; `phase10-gpu.ps1` braucht den echten Desktop mit eingeschaltetem Bildschirm und läuft nur zusammen mit dem Nutzer. Alle folgenden Läufe nutzten noch die alte Messung (ein Moment, vier feste Sekundenproben ab dem Auslösen, Grenze unter 30 % auf die höchste Probe). Zur Freigabe von 1.5.0 nicht gemessen. Früherer Lauf 2026-10-16 auf feature/showcase (vor Werkzeugleiste, Phase 11 und Quiver): PHASE10_GPU_OK, Liste in Ruhe 1,2 % GPU, HDR-Moment Spitze rund 24 % GPU (ein einzelner Lauf), minimiert 0,2 % CPU. 2026-11-04 auf 1.6.0 (5b96faf, Debug-Build): exit 2, PHASE10_GPU_UMGEBUNG (Teil 1 und 3 bestanden); exit 1 ohne Marke, einziger FEHLER „HDR-Moment: Spitze 30,53 % < 30 %“ (Sekundenproben 13,8 / 30,5 / 17,6 / 1,1); exit 2, PHASE10_GPU_UMGEBUNG (andere Anwendung im Vordergrund); zwei weitere Läufe ohne protokollierten Exit-Code: PHASE10_GPU_OK mit Spitze 29,36 % (PHASE3_IDLE_OK darin) und mit `-ColorsFollowGame` einziger FEHLER HDR-Moment 30,15 % (G15.7). Vergleich in derselben Sitzung mit den veröffentlichten Programmdateien (Kopie des unveränderten Gates, nur die gestartete Programmdatei geändert, -SkipIdleGate): 1.5.0 exit 0, PHASE10_GPU_OK, Spitze 29,65 %; 1.6.0 exit 0, PHASE10_GPU_OK, Spitze 26,82 %. Der Effekt-Code, der den Moment spielt (`src/HdrPilot.App/Infrastructure/Effects`), ist von 8fe23c6 (Lauf vom 2026-10-16) bis 5b96faf Byte für Byte gleich; die Last liegt vor allem in einer Sekunde, die höchste Sekundenprobe hing davon ab, wie diese Sekunde ins Raster fiel (26,8 bis 30,5 %). Deshalb E97.
 
 - [x] G10.10: Gesamtstand: build.ps1 ohne Warnungen, alle Tests und alle Gates ohne echte HDR-Umschaltung grün (auch die bisherigen UI-Gates nach Anpassung), Anti-Cheat-Architekturtest grün, README und E89 passen zu den resx-Texten, unabhängige Prüfung mit Gegenprüfung
   CHECK: ps tools\gates\phase5-readme.ps1
@@ -603,17 +603,17 @@ Scope: Im Dialog „Bild wählen…“ je Reiter (Titelbild, Logo, Cover) ein Ab
 - [ ] G14.7: Testinstanz mit erzeugten SteamGridDB-Antworten (kein Netz, nur UI-Automation): Schlüssel bei ausgeschaltetem Schalter prüfen und speichern ohne Lauf; keine Anfrage vor dem Klick; 24/48/70 Ergebnisse mit Autor, Ende mit leerer Seite; nur www./cdn2.steamgriddb.com, Schlüssel nur an die Schnittstelle; Übernehmen speichert ein 600×900-Cover als eigenes Bild, Zurücksetzen entfernt es, Abbrechen schreibt nichts; Spielwahl, gemerkte Zuordnung nur ohne Steam-App-ID; Fehlerzustände samt Zeitüberschreitung; Link zum Schlüsselfeld; keine Vorschau-Threads nach dem Schließen; Bildschirmfotos aller Zustände hell und dunkel, auch klein und in hohem Kontrast, dazu die Einstellungskarte
   CHECK: ps tools\gates\phase14-sgdb-ui.ps1
   EXPECT: PHASE14_SGDB_UI_OK
-  EVIDENCE: pending. Entschieden (Nutzer, 2026-11-04, E93): Die Spielwahl zeigt bei langsamer Antwort „Sucht bei SteamGridDB …“ bis zur Zeitüberschreitung, „antwortet langsam“ nur die Suche im Reiter. Das Gate prüft das in Schritt J (nach 6,5 s noch „Sucht …“ ohne „antwortet langsam“, dann Zeitüberschreitung); nach der Änderung noch nicht gelaufen.
+  EVIDENCE: pending. Entschieden (Nutzer, 2026-11-04, E93): Die Spielwahl zeigt bei langsamer Antwort „Sucht bei SteamGridDB …“ bis zur Zeitüberschreitung, „antwortet langsam“ nur die Suche im Reiter. Das Gate prüft das in Schritt J (nach 6,5 s noch „Sucht …“ ohne „antwortet langsam“, dann Zeitüberschreitung); nach der Änderung 2026-11-04 auf 1.6.0 (5b96faf, nacheinander, Nutzer am PC): exit 0, PHASE14_SGDB_UI_OK (mit Schritt J).
 
 - [ ] G14.8: Einstellungen per UI-Automation weiter grün, mit der angepassten Prüfung „Prüfen auch bei ausgeschaltetem Schalter bedienbar“
   CHECK: ps tools\gates\phase10-settings-ui.ps1
   EXPECT: PHASE10_SETTINGS_UI_OK
-  EVIDENCE: pending.
+  EVIDENCE: pending (Gesamtstand). 2026-11-04 auf 1.6.0 (5b96faf, nacheinander, Nutzer am PC): exit 0, PHASE10_SETTINGS_UI_OK.
 
 - [ ] G14.9: Bibliothek und Dialog ohne Schlüssel weiter grün (Abbrechen schreibt nichts, kein Netz)
   CHECK: ps tools\gates\phase10-ui.ps1
   EXPECT: PHASE10_UI_OK
-  EVIDENCE: pending.
+  EVIDENCE: pending (Gesamtstand). 2026-11-04 auf 1.6.0 (5b96faf, nacheinander, Nutzer am PC): exit 0, PHASE10_UI_OK.
 
 - [ ] G14.10: Bilder geprüft: Bildschirmfotos aus G14.7 bei 1280×800, 1920×1080 und 3440×1440, hell und dunkel, zugeschnitten und vermessen (Kachelgrößen, Abstände, rechte Kante bei 830 DIP, Luft um die Trennlinie); Vergleich an den Nutzer geschickt, bevor das Test-Update installiert wird
   EVIDENCE: pending.
@@ -666,19 +666,21 @@ Scope: Schalter „Farben folgen dem Spiel“ (Standard aus) neben „Hintergrun
 - [ ] G15.5: Einstellungen per UI-Automation mit der neuen Kennung (Schalter an und aus landet sofort in der Konfiguration)
   CHECK: ps tools\gates\phase10-settings-ui.ps1
   EXPECT: PHASE10_SETTINGS_UI_OK
-  EVIDENCE: pending
+  EVIDENCE: pending (Gesamtstand). 2026-11-04 auf 1.6.0 (5b96faf, nacheinander, Nutzer am PC): exit 0, PHASE10_SETTINGS_UI_OK.
 
 - [ ] G15.6: Bilder mit erzeugten Spielbildern (rot/orange, weiß/blau, grau mit anderem Schema, bunt in Duoton und Tritonus, Hintergrund aus, Leuchten des Titelbilds, dunkle Markenfarbe, Gold im hellen Thema; Liste, Raster, Regal; hell und dunkel) in genauer Größe, Starten-Knopf im erwarteten Verlauf, graues Spiel gleich dem Farbschema
   CHECK: ps tools\gates\phase15-gamecolors.ps1
   EXPECT: PHASE15_GAMECOLORS_OK
-  EVIDENCE: pending
+  EVIDENCE: pending (Gesamtstand). 2026-11-04 auf 1.6.0 (5b96faf, nacheinander, Nutzer am PC): exit 0, TESTS_OK 9, PHASE15_GAMECOLORS_OK.
 
-- [ ] G15.7: Kosten: Auslesen nur bei eingeschaltetem Schalter bzw. für das Vorschauspiel, einmal je Spiel und Bildstand, nie für Kacheln, Kontaktbogen oder Bildschirmfotos; die Farbebene macht je angewendetem Wechsel höchstens einen Austausch der Farbwerte und keinen neuen Pinsel, bei gehaltener Pfeiltaste keine Arbeit, Speicher je angewendetem Wechsel höchstens eine Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (Entscheidung des Nutzers 2026-10-28, E94; ersetzt die feste Grenze von 256 KB); Leerlauf mit geschlossenem Fenster wie bisher
+- [ ] G15.7: Kosten: Auslesen nur bei eingeschaltetem Schalter bzw. für das Vorschauspiel, einmal je Spiel und Bildstand, nie für Kacheln, Kontaktbogen oder Bildschirmfotos; die Farbebene macht je angewendetem Wechsel höchstens einen Austausch der Farbwerte und keinen neuen Pinsel, bei gehaltener Pfeiltaste keine Arbeit, Speicher je angewendetem Wechsel höchstens eine Ressourcen-Änderung im selben Fenster plus 150 KiB (153 600 Byte) eigener Anteil der Spielfarben (Entscheidung des Nutzers 2026-10-28, E94; ersetzt die feste Grenze von 256 KB); Leerlauf mit geschlossenem Fenster wie bisher; Grafikkartenlast mit eingeschaltetem Schalter in den Grenzen von G10.9
   CHECK: ps tools\gates\test.ps1 -Filter "FullyQualifiedName~HdrPilot.App.Tests.Library.GameAccentCost|FullyQualifiedName~HdrPilot.App.Tests.Artwork.ArtworkServiceGameColors" -MinTests 17
   EXPECT: TESTS_OK
   CHECK: ps tools\gates\phase3-idle.ps1
   EXPECT: PHASE3_IDLE_OK
-  EVIDENCE: pending (`phase3-idle.ps1` und die Grafikkartenlast mit eingeschaltetem Schalter wie G10.9 nur zusammen mit dem Nutzer: `phase10-gpu.ps1`, PHASE10_GPU_OK). Testteil 2026-11-02 unter Windows (Stand fcb9aae, gedrosselt, nacheinander): exit 0, TESTS_OK 29. GameAccentCostTests gibt aus: 333 336 Byte je angewendetem Wechsel, eine Ressourcen-Änderung im selben Fenster 213 104 Byte, eigener Anteil 120 232 Byte, Grenze 213 104 + 153 600 = 366 704 Byte; fünf Läufe der Klasse vor der Änderung maßen dieselben Werte. Gegenproben (nicht übernommen), je rot: rund 200 KB mehr je Wechsel im Akzentpfad (534 536 Byte), rund 40 KB mehr (373 576 Byte), wieder einfrierbare Pinsel (2 444 416 Byte), Vergleichsmessung ohne Baum (408 Byte, unter 64 KiB), Messschleife ohne angewendeten Wechsel, halbierte Messung; wiederhergestellt grün. Nachbesserung 2026-11-02 (Stand 05074d4, gedrosselt): Die Vergleichsgröße wird vor den gemessenen Wechseln gemessen und danach noch einmal, beide müssen auf 1 KiB gleich sein (gemessen beide 213 104 Byte); exit 0, TESTS_OK 29. Gegenprobe: ein Rahmen mit Ressourcen-Verweis mehr im Fenster je Wechsel (danach 1 280 Byte mehr) besteht den alten Test und scheitert am neuen; rund 40 KB mehr je Wechsel und die Vergleichsmessung ohne Baum scheitern weiter.
+  CHECK: ps tools\gates\phase10-gpu.ps1 -ColorsFollowGame -SkipIdleGate
+  EXPECT: PHASE10_GPU_OK
+  EVIDENCE: pending (`phase3-idle.ps1` und die Grafikkartenlast mit eingeschaltetem Schalter wie G10.9 nur zusammen mit dem Nutzer: `phase10-gpu.ps1 -ColorsFollowGame`, PHASE10_GPU_OK; den Schalter hat das Gate seit 2026-11-04, er schaltet „Farben folgen dem Spiel“ in der Testablage ein, `-SkipIdleGate`, weil `phase3-idle.ps1` hier eine eigene Prüfung ist). Lauf 2026-11-04 auf 1.6.0 (5b96faf) noch mit der alten Messung des HDR-Moments, Exit-Code nicht protokolliert: „Farben folgen dem Spiel: True“, einziger FEHLER HDR-Moment Spitze 30,15 % gegen die alte Grenze unter 30 %, alles andere in den Grenzen (siehe G10.9 und E97). Testteil 2026-11-02 unter Windows (Stand fcb9aae, gedrosselt, nacheinander): exit 0, TESTS_OK 29. GameAccentCostTests gibt aus: 333 336 Byte je angewendetem Wechsel, eine Ressourcen-Änderung im selben Fenster 213 104 Byte, eigener Anteil 120 232 Byte, Grenze 213 104 + 153 600 = 366 704 Byte; fünf Läufe der Klasse vor der Änderung maßen dieselben Werte. Gegenproben (nicht übernommen), je rot: rund 200 KB mehr je Wechsel im Akzentpfad (534 536 Byte), rund 40 KB mehr (373 576 Byte), wieder einfrierbare Pinsel (2 444 416 Byte), Vergleichsmessung ohne Baum (408 Byte, unter 64 KiB), Messschleife ohne angewendeten Wechsel, halbierte Messung; wiederhergestellt grün. Nachbesserung 2026-11-02 (Stand 05074d4, gedrosselt): Die Vergleichsgröße wird vor den gemessenen Wechseln gemessen und danach noch einmal, beide müssen auf 1 KiB gleich sein (gemessen beide 213 104 Byte); exit 0, TESTS_OK 29. Gegenprobe: ein Rahmen mit Ressourcen-Verweis mehr im Fenster je Wechsel (danach 1 280 Byte mehr) besteht den alten Test und scheitert am neuen; rund 40 KB mehr je Wechsel und die Vergleichsmessung ohne Baum scheitern weiter.
 
 - [ ] G15.8: README und E94 passen zu den resx-Texten; keine lokalen Pfade
   CHECK: ps tools\gates\phase5-readme.ps1
@@ -719,7 +721,7 @@ Scope: Komplette englische Übersetzung (App, Setup, Kern, Kommandozeile) als `.
 - [ ] G16.4: Testinstanz mit englischer Ablage: Bibliothek, Einstellungen und Vorschau des Tray-Menüs englisch (Namen der Bedienungshilfen aus den `.en.resx`), Kommandozeile englisch; „Deutsch“ wählen und „Restart now“: alte Instanz endet, neue mit `--restarted` zeigt die Einstellungen und die Bibliothek deutsch, `language` = de; neue Ablage nach der Anzeigesprache von Windows; Setup an einer Testablage mit `--ui-language en` englisch, „Cancel“ ändert nichts; englische Bildschirmfotos mit „-en“ im Namen; echter Stand unverändert.
   CHECK: ps tools\gates\phase16-english-ui.ps1
   EXPECT: PHASE16_ENGLISH_UI_OK
-  EVIDENCE: pending (nur unter Windows).
+  EVIDENCE: pending (Gesamtstand). 2026-11-04 auf 1.6.0 (5b96faf, nacheinander, Nutzer am PC): exit 0, PHASE16_ENGLISH_UI_OK.
 
 - [ ] G16.5: Sichtprüfung der englischen Oberfläche: Bibliothek (Liste, Raster, Regal, Details, Kontextmenü, „Bild wählen“, Rückfragen), Einstellungen (alle Bereiche) und Setup bei 1280×800 und 1920×1080, dunkel und hell; keine abgeschnittenen oder überlaufenden Texte (Englisch ist an einigen Stellen länger); danach Abnahme durch den Nutzer.
   CHECK: HDRpilot.exe --snapshot <ordner> --config-dir <Kopie der Ablage> --snapshot-language en --snapshot-sizes 1280x800,1920x1080
